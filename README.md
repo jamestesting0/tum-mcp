@@ -99,16 +99,22 @@ Files are limited to **50 MiB** each. OCR may misread equations or diagrams.
 
 ## Update
 
-From your checkout:
+Paste this one-line prompt into Codex:
 
 ```text
-git pull --ff-only
-uv run --no-project --python 3.13 scripts/package_plugin.py --register
-uv run --no-project --python 3.13 dist/tum-moodle/scripts/bootstrap.py
+Update my TUM Moodle plugin from https://github.com/jamestesting0/tum-moodle-integration: find my checkout, preserve local changes and session data, get scripts/update.py with a fast-forward-only pull if needed, run it with uv, and tell me whether I need to restart Codex or complete a manual step.
 ```
 
-Reinstall from your personal source if needed, then fully restart Codex.
-Your session and downloads are preserved.
+Or run this from your checkout:
+
+```sh
+uv run scripts/update.py
+```
+
+This pulls the latest code, rebuilds the plugin, updates its runtime, and refreshes
+Codex. It stops if you have local changes and preserves your session and downloads.
+Fully restart Codex afterward. Older checkouts need `git pull --ff-only` once to
+get the updater. [Update details](docs/setup.md#updates).
 
 [Problems?](docs/setup.md#troubleshooting) · [Uninstall](docs/setup.md#uninstall) ·
 [Tests and architecture](docs/development.md)

@@ -1,7 +1,7 @@
 # Desktop setup
 
 [README](../README.md) · [macOS](#macos) · [Windows](#windows) · [Linux](#linux) ·
-[Troubleshooting](#troubleshooting) · [Uninstall](#uninstall)
+[Updates](#updates) · [Troubleshooting](#troubleshooting) · [Uninstall](#uninstall)
 
 ## Prerequisites
 
@@ -82,6 +82,20 @@ exit all app windows/background instances on Windows/Linux, then reopen it.
 
 Select **TUM Moodle** and ask it to sign in. Complete the TUM login and MFA in
 the private Chrome window. The plugin reuses a saved session until it expires.
+
+## Updates
+
+Run `uv run scripts/update.py` from your checkout, then fully restart Codex.
+It uses your branch's configured upstream and a fast-forward-only pull; it never
+stashes edits, switches branches, or creates a merge commit.
+
+The updater refreshes TUM Moodle using the Codex CLI on PATH or in a standard
+macOS app bundle. If it cannot find the CLI, it updates the code/runtime and tells
+you to reinstall the plugin from your personal source in the Plugins screen.
+Custom marketplace names are preserved. A failed step stops the update and
+reports the error; fix that issue and rerun the command.
+
+For a checkout created before the updater was added, first run `git pull --ff-only`.
 
 ## Troubleshooting
 
