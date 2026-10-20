@@ -49,6 +49,45 @@ Chrome also have their own installers.
 Apple Silicon is tested locally. The installer also handles standard Intel
 Homebrew paths; Intel hardware has not been tested locally.
 
+## Agent setup
+
+Paste this prompt into Codex on your Mac. Codex can perform the terminal setup;
+you still complete TUM sign-in/MFA and any required app restart or plugin-UI step.
+
+```text
+Set up https://github.com/jamestesting0/tum-moodle-integration on this Mac
+so I can use TUM Moodle directly in Codex.
+
+Read the repository's README and setup scripts, then carry out the installation:
+
+1. Reuse a matching local checkout if one exists, otherwise clone the repository
+   into a new folder under my home directory. Preserve existing files and changes.
+2. Check Git, python3, uv, Google Chrome, and Tesseract. Install missing prerequisites
+   using an existing trusted package manager. If macOS requires a manual approval
+   or a prerequisite cannot be installed automatically, give me the exact next step.
+3. From the checkout, run:
+   python3 scripts/package_plugin.py --register
+   python3 "$HOME/.codex/plugins/local/tum-moodle/scripts/bootstrap.py"
+   Preserve my other plugins and existing Moodle session.
+4. Install/enable TUM Moodle from the personal local marketplace. If the Codex CLI
+   is available, use `codex plugin add tum-moodle@personal-local`; otherwise guide
+   me through the Plugins screen. If a restart is needed, tell me to quit with
+   Cmd+Q, reopen Codex, and return to this chat. Resume when I reply.
+5. Verify that the native Moodle tools are available in this chat, then call
+   moodle_auth_status. If sign-in is needed, call moodle_login and let me complete
+   TUM sign-in and MFA in Chrome. Never request or display passwords, cookies,
+   session tokens, or MFA codes in chat.
+6. Use the native tools to list my current-semester courses and read one page of
+   an accessible lecture file. Do not bulk-download content or fetch private
+   grades/messages for this setup check. Report any access or extraction limits.
+
+Continue through the automatic steps without unnecessary confirmations. If tools
+are missing, inspect the plugin loader errors before requesting another restart.
+Only report setup complete after native tool calls work in Codex; a successful
+terminal-only test is not enough. Summarize what was installed and any remaining
+manual action.
+```
+
 ## Install
 
 ### 1. Clone and prepare the plugin
