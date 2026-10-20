@@ -66,7 +66,8 @@ def test_bootstrap_finds_intel_homebrew_and_uses_locked_dependencies(
     monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setattr(platforms, "app_root", lambda: tmp_path / "app")
     monkeypatch.setattr(shutil, "which", lambda _: None)
-    monkeypatch.setattr(Path, "is_file", lambda path: str(path) == "/usr/local/bin/uv")
+    uv_path = Path("/usr/local/bin/uv")
+    monkeypatch.setattr(Path, "is_file", lambda path: path == uv_path)
 
     def run(command: list[str], *, env: dict[str, str], check: bool) -> None:
         assert check
@@ -76,5 +77,5 @@ def test_bootstrap_finds_intel_homebrew_and_uses_locked_dependencies(
     monkeypatch.setattr(subprocess, "run", run)
     runpy.run_path(str(Path(__file__).resolve().parents[2] / "plugin/scripts/bootstrap.py"))
     assert len(calls) == 1
-    assert calls[0][0] == "/usr/local/bin/uv"
+    assert calls[0][0] == str(uv_path)
     assert {"--locked", "--no-dev", "--no-editable"} <= set(calls[0])

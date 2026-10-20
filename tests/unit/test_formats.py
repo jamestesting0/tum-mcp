@@ -38,14 +38,16 @@ def test_powerpoint_slides_keep_numeric_order() -> None:
 
 def test_ocr_finds_intel_homebrew_without_shell_path(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(extraction.shutil, "which", lambda _: None)
-    monkeypatch.setattr(Path, "is_file", lambda path: str(path) == "/usr/local/bin/tesseract")
+    executable = Path("/usr/local/bin/tesseract")
+    scan = Path("/scan.png")
+    monkeypatch.setattr(Path, "is_file", lambda path: path == executable)
 
     def run(
         command: list[str], *, check: bool, capture_output: bool, timeout: int
     ) -> subprocess.CompletedProcess[bytes]:
-        assert command == ["/usr/local/bin/tesseract", "/scan.png", "stdout", "-l", "eng"]
+        assert command == [str(executable), str(scan), "stdout", "-l", "eng"]
         assert check and capture_output and timeout == 45
         return subprocess.CompletedProcess(command, 0, stdout=b"Scanned lecture text\n")
 
     monkeypatch.setattr(extraction.subprocess, "run", run)
-    assert extraction.image_text(Path("/scan.png")) == "Scanned lecture text"
+    assert extraction.image_text(scan) == "Scanned lecture text"
