@@ -14,10 +14,8 @@ def build_package(root: Path) -> Path:
         destination / "src",
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
     )
-    for name in ("pyproject.toml", "uv.lock", "README.md", ".python-version"):
+    for name in ("pyproject.toml", "uv.lock", "README.md", ".python-version", "LICENSE", "NOTICE"):
         shutil.copy2(root / name, destination / name)
-    if (root / "LICENSE").is_file():
-        shutil.copy2(root / "LICENSE", destination / "LICENSE")
     return destination
 
 

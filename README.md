@@ -226,3 +226,9 @@ modules in `src/tum_moodle/`. Packaging scripts live in `scripts/` and `plugin/s
 Keep changes focused, add tests for behavior changes, and run the checks above.
 Do not commit session files, course materials, local databases, or `.env` files.
 No language-server installation is required.
+
+## License
+
+The code and original documentation are licensed under the [MIT License](LICENSE).
+The TUM logo is excluded and retains its original rights; see [NOTICE](NOTICE)
+and the [logo source](plugin/assets/README.md). This project grants no trademark rights.

@@ -3,6 +3,8 @@ name = "tum-moodle-integration"
 version = "0.1.0"
 description = "Personal, read-only TUM Moodle tools for Codex."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.12"
 dependencies = [
   "mcp==2.3.0",
