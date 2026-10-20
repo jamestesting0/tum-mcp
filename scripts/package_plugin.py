@@ -9,6 +9,14 @@ def build_package(root: Path) -> Path:
     if destination.exists():
         shutil.rmtree(destination)
     shutil.copytree(root / "plugin", destination)
+    shutil.copytree(root / "docs", destination / "docs")
+    if sys.platform == "win32":
+        manifest_path = destination / "mcp.json"
+        manifest = json.loads(manifest_path.read_text())
+        server = manifest["mcpServers"]["moodle"]
+        server["command"] = "uv"
+        server["args"] = ["run", "--no-project", "--offline", "--python", "3.13", *server["args"]]
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     shutil.copytree(
         root / "src",
         destination / "src",
@@ -37,7 +45,7 @@ def register_package(package: Path) -> Path:
     )
     entry = {
         "name": "tum-moodle",
-        "source": {"source": "local", "path": "./" + str(source.relative_to(Path.home()))},
+        "source": {"source": "local", "path": "./" + source.relative_to(Path.home()).as_posix()},
         "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
         "category": "Education",
     }

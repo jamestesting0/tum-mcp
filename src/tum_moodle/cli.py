@@ -15,7 +15,7 @@ def login_command() -> None:
     """Open a private browser window for personal TUM sign-in."""
     typer.echo("Complete TUM sign-in in the opened browser. Do not send credentials in chat.")
     anyio.run(login, Paths.default())
-    typer.echo("Moodle session saved securely in macOS Keychain-backed storage.")
+    typer.echo("Moodle session encrypted using your system's native credential store.")
 
 
 @app.command()

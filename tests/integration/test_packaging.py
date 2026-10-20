@@ -8,13 +8,15 @@ from pathlib import Path
 
 import pytest
 
+from tum_moodle import platforms
+
 
 def test_registration_works_outside_home_and_preserves_other_plugins(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[2]
     checkout = tmp_path / "external checkout"
     home = tmp_path / "user home"
     checkout.mkdir()
-    for name in ("plugin", "src", "scripts"):
+    for name in ("plugin", "src", "scripts", "docs"):
         shutil.copytree(root / name, checkout / name)
     for name in ("pyproject.toml", "uv.lock", "README.md", ".python-version", "LICENSE", "NOTICE"):
         shutil.copy2(root / name, checkout / name)
@@ -28,13 +30,14 @@ def test_registration_works_outside_home_and_preserves_other_plugins(tmp_path: P
         "plugins": [{"name": "other-plugin"}],
     }
     marketplace_path.write_text(json.dumps(existing))
-    environment = {**os.environ, "HOME": str(home)}
+    environment = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
     command = [sys.executable, str(checkout / "scripts/package_plugin.py"), "--register"]
     subprocess.run(command, env=environment, check=True, capture_output=True)
 
     installed_source = home / ".codex/plugins/local/tum-moodle"
     assert (installed_source / "src/tum_moodle/__init__.py").is_file()
     assert (installed_source / "assets/tum-logo.png").is_file()
+    assert (installed_source / "docs/setup.md").is_file()
     assert (installed_source / "LICENSE").read_bytes() == (root / "LICENSE").read_bytes()
     assert (installed_source / "NOTICE").read_bytes() == (root / "NOTICE").read_bytes()
     assert not (installed_source / ".env").exists()
@@ -44,6 +47,7 @@ def test_registration_works_outside_home_and_preserves_other_plugins(tmp_path: P
     assert marketplace["plugins"][0] == {"name": "other-plugin"}
     plugin = marketplace["plugins"][1]
     assert (home / plugin["source"]["path"]).resolve() == installed_source
+    assert "\\" not in plugin["source"]["path"]
 
     (checkout / "dist/tum-moodle/stale.py").write_text("stale")
     (installed_source / "stale.py").write_text("stale")
@@ -58,14 +62,15 @@ def test_bootstrap_finds_intel_homebrew_and_uses_locked_dependencies(
 ) -> None:
     calls: list[list[str]] = []
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(platforms, "app_root", lambda: tmp_path / "app")
     monkeypatch.setattr(shutil, "which", lambda _: None)
     monkeypatch.setattr(Path, "is_file", lambda path: str(path) == "/usr/local/bin/uv")
 
     def run(command: list[str], *, env: dict[str, str], check: bool) -> None:
         assert check
-        assert env["UV_PROJECT_ENVIRONMENT"] == str(
-            tmp_path / "Library/Application Support/TUMMoodle/runtime"
-        )
+        assert env["UV_PROJECT_ENVIRONMENT"] == str(tmp_path / "app/runtime")
         calls.append(command)
 
     monkeypatch.setattr(subprocess, "run", run)

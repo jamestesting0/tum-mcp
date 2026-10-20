@@ -1,17 +1,32 @@
 import os
-import resource
 import signal
 import subprocess
 import sys
 import tempfile
 import time
+from contextlib import suppress
 from pathlib import Path
+from typing import Final
 
 import psutil
 
 from tum_moodle.errors import ErrorCode, MoodleError
 from tum_moodle.extraction import extract
 from tum_moodle.models import Extracted
+
+EXTRACTION_SECONDS: Final = 60
+
+
+def kill_worker(process: subprocess.Popen[bytes]) -> None:
+    if os.name == "posix":
+        with suppress(ProcessLookupError):
+            os.killpg(process.pid, signal.SIGKILL)
+        return
+    with suppress(psutil.NoSuchProcess):
+        for child in psutil.Process(process.pid).children(recursive=True):
+            with suppress(psutil.NoSuchProcess):
+                child.kill()
+    process.kill()
 
 
 def run_extraction(body: bytes, content_type: str) -> Extracted:
@@ -22,9 +37,9 @@ def run_extraction(body: bytes, content_type: str) -> Extracted:
             [sys.executable, "-m", "tum_moodle.extract_worker", str(path), content_type],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            start_new_session=True,
+            start_new_session=os.name == "posix",
         ) as process:
-            deadline = time.monotonic() + 60
+            deadline = time.monotonic() + EXTRACTION_SECONDS
             observed = psutil.Process(process.pid)
             while True:
                 try:
@@ -39,7 +54,7 @@ def run_extraction(body: bytes, content_type: str) -> Extracted:
                     except psutil.NoSuchProcess:
                         memory = 0
                     if memory > 512 * 1024**2 or time.monotonic() > deadline:
-                        os.killpg(process.pid, signal.SIGKILL)
+                        kill_worker(process)
                         process.communicate()
                         raise MoodleError(
                             ErrorCode.EXTRACTION_FAILED,
@@ -51,6 +66,9 @@ def run_extraction(body: bytes, content_type: str) -> Extracted:
 
 
 if __name__ == "__main__":
-    resource.setrlimit(resource.RLIMIT_CPU, (45, 45))
+    if os.name == "posix":
+        import resource
+
+        resource.setrlimit(resource.RLIMIT_CPU, (45, 45))
     result = extract(Path(sys.argv[1]).read_bytes(), sys.argv[2])
     sys.stdout.write(result.model_dump_json())

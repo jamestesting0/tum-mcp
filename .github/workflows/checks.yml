@@ -1,4 +1,4 @@
-name: macOS checks
+name: Desktop checks
 
 on:
   push:
@@ -15,7 +15,11 @@ concurrency:
 
 jobs:
   test:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -23,8 +27,19 @@ jobs:
         with:
           version: "0.12.5"
           enable-cache: true
-      - name: Install OCR dependency
+      - name: Install macOS OCR dependency
+        if: runner.os == 'macOS'
         run: brew install tesseract
+      - name: Install Linux desktop dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr gnome-keyring dbus-x11
+      - name: Install Windows OCR dependency
+        if: runner.os == 'Windows'
+        run: |
+          choco install tesseract --no-progress -y
+          "$env:ProgramFiles\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Install locked Python dependencies
         run: uv sync --locked
       - name: Lint and format
@@ -35,9 +50,21 @@ jobs:
         run: |
           uv run python scripts/package_plugin.py
           uv run python dist/tum-moodle/scripts/bootstrap.py
-      - name: Test without Moodle credentials
+      - name: Test on macOS and Windows
+        if: runner.os != 'Linux'
         env:
           TUM_MOODLE_PACKAGED: ${{ github.workspace }}/dist/tum-moodle/scripts/launch.py
+          TUM_MOODLE_SYSTEM_KEYRING: "1"
         run: uv run pytest -q
+      - name: Test in a Linux desktop keyring session
+        if: runner.os == 'Linux'
+        env:
+          TUM_MOODLE_PACKAGED: ${{ github.workspace }}/dist/tum-moodle/scripts/launch.py
+          TUM_MOODLE_SYSTEM_KEYRING: "1"
+        run: |
+          dbus-run-session -- sh -e -c '
+            printf "ci-test-only" | gnome-keyring-daemon --unlock --components=secrets
+            uv run pytest -q
+          '
       - name: Build Python distribution
         run: uv build

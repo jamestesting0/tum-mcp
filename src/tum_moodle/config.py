@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from tum_moodle.platforms import data_root
+
 BASE_URL: Final = "https://www.moodle.tum.de"
 MAX_BYTES: Final = 50 * 1024 * 1024
 CACHE_BYTES: Final = 1024 * 1024 * 1024
@@ -16,8 +18,7 @@ class Paths:
 
     @classmethod
     def default(cls) -> "Paths":
-        override = os.environ.get("TUM_MOODLE_DATA_DIR")
-        root = Path(override) if override else Path.home() / "Library/Application Support/TUMMoodle"
+        root = data_root()
         root.mkdir(mode=0o700, parents=True, exist_ok=True)
         root.chmod(0o700)
         return cls(root.resolve())

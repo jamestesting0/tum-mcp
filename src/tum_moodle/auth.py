@@ -1,19 +1,48 @@
 import json
 import time
-from typing import Final, Literal
+from typing import Final, Literal, assert_never
 from uuid import uuid4
 
-import keyring
 from cryptography.fernet import Fernet, InvalidToken
 from filelock import FileLock
-from keyring.backends.macOS import Keyring as MacKeyring
+from keyring.backend import KeyringBackend
 from keyring.errors import KeyringError
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from tum_moodle.config import Paths, private_write
 from tum_moodle.errors import ErrorCode, MoodleError
+from tum_moodle.platforms import System, system
 
 KEYCHAIN_SERVICE: Final = "tum-moodle-integration"
+
+
+def system_keyring() -> KeyringBackend:
+    try:
+        backend: KeyringBackend
+        match system():
+            case System.MACOS:
+                from keyring.backends.macOS import Keyring as MacKeyring
+
+                backend = MacKeyring()
+            case System.WINDOWS:
+                from keyring.backends.Windows import WinVaultKeyring
+
+                backend = WinVaultKeyring()
+            case System.LINUX:
+                from keyring.backends.SecretService import Keyring as SecretServiceKeyring
+
+                backend = SecretServiceKeyring()
+            case unreachable:
+                assert_never(unreachable)
+        _ = backend.priority
+        return backend
+    except (ImportError, RuntimeError):
+        raise MoodleError(
+            ErrorCode.SETUP_REQUIRED,
+            "Native credential storage is unavailable. Unlock your system keyring; "
+            "Linux requires a running Secret Service such as GNOME Keyring "
+            "in your desktop session.",
+        ) from None
 
 
 class Cookie(BaseModel):
@@ -51,21 +80,18 @@ class SessionStore:
         self.lock = FileLock(paths.file("session.lock"))
 
     def _cipher(self, *, create: bool = False) -> Fernet:
-        if not isinstance(keyring.get_keyring(), MacKeyring):
-            raise MoodleError(
-                ErrorCode.SETUP_REQUIRED, "Use the macOS Keychain backend for sessions."
-            )
         try:
-            key = keyring.get_password(KEYCHAIN_SERVICE, str(self.paths.root))
+            backend = system_keyring()
+            key = backend.get_password(KEYCHAIN_SERVICE, str(self.paths.root))
             if key is None and create:
                 key = Fernet.generate_key().decode("ascii")
-                keyring.set_password(KEYCHAIN_SERVICE, str(self.paths.root), key)
+                backend.set_password(KEYCHAIN_SERVICE, str(self.paths.root), key)
             if key is None:
                 raise MoodleError(ErrorCode.AUTH_REQUIRED, "Sign in to TUM Moodle first.")
             return Fernet(key.encode("ascii"))
         except KeyringError:
             raise MoodleError(
-                ErrorCode.SETUP_REQUIRED, "Unlock macOS Keychain and retry."
+                ErrorCode.SETUP_REQUIRED, "Unlock your system credential store and retry."
             ) from None
 
     def generation(self) -> str:

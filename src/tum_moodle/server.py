@@ -52,7 +52,8 @@ def moodle_login() -> dict[str, str]:
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        start_new_session=True,
+        start_new_session=os.name == "posix",
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         env=os.environ.copy(),
     )
     return {"state": "STARTING", "message": "Complete sign-in in Chrome, then check status."}

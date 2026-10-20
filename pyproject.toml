@@ -1,11 +1,11 @@
 [project]
 name = "tum-moodle-integration"
-version = "0.1.0"
+version = "0.2.1"
 description = "Personal, read-only TUM Moodle tools for Codex."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE", "NOTICE"]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
   "mcp==2.3.0",
   "playwright>=1.58,<2",
@@ -56,7 +56,7 @@ select = ["E", "F", "I", "UP", "B", "S", "ASYNC"]
 "tests/**" = ["S101"]
 "tests/integration/test_packaging.py" = ["S603"]
 "plugin/scripts/bootstrap.py" = ["S603"]
-"plugin/scripts/launch.py" = ["S606"]
+"plugin/scripts/launch.py" = ["S603", "S606"]
 "src/tum_moodle/server.py" = ["S603"]
 "src/tum_moodle/extraction.py" = ["S603"]
 "src/tum_moodle/extract_worker.py" = ["S603"]

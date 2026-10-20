@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import httpx2
-import keyring
 import pytest
+from keyring.backend import KeyringBackend
 
 from tum_moodle import http_client
 from tum_moodle.auth import Cookie, Session, SessionStore
@@ -11,11 +11,6 @@ from tum_moodle.errors import MoodleError
 
 
 def make_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SessionStore:
-    keys: dict[str, str] = {}
-    monkeypatch.setattr(keyring, "get_password", lambda service, account: keys.get(account))
-    monkeypatch.setattr(
-        keyring, "set_password", lambda service, account, value: keys.update({account: value})
-    )
     store = SessionStore(Paths(tmp_path))
     store.save(
         Session(
@@ -29,7 +24,7 @@ def make_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SessionStore:
 
 
 def test_external_redirect_is_blocked_before_cookie_leak(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, memory_keyring: KeyringBackend
 ) -> None:
     store = make_store(tmp_path, monkeypatch)
     requests: list[httpx2.Request] = []
@@ -51,7 +46,7 @@ def test_external_redirect_is_blocked_before_cookie_leak(
 
 
 def test_login_html_is_not_returned_as_content(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, memory_keyring: KeyringBackend
 ) -> None:
     store = make_store(tmp_path, monkeypatch)
     client_class = httpx2.Client
@@ -74,6 +69,7 @@ def test_login_html_is_not_returned_as_content(
 def test_actual_response_bytes_enforce_download_limit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    memory_keyring: KeyringBackend,
 ) -> None:
     store = make_store(tmp_path, monkeypatch)
     client_class = httpx2.Client
