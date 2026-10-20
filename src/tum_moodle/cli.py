@@ -1,3 +1,5 @@
+import logging
+
 import anyio
 import typer
 
@@ -27,4 +29,5 @@ def serve() -> None:
     """Start the MCP stdio server."""
     from tum_moodle.server import server
 
+    logging.getLogger("httpx2").setLevel(logging.WARNING)
     server.run()

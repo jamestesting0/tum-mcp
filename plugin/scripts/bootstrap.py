@@ -38,3 +38,5 @@ subprocess.run(
     env=environment,
     check=True,
 )
+print("TUM Moodle is ready. Install/enable it from your personal source in Plugins.")
+print("Then ask Codex to sign in to TUM Moodle. Complete sign-in and MFA only in Chrome.")

@@ -2,7 +2,7 @@ import pytest
 
 from tum_moodle.errors import MoodleError
 from tum_moodle.models import Extracted, TextPage
-from tum_moodle.pagination import excerpt
+from tum_moodle.pagination import excerpt, offset_of
 
 
 def test_continuation_preserves_selected_page_range() -> None:
@@ -23,3 +23,20 @@ def test_changed_document_invalidates_cursor() -> None:
             None,
             None,
         )
+
+
+@pytest.mark.parametrize("cursor", ["²", "١", "-1", "abc", "", "12345678"])
+def test_invalid_offset_returns_an_actionable_error(cursor: str) -> None:
+    with pytest.raises(MoodleError, match="Invalid pagination cursor"):
+        offset_of(cursor)
+
+
+def test_offset_continuations_are_accepted() -> None:
+    assert offset_of(None) == 0
+    assert offset_of("20") == 20
+
+
+def test_page_range_beyond_document_explains_the_problem() -> None:
+    content = Extracted(pages=[TextPage(number=1, text="Lecture notes")])
+    with pytest.raises(MoodleError, match="outside.*1 page"):
+        excerpt(content, None, 500, 2, 3)

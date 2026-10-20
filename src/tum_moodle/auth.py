@@ -129,5 +129,13 @@ class SessionStore:
         try:
             session = self.load()
         except MoodleError as error:
-            return {"state": error.code.value, "message": error.message}
+            message = error.message
+            if (
+                progress
+                and progress.state == "failed"
+                and progress.message
+                and error.code in {ErrorCode.AUTH_REQUIRED, ErrorCode.SESSION_EXPIRED}
+            ):
+                message = progress.message
+            return {"state": error.code.value, "message": message}
         return {"state": "SAVED_SESSION", "last_verified_at": session.verified_at}

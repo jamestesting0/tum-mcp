@@ -3,7 +3,7 @@ from pathlib import Path
 import keyring
 import pytest
 
-from tum_moodle.auth import Cookie, Session, SessionStore
+from tum_moodle.auth import Cookie, LoginProgress, Session, SessionStore
 from tum_moodle.config import Paths
 from tum_moodle.errors import MoodleError
 
@@ -43,3 +43,18 @@ def test_logout_prevents_stale_process_restoring_session(store: SessionStore) ->
 
 def test_missing_session_has_explicit_status(store: SessionStore) -> None:
     assert store.status()["state"] == "AUTH_REQUIRED"
+
+
+def test_failed_login_keeps_the_actionable_failure_reason(store: SessionStore) -> None:
+    store.set_progress(
+        LoginProgress(
+            operation_id="login-1",
+            state="failed",
+            started_at=0,
+            message="Install Google Chrome, then retry sign-in.",
+        )
+    )
+    assert store.status() == {
+        "state": "AUTH_REQUIRED",
+        "message": "Install Google Chrome, then retry sign-in.",
+    }

@@ -7,6 +7,14 @@ from tum_moodle.errors import ErrorCode, MoodleError
 from tum_moodle.models import Extracted
 
 
+def offset_of(cursor: str | None) -> int:
+    if cursor is None:
+        return 0
+    if not cursor.isascii() or not cursor.isdecimal() or len(cursor) > 7:
+        raise MoodleError(ErrorCode.RESOURCE_UNSUPPORTED, "Invalid pagination cursor.")
+    return int(cursor)
+
+
 def excerpt(
     extracted: Extracted,
     cursor: str | None,
@@ -37,6 +45,11 @@ def excerpt(
         if (start_page is None or page.number >= start_page)
         and (end_page is None or page.number <= end_page)
     ]
+    if not pages and (start_page is not None or end_page is not None):
+        raise MoodleError(
+            ErrorCode.RESOURCE_UNSUPPORTED,
+            f"Requested range is outside this document's {len(extracted.pages)} page(s).",
+        )
     total = sum(len(page.text) for page in pages)
     result: list[JsonValue] = []
     remaining = max_chars

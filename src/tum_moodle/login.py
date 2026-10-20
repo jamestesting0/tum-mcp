@@ -1,4 +1,5 @@
 import time
+from typing import assert_never
 
 import anyio
 from filelock import FileLock, Timeout
@@ -51,8 +52,17 @@ async def _login(store: SessionStore) -> None:
             finally:
                 await browser.close()
     except (MoodleError, TimeoutError, BrowserError) as error:
-        message = (
-            error.message if isinstance(error, MoodleError) else "Login closed or timed out; retry."
-        )
+        match error:
+            case MoodleError():
+                message = error.message
+            case TimeoutError():
+                message = "Sign-in timed out. Run moodle_login to try again."
+            case BrowserError():
+                message = (
+                    "Chrome closed or could not start. Install Google Chrome if missing, "
+                    "then retry sign-in."
+                )
+            case unreachable:
+                assert_never(unreachable)
         store.set_progress(progress.model_copy(update={"state": "failed", "message": message}))
         raise MoodleError(ErrorCode.AUTH_REQUIRED, message) from None

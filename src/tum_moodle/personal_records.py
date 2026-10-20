@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue
 from tum_moodle.config import BASE_URL
 from tum_moodle.errors import ErrorCode, MoodleError
 from tum_moodle.models import Extracted, Material, TextPage
-from tum_moodle.pagination import excerpt
+from tum_moodle.pagination import excerpt, offset_of
 from tum_moodle.parsing import files_from_html, main_text
 from tum_moodle.service import Service
 
@@ -136,9 +136,7 @@ class PersonalRecords:
             }
         if item.kind == "private_messages":
             batch, inner = (cursor or "0|").split("|", 1) if "|" in (cursor or "0|") else ("", "")
-            if not batch.isdigit() or len(batch) > 7:
-                raise MoodleError(ErrorCode.RESOURCE_UNSUPPORTED, "Invalid message cursor.")
-            offset = int(batch)
+            offset = offset_of(batch)
             response = self.service.http.read_api(
                 "core_message_get_conversation_messages",
                 {

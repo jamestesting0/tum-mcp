@@ -44,5 +44,8 @@ def test_installed_launcher_works_outside_the_checkout(tmp_path: Path) -> None:
                 assert result.structured_content["state"] == "AUTH_REQUIRED"
                 unknown = await session.call_tool("moodle_auth_status", {"unexpected": True})
                 assert unknown.is_error
+                cursor_error = await session.call_tool("moodle_list_downloads", {"cursor": "²"})
+                assert cursor_error.is_error
+                assert "Invalid pagination cursor" in cursor_error.content[0].text
 
     anyio.run(check)

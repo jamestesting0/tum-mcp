@@ -13,7 +13,7 @@ from tum_moodle.downloads import list_downloads
 from tum_moodle.errors import ErrorCode, MoodleError
 from tum_moodle.http_client import MoodleHTTP
 from tum_moodle.models import Post, TextPage
-from tum_moodle.pagination import excerpt
+from tum_moodle.pagination import excerpt, offset_of
 from tum_moodle.personal_records import PersonalRecords
 from tum_moodle.protocol import StrictMCPServer
 from tum_moodle.service import Service
@@ -24,14 +24,6 @@ LOCAL_WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open
 CourseId = Annotated[int, Field(gt=0)]
 Limit = Annotated[int, Field(ge=1, le=50)]
 MaxChars = Annotated[int, Field(ge=500, le=30000)]
-
-
-def offset_of(cursor: str | None) -> int:
-    if cursor is None:
-        return 0
-    if not cursor.isdigit() or len(cursor) > 7:
-        raise MoodleError(ErrorCode.RESOURCE_UNSUPPORTED, "Invalid pagination cursor.")
-    return int(cursor)
 
 
 @server.tool(annotations=ToolAnnotations(read_only_hint=True))
