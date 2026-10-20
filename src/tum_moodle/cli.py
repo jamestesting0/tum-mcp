@@ -1,0 +1,30 @@
+import anyio
+import typer
+
+from tum_moodle.auth import SessionStore
+from tum_moodle.config import Paths
+from tum_moodle.login import login
+
+app = typer.Typer(no_args_is_help=True)
+
+
+@app.command("login")
+def login_command() -> None:
+    """Open a private browser window for personal TUM sign-in."""
+    typer.echo("Complete TUM sign-in in the opened browser. Do not send credentials in chat.")
+    anyio.run(login, Paths.default())
+    typer.echo("Moodle session saved securely in macOS Keychain-backed storage.")
+
+
+@app.command()
+def status() -> None:
+    """Report saved-session status without exposing account data."""
+    typer.echo(SessionStore(Paths.default()).status())
+
+
+@app.command()
+def serve() -> None:
+    """Start the MCP stdio server."""
+    from tum_moodle.server import server
+
+    server.run()

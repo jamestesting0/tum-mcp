@@ -1,0 +1,65 @@
+[project]
+name = "tum-moodle-integration"
+version = "0.1.0"
+description = "Personal, read-only TUM Moodle tools for Codex."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "mcp==2.3.0",
+  "playwright>=1.58,<2",
+  "httpx2[http2,brotli,zstd]>=2.10,<3",
+  "beautifulsoup4>=4.14,<5",
+  "defusedxml>=0.7,<1",
+  "pydantic>=2.12,<3",
+  "jsonschema>=4.26,<5",
+  "cryptography>=46,<48",
+  "keyring>=25,<26",
+  "filelock>=3.20,<4",
+  "pypdf>=6,<7",
+  "pypdfium2>=4,<6",
+  "pillow>=11,<13",
+  "psutil>=7,<8",
+  "typer>=0.20,<1",
+]
+
+[project.scripts]
+tum-moodle = "tum_moodle.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tum_moodle"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9,<10",
+    "ruff==0.16.9",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["live: requires an explicit live Moodle session"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "ASYNC"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+"tests/integration/test_packaging.py" = ["S603"]
+"plugin/scripts/bootstrap.py" = ["S603"]
+"plugin/scripts/launch.py" = ["S606"]
+"src/tum_moodle/server.py" = ["S603"]
+"src/tum_moodle/extraction.py" = ["S603"]
+"src/tum_moodle/extract_worker.py" = ["S603"]
+
+[tool.basedpyright]
+typeCheckingMode = "all"
+include = ["src"]
+pythonVersion = "3.12"
