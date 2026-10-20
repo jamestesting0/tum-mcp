@@ -3,10 +3,30 @@
 Read, search, and download your TUM Moodle materials directly in Codex.
 Runs locally on **macOS, Windows, and Linux**. No Moodle API token is needed.
 
-[Setup by platform](docs/setup.md) · [Agent setup](#agent-setup) ·
+[Agent setup (recommended)](#agent-setup) · [Manual installation](#install) ·
+[Setup by platform](docs/setup.md) ·
 [Examples](#use-it) · [Update](#update) · [Development](docs/development.md)
 
 This is an unofficial project, independent of TUM and OpenAI.
+
+## Agent setup
+
+**Recommended:** paste this prompt into Codex on the computer where you want
+to install the plugin. Codex handles setup and guides you through any manual steps.
+
+```text
+Install https://github.com/jamestesting0/tum-moodle-integration on this computer.
+Read README.md and docs/setup.md, then follow the instructions for this OS.
+Reuse a matching checkout and preserve local changes, other plugins, and sessions.
+Check prerequisites; install missing ones with an existing trusted package manager.
+Build/register the plugin and install its locked private runtime.
+Enable it through the supported Codex CLI or guide me through the Plugins screen.
+Let me complete TUM sign-in/MFA in Chrome; never request credentials in chat.
+Verify native Moodle tools by listing my courses and reading one lecture page.
+Do not bulk-download content or fetch private records during setup.
+If a step needs my action, explain exactly what is needed. Only report completion
+after native tool calls work in Codex.
+```
 
 ## What it does
 
@@ -20,6 +40,8 @@ Recordings remain links. It never submits assignments, starts quizzes, posts,
 or sends messages. Normal Moodle viewing logs and completion rules still apply.
 
 ## Install
+
+For manual installation, follow these steps.
 
 You need **Git, uv, Google Chrome, your TUM account**, and a Codex client with
 local plugin support. macOS/Linux also need `python3` for the launcher.
@@ -45,24 +67,6 @@ Your system Python packages are untouched. Each user signs in separately.
 **Testing:** automated checks cover macOS, Windows, and Ubuntu. Interactive
 Codex installation and TUM sign-in have been verified on macOS; Windows/Linux
 desktop sign-in still needs a hands-on check.
-
-## Agent setup
-
-Paste this into Codex to have it perform the installation:
-
-```text
-Install https://github.com/jamestesting0/tum-moodle-integration on this computer.
-Read README.md and docs/setup.md, then follow the instructions for this OS.
-Reuse a matching checkout and preserve local changes, other plugins, and sessions.
-Check prerequisites; install missing ones with an existing trusted package manager.
-Build/register the plugin and install its locked private runtime.
-Enable it through the supported Codex CLI or guide me through the Plugins screen.
-Let me complete TUM sign-in/MFA in Chrome; never request credentials in chat.
-Verify native Moodle tools by listing my courses and reading one lecture page.
-Do not bulk-download content or fetch private records during setup.
-If a step needs my action, explain exactly what is needed. Only report completion
-after native tool calls work in Codex.
-```
 
 ## Use it
 
