@@ -243,7 +243,7 @@ def test_failed_health_check_invalidates_receipt(
 def test_runtime_setup_finds_intel_homebrew(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(shutil, "which", lambda name: None)
     monkeypatch.setattr(Path, "is_file", lambda path: path == Path("/usr/local/bin/uv"))
-    assert runtime_setup.find_uv() == "/usr/local/bin/uv"
+    assert runtime_setup.find_uv() == str(Path("/usr/local/bin/uv"))
 
 
 def test_missing_uv_is_actionable_before_installing(
