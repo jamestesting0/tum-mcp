@@ -1,6 +1,5 @@
 import json
 import os
-import runpy
 import shutil
 import subprocess
 import sys
@@ -81,11 +80,12 @@ def installation(tmp_path: Path) -> Installation:
         ".gitignore",
     ):
         shutil.copy2(source / filename, seed / filename)
-    (seed / "plugin/scripts/bootstrap.py").write_text(
-        "import os, sys\nfrom pathlib import Path\n"
+    (seed / "scripts/install.py").write_text(
+        "import json, os, sys\nfrom pathlib import Path\n"
         'with Path(os.environ["UPDATE_TEST_LOG"]).open("a") as output:\n'
-        '    output.write("bootstrap\\n")\n'
-        'sys.exit(int(os.environ.get("UPDATE_TEST_BOOTSTRAP_FAIL", "0")))\n',
+        '    output.write(json.dumps(sys.argv[1:]) + "\\n")\n'
+        'print(json.dumps({"status": "ready"}))\n'
+        'sys.exit(int(os.environ.get("UPDATE_TEST_INSTALL_EXIT", "0")))\n',
         encoding="utf-8",
     )
     git(seed, ["add", "."], environment)
@@ -108,20 +108,6 @@ def installation(tmp_path: Path) -> Installation:
     downloads.mkdir()
     (data / "session.enc").write_bytes(b"existing-encrypted-session")
     (downloads / "lecture.pdf").write_bytes(b"existing-download")
-    program = (
-        "import json, os, sys\nfrom pathlib import Path\n"
-        'with Path(os.environ["UPDATE_TEST_LOG"]).open("a") as output:\n'
-        '    output.write(json.dumps(sys.argv[1:]) + "\\n")\n'
-        'sys.exit(int(os.environ.get("UPDATE_TEST_CODEX_FAIL", "0")))\n'
-    )
-    if os.name == "nt":
-        python_file = tools / "codex_stub.py"
-        python_file.write_text(program, encoding="utf-8")
-        (tools / "codex.cmd").write_text(f'@"{sys.executable}" "{python_file}" %*\n')
-    else:
-        executable = tools / "codex"
-        executable.write_text(f"#!{sys.executable}\n" + program, encoding="utf-8")
-        executable.chmod(0o755)
     return Installation(local, seed, environment)
 
 
@@ -135,16 +121,11 @@ def test_update_fast_forwards_rebuilds_and_refreshes_the_custom_marketplace(
         installation.seed, ["rev-parse", "HEAD"], installation.environment
     )
     events = Path(installation.environment["UPDATE_TEST_LOG"]).read_text().splitlines()
-    assert events == [
-        "bootstrap",
-        json.dumps(["plugin", "add", "tum-moodle@custom-local", "--json"]),
-    ]
+    assert events == ["[]"]
     home = Path(installation.environment["HOME"])
     catalog = json.loads((home / ".agents/plugins/marketplace.json").read_text())
     assert catalog["plugins"][0] == {"name": "existing"}
-    assert (
-        home / ".codex/plugins/local/tum-moodle/README.md"
-    ).read_text() == "Updated upstream content.\n"
+    assert (installation.local / "README.md").read_text() == "Updated upstream content.\n"
     data = Path(installation.environment["TUM_MOODLE_DATA_DIR"])
     downloads = Path(installation.environment["TUM_MOODLE_DOWNLOAD_DIR"])
     assert (data / "session.enc").read_bytes() == b"existing-encrypted-session"
@@ -181,27 +162,26 @@ def test_diverged_history_is_not_merged_or_installed(installation: Installation)
     assert not Path(installation.environment["UPDATE_TEST_LOG"]).exists()
 
 
-@pytest.mark.parametrize("failure", ["UPDATE_TEST_BOOTSTRAP_FAIL", "UPDATE_TEST_CODEX_FAIL"])
-def test_failed_install_step_returns_failure(installation: Installation, failure: str) -> None:
-    result = run_update(installation, **{failure: "1"})
-
-    assert result.returncode == 1
-    events = Path(installation.environment["UPDATE_TEST_LOG"]).read_text().splitlines()
-    assert events[0] == "bootstrap"
-    if failure == "UPDATE_TEST_BOOTSTRAP_FAIL":
-        assert events == ["bootstrap"]
-
-
-def test_missing_codex_prints_manual_refresh_step(
-    installation: Installation, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
+@pytest.mark.parametrize("exit_code", [1, 2])
+def test_install_error_and_manual_actions_are_forwarded(
+    installation: Installation, exit_code: int
 ) -> None:
-    for key, value in installation.environment.items():
-        monkeypatch.setenv(key, value)
-    namespace = runpy.run_path(str(installation.local / "scripts/update.py"))
-    main = namespace["main"]
-    monkeypatch.setitem(main.__globals__, "find_codex", lambda: None)
+    result = run_update(installation, UPDATE_TEST_INSTALL_EXIT=str(exit_code))
+    assert result.returncode == exit_code
 
-    assert main() == 0
 
-    assert "Reinstall TUM Moodle" in capfd.readouterr().out
-    assert Path(installation.environment["UPDATE_TEST_LOG"]).read_text() == "bootstrap\n"
+def test_update_forwards_installer_options(installation: Installation) -> None:
+    result = subprocess.run(
+        [sys.executable, str(installation.local / "scripts/update.py"), "--json", "--repair"],
+        cwd=installation.local.parent,
+        env=installation.environment,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {"status": "ready"}
+    assert json.loads(Path(installation.environment["UPDATE_TEST_LOG"]).read_text()) == [
+        "--json",
+        "--repair",
+    ]

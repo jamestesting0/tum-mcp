@@ -21,6 +21,9 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    env:
+      TUM_MOODLE_INSTALLER_INTEGRATION: "1"
+      TUM_MOODLE_INSTALLER_EVIDENCE: ${{ github.workspace }}/.omo/evidence/installer-benchmark.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
@@ -46,10 +49,18 @@ jobs:
         run: |
           uv run ruff check src tests plugin/scripts scripts
           uv run ruff format --check src tests plugin/scripts scripts
-      - name: Build plugin and private runtime
+      - name: Build plugin
+        run: uv run python scripts/package_plugin.py
+      - name: Build private runtime on macOS and Windows
+        if: runner.os != 'Linux'
+        run: uv run python dist/tum-moodle/scripts/bootstrap.py
+      - name: Build private runtime in Linux keyring session
+        if: runner.os == 'Linux'
         run: |
-          uv run python scripts/package_plugin.py
-          uv run python dist/tum-moodle/scripts/bootstrap.py
+          dbus-run-session -- sh -e -c '
+            printf "ci-test-only" | gnome-keyring-daemon --unlock --components=secrets
+            uv run python dist/tum-moodle/scripts/bootstrap.py
+          '
       - name: Test on macOS and Windows
         if: runner.os != 'Linux'
         env:
@@ -68,3 +79,5 @@ jobs:
           '
       - name: Build Python distribution
         run: uv build
+      - name: Installer timing summary
+        run: uv run python -c "import os; from pathlib import Path; print(Path(os.environ['TUM_MOODLE_INSTALLER_EVIDENCE']).read_text())"

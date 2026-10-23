@@ -1,6 +1,6 @@
 [project]
 name = "tum-moodle-integration"
-version = "0.2.1"
+version = "0.3.0"
 description = "Personal, read-only TUM Moodle tools for Codex."
 readme = "README.md"
 license = "MIT"
@@ -56,7 +56,10 @@ select = ["E", "F", "I", "UP", "B", "S", "ASYNC"]
 "tests/**" = ["S101"]
 "tests/integration/test_packaging.py" = ["S603"]
 "tests/integration/test_update.py" = ["S603"]
+"tests/integration/test_install.py" = ["S603"]
 "scripts/update.py" = ["S603"]
+"scripts/install.py" = ["S603"]
+"plugin/scripts/runtime_setup.py" = ["S603"]
 "plugin/scripts/bootstrap.py" = ["S603"]
 "plugin/scripts/launch.py" = ["S603", "S606"]
 "src/tum_moodle/server.py" = ["S603"]

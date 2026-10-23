@@ -1,14 +1,9 @@
 import json
 import os
-import runpy
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-
-import pytest
-
-from tum_moodle import platforms
 
 
 def test_registration_works_outside_home_and_preserves_other_plugins(tmp_path: Path) -> None:
@@ -55,27 +50,3 @@ def test_registration_works_outside_home_and_preserves_other_plugins(tmp_path: P
     assert not (checkout / "dist/tum-moodle/stale.py").exists()
     assert not (installed_source / "stale.py").exists()
     assert len(json.loads(marketplace_path.read_text())["plugins"]) == 2
-
-
-def test_bootstrap_finds_intel_homebrew_and_uses_locked_dependencies(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    calls: list[list[str]] = []
-    monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setattr(platforms, "app_root", lambda: tmp_path / "app")
-    monkeypatch.setattr(shutil, "which", lambda _: None)
-    uv_path = Path("/usr/local/bin/uv")
-    monkeypatch.setattr(Path, "is_file", lambda path: path == uv_path)
-
-    def run(command: list[str], *, env: dict[str, str], check: bool) -> None:
-        assert check
-        assert env["UV_PROJECT_ENVIRONMENT"] == str(tmp_path / "app/runtime")
-        calls.append(command)
-
-    monkeypatch.setattr(subprocess, "run", run)
-    runpy.run_path(str(Path(__file__).resolve().parents[2] / "plugin/scripts/bootstrap.py"))
-    assert len(calls) == 1
-    assert calls[0][0] == str(uv_path)
-    assert {"--locked", "--no-dev", "--no-editable"} <= set(calls[0])

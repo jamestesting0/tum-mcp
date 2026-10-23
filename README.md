@@ -11,21 +11,18 @@ This is an unofficial project, independent of TUM and OpenAI.
 
 ## Agent setup
 
-**Recommended:** paste this prompt into Codex on the computer where you want
-to install the plugin. Codex handles setup and guides you through any manual steps.
+**Use Luna Fast for installation.** Select Luna with Fast mode, where available,
+then paste this prompt into Codex on the target computer:
 
 ```text
 Install https://github.com/jamestesting0/tum-moodle-integration on this computer.
-Read README.md and docs/setup.md, then follow the instructions for this OS.
-Reuse a matching checkout and preserve local changes, other plugins, and sessions.
-Check prerequisites; install missing ones with an existing trusted package manager.
-Build/register the plugin and install its locked private runtime.
-Enable it through the supported Codex CLI or guide me through the Plugins screen.
-Let me complete TUM sign-in/MFA in Chrome; never request credentials in chat.
-Verify native Moodle tools by listing my courses and reading one lecture page.
-Do not bulk-download content or fetch private records during setup.
-If a step needs my action, explain exactly what is needed. Only report completion
-after native tool calls work in Codex.
+Reuse this matching checkout, otherwise shallow-clone to ~/tum-moodle-integration;
+do not scan my computer or overwrite existing files. Check docs/setup.md only
+for missing prerequisites; use an existing trusted package manager if needed.
+Run uv run scripts/install.py --json and follow its next_actions.
+Preserve local changes, other plugins, sessions, and downloads. No developer setup.
+Install first, prompt for TUM sign-in/MFA in Chrome, then offer an optional live
+course check. Never request credentials in chat or read courses without opt-in.
 ```
 
 ## What it does
@@ -44,25 +41,24 @@ or sends messages. Normal Moodle viewing logs and completion rules still apply.
 For manual installation, follow these steps.
 
 You need **Git, uv, Google Chrome, your TUM account**, and a Codex client with
-local plugin support. macOS/Linux also need `python3` for the launcher.
+local plugin support. A separate Python installation is not needed.
 See [platform prerequisites](docs/setup.md#prerequisites) first.
 
 Run these commands in Terminal or Windows PowerShell:
 
 ```text
-git clone https://github.com/jamestesting0/tum-moodle-integration.git
+git clone --depth 1 https://github.com/jamestesting0/tum-moodle-integration.git
 cd tum-moodle-integration
-uv run --no-project --python 3.13 scripts/package_plugin.py --register
-uv run --no-project --python 3.13 dist/tum-moodle/scripts/bootstrap.py
+uv run scripts/install.py
 ```
 
-1. Fully quit and reopen Codex.
-2. In **Plugins → Personal local plugins**, install/enable **TUM Moodle**.
-3. Ask: **“Sign in to TUM Moodle, then list my current-semester courses.”**
-4. Complete TUM sign-in and MFA in Chrome. Keep credentials out of chat.
+1. Follow any enablement or restart step printed by the installer.
+2. Ask **“Sign in to TUM Moodle.”** Complete sign-in and MFA in Chrome.
+3. Optionally ask **“List my current-semester courses to check the connection.”**
 
-uv installs Python 3.13 and the locked dependencies into a private runtime.
-Your system Python packages are untouched. Each user signs in separately.
+The installer checks local tool startup and uses the Codex CLI to enable the plugin
+when supported. It reuses healthy installations and cached downloads. First-time
+Python/dependency downloads depend on your connection. Each user signs in separately.
 
 **Testing:** automated checks cover macOS, Windows, and Ubuntu. Interactive
 Codex installation and TUM sign-in have been verified on macOS; Windows/Linux
@@ -111,9 +107,9 @@ Or run this from your checkout:
 uv run scripts/update.py
 ```
 
-This pulls the latest code, rebuilds the plugin, updates its runtime, and refreshes
-Codex. It stops if you have local changes and preserves your session and downloads.
-Fully restart Codex afterward. Older checkouts need `git pull --ff-only` once to
+This pulls the latest code and runs the same checked installer. It stops if you
+have local changes and preserves your session and downloads. Follow any printed
+restart/action step. Older checkouts need `git pull --ff-only` once to
 get the updater. [Update details](docs/setup.md#updates).
 
 [Problems?](docs/setup.md#troubleshooting) · [Uninstall](docs/setup.md#uninstall) ·

@@ -1,14 +1,14 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "tum-moodle",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Read your current-semester TUM Moodle courses and forums in Codex.",
   "extensions": {
     "com.openai": {
       "onboardingSkill": "./skills/setup/SKILL.md",
       "interface": {
         "displayName": "TUM Moodle",
-        "shortDescription": "Read course materials and forums from TUM Moodle",
+        "shortDescription": "Read TUM Moodle materials",
         "composerIcon": "./assets/tum-logo.png",
         "logo": "./assets/tum-logo.png",
         "category": "Education",

@@ -7,6 +7,8 @@ import pytest
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
+from tum_moodle.platforms import runtime_python
+
 
 def test_installed_launcher_works_outside_the_checkout(tmp_path: Path) -> None:
     configured = os.environ.get("TUM_MOODLE_PACKAGED")
@@ -16,7 +18,8 @@ def test_installed_launcher_works_outside_the_checkout(tmp_path: Path) -> None:
     package_root = Path(configured).resolve().parents[1]
     server = json.loads((package_root / "mcp.json").read_text())["mcpServers"]["moodle"]
     command = server["command"]
-    assert command == Path(command).name, "Portable plugin commands must use a bare executable name"
+    assert Path(command) == runtime_python()
+    assert server["args"] == ["-m", "tum_moodle", "serve"]
     arguments = [arg.replace("${PLUGIN_ROOT}", str(package_root)) for arg in server["args"]]
 
     async def check() -> None:
@@ -24,7 +27,7 @@ def test_installed_launcher_works_outside_the_checkout(tmp_path: Path) -> None:
             command=command,
             args=arguments,
             cwd=str(tmp_path),
-            env={**os.environ, "TUM_MOODLE_DATA_DIR": str(tmp_path / "private")},
+            env={**os.environ, "PATH": "", "TUM_MOODLE_DATA_DIR": str(tmp_path / "private")},
         )
         async with stdio_client(params) as (reader, writer):
             async with ClientSession(reader, writer) as session:

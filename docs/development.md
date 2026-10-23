@@ -41,10 +41,23 @@ one test downloads a lecture. Never supply personal credentials to public CI.
 | `extraction.py`, `extract_worker.py` | Document/OCR extraction with process limits |
 | `library.py`, `downloads.py` | Local search/cache and persistent exports |
 
-Bootstrap installs locked, non-editable dependencies into a separate runtime.
-macOS/Linux manifests use a bare `python3` launcher; Windows packaging generates
-a bare `uv` command so Python Store aliases and missing system Python do not interfere.
-Both launch the installed runtime, so moving/deleting the checkout is safe.
+The stdlib-only `scripts/install.py` owns packaging, runtime checks, activation,
+and structured handoff. The updater pulls safely, then delegates to that installer.
+Packaged `scripts/runtime_setup.py` is shared with bootstrap; its content receipt
+and offline dependency check permit healthy reruns without synchronization.
+Source changes force a package refresh even if the version/metadata timestamp
+is unchanged. `--repair` reinstalls the locked runtime. The MCP smoke check lists
+tools without reading a Moodle session or making Moodle requests.
+
+Generated manifests launch the absolute private Python path on every OS.
+Portable source templates contain no machine paths. Rebuild on each target
+computer; moving/deleting the checkout does not affect the installed runtime.
+
+CI enables `TUM_MOODLE_INSTALLER_INTEGRATION=1` for a real isolated-cache install,
+offline rerun, same-version source update, damaged-runtime detection, and repair.
+Set `TUM_MOODLE_INSTALLER_EVIDENCE` to write stage timings. The external Codex CLI
+is synthetic in those tests; dependency installation and MCP startup are real.
+Timings exclude agent latency, user sign-in/MFA, and application restart time.
 
 Credentials use explicit OS backends. Unsupported or unavailable stores fail
 with `SETUP_REQUIRED`; environment-selected plaintext alternatives are ignored.

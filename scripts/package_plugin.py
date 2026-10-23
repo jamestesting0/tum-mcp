@@ -3,20 +3,24 @@ import shutil
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from tum_moodle.platforms import runtime_python  # noqa: E402
+
 
 def build_package(root: Path) -> Path:
     destination = root / "dist/tum-moodle"
     if destination.exists():
         shutil.rmtree(destination)
-    shutil.copytree(root / "plugin", destination)
+    shutil.copytree(
+        root / "plugin", destination, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
+    )
     shutil.copytree(root / "docs", destination / "docs")
-    if sys.platform == "win32":
-        manifest_path = destination / "mcp.json"
-        manifest = json.loads(manifest_path.read_text())
-        server = manifest["mcpServers"]["moodle"]
-        server["command"] = "uv"
-        server["args"] = ["run", "--no-project", "--offline", "--python", "3.13", *server["args"]]
-        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    manifest_path = destination / "mcp.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    server = manifest["mcpServers"]["moodle"]
+    server["command"] = str(runtime_python())
+    server["args"] = ["-m", "tum_moodle", "serve"]
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     shutil.copytree(
         root / "src",
         destination / "src",
@@ -27,11 +31,12 @@ def build_package(root: Path) -> Path:
     return destination
 
 
-def register_package(package: Path) -> Path:
+def register_package(package: Path, *, replace_source: bool = True) -> Path:
     source = Path.home() / ".codex/plugins/local/tum-moodle"
-    if source.exists():
-        shutil.rmtree(source)
-    shutil.copytree(package, source)
+    if replace_source or not source.is_dir():
+        if source.exists():
+            shutil.rmtree(source)
+        shutil.copytree(package, source)
     marketplace_path = Path.home() / ".agents/plugins/marketplace.json"
     marketplace_path.parent.mkdir(parents=True, exist_ok=True)
     marketplace = (
