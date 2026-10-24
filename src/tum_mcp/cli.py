@@ -11,6 +11,7 @@ from typing import Annotated, Literal, assert_never
 import typer
 
 from tum_mcp import __version__
+from tum_mcp.client_hosts import ClientHost
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import (
@@ -225,23 +226,36 @@ def doctor(
 
 
 @app.command()
-def setup(client: Annotated[list[str] | None, typer.Option()] = None) -> None:
+def setup(
+    client: Annotated[list[str] | None, typer.Option()] = None,
+    host: Annotated[
+        ClientHost,
+        typer.Option(help="Client location; windows registers a Windows client from WSL."),
+    ] = ClientHost.LOCAL,
+) -> None:
     """Register explicitly chosen clients; no login or course retrieval occurs."""
     from tum_mcp.clients import install_client
 
     for name in client or []:
-        install_client(name)
+        install_client(name, host=host)
     typer.echo("Runtime ready. Complete service connections and select scopes separately.")
     if not client:
         typer.echo("Select adapters with --client codex, claude, cursor, antigravity, or generic.")
+    from tum_moodle.browsers import is_wsl
+
+    if is_wsl() and host == ClientHost.LOCAL:
+        typer.echo("For a Windows desktop client, repeat setup with --host windows.")
 
 
 @app.command()
-def uninstall(client: Literal["codex", "claude", "cursor", "antigravity", "generic"]) -> None:
+def uninstall(
+    client: Literal["codex", "claude", "cursor", "antigravity", "generic"],
+    host: ClientHost = ClientHost.LOCAL,
+) -> None:
     """Remove an unchanged managed client entry; preserve all campus state and personal work."""
     from tum_mcp.uninstall import uninstall_client
 
-    uninstall_client(client)
+    uninstall_client(client, host=host)
 
 
 @skills_app.command("list")

@@ -11,6 +11,7 @@ from filelock import FileLock
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from tum_mcp import __version__
+from tum_mcp.client_hosts import ClientHost, StdioLaunch, client_home, client_launch
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import config_dir
 from tum_mcp.skills import export_pack, inspect_skills
@@ -24,7 +25,7 @@ class ClientConfiguration(BaseModel):
     mcpServers: dict[str, JsonValue] = Field(default_factory=dict)
 
 
-def client_config_path(name: str, home: Path) -> Path:
+def client_config_path(name: str, home: Path, *, host: ClientHost = ClientHost.LOCAL) -> Path:
     match name:
         case "cursor":
             return home / ".cursor/mcp.json"
@@ -35,7 +36,11 @@ def client_config_path(name: str, home: Path) -> Path:
         case "claude":
             return home / ".claude.json"
         case "generic":
-            return config_dir() / "mcp.json"
+            return (
+                home / ".config/tum-mcp/mcp-wsl.json"
+                if host == ClientHost.WINDOWS
+                else config_dir() / "mcp.json"
+            )
         case "codex":
             return home / ".codex/plugins/local/tum-mcp/mcp.json"
         case _:
@@ -59,10 +64,10 @@ def read_client_config(path: Path, *, for_update: bool = False) -> ClientConfigu
         ) from None
 
 
-def install_stdio_client(name: str, home: Path) -> None:
+def install_stdio_client(name: str, home: Path, launch: StdioLaunch) -> None:
     target = client_config_path(name, home)
     current = read_client_config(target, for_update=True)
-    server = {"command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
+    server = launch.entry()
     existing = current.mcpServers.get("tum")
     if existing is not None and existing != server:
         raise CampusError(
@@ -81,20 +86,24 @@ def same_tree(left: Path, right: Path) -> bool:
     return expected == actual
 
 
-def install_client(name: str, home: Path | None = None) -> None:
-    base = home or Path.home()
+def install_client(
+    name: str, home: Path | None = None, *, host: ClientHost = ClientHost.LOCAL
+) -> None:
+    base = client_home(host, home)
+    launch = client_launch(host)
     if name not in CLIENTS:
         raise CampusError(
             Code.CAPABILITY_UNSUPPORTED, "Choose codex, claude, cursor, antigravity, or generic."
         )
     with FileLock(str(config_dir() / "client-install.lock")):
         if name in {"cursor", "antigravity"}:
-            install_stdio_client(name, base)
+            install_stdio_client(name, base, launch)
             return
         if name == "generic":
-            target = config_dir() / "mcp.json"
+            target = client_config_path(name, base, host=host)
+            target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             current = read_client_config(target, for_update=True).model_dump()
-            server = {"command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
+            server = launch.entry()
             registered = current.get("mcpServers", {}).get("tum")
             if registered is not None and registered != server:
                 raise CampusError(
@@ -108,12 +117,12 @@ def install_client(name: str, home: Path | None = None) -> None:
             staged.mkdir()
             export_pack(staged / "skills")
             if name == "codex":
-                install_codex(staged, base)
+                install_codex(staged, base, launch=launch if host == ClientHost.WINDOWS else None)
             else:
-                install_claude(staged, base)
+                install_claude(staged, base, launch=launch)
 
 
-def install_codex(staged: Path, home: Path) -> None:
+def install_codex(staged: Path, home: Path, *, launch: StdioLaunch | None = None) -> None:
     for info in inspect_skills():
         if (home / ".agents/skills" / info["name"]).exists():
             raise CampusError(
@@ -136,33 +145,34 @@ def install_codex(staged: Path, home: Path) -> None:
         },
     }
     (staged / "plugin.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    scripts = staged / "scripts"
-    scripts.mkdir()
-    # Portable Agent Plugins reject absolute stdio executable paths. Node is the
-    # npm consumer prerequisite; this contained launcher pins the managed Python.
-    (scripts / "serve.mjs").write_text(
-        "import { spawn } from 'node:child_process';\n"
-        "const env = { ...process.env }; delete env.PYTHONPATH; delete env.PYTHONHOME;\n"
-        f"const backend = spawn({json.dumps(sys.executable)}, "
-        "['-I', '-m', 'tum_mcp', 'serve'], { env, stdio: 'inherit', shell: false });\n"
-        "for (const signal of ['SIGINT', 'SIGTERM']) "
-        "process.on(signal, () => backend.kill(signal));\n"
-        "backend.on('error', () => { console.error('TUM backend could not start; rerun setup.'); "
-        "process.exitCode = 2; });\n"
-        "backend.on('exit', code => { process.exitCode = code ?? 1; });\n",
-        encoding="utf-8",
+    if launch is None:
+        scripts = staged / "scripts"
+        scripts.mkdir()
+        # Portable Agent Plugins reject absolute stdio executable paths. Node is the
+        # npm consumer prerequisite; this contained launcher pins the managed Python.
+        (scripts / "serve.mjs").write_text(
+            "import { spawn } from 'node:child_process';\n"
+            "const env = { ...process.env }; delete env.PYTHONPATH; delete env.PYTHONHOME;\n"
+            f"const backend = spawn({json.dumps(sys.executable)}, "
+            "['-I', '-m', 'tum_mcp', 'serve'], { env, stdio: 'inherit', shell: false });\n"
+            "for (const signal of ['SIGINT', 'SIGTERM']) "
+            "process.on(signal, () => backend.kill(signal));\n"
+            "backend.on('error', () => { "
+            "console.error('TUM backend could not start; rerun setup.'); "
+            "process.exitCode = 2; });\n"
+            "backend.on('exit', code => { process.exitCode = code ?? 1; });\n",
+            encoding="utf-8",
+        )
+    server = (
+        launch.entry(typed=True)
+        if launch
+        else {"type": "stdio", "command": "node", "args": ["${PLUGIN_ROOT}/scripts/serve.mjs"]}
     )
     (staged / "mcp.json").write_text(
         json.dumps(
             {
                 "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-                "mcpServers": {
-                    "tum": {
-                        "type": "stdio",
-                        "command": "node",
-                        "args": ["${PLUGIN_ROOT}/scripts/serve.mjs"],
-                    }
-                },
+                "mcpServers": {"tum": server},
             },
             indent=2,
         ),
@@ -200,11 +210,11 @@ def install_codex(staged: Path, home: Path) -> None:
     print("Client activation and skill routing still need a live verification.")
 
 
-def install_claude(staged: Path, home: Path) -> None:
+def install_claude(staged: Path, home: Path, *, launch: StdioLaunch | None = None) -> None:
     skills = home / ".claude/skills"
     target = home / ".claude.json"
     existing = read_client_config(target, for_update=True).model_dump()
-    server = {"type": "stdio", "command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
+    server = (launch or client_launch(ClientHost.LOCAL)).entry(typed=True)
     registered = existing.get("mcpServers", {}).get("tum")
     if registered is not None and registered != server:
         raise CampusError(Code.WORKSPACE_CONFLICT, "A different Claude MCP entry already uses tum.")

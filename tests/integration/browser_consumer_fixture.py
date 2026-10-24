@@ -7,6 +7,7 @@
 """Owned-browser verification with synthetic data and no live campus requests."""
 
 import json
+import sys
 import time
 
 from playwright.sync_api import Route, sync_playwright
@@ -32,6 +33,7 @@ def main() -> None:
     assert browsers, "No Chromium browser was found for the requested integration check."
     results = []
     for choice in browsers:
+        print(f"Verifying owned browser: {choice.label}", file=sys.stderr, flush=True)
         with browser_driver(choice), sync_playwright() as playwright:
             browser = playwright.chromium.launch(
                 executable_path=choice.executable, headless=True, args=["--enable-automation"]

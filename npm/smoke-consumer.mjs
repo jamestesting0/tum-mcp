@@ -76,8 +76,11 @@ for name in ('cursor','antigravity'):
   const protocol = `import os,sys,anyio
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters,stdio_client
+from tum_mcp.client_hosts import ClientHost,client_launch
+from tum_moodle.browsers import is_wsl
 async def check():
-    params=StdioServerParameters(command=sys.executable,args=['-I','-m','tum_mcp','serve'],env=dict(os.environ))
+    launch=client_launch(ClientHost.WINDOWS if is_wsl() else ClientHost.LOCAL)
+    params=StdioServerParameters(**launch.entry(),env=dict(os.environ))
     async with stdio_client(params) as (reader,writer),ClientSession(reader,writer,read_timeout_seconds=20) as client:
         await client.initialize()
         inventory=await client.list_tools()

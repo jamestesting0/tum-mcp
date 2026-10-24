@@ -1,33 +1,32 @@
 """Remove only unchanged managed client files; retain all user campus data."""
 
 import json
-import sys
 from pathlib import Path
 from typing import Literal, assert_never
 
+from tum_mcp.client_hosts import ClientHost, client_home, client_launch
 from tum_mcp.clients import client_config_path, read_client_config, same_tree
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.settings import config_dir
 from tum_mcp.skills import bundled, export_pack
 from tum_moodle.config import private_write
 
 
 def uninstall_client(
-    name: Literal["codex", "claude", "cursor", "antigravity", "generic"], home: Path | None = None
+    name: Literal["codex", "claude", "cursor", "antigravity", "generic"],
+    home: Path | None = None,
+    *,
+    host: ClientHost = ClientHost.LOCAL,
 ) -> None:
-    base = home or Path.home()
-    expected = {
-        "type": "stdio",
-        "command": sys.executable,
-        "args": ["-I", "-m", "tum_mcp", "serve"],
-    }
+    base = client_home(host, home)
+    launch = client_launch(host)
+    expected = launch.entry(typed=True)
     match name:
         case "cursor" | "antigravity":
             path = client_config_path(name, base)
             if path.exists():
                 current = read_client_config(path, for_update=True)
                 registered = current.mcpServers.get("tum")
-                wanted = {"command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
+                wanted = launch.entry()
                 if registered is not None and registered != wanted:
                     raise CampusError(
                         Code.WORKSPACE_CONFLICT, "Customized MCP configuration was preserved."
@@ -35,13 +34,10 @@ def uninstall_client(
                 current.mcpServers.pop("tum", None)
                 private_write(path, current.model_dump_json(indent=2).encode())
         case "generic":
-            path = config_dir() / "mcp.json"
+            path = client_config_path(name, base, host=host)
             if path.exists():
                 value = read_client_config(path, for_update=True).model_dump()
-                expected_generic = {
-                    "command": sys.executable,
-                    "args": ["-I", "-m", "tum_mcp", "serve"],
-                }
+                expected_generic = launch.entry()
                 entry = value.get("mcpServers", {}).get("tum")
                 if entry is not None and entry != expected_generic:
                     raise CampusError(

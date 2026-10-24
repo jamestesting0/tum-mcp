@@ -10,6 +10,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from tum_mcp import __version__
+from tum_mcp.client_hosts import ClientHost, client_home
 from tum_mcp.clients import CLIENTS, client_config_path, read_client_config
 from tum_mcp.errors import CampusError
 from tum_mcp.settings import Frozen, Preferences, Provider, config_path, data_path
@@ -154,30 +155,49 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
         next_steps.append("tum-mcp connect — sign in only to the services you select")
 
     clients: list[Check] = []
-    for name in CLIENTS:
-        path = config / "mcp.json" if name == "generic" else client_config_path(name, base)
+    profiles = [(ClientHost.LOCAL, base)]
+    if is_wsl():
         try:
-            entry = read_client_config(path).mcpServers.get("tum")
-            registered = isinstance(entry, dict) and (
-                isinstance(entry.get("command"), str)
-                and bool(entry.get("command"))
-                or isinstance(entry.get("url"), str)
-                and bool(entry.get("url"))
+            profiles.append((ClientHost.WINDOWS, client_home(ClientHost.WINDOWS)))
+        except BrowserSetupError as error:
+            runtime.append(Check(label="Windows clients", state=State.ACTION, detail=error.message))
+    for host, profile in profiles:
+        for name in CLIENTS:
+            path = (
+                config / "mcp.json"
+                if name == "generic" and host == ClientHost.LOCAL
+                else client_config_path(name, profile, host=host)
             )
-            detail = (
-                "MCP registration saved; host activation not checked."
-                if registered
-                else f"Register with tum-mcp setup --client {name}."
-            )
-            state = State.CONFIGURED if registered else State.UNCONFIGURED
-            if entry is not None and not registered:
-                state, detail = (
-                    State.FAILED,
-                    "Invalid tum server entry; review client configuration.",
+            try:
+                entry = read_client_config(path).mcpServers.get("tum")
+                registered = isinstance(entry, dict) and (
+                    isinstance(entry.get("command"), str)
+                    and bool(entry.get("command"))
+                    or isinstance(entry.get("url"), str)
+                    and bool(entry.get("url"))
                 )
-        except CampusError as error:
-            detail, state = error.message, State.FAILED
-        clients.append(Check(label=name.title(), state=state, detail=detail, location=str(path)))
+                detail = (
+                    "MCP registration saved; host activation not checked."
+                    if registered
+                    else f"Register with tum-mcp setup --client {name}"
+                    + (" --host windows." if host == ClientHost.WINDOWS else ".")
+                )
+                state = State.CONFIGURED if registered else State.UNCONFIGURED
+                if entry is not None and not registered:
+                    state, detail = (
+                        State.FAILED,
+                        "Invalid tum server entry; review client configuration.",
+                    )
+            except CampusError as error:
+                detail, state = error.message, State.FAILED
+            clients.append(
+                Check(
+                    label=name.title() + (" (Windows)" if host == ClientHost.WINDOWS else ""),
+                    state=state,
+                    detail=detail,
+                    location=str(path),
+                )
+            )
     if not any(item.state == State.CONFIGURED for item in clients):
         next_steps.append("tum-mcp setup --client codex — or claude, cursor, antigravity, generic")
 
