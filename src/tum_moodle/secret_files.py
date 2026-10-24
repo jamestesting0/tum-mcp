@@ -22,13 +22,20 @@ def _secure_windows_path(path: Path) -> None:
     script = (
         "$ErrorActionPreference='Stop'; "
         "$sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; "
-        "$acl=Get-Acl -LiteralPath $env:TUM_MCP_PRIVATE_DIRECTORY; "
-        "$inherit=if((Get-Item -LiteralPath $env:TUM_MCP_PRIVATE_DIRECTORY).PSIsContainer)"
-        "{'OICI'}else{''}; "
+        "$path=$env:TUM_MCP_PRIVATE_DIRECTORY; "
+        "$directory=[System.IO.Directory]::Exists($path); "
+        "$acl=if($directory){[System.Security.AccessControl.DirectorySecurity]::new()}"
+        "else{[System.Security.AccessControl.FileSecurity]::new()}; "
+        "$inherit=if($directory){'OICI'}else{''}; "
         "$sddl='D:P(A;'+$inherit+';FA;;;'+$sid+')'; "
         "$acl.SetSecurityDescriptorSddlForm($sddl, "
         "[System.Security.AccessControl.AccessControlSections]::Access); "
-        "Set-Acl -LiteralPath $env:TUM_MCP_PRIVATE_DIRECTORY -AclObject $acl"
+        "if($PSVersionTable.PSEdition -eq 'Core'){"
+        "$item=if($directory){[System.IO.DirectoryInfo]::new($path)}"
+        "else{[System.IO.FileInfo]::new($path)}; "
+        "[System.IO.FileSystemAclExtensions]::SetAccessControl($item,$acl)"
+        "}elseif($directory){[System.IO.Directory]::SetAccessControl($path,$acl)}"
+        "else{[System.IO.File]::SetAccessControl($path,$acl)}"
     )
     try:
         subprocess.run(  # noqa: S603
