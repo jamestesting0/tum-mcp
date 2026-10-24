@@ -2,8 +2,8 @@
 
 [README](../README.md) · [Tools and scopes](tum-mcp.md) · [Development](development.md)
 
-The upcoming 0.5.0 release uses this setup. npm 0.4.1 remains the published
-version until 0.5.0 is released; its connection commands differ.
+These instructions apply to **0.5.0**. Upgrade older installations before using
+the interactive connection flow below.
 
 ## Install
 
@@ -13,7 +13,7 @@ targets are macOS ARM64/x64, Windows ARM64/x64 and glibc Linux ARM64/x86_64.
 Linux needs a graphical desktop for native browser sign-in; WSL can use Windows.
 
 ```sh
-npm install --global @jamestesting888/tum-mcp
+npm install --global @jamestesting888/tum-mcp@0.5.0
 tum-mcp setup --client codex
 tum-mcp connect
 tum-mcp doctor
@@ -60,7 +60,7 @@ release; distributions still use engine 1 or 2. See Microsoft's
 Both engines have dedicated CI checks on the current WSL 3.x runner image.
 
 ```sh
-npm install --global @jamestesting888/tum-mcp
+npm install --global @jamestesting888/tum-mcp@0.5.0
 tum-mcp setup --client cursor --host windows
 tum-mcp connect
 tum-mcp doctor

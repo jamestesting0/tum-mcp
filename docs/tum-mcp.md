@@ -1,11 +1,10 @@
-# TUM MCP guide — upcoming release
+# TUM MCP guide
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
-npm 0.4.1 remains the published pilot. This 0.5.0 checkout adds unified browser connection,
-local-file credential keys, richer diagnostics, and Cursor/Antigravity adapters.
-These changes are not yet published. The package remains a read/local-assistance pilot. The complete
-revision 3 remote workflow is not included; its approval and host boundaries
-remain unverified and its remote-action tools remain disabled.
+Version **0.5.0** provides interactive service and browser selection, local-file
+credential keys, richer diagnostics, Cursor/Antigravity adapters, and WSL-backed
+Windows client setup. The package supports campus reads and local assignment
+assistance; remote-action tools remain disabled.
 
 ## Current capabilities
 
@@ -20,7 +19,7 @@ An internal, release-gated executor covers exact-action fingerprints, encrypted
 expiring one-use grants, account/scope/credential revalidation, and durable
 unknown-outcome receipts. Synthetic tests cover one POST or exact-commit push,
 copied/fabricated approvals, changed targets, and lost responses. No MCP write
-tool, approval issuer, or preference can open this development release's gate.
+tool, approval issuer, or preference can open this version's gate.
 The internal executor is groundwork for Phase 5; no live-action certification is claimed.
 Revision 3 Phase 5 needs a demonstrated trusted approval/credential boundary and
 safe practice-exercise verification before those tools can be exposed. A
@@ -36,7 +35,7 @@ public discovery. Provider routes were checked against that Artemis revision.
 
 ## Build and test the local package
 
-For normal installation, use `npm install --global @jamestesting888/tum-mcp@0.4.1`
+For normal installation, use `npm install --global @jamestesting888/tum-mcp@0.5.0`
 and `tum-mcp setup --client codex`. The following commands are for maintainers.
 
 ```sh
@@ -290,16 +289,17 @@ release; no measured activation accuracy is claimed by the structural checks.
 
 ## Release scope
 
-The maintainer authorized public npm distribution of the current 0.4.1 pilot.
-This does not certify the complete revision 3 workflow or all desktop targets.
-Host/model skill-selection trials, native Windows/macOS x64 onboarding, and real
-Linux desktop browser sign-in remain incomplete. Remote workflows also need a
+Version 0.5.0 has automated installation, browser transport, storage and MCP
+checks on macOS, Windows, Linux, and both distribution engines on WSL 3.0.3.
+These checks use synthetic pages and credentials. Fresh human SSO/MFA and
+desktop-client activation on every target remain separate manual checks, as do
+host/model skill-selection trials. Remote workflows also need a
 trusted approval/host credential boundary and safe practice verification before
 they can be exposed. Browser sign-in alone does not establish a saved backend connection.
 
 Maintainer checks include the relevant tests, a reviewed tarball inventory,
 integrity checks, and an isolated consumer install. Never publish or stage npm
 packages as a test. Review and authorization of a registry upload are separate
-from a GitHub source push; this pilot is being published to npm first.
+from a GitHub source push.
 `tum-mcp status` reports registry state as `not_checked`, since it inspects local
 configuration without making registry requests.

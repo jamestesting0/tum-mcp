@@ -3,15 +3,15 @@
 Connect your coding agent to TUM Moodle, Artemis, and Zulip. Runs locally with
 36 tools and seven workflow skills. Unofficial; independent of TUM and OpenAI.
 
-> This checkout prepares 0.5.0 for release. npm currently provides 0.4.1.
+**Version 0.5.0** · [npm package](https://www.npmjs.com/package/@jamestesting888/tum-mcp/v/0.5.0)
 
 ## Agent setup
 
-Paste this into your coding agent after the next release is published:
+Paste this into your coding agent:
 
 ```text
 Install @jamestesting888/tum-mcp on this computer. Check Node.js is 22.14+.
-Run npm install --global @jamestesting888/tum-mcp, then:
+Run npm install --global @jamestesting888/tum-mcp@0.5.0, then:
   tum-mcp setup --client codex
 Use --client claude, cursor, antigravity, or generic for a different client.
 Preserve existing settings and customized skills. Follow the activation steps.
@@ -26,7 +26,7 @@ Run tum-mcp doctor to explain what is available and what still needs setup.
 You need **Node.js 22.14+**, **a Chromium browser**, and your TUM account.
 
 ```sh
-npm install --global @jamestesting888/tum-mcp
+npm install --global @jamestesting888/tum-mcp@0.5.0
 tum-mcp setup --client codex
 tum-mcp connect
 tum-mcp doctor
