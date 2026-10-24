@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const destination = join(root, 'npm', 'backend');
 mkdirSync(destination, { recursive: true });
+mkdirSync(join(root, 'dist'), { recursive: true });
 function run(args, quiet = false) {
   const result = spawnSync('uv', args, { cwd: root, stdio: ['ignore', quiet ? 'ignore' : 'inherit', 'inherit'], shell: false });
   if (result.error || result.status !== 0) throw new Error('Backend build failed; install uv and inspect the error above.');
