@@ -2,9 +2,11 @@
 
 [README](../README.md) · [Setup](setup.md)
 
-For the combined 0.4.1 campus pilot, see the [TUM MCP guide](tum-mcp.md) and
+For the combined campus package, see the [TUM MCP guide](tum-mcp.md) and
 [current verification limits](tum-mcp.md#build-and-test-the-local-package). This page also
-covers the preserved Moodle-only installer.
+covers the preserved Moodle-only installer. Terminal changes follow
+[the design system](DESIGN.md). Keep local agent handoffs and machine-specific QA
+under `docs/local/`, which is ignored by Git and excluded from packages.
 
 ## Checks
 
@@ -18,7 +20,7 @@ uv build
 node npm/build.mjs
 npm test
 npm pack --ignore-scripts --pack-destination dist
-npm run test:consumer -- dist/jamestesting888-tum-mcp-0.4.1.tgz
+npm run test:consumer -- dist/jamestesting888-tum-mcp-0.5.0.tgz
 ```
 
 Python 3.13 is the managed runtime on every platform. Install Tesseract for the
@@ -69,9 +71,11 @@ Set `TUM_MOODLE_INSTALLER_EVIDENCE` to write stage timings. The external Codex C
 is synthetic in those tests; dependency installation and MCP startup are real.
 Timings exclude agent latency, user sign-in/MFA, and application restart time.
 
-Credentials use explicit OS backends. Unsupported or unavailable stores fail
+The preserved Moodle-only installer uses explicit OS backends. Unsupported or unavailable stores fail
 with `SETUP_REQUIRED`; environment-selected plaintext alternatives are ignored.
 Keep the existing macOS service name and account path to preserve saved sessions.
+The combined campus runtime instead uses encrypted files and owner-restricted
+local keys, without opening native stores. Test both paths with synthetic fixtures.
 
 Extraction runs in a subprocess with a 60-second wall limit and 512 MiB aggregate
 memory monitoring. POSIX also enforces a CPU limit and kills the process group;

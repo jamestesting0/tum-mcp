@@ -1,8 +1,9 @@
-# TUM MCP 0.4.1 guide
+# TUM MCP guide — upcoming release
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
-Patch 0.4.1 fixes UTF-8 skill and client-configuration handling on Windows code pages.
-Version 0.4.1 is distributed as a public read/local-assistance pilot. The complete
+npm 0.4.1 remains the published pilot. This 0.5.0 checkout adds unified browser connection,
+local-file credential keys, richer diagnostics, and Cursor/Antigravity adapters.
+These changes are not yet published. The package remains a read/local-assistance pilot. The complete
 revision 3 remote workflow is not included; its approval and host boundaries
 remain unverified and its remote-action tools remain disabled.
 
@@ -46,7 +47,7 @@ uv run pytest -q -m 'not live'
 node npm/build.mjs
 npm test
 npm pack --ignore-scripts --pack-destination dist
-npm run test:consumer -- dist/jamestesting888-tum-mcp-0.4.1.tgz
+npm run test:consumer -- dist/jamestesting888-tum-mcp-0.5.0.tgz
 ```
 
 The npm artifact has an explicit file allowlist, a bundled backend wheel,
@@ -69,13 +70,14 @@ and Python 3.13.15; an existing matching uv, including the verified cached downl
 is reused. Source checkouts and system
 Python are unnecessary for consumers. Supported bootstrap targets are macOS
 arm64/x64, Windows arm64/x64, and glibc Linux arm64/x64; hands-on verification is
-recorded separately. Linux still needs a native Secret Service for credentials.
+recorded separately. New campus sessions use permission-restricted local keys and need no Secret Service.
 Clean consumer bootstrap, idempotent setup, diagnostics, and skill validation
 passed on macOS ARM64 and in Linux ARM64 and x86_64 containers. The x86_64 check
 ran through Docker amd64 emulation on an ARM64 Mac; packaged MCP protocol checks
 and an encrypted credential round trip through a real GNOME Secret Service in an
 isolated D-Bus session also passed. Real Linux desktop browser sign-in, macOS x64,
-and Windows hands-on checks remain open. The installer targets glibc Linux
+and Windows hands-on checks remain open. New storage and terminal behavior need
+the current checkout’s test evidence; earlier native-store results do not certify them. The installer targets glibc Linux
 x86_64/amd64 and aarch64/ARM64.
 
 `update` provisions the backend bundled in the invoked package and preserves
@@ -89,14 +91,14 @@ available to existing client registrations. Use an older reviewed package and
 rerun its setup to restore that runtime, reviewing any client configuration diff.
 
 For platforms outside the bootstrap targets, the source installation needs
-Python 3.13+, uv, Git, and a native credential store: run `uv sync --locked`, then
+Python 3.13+, uv, and Git: run `uv sync --locked`, then
 `uv run tum-mcp setup --client generic` from the checkout. Chrome is needed for
 browser onboarding. Docker is needed only for isolated assignment tests.
 
 ## Connections and scopes
 
 ```sh
-tum-mcp connect campus
+tum-mcp connect
 tum-mcp status
 tum-mcp discover artemis ACCOUNT_ID
 tum-mcp discover zulip ACCOUNT_ID
@@ -104,18 +106,23 @@ tum-mcp scope artemis ACCOUNT_ID --course COURSE_ID --sensitive --workspace
 tum-mcp scope zulip ACCOUNT_ID --channel CHANNEL_ID
 ```
 
-`connect campus` opens Artemis and Zulip in one temporary Chrome context for
-user-driven sign-in/MFA; the identity provider can reuse its session between tabs.
-Only each service's own host cookies are encrypted and saved. Identity-provider
-cookies are discarded when the browser closes. Single-service commands remain
-available as `connect artemis` and `connect zulip`.
+`connect` opens a keyboard service selector. Move with up/down, toggle with Space,
+and confirm with Enter. Nothing is selected initially. Only selected tabs open
+in one temporary Chrome context; sign-in/MFA stays in the browser. TERM=dumb uses
+a numbered prompt. Ctrl+C cancels, closes Chrome, and retains completed connections.
+
+Skip the selector with repeated options: `connect --service moodle --service zulip`.
+Sign-in still requires an interactive terminal. Legacy `connect campus` remains
+an alias for Artemis and Zulip; legacy individual service arguments still work.
+Moodle now follows the same connection flow. Only service-owned cookies are saved;
+identity-provider cookies are discarded when the temporary browser closes.
 
 Zulip browser sessions use its read-only `/json/` routes; API-key authentication
 uses `/api/v1/`. A successful authenticated `/json/users/me` read was verified on
 TUM's deployment. This separation is also documented in
 [Zulip's dispatcher](https://github.com/zulip/zulip/blob/12.0/zerver/lib/rest.py).
 Session expiry requires browser reconnection. API keys are optional:
-`connect zulip --auth api-key` imports an existing key through hidden local input.
+`connect --service zulip --auth api-key` imports an existing key through hidden local input.
 Never paste credentials in chat. Browser login and Artemis Git access remain
 separate capabilities. Existing scopes survive reconnection; new identities start
 with empty scopes. Private channels additionally require `--private-channel ID` while
@@ -130,19 +137,48 @@ was started, code pushed, message sent, or read flag changed by these checks.
 
 Settings live outside the installed package in `TUMMCP/config/preferences.json`.
 The default data directory is beside the legacy `TUMMoodle` directory on each OS.
-Existing Moodle data is retained in place, preserving the keychain lookup. New
-service credentials are encrypted separately with an account/provider/origin-bound
-identity and a native credential-store key. There is no plaintext fallback.
-Use the installed `tum-mcp` runtime from the first login to avoid
-development-to-packaged Python permission changes. Native credential-store
-approval is separate from broader desktop-app access to other apps' data, which
-the campus backend does not require.
+Existing Moodle data and its native-store identity are retained in place. New
+campus connections deliberately do not read or migrate native-store secrets;
+reconnect each service once to use local-file storage. The combined MCP process
+uses that storage for all `moodle_*` compatibility tools. The separate Moodle-only
+installer keeps its native-store default.
+Previously imported Artemis Git tokens also need re-importing into the new store;
+browser sign-in does not import them or open the old native store.
+
+New Moodle sessions live under `TUMMoodle/local-session/`; campus credentials live
+under `TUMMCP/credentials/local/`. Each directory has an independent `session.key`.
+Encrypted records and keys have owner-only permissions: 0700 directories / 0600
+keys on POSIX; protected current-user DACLs on Windows through PowerShell. No
+administrator privileges are requested. This avoids Keychain/Secret Service
+prompts but protects less than a native store. A copy of both ciphertext and key
+is sufficient to decrypt a session. Do not share, sync publicly, or package them.
+
+Missing or damaged keys fail closed. Restore the matching key from a private
+backup. To start fresh, stop clients and move the affected **local storage folder**
+to a private backup before reconnecting; this also resets its stored Git tokens.
+Never remove the legacy Moodle directory or downloads to repair a login.
+Native-store records remain available to the older installation for rollback.
+
 Zulip message text is retrieved live and is not persisted. Retrieved excerpts may
 be transmitted to the coding agent's configured AI provider. Moodle's existing
 document cache retains its documented plaintext/expiry behavior.
 
 Course nicknames can be mapped in `mappings` using explicit per-service IDs.
 The tools resolve one exact mapping; ambiguity never grants broader access.
+
+## Diagnostics
+
+`doctor` reads local configuration and checks runtime prerequisites. It does not
+open Chrome, contact campus services, decrypt sessions, or read native stores.
+Saved sessions are **Not verified** until checked. Missing optional Git/Docker
+capabilities do not prevent course reads. Client registration is distinguished
+from activation; the host must confirm a running MCP connection after setup.
+
+Use `doctor --live` for bounded authenticated identity checks on saved local
+sessions. This reads Moodle's course overview and Artemis/Zulip identity only;
+it does not broaden content scopes. `doctor --json` emits schema-versioned JSON
+without terminal styling; combine both flags for live automation. Paths appear
+in JSON for troubleshooting. Default diagnostics do not create state folders.
 
 ## Assignment workspaces and tests
 
@@ -200,6 +236,22 @@ Host/model activation trials remain a separate gate.
 local MCP server, and installs the skill pack. Codex's submission invocation
 policy and Claude's `disable-model-invocation` metadata are handled independently.
 Generic clients receive configuration plus optional manual skill export.
+
+`setup --client cursor` writes `~/.cursor/mcp.json`.
+`setup --client antigravity` writes `~/.gemini/config/mcp_config.json`; an existing
+legacy `~/.gemini/antigravity/mcp_config.json` is reused when no current file exists.
+Both merge the `tum` stdio entry and preserve unrelated settings. Conflicting or
+invalid configuration is preserved with an actionable error. Reload MCP servers
+in the host after setup; actual host activation is not certified by writing files.
+See the official [Cursor MCP documentation](https://cursor.com/docs/mcp) and
+[Antigravity MCP documentation](https://antigravity.google/docs/mcp).
+
+These two adapters install MCP configuration only. Export the workflow skills
+below and install them using the host's documented skill mechanism after review.
+This avoids claiming equivalent invocation controls across clients. No new
+Cursor/Antigravity model-routing or native desktop activation result is claimed.
+`uninstall --client cursor` and `uninstall --client antigravity` remove only an
+unchanged managed entry; sessions and personal work stay intact.
 
 ```sh
 tum-mcp skills list

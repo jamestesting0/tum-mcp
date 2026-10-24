@@ -1,95 +1,81 @@
 # TUM MCP
 
-Use TUM Moodle, Artemis, and Zulip from your coding agent. Runs locally with
+Connect your coding agent to TUM Moodle, Artemis, and Zulip. Runs locally with
 36 tools and seven workflow skills. Unofficial; independent of TUM and OpenAI.
+
+> This checkout prepares 0.5.0 for release. npm currently provides 0.4.1.
 
 ## Agent setup
 
-Paste this into your coding agent:
+Paste this into your coding agent after the next release is published:
 
 ```text
-Install @jamestesting888/tum-mcp@0.4.1 from npm on this computer.
-Check that Node.js is at least 22.14, then run:
-  npm install --global @jamestesting888/tum-mcp@0.4.1
+Install @jamestesting888/tum-mcp on this computer. Check Node.js is 22.14+.
+Run npm install --global @jamestesting888/tum-mcp, then:
   tum-mcp setup --client codex
-For Claude Code, use --client claude instead; other MCP clients use --client generic.
-Preserve existing settings, plugins, sessions, downloads, and customized skills.
-Follow the printed enablement/restart step. Then help me run tum-mcp connect campus
-in an interactive terminal so I can complete TUM sign-in/MFA in Chrome.
+Use --client claude, cursor, antigravity, or generic for a different client.
+Preserve existing settings and customized skills. Follow the activation steps.
+Help me run tum-mcp connect in an interactive terminal and choose services.
+I will complete TUM sign-in/MFA in Chrome. Never request secrets in chat.
 Ask which Artemis courses and Zulip channels to enable before reading content.
-For Moodle, use the plugin's separate Moodle sign-in. Never request secrets in chat.
+Run tum-mcp doctor to explain what is available and what still needs setup.
 ```
 
-## Manual setup
+## Quick start
 
 You need **Node.js 22.14+**, **Google Chrome**, and your TUM account.
 
 ```sh
-npm install --global @jamestesting888/tum-mcp@0.4.1
+npm install --global @jamestesting888/tum-mcp
 tum-mcp setup --client codex
-tum-mcp connect campus
+tum-mcp connect
+tum-mcp doctor
 ```
 
-`campus` connects **Artemis and Zulip together**. Complete sign-in and MFA in
-Chrome; no Zulip API key is required. Moodle sign-in is separate: ask the loaded
-plugin, **“Sign in to TUM Moodle.”** Follow any client enablement/restart instruction.
-Disable the older Moodle plugin when enabling TUM MCP to avoid duplicate tools.
+Choose Moodle, Artemis, Zulip, or any combination with **Space**, then **Enter**.
+Only selected tabs open. Complete sign-in/MFA there; no Zulip API key is needed.
+New Artemis/Zulip accounts need explicit [course and channel scopes](docs/tum-mcp.md#connections-and-scopes).
 
-Select the courses and channels the backend may read. `status` shows account IDs;
-`discover` lists metadata, and `scope` saves your choices. New accounts start
-without content access. See the [connection and scope commands](docs/tum-mcp.md#connections-and-scopes).
-
-Setup downloads a private Python runtime; consumers do not need Python or uv.
-Git is needed for assignment workspaces and Docker for isolated assignment tests.
-Linux also needs an unlocked Secret Service keyring in its desktop D-Bus session.
-
-## What you can do
-
-| Service | Available |
+| Client | Setup |
 | --- | --- |
-| Moodle | Read/search course materials and forums, cite PDF pages, download originals |
-| Artemis | Read released programming exercises and permitted feedback; prepare existing-participation workspaces, run approved local tests, preview submissions |
-| Zulip | Search selected channels, read topics, and summarize recent discussions with citations |
+| Codex | `--client codex` · plugin and workflow skills; enable/restart when prompted |
+| Claude Code | `--client claude` · MCP registration and workflow skills |
+| Cursor | `--client cursor` · MCP registration; reload MCP servers |
+| Google Antigravity | `--client antigravity` · MCP registration; reload MCP servers |
+| Other local MCP clients | `--client generic` · configuration for manual installation |
 
-Try “Find the lecture section about scheduling,” “Read this Artemis exercise,”
-or “Catch me up on the selected Zulip channel.” Personal records, participation
-feedback, and workspace writes require their own explicit permissions.
+Cursor and Antigravity workflow skills can be [exported for manual installation](docs/tum-mcp.md#client-and-skill-setup).
+Setup supplies a private Python runtime. Git is optional for assignment workspaces;
+Docker is optional for isolated assignment tests. No native keyring is needed by
+new campus connections, including Linux x86_64 and ARM64.
 
-**0.4.1 is a public pilot.** Remote start, push, submit, and rebuild are disabled.
-It cannot post to Zulip or read DMs. A submission preview never submits anything.
-macOS ARM64 browser sign-in and live reads are verified; Windows, Intel Mac, and
-Linux desktop checks remain incomplete. Bootstrap targets and test evidence are
-listed in the [detailed guide](docs/tum-mcp.md#build-and-test-the-local-package).
+## Available tools
 
-## Privacy
+| Service | What your agent can do |
+| --- | --- |
+| Moodle | Search materials and forums, cite PDF pages, download originals |
+| Artemis | Read exercises and permitted feedback, prepare existing-participation workspaces, run approved local tests, preview submissions |
+| Zulip | Search selected channels and catch up on course discussions with citations |
 
-Sessions stay local and encrypted, with keys in macOS Keychain, Windows Credential
-Manager, or Linux Secret Service. There is no plaintext credential fallback.
-Relevant excerpts can be sent to your agent's configured AI provider. Zulip chat
-text is fetched live; Moodle's document cache is unencrypted and limited to
-30 days / 1 GiB. Downloads remain until deleted.
+Remote start, push, submit, and rebuild are disabled. Zulip posting and DMs are
+unavailable. `doctor` checks local readiness; `doctor --live` verifies saved
+sessions, and `doctor --json` gives machine-readable results. Saved configuration
+and active client connections are reported separately.
 
-Use the installed `tum-mcp` command for sign-in to keep the requesting runtime
-consistent. Your OS may ask for credential-store access. See
-[storage details](docs/tum-mcp.md#connections-and-scopes).
+## Privacy and updates
 
-## Update and support
+Sessions use encrypted local files with an owner-restricted key file. This avoids
+Keychain prompts but provides less protection than a native credential store:
+someone who obtains both files can decrypt them. Existing native-store records,
+downloads, and customizations are preserved; reconnect to use the new storage.
+The separate Moodle-only installer retains its native credential-store behavior.
 
-Install the reviewed version you want, then rerun the client setup:
+Retrieved excerpts can reach your agent's AI provider. Moodle's document cache
+is unencrypted and limited to 30 days / 1 GiB; downloads remain until deleted.
 
-```sh
-npm install --global @jamestesting888/tum-mcp@latest
-tum-mcp setup --client codex
-```
+Update with `npm install --global @jamestesting888/tum-mcp@latest`, then rerun
+setup for your client. Conflicting customized configuration is kept for review.
+See the [guide and verification limits](docs/tum-mcp.md), [Moodle-only setup](docs/setup.md),
+[development guide](docs/development.md), and [terminal design system](docs/DESIGN.md).
 
-Existing Moodle sessions and downloads are preserved. Customized configurations
-are kept for review. `tum-mcp doctor` checks local prerequisites; it does not
-verify live authentication.
-
-[Detailed guide](docs/tum-mcp.md) · [Moodle-only setup](docs/setup.md) ·
-[Development](docs/development.md) · [Report a problem](https://github.com/jamestesting0/tum-moodle-integration/issues)
-
-## License
-
-[MIT](LICENSE). The TUM logo retains its original rights; see [NOTICE](NOTICE).
-No trademark rights are granted.
+[MIT](LICENSE) · [NOTICE](NOTICE) · [Report a problem](https://github.com/jamestesting0/tum-moodle-integration/issues)

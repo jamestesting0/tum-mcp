@@ -1,8 +1,10 @@
 # Desktop setup
 
 This page covers the preserved **Moodle-only** installer. For the combined
-Artemis/Zulip/Moodle 0.4.1 pilot, use [campus setup](../README.md#manual-setup) and
-the [TUM MCP guide](tum-mcp.md).
+Artemis/Zulip/Moodle package, use [campus setup](../README.md#quick-start) and
+the [TUM MCP guide](tum-mcp.md). Its unified `tum-mcp connect` uses local-file
+keys without native-store prompts; the native-store requirements below apply
+only to this older Moodle-only installation path.
 
 [README](../README.md) · [macOS](#macos) · [Windows](#windows) · [Linux](#linux) ·
 [Updates](#updates) · [Troubleshooting](#troubleshooting) · [Uninstall](#uninstall)
