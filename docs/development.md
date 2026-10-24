@@ -2,6 +2,10 @@
 
 [README](../README.md) · [Setup](setup.md)
 
+For the combined 0.4.0 campus pilot, see the [TUM MCP guide](tum-mcp.md) and
+[current verification limits](tum-mcp.md#build-and-test-the-local-package). This page also
+covers the preserved Moodle-only installer.
+
 ## Checks
 
 ```sh
@@ -11,6 +15,10 @@ uv run ruff format --check src tests plugin/scripts scripts
 uv run pytest -q
 uv run python scripts/package_plugin.py
 uv build
+node npm/build.mjs
+npm test
+npm pack --ignore-scripts --pack-destination dist
+npm run test:consumer -- dist/jamestesting888-tum-mcp-0.4.0.tgz
 ```
 
 Python 3.13 is the managed runtime on every platform. Install Tesseract for the
@@ -20,6 +28,8 @@ credentials; no Moodle login is needed. No language-server installation is requi
 GitHub Actions runs the suite on macOS, Windows, and Ubuntu, including packaged
 MCP startup, PDF/OCR extraction, downloads, and real native credential-store
 round trips. The Linux job starts its own D-Bus/Secret Service session.
+The campus additions configure fresh npm consumer checks on all three runners;
+those checks must pass for the release commit before claiming release coverage.
 
 To test an installed package, set `TUM_MOODLE_PACKAGED` to its
 `scripts/launch.py` path before running pytest. Set `TUM_MOODLE_SYSTEM_KEYRING=1`

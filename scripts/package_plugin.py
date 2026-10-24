@@ -14,7 +14,10 @@ def build_package(root: Path) -> Path:
     shutil.copytree(
         root / "plugin", destination, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
     )
-    shutil.copytree(root / "docs", destination / "docs")
+    documentation = destination / "docs"
+    documentation.mkdir()
+    for name in ("setup.md", "development.md", "tum-mcp.md", "credential-storage-options.md"):
+        shutil.copy2(root / "docs" / name, documentation / name)
     manifest_path = destination / "mcp.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     server = manifest["mcpServers"]["moodle"]

@@ -1,5 +1,9 @@
 # Desktop setup
 
+This page covers the preserved **Moodle-only** installer. For the combined
+Artemis/Zulip/Moodle 0.4.0 pilot, use [campus setup](../README.md#manual-setup) and
+the [TUM MCP guide](tum-mcp.md).
+
 [README](../README.md) · [macOS](#macos) · [Windows](#windows) · [Linux](#linux) ·
 [Updates](#updates) · [Troubleshooting](#troubleshooting) · [Uninstall](#uninstall)
 
@@ -64,8 +68,14 @@ or arbitrary third-party credential backends.
 
 ## Install and sign in
 
-Follow the [installation commands in the README](../README.md#install).
-Run them on the target computer so packaging generates the correct launcher.
+Run these commands on the target computer so packaging generates the correct launcher:
+
+```sh
+git clone --depth 1 https://github.com/jamestesting0/tum-moodle-integration.git
+cd tum-moodle-integration
+uv run scripts/install.py
+```
+
 Do not copy a Mac's generated plugin or session files to Windows/Linux.
 
 The installer preserves existing marketplace entries and registers the source
@@ -142,13 +152,24 @@ For [bug reports](https://github.com/jamestesting0/tum-moodle-integration/issues
 include OS/client versions and the error message. Remove credentials, cookies,
 personal records, and course content.
 
+## Data locations
+
+| Platform | Moodle runtime, session, and cache |
+| --- | --- |
+| macOS | `~/Library/Application Support/TUMMoodle/` |
+| Windows | `%LOCALAPPDATA%\TUMMoodle\` |
+| Linux | `${XDG_DATA_HOME:-~/.local/share}/TUMMoodle/` |
+
+Campus settings and encrypted credentials use a separate `TUMMCP/` folder beside
+`TUMMoodle/`. Existing Moodle data remains in place when switching to TUM MCP.
+
 ## Uninstall
 
 1. Ask Codex to sign out and clear the cache, then remove the plugin in Plugins.
 2. To remove the personal catalog entry, delete only `tum-moodle` from
    `~/.agents/plugins/marketplace.json`, preserving the other entries.
 3. Delete `~/.codex/plugins/local/tum-moodle/` and the
-   [platform data folder](../README.md#privacy-and-storage) if no longer needed.
+   [platform data folder](#data-locations) if no longer needed.
 4. Remove the `tum-moodle-integration` credential entry using the OS credential
    manager: Keychain Access, Windows Credential Manager, or the Linux password/keyring app.
 

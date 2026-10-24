@@ -18,6 +18,10 @@ build/
 !.env.example
 .omo/
 
+# Machine-local agent instructions and handoff notes; public docs stay tracked.
+/AGENTS.md
+/docs/tum-mcp-handoff.md
+
 # Local Moodle state and downloads must never be published.
 session.enc
 session.lock
@@ -27,3 +31,5 @@ library.sqlite*
 storage-state*.json
 playwright/.auth/
 downloads/
+npm/backend/
+*.tgz

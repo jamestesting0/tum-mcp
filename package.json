@@ -1,0 +1,16 @@
+{
+  "name": "@jamestesting888/tum-mcp",
+  "version": "0.4.0",
+  "description": "Local-first TUM Moodle, Artemis, and Zulip integration with campus workflow skills",
+  "license": "MIT",
+  "type": "module",
+  "bin": {"tum-mcp": "npm/tum-mcp.mjs"},
+  "engines": {"node": ">=22.14.0"},
+  "files": ["npm/tum-mcp.mjs", "npm/runtime.mjs", "npm/download.mjs", "npm/uv-artifacts.json", "npm/backend/*.whl", "npm/backend/requirements.txt", "npm/backend/manifest.json", "LICENSE", "NOTICE", "README.md", "docs/setup.md", "docs/development.md", "docs/tum-mcp.md", "docs/credential-storage-options.md"],
+  "scripts": {"prepack": "node npm/build.mjs", "test": "node --test npm/test/*.test.mjs", "test:consumer": "node npm/smoke-consumer.mjs"},
+  "publishConfig": {"access": "public"},
+  "repository": {"type": "git", "url": "git+https://github.com/jamestesting0/tum-moodle-integration.git"},
+  "homepage": "https://github.com/jamestesting0/tum-moodle-integration#readme",
+  "bugs": {"url": "https://github.com/jamestesting0/tum-moodle-integration/issues"},
+  "keywords": ["mcp", "tum", "moodle", "artemis", "zulip", "codex"]
+}
