@@ -129,3 +129,42 @@ def test_doctor_survives_an_incomplete_custom_skill(
         next(item for item in report.runtime if item.label == "Workflow skills").state
         == State.FAILED
     )
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["artemis"],
+        ["zulip"],
+        ["campus"],
+        ["moodle"],
+        ["--service", "zulip"],
+        ["--auth", "api-key"],
+    ],
+)
+def test_connect_rejects_all_legacy_selection_arguments_before_opening_a_browser(
+    arguments: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "tum_moodle.browsers.discover_browsers", lambda: pytest.fail("No browser discovery")
+    )
+    result = CliRunner().invoke(app, ["connect", *arguments])
+    assert result.exit_code == 2
+
+
+def test_all_campus_authentication_tools_direct_users_to_the_same_selector(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tum_mcp.server import tum_connect
+    from tum_moodle.server import moodle_login
+
+    monkeypatch.setenv("TUM_MOODLE_SESSION_STORAGE", "file")
+    monkeypatch.setattr(auth, "system_keyring", lambda: pytest.fail("No native store"))
+    monkeypatch.setattr(
+        "tum_moodle.server.subprocess.Popen",
+        lambda *args, **kwargs: pytest.fail("No background browser"),
+    )
+    assert "tum-mcp connect" in tum_connect()
+    result = moodle_login()
+    assert result["command"] == "tum-mcp connect" and result["state"] == "ACTION_REQUIRED"

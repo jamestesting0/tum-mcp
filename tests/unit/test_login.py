@@ -7,13 +7,14 @@ from playwright.async_api import Error as BrowserError
 
 from tum_moodle import login as login_module
 from tum_moodle.auth import SessionStore
+from tum_moodle.browsers import BrowserChoice
 from tum_moodle.config import Paths
 from tum_moodle.errors import MoodleError
 
 
 @pytest.mark.parametrize(
     "scenario",
-    [(BrowserError("internal browser details"), "Chrome"), (TimeoutError(), "timed out")],
+    [(BrowserError("internal browser details"), "browser"), (TimeoutError(), "timed out")],
 )
 def test_login_failure_is_actionable_and_keeps_browser_details_private(
     tmp_path: Path,
@@ -25,6 +26,9 @@ def test_login_failure_is_actionable_and_keeps_browser_details_private(
     context.__aenter__ = AsyncMock(side_effect=failure)
     context.__aexit__ = AsyncMock(return_value=False)
     monkeypatch.setattr(login_module, "async_playwright", lambda: context)
+    monkeypatch.setattr(
+        login_module, "discover_browsers", lambda: (BrowserChoice("Synthetic", "unused"),)
+    )
     paths = Paths(tmp_path)
 
     with pytest.raises(MoodleError, match=message):

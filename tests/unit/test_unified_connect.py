@@ -14,6 +14,7 @@ from tum_mcp.settings import ARTEMIS, ZULIP, Account, Provider, preferences, sav
 from tum_mcp.transport import API
 from tum_moodle import auth
 from tum_moodle.auth import SessionStore
+from tum_moodle.browsers import BrowserChoice
 from tum_moodle.config import BASE_URL, Paths
 
 
@@ -66,7 +67,9 @@ def test_only_selected_tabs_open_and_all_sessions_use_local_files(
 
     monkeypatch.setattr(connect, "API", api)
     completed = []
-    results = connect.connect_services(selected, on_connected=completed.append)
+    results = connect.connect_services(
+        selected, on_connected=completed.append, browser=BrowserChoice("Synthetic", "unused")
+    )
     origins = {
         ServiceChoice.MOODLE: BASE_URL,
         ServiceChoice.ARTEMIS: ARTEMIS,
@@ -113,7 +116,10 @@ def test_timeout_preserves_completed_connections_and_closes_browser(
     monkeypatch.setattr(connect.time, "monotonic", lambda: next(ticks))
     monkeypatch.setattr(connect, "sync_playwright", manager)
     with pytest.raises(CampusError, match="completed connections were saved"):
-        connect.connect_services((ServiceChoice.MOODLE, ServiceChoice.ZULIP))
+        connect.connect_services(
+            (ServiceChoice.MOODLE, ServiceChoice.ZULIP),
+            browser=BrowserChoice("Synthetic", "unused"),
+        )
     assert SessionStore(Paths.default(), storage="file").load().cookies[0].value == "synthetic-only"
     browser.close.assert_called_once()
 

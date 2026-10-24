@@ -5,7 +5,7 @@ import { currentPython, ensureRuntime } from './runtime.mjs';
 const args = process.argv.slice(2);
 try {
   if (args.length === 0 || (args.length === 1 && ['--help', '-h'].includes(args[0]))) {
-    console.log('TUM MCP 0.5.0\nCommands: setup [--client codex|claude|cursor|antigravity|generic], connect, scope, discover, status, doctor [--json] [--live], serve, skills, workspace, actions, logout, uninstall, update\nRun connect to choose Moodle, Artemis and Zulip. Run setup explicitly to provision the managed Python backend.');
+    console.log('TUM MCP 0.5.0\nCommands: setup [--client codex|claude|cursor|antigravity|generic], connect, scope, discover, status, doctor [--json] [--live], serve, skills, workspace, actions, logout, uninstall, update\nRun connect without arguments to select services and an installed Chromium browser. Run setup explicitly to provision the managed Python backend.');
   } else if (['--version', 'version'].includes(args[0])) {
     console.log('0.5.0');
   } else {

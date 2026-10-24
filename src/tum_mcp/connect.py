@@ -18,6 +18,8 @@ from tum_mcp.settings import ARTEMIS, ZULIP, Account, Provider, preferences, sav
 from tum_mcp.transport import API, MAX_RESPONSE
 from tum_mcp.zulip_models import Identity as ZulipIdentity
 from tum_moodle.auth import Cookie, LoginProgress, Session, SessionStore
+from tum_moodle.browser_runtime import browser_driver
+from tum_moodle.browsers import BrowserChoice, BrowserSetupError, discover_browsers
 from tum_moodle.config import BASE_URL, Paths
 
 
@@ -55,10 +57,16 @@ def connect_browser(providers: tuple[Provider, ...]) -> tuple[Account, ...]:
 def connect_services(
     services: tuple[ServiceChoice, ...],
     on_connected: Callable[[ConnectionResult], None] | None = None,
+    *,
+    browser: BrowserChoice | None = None,
 ) -> tuple[ConnectionResult, ...]:
     """Open only selected services in one temporary context, without native-store access."""
     if not services or len(set(services)) != len(services):
         raise CampusError(Code.SCOPE_DENIED, "Select each service exactly once.")
+    available = (browser,) if browser is not None else discover_browsers()
+    if not available:
+        raise BrowserSetupError("Install a Chromium browser, then run tum-mcp connect.")
+    selected_browser = available[0]
     origins = {
         ServiceChoice.MOODLE: BASE_URL,
         ServiceChoice.ARTEMIS: ARTEMIS,
@@ -66,10 +74,12 @@ def connect_services(
     }
     connected: dict[ServiceChoice, ConnectionResult] = {}
     try:
-        with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(channel="chrome", headless=False)
+        with browser_driver(selected_browser), sync_playwright() as playwright:
+            instance = playwright.chromium.launch(
+                executable_path=selected_browser.executable, headless=False
+            )
             try:
-                context = browser.new_context()
+                context = instance.new_context()
                 pages: dict[ServiceChoice, Page] = {}
                 for service in services:
                     page = context.new_page()
@@ -122,11 +132,12 @@ def connect_services(
                     Code.AUTH_REQUIRED, "Sign-in timed out; completed connections were saved."
                 )
             finally:
-                browser.close()
+                instance.close()
     except BrowserError:
         raise CampusError(
             Code.AUTH_REQUIRED,
-            "Chrome closed or could not complete sign-in; completed connections were saved.",
+            "The browser closed or could not complete sign-in. Completed connections were saved; "
+            "run tum-mcp connect to retry or choose another browser.",
         ) from None
 
 

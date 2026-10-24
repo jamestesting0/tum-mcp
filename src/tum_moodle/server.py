@@ -42,7 +42,14 @@ def moodle_auth_status() -> dict[str, str | float | None]:
 
 @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False))
 def moodle_login() -> dict[str, str]:
-    """Open one private Chrome window for user-driven TUM sign-in; never supply credentials."""
+    """Start local Moodle sign-in; never accept passwords or codes through chat."""
+    if os.environ.get("TUM_MOODLE_SESSION_STORAGE") == "file":
+        return {
+            "state": "ACTION_REQUIRED",
+            "command": "tum-mcp connect",
+            "message": "Run tum-mcp connect in your terminal and select Moodle. "
+            "Moodle, Artemis and Zulip use the same browser sign-in flow.",
+        }
     store = SessionStore(Paths.default())
     status = store.status()
     if status["state"] == "AUTHENTICATING":
@@ -56,7 +63,7 @@ def moodle_login() -> dict[str, str]:
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         env=os.environ.copy(),
     )
-    return {"state": "STARTING", "message": "Complete sign-in in Chrome, then check status."}
+    return {"state": "STARTING", "message": "Complete sign-in in the browser, then check status."}
 
 
 @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True))

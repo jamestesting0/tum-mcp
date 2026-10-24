@@ -3,7 +3,9 @@ name: tum-moodle-study
 description: Read and search authorized TUM Moodle course materials and forums with source and page references. Use for Moodle study requests, not generic local PDF work or Artemis submissions.
 ---
 
-Use the preserved `moodle_*` tools. Check `moodle_auth_status` first. Reuse known
+Use the preserved `moodle_*` tools. On `AUTH_REQUIRED`, direct the user to
+`tum-mcp connect` in their terminal and have them select Moodle. Never request
+passwords, codes or cookies through chat. Check `moodle_auth_status` first. Reuse known
 course context; otherwise call `moodle_list_courses`, then `moodle_list_materials`.
 Read using `moodle_read_material` and search using `moodle_search_materials`.
 

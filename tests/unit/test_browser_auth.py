@@ -13,6 +13,7 @@ from tum_mcp.errors import CampusError
 from tum_mcp.settings import ARTEMIS, ZULIP, Account, Provider, preferences
 from tum_mcp.transport import API
 from tum_moodle.auth import Cookie
+from tum_moodle.browsers import BrowserChoice
 
 
 def test_zulip_browser_reads_use_session_json_routes_without_api_keys() -> None:
@@ -90,6 +91,9 @@ def test_one_temporary_context_connects_both_services_and_discards_idp_cookies(
     context.request.get.side_effect = browser_get
     context.cookies.side_effect = cookies
     monkeypatch.setattr(connect, "sync_playwright", manager)
+    monkeypatch.setattr(
+        connect, "discover_browsers", lambda: (BrowserChoice("Synthetic", "unused"),)
+    )
 
     def api(account: Account, credential: Credential) -> API:
         def handler(request: httpx2.Request) -> httpx2.Response:

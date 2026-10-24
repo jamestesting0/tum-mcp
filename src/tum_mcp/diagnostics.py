@@ -1,6 +1,5 @@
 """Read-only local diagnostics, with explicitly requested live authentication checks."""
 
-import os
 import platform
 import re
 import shutil
@@ -16,6 +15,7 @@ from tum_mcp.errors import CampusError
 from tum_mcp.settings import Frozen, Preferences, Provider, config_path, data_path
 from tum_mcp.skills import inspect_skills
 from tum_mcp.ui import State
+from tum_moodle.browsers import BrowserSetupError, discover_browsers, is_wsl
 from tum_moodle.platforms import data_root
 
 
@@ -38,15 +38,6 @@ class DoctorReport(Frozen):
     config_directory: str
     live_authentication: str
     remote_actions: str = "disabled"
-
-
-def chrome_available() -> bool:
-    commands = ("google-chrome", "google-chrome-stable", "chrome")
-    paths = [Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")]
-    for variable in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
-        if value := os.environ.get(variable):
-            paths.append(Path(value) / "Google/Chrome/Application/chrome.exe")
-    return any(shutil.which(name) for name in commands) or any(path.is_file() for path in paths)
 
 
 def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> DoctorReport:
@@ -198,18 +189,34 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             location=sys.executable,
         )
     )
-    chrome = chrome_available()
-    runtime.append(
-        Check(
-            label="Chrome",
-            state=State.READY if chrome else State.MISSING,
-            detail="Browser sign-in available."
-            if chrome
-            else "Install Google Chrome for browser sign-in.",
+    try:
+        browsers = discover_browsers()
+        runtime.append(
+            Check(
+                label="Browsers",
+                state=State.READY if browsers else State.MISSING,
+                detail=(
+                    "Detected: "
+                    + ", ".join(browser.label for browser in browsers)
+                    + ". Launch not checked."
+                )
+                if browsers
+                else "Install a Chromium browser such as Edge, Chrome, Brave or Chromium.",
+            )
         )
-    )
-    if not chrome:
-        next_steps.append("Install Google Chrome before connecting services.")
+        if not browsers:
+            next_steps.append("Install a Chromium browser before connecting services.")
+        if is_wsl():
+            runtime.append(
+                Check(
+                    label="WSL browser bridge",
+                    state=State.INFO,
+                    detail="Windows sign-in through private pipes; "
+                    "the isolated runtime is prepared on first use.",
+                )
+            )
+    except BrowserSetupError as error:
+        runtime.append(Check(label="Browsers", state=State.ACTION, detail=error.message))
     node = shutil.which("node")
     node_state, node_detail = (
         State.MISSING,

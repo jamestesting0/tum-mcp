@@ -1,6 +1,5 @@
 """Local settings and onboarding commands; never runs automatically on npm install."""
 
-import getpass
 import io
 import json
 import logging
@@ -10,7 +9,6 @@ from pathlib import Path
 from typing import Annotated, Literal, assert_never
 
 import typer
-from pydantic import SecretStr
 
 from tum_mcp import __version__
 from tum_mcp.credentials import Vault
@@ -21,6 +19,7 @@ from tum_mcp.settings import (
     preferences,
     save_account,
 )
+from tum_moodle.browsers import BrowserSetupError
 from tum_moodle.errors import MoodleError
 
 app = typer.Typer(no_args_is_help=True)
@@ -71,71 +70,34 @@ def status() -> None:
 
 
 @app.command()
-def connect(
-    provider: Annotated[
-        Literal["moodle", "artemis", "zulip", "campus"] | None, typer.Argument()
-    ] = None,
-    service: Annotated[list[str] | None, typer.Option("--service", "-s")] = None,
-    auth: Literal["browser", "api-key"] = "browser",
-) -> None:
-    """Choose services and connect them in a shared temporary Chrome window."""
+def connect() -> None:
+    """Select services and a browser, then complete sign-in in its temporary window."""
     from rich.text import Text
 
-    from tum_mcp.connect import ConnectionResult, ServiceChoice, connect_services, connect_zulip
-    from tum_mcp.ui import heading, select_services, terminal_console
+    from tum_mcp.connect import ConnectionResult, connect_services
+    from tum_mcp.ui import heading, select_browser, select_services, terminal_console
+    from tum_moodle.browsers import discover_browsers
 
     console = terminal_console()
     if not sys.stdin.isatty():
         raise CampusError(Code.ACTION_REQUIRED, "Run tum-mcp connect in your interactive terminal.")
-    if provider and service:
-        raise CampusError(
-            Code.SCOPE_DENIED, "Use --service choices or a legacy positional service, not both."
-        )
-    heading(console, "Connect", "Choose what to connect. Only the selected tabs will open.")
-    if service:
-        try:
-            selected = tuple(ServiceChoice(value) for value in service)
-        except ValueError:
-            raise CampusError(Code.SCOPE_DENIED, "Choose moodle, artemis or zulip.") from None
-    elif provider:
-        selected = (
-            (ServiceChoice.ARTEMIS, ServiceChoice.ZULIP)
-            if provider == "campus"
-            else (ServiceChoice(provider),)
-        )
-    else:
-        try:
-            selected = select_services()
-        except (KeyboardInterrupt, EOFError):
-            console.print("Cancelled. No browser was opened.")
-            raise typer.Exit(130) from None
-    if not selected:
-        console.print("No services selected. Nothing was changed.")
-        return
-    if len(set(selected)) != len(selected):
-        raise CampusError(Code.SCOPE_DENIED, "Select each service only once.")
-    if auth == "api-key":
-        if selected != (ServiceChoice.ZULIP,):
-            raise CampusError(
-                Code.CAPABILITY_UNSUPPORTED,
-                "API-key import is only for Zulip. Use --service zulip.",
-            )
-        console.print("Enter your existing Zulip API key here; the value stays local.")
-        email = typer.prompt("Zulip email")
-        key = SecretStr(getpass.getpass("Zulip API key (hidden): "))
-        account = connect_zulip(email, key)
-        console.print(Text(f"Zulip connected. Account ID: {account.id}"))
-        return
-    console.print(
-        Text(
-            "Opening "
-            + ", ".join(value.value.title() for value in selected)
-            + ". Complete TUM sign-in/MFA in Chrome."
-        )
-    )
-    console.print(
-        "Sessions are encrypted locally; the owner-restricted key file stays on this computer."
-    )
+    heading(console, "Connect", "Choose services, then a browser. Only selected tabs will open.")
+    try:
+        selected = select_services()
+        if not selected:
+            console.print("No services selected. Nothing was changed.")
+            return
+        browser = select_browser(discover_browsers())
+    except (KeyboardInterrupt, EOFError):
+        console.print("Cancelled. No browser was opened.")
+        raise typer.Exit(130) from None
+    console.print(Text(f"Browser: {browser.label}"))
+    console.print(Text("Opening " + ", ".join(value.value.title() for value in selected) + "."))
+    console.print("Complete TUM sign-in/MFA in the browser window.")
+    if browser.windows_host:
+        console.print("Preparing the private Windows browser driver on first use.")
+        console.print("Sessions stay encrypted in WSL; no browser debugging port is opened.")
+    console.print("Sessions are encrypted locally with an owner-restricted key file.")
     console.print(
         "This avoids Keychain prompts, with less protection than native credential storage."
     )
@@ -149,7 +111,7 @@ def connect(
             console.print(Text(f"Account ID: {result.account.id}"))
 
     try:
-        results = connect_services(selected, on_connected=connected)
+        results = connect_services(selected, on_connected=connected, browser=browser)
     except KeyboardInterrupt:
         console.print("Cancelled. Completed connections were saved.")
         raise typer.Exit(130) from None
@@ -157,9 +119,8 @@ def connect(
     console.print(
         f"Saved {len(results)} connection(s). Existing course/channel scopes are preserved."
     )
-    console.print(
-        "New accounts need scope selection before content reads. Run tum-mcp status for IDs."
-    )
+    console.print("New Artemis/Zulip accounts need scope selection before content reads.")
+    console.print("Your coding agent can use status, discover and scope to help with your choices.")
 
 
 @app.command()
@@ -350,7 +311,7 @@ def main() -> None:
                 stream.reconfigure(encoding="utf-8")
     try:
         app()
-    except (CampusError, MoodleError) as error:
+    except (CampusError, MoodleError, BrowserSetupError) as error:
         typer.echo(str(error), err=True)
         raise SystemExit(2) from None
     except KeyboardInterrupt:

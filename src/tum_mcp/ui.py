@@ -1,4 +1,4 @@
-"""Shared, terminal-aware primitives. The visual contract lives in docs/DESIGN.md."""
+"""Shared, terminal-aware primitives. Design working notes stay in docs/local/."""
 
 import os
 import shutil
@@ -14,6 +14,7 @@ from rich.theme import Theme
 
 from tum_mcp import __version__
 from tum_mcp.connect import ServiceChoice
+from tum_moodle.browsers import BrowserChoice, BrowserSetupError
 
 STYLES = {
     "title": "bold",
@@ -136,3 +137,41 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
         color_depth=ColorDepth.DEPTH_1_BIT if "NO_COLOR" in os.environ else None,
     ).unsafe_ask()
     return tuple(ServiceChoice(value) for value in result) if result else None
+
+
+def select_browser(browsers: tuple[BrowserChoice, ...]) -> BrowserChoice:
+    if not browsers:
+        raise BrowserSetupError(
+            "No supported Chromium browser found. Install Edge, Chrome, Brave, Chromium, "
+            "Vivaldi or Opera, or set TUM_MCP_BROWSER to a compatible executable."
+        )
+    if len(browsers) == 1:
+        return browsers[0]
+    console = terminal_console()
+    if os.environ.get("TERM") == "dumb":
+        console.print("Browser")
+        for index, browser in enumerate(browsers, 1):
+            console.print(Text(f"{index}. {browser.label}"))
+        while True:
+            answer = console.input("Browser number: ").strip()
+            if answer.isdecimal() and 1 <= int(answer) <= len(browsers):
+                return browsers[int(answer) - 1]
+            console.print("Choose one of the listed browser numbers.")
+    console.print("Up/down: move · Enter: continue")
+    console.print("Ctrl+C: cancel")
+    result = questionary.select(
+        "Browser",
+        choices=[questionary.Choice(browser.label, value=browser) for browser in browsers],
+        qmark="",
+        pointer=">",
+        instruction="",
+        style=questionary.Style([("highlighted", "bold"), ("pointer", "bold")]),
+        color_depth=ColorDepth.DEPTH_1_BIT if "NO_COLOR" in os.environ else None,
+    ).unsafe_ask()
+    match result:
+        case BrowserChoice():
+            return result
+        case None:
+            raise KeyboardInterrupt
+        case _:
+            raise BrowserSetupError("The browser selection could not be read. Run connect again.")
