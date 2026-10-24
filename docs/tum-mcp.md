@@ -92,8 +92,8 @@ rerun its setup to restore that runtime, reviewing any client configuration diff
 
 For platforms outside the bootstrap targets, the source installation needs
 Python 3.13+, uv, and Git: run `uv sync --locked`, then
-`uv run tum-mcp setup --client generic` from the checkout. Chrome is needed for
-browser onboarding. Docker is needed only for isolated assignment tests.
+`uv run tum-mcp setup --client generic` from the checkout. An installed Chromium browser is needed for
+browser onboarding. See [setup](setup.md) for browser choices and WSL. Docker is needed only for isolated assignment tests.
 
 ## Connections and scopes
 
@@ -106,24 +106,26 @@ tum-mcp scope artemis ACCOUNT_ID --course COURSE_ID --sensitive --workspace
 tum-mcp scope zulip ACCOUNT_ID --channel CHANNEL_ID
 ```
 
-`connect` opens a keyboard service selector. Move with up/down, toggle with Space,
-and confirm with Enter. Nothing is selected initially. Only selected tabs open
-in one temporary Chrome context; sign-in/MFA stays in the browser. TERM=dumb uses
-a numbered prompt. Ctrl+C cancels, closes Chrome, and retains completed connections.
+`connect` takes no arguments or connection options. Move with up/down, toggle
+services with Space, and press Enter. Choose a browser when more than one is
+installed. Only selected tabs open in one temporary browser context. Moodle,
+Artemis and Zulip all follow this flow; no separate Moodle login is needed.
+Sign-in/MFA stays in the browser. `TERM=dumb` uses numbered prompts. Ctrl+C
+cancels and retains completed connections. Old service/campus arguments and
+`--service`/`--auth` flags are rejected before any browser opens.
 
-Skip the selector with repeated options: `connect --service moodle --service zulip`.
-Sign-in still requires an interactive terminal. Legacy `connect campus` remains
-an alias for Artemis and Zulip; legacy individual service arguments still work.
-Moodle now follows the same connection flow. Only service-owned cookies are saved;
-identity-provider cookies are discarded when the temporary browser closes.
+Detection covers Chrome, Edge, Brave, Chromium, Vivaldi, Opera and selected
+preview channels. Set `TUM_MCP_BROWSER` to an executable path for another
+compatible Chromium build. Browsers must permit Playwright automation. Firefox
+and Safari use different protocols and are outside this integration.
+Only service-owned cookies are saved; identity-provider cookies are discarded
+when the temporary browser closes. Existing browser profiles are never imported.
 
-Zulip browser sessions use its read-only `/json/` routes; API-key authentication
-uses `/api/v1/`. A successful authenticated `/json/users/me` read was verified on
-TUM's deployment. This separation is also documented in
-[Zulip's dispatcher](https://github.com/zulip/zulip/blob/12.0/zerver/lib/rest.py).
-Session expiry requires browser reconnection. API keys are optional:
-`connect --service zulip --auth api-key` imports an existing key through hidden local input.
-Never paste credentials in chat. Browser login and Artemis Git access remain
+Zulip uses its read-only `/json/` routes with the browser session; no API key is
+required. Reconnect through the same selector when a session expires. Existing
+API-key records remain readable for compatibility, but key entry is not part of
+onboarding. See [Zulip's dispatcher](https://github.com/zulip/zulip/blob/12.0/zerver/lib/rest.py).
+Browser login and Artemis Git access remain
 separate capabilities. Existing scopes survive reconnection; new identities start
 with empty scopes. Private channels additionally require `--private-channel ID` while
 remaining in `--channel ID`. `--sensitive` enables own Artemis participation and
@@ -169,7 +171,7 @@ The tools resolve one exact mapping; ambiguity never grants broader access.
 ## Diagnostics
 
 `doctor` reads local configuration and checks runtime prerequisites. It does not
-open Chrome, contact campus services, decrypt sessions, or read native stores.
+open a browser, contact campus services, decrypt sessions, or read native stores.
 Saved sessions are **Not verified** until checked. Missing optional Git/Docker
 capabilities do not prevent course reads. Client registration is distinguished
 from activation; the host must confirm a running MCP connection after setup.
@@ -240,7 +242,13 @@ Generic clients receive configuration plus optional manual skill export.
 `setup --client cursor` writes `~/.cursor/mcp.json`.
 `setup --client antigravity` writes `~/.gemini/config/mcp_config.json`; an existing
 legacy `~/.gemini/antigravity/mcp_config.json` is reused when no current file exists.
-Both merge the `tum` stdio entry and preserve unrelated settings. Conflicting or
+Both merge the `tum` stdio entry and preserve unrelated settings.
+From WSL, append `--host windows` to any client setup command to target its
+Windows profile. The generated `wsl.exe` command pins the distribution, Linux
+user, managed Python and data paths, so clients share the WSL connection.
+Use the same host option on uninstall. Native Windows uses the default host.
+`doctor` in WSL shows local and Windows client registrations separately.
+See [the WSL guide](setup.md#wsl) for interop requirements. Conflicting or
 invalid configuration is preserved with an actionable error. Reload MCP servers
 in the host after setup; actual host activation is not certified by writing files.
 See the official [Cursor MCP documentation](https://cursor.com/docs/mcp) and

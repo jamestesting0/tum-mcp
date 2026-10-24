@@ -16,14 +16,14 @@ Run npm install --global @jamestesting888/tum-mcp, then:
 Use --client claude, cursor, antigravity, or generic for a different client.
 Preserve existing settings and customized skills. Follow the activation steps.
 Help me run tum-mcp connect in an interactive terminal and choose services.
-I will complete TUM sign-in/MFA in Chrome. Never request secrets in chat.
+I will complete TUM sign-in/MFA in the browser. Never request secrets in chat.
 Ask which Artemis courses and Zulip channels to enable before reading content.
 Run tum-mcp doctor to explain what is available and what still needs setup.
 ```
 
 ## Quick start
 
-You need **Node.js 22.14+**, **Google Chrome**, and your TUM account.
+You need **Node.js 22.14+**, **a Chromium browser**, and your TUM account.
 
 ```sh
 npm install --global @jamestesting888/tum-mcp
@@ -32,8 +32,9 @@ tum-mcp connect
 tum-mcp doctor
 ```
 
-Choose Moodle, Artemis, Zulip, or any combination with **Space**, then **Enter**.
-Only selected tabs open. Complete sign-in/MFA there; no Zulip API key is needed.
+Choose services with **Space**, then **Enter**. Choose an installed browser when
+prompted. Moodle, Artemis and Zulip use the same flow; only selected tabs open.
+Complete sign-in/MFA there; no Zulip API key is needed.
 New Artemis/Zulip accounts need explicit [course and channel scopes](docs/tum-mcp.md#connections-and-scopes).
 
 | Client | Setup |
@@ -45,6 +46,12 @@ New Artemis/Zulip accounts need explicit [course and channel scopes](docs/tum-mc
 | Other local MCP clients | `--client generic` · configuration for manual installation |
 
 Cursor and Antigravity workflow skills can be [exported for manual installation](docs/tum-mcp.md#client-and-skill-setup).
+Works on macOS, Windows, glibc Linux x86_64/ARM64, and WSL 3.x. From WSL,
+Windows browsers open on the Windows desktop. Use
+`tum-mcp setup --client cursor --host windows` to register a Windows client
+against that same WSL backend; replace `cursor` with your client.
+[WSL setup and requirements](docs/setup.md#wsl).
+
 Setup supplies a private Python runtime. Git is optional for assignment workspaces;
 Docker is optional for isolated assignment tests. No native keyring is needed by
 new campus connections, including Linux x86_64 and ARM64.
@@ -75,7 +82,7 @@ is unencrypted and limited to 30 days / 1 GiB; downloads remain until deleted.
 
 Update with `npm install --global @jamestesting888/tum-mcp@latest`, then rerun
 setup for your client. Conflicting customized configuration is kept for review.
-See the [guide and verification limits](docs/tum-mcp.md), [Moodle-only setup](docs/setup.md),
-[development guide](docs/development.md), and [terminal design system](docs/DESIGN.md).
+See the [guide and verification limits](docs/tum-mcp.md), [setup and troubleshooting](docs/setup.md),
+[development guide](docs/development.md).
 
-[MIT](LICENSE) · [NOTICE](NOTICE) · [Report a problem](https://github.com/jamestesting0/tum-moodle-integration/issues)
+[MIT](LICENSE) · [NOTICE](NOTICE) · [Report a problem](https://github.com/jamestesting0/tum-mcp/issues)

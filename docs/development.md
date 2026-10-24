@@ -4,9 +4,10 @@
 
 For the combined campus package, see the [TUM MCP guide](tum-mcp.md) and
 [current verification limits](tum-mcp.md#build-and-test-the-local-package). This page also
-covers the preserved Moodle-only installer. Terminal changes follow
-[the design system](DESIGN.md). Keep local agent handoffs and machine-specific QA
-under `docs/local/`, which is ignored by Git and excluded from packages.
+covers the preserved Moodle-only installer. Keep design working notes, agent handoffs and machine-specific QA under
+`docs/local/`, which is ignored by Git and excluded from packages. `DESIGN.md`
+belongs there, never in public documentation. Public CLI documentation must
+match help output and the actual keyboard flow.
 
 ## Checks
 
@@ -29,7 +30,12 @@ credentials; no Moodle login is needed. No language-server installation is requi
 
 GitHub Actions runs the suite on macOS, Windows, and Ubuntu, including packaged
 MCP startup, PDF/OCR extraction, downloads, and real native credential-store
-round trips. The Linux job starts its own D-Bus/Secret Service session.
+round trips. The WSL workflow runs Linux consumer installation and a Windows
+browser under both distribution engines on WSL 3.x. It records `wsl --version`;
+the package version and distribution engine number are separate. Browser checks
+use owned temporary profiles and synthetic pages/cookies, with no live campus
+requests. Binary stdio probing chooses direct interop or a native Windows pipe
+relay; there is no kernel-version guess or debugging TCP listener. The Linux job starts its own D-Bus/Secret Service session.
 The campus additions configure fresh npm consumer checks on all three runners;
 those checks must pass for the release commit before claiming release coverage.
 
@@ -46,7 +52,8 @@ one test downloads a lecture. Never supply personal credentials to public CI.
 | Module | Responsibility |
 | --- | --- |
 | `platforms.py` | Shared OS data/runtime paths; also imported by bootstrap and launcher |
-| `auth.py`, `login.py` | Encrypted sessions, native credential stores, Chrome sign-in |
+| `auth.py`, `login.py` | Encrypted sessions, native credential stores, Chromium sign-in |
+| `browsers.py`, `browser_runtime.py` | Browser discovery, isolated Playwright launch and Windows/WSL pipe bridge |
 | `server.py`, `service.py` | MCP tools and retrieval coordination |
 | `http_client.py` | Read-only Moodle network boundary |
 | `parsing.py`, `forums.py`, `personal_records.py` | Moodle content and explicit private-record reads |
@@ -86,12 +93,13 @@ Windows terminates the worker and its observed child processes.
 Automated tests do not replace a desktop check. On each target OS, verify:
 
 1. Register/install from a checkout with spaces in its path; restart the client.
-2. Confirm native tools appear, then complete Chrome sign-in and MFA.
+2. Confirm native tools appear, then complete Chromium sign-in and MFA.
 3. List current-semester courses, read a PDF, and check a forum.
 4. Download one material and open the returned file locally.
 5. Restart the client and confirm session reuse, then test logout and sign-in.
 
-macOS has had a live course/sign-in test. Windows and Linux still require this
+Automated browser checks do not certify a fresh human SSO/MFA flow. macOS has
+had a live course/sign-in test. Windows and Linux still require this
 interactive check before claiming equivalent desktop verification.
 
 Keep changes focused. Never commit session files, course materials, databases,

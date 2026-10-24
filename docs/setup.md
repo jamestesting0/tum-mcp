@@ -1,179 +1,130 @@
-# Desktop setup
+# Setup and troubleshooting
 
-This page covers the preserved **Moodle-only** installer. For the combined
-Artemis/Zulip/Moodle package, use [campus setup](../README.md#quick-start) and
-the [TUM MCP guide](tum-mcp.md). Its unified `tum-mcp connect` uses local-file
-keys without native-store prompts; the native-store requirements below apply
-only to this older Moodle-only installation path.
+[README](../README.md) · [Tools and scopes](tum-mcp.md) · [Development](development.md)
 
-[README](../README.md) · [macOS](#macos) · [Windows](#windows) · [Linux](#linux) ·
-[Updates](#updates) · [Troubleshooting](#troubleshooting) · [Uninstall](#uninstall)
+The upcoming 0.5.0 release uses this setup. npm 0.4.1 remains the published
+version until 0.5.0 is released; its connection commands differ.
 
-## Prerequisites
+## Install
 
-Use your own TUM account and a Codex client that supports local plugin marketplaces.
-This package runs on the local computer; it does not connect ChatGPT web.
-
-### macOS
-
-Install Git, [uv](https://docs.astral.sh/uv/getting-started/installation/), and
-[Google Chrome](https://www.google.com/chrome/). Homebrew users can run:
+Install Node.js 22.14 or newer and a Chromium browser. No system Python, native
+keyring or administrator access is required by TUM MCP. Supported bootstrap
+targets are macOS ARM64/x64, Windows ARM64/x64 and glibc Linux ARM64/x86_64.
+Linux needs a graphical desktop for native browser sign-in; WSL can use Windows.
 
 ```sh
-brew install git uv
-brew install --cask google-chrome
+npm install --global @jamestesting888/tum-mcp
+tum-mcp setup --client codex
+tum-mcp connect
+tum-mcp doctor
 ```
 
-Git can also come from Apple's Command Line Tools: `xcode-select --install`.
-No system Python is needed. For scanned PDFs, optionally install `brew install tesseract`.
-Unlock your login keychain if macOS asks. Apple Silicon has been tested locally;
-Intel uses the same setup, but has not had a hands-on test.
+Use `--client claude`, `cursor`, `antigravity`, or `generic` for another client.
+Codex needs the plugin enabled and a restart when prompted. Cursor and
+Antigravity need their MCP servers reloaded. Generic setup writes configuration
+for manual installation. Setup preserves unrelated settings and refuses to
+replace customized entries. It does not authenticate or fetch courses.
 
-### Windows
+## Connect
 
-Use a normal, non-administrator PowerShell window. Install prerequisites if missing:
+Run **`tum-mcp connect`**, with no arguments, in an interactive terminal:
 
-```powershell
-winget install --exact --id Git.Git
-winget install --exact --id astral-sh.uv
-winget install --exact --id Google.Chrome
-```
+1. Use up/down to move and Space to select Moodle, Artemis and/or Zulip.
+2. Press Enter. If several browsers are installed, choose one and press Enter.
+3. Complete TUM sign-in/MFA in the opened window. Only selected service tabs open.
+4. Return to the terminal for the saved-connection result.
 
-Open a **new PowerShell window** after installation so PATH is refreshed.
-uv supplies Python; a separate Python installation is not required. Ensure
-`uv --version` works before running the installer. Codex then launches the private
-interpreter directly, so it does not depend on PowerShell's PATH.
+Moodle uses exactly the same selector and storage flow as Artemis and Zulip.
+No API key or Keychain prompt is needed. A temporary browser profile keeps the
+connection separate from your everyday browser. Ctrl+C closes it and preserves
+connections that already completed. A dumb terminal uses numbered prompts.
+Old service arguments and `--service`/`--auth` flags are no longer accepted.
 
-Windows Credential Manager stores the session-encryption key. Optional OCR needs
-[Tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html), with its
-installation directory on PATH. Restart Codex after changing PATH.
+Chrome, Edge, Brave, Chromium, Vivaldi and Opera are detected in their standard
+locations. Selected preview channels and Opera GX are detected where installed.
+For another Chromium build, set `TUM_MCP_BROWSER` to its executable path before
+running connect. Compatible builds must allow Playwright automation. Safari and
+Firefox are not supported.
 
-### Linux
+New Artemis/Zulip accounts start without content scopes. Your agent can use
+status/discover to show account IDs and available course/channel metadata, then
+help you choose [explicit scopes](tum-mcp.md#connections-and-scopes).
+An account ID identifies a saved service connection; it is not your TUM login.
 
-Use a graphical desktop session with Google Chrome, Git, uv, and an
-unlocked **Secret Service** keyring, such as GNOME Keyring. The keyring must be
-available in the same D-Bus session as Codex. A headless SSH session is insufficient
-for interactive Moodle sign-in.
+## WSL
 
-For Ubuntu/Debian prerequisites:
+Install Node.js and the npm package **inside WSL**. WSL 3.x is the application
+release; distributions still use engine 1 or 2. See Microsoft's
+[release page](https://github.com/microsoft/WSL/releases) and
+[version commands](https://learn.microsoft.com/en-us/windows/wsl/basic-commands).
+Both engines have dedicated CI checks on the current WSL 3.x runner image.
 
 ```sh
-sudo apt-get install git gnome-keyring
+npm install --global @jamestesting888/tum-mcp
+tum-mcp setup --client cursor --host windows
+tum-mcp connect
+tum-mcp doctor
 ```
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and
-[Chrome](https://www.google.com/chrome/) using their official installers.
-For OCR, optionally install `sudo apt-get install tesseract-ocr`.
-On other distributions, use the equivalent packages. KWallet-only setups need
-a running Secret Service provider; the plugin deliberately avoids plaintext
-or arbitrary third-party credential backends.
+Replace `cursor` with your client. `--host windows` registers the Windows app
+against the WSL backend and shared Linux session paths. It writes the Windows
+user's profile using a `wsl.exe` stdio command that pins the distribution and
+Linux user. Omit the option for clients running inside Linux. Native Windows
+installation also uses the default host. Use `--host windows` on uninstall too.
+Reload or restart the Windows client after setup. The WSL distribution and its
+managed runtime must remain available at the registered paths.
 
-## Install and sign in
+Connect detects Windows Chromium browsers and opens them on the Windows desktop.
+First use downloads a private, checksum-verified Windows Node driver from
+nodejs.org into Windows LocalAppData. A separate Windows Python or Node install
+is unnecessary. The backend, session keys and encrypted sessions stay in WSL.
+The bridge uses binary pipes and a temporary browser profile, without a remote
+debugging TCP port. Transport is selected by a runtime pipe test, not a version
+string, so a WSL package update does not change that assumption.
 
-Run these commands on the target computer so packaging generates the correct launcher:
+Windows interop and its PATH integration must be enabled: `powershell.exe` (or
+`pwsh.exe`) and `wslpath` must be available from WSL. Drive paths are translated
+with `wslpath`; the package does not assume `/mnt/c`. If interop is disabled,
+restore it in your WSL configuration and restart the distribution. A Linux GUI
+browser can also be listed when DISPLAY or WAYLAND_DISPLAY is set. Windows
+browser discovery still requires functioning interop.
 
-```sh
-git clone --depth 1 https://github.com/jamestesting0/tum-moodle-integration.git
-cd tum-moodle-integration
-uv run scripts/install.py
-```
+## Diagnose and reconnect
 
-Do not copy a Mac's generated plugin or session files to Windows/Linux.
+- `tum-mcp doctor` shows services, client registrations, browsers and optional
+  tools. Saved sessions are **Not verified** until checked; registration alone
+  does not prove a desktop client is running the server.
+- `tum-mcp doctor --live` verifies saved local sessions with bounded service
+  reads. `--json` provides structured output; combine the flags if needed.
+- An expired session uses the same `tum-mcp connect` selector. Reconnecting the
+  same identity preserves course/channel scopes.
+- If no browser appears, check its installation or `TUM_MCP_BROWSER`. A managed
+  or incompatible Chromium build may prevent automation; try another browser.
+- Git is optional for assignment workspaces. Docker is optional for approved
+  isolated tests. Missing either does not prevent course reads.
+- Do not paste passwords, cookies, MFA codes or API keys into chat or bug reports.
 
-The installer preserves existing marketplace entries and registers the source
-under `~/.codex/plugins/local/tum-moodle/`. In PowerShell, `~` refers to your user
-profile. You can also install through the Codex CLI:
+Sessions are encrypted with owner-restricted local key files. This avoids native
+credential-store prompts, but anyone obtaining both key and ciphertext can
+decrypt them. [Storage locations and recovery](tum-mcp.md#connections-and-scopes)
+explain migration and backup. Existing Moodle data and downloads are preserved.
 
-```text
-codex plugin add tum-moodle@personal-local
-```
+## Update and remove
 
-If you renamed your personal source, use its marketplace name instead.
-When the installer requests it, restart the desktop app completely: **Cmd+Q** on macOS;
-exit all app windows/background instances on Windows/Linux, then reopen it.
+Update with `npm install --global @jamestesting888/tum-mcp@latest`, then rerun
+setup. Review conflicts instead of deleting customized client configuration.
+`tum-mcp uninstall --client cursor` (or your client) removes unchanged managed
+registration while retaining sessions, downloads and personal work. Codex plugin
+removal uses its Plugins UI. Remove the npm package separately with
+`npm uninstall --global @jamestesting888/tum-mcp`.
 
-After installation, ask **“Sign in to TUM Moodle.”** The agent checks the existing
-session before opening Chrome. Complete any TUM login/MFA there. Once connected,
-the agent offers an optional course-list check; declining it leaves setup complete.
+## Existing Moodle-only installations
 
-### Installer results and repair
-
-`uv run scripts/install.py --json` returns one structured result. Progress goes to
-stderr; `next_actions` tells the agent exactly what remains.
-
-| Result | Meaning |
-| --- | --- |
-| `ready` | Local checks pass and the installed plugin is current. Sign-in is separate. |
-| `restart_required` | Software setup passed; fully restart Codex once to load it. |
-| `action_required` | Follow the prerequisite, keyring, or manual enablement instruction. Completed software stages are retained. |
-| `error` | A stage failed; the result includes the failed stage and error. |
-
-Exit codes are 0 for software success, 2 for a required user action, and 1 for an
-error. A local MCP check does not prove tools have reloaded in the current chat.
-Do not keep restarting or reinstalling while waiting for the user.
-
-If the runtime is damaged, run `uv run scripts/install.py --repair`. This reinstalls
-locked runtime packages without removing sessions or downloads. Healthy reruns
-check the existing runtime and reuse uv's cache. Native tools can work after the
-original checkout is moved/deleted; keep a checkout for future updates.
-
-## Updates
-
-Run `uv run scripts/update.py` from your checkout and follow the printed actions.
-It uses your branch's configured upstream and a fast-forward-only pull; it never
-stashes edits, switches branches, or creates a merge commit.
-
-The shared installer refreshes TUM Moodle using the Codex CLI on PATH or in a standard
-macOS app bundle. If it cannot find the CLI, it updates the code/runtime and tells
-you to reinstall the plugin from your personal source in the Plugins screen.
-Custom marketplace names are preserved. A failed step stops the update and
-reports the error; fix that issue and rerun the command.
-
-For a checkout created before the updater was added, first run `git pull --ff-only`.
-
-## Troubleshooting
-
-| Problem | Fix |
-| --- | --- |
-| No personal plugin source | Repeat packaging with `--register`, then fully restart Codex. Check that your client supports local marketplaces. |
-| Skills appear but tools do not | Repeat bootstrap, reinstall the plugin from your personal source, and restart Codex. Check loader errors before repeating restarts. |
-| `uv` is missing | Install uv and open a new terminal/app session. Bootstrap also checks `~/.local/bin` and standard Homebrew locations. |
-| Windows opens Microsoft Store for Python | Rerun the installer. The generated manifest must point to the private runtime's `Scripts/python.exe`. |
-| Native credential store unavailable | Unlock the OS store. Linux needs Secret Service in the current desktop D-Bus session; there is no plaintext fallback. |
-| Chrome fails to open | Install Google Chrome, then ask the plugin to sign in again. Chromium-only installations are not selected automatically. |
-| Session expired | Ask Codex to sign in to Moodle again. |
-| Scanned material fails | Install Tesseract and put it on PATH, then restart Codex and retry. Text PDFs do not require OCR. |
-| Search returns little | Ask Codex to index/refresh the course and check coverage. |
-
-Downloaded originals are in `~/Downloads/TUM Moodle/`. To use a different folder,
-set `TUM_MOODLE_DOWNLOAD_DIR` in the environment inherited by Codex.
-`TUM_MOODLE_DATA_DIR` overrides the session/cache location. The installed runtime
-stays in the standard platform data folder.
-
-For [bug reports](https://github.com/jamestesting0/tum-moodle-integration/issues),
-include OS/client versions and the error message. Remove credentials, cookies,
-personal records, and course content.
-
-## Data locations
-
-| Platform | Moodle runtime, session, and cache |
-| --- | --- |
-| macOS | `~/Library/Application Support/TUMMoodle/` |
-| Windows | `%LOCALAPPDATA%\TUMMoodle\` |
-| Linux | `${XDG_DATA_HOME:-~/.local/share}/TUMMoodle/` |
-
-Campus settings and encrypted credentials use a separate `TUMMCP/` folder beside
-`TUMMoodle/`. Existing Moodle data remains in place when switching to TUM MCP.
-
-## Uninstall
-
-1. Ask Codex to sign out and clear the cache, then remove the plugin in Plugins.
-2. To remove the personal catalog entry, delete only `tum-moodle` from
-   `~/.agents/plugins/marketplace.json`, preserving the other entries.
-3. Delete `~/.codex/plugins/local/tum-moodle/` and the
-   [platform data folder](#data-locations) if no longer needed.
-4. Remove the `tum-moodle-integration` credential entry using the OS credential
-   manager: Keychain Access, Windows Credential Manager, or the Linux password/keyring app.
-
-Delete downloaded files separately if desired. Signing out removes this plugin's
-saved session; it does not sign you out of other browsers or revoke TUM sessions.
+The older `tum-moodle` commands and sixteen `moodle_*` tools remain compatible.
+The separate source/plugin installer retains its original native credential
+store: macOS Keychain, Windows Credential Manager, or Linux Secret Service.
+Its native-store identity, existing session paths and downloads remain intact.
+The combined `tum-mcp serve` uses local-file storage and directs all login
+requests to `tum-mcp connect`. Reconnect once through that selector to create the
+new session; no automatic extraction of older native-store secrets occurs.
+Disable the older plugin when activating TUM MCP to avoid duplicate tools.
