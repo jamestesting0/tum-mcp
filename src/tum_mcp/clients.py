@@ -8,12 +8,71 @@ from pathlib import Path
 
 import yaml
 from filelock import FileLock
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from tum_mcp import __version__
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import config_dir
 from tum_mcp.skills import export_pack, inspect_skills
 from tum_moodle.config import private_write
+
+CLIENTS = ("codex", "claude", "cursor", "antigravity", "generic")
+
+
+class ClientConfiguration(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    mcpServers: dict[str, JsonValue] = Field(default_factory=dict)
+
+
+def client_config_path(name: str, home: Path) -> Path:
+    match name:
+        case "cursor":
+            return home / ".cursor/mcp.json"
+        case "antigravity":
+            current = home / ".gemini/config/mcp_config.json"
+            legacy = home / ".gemini/antigravity/mcp_config.json"
+            return legacy if legacy.is_file() and not current.exists() else current
+        case "claude":
+            return home / ".claude.json"
+        case "generic":
+            return config_dir() / "mcp.json"
+        case "codex":
+            return home / ".codex/plugins/local/tum-mcp/mcp.json"
+        case _:
+            raise CampusError(Code.CAPABILITY_UNSUPPORTED, "Choose a supported MCP client.")
+
+
+def read_client_config(path: Path, *, for_update: bool = False) -> ClientConfiguration:
+    if for_update and path.is_symlink():
+        raise CampusError(
+            Code.WORKSPACE_CONFLICT,
+            "Client configuration is a symbolic link; update its target manually.",
+        )
+    if not path.exists():
+        return ClientConfiguration()
+    try:
+        return ClientConfiguration.model_validate_json(path.read_bytes())
+    except (ValidationError, OSError):
+        raise CampusError(
+            Code.WORKSPACE_CONFLICT,
+            "Client configuration is invalid; preserve and repair it locally.",
+        ) from None
+
+
+def install_stdio_client(name: str, home: Path) -> None:
+    target = client_config_path(name, home)
+    current = read_client_config(target, for_update=True)
+    server = {"command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
+    existing = current.mcpServers.get("tum")
+    if existing is not None and existing != server:
+        raise CampusError(
+            Code.WORKSPACE_CONFLICT, "A customized MCP entry already uses tum; preserve it."
+        )
+    current.mcpServers["tum"] = server
+    target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    private_write(target, current.model_dump_json(indent=2).encode())
+    print(f"{name.title()} MCP configuration saved. Reload its MCP servers to activate TUM MCP.")
+    print("Host activation is not verified. Use skills export for portable workflow skills.")
 
 
 def same_tree(left: Path, right: Path) -> bool:
@@ -24,12 +83,17 @@ def same_tree(left: Path, right: Path) -> bool:
 
 def install_client(name: str, home: Path | None = None) -> None:
     base = home or Path.home()
-    if name not in {"codex", "claude", "generic"}:
-        raise CampusError(Code.CAPABILITY_UNSUPPORTED, "Choose codex, claude, or generic.")
+    if name not in CLIENTS:
+        raise CampusError(
+            Code.CAPABILITY_UNSUPPORTED, "Choose codex, claude, cursor, antigravity, or generic."
+        )
     with FileLock(str(config_dir() / "client-install.lock")):
+        if name in {"cursor", "antigravity"}:
+            install_stdio_client(name, base)
+            return
         if name == "generic":
             target = config_dir() / "mcp.json"
-            current = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
+            current = read_client_config(target, for_update=True).model_dump()
             server = {"command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
             registered = current.get("mcpServers", {}).get("tum")
             if registered is not None and registered != server:
@@ -139,7 +203,7 @@ def install_codex(staged: Path, home: Path) -> None:
 def install_claude(staged: Path, home: Path) -> None:
     skills = home / ".claude/skills"
     target = home / ".claude.json"
-    existing = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
+    existing = read_client_config(target, for_update=True).model_dump()
     server = {"type": "stdio", "command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
     registered = existing.get("mcpServers", {}).get("tum")
     if registered is not None and registered != server:

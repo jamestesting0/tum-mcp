@@ -5,14 +5,16 @@ import sys
 from pathlib import Path
 from typing import Literal, assert_never
 
-from tum_mcp.clients import same_tree
+from tum_mcp.clients import client_config_path, read_client_config, same_tree
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import config_dir
 from tum_mcp.skills import bundled, export_pack
 from tum_moodle.config import private_write
 
 
-def uninstall_client(name: Literal["codex", "claude", "generic"], home: Path | None = None) -> None:
+def uninstall_client(
+    name: Literal["codex", "claude", "cursor", "antigravity", "generic"], home: Path | None = None
+) -> None:
     base = home or Path.home()
     expected = {
         "type": "stdio",
@@ -20,10 +22,22 @@ def uninstall_client(name: Literal["codex", "claude", "generic"], home: Path | N
         "args": ["-I", "-m", "tum_mcp", "serve"],
     }
     match name:
+        case "cursor" | "antigravity":
+            path = client_config_path(name, base)
+            if path.exists():
+                current = read_client_config(path, for_update=True)
+                registered = current.mcpServers.get("tum")
+                wanted = {"command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
+                if registered is not None and registered != wanted:
+                    raise CampusError(
+                        Code.WORKSPACE_CONFLICT, "Customized MCP configuration was preserved."
+                    )
+                current.mcpServers.pop("tum", None)
+                private_write(path, current.model_dump_json(indent=2).encode())
         case "generic":
             path = config_dir() / "mcp.json"
             if path.exists():
-                value = json.loads(path.read_text(encoding="utf-8"))
+                value = read_client_config(path, for_update=True).model_dump()
                 expected_generic = {
                     "command": sys.executable,
                     "args": ["-I", "-m", "tum_mcp", "serve"],
@@ -41,7 +55,7 @@ def uninstall_client(name: Literal["codex", "claude", "generic"], home: Path | N
                     path.unlink()
         case "claude":
             target = base / ".claude.json"
-            value = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
+            value = read_client_config(target, for_update=True).model_dump()
             entry = value.get("mcpServers", {}).get("tum")
             if entry is not None and entry != expected:
                 raise CampusError(
