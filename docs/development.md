@@ -21,7 +21,8 @@ uv build
 node npm/build.mjs
 npm test
 npm pack --ignore-scripts --pack-destination dist
-npm run test:consumer -- dist/jamestesting888-tum-mcp-0.5.0.tgz
+npm run test:consumer
+npm run test:upgrade
 ```
 
 Python 3.13 is the managed runtime on every platform. Install Tesseract for the
@@ -38,6 +39,9 @@ requests. Binary stdio probing chooses direct interop or a native Windows pipe
 relay; there is no kernel-version guess or debugging TCP listener. The Linux job starts its own D-Bus/Secret Service session.
 The campus additions configure fresh npm consumer checks on all three runners;
 those checks must pass for the release commit before claiming release coverage.
+Upgrade consumers install the real public 0.4.1/0.5.0 artifacts into isolated
+profiles, refresh every supported client, retire old skills, verify failed-stage
+rollback and damaged-runtime repair, then check explicit cleanup preserves data.
 
 To test an installed package, set `TUM_MOODLE_PACKAGED` to its
 `scripts/launch.py` path before running pytest. Set `TUM_MOODLE_SYSTEM_KEYRING=1`

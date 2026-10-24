@@ -2,8 +2,7 @@
 
 [README](../README.md) · [Tools and scopes](tum-mcp.md) · [Development](development.md)
 
-These instructions apply to **0.5.0**. Upgrade older installations before using
-the interactive connection flow below.
+Use the latest package for the connection, managed update and removal flows below.
 
 ## Install
 
@@ -13,7 +12,7 @@ targets are macOS ARM64/x64, Windows ARM64/x64 and glibc Linux ARM64/x86_64.
 Linux needs a graphical desktop for native browser sign-in; WSL can use Windows.
 
 ```sh
-npm install --global @jamestesting888/tum-mcp@0.5.0
+npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp setup --client codex
 tum-mcp connect
 tum-mcp doctor
@@ -60,7 +59,7 @@ release; distributions still use engine 1 or 2. See Microsoft's
 Both engines have dedicated CI checks on the current WSL 3.x runner image.
 
 ```sh
-npm install --global @jamestesting888/tum-mcp@0.5.0
+npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp setup --client cursor --host windows
 tum-mcp connect
 tum-mcp doctor
@@ -111,12 +110,64 @@ explain migration and backup. Existing Moodle data and downloads are preserved.
 
 ## Update and remove
 
-Update with `npm install --global @jamestesting888/tum-mcp@latest`, then rerun
-setup. Review conflicts instead of deleting customized client configuration.
-`tum-mcp uninstall --client cursor` (or your client) removes unchanged managed
-registration while retaining sessions, downloads and personal work. Codex plugin
-removal uses its Plugins UI. Remove the npm package separately with
-`npm uninstall --global @jamestesting888/tum-mcp`.
+```sh
+npm install --global @jamestesting888/tum-mcp@latest
+tum-mcp update
+```
+
+`update` activates the backend bundled in the invoked npm package and refreshes
+previously configured clients. It does not fetch a newer npm version itself,
+connect services, change scopes or register additional clients. `setup --client
+NAME` explicitly registers one client and can also refresh that client's managed
+files. WSL Windows registrations keep their distribution/user/data paths.
+
+Ownership receipts track the entries and files installed by TUM MCP. Unchanged
+managed files advance; unrelated settings and extra files stay intact. Direct
+edits to an entry or skill stop that client's update and are reported for review;
+other clients can still advance. Old runtime generations remain available for
+existing pinned clients. Interrupted setup can recover a stopped lock owner;
+an ownerless/unknown legacy lock requires local review. A failed new runtime is
+not selected, and a damaged runtime is repaired into a fresh generation.
+
+0.4.1/0.5.0 installations without receipts are adopted only after matching their
+retained runtime's canonical client output. The seven former workflow skills
+become three website skills. Personal overrides under retired names remain in
+the config `skills/` directory; review and merge them into `tum-moodle`,
+`tum-artemis` or `tum-zulip` before exporting a replacement pack.
+Reload MCP servers in Cursor/Antigravity, restart Claude as appropriate, and
+update/reinstall TUM MCP from the personal source in Codex Plugins if its cached
+copy still shows the older skills. Writing source files does not activate a host.
+
+Remove a single client with `tum-mcp uninstall --client cursor` (replace the
+client as needed; add `--host windows` from WSL for a Windows client). To remove
+all managed registrations before uninstalling npm:
+
+```sh
+tum-mcp uninstall --all
+npm uninstall --global @jamestesting888/tum-mcp
+```
+
+Custom edits and user-added files are preserved. Codex's local source/catalog
+entry can be removed, but its cached/active plugin must also be removed or
+disabled through Codex Plugins. No npm uninstall hook deletes user data.
+
+For explicit cleanup, **close coding clients first**, then run:
+
+```sh
+tum-mcp uninstall --all --purge-runtime --forget-credentials
+npm uninstall --global @jamestesting888/tum-mcp
+```
+
+`--purge-runtime` deletes verified managed runtime generations after the Python
+helper exits, and removes unchanged managed bootstrap/browser-driver caches.
+Active tracked backends or unrecognized runtime files stop automatic removal.
+Paths overlapping configured assignment work, downloads or Moodle data are
+protected. `--forget-credentials` removes local encrypted service sessions, keys
+and participation Git tokens; it does not revoke remote credentials. Native
+Keychain/Credential Manager/Secret Service records and legacy Moodle sessions
+stay intact. Settings, custom skills, course cache, downloads and assignment
+work are retained by these commands. No command recursively deletes the campus
+data root. If removal is interrupted, run npm `setup` to recover before reuse.
 
 ## Existing Moodle-only installations
 

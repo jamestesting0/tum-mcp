@@ -1,7 +1,7 @@
 # TUM MCP guide
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
-Version **0.5.0** provides interactive service and browser selection, local-file
+Version **0.5.1** provides interactive service and browser selection, local-file
 credential keys, richer diagnostics, Cursor/Antigravity adapters, and WSL-backed
 Windows client setup. The package supports campus reads and local assignment
 assistance; remote-action tools remain disabled.
@@ -12,7 +12,7 @@ The campus server preserves all sixteen `moodle_*` tools and the existing Moodle
 session/keychain identity. It adds scoped Zulip channel search/topic reads,
 released Artemis programming statements, exact-revision visible feedback,
 participation-bound workspace preparation, approved container test recipes,
-submission previews, and seven portable workflow skills.
+submission previews, and three website skills.
 
 Remote start, push, submit, rebuild, Zulip posting, and DMs are unavailable.
 An internal, release-gated executor covers exact-action fingerprints, encrypted
@@ -35,7 +35,7 @@ public discovery. Provider routes were checked against that Artemis revision.
 
 ## Build and test the local package
 
-For normal installation, use `npm install --global @jamestesting888/tum-mcp@0.5.0`
+For normal installation, use `npm install --global @jamestesting888/tum-mcp@latest`
 and `tum-mcp setup --client codex`. The following commands are for maintainers.
 
 ```sh
@@ -46,7 +46,8 @@ uv run pytest -q -m 'not live'
 node npm/build.mjs
 npm test
 npm pack --ignore-scripts --pack-destination dist
-npm run test:consumer -- dist/jamestesting888-tum-mcp-0.5.0.tgz
+npm run test:consumer
+npm run test:upgrade
 ```
 
 The npm artifact has an explicit file allowlist, a bundled backend wheel,
@@ -79,8 +80,10 @@ and Windows hands-on checks remain open. New storage and terminal behavior need
 the current checkout’s test evidence; earlier native-store results do not certify them. The installer targets glibc Linux
 x86_64/amd64 and aarch64/ARM64.
 
-`update` provisions the backend bundled in the invoked package and preserves
-older runtime directories. To obtain a newer public package after publication,
+`update` prepares the backend bundled in the invoked package, refreshes
+previously configured clients and preserves older runtime generations.
+[Update and removal behavior](setup.md#update-and-remove) covers ownership
+receipts, legacy adoption, conflict handling and explicit cleanup. To obtain a newer public package after publication,
 invoke its reviewed version explicitly. It does not publish a release or replace
 customized client skills silently. If interrupted setup leaves `setup.lock`,
 confirm that no setup process is running before removing that directory locally.
@@ -225,18 +228,17 @@ steps and never equates writing files with activation.
 
 The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
-Disposable-profile checks with Codex CLI 0.164.0 discovered all seven campus
-skills and 36 tools with no discovery error. Claude Code 2.1.304 connected to the
-stdio process. `scripts/verify_campus_clients.py` reproduces those checks without
-running another coding agent or changing real user profiles. After a user restart,
-an active Codex desktop chat also loaded all 36 tools, verified both provider
-identities, and passed scoped Artemis exercise and Zulip message reads.
-Host/model activation trials remain a separate gate.
+The shipped pack contains exactly three skills: `tum-moodle`, `tum-artemis`
+and `tum-zulip`. They share known account/course context instead of repeating
+setup, and load task-specific references only when needed. Artemis combines
+statement/workspace help, local implementation, feedback and submission preview;
+Zulip combines factual research and catch-up. Remote actions remain disabled.
 
-`setup --client claude` preserves unrelated user configuration, registers the
-local MCP server, and installs the skill pack. Codex's submission invocation
-policy and Claude's `disable-model-invocation` metadata are handled independently.
-Generic clients receive configuration plus optional manual skill export.
+`scripts/verify_campus_clients.py` checks real host discovery in disposable
+profiles without running a model or changing actual user profiles. Host/model
+routing quality is a separate evaluation from structural and discovery checks.
+Claude's invocation metadata follows each site's selected policy; automatic
+selection is enabled by default and never grants permission for a mutation.
 
 `setup --client cursor` writes `~/.cursor/mcp.json`.
 `setup --client antigravity` writes `~/.gemini/config/mcp_config.json`; an existing
@@ -262,9 +264,9 @@ unchanged managed entry; sessions and personal work stay intact.
 
 ```sh
 tum-mcp skills list
-tum-mcp skills inspect tum-zulip-research
-tum-mcp skills customize tum-zulip-research
-tum-mcp skills diff tum-zulip-research
+tum-mcp skills inspect tum-zulip
+tum-mcp skills customize tum-zulip
+tum-mcp skills diff tum-zulip
 tum-mcp skills validate
 tum-mcp skills export /path/to/new/export-folder
 ```
@@ -278,9 +280,10 @@ trials, and two review passes have not been demonstrated for this pilot.
 Export refuses symbolic links and
 does not overwrite an existing destination.
 
-The bundled activation corpus has 140 cases (16 development and four held-out
-cases per skill), including explicit/implicit requests, adjacent negatives, and
-missing credentials. `skills evaluate TRIALS.jsonl` scores supplied fresh-session
+The activation corpus contains 140 cases grouped by website, with development
+and held-out partitions. It covers explicit/implicit requests, unrelated
+negatives, missing credentials and unsupported-action handoffs. Old trial
+results must not be reused against the consolidated skill labels. `skills evaluate TRIALS.jsonl` scores supplied fresh-session
 records separately by host/version/model. Each record follows `Trial` in
 `skill_validation.py` and references its retained raw trace by SHA-256. The scorer
 does not launch other agents or certify the supplied traces, summary quality,
@@ -289,7 +292,7 @@ release; no measured activation accuracy is claimed by the structural checks.
 
 ## Release scope
 
-Version 0.5.0 has automated installation, browser transport, storage and MCP
+Version 0.5.1 has automated installation, browser transport, storage and MCP
 checks on macOS, Windows, Linux, and both distribution engines on WSL 3.0.3.
 These checks use synthetic pages and credentials. Fresh human SSO/MFA and
 desktop-client activation on every target remain separate manual checks, as do
