@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { tmpdir, release } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const artifact = process.argv[2];
 if (!artifact || !process.env.npm_execpath) throw new Error('Run npm run test:consumer -- /path/to/package.tgz.');
 const root = mkdtempSync(join(tmpdir(), 'tum-mcp-packaged-smoke-'));
-const allowed = new Set(['PATH', 'HOME', 'USERPROFILE', 'SYSTEMROOT', 'COMSPEC', 'TMPDIR', 'TMP', 'TEMP', 'LOCALAPPDATA', 'APPDATA', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'SSL_CERT_FILE', 'SSL_CERT_DIR']);
+const allowed = new Set(['PATH', 'HOME', 'USERPROFILE', 'SYSTEMROOT', 'COMSPEC', 'TMPDIR', 'TMP', 'TEMP', 'LOCALAPPDATA', 'APPDATA', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'WSL_INTEROP', 'WSL_DISTRO_NAME', 'WSLENV', 'DISPLAY', 'WAYLAND_DISPLAY']);
 const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => allowed.has(name.toUpperCase())));
 Object.assign(env, {
   TUM_MCP_DATA_DIR: join(root, 'data'), TUM_MCP_CONFIG_DIR: join(root, 'config'),
@@ -69,6 +69,10 @@ for name in ('cursor','antigravity'):
     assert read_client_config(client_config_path(name,home)).mcpServers['tum']['args']==['-I','-m','tum_mcp','serve']
 `;
   run(first.python, ['-I', '-c', storage], 60000);
+  let browserEvidence = null;
+  if (process.env.TUM_MCP_BROWSER_INTEGRATION === '1' || /microsoft|wsl/i.test(release())) {
+    browserEvidence = JSON.parse(run(first.python, ['-I', '-c', readFileSync(new URL('../tests/integration/browser_consumer_fixture.py', import.meta.url), 'utf8')], 180000));
+  }
   const protocol = `import os,sys,anyio
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters,stdio_client
@@ -87,5 +91,5 @@ async def check():
 anyio.run(check)
 `;
   run(first.python, ['-I', '-c', protocol], 60000);
-  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 7, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, realAccountsUsed: false }));
+  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 7, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
 } finally { rmSync(root, { recursive: true, force: true }); }
