@@ -16,7 +16,7 @@ def test_managed_client_updates_to_a_new_runtime_without_losing_other_settings(
     home = tmp_path / "profile"
     install_client(name, home)
     path = client_config_path(name, home)
-    before = json.loads(path.read_text())
+    before = json.loads(path.read_text(encoding="utf-8"))
     before["unrelated"] = {"keep": "München"}
     path.write_text(json.dumps(before), encoding="utf-8")
     previous_python = sys.executable
@@ -25,10 +25,10 @@ def test_managed_client_updates_to_a_new_runtime_without_losing_other_settings(
     # When setup refreshes the same client against the new runtime.
     install_client(name, home)
     # Then the registration/launcher advances and unrelated settings survive.
-    configured = json.loads(path.read_text())
+    configured = json.loads(path.read_text(encoding="utf-8"))
     assert configured["unrelated"] == before["unrelated"]
     if name == "codex":
-        wrapper = (path.parent / "scripts/serve.mjs").read_text()
+        wrapper = (path.parent / "scripts/serve.mjs").read_text(encoding="utf-8")
         assert json.dumps(next_python) in wrapper and json.dumps(previous_python) not in wrapper
     else:
         assert configured["mcpServers"]["tum"]["command"] == next_python
@@ -45,7 +45,7 @@ def test_customized_mcp_entry_is_preserved_before_any_update_writes(
     home = tmp_path / "profile"
     install_client(name, home)
     path = client_config_path(name, home)
-    current = json.loads(path.read_text())
+    current = json.loads(path.read_text(encoding="utf-8"))
     current["mcpServers"]["tum"]["env"] = {"USER_CHOICE": "synthetic-preference"}
     path.write_text(json.dumps(current))
     before = {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()}
@@ -68,7 +68,7 @@ def test_customized_skill_blocks_its_client_without_overwriting_any_file(
     home = tmp_path / "profile"
     install_client(name, home)
     skill = next(home.rglob("tum-moodle/SKILL.md"))
-    skill.write_text(skill.read_text() + "\nPersonal instruction to retain.\n")
+    skill.write_text(skill.read_text(encoding="utf-8") + "\nPersonal instruction to retain.\n")
     before = {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()}
     monkeypatch.setattr(sys, "executable", str(tmp_path / "next/python"))
     # When the runtime and bundled files are refreshed.
@@ -135,11 +135,11 @@ def test_update_continues_other_clients_but_reports_a_customized_client(
     result = refresh_clients()
     # Then the intact client advances, the conflict is reported, and saved data survives.
     assert result["updated"] == 1 and result["needs_review"] == 1
-    assert json.loads(cursor.read_text()) == custom
+    assert json.loads(cursor.read_text(encoding="utf-8")) == custom
     assert (
-        json.loads(client_config_path("antigravity", home).read_text())["mcpServers"]["tum"][
-            "command"
-        ]
+        json.loads(client_config_path("antigravity", home).read_text(encoding="utf-8"))[
+            "mcpServers"
+        ]["tum"]["command"]
         == next_python
     )
     assert saved.read_bytes() == b"synthetic-encrypted-record-to-retain"
@@ -161,7 +161,12 @@ def test_uninstalled_client_is_not_recreated_by_update(
     result = refresh_clients()
     # Then this client stays removed.
     assert result["updated"] == 0 and result["needs_review"] == 0
-    assert "tum" not in json.loads(client_config_path("cursor", home).read_text())["mcpServers"]
+    assert (
+        "tum"
+        not in json.loads(client_config_path("cursor", home).read_text(encoding="utf-8"))[
+            "mcpServers"
+        ]
+    )
 
 
 def test_native_registration_binds_the_selected_data_and_download_directories(
@@ -179,7 +184,9 @@ def test_native_registration_binds_the_selected_data_and_download_directories(
     home = tmp_path / "profile"
     # When the client is registered for a desktop launch.
     install_client("cursor", home)
-    entry = json.loads(client_config_path("cursor", home).read_text())["mcpServers"]["tum"]
+    entry = json.loads(client_config_path("cursor", home).read_text(encoding="utf-8"))[
+        "mcpServers"
+    ]["tum"]
     # Then the desktop launch carries the same nonsecret storage paths.
     assert entry.get("env") == {key: str(path.resolve()) for key, path in variables.items()}
 
@@ -196,7 +203,7 @@ def test_update_does_not_silently_downgrade_a_newer_managed_client(
     home = tmp_path / "profile"
     install_client("cursor", home)
     record = receipt_path("cursor", ClientHost.LOCAL, home)
-    receipt = json.loads(record.read_text())
+    receipt = json.loads(record.read_text(encoding="utf-8"))
     receipt["version"] = "99.0.0"
     record.write_text(json.dumps(receipt))
     before = client_config_path("cursor", home).read_bytes()
@@ -205,4 +212,4 @@ def test_update_does_not_silently_downgrade_a_newer_managed_client(
         install_client("cursor", home)
     # Then its newer registration and record remain untouched.
     assert client_config_path("cursor", home).read_bytes() == before
-    assert json.loads(record.read_text())["version"] == "99.0.0"
+    assert json.loads(record.read_text(encoding="utf-8"))["version"] == "99.0.0"
