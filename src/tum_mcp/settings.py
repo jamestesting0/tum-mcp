@@ -97,15 +97,28 @@ class Preferences(Frozen):
     test_recipes: tuple[TestRecipe, ...] = ()
 
 
+def data_path() -> Path:
+    return (
+        Path(os.environ.get("TUM_MCP_DATA_DIR", app_root().with_name("TUMMCP")))
+        .expanduser()
+        .resolve()
+    )
+
+
+def config_path() -> Path:
+    return Path(os.environ.get("TUM_MCP_CONFIG_DIR", data_path() / "config")).expanduser().resolve()
+
+
 def data_dir() -> Path:
-    path = Path(os.environ.get("TUM_MCP_DATA_DIR", app_root().with_name("TUMMCP")))
+    path = data_path()
     path.mkdir(mode=0o700, parents=True, exist_ok=True)
     path.chmod(0o700)
     return path.resolve()
 
 
 def config_dir() -> Path:
-    path = Path(os.environ.get("TUM_MCP_CONFIG_DIR", data_dir() / "config"))
+    data_dir()
+    path = config_path()
     path.mkdir(mode=0o700, parents=True, exist_ok=True)
     return path.resolve()
 
@@ -120,12 +133,17 @@ def preferences() -> Preferences:
         raise CampusError(Code.SCOPE_DENIED, "Invalid preferences; inspect them locally.") from None
 
 
-def save_account(account: Account) -> None:
+def save_account(account: Account, *, preserve_scopes: bool = False) -> None:
     with FileLock(str(config_dir() / "preferences.lock")):
         current = preferences()
         previous = next((item for item in current.accounts if item.id == account.id), None)
         revision = previous.scope_revision + 1 if previous else 1
-        updated = account.model_copy(update={"scope_revision": revision})
+        # Reconnection must not restore scopes revoked while browser sign-in was open.
+        updated = (
+            previous
+            if preserve_scopes and previous is not None
+            else account.model_copy(update={"scope_revision": revision})
+        )
         accounts = tuple(item for item in current.accounts if item.id != account.id) + (updated,)
         private_write(
             config_dir() / "preferences.json",

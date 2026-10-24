@@ -20,12 +20,14 @@ build/
 
 # Machine-local agent instructions and handoff notes; public docs stay tracked.
 /AGENTS.md
-/docs/tum-mcp-handoff.md
-/docs/credential-storage-options.md
-/docs/release-workflow.yml.example
+/docs/local/
 
 # Local Moodle state and downloads must never be published.
 session.enc
+session.key
+*.enc
+key.lock
+*.lease.lock
 session.lock
 login.json
 library.sqlite*

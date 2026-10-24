@@ -89,7 +89,4 @@ def test_git_helper_releases_token_only_to_the_exact_repository(
     assert ("password=synthetic-repository-token" in output) is allowed
     assert "synthetic-repository-token" not in saved.model_dump_json()
     assert "synthetic-repository-token" not in repr(saved)
-    assert (
-        b"synthetic-repository-token"
-        not in next((tmp_path / "credentials").glob("*.enc")).read_bytes()
-    )
+    assert b"synthetic-repository-token" not in vault.record_path(account).read_bytes()

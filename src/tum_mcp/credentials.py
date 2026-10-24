@@ -14,6 +14,8 @@ from tum_mcp.settings import Account, Frozen, data_dir
 from tum_moodle import auth
 from tum_moodle.auth import Cookie
 from tum_moodle.config import private_write
+from tum_moodle.errors import MoodleError
+from tum_moodle.secret_files import local_cipher
 
 SERVICE: Final = "tum-mcp"
 
@@ -74,8 +76,11 @@ class StoredRepository(Frozen):
 
 
 class Vault:
-    def __init__(self, root: Path | None = None) -> None:
+    def __init__(
+        self, root: Path | None = None, *, storage: Literal["file", "native"] = "file"
+    ) -> None:
         self.root = root or data_dir() / "credentials"
+        self.storage = storage
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.lock = FileLock(str(self.root / "vault.lock"))
 
@@ -84,6 +89,11 @@ class Vault:
             return self._cipher(create=create)
 
     def _cipher(self, *, create: bool) -> Fernet:
+        if self.storage == "file":
+            try:
+                return local_cipher(self.root / "local", create=create)
+            except MoodleError as error:
+                raise CampusError(Code.AUTH_REQUIRED, error.message) from None
         try:
             backend = auth.system_keyring()
             identity = str(self.root.resolve())
@@ -105,11 +115,15 @@ class Vault:
 
     def _write(self, account: Account, credential: Credential) -> None:
         private_write(
-            self.root / f"{account.id}.enc",
+            self.record_path(account),
             self.cipher(create=True).encrypt(
                 credential.model_copy(update={"generation": uuid4().hex}).encoded()
             ),
         )
+
+    def record_path(self, account: Account) -> Path:
+        base = self.root / "local" if self.storage == "file" else self.root
+        return base / f"{account.id}.enc"
 
     def lease(self, account: Account) -> FileLock:
         """Serialize effects with credential replacement/logout for this account only."""
@@ -117,27 +131,33 @@ class Vault:
 
     def load(self, account: Account) -> Credential:
         with self.lock:
-            path = self.root / f"{account.id}.enc"
+            path = self.record_path(account)
+            if path.is_symlink():
+                raise CampusError(Code.SCOPE_DENIED, "Credential record cannot be a symlink.")
             if not path.exists():
                 raise CampusError(Code.AUTH_REQUIRED, "Connect this account with the local CLI.")
             try:
                 value = Credential.model_validate_json(self.cipher().decrypt(path.read_bytes()))
-            except (InvalidToken, ValidationError):
-                raise CampusError(Code.AUTH_REQUIRED, "Reconnect this account.") from None
+            except (InvalidToken, ValidationError, OSError):
+                raise CampusError(
+                    Code.AUTH_REQUIRED,
+                    "Saved credentials are unreadable. Restore a backup or move the local "
+                    "credential folder aside before reconnecting; see the storage guide.",
+                ) from None
             if value.account_id != account.id:
                 raise CampusError(Code.SCOPE_DENIED, "Stored credential principal does not match.")
             return value
 
     def logout(self, account: Account) -> None:
         with self.lease(account), self.lock:
-            (self.root / f"{account.id}.enc").unlink(missing_ok=True)
+            self.record_path(account).unlink(missing_ok=True)
 
     def replace_login(self, account: Account, credential: Credential) -> None:
         """Rotate the login generation while preserving this identity's Git credentials."""
         if credential.account_id != account.id:
             raise CampusError(Code.SCOPE_DENIED, "Credential principal does not match.")
         with self.lease(account), self.lock:
-            path = self.root / f"{account.id}.enc"
+            path = self.record_path(account)
             if path.exists():
                 previous = self.load(account)
                 credential = credential.model_copy(update={"repositories": previous.repositories})

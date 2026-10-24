@@ -33,7 +33,7 @@ def test_vault_encrypts_and_binds_credentials_when_accounts_differ(
     memory_keyring,
     account: Account,
 ) -> None:
-    # Given an OS-keyring-backed vault and one identity.
+    # Given a local-file encrypted vault and one identity.
     vault = Vault(tmp_path)
     saved = credential(account)
     vault.save(account, saved)
@@ -41,7 +41,7 @@ def test_vault_encrypts_and_binds_credentials_when_accounts_differ(
     loaded = vault.load(account)
     # Then only the same identity can use them and disk/normal representations hide secrets.
     assert loaded.api_key.get_secret_value() == "private-api-key"
-    assert b"private-api-key" not in (tmp_path / f"{account.id}.enc").read_bytes()
+    assert b"private-api-key" not in vault.record_path(account).read_bytes()
     assert "private-api-key" not in repr(loaded)
     assert "private-api-key" not in loaded.model_dump_json()
     with pytest.raises(CampusError, match="principal"):

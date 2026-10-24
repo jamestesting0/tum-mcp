@@ -1,5 +1,7 @@
 import json
+import os
 import time
+from pathlib import Path
 from typing import Final, Literal, assert_never
 from uuid import uuid4
 
@@ -12,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from tum_moodle.config import Paths, private_write
 from tum_moodle.errors import ErrorCode, MoodleError
 from tum_moodle.platforms import System, system
+from tum_moodle.secret_files import local_cipher, secure_directory
 
 KEYCHAIN_SERVICE: Final = "tum-moodle-integration"
 
@@ -75,11 +78,24 @@ class LoginProgress(BaseModel):
 class SessionStore:
     """Serialize updates under a lock; never expose encrypted or clear session data."""
 
-    def __init__(self, paths: Paths) -> None:
+    def __init__(self, paths: Paths, *, storage: Literal["native", "file"] | None = None) -> None:
         self.paths = paths
-        self.lock = FileLock(paths.file("session.lock"))
+        self.storage = storage or os.environ.get("TUM_MOODLE_SESSION_STORAGE", "native")
+        if self.storage not in {"native", "file"}:
+            raise MoodleError(ErrorCode.SETUP_REQUIRED, "Choose native or file session storage.")
+        self.state_root = paths.root / "local-session" if self.storage == "file" else paths.root
+        if self.storage == "file":
+            secure_directory(self.state_root)
+        else:
+            self.state_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self.lock = FileLock(self.file("session.lock"))
+
+    def file(self, name: str) -> Path:
+        return self.state_root / name
 
     def _cipher(self, *, create: bool = False) -> Fernet:
+        if self.storage == "file":
+            return local_cipher(self.state_root, create=create)
         try:
             backend = system_keyring()
             key = backend.get_password(KEYCHAIN_SERVICE, str(self.paths.root))
@@ -95,20 +111,27 @@ class SessionStore:
             ) from None
 
     def generation(self) -> str:
-        path = self.paths.file("generation")
+        path = self.file("generation")
         return path.read_text().strip() if path.exists() else ""
 
     def begin_login(self) -> str:
         with self.lock:
             generation = uuid4().hex
-            private_write(self.paths.file("generation"), generation.encode())
+            private_write(self.file("generation"), generation.encode())
             return generation
 
     def load(self) -> Session:
         with self.lock:
-            path = self.paths.file("session.enc")
+            path = self.file("session.enc")
+            if path.is_symlink():
+                raise MoodleError(ErrorCode.SETUP_REQUIRED, "Session record cannot be a symlink.")
             if not path.exists():
-                raise MoodleError(ErrorCode.AUTH_REQUIRED, "Use moodle_login to sign in.")
+                raise MoodleError(
+                    ErrorCode.AUTH_REQUIRED,
+                    "Run tum-mcp connect --service moodle in a terminal."
+                    if self.storage == "file"
+                    else "Use moodle_login to sign in.",
+                )
             try:
                 session = Session.model_validate_json(self._cipher().decrypt(path.read_bytes()))
             except (InvalidToken, ValidationError):
@@ -122,18 +145,18 @@ class SessionStore:
             if session.generation != self.generation():
                 raise MoodleError(ErrorCode.SESSION_EXPIRED, "The session was disconnected.")
             private_write(
-                self.paths.file("session.enc"),
+                self.file("session.enc"),
                 self._cipher(create=True).encrypt(session.model_dump_json().encode()),
             )
 
     def logout(self) -> None:
         with self.lock:
-            private_write(self.paths.file("generation"), uuid4().hex.encode())
-            self.paths.file("session.enc").unlink(missing_ok=True)
-            self.paths.file("login.json").unlink(missing_ok=True)
+            private_write(self.file("generation"), uuid4().hex.encode())
+            self.file("session.enc").unlink(missing_ok=True)
+            self.file("login.json").unlink(missing_ok=True)
 
     def progress(self) -> LoginProgress | None:
-        path = self.paths.file("login.json")
+        path = self.file("login.json")
         if not path.exists():
             return None
         try:
@@ -142,7 +165,7 @@ class SessionStore:
             return None
 
     def set_progress(self, progress: LoginProgress) -> None:
-        private_write(self.paths.file("login.json"), progress.model_dump_json().encode())
+        private_write(self.file("login.json"), progress.model_dump_json().encode())
 
     def status(self) -> dict[str, str | float | None]:
         progress = self.progress()
