@@ -1,6 +1,7 @@
 """Local ownership receipts and reversible writes for managed client installations."""
 
 import hashlib
+import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Literal
@@ -75,7 +76,7 @@ def read_owned_file(path: Path, home: Path) -> bytes | None:
     current = home
     for part in relative.parts:
         current /= part
-        if current.is_symlink():
+        if current.is_symlink() or current.is_junction():
             raise CampusError(
                 Code.WORKSPACE_CONFLICT, "A symbolic link in client paths was preserved."
             )
@@ -182,3 +183,20 @@ def prune_removed_folders(home: Path, removed_files: tuple[str, ...]) -> None:
                     Code.WORKSPACE_CONFLICT,
                     "Managed files changed, but empty directories need local cleanup.",
                 ) from None
+
+
+def require_supported_version(previous: Installation, current: str) -> None:
+    if previous.version == "legacy":
+        return
+    installed = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", previous.version)
+    requested = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", current)
+    if installed is None or requested is None:
+        raise CampusError(
+            Code.WORKSPACE_CONFLICT, "Installation version needs local review before refresh."
+        )
+    if tuple(map(int, installed.groups())) > tuple(map(int, requested.groups())):
+        raise CampusError(
+            Code.WORKSPACE_CONFLICT,
+            "A newer managed client version is installed. Use its package to update or "
+            "unregister the client before an intentional rollback.",
+        )

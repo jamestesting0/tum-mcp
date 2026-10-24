@@ -127,7 +127,9 @@ edits to an entry or skill stop that client's update and are reported for review
 other clients can still advance. Old runtime generations remain available for
 existing pinned clients. Interrupted setup can recover a stopped lock owner;
 an ownerless/unknown legacy lock requires local review. A failed new runtime is
-not selected, and a damaged runtime is repaired into a fresh generation.
+not selected, and a damaged runtime is repaired into a fresh generation. A newer
+managed client is not silently downgraded by an older package; intentional
+rollback starts by unregistering that client, then registering the reviewed version.
 
 0.4.1/0.5.0 installations without receipts are adopted only after matching their
 retained runtime's canonical client output. The seven former workflow skills

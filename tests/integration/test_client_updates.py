@@ -182,3 +182,27 @@ def test_native_registration_binds_the_selected_data_and_download_directories(
     entry = json.loads(client_config_path("cursor", home).read_text())["mcpServers"]["tum"]
     # Then the desktop launch carries the same nonsecret storage paths.
     assert entry.get("env") == {key: str(path.resolve()) for key, path in variables.items()}
+
+
+def test_update_does_not_silently_downgrade_a_newer_managed_client(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.client_hosts import ClientHost
+    from tum_mcp.client_installs import receipt_path
+    from tum_mcp.errors import CampusError
+
+    # Given a newer managed installation recorded by another package version.
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    home = tmp_path / "profile"
+    install_client("cursor", home)
+    record = receipt_path("cursor", ClientHost.LOCAL, home)
+    receipt = json.loads(record.read_text())
+    receipt["version"] = "99.0.0"
+    record.write_text(json.dumps(receipt))
+    before = client_config_path("cursor", home).read_bytes()
+    # When an older installed package attempts to refresh it.
+    with pytest.raises(CampusError, match="newer managed client"):
+        install_client("cursor", home)
+    # Then its newer registration and record remain untouched.
+    assert client_config_path("cursor", home).read_bytes() == before
+    assert json.loads(record.read_text())["version"] == "99.0.0"

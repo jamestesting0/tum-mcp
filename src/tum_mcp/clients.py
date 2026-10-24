@@ -22,6 +22,7 @@ from tum_mcp.client_installs import (
     prune_removed_folders,
     read_owned_file,
     receipt_path,
+    require_supported_version,
 )
 from tum_mcp.client_rendering import rendered_client
 from tum_mcp.client_rendering import same_tree as same_tree
@@ -60,6 +61,8 @@ def install_client(
         config = read_client_config(target, for_update=True)
         existing = config.mcpServers.get("tum")
         previous = load_receipt(selected, host, base)
+        if previous is not None:
+            require_supported_version(previous, __version__)
         if previous is None and existing is not None:
             from tum_mcp.legacy_clients import legacy_installation
 

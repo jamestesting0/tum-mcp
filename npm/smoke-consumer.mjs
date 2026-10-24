@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, release } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -8,6 +8,8 @@ const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.u
 const artifact = process.argv[2] || `dist/jamestesting888-tum-mcp-${version}.tgz`;
 if (!artifact || !process.env.npm_execpath) throw new Error('Run npm run test:consumer -- /path/to/package.tgz.');
 const root = mkdtempSync(join(tmpdir(), 'tum-mcp-packaged-smoke-'));
+// Windows known-folder APIs reject a USERPROFILE directory that does not exist.
+mkdirSync(join(root, 'profile'));
 const allowed = new Set(['PATH', 'HOME', 'USERPROFILE', 'SYSTEMROOT', 'COMSPEC', 'TMPDIR', 'TMP', 'TEMP', 'LOCALAPPDATA', 'APPDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'WSL_INTEROP', 'WSL_DISTRO_NAME', 'WSLENV', 'DISPLAY', 'WAYLAND_DISPLAY']);
 const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => allowed.has(name.toUpperCase())));
 Object.assign(env, {
