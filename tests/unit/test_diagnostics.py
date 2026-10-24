@@ -168,3 +168,25 @@ def test_all_campus_authentication_tools_direct_users_to_the_same_selector(
     assert "tum-mcp connect" in tum_connect()
     result = moodle_login()
     assert result["command"] == "tum-mcp connect" and result["state"] == "ACTION_REQUIRED"
+
+
+def test_wsl_doctor_reports_both_client_profiles_without_creating_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp import diagnostics
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "moodle"))
+    monkeypatch.setattr(diagnostics, "is_wsl", lambda: True)
+    windows = tmp_path / "Windows user"
+    monkeypatch.setattr(diagnostics, "client_home", lambda host: windows)
+    monkeypatch.setattr(diagnostics, "discover_browsers", lambda: ())
+    target = windows / ".cursor/mcp.json"
+    target.parent.mkdir(parents=True)
+    target.write_text('{"mcpServers":{"tum":{"command":"wsl.exe","args":[]}}}')
+    report = diagnostics.collect_diagnostics(home=tmp_path / "Linux user")
+    clients = {item.label: item for item in report.clients}
+    assert clients["Cursor (Windows)"].state == State.CONFIGURED
+    assert clients["Cursor"].state == State.UNCONFIGURED
+    assert "--host windows" in clients["Claude (Windows)"].detail
+    assert not (tmp_path / "data").exists()

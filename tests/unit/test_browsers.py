@@ -38,6 +38,7 @@ def test_wsl_discovers_windows_edge_and_brave_on_a_nonstandard_drive(
     for suffix in (
         "Microsoft/Edge/Application/msedge.exe",
         "BraveSoftware/Brave-Browser/Application/brave.exe",
+        "Programs/Opera/128.0.0.0/opera.exe",
     ):
         path = tmp_path / suffix
         path.parent.mkdir(parents=True)
@@ -52,7 +53,7 @@ def test_wsl_discovers_windows_edge_and_brave_on_a_nonstandard_drive(
     )
     monkeypatch.setattr(browsers, "wsl_path", lambda path: str(tmp_path))
     result = browsers.discover_browsers()
-    assert {browser.name for browser in result} == {"Microsoft Edge", "Brave"}
+    assert {browser.name for browser in result} == {"Microsoft Edge", "Brave", "Opera"}
     assert all(browser.windows_host and browser.executable.startswith("D:\\") for browser in result)
 
 

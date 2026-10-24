@@ -105,7 +105,7 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
     console.print("Enter: continue · Ctrl+C: cancel")
     console.print()
     labels = (
-        ("Moodle · Materials and forums", "Artemis · Exercises and feedback", "Zulip · Discussions")
+        ("Moodle · Materials", "Artemis · Exercises", "Zulip · Discussions")
         if console.width < 70
         else (
             "Moodle    Materials, forums and downloads",
