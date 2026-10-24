@@ -28,6 +28,7 @@ STYLES = {
 
 class State(StrEnum):
     READY = "Ready"
+    UPDATED = "Updated"
     CONFIGURED = "Not verified"
     MISSING = "Not installed"
     UNCONFIGURED = "Not configured"
@@ -67,7 +68,7 @@ def status_rows(console: Console, rows: list[tuple[str, State, str]]) -> None:
         table.add_column(overflow="fold")
     for label, state, detail in rows:
         match state:
-            case State.READY:
+            case State.READY | State.UPDATED:
                 style = "ready"
             case State.FAILED:
                 style = "failed"

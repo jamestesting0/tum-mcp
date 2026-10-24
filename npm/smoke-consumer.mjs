@@ -8,7 +8,6 @@ const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.u
 const artifact = process.argv[2] || `dist/jamestesting888-tum-mcp-${version}.tgz`;
 if (!artifact || !process.env.npm_execpath) throw new Error('Run npm run test:consumer -- /path/to/package.tgz.');
 const root = mkdtempSync(join(tmpdir(), 'tum-mcp-packaged-smoke-'));
-// Windows known-folder APIs reject a USERPROFILE directory that does not exist.
 mkdirSync(join(root, 'profile'));
 const allowed = new Set(['PATH', 'HOME', 'USERPROFILE', 'SYSTEMROOT', 'COMSPEC', 'TMPDIR', 'TMP', 'TEMP', 'LOCALAPPDATA', 'APPDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'WSL_INTEROP', 'WSL_DISTRO_NAME', 'WSLENV', 'DISPLAY', 'WAYLAND_DISPLAY']);
 const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => allowed.has(name.toUpperCase())));
@@ -19,8 +18,8 @@ Object.assign(env, {
 });
 writeFileSync(env.NPM_CONFIG_USERCONFIG, '', { mode: 0o600 });
 
-function run(command, args, timeout = 600000) {
-  const result = spawnSync(command, args, { env, encoding: 'utf8', shell: false, timeout });
+function run(command, args, timeout = 600000, childEnv = env) {
+  const result = spawnSync(command, args, { env: childEnv, encoding: 'utf8', shell: false, timeout });
   if (result.error || result.status !== 0) throw new Error(`${command} failed: ${[result.stdout, result.stderr, result.error?.message].filter(Boolean).join('\n') || result.status}`);
   return result.stdout;
 }
@@ -75,7 +74,13 @@ for name in ('cursor','antigravity'):
   run(first.python, ['-I', '-c', storage], 60000);
   let browserEvidence = null;
   if (process.env.TUM_MCP_BROWSER_INTEGRATION === '1' || /microsoft|wsl/i.test(release())) {
-    browserEvidence = JSON.parse(run(first.python, ['-I', '-c', readFileSync(new URL('../tests/integration/browser_consumer_fixture.py', import.meta.url), 'utf8')], 180000));
+    // Windows browsers require the OS account's known-folder environment. They
+    // still receive Playwright's separate temporary profile, never the real one.
+    const browserEnv = { ...env };
+    if (process.platform === 'win32') {
+      for (const name of ['HOME', 'USERPROFILE']) if (process.env[name]) browserEnv[name] = process.env[name];
+    }
+    browserEvidence = JSON.parse(run(first.python, ['-I', '-c', readFileSync(new URL('../tests/integration/browser_consumer_fixture.py', import.meta.url), 'utf8')], 180000, browserEnv));
   }
   const protocol = `import os,sys,anyio
 from mcp import ClientSession

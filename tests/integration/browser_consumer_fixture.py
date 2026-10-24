@@ -52,10 +52,17 @@ def main() -> None:
                 arguments = cdp.send("Browser.getBrowserCommandLine")["arguments"]
                 assert "--remote-debugging-pipe" in arguments
                 assert not any(value.startswith("--remote-debugging-port") for value in arguments)
-                cookies = [
-                    Cookie.model_validate(cookie)
-                    for cookie in context.cookies("https://fixture.invalid/")
-                ]
+                # Cookie writes cross renderer/network processes. Observe their
+                # completion instead of racing the CDP snapshot after the click.
+                deadline = time.monotonic() + 5
+                while True:
+                    cookies = [
+                        Cookie.model_validate(cookie)
+                        for cookie in context.cookies("https://fixture.invalid/")
+                    ]
+                    if cookies or time.monotonic() >= deadline:
+                        break
+                    page.wait_for_timeout(50)
                 assert len(cookies) == 1 and cookies[0].value == "synthetic-browser-only"
                 store = SessionStore(Paths.default(), storage="file")
                 store.save(

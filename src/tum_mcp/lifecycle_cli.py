@@ -42,7 +42,7 @@ def update() -> None:
     for item in report["clients"]:
         match item["state"]:
             case "updated":
-                state = State.CONFIGURED
+                state = State.UPDATED
             case "needs_review":
                 state = State.ACTION
             case "not_registered" | "skipped":
