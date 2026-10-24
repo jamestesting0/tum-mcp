@@ -29,7 +29,7 @@ def install_client(name: str, home: Path | None = None) -> None:
     with FileLock(str(config_dir() / "client-install.lock")):
         if name == "generic":
             target = config_dir() / "mcp.json"
-            current = json.loads(target.read_text()) if target.exists() else {}
+            current = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
             server = {"command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
             registered = current.get("mcpServers", {}).get("tum")
             if registered is not None and registered != server:
@@ -71,7 +71,7 @@ def install_codex(staged: Path, home: Path) -> None:
             }
         },
     }
-    (staged / "plugin.json").write_text(json.dumps(manifest, indent=2))
+    (staged / "plugin.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     scripts = staged / "scripts"
     scripts.mkdir()
     # Portable Agent Plugins reject absolute stdio executable paths. Node is the
@@ -85,7 +85,8 @@ def install_codex(staged: Path, home: Path) -> None:
         "process.on(signal, () => backend.kill(signal));\n"
         "backend.on('error', () => { console.error('TUM backend could not start; rerun setup.'); "
         "process.exitCode = 2; });\n"
-        "backend.on('exit', code => { process.exitCode = code ?? 1; });\n"
+        "backend.on('exit', code => { process.exitCode = code ?? 1; });\n",
+        encoding="utf-8",
     )
     (staged / "mcp.json").write_text(
         json.dumps(
@@ -100,7 +101,8 @@ def install_codex(staged: Path, home: Path) -> None:
                 },
             },
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
     destination = home / ".codex/plugins/local/tum-mcp"
     if destination.exists() and not same_tree(staged, destination):
@@ -114,7 +116,7 @@ def install_codex(staged: Path, home: Path) -> None:
     catalog = home / ".agents/plugins/marketplace.json"
     catalog.parent.mkdir(parents=True, exist_ok=True)
     existing = (
-        json.loads(catalog.read_text())
+        json.loads(catalog.read_text(encoding="utf-8"))
         if catalog.exists()
         else {
             "name": "personal-local",
@@ -137,19 +139,21 @@ def install_codex(staged: Path, home: Path) -> None:
 def install_claude(staged: Path, home: Path) -> None:
     skills = home / ".claude/skills"
     target = home / ".claude.json"
-    existing = json.loads(target.read_text()) if target.exists() else {}
+    existing = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
     server = {"type": "stdio", "command": sys.executable, "args": ["-I", "-m", "tum_mcp", "serve"]}
     registered = existing.get("mcpServers", {}).get("tum")
     if registered is not None and registered != server:
         raise CampusError(Code.WORKSPACE_CONFLICT, "A different Claude MCP entry already uses tum.")
     submission = staged / "skills/tum-artemis-submit/SKILL.md"
-    content = submission.read_text()
-    submission.write_text(content.replace("---\n", "---\ndisable-model-invocation: true\n", 1))
+    content = submission.read_text(encoding="utf-8")
+    submission.write_text(
+        content.replace("---\n", "---\ndisable-model-invocation: true\n", 1), encoding="utf-8"
+    )
     # Claude uses its frontmatter control rather than Codex's agents/openai.yaml.
     for source in (staged / "skills").iterdir():
         metadata_path = source / "agents/openai.yaml"
         if metadata_path.exists():
-            parsed = yaml.safe_load(metadata_path.read_text())
+            parsed = yaml.safe_load(metadata_path.read_text(encoding="utf-8"))
             if parsed.get("policy", {}).get("allow_implicit_invocation") is not False:
                 raise CampusError(
                     Code.INVALID_RESPONSE, "Submission invocation policy is inconsistent."

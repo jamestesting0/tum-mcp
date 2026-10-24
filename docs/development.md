@@ -2,7 +2,7 @@
 
 [README](../README.md) · [Setup](setup.md)
 
-For the combined 0.4.0 campus pilot, see the [TUM MCP guide](tum-mcp.md) and
+For the combined 0.4.1 campus pilot, see the [TUM MCP guide](tum-mcp.md) and
 [current verification limits](tum-mcp.md#build-and-test-the-local-package). This page also
 covers the preserved Moodle-only installer.
 
@@ -18,7 +18,7 @@ uv build
 node npm/build.mjs
 npm test
 npm pack --ignore-scripts --pack-destination dist
-npm run test:consumer -- dist/jamestesting888-tum-mcp-0.4.0.tgz
+npm run test:consumer -- dist/jamestesting888-tum-mcp-0.4.1.tgz
 ```
 
 Python 3.13 is the managed runtime on every platform. Install Tesseract for the

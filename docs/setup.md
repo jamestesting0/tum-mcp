@@ -1,7 +1,7 @@
 # Desktop setup
 
 This page covers the preserved **Moodle-only** installer. For the combined
-Artemis/Zulip/Moodle 0.4.0 pilot, use [campus setup](../README.md#manual-setup) and
+Artemis/Zulip/Moodle 0.4.1 pilot, use [campus setup](../README.md#manual-setup) and
 the [TUM MCP guide](tum-mcp.md).
 
 [README](../README.md) · [macOS](#macos) · [Windows](#windows) · [Linux](#linux) ·

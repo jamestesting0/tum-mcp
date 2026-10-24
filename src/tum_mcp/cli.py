@@ -240,7 +240,7 @@ def inspect_skill(name: str) -> None:
     """Print the selected version of one bundled/customized skill."""
     from tum_mcp.skills import selected
 
-    typer.echo((selected(name) / "SKILL.md").read_text())
+    typer.echo((selected(name) / "SKILL.md").read_text(encoding="utf-8"))
 
 
 @skills_app.command("diff")

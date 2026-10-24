@@ -54,7 +54,7 @@ jobs:
           npm test
           npm pack --ignore-scripts --pack-destination dist
       - name: Verify clean campus consumer installation and MCP
-        run: npm run test:consumer -- dist/jamestesting888-tum-mcp-0.4.0.tgz
+        run: npm run test:consumer -- dist/jamestesting888-tum-mcp-0.4.1.tgz
       - name: Lint and format
         run: |
           uv run ruff check src tests plugin/scripts scripts

@@ -23,7 +23,7 @@ def uninstall_client(name: Literal["codex", "claude", "generic"], home: Path | N
         case "generic":
             path = config_dir() / "mcp.json"
             if path.exists():
-                value = json.loads(path.read_text())
+                value = json.loads(path.read_text(encoding="utf-8"))
                 expected_generic = {
                     "command": sys.executable,
                     "args": ["-I", "-m", "tum_mcp", "serve"],
@@ -41,7 +41,7 @@ def uninstall_client(name: Literal["codex", "claude", "generic"], home: Path | N
                     path.unlink()
         case "claude":
             target = base / ".claude.json"
-            value = json.loads(target.read_text()) if target.exists() else {}
+            value = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
             entry = value.get("mcpServers", {}).get("tum")
             if entry is not None and entry != expected:
                 raise CampusError(
@@ -56,9 +56,10 @@ def uninstall_client(name: Literal["codex", "claude", "generic"], home: Path | N
                 export_pack(source)
                 submission = source / "tum-artemis-submit/SKILL.md"
                 submission.write_text(
-                    submission.read_text().replace(
+                    submission.read_text(encoding="utf-8").replace(
                         "---\n", "---\ndisable-model-invocation: true\n", 1
-                    )
+                    ),
+                    encoding="utf-8",
                 )
                 for skill in bundled().iterdir():
                     destination = base / ".claude/skills" / skill.name

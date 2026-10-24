@@ -42,5 +42,5 @@ jobs:
         run: |
           test -f release-evidence/activation-and-platforms-approved.json
           node -e "const r=require('./release-evidence/activation-and-platforms-approved.json'); if(r.approved!==true || r.sourceRevision!==process.env.GITHUB_SHA) process.exit(1)"
-      - run: npm stage publish dist/jamestesting888-tum-mcp-0.4.0.tgz --access public
+      - run: npm stage publish dist/jamestesting888-tum-mcp-0.4.1.tgz --access public
       # A maintainer reviews and approves the staged payload with 2FA separately.

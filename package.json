@@ -1,6 +1,6 @@
 {
   "name": "@jamestesting888/tum-mcp",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Local-first TUM Moodle, Artemis, and Zulip integration with campus workflow skills",
   "license": "MIT",
   "type": "module",

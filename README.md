@@ -8,9 +8,9 @@ Use TUM Moodle, Artemis, and Zulip from your coding agent. Runs locally with
 Paste this into your coding agent:
 
 ```text
-Install @jamestesting888/tum-mcp@0.4.0 from npm on this computer.
+Install @jamestesting888/tum-mcp@0.4.1 from npm on this computer.
 Check that Node.js is at least 22.14, then run:
-  npm install --global @jamestesting888/tum-mcp@0.4.0
+  npm install --global @jamestesting888/tum-mcp@0.4.1
   tum-mcp setup --client codex
 For Claude Code, use --client claude instead; other MCP clients use --client generic.
 Preserve existing settings, plugins, sessions, downloads, and customized skills.
@@ -25,7 +25,7 @@ For Moodle, use the plugin's separate Moodle sign-in. Never request secrets in c
 You need **Node.js 22.14+**, **Google Chrome**, and your TUM account.
 
 ```sh
-npm install --global @jamestesting888/tum-mcp@0.4.0
+npm install --global @jamestesting888/tum-mcp@0.4.1
 tum-mcp setup --client codex
 tum-mcp connect campus
 ```
@@ -55,7 +55,7 @@ Try “Find the lecture section about scheduling,” “Read this Artemis exerci
 or “Catch me up on the selected Zulip channel.” Personal records, participation
 feedback, and workspace writes require their own explicit permissions.
 
-**0.4.0 is a public pilot.** Remote start, push, submit, and rebuild are disabled.
+**0.4.1 is a public pilot.** Remote start, push, submit, and rebuild are disabled.
 It cannot post to Zulip or read DMs. A submission preview never submits anything.
 macOS ARM64 browser sign-in and live reads are verified; Windows, Intel Mac, and
 Linux desktop checks remain incomplete. Bootstrap targets and test evidence are

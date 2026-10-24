@@ -39,7 +39,7 @@ def selected(name: str) -> Path:
 def metadata(path: Path) -> SkillMetadata:
     if path.is_symlink() or any(item.is_symlink() for item in path.rglob("*")):
         raise CampusError(Code.SCOPE_DENIED, "Skill exports cannot contain symbolic links.")
-    content = (path / "SKILL.md").read_text()
+    content = (path / "SKILL.md").read_text(encoding="utf-8")
     if len(content.encode()) > 1024 * 1024:
         raise CampusError(Code.INVALID_RESPONSE, "Skill entry exceeds the portable size limit.")
     if not content.startswith("---\n") or "\n---\n" not in content[4:]:
@@ -65,7 +65,7 @@ def inspect_skills() -> list[SkillInfo]:
                     name=info.name,
                     description=info.description,
                     customized=path != source,
-                    entry_lines=len((path / "SKILL.md").read_text().splitlines()),
+                    entry_lines=len((path / "SKILL.md").read_text(encoding="utf-8").splitlines()),
                 )
             )
     return result
@@ -100,8 +100,8 @@ def skill_diff(name: str) -> str:
     original = bundled() / name / "SKILL.md"
     return "".join(
         unified_diff(
-            original.read_text().splitlines(keepends=True),
-            (chosen / "SKILL.md").read_text().splitlines(keepends=True),
+            original.read_text(encoding="utf-8").splitlines(keepends=True),
+            (chosen / "SKILL.md").read_text(encoding="utf-8").splitlines(keepends=True),
             fromfile=f"bundled/{name}/SKILL.md",
             tofile=f"selected/{name}/SKILL.md",
         )

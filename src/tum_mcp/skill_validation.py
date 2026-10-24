@@ -32,7 +32,7 @@ def validate_skills() -> ValidationReport:
         chosen = selected(source.name)
         info = metadata(chosen)
         checked.append(info.name)
-        content = (chosen / "SKILL.md").read_text()
+        content = (chosen / "SKILL.md").read_text(encoding="utf-8")
         characters += len(content)
         for tool in re.findall(r"`((?:moodle|tum|zulip|artemis)_[a-z0-9_]+)`", content):
             if tool not in registered:
@@ -42,7 +42,7 @@ def validate_skills() -> ValidationReport:
             if not policy_file.is_file():
                 errors.append(f"{info.name}: missing explicit-invocation policy")
             else:
-                policy = yaml.safe_load(policy_file.read_text())
+                policy = yaml.safe_load(policy_file.read_text(encoding="utf-8"))
                 if policy.get("policy", {}).get("allow_implicit_invocation") is not False:
                     errors.append(f"{info.name}: implicit submission invocation enabled")
     return ValidationReport(

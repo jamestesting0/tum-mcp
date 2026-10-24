@@ -41,7 +41,9 @@ def score_trials(path: Path) -> tuple[Score, ...]:
     corpus = decode(Corpus, (files("tum_mcp") / "bundled/activation-cases.json").read_bytes())
     cases = {case.id: case for case in corpus.root}
     trials = [
-        decode(Trial, line.encode()) for line in path.read_text().splitlines() if line.strip()
+        decode(Trial, line.encode())
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
     ]
     for trial in trials:
         if (
