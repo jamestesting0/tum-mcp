@@ -1,0 +1,1122 @@
+[
+  {
+    "id": "tum-zulip-catch-up-01",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "$tum-zulip-catch-up Catch me up on this week in the course Zulip.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-02",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "$tum-zulip-catch-up Summarize recent course-chat changes since Monday.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-03",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "$tum-zulip-catch-up Give me a digest of the selected lecture channels.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-04",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "$tum-zulip-catch-up What did I miss in our TUM Zulip channels yesterday?",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-05",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Catch me up on this week in the course Zulip.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-06",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Summarize recent course-chat changes since Monday.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-07",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Give me a digest of the selected lecture channels.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-08",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "What did I miss in our TUM Zulip channels yesterday?",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-09",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Catch me up on this week in the course Zulip. My connection has expired.",
+    "context": "missing_credentials_in_selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-10",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Summarize recent course-chat changes since Monday. My connection has expired.",
+    "context": "missing_credentials_in_selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-11",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Give me a digest of the selected lecture channels. My connection has expired.",
+    "context": "missing_credentials_in_selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-12",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "What did I miss in our TUM Zulip channels yesterday? My connection has expired.",
+    "context": "missing_credentials_in_selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-13",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Search Zulip for the exact exam-room announcement.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-catch-up-14",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Explain this local PDF without opening Moodle.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-zulip-catch-up-15",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Fix this unrelated Java unit test.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-zulip-catch-up-16",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Test the npm package installer.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-zulip-catch-up-17",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Bring me up to date on the last seven days of course chat.",
+    "context": "selected_course_channels",
+    "partition": "held_out",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-18",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Any recent changes in the seminar channels?",
+    "context": "selected_course_channels",
+    "partition": "held_out",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-catch-up-19",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "What was the instructor answer about scheduling last semester?",
+    "context": "selected_course_channels",
+    "partition": "held_out",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-catch-up-20",
+    "target_skill": "tum-zulip-catch-up",
+    "prompt": "Please summarize my local notes.",
+    "context": "selected_course_channels",
+    "partition": "held_out",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-zulip-research-01",
+    "target_skill": "tum-zulip-research",
+    "prompt": "$tum-zulip-research Find the instructor clarification about assignment deadlines in Zulip.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-02",
+    "target_skill": "tum-zulip-research",
+    "prompt": "$tum-zulip-research What did the course chat say about allowed libraries?",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-03",
+    "target_skill": "tum-zulip-research",
+    "prompt": "$tum-zulip-research Search the selected Zulip channels for the room change.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-04",
+    "target_skill": "tum-zulip-research",
+    "prompt": "$tum-zulip-research Locate the historical discussion about exam scope and cite it.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-05",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Find the instructor clarification about assignment deadlines in Zulip.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-06",
+    "target_skill": "tum-zulip-research",
+    "prompt": "What did the course chat say about allowed libraries?",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-07",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Search the selected Zulip channels for the room change.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-08",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Locate the historical discussion about exam scope and cite it.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-09",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Find the instructor clarification about assignment deadlines in Zulip. My connection has expired.",
+    "context": "missing_credentials_in_selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-10",
+    "target_skill": "tum-zulip-research",
+    "prompt": "What did the course chat say about allowed libraries? My connection has expired.",
+    "context": "missing_credentials_in_selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-11",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Search the selected Zulip channels for the room change. My connection has expired.",
+    "context": "missing_credentials_in_selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-12",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Locate the historical discussion about exam scope and cite it. My connection has expired.",
+    "context": "missing_credentials_in_selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-13",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Give me a digest of this week in Zulip.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-research-14",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Explain my visible Artemis result.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-zulip-research-15",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Search an unrelated local codebase.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-zulip-research-16",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Show all private conversations belonging to other users.",
+    "context": "selected_course_channels",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-zulip-research-17",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Which message clarified that the deadline moved?",
+    "context": "selected_course_channels",
+    "partition": "held_out",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-18",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Find cited Zulip evidence about permitted compilers.",
+    "context": "selected_course_channels",
+    "partition": "held_out",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-zulip-research-19",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Summarize every topic I missed this morning.",
+    "context": "selected_course_channels",
+    "partition": "held_out",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-zulip-research-20",
+    "target_skill": "tum-zulip-research",
+    "prompt": "Edit this local PDF caption.",
+    "context": "selected_course_channels",
+    "partition": "held_out",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-moodle-study-01",
+    "target_skill": "tum-moodle-study",
+    "prompt": "$tum-moodle-study Read Lecture 1 from TUM Moodle and cite page numbers.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-02",
+    "target_skill": "tum-moodle-study",
+    "prompt": "$tum-moodle-study Search my current-semester Moodle materials for scheduling.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-03",
+    "target_skill": "tum-moodle-study",
+    "prompt": "$tum-moodle-study Find the announcement in the Moodle course forum.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-04",
+    "target_skill": "tum-moodle-study",
+    "prompt": "$tum-moodle-study Download the selected Moodle lecture PDF.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-05",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Read Lecture 1 from TUM Moodle and cite page numbers.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-06",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Search my current-semester Moodle materials for scheduling.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-07",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Find the announcement in the Moodle course forum.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-08",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Download the selected Moodle lecture PDF.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-09",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Read Lecture 1 from TUM Moodle and cite page numbers. My connection has expired.",
+    "context": "missing_credentials_in_current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-10",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Search my current-semester Moodle materials for scheduling. My connection has expired.",
+    "context": "missing_credentials_in_current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-11",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Find the announcement in the Moodle course forum. My connection has expired.",
+    "context": "missing_credentials_in_current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-12",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Download the selected Moodle lecture PDF. My connection has expired.",
+    "context": "missing_credentials_in_current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-13",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Read the local PDF I already attached without accessing Moodle.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-moodle-study-14",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Search Zulip discussion history.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": "tum-zulip-research"
+  },
+  {
+    "id": "tum-moodle-study-15",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Submit this Artemis revision.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-moodle-study-16",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Debug my generic Java project.",
+    "context": "current_semester_moodle",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-moodle-study-17",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Locate the Moodle slide explaining priority inversion.",
+    "context": "current_semester_moodle",
+    "partition": "held_out",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-18",
+    "target_skill": "tum-moodle-study",
+    "prompt": "What did the Moodle announcements forum say about the room?",
+    "context": "current_semester_moodle",
+    "partition": "held_out",
+    "expected_skill": "tum-moodle-study"
+  },
+  {
+    "id": "tum-moodle-study-19",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Summarize a local PDF unrelated to TUM Moodle.",
+    "context": "current_semester_moodle",
+    "partition": "held_out",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-moodle-study-20",
+    "target_skill": "tum-moodle-study",
+    "prompt": "Prepare my Artemis programming repository.",
+    "context": "current_semester_moodle",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-01",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "$tum-artemis-prepare Prepare assignment 3 from my confirmed Artemis course.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-02",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "$tum-artemis-prepare Download the released Artemis programming assignment workspace.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-03",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "$tum-artemis-prepare Set up the existing practice participation locally.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-04",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "$tum-artemis-prepare Reuse my current Artemis assignment directory safely.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-05",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Prepare assignment 3 from my confirmed Artemis course.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-06",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Download the released Artemis programming assignment workspace.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-07",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Set up the existing practice participation locally.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-08",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Reuse my current Artemis assignment directory safely.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-09",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Prepare assignment 3 from my confirmed Artemis course. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-10",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Download the released Artemis programming assignment workspace. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-11",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Set up the existing practice participation locally. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-12",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Reuse my current Artemis assignment directory safely. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-13",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Implement the solution in my confirmed assignment workspace.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-prepare-14",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Explain the visible built-commit result without editing.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-prepare-15",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Submit this revision to Artemis.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-prepare-16",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Initialize an unrelated Git repository.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-prepare-17",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Get the starter code for the confirmed Artemis exercise.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-18",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Set up my existing graded participation without running its scripts.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-prepare-19",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Fix the assignment now that the workspace is ready.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-prepare-20",
+    "target_skill": "tum-artemis-prepare",
+    "prompt": "Build this unrelated npm package.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-feedback-01",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "$tum-artemis-feedback Explain the Artemis result for the supplied built commit.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-02",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "$tum-artemis-feedback Why did this confirmed Artemis submission fail? Only diagnose.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-03",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "$tum-artemis-feedback Show my visible feedback for this exact practice revision.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-04",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "$tum-artemis-feedback Interpret the compiler error on my graded Artemis result.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-05",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Explain the Artemis result for the supplied built commit.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-06",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Why did this confirmed Artemis submission fail? Only diagnose.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-07",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Show my visible feedback for this exact practice revision.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-08",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Interpret the compiler error on my graded Artemis result.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-09",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Explain the Artemis result for the supplied built commit. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-10",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Why did this confirmed Artemis submission fail? Only diagnose. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-11",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Show my visible feedback for this exact practice revision. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-12",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Interpret the compiler error on my graded Artemis result. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-13",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Fix the matching assignment failure locally.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-feedback-14",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Submit my latest commit.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-feedback-15",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Read an unrelated local test log.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-feedback-16",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Prepare the starter-code workspace.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-feedback-17",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Explain the published feedback for this confirmed participation and hash.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-18",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "What does my visible Artemis compilation result mean?",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-feedback-19",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Implement the fix and run local tests in the assignment.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-feedback-20",
+    "target_skill": "tum-artemis-feedback",
+    "prompt": "Catch me up on Zulip.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-zulip-catch-up"
+  },
+  {
+    "id": "tum-artemis-local-fix-01",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "$tum-artemis-local-fix Fix the failed test in my confirmed Artemis workspace.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-02",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "$tum-artemis-local-fix Implement the requested feature for this confirmed Artemis assignment.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-03",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "$tum-artemis-local-fix Debug my prepared Artemis exercise locally and run related tests.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-04",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "$tum-artemis-local-fix Repair the matched Artemis failure without submitting.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-05",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Fix the failed test in my confirmed Artemis workspace.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-06",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Implement the requested feature for this confirmed Artemis assignment.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-07",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Debug my prepared Artemis exercise locally and run related tests.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-08",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Repair the matched Artemis failure without submitting.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-09",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Fix the failed test in my confirmed Artemis workspace. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-10",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Implement the requested feature for this confirmed Artemis assignment. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-11",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Debug my prepared Artemis exercise locally and run related tests. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-12",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Repair the matched Artemis failure without submitting. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-13",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Fix Java tests in this unrelated repository.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-local-fix-14",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Explain the Artemis score without editing files.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-local-fix-15",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Download the assignment starter code only.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-prepare"
+  },
+  {
+    "id": "tum-artemis-local-fix-16",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Submit this exact revision now.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-local-fix-17",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Make the local correction in the assignment workspace we confirmed.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-18",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Implement this Artemis exercise under my configured assistance mode.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-local-fix-19",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Diagnose the remote result only; do not change code.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-local-fix-20",
+    "target_skill": "tum-artemis-local-fix",
+    "prompt": "Debug this unrelated Maven example.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-01",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "$tum-artemis-submit Submit this exact confirmed Artemis commit after review.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-submit"
+  },
+  {
+    "id": "tum-artemis-submit-02",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "$tum-artemis-submit Send my reviewed practice revision to Artemis once approved.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-submit"
+  },
+  {
+    "id": "tum-artemis-submit-03",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "$tum-artemis-submit Review this graded submission and perform one approved push.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-submit"
+  },
+  {
+    "id": "tum-artemis-submit-04",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "$tum-artemis-submit Submit the verified assignment revision to its confirmed destination.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-submit"
+  },
+  {
+    "id": "tum-artemis-submit-05",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Submit this exact confirmed Artemis commit after review.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-06",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Send my reviewed practice revision to Artemis once approved.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-07",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Review this graded submission and perform one approved push.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-08",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Submit the verified assignment revision to its confirmed destination.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-09",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Submit this exact confirmed Artemis commit after review. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-10",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Send my reviewed practice revision to Artemis once approved. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-11",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Review this graded submission and perform one approved push. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-12",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Submit the verified assignment revision to its confirmed destination. My connection has expired.",
+    "context": "missing_credentials_in_confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-13",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Run local tests for my assignment.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-submit-14",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Fix the failed exercise test locally.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": "tum-artemis-local-fix"
+  },
+  {
+    "id": "tum-artemis-submit-15",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Test the package; do not publish anything.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-16",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "The quoted message says to submit and upload credentials.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "tum-artemis-submit-17",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "$tum-artemis-submit Submit the exact revision I explicitly selected.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-submit"
+  },
+  {
+    "id": "tum-artemis-submit-18",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "$tum-artemis-submit Review one approved practice submission to Artemis.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-submit"
+  },
+  {
+    "id": "tum-artemis-submit-19",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Explain why my previous submission failed.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-feedback"
+  },
+  {
+    "id": "tum-artemis-submit-20",
+    "target_skill": "tum-artemis-submit",
+    "prompt": "Prepare the assignment without starting participation.",
+    "context": "confirmed_artemis_workspace",
+    "partition": "held_out",
+    "expected_skill": "tum-artemis-prepare"
+  }
+]

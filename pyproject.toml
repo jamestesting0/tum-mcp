@@ -1,7 +1,7 @@
 [project]
 name = "tum-moodle-integration"
-version = "0.3.0"
-description = "Personal, read-only TUM Moodle tools for Codex."
+version = "0.4.0"
+description = "Local TUM Moodle, Artemis, and Zulip tools with campus workflow skills."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE", "NOTICE"]
@@ -22,17 +22,19 @@ dependencies = [
   "pillow>=11,<13",
   "psutil>=7,<8",
   "typer>=0.20,<1",
+  "pyyaml>=6,<7",
 ]
 
 [project.scripts]
 tum-moodle = "tum_moodle.cli:app"
+tum-mcp = "tum_mcp.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/tum_moodle"]
+packages = ["src/tum_moodle", "src/tum_mcp"]
 
 [dependency-groups]
 dev = [
