@@ -6,12 +6,11 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Annotated, Literal, assert_never
+from typing import Annotated, assert_never
 
 import typer
 
 from tum_mcp import __version__
-from tum_mcp.client_hosts import ClientHost
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import (
@@ -23,8 +22,8 @@ from tum_mcp.settings import (
 from tum_moodle.browsers import BrowserSetupError
 from tum_moodle.errors import MoodleError
 
-app = typer.Typer(no_args_is_help=True)
-skills_app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
+skills_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 app.add_typer(skills_app, name="skills")
 from tum_mcp.workflow_cli import app as workspace_app  # noqa: E402
 
@@ -47,7 +46,10 @@ def serve() -> None:
     from tum_mcp.server import server
 
     logging.getLogger("httpx2").setLevel(logging.WARNING)
-    server.run()
+    from tum_mcp.runtime_leases import runtime_lease
+
+    with runtime_lease():
+        server.run()
 
 
 @app.command()
@@ -225,37 +227,11 @@ def doctor(
     )
 
 
-@app.command()
-def setup(
-    client: Annotated[list[str] | None, typer.Option()] = None,
-    host: Annotated[
-        ClientHost,
-        typer.Option(help="Client location; windows registers a Windows client from WSL."),
-    ] = ClientHost.LOCAL,
-) -> None:
-    """Register explicitly chosen clients; no login or course retrieval occurs."""
-    from tum_mcp.clients import install_client
+from tum_mcp.lifecycle_cli import setup, uninstall, update  # noqa: E402
 
-    for name in client or []:
-        install_client(name, host=host)
-    typer.echo("Runtime ready. Complete service connections and select scopes separately.")
-    if not client:
-        typer.echo("Select adapters with --client codex, claude, cursor, antigravity, or generic.")
-    from tum_moodle.browsers import is_wsl
-
-    if is_wsl() and host == ClientHost.LOCAL:
-        typer.echo("For a Windows desktop client, repeat setup with --host windows.")
-
-
-@app.command()
-def uninstall(
-    client: Literal["codex", "claude", "cursor", "antigravity", "generic"],
-    host: ClientHost = ClientHost.LOCAL,
-) -> None:
-    """Remove an unchanged managed client entry; preserve all campus state and personal work."""
-    from tum_mcp.uninstall import uninstall_client
-
-    uninstall_client(client, host=host)
+app.command()(setup)
+app.command()(update)
+app.command()(uninstall)
 
 
 @skills_app.command("list")
@@ -327,6 +303,9 @@ def main() -> None:
         app()
     except (CampusError, MoodleError, BrowserSetupError) as error:
         typer.echo(str(error), err=True)
+        raise SystemExit(2) from None
+    except OSError:
+        typer.echo("Local files could not be accessed. Check permissions and retry.", err=True)
         raise SystemExit(2) from None
     except KeyboardInterrupt:
         typer.echo("Connection cancelled. Completed sign-ins were preserved.", err=True)

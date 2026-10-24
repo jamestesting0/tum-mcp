@@ -12,6 +12,7 @@ from pathlib import Path
 from queue import Empty, Queue
 from threading import Thread
 
+from tum_mcp import __version__
 from tum_mcp.clients import install_client
 from tum_mcp.skills import inspect_skills
 
@@ -128,7 +129,7 @@ def verify() -> dict[str, object]:
                 request(
                     "initialize",
                     {
-                        "clientInfo": {"name": "tum_mcp_local_qa", "version": "0.4.0"},
+                        "clientInfo": {"name": "tum_mcp_local_qa", "version": __version__},
                         "capabilities": {"experimentalApi": True},
                     },
                 )

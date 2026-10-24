@@ -1,3 +1,3 @@
 """Local campus providers, policy, and client integration for TUM MCP."""
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"

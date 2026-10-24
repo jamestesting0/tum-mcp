@@ -4,13 +4,56 @@ import shutil
 from difflib import unified_diff
 from importlib.resources import files
 from pathlib import Path
-from typing import TypedDict
+from typing import Final, TypedDict
 
 import yaml
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen, config_path
+
+LEGACY_SKILLS: Final = {
+    "tum-moodle-study": "tum-moodle",
+    "tum-artemis-prepare": "tum-artemis",
+    "tum-artemis-feedback": "tum-artemis",
+    "tum-artemis-local-fix": "tum-artemis",
+    "tum-artemis-submit": "tum-artemis",
+    "tum-zulip-research": "tum-zulip",
+    "tum-zulip-catch-up": "tum-zulip",
+}
+
+
+def legacy_overrides() -> tuple[Path, ...]:
+    return tuple(
+        config_path() / "skills" / name
+        for name in LEGACY_SKILLS
+        if (config_path() / "skills" / name).exists()
+    )
+
+
+class InvocationPolicy(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="allow")
+    allow_implicit_invocation: StrictBool = True
+
+
+class InvocationMetadata(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="allow")
+    policy: InvocationPolicy = Field(default_factory=InvocationPolicy)
+
+
+def implicit_invocation(path: Path) -> bool:
+    policy_file = path / "agents/openai.yaml"
+    if not policy_file.exists():
+        return True
+    try:
+        return InvocationMetadata.model_validate(
+            yaml.safe_load(policy_file.read_text(encoding="utf-8"))
+        ).policy.allow_implicit_invocation
+    except (OSError, yaml.YAMLError, ValidationError):
+        raise CampusError(
+            Code.INVALID_RESPONSE,
+            "Invalid skill invocation metadata; review agents/openai.yaml locally.",
+        ) from None
 
 
 class SkillMetadata(Frozen):
@@ -31,7 +74,12 @@ def bundled() -> Path:
 
 def selected(name: str) -> Path:
     if name not in {path.name for path in bundled().iterdir() if path.is_dir()}:
-        raise CampusError(Code.CAPABILITY_UNSUPPORTED, "Unknown bundled skill name.")
+        raise CampusError(
+            Code.CAPABILITY_UNSUPPORTED,
+            f"This skill is retired; use {LEGACY_SKILLS[name]}."
+            if name in LEGACY_SKILLS
+            else "Unknown bundled skill name.",
+        )
     override = config_path() / "skills" / name
     return override if override.is_dir() else bundled() / name
 
@@ -49,6 +97,7 @@ def metadata(path: Path) -> SkillMetadata:
         parsed = SkillMetadata.model_validate(raw)
     except (yaml.YAMLError, ValidationError):
         raise CampusError(Code.INVALID_RESPONSE, "Skill metadata is invalid.") from None
+    implicit_invocation(path)
     if parsed.name != path.name:
         raise CampusError(Code.INVALID_RESPONSE, "Skill name must match its directory.")
     return parsed
@@ -83,6 +132,12 @@ def customize_skill(name: str) -> Path:
 def export_pack(destination: Path) -> None:
     if destination.exists():
         raise CampusError(Code.WORKSPACE_CONFLICT, "Export destination already exists.")
+    if legacy_overrides():
+        raise CampusError(
+            Code.WORKSPACE_CONFLICT,
+            "Legacy skill customizations were preserved in the config skills directory. "
+            "Review and merge them into tum-moodle, tum-artemis or tum-zulip before export/update.",
+        )
     chosen_sources: list[Path] = []
     for source in sorted(bundled().iterdir()):
         if source.is_dir():

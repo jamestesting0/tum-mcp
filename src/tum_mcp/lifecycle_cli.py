@@ -1,0 +1,101 @@
+"""Trusted local setup, update and removal commands."""
+
+import os
+from typing import Annotated, Literal, assert_never
+
+import typer
+
+from tum_mcp.client_hosts import ClientHost
+from tum_mcp.errors import CampusError, Code
+
+
+def setup(
+    client: Annotated[list[str] | None, typer.Option()] = None,
+    host: Annotated[
+        ClientHost,
+        typer.Option(help="Client location; windows registers a Windows client from WSL."),
+    ] = ClientHost.LOCAL,
+) -> None:
+    """Register explicitly chosen clients; no login or course retrieval occurs."""
+    from tum_mcp.clients import install_client
+
+    for name in client or []:
+        install_client(name, host=host)
+    typer.echo("Runtime ready. Complete service connections and select scopes separately.")
+    if not client:
+        typer.echo("Select adapters with --client codex, claude, cursor, antigravity, or generic.")
+    from tum_moodle.browsers import is_wsl
+
+    if is_wsl() and host == ClientHost.LOCAL:
+        typer.echo("For a Windows desktop client, repeat setup with --host windows.")
+
+
+def update() -> None:
+    """Refresh configured clients for this installed version; npm manages package downloads."""
+    from tum_mcp.ui import State, heading, status_rows, terminal_console
+    from tum_mcp.updates import refresh_clients
+
+    console = terminal_console()
+    heading(console, "Update", "Refresh configured clients for this installed package version.")
+    report = refresh_clients()
+    rows = []
+    for item in report["clients"]:
+        match item["state"]:
+            case "updated":
+                state = State.CONFIGURED
+            case "needs_review":
+                state = State.ACTION
+            case "not_registered" | "skipped":
+                state = State.INFO
+            case unreachable:
+                assert_never(unreachable)
+        rows.append((f"{item['client'].title()} ({item['host']})", state, item["detail"]))
+    if rows:
+        status_rows(console, rows)
+    console.print(f"Refreshed {report['updated']} client(s); {report['needs_review']} need review.")
+    console.print("Sessions, scopes, downloads and previous runtimes are retained.")
+    console.print(
+        "Download newer packages with npm install --global @jamestesting888/tum-mcp@latest"
+    )
+    if report["needs_review"]:
+        raise typer.Exit(2)
+
+
+def uninstall(
+    client: Literal["codex", "claude", "cursor", "antigravity", "generic"] | None = None,
+    host: ClientHost = ClientHost.LOCAL,
+    all_clients: Annotated[
+        bool, typer.Option("--all", help="Remove managed registrations for all configured clients.")
+    ] = False,
+    purge_runtime: Annotated[
+        bool,
+        typer.Option(
+            help="Remove verified runtimes after this process exits. Close coding clients first."
+        ),
+    ] = False,
+    forget_credentials: Annotated[
+        bool,
+        typer.Option(
+            help="Also forget local service credentials and Git tokens; keep native-store records."
+        ),
+    ] = False,
+) -> None:
+    """Remove managed client files; preserve personal work and saved data by default."""
+
+    if (client is None) == (not all_clients):
+        raise CampusError(Code.ACTION_REQUIRED, "Choose --client NAME or --all.")
+    if (purge_runtime or forget_credentials) and not all_clients:
+        raise CampusError(Code.ACTION_REQUIRED, "Runtime/credential cleanup requires --all.")
+    if purge_runtime and os.environ.get("TUM_MCP_NPM_LAUNCHER") != "1":
+        raise CampusError(Code.ACTION_REQUIRED, "Use the npm tum-mcp launcher for runtime cleanup.")
+    if all_clients:
+        from tum_mcp.removal import remove_clients
+
+        remove_clients(purge_runtime=purge_runtime, forget_credentials=forget_credentials)
+    else:
+        from tum_mcp.uninstall import uninstall_client
+
+        if client is None:
+            raise CampusError(Code.ACTION_REQUIRED, "Choose a client.")
+        uninstall_client(client, host=host)
+    typer.echo("Then remove the npm package: npm uninstall --global @jamestesting888/tum-mcp")

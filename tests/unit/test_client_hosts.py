@@ -81,3 +81,42 @@ def test_windows_profile_registration_is_repeatable_and_conflict_safe(
         remaining = json.loads(path.read_bytes())
         assert remaining["custom"] == "München"
         assert remaining["mcpServers"] == {"other": {"command": "keep"}}
+
+
+def test_legacy_windows_registration_can_gain_download_path_binding(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    from tum_mcp.legacy_clients import legacy_installation
+
+    # Given a real-shaped old runtime and the former three-path WSL entry.
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    runtime = tmp_path / "data/runtimes" / ("a" * 64)
+    python = runtime / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    python.parent.mkdir(parents=True)
+    python.write_bytes(b"synthetic-not-executed")
+    (runtime / ".tum-mcp-ready").write_text("a" * 64)
+    old_args = [
+        "--distribution",
+        "Fixture",
+        "--exec",
+        "/usr/bin/env",
+        "TUM_MCP_DATA_DIR=fixture",
+        str(python),
+        "-I",
+        "-m",
+        "tum_mcp",
+        "serve",
+    ]
+    old = {"command": "wsl.exe", "args": old_args}
+    new = {
+        "command": "wsl.exe",
+        "args": old_args[:-5]
+        + ["TUM_MOODLE_DOWNLOAD_DIR=fixture-downloads"]
+        + ["next-python", "-I", "-m", "tum_mcp", "serve"],
+    }
+    # When the unchanged legacy entry is recognized for migration.
+    record = legacy_installation("cursor", ClientHost.WINDOWS, tmp_path, old, new)
+    # Then its original managed entry is adopted for a safe update.
+    assert record is not None and record.server == old

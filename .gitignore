@@ -39,3 +39,6 @@ playwright/.auth/
 downloads/
 npm/backend/
 *.tgz
+
+# Atomic backend build staging; never distributed.
+/npm/.backend-build-*

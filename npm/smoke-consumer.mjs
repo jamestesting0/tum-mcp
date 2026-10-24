@@ -4,12 +4,14 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, release } from 'node:os';
 import { join, resolve } from 'node:path';
 
-const artifact = process.argv[2];
+const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version;
+const artifact = process.argv[2] || `dist/jamestesting888-tum-mcp-${version}.tgz`;
 if (!artifact || !process.env.npm_execpath) throw new Error('Run npm run test:consumer -- /path/to/package.tgz.');
 const root = mkdtempSync(join(tmpdir(), 'tum-mcp-packaged-smoke-'));
 const allowed = new Set(['PATH', 'HOME', 'USERPROFILE', 'SYSTEMROOT', 'COMSPEC', 'TMPDIR', 'TMP', 'TEMP', 'LOCALAPPDATA', 'APPDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'WSL_INTEROP', 'WSL_DISTRO_NAME', 'WSLENV', 'DISPLAY', 'WAYLAND_DISPLAY']);
 const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => allowed.has(name.toUpperCase())));
 Object.assign(env, {
+  HOME: join(root, 'profile'), USERPROFILE: join(root, 'profile'),
   TUM_MCP_DATA_DIR: join(root, 'data'), TUM_MCP_CONFIG_DIR: join(root, 'config'),
   TUM_MOODLE_DATA_DIR: join(root, 'moodle'), NPM_CONFIG_USERCONFIG: join(root, 'npmrc'),
 });
@@ -30,7 +32,7 @@ try {
   run(process.execPath, [launcher, 'setup', '--client', 'generic']);
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'data/runtime.json'), 'utf8')), first);
   const skills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate']));
-  assert.equal(skills.checked_skills.length, 7);
+  assert.equal(skills.checked_skills.length, 3);
   assert.deepEqual(skills.errors, []);
   const diagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--json']));
   assert.equal(diagnostics.live_authentication, 'not_checked');
@@ -80,7 +82,7 @@ from tum_mcp.client_hosts import ClientHost,client_launch
 from tum_moodle.browsers import is_wsl
 async def check():
     launch=client_launch(ClientHost.WINDOWS if is_wsl() else ClientHost.LOCAL)
-    params=StdioServerParameters(**launch.entry(),env=dict(os.environ))
+    params=StdioServerParameters(**(launch.entry()|{'env':{**os.environ,**launch.entry().get('env',{})}}))
     async with stdio_client(params) as (reader,writer),ClientSession(reader,writer,read_timeout_seconds=20) as client:
         await client.initialize()
         inventory=await client.list_tools()
@@ -94,5 +96,5 @@ async def check():
 anyio.run(check)
 `;
   run(first.python, ['-I', '-c', protocol], 60000);
-  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 7, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
+  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 3, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
 } finally { rmSync(root, { recursive: true, force: true }); }

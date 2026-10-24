@@ -28,10 +28,10 @@ def test_additional_client_setup_is_idempotent_and_preserves_other_entries(
     configured = json.loads(path.read_text(encoding="utf-8"))
     assert configured["customSetting"] == original["customSetting"]
     assert configured["mcpServers"]["other"] == {"command": "keep"}
-    assert configured["mcpServers"]["tum"] == {
-        "command": sys.executable,
-        "args": ["-I", "-m", "tum_mcp", "serve"],
-    }
+    entry = configured["mcpServers"]["tum"]
+    assert entry["command"] == sys.executable
+    assert entry["args"] == ["-I", "-m", "tum_mcp", "serve"]
+    assert entry["env"]["TUM_MCP_DATA_DIR"] == str((tmp_path / "data").resolve())
     uninstall_client(name, home)
     assert json.loads(path.read_text(encoding="utf-8")) == original
 
@@ -108,7 +108,9 @@ def test_generated_client_command_starts_the_real_mcp_server(
     entry = config["mcpServers"]["tum"]
 
     async def check() -> None:
-        parameters = StdioServerParameters(**entry, env=dict(os.environ))
+        parameters = StdioServerParameters(
+            **(entry | {"env": {**os.environ, **entry.get("env", {})}})
+        )
         async with stdio_client(parameters) as (reader, writer):
             async with ClientSession(reader, writer) as client:
                 await client.initialize()

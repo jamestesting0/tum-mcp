@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,11 +18,21 @@ function invoke(args) {
 test('version works without provisioning Python or modifying user configuration', () => {
   const result = invoke(['--version']);
   assert.equal(result.status, 0);
-  assert.equal(result.stdout.trim(), '0.5.0');
+  assert.equal(result.stdout.trim(), JSON.parse(readFileSync(new URL('../../package.json', import.meta.url))).version);
 });
 
 test('serve fails closed before explicit setup', () => {
   const result = invoke(['serve']);
   assert.equal(result.status, 2);
   assert.match(result.stderr, /SETUP_REQUIRED/);
+});
+
+
+test('update help and invalid update options do not provision a runtime', () => {
+  const help = invoke(['update', '--help']);
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /Refresh previously configured clients/);
+  const invalid = invoke(['update', '--unknown-option']);
+  assert.equal(invalid.status, 2);
+  assert.match(invalid.stderr, /no arguments/);
 });

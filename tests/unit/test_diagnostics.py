@@ -123,7 +123,7 @@ def test_doctor_survives_an_incomplete_custom_skill(
 ) -> None:
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "campus"))
     monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "moodle"))
-    (tmp_path / "campus/config/skills/tum-zulip-research").mkdir(parents=True)
+    (tmp_path / "campus/config/skills/tum-zulip").mkdir(parents=True)
     report = collect_diagnostics(home=tmp_path)
     assert (
         next(item for item in report.runtime if item.label == "Workflow skills").state

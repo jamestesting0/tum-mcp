@@ -21,7 +21,7 @@ jobs:
       matrix:
         wsl: [1, 2]
     runs-on: windows-2025
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
@@ -54,4 +54,5 @@ jobs:
           mkdir -p /opt/tum-ci-node
           tar -xJf /tmp/tum-node.tar.xz -C /opt/tum-ci-node --strip-components=1
           export PATH="/opt/tum-ci-node/bin:$PATH"
-          npm run test:consumer -- dist/jamestesting888-tum-mcp-0.5.0.tgz
+          npm run test:consumer
+          npm run test:upgrade
