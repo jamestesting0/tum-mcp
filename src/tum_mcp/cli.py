@@ -1,9 +1,10 @@
 """Local settings and onboarding commands; never runs automatically on npm install."""
 
 import getpass
+import io
 import json
 import logging
-import shutil
+import os
 import sys
 from pathlib import Path
 from typing import Annotated, Literal, assert_never
@@ -16,12 +17,11 @@ from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import (
     Provider,
-    config_dir,
-    data_dir,
     find_account,
     preferences,
     save_account,
 )
+from tum_moodle.errors import MoodleError
 
 app = typer.Typer(no_args_is_help=True)
 skills_app = typer.Typer(no_args_is_help=True)
@@ -43,6 +43,7 @@ def version() -> None:
 @app.command()
 def serve() -> None:
     """Run the combined campus/Moodle MCP server over stdio."""
+    os.environ["TUM_MOODLE_SESSION_STORAGE"] = "file"
     from tum_mcp.server import server
 
     logging.getLogger("httpx2").setLevel(logging.WARNING)
@@ -71,30 +72,94 @@ def status() -> None:
 
 @app.command()
 def connect(
-    provider: Literal["artemis", "zulip", "campus"],
+    provider: Annotated[
+        Literal["moodle", "artemis", "zulip", "campus"] | None, typer.Argument()
+    ] = None,
+    service: Annotated[list[str] | None, typer.Option("--service", "-s")] = None,
     auth: Literal["browser", "api-key"] = "browser",
 ) -> None:
-    """Sign in through a temporary browser; campus shares one Artemis/Zulip SSO context."""
-    from tum_mcp.connect import connect_browser, connect_zulip
+    """Choose services and connect them in a shared temporary Chrome window."""
+    from rich.text import Text
 
+    from tum_mcp.connect import ConnectionResult, ServiceChoice, connect_services, connect_zulip
+    from tum_mcp.ui import heading, select_services, terminal_console
+
+    console = terminal_console()
     if not sys.stdin.isatty():
-        raise CampusError(Code.ACTION_REQUIRED, "Run connect in your own interactive terminal.")
+        raise CampusError(Code.ACTION_REQUIRED, "Run tum-mcp connect in your interactive terminal.")
+    if provider and service:
+        raise CampusError(
+            Code.SCOPE_DENIED, "Use --service choices or a legacy positional service, not both."
+        )
+    heading(console, "Connect", "Choose what to connect. Only the selected tabs will open.")
+    if service:
+        try:
+            selected = tuple(ServiceChoice(value) for value in service)
+        except ValueError:
+            raise CampusError(Code.SCOPE_DENIED, "Choose moodle, artemis or zulip.") from None
+    elif provider:
+        selected = (
+            (ServiceChoice.ARTEMIS, ServiceChoice.ZULIP)
+            if provider == "campus"
+            else (ServiceChoice(provider),)
+        )
+    else:
+        try:
+            selected = select_services()
+        except (KeyboardInterrupt, EOFError):
+            console.print("Cancelled. No browser was opened.")
+            raise typer.Exit(130) from None
+    if not selected:
+        console.print("No services selected. Nothing was changed.")
+        return
+    if len(set(selected)) != len(selected):
+        raise CampusError(Code.SCOPE_DENIED, "Select each service only once.")
     if auth == "api-key":
-        if provider != "zulip":
-            raise CampusError(Code.CAPABILITY_UNSUPPORTED, "API-key import is only for Zulip.")
-        typer.echo("Import your existing Zulip API key locally; no password reset is needed.")
+        if selected != (ServiceChoice.ZULIP,):
+            raise CampusError(
+                Code.CAPABILITY_UNSUPPORTED,
+                "API-key import is only for Zulip. Use --service zulip.",
+            )
+        console.print("Enter your existing Zulip API key here; the value stays local.")
         email = typer.prompt("Zulip email")
         key = SecretStr(getpass.getpass("Zulip API key (hidden): "))
-        accounts = (connect_zulip(email, key),)
-    else:
-        providers = (
-            (Provider.ARTEMIS, Provider.ZULIP) if provider == "campus" else (Provider(provider),)
+        account = connect_zulip(email, key)
+        console.print(Text(f"Zulip connected. Account ID: {account.id}"))
+        return
+    console.print(
+        Text(
+            "Opening "
+            + ", ".join(value.value.title() for value in selected)
+            + ". Complete TUM sign-in/MFA in Chrome."
         )
-        typer.echo("Complete service sign-in in the Chrome tabs. Only own identity is checked.")
-        accounts = connect_browser(providers)
-    for account in accounts:
-        typer.echo(f"Connected {account.provider}. Account ID: {account.id}")
-    typer.echo("Existing scopes preserved. New identities have no enabled courses or channels.")
+    )
+    console.print(
+        "Sessions are encrypted locally; the owner-restricted key file stays on this computer."
+    )
+    console.print(
+        "This avoids Keychain prompts, with less protection than native credential storage."
+    )
+    console.print()
+
+    def connected(result: ConnectionResult) -> None:
+        console.print(
+            Text.assemble(("· ", "ready"), (f"Connected  {result.service.value.title()}", "bold"))
+        )
+        if result.account is not None:
+            console.print(Text(f"Account ID: {result.account.id}"))
+
+    try:
+        results = connect_services(selected, on_connected=connected)
+    except KeyboardInterrupt:
+        console.print("Cancelled. Completed connections were saved.")
+        raise typer.Exit(130) from None
+    console.print()
+    console.print(
+        f"Saved {len(results)} connection(s). Existing course/channel scopes are preserved."
+    )
+    console.print(
+        "New accounts need scope selection before content reads. Run tum-mcp status for IDs."
+    )
 
 
 @app.command()
@@ -155,27 +220,46 @@ def logout(provider: Provider, account_id: str) -> None:
 
 
 @app.command()
-def doctor() -> None:
-    """Report prerequisites without authenticating or changing client configuration."""
-    from tum_mcp.skills import inspect_skills
+def doctor(
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Print machine-readable diagnostics.")
+    ] = False,
+    live: Annotated[
+        bool, typer.Option("--live", help="Verify saved local sessions with the services.")
+    ] = False,
+) -> None:
+    """Show service readiness, client registrations, prerequisites and useful next actions."""
+    from rich.text import Text
 
-    typer.echo(
-        json.dumps(
-            {
-                "python": sys.version.split()[0],
-                "git": bool(shutil.which("git")),
-                "docker_cli": bool(shutil.which("docker")),
-                "codex": bool(shutil.which("codex")),
-                "claude": bool(shutil.which("claude")),
-                "config": str(config_dir()),
-                "data": str(data_dir()),
-                "bundled_skills": inspect_skills(),
-                "live_authentication": "not_checked",
-                "client_skill_loading": "not_verified",
-                "assignment_test_isolation": "requires_running_engine_and_approved_recipe",
-            },
-            indent=2,
-        )
+    from tum_mcp.diagnostics import collect_diagnostics
+    from tum_mcp.ui import heading, section, status_rows, terminal_console
+
+    report = collect_diagnostics(live=live)
+    if json_output:
+        typer.echo(report.model_dump_json(indent=2))
+        return
+    console = terminal_console()
+    heading(
+        console,
+        "Doctor",
+        "Local readiness checks"
+        + (" and requested live authentication." if live else ". No login or Keychain access."),
+    )
+    for title, items in (
+        ("Services", report.services),
+        ("Clients", report.clients),
+        ("Runtime", report.runtime),
+    ):
+        section(console, title)
+        status_rows(console, [(item.label, item.state, item.detail) for item in items])
+    if report.next_steps:
+        section(console, "Next steps")
+        for index, action in enumerate(report.next_steps, 1):
+            console.print(Text(f"{index}. {action}"))
+        console.print()
+    console.print(Text("Remote start, push, submit and rebuild remain disabled.", style="muted"))
+    console.print(
+        Text("Use --live for a fresh session check; --json for automation.", style="muted")
     )
 
 
@@ -188,11 +272,11 @@ def setup(client: Annotated[list[str] | None, typer.Option()] = None) -> None:
         install_client(name)
     typer.echo("Runtime ready. Complete service connections and select scopes separately.")
     if not client:
-        typer.echo("Select adapters with --client codex, --client claude, or --client generic.")
+        typer.echo("Select adapters with --client codex, claude, cursor, antigravity, or generic.")
 
 
 @app.command()
-def uninstall(client: Literal["codex", "claude", "generic"]) -> None:
+def uninstall(client: Literal["codex", "claude", "cursor", "antigravity", "generic"]) -> None:
     """Remove an unchanged managed client entry; preserve all campus state and personal work."""
     from tum_mcp.uninstall import uninstall_client
 
@@ -260,8 +344,15 @@ def evaluate_skills(trials: Path) -> None:
 
 
 def main() -> None:
+    if sys.platform == "win32":
+        for stream in (sys.stdout, sys.stderr):
+            if isinstance(stream, io.TextIOWrapper):
+                stream.reconfigure(encoding="utf-8")
     try:
         app()
-    except CampusError as error:
+    except (CampusError, MoodleError) as error:
         typer.echo(str(error), err=True)
         raise SystemExit(2) from None
+    except KeyboardInterrupt:
+        typer.echo("Connection cancelled. Completed sign-ins were preserved.", err=True)
+        raise SystemExit(130) from None

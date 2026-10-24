@@ -10,7 +10,7 @@ import yaml
 from pydantic import ValidationError
 
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.settings import Frozen, config_dir
+from tum_mcp.settings import Frozen, config_path
 
 
 class SkillMetadata(Frozen):
@@ -32,7 +32,7 @@ def bundled() -> Path:
 def selected(name: str) -> Path:
     if name not in {path.name for path in bundled().iterdir() if path.is_dir()}:
         raise CampusError(Code.CAPABILITY_UNSUPPORTED, "Unknown bundled skill name.")
-    override = config_dir() / "skills" / name
+    override = config_path() / "skills" / name
     return override if override.is_dir() else bundled() / name
 
 
@@ -73,7 +73,7 @@ def inspect_skills() -> list[SkillInfo]:
 
 def customize_skill(name: str) -> Path:
     source = selected(name)
-    destination = config_dir() / "skills" / name
+    destination = config_path() / "skills" / name
     if not destination.exists():
         destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         shutil.copytree(source, destination)

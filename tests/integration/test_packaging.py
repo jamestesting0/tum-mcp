@@ -19,7 +19,7 @@ def test_registration_works_outside_home_and_preserves_other_plugins(
     for name in ("plugin", "src", "scripts"):
         shutil.copytree(root / name, checkout / name)
     (checkout / "docs").mkdir()
-    for name in ("setup.md", "development.md", "tum-mcp.md"):
+    for name in ("setup.md", "development.md", "tum-mcp.md", "DESIGN.md"):
         shutil.copy2(root / "docs" / name, checkout / "docs" / name)
     if include_local_docs:
         for name in (
@@ -29,6 +29,8 @@ def test_registration_works_outside_home_and_preserves_other_plugins(
         ):
             (checkout / "docs" / name).write_text("LOCAL_ONLY_DOC_DO_NOT_PACKAGE\n")
         (checkout / "AGENTS.md").write_text("LOCAL_ONLY_AGENT_INSTRUCTIONS\n")
+        (checkout / "docs/local").mkdir()
+        (checkout / "docs/local/handoff.md").write_text("LOCAL_ONLY_AGENT_INSTRUCTIONS\n")
     for name in ("pyproject.toml", "uv.lock", "README.md", ".python-version", "LICENSE", "NOTICE"):
         shutil.copy2(root / name, checkout / name)
     (checkout / ".env").write_text("PRIVATE_TEST_VALUE=do-not-package\n")
@@ -54,6 +56,7 @@ def test_registration_works_outside_home_and_preserves_other_plugins(
     assert not (installed_source / "docs/tum-mcp-handoff.md").exists()
     assert not (installed_source / "docs/credential-storage-options.md").exists()
     assert not (installed_source / "docs/release-workflow.yml.example").exists()
+    assert not (installed_source / "docs/local").exists()
     assert not (installed_source / "AGENTS.md").exists()
     assert (installed_source / "LICENSE").read_bytes() == (root / "LICENSE").read_bytes()
     assert (installed_source / "NOTICE").read_bytes() == (root / "NOTICE").read_bytes()

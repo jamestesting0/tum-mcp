@@ -32,6 +32,43 @@ try {
   const skills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate']));
   assert.equal(skills.checked_skills.length, 7);
   assert.deepEqual(skills.errors, []);
+  const diagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--json']));
+  assert.equal(diagnostics.live_authentication, 'not_checked');
+  assert.equal(diagnostics.remote_actions, 'disabled');
+  assert.ok(diagnostics.services.every(service => service.state !== 'Ready'));
+  const storage = `import os
+from pathlib import Path
+from tum_moodle import auth
+from tum_moodle.auth import Cookie,Session,SessionStore
+from tum_moodle.config import Paths
+from tum_mcp.clients import install_client,client_config_path,read_client_config
+from tum_mcp.credentials import Credential,Vault
+from tum_mcp.settings import Account,Provider
+def forbidden():
+    raise AssertionError('Native credential storage must not be opened')
+auth.system_keyring=forbidden
+root=Path(os.environ['TUM_MOODLE_DATA_DIR'])
+root.mkdir(parents=True,exist_ok=True)
+legacy=root/'session.enc'
+legacy.write_bytes(b'preserved-legacy-record')
+store=SessionStore(Paths(root),storage='file')
+store.save(Session(generation=store.begin_login(),cookies=[Cookie(name='session',value='synthetic-consumer-only',domain='www.moodle.tum.de')],verified_at=1))
+assert store.load().cookies[0].value=='synthetic-consumer-only'
+assert b'synthetic-consumer-only' not in store.file('session.enc').read_bytes()
+store.logout()
+assert legacy.read_bytes()==b'preserved-legacy-record'
+account=Account(provider=Provider.ARTEMIS,origin='https://artemis.tum.de',principal='consumer-fixture')
+vault=Vault()
+vault.save(account,Credential(account_id=account.id))
+assert vault.load(account).account_id==account.id
+vault.logout(account)
+home=root/'disposable-client-profile'
+for name in ('cursor','antigravity'):
+    install_client(name,home)
+    install_client(name,home)
+    assert read_client_config(client_config_path(name,home)).mcpServers['tum']['args']==['-I','-m','tum_mcp','serve']
+`;
+  run(first.python, ['-I', '-c', storage], 60000);
   const protocol = `import os,sys,anyio
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters,stdio_client
@@ -50,5 +87,5 @@ async def check():
 anyio.run(check)
 `;
   run(first.python, ['-I', '-c', protocol], 60000);
-  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 7, packagedMcpPassed: true, realAccountsUsed: false }));
+  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 7, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, realAccountsUsed: false }));
 } finally { rmSync(root, { recursive: true, force: true }); }
