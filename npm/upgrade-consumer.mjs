@@ -67,7 +67,7 @@ for (const previousVersion of ['0.4.1', '0.5.0']) {
     assert.equal(readFileSync(join(root, 'data/runtime.json'), 'utf8'), first);
     writeFileSync(wheelPath, wheel); writeFileSync(manifestPath, manifestBytes);
     // Force health validation to repair this package using a new immutable generation.
-    const initializer = run(current.python, ['-I', '-c', 'import tum_mcp;print(tum_mcp.__file__)']).trim();
+    const initializer = JSON.parse(run(current.python, ['-I', '-c', 'import json,tum_mcp;print(json.dumps(tum_mcp.__file__))']));
     writeFileSync(initializer, '__version__="synthetic-broken-runtime"\n');
     call(currentPrefix, ['update']);
     const repaired = JSON.parse(readFileSync(join(root, 'data/runtime.json')));
