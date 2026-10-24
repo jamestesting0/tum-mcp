@@ -80,6 +80,9 @@ public static class TumBrowserPipes {
     thread.IsBackground = true; thread.Start(); return thread;
   }
   public static int Run(string executable, string arguments) {
+    // Process.StandardInput derives its StreamWriter encoding from the console.
+    // A BOM here would corrupt the first binary Playwright frame.
+    Console.InputEncoding = new System.Text.UTF8Encoding(false);
     using (var process = new Process()) {
       process.StartInfo = new ProcessStartInfo(executable, arguments) {
         UseShellExecute = false, CreateNoWindow = true,
