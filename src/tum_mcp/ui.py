@@ -102,7 +102,7 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
                 return tuple(dict.fromkeys(choices[int(value) - 1] for value in numbers))
             console.print("Choose at least one of 1, 2 or 3.")
     console.print("Up/down: move · Space: select")
-    console.print("Enter: connect · Ctrl+C: cancel")
+    console.print("Enter: continue · Ctrl+C: cancel")
     console.print()
     labels = (
         ("Moodle · Materials and forums", "Artemis · Exercises and feedback", "Zulip · Discussions")

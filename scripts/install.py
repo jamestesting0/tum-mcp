@@ -16,11 +16,14 @@ from package_plugin import build_package, register_package
 
 ROOT: Final = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "plugin/scripts"))
+sys.path.insert(0, str(ROOT / "src"))
 from runtime_setup import ensure_runtime, find_uv, same_package  # noqa: E402
+
+from tum_moodle.browsers import BrowserSetupError, discover_browsers  # noqa: E402
 
 SIGN_IN: Final = (
     'Prompt the user: "Sign in to TUM Moodle." Use native tools after any reload; '
-    "reuse an already connected session. Credentials and MFA stay in Chrome."
+    "reuse an already connected session. Credentials and MFA stay in the browser."
 )
 COURSE_CHECK: Final = (
     "After connection succeeds, offer an optional current-semester course check. "
@@ -56,17 +59,11 @@ def find_codex() -> str | None:
 
 
 def chrome_available() -> bool:
-    paths = [
-        Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-        Path.home() / "Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        Path("/opt/google/chrome/chrome"),
-    ]
-    for variable in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
-        if os.environ.get(variable):
-            paths.append(Path(os.environ[variable]) / "Google/Chrome/Application/chrome.exe")
-    return any(path.is_file() for path in paths) or any(
-        shutil.which(name) for name in ("google-chrome", "google-chrome-stable")
-    )
+    """Compatibility name for the legacy installer; use shared Chromium discovery."""
+    try:
+        return bool(discover_browsers())
+    except BrowserSetupError:
+        return False
 
 
 def plugin_current(executable: str, marketplace: str, package: Path) -> bool | None:
@@ -115,7 +112,7 @@ def install(root: Path = ROOT, *, repair: bool = False) -> InstallResult:
         chrome_missing = not chrome_available()
         if chrome_missing:
             actions.append(
-                "Install Google Chrome before TUM sign-in; see docs/setup.md for this OS."
+                "Install a Chromium browser before TUM sign-in; see docs/setup.md for this OS."
             )
         completed.append(stage)
         stage = "packaging"

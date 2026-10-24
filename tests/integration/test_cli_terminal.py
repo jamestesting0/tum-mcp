@@ -12,7 +12,13 @@ pytestmark = pytest.mark.skipif(os.name == "nt", reason="PTY keyboard QA uses PO
 
 
 def run_selector(
-    tmp_path: Path, keys: bytes, *, terminal: str = "xterm-256color", no_color: bool = False
+    tmp_path: Path,
+    keys: bytes,
+    *,
+    terminal: str = "xterm-256color",
+    no_color: bool = False,
+    browser_keys: bytes | None = None,
+    columns: int = 80,
 ) -> tuple[int, str]:
     import pty
 
@@ -22,9 +28,12 @@ def run_selector(
         "from tum_mcp import connect\n"
         "from tum_mcp.connect import ConnectionResult\n"
         "import tum_moodle.browsers as browsers\n"
-        "browsers.discover_browsers=lambda:(browsers.BrowserChoice('Test browser','unused'),)\n"
+        "browsers.discover_browsers=lambda:(browsers.BrowserChoice('First browser','first'),"
+        + ("browsers.BrowserChoice('Second browser','second')," if browser_keys else "")
+        + ")\n"
         "def connected(services,on_connected=None,browser=None):\n"
         " print('SELECTED='+','.join(service.value for service in services))\n"
+        " print('BROWSER='+browser.executable)\n"
         " results=tuple(ConnectionResult(service) for service in services)\n"
         " for result in results:\n"
         "  if on_connected: on_connected(result)\n"
@@ -35,7 +44,7 @@ def run_selector(
         encoding="utf-8",
     )
     master, slave = pty.openpty()
-    env = {**os.environ, "TERM": terminal, "COLUMNS": "80", "LINES": "30"}
+    env = {**os.environ, "TERM": terminal, "COLUMNS": str(columns), "LINES": "30"}
     if no_color:
         env["NO_COLOR"] = ""
     process = subprocess.Popen(  # noqa: S603
@@ -44,6 +53,7 @@ def run_selector(
     os.close(slave)
     captured = bytearray()
     sent = False
+    browser_sent = False
     deadline = time.monotonic() + 15
     try:
         while time.monotonic() < deadline:
@@ -61,6 +71,9 @@ def run_selector(
                 if not sent and b"Connect services" in plain:
                     os.write(master, keys)
                     sent = True
+                elif sent and not browser_sent and browser_keys and b"Browser" in plain:
+                    os.write(master, browser_keys)
+                    browser_sent = True
             if process.poll() is not None:
                 break
         else:
@@ -109,3 +122,21 @@ def test_empty_no_color_variable_disables_selector_color(tmp_path: Path) -> None
             for value in sequence.split(";")
             if value
         )
+
+
+def test_real_browser_picker_uses_the_chosen_browser_at_narrow_width(tmp_path: Path) -> None:
+    code, output = run_selector(tmp_path, b" \r", browser_keys=b"\x1b[B\r", columns=40)
+    assert code == 0, output
+    assert "SELECTED=moodle" in output and "BROWSER=second" in output
+
+
+def test_cancelling_browser_picker_does_not_connect(tmp_path: Path) -> None:
+    code, output = run_selector(tmp_path, b" \r", browser_keys=b"\x03")
+    assert code == 130, output
+    assert "SELECTED=" not in output and "No browser was opened" in output
+
+
+def test_dumb_terminal_browser_picker(tmp_path: Path) -> None:
+    code, output = run_selector(tmp_path, b"1,2\n", browser_keys=b"2\n", terminal="dumb")
+    assert code == 0, output
+    assert "SELECTED=moodle,artemis" in output and "BROWSER=second" in output

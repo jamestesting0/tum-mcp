@@ -103,6 +103,8 @@ def windows_host() -> WindowsHost:
         ) from None
     if len(values) != 5 or not all(values[index] for index in (0, 1, 4)):
         raise BrowserSetupError("Windows returned incomplete browser setup information.")
+    if any(value and not PureWindowsPath(value).is_absolute() for value in values[:4]):
+        raise BrowserSetupError("Windows returned invalid absolute browser paths.")
     architecture = values[4].lower()
     if architecture not in {"x64", "arm64"}:
         raise BrowserSetupError("The Windows browser bridge requires x64 or ARM64 Windows.")
@@ -121,6 +123,7 @@ MAC_BROWSERS: Final = (
     ("Chromium", "Chromium.app/Contents/MacOS/Chromium"),
     ("Vivaldi", "Vivaldi.app/Contents/MacOS/Vivaldi"),
     ("Opera", "Opera.app/Contents/MacOS/Opera"),
+    ("Opera GX", "Opera GX.app/Contents/MacOS/Opera GX"),
     ("Chrome Canary", "Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"),
     ("Edge Beta", "Microsoft Edge Beta.app/Contents/MacOS/Microsoft Edge Beta"),
 )
@@ -143,11 +146,21 @@ WINDOWS_BROWSERS: Final = (
     ("Chromium", "Chromium/Application/chrome.exe"),
     ("Vivaldi", "Vivaldi/Application/vivaldi.exe"),
     ("Opera", "Programs/Opera/opera.exe"),
+    ("Opera GX", "Programs/Opera GX/opera.exe"),
     ("Chrome Beta", "Google/Chrome Beta/Application/chrome.exe"),
     ("Chrome Canary", "Google/Chrome SxS/Application/chrome.exe"),
     ("Edge Beta", "Microsoft/Edge Beta/Application/msedge.exe"),
     ("Edge Dev", "Microsoft/Edge Dev/Application/msedge.exe"),
 )
+
+
+def _windows_candidates(root: Path, suffix: str) -> tuple[Path, ...]:
+    path = root / suffix
+    if "Opera" not in suffix:
+        return (path,)
+    # Opera keeps opera.exe inside a version directory on some installations.
+    versions = sorted(path.parent.glob("[0-9]*.*/opera.exe"), reverse=True)
+    return (path, *versions)
 
 
 def discover_browsers() -> tuple[BrowserChoice, ...]:
@@ -179,9 +192,10 @@ def discover_browsers() -> tuple[BrowserChoice, ...]:
             ]
             for name, suffix in WINDOWS_BROWSERS:
                 for root in roots:
-                    path = root / suffix
-                    if path.is_file():
-                        found.append(BrowserChoice(name, str(path)))
+                    for path in _windows_candidates(root, suffix):
+                        if path.is_file():
+                            found.append(BrowserChoice(name, str(path)))
+                            break
         case "linux":
             if is_wsl():
                 host = windows_host()
@@ -191,9 +205,11 @@ def discover_browsers() -> tuple[BrowserChoice, ...]:
                 )
                 for name, suffix in WINDOWS_BROWSERS:
                     for root, linux_root in roots:
-                        path = root / suffix
-                        if (linux_root / suffix).is_file():
-                            found.append(BrowserChoice(name, str(path), True))
+                        for path in _windows_candidates(linux_root, suffix):
+                            if path.is_file():
+                                executable = root / path.relative_to(linux_root).as_posix()
+                                found.append(BrowserChoice(name, str(executable), True))
+                                break
             if not is_wsl() or os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
                 for name, commands in LINUX_BROWSERS:
                     for command in commands:
