@@ -1,10 +1,14 @@
 """An isolated Windows Playwright driver over WSL interop's private stdio pipes."""
 
+import base64
 import hashlib
 import io
 import os
+import platform
 import shlex
+import shutil
 import socket
+import subprocess
 import tempfile
 import zipfile
 from collections.abc import Iterator
@@ -15,7 +19,7 @@ from typing import Final
 import httpx2
 from filelock import FileLock, Timeout
 
-from tum_moodle.browsers import BrowserChoice, BrowserSetupError, windows_host, wsl_path
+from tum_moodle.browsers import BrowserChoice, BrowserSetupError, is_wsl, windows_host, wsl_path
 from tum_moodle.config import private_write
 from tum_moodle.platforms import app_root
 
@@ -32,6 +36,37 @@ NODE_HASHES: Final = {
 }
 MAX_ARCHIVE: Final = 80 * 1024 * 1024
 MAX_EXECUTABLE: Final = 128 * 1024 * 1024
+
+
+def _wsl1_relay(node: Path, entrypoint: str, bootstrap: str) -> str:
+    """Give Windows Node real Windows pipes; WSL 1 handles cannot be opened by libuv."""
+    shell = shutil.which("powershell.exe") or shutil.which("pwsh.exe")
+    if shell is None:
+        raise BrowserSetupError("WSL 1 browser sign-in requires Windows PowerShell interop.")
+    executable = wsl_path(str(node), windows=True).replace("'", "''")
+    arguments = subprocess.list2cmdline(["--eval", bootstrap, entrypoint, "run-driver"]).replace(
+        "'", "''"
+    )
+    script = (
+        "$ErrorActionPreference='Stop'; $p=[Diagnostics.Process]::new(); $started=$false; "
+        f"$p.StartInfo.FileName='{executable}'; $p.StartInfo.Arguments='{arguments}'; "
+        "$p.StartInfo.UseShellExecute=$false; $p.StartInfo.CreateNoWindow=$true; "
+        "$p.StartInfo.RedirectStandardInput=$true; $p.StartInfo.RedirectStandardOutput=$true; "
+        "$p.StartInfo.RedirectStandardError=$true; "
+        "try{ $started=$p.Start(); "
+        "$inputCopy=[Console]::OpenStandardInput().CopyToAsync($p.StandardInput.BaseStream); "
+        "$outputCopy=$p.StandardOutput.BaseStream.CopyToAsync([Console]::OpenStandardOutput()); "
+        "$errorCopy=$p.StandardError.BaseStream.CopyToAsync([Console]::OpenStandardError()); "
+        "$closed=$false; "
+        "while(-not $p.WaitForExit(50)){if($inputCopy.IsCompleted -and -not $closed){"
+        "$p.StandardInput.Close(); $closed=$true}}; "
+        "$outputCopy.GetAwaiter().GetResult(); $errorCopy.GetAwaiter().GetResult(); "
+        "$code=$p.ExitCode "
+        "}finally{if($started -and -not $p.HasExited){$p.StandardInput.Close(); "
+        "if(-not $p.WaitForExit(5000)){$p.Kill()}}; $p.Dispose()}; exit $code"
+    )
+    encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+    return f"exec {shlex.quote(shell)} -NoProfile -NonInteractive -EncodedCommand {encoded}\n"
 
 
 def _download_node(architecture: str) -> bytes:
@@ -127,20 +162,19 @@ def browser_driver(browser: BrowserChoice) -> Iterator[None]:
 
                 node = windows_node()
                 cli = Path(playwright.__file__).parent / "driver/package/cli.js"
-                entrypoint = shlex.quote(wsl_path(str(cli), windows=True))
-                bootstrap = shlex.quote(
+                entrypoint = wsl_path(str(cli), windows=True)
+                bootstrap = (
                     "for(const key of ['DEBUG','DEBUGP','PWDEBUG'])delete process.env[key];"
                     "require(process.argv[1]);"
                 )
                 shim = Path(temporary) / "windows-node"
-                private_write(
-                    shim,
-                    (
-                        "#!/bin/sh\n"
-                        "shift\n"
-                        f'exec {shlex.quote(str(node))} --eval {bootstrap} {entrypoint} "$@"\n'
-                    ).encode(),
+                command = (
+                    _wsl1_relay(node, entrypoint, bootstrap)
+                    if is_wsl() and "wsl2" not in platform.release().lower()
+                    else f"exec {shlex.quote(str(node))} --eval {shlex.quote(bootstrap)} "
+                    f'{shlex.quote(entrypoint)} "$@"\n'
                 )
+                private_write(shim, ("#!/bin/sh\nshift\n" + command).encode())
                 shim.chmod(0o700)
                 os.environ["PLAYWRIGHT_NODEJS_PATH"] = str(shim)
             yield
