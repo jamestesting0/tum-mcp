@@ -68,7 +68,12 @@ using System.Threading;
 public static class TumBrowserPipes {
   static Thread Copy(Stream source, Stream target, bool close) {
     var thread = new Thread(() => {
-      try { source.CopyTo(target); target.Flush(); }
+      try {
+        var buffer = new byte[8192]; int count;
+        while ((count = source.Read(buffer, 0, buffer.Length)) > 0) {
+          target.Write(buffer, 0, count); target.Flush();
+        }
+      }
       catch (IOException) {} catch (ObjectDisposedException) {}
       finally { if (close) target.Dispose(); }
     });
