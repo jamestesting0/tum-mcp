@@ -16,7 +16,7 @@ def build_package(root: Path) -> Path:
     )
     documentation = destination / "docs"
     documentation.mkdir()
-    for name in ("setup.md", "development.md", "tum-mcp.md", "DESIGN.md"):
+    for name in ("setup.md", "development.md", "tum-mcp.md"):
         shutil.copy2(root / "docs" / name, documentation / name)
     manifest_path = destination / "mcp.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

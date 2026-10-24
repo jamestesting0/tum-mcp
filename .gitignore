@@ -21,6 +21,8 @@ build/
 # Machine-local agent instructions and handoff notes; public docs stay tracked.
 /AGENTS.md
 /docs/local/
+/docs/DESIGN.md
+/DESIGN.md
 
 # Local Moodle state and downloads must never be published.
 session.enc

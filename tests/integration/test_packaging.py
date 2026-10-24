@@ -19,9 +19,10 @@ def test_registration_works_outside_home_and_preserves_other_plugins(
     for name in ("plugin", "src", "scripts"):
         shutil.copytree(root / name, checkout / name)
     (checkout / "docs").mkdir()
-    for name in ("setup.md", "development.md", "tum-mcp.md", "DESIGN.md"):
+    for name in ("setup.md", "development.md", "tum-mcp.md"):
         shutil.copy2(root / "docs" / name, checkout / "docs" / name)
     if include_local_docs:
+        (checkout / "docs/DESIGN.md").write_text("LOCAL_ONLY_DESIGN_NOT_FOR_DISTRIBUTION\n")
         for name in (
             "tum-mcp-handoff.md",
             "credential-storage-options.md",
@@ -57,6 +58,7 @@ def test_registration_works_outside_home_and_preserves_other_plugins(
     assert not (installed_source / "docs/credential-storage-options.md").exists()
     assert not (installed_source / "docs/release-workflow.yml.example").exists()
     assert not (installed_source / "docs/local").exists()
+    assert not (installed_source / "docs/DESIGN.md").exists()
     assert not (installed_source / "AGENTS.md").exists()
     assert (installed_source / "LICENSE").read_bytes() == (root / "LICENSE").read_bytes()
     assert (installed_source / "NOTICE").read_bytes() == (root / "NOTICE").read_bytes()
