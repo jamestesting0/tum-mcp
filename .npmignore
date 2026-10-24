@@ -2,3 +2,5 @@
 # which deliberately excludes the generated backend artifacts needed by consumers.
 /AGENTS.md
 /docs/tum-mcp-handoff.md
+/docs/credential-storage-options.md
+/docs/release-workflow.yml.example

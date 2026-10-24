@@ -19,6 +19,7 @@ test('packed artifact contains the managed backend and excludes private workspac
     assert.ok(paths.includes('docs/tum-mcp.md'));
     assert.ok(paths.includes('docs/setup.md'));
     assert.ok(!paths.includes('AGENTS.md') && !paths.includes('docs/tum-mcp-handoff.md'), 'Local agent notes must not enter the npm artifact.');
+    assert.ok(!paths.includes('docs/credential-storage-options.md') && !paths.includes('docs/release-workflow.yml.example'), 'Background notes and draft workflows must not enter the npm artifact.');
     assert.ok(paths.every(path => !/(^|\/)(?:\.env|\.npmrc|session\.enc|credentials|output|tmp|node_modules)(?:\/|$)/.test(path)));
     assert.ok(!paths.some(path => path.startsWith('src/') || path.startsWith('tests/')));
   } finally { rmSync(directory, { recursive: true, force: true }); }

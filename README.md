@@ -71,7 +71,7 @@ text is fetched live; Moodle's document cache is unencrypted and limited to
 
 Use the installed `tum-mcp` command for sign-in to keep the requesting runtime
 consistent. Your OS may ask for credential-store access. See
-[storage details](docs/credential-storage-options.md).
+[storage details](docs/tum-mcp.md#connections-and-scopes).
 
 ## Update and support
 

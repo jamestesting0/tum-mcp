@@ -133,11 +133,10 @@ The default data directory is beside the legacy `TUMMoodle` directory on each OS
 Existing Moodle data is retained in place, preserving the keychain lookup. New
 service credentials are encrypted separately with an account/provider/origin-bound
 identity and a native credential-store key. There is no plaintext fallback.
-For the platform trade-offs, upstream examples, and the distinction between
-Keychain and desktop-app permissions, see
-[credential storage options](credential-storage-options.md). Use the installed
-`tum-mcp` runtime from the first login to avoid development-to-packaged Python
-permission changes.
+Use the installed `tum-mcp` runtime from the first login to avoid
+development-to-packaged Python permission changes. Native credential-store
+approval is separate from broader desktop-app access to other apps' data, which
+the campus backend does not require.
 Zulip message text is retrieved live and is not persisted. Retrieved excerpts may
 be transmitted to the coding agent's configured AI provider. Moodle's existing
 document cache retains its documented plaintext/expiry behavior.
