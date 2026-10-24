@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   browser:
+    name: WSL 3.x / engine ${{ matrix.wsl }}
     strategy:
       fail-fast: false
       matrix:
@@ -33,6 +34,10 @@ jobs:
         run: |
           node npm/build.mjs
           npm pack --ignore-scripts --pack-destination dist
+      - name: Record WSL package version
+        run: |
+          wsl.exe --version
+          if ($LASTEXITCODE -ne 0) { throw 'WSL package version could not be read.' }
       - uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364
         with:
           distribution: Ubuntu-24.04

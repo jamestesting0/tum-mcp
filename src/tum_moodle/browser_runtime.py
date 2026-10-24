@@ -4,7 +4,6 @@ import base64
 import hashlib
 import io
 import os
-import platform
 import shlex
 import shutil
 import socket
@@ -19,7 +18,7 @@ from typing import Final
 import httpx2
 from filelock import FileLock, Timeout
 
-from tum_moodle.browsers import BrowserChoice, BrowserSetupError, is_wsl, windows_host, wsl_path
+from tum_moodle.browsers import BrowserChoice, BrowserSetupError, windows_host, wsl_path
 from tum_moodle.config import private_write
 from tum_moodle.platforms import app_root
 
@@ -38,32 +37,68 @@ MAX_ARCHIVE: Final = 80 * 1024 * 1024
 MAX_EXECUTABLE: Final = 128 * 1024 * 1024
 
 
-def _wsl1_relay(node: Path, entrypoint: str, bootstrap: str) -> str:
-    """Give Windows Node real Windows pipes; WSL 1 handles cannot be opened by libuv."""
+def _direct_pipes_work(node: Path) -> bool:
+    """Probe binary stdio capability, independent of WSL package or engine versions."""
+    payload = b"tum-browser-pipe\x00\xff\n"
+    script = "process.stdin.pipe(process.stdout);"
+    try:
+        result = subprocess.run(  # noqa: S603
+            [str(node), "--eval", script], input=payload, capture_output=True, timeout=10
+        )
+        return result.returncode == 0 and result.stdout == payload
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def _native_pipe_relay(node: Path, entrypoint: str, bootstrap: str) -> str:
+    """Give Windows Node native handles and copy binary data on independent threads."""
     shell = shutil.which("powershell.exe") or shutil.which("pwsh.exe")
     if shell is None:
-        raise BrowserSetupError("WSL 1 browser sign-in requires Windows PowerShell interop.")
+        raise BrowserSetupError("Windows browser sign-in requires Windows PowerShell interop.")
     executable = wsl_path(str(node), windows=True).replace("'", "''")
     arguments = subprocess.list2cmdline(["--eval", bootstrap, entrypoint, "run-driver"]).replace(
         "'", "''"
     )
+    # Console streams on Windows PowerShell can synchronously block CopyToAsync.
+    # C# threads avoid PowerShell runspace callbacks and keep all three streams live.
+    source = """using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
+public static class TumBrowserPipes {
+  static Thread Copy(Stream source, Stream target, bool close) {
+    var thread = new Thread(() => {
+      try { source.CopyTo(target); target.Flush(); }
+      catch (IOException) {} catch (ObjectDisposedException) {}
+      finally { if (close) target.Dispose(); }
+    });
+    thread.IsBackground = true; thread.Start(); return thread;
+  }
+  public static int Run(string executable, string arguments) {
+    using (var process = new Process()) {
+      process.StartInfo = new ProcessStartInfo(executable, arguments) {
+        UseShellExecute = false, CreateNoWindow = true,
+        RedirectStandardInput = true, RedirectStandardOutput = true,
+        RedirectStandardError = true
+      };
+      process.Start();
+      try {
+        Copy(Console.OpenStandardInput(), process.StandardInput.BaseStream, true);
+        var output = Copy(process.StandardOutput.BaseStream, Console.OpenStandardOutput(), false);
+        var error = Copy(process.StandardError.BaseStream, Console.OpenStandardError(), false);
+        process.WaitForExit(); output.Join(); error.Join(); return process.ExitCode;
+      } finally { if (!process.HasExited) process.Kill(); }
+    }
+  }
+}"""
+    source64 = base64.b64encode(source.encode()).decode("ascii")
     script = (
-        "$ErrorActionPreference='Stop'; $p=[Diagnostics.Process]::new(); $started=$false; "
-        f"$p.StartInfo.FileName='{executable}'; $p.StartInfo.Arguments='{arguments}'; "
-        "$p.StartInfo.UseShellExecute=$false; $p.StartInfo.CreateNoWindow=$true; "
-        "$p.StartInfo.RedirectStandardInput=$true; $p.StartInfo.RedirectStandardOutput=$true; "
-        "$p.StartInfo.RedirectStandardError=$true; "
-        "try{ $started=$p.Start(); "
-        "$inputCopy=[Console]::OpenStandardInput().CopyToAsync($p.StandardInput.BaseStream); "
-        "$outputCopy=$p.StandardOutput.BaseStream.CopyToAsync([Console]::OpenStandardOutput()); "
-        "$errorCopy=$p.StandardError.BaseStream.CopyToAsync([Console]::OpenStandardError()); "
-        "$closed=$false; "
-        "while(-not $p.WaitForExit(50)){if($inputCopy.IsCompleted -and -not $closed){"
-        "$p.StandardInput.Close(); $closed=$true}}; "
-        "$outputCopy.GetAwaiter().GetResult(); $errorCopy.GetAwaiter().GetResult(); "
-        "$code=$p.ExitCode "
-        "}finally{if($started -and -not $p.HasExited){$p.StandardInput.Close(); "
-        "if(-not $p.WaitForExit(5000)){$p.Kill()}}; $p.Dispose()}; exit $code"
+        "$ErrorActionPreference='Stop'; "
+        "Import-Module ([IO.Path]::Combine($PSHOME,'Modules','Microsoft.PowerShell.Utility',"
+        "'Microsoft.PowerShell.Utility.psd1')); "
+        f"Add-Type -TypeDefinition ([Text.Encoding]::UTF8.GetString("
+        f"[Convert]::FromBase64String('{source64}'))); "
+        f"exit [TumBrowserPipes]::Run('{executable}','{arguments}')"
     )
     encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
     return f"exec {shlex.quote(shell)} -NoProfile -NonInteractive -EncodedCommand {encoded}\n"
@@ -169,8 +204,8 @@ def browser_driver(browser: BrowserChoice) -> Iterator[None]:
                 )
                 shim = Path(temporary) / "windows-node"
                 command = (
-                    _wsl1_relay(node, entrypoint, bootstrap)
-                    if is_wsl() and "wsl2" not in platform.release().lower()
+                    _native_pipe_relay(node, entrypoint, bootstrap)
+                    if not _direct_pipes_work(node)
                     else f"exec {shlex.quote(str(node))} --eval {shlex.quote(bootstrap)} "
                     f'{shlex.quote(entrypoint)} "$@"\n'
                 )

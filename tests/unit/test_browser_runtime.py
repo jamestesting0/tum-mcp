@@ -1,6 +1,7 @@
 import hashlib
 import io
 import os
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -11,6 +12,25 @@ from playwright.sync_api import sync_playwright
 
 from tum_moodle import browser_runtime
 from tum_moodle.browsers import BrowserChoice, BrowserSetupError
+
+
+@pytest.mark.parametrize("mode", ["success", "text-corruption", "failure", "timeout"])
+def test_pipe_probe_uses_binary_round_trip_not_wsl_version(
+    monkeypatch: pytest.MonkeyPatch, mode: str
+) -> None:
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        assert command[:2] == ["node.exe", "--eval"]
+        assert kwargs["input"] == b"tum-browser-pipe\x00\xff\n"
+        if mode == "timeout":
+            raise subprocess.TimeoutExpired(command, 10)
+        return subprocess.CompletedProcess(
+            command,
+            1 if mode == "failure" else 0,
+            kwargs["input"] if mode != "text-corruption" else b"corrupted",
+        )
+
+    monkeypatch.setattr(browser_runtime.subprocess, "run", run)
+    assert browser_runtime._direct_pipes_work(Path("node.exe")) == (mode == "success")
 
 
 @pytest.mark.parametrize("tampered", [False, True])
