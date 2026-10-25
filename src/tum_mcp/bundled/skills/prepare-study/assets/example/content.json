@@ -518,7 +518,7 @@
           "key": "distance",
           "objective": "distance",
           "front": "When does BFS guarantee a shortest path?",
-          "back": "When distance means the number of edges, or all edges have equal weight. Arbitrary weights require a different method.",
+          "back": "BFS minimizes edge count. It also minimizes total cost when all edges have equal positive weight. With arbitrary weights, BFS does not guarantee minimum cost.",
           "sources": [
             "bfs"
           ]
