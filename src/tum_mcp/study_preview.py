@@ -6,6 +6,7 @@ import io
 import shutil
 import socket
 import subprocess
+import time
 import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -31,6 +32,26 @@ class PreviewServer(ThreadingHTTPServer):
 
 
 class Handler(SimpleHTTPRequestHandler):
+    def finish(self) -> None:
+        # Early HTTP rejections can leave an in-flight body unread. A hard close
+        # then resets Windows TCP and discards the response. Send FIN first and
+        # drain only a bounded amount/time before the ordinary socket cleanup.
+        try:
+            self.wfile.flush()
+            self.connection.shutdown(socket.SHUT_WR)
+            budget = 128 * 1024
+            deadline = time.monotonic() + 0.5
+            while budget and (remaining := deadline - time.monotonic()) > 0:
+                self.connection.settimeout(remaining)
+                chunk = self.connection.recv(min(16384, budget))
+                if not chunk:
+                    break
+                budget -= len(chunk)
+        except OSError:
+            pass  # A disconnected or stalled peer must not prevent cleanup.
+        finally:
+            super().finish()
+
     def do_GET(self) -> None:
         from tum_mcp.study_comment_api import ENDPOINT, comments_request
 

@@ -1,4 +1,7 @@
 import json
+import os
+import socket
+import struct
 from functools import partial
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -87,3 +90,55 @@ def test_comment_endpoint_is_same_origin_bounded_and_confined(project: Path) -> 
             server.shutdown()
             worker.join(timeout=2)
             assert not worker.is_alive(), "Comment test server did not stop."
+
+
+def test_rejected_post_keeps_its_response_when_the_body_arrives_late(tmp_path: Path) -> None:
+    # An HTTP client may still be sending when origin/size checks reject its headers.
+    site = tmp_path / "study"
+    site.mkdir()
+
+    class AbortiveCloseServer(ThreadingHTTPServer):
+        def get_request(self) -> tuple[socket.socket, tuple[str, int]]:
+            connection, address = super().get_request()
+            # Expose the Windows early-close reset on every test host. A graceful
+            # write shutdown must deliver the response before this final close.
+            linger = struct.pack("HH" if os.name == "nt" else "ii", 1, 0)
+            connection.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, linger)
+            return connection, address
+
+    with AbortiveCloseServer(("127.0.0.1", 0), partial(Handler, directory=str(site))) as server:
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            for size, origin, status in [
+                (20000, "https://attacker.invalid", 403),
+                (70000, None, 413),
+            ]:
+                base = f"http://127.0.0.1:{server.server_port}"
+                headers = (
+                    f"POST /_study/comments HTTP/1.1\r\nHost: 127.0.0.1:{server.server_port}\r\n"
+                    f"Origin: {origin or base}\r\nContent-Type: application/json\r\n"
+                    f"Content-Length: {size}\r\nConnection: close\r\n\r\n"
+                )
+                with socket.create_connection(("127.0.0.1", server.server_port), timeout=3) as peer:
+                    peer.sendall(headers.encode("ascii") + b"x" * 256)
+                    with peer.makefile("rb") as response:
+                        assert int(response.readline().split()[1]) == status
+                        length = None
+                        while line := response.readline():
+                            if line == b"\r\n":
+                                break
+                            if line.lower().startswith(b"content-length:"):
+                                length = int(line.split(b":", 1)[1])
+                        assert length is not None
+                        # Complete the body after the rejection. A hard close with
+                        # unread bytes loses the response through a TCP reset.
+                        peer.sendall(b"x" * (size - 256))
+                        peer.shutdown(socket.SHUT_WR)
+                        assert len(response.read(length)) == length
+                        assert response.read(1) == b""
+            assert not (tmp_path / ".study").exists()
+        finally:
+            server.shutdown()
+            worker.join(timeout=2)
+            assert not worker.is_alive()
