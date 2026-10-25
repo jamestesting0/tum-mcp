@@ -1,7 +1,7 @@
 # Course study projects
 
-The five reading, study, audio and publishing skills are part of development
-version **0.6.0 (unreleased)**. They run in your local agent, using the connected
+The five reading, study, audio and publishing skills ship with version **0.6.0**.
+They run in your local agent, using the connected
 MCP tools to read course sources. The CLI validates and stores the resulting local
 files; it does not run an AI model.
 

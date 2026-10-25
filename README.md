@@ -3,8 +3,7 @@
 Connect your coding agent to Moodle, Artemis and Zulip. Read course content and
 build a private, source-backed study workspace. Unofficial; independent of TUM.
 
-**Development version: 0.6.0, unreleased.** The public npm release remains 0.5.0.
-The study workflows below are available in [local builds](docs/development.md#checks).
+**Latest release: [0.6.0](https://www.npmjs.com/package/@jamestesting888/tum-mcp).**
 [Release notes](CHANGELOG.md).
 
 ## Agent setup
@@ -68,7 +67,7 @@ posting and read-state changes are unavailable.
 
 ### Skills and example requests
 
-The development package includes five skills. Once you've chosen a course from
+The package includes five skills. Once you've chosen a course from
 your connections, try requests like these:
 
 | Skill | Use it to | Example request |

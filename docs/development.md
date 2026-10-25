@@ -64,7 +64,7 @@ All five jobs must pass on the exact pushed commit before completion is claimed.
 Live Moodle checks are opt-in: `TUM_MOODLE_LIVE=1 uv run pytest tests/live -q`.
 They use the developer's selected course and saved session. Keep them out of CI.
 
-## Release candidate
+## Releases
 
 Keep package.json, pyproject.toml and `tum_mcp.__version__` aligned. Build/pack into
 `dist/`, inspect the wheel and tarball contents, and record the tarball's SHA-256.
@@ -73,10 +73,11 @@ both desktop and WSL workflows for the exact pushed SHA; a previous green run is
 not release evidence. Local agent notes, course projects and credentials must be
 absent from both Git and the package.
 
-0.6.0 is prepared but unreleased. Publishing is a separate explicit step using the
-reviewed tarball, with npm's browser verification when required. Do not use
-publication as a test. Once npm confirms the version, update the README and
-changelog to describe the published release; until then, retain the unreleased label.
+Prepare the README and changelog for the release before building the final
+tarball so npm receives the same release documentation. Publishing is a separate
+explicit step using that reviewed tarball, with npm's browser verification when
+required. Do not use publication as a test. Confirm the registry version, latest
+tag and artifact integrity before pushing the release documentation.
 
 ## Source layout
 

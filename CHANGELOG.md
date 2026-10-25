@@ -1,6 +1,6 @@
 # Changes
 
-## 0.6.0 — unreleased
+## 0.6.0 — 2026-10-25
 
 - Merge course setup and updates into `sync-study`, with recovery for incomplete
   projects and preservation of edits, source coverage and course identity.
@@ -26,5 +26,4 @@
 Upgrading does not rebuild personal study sites automatically. Ask your agent to
 update the prepared website; customized renderer files are preserved for review.
 Audio, source materials, comments and study projects remain outside package
-installation/removal. The public npm version is still **0.5.0** until this candidate
-is published.
+installation/removal.

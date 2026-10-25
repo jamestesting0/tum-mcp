@@ -1,8 +1,7 @@
 # TUM MCP guide
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
-Development version **0.6.0 is unreleased**; public npm latest remains 0.5.0.
-This checkout provides read-only course retrieval and five local study workflows.
+Version **0.6.0** provides read-only course retrieval and five local study workflows.
 
 ## Current capabilities
 
