@@ -31,8 +31,22 @@ test('serve fails closed before explicit setup', () => {
 test('update help and invalid update options do not provision a runtime', () => {
   const help = invoke(['update', '--help']);
   assert.equal(help.status, 0);
-  assert.match(help.stdout, /Refresh previously configured clients/);
+  assert.match(help.stdout, /--local/);
+  assert.equal(invoke(['update', '--local', '--help']).status, 0);
   const invalid = invoke(['update', '--unknown-option']);
   assert.equal(invalid.status, 2);
-  assert.match(invalid.stderr, /no arguments/);
+  assert.match(invalid.stderr, /Usage:/);
+});
+
+test('uninstall validates scope and flags before package removal', () => {
+  assert.equal(invoke(['uninstall', '--help']).status, 0);
+  assert.equal(invoke(['uninstall', '--all', '--help']).status, 0);
+  for (const args of [
+    ['--client', ''], ['--client', 'unknown'], ['--unknown'], ['--host', 'unknown'],
+    ['--client', 'cursor', '--all'], ['--client', 'claude', '--forget-credentials'],
+  ]) {
+    const result = invoke(['uninstall', ...args]);
+    assert.equal(result.status, 2);
+    assert.doesNotMatch(result.stderr, /SETUP_REQUIRED|npm installation/);
+  }
 });

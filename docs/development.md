@@ -17,6 +17,7 @@ npm test
 npm pack --ignore-scripts --pack-destination dist
 npm run test:consumer
 npm run test:upgrade
+npm run test:package-lifecycle
 ```
 
 Python 3.13 is the managed runtime. Install Tesseract for OCR tests. Default tests
@@ -55,8 +56,11 @@ CI runs macOS, Windows and Linux, plus both distribution engines on WSL 3.x.
 Consumer checks install the actual npm artifact, discover tools, build a study
 site and test available Chromium browsers with temporary profiles and synthetic
 pages. WSL verifies Windows browser transport. No live account is used.
-Upgrade checks cover public 0.4.1/0.5.0, client refresh, customized-file conflicts,
+Upgrade checks cover public 0.6.0, client refresh, customized-file conflicts,
 failed preparation, runtime repair and removal that preserves work/credentials.
+The package-lifecycle check uses a local synthetic registry and real isolated
+global npm prefixes to verify downloads, backend validation, replacement,
+failure ordering and one-command removal. It does not publish a test release.
 All five jobs must pass on the exact pushed commit before completion is claimed.
 
 Live Moodle checks are opt-in: `TUM_MOODLE_LIVE=1 uv run pytest tests/live -q`.

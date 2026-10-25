@@ -56,3 +56,4 @@ jobs:
           export PATH="/opt/tum-ci-node/bin:$PATH"
           npm run test:consumer
           npm run test:upgrade
+          npm run test:package-lifecycle

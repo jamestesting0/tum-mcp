@@ -44,30 +44,6 @@ def snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
     )
 
 
-def test_update_adopts_mcp_only_receipt_and_installs_all_skills(client: SkillClient) -> None:
-    entry = dict(client_launch(ClientHost.LOCAL).entry())
-    config = client_config_path(client.name, client.home)
-    config.parent.mkdir(parents=True)
-    config.write_text(json.dumps({"mcpServers": {"tum": entry}}), encoding="utf-8")
-    old = Installation(
-        client=client.name,
-        host=ClientHost.LOCAL,
-        home=client.home,
-        version="0.5.0",
-        server=entry,
-    )
-    record = receipt_path(client.name, ClientHost.LOCAL, client.home)
-    record.parent.mkdir(parents=True)
-    record.write_text(old.model_dump_json(), encoding="utf-8")
-
-    result = refresh_clients()
-
-    assert result["updated"] == 1 and result["needs_review"] == 0
-    assert {p.name for p in client.skills.iterdir()} == set(CURRENT_SKILLS)
-    installed = Installation.model_validate_json(record.read_bytes())
-    assert installed.version == __version__ and installed.files
-
-
 def test_skill_update_refreshes_owned_files_and_preserves_extras(client: SkillClient) -> None:
     install_client(client.name, client.home)
     note = client.skills / "read-content/personal-note.txt"

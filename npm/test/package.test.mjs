@@ -13,6 +13,7 @@ test('packed artifact contains the managed backend and excludes private workspac
     assert.equal(result.status, 0, result.stderr);
     const packed = JSON.parse(result.stdout)[0];
     const paths = packed.files.map(item => item.path);
+    for (const name of ['lock.mjs', 'npm-command.mjs', 'package-manager.mjs']) assert.ok(paths.includes(`npm/${name}`));
     assert.ok(paths.includes('npm/backend/manifest.json'));
     assert.ok(paths.includes('npm/backend/requirements.txt'));
     assert.equal(paths.filter(path => /^npm\/backend\/.+\.whl$/.test(path)).length, 1);

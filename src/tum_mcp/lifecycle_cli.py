@@ -31,7 +31,7 @@ def setup(
 
 
 def update() -> None:
-    """Refresh configured clients for this installed version; npm manages package downloads."""
+    """Refresh configured clients after the npm launcher prepares the chosen version."""
     from tum_mcp.ui import State, heading, status_rows, terminal_console
     from tum_mcp.updates import refresh_clients
 
@@ -54,9 +54,6 @@ def update() -> None:
         status_rows(console, rows)
     console.print(f"Refreshed {report['updated']} client(s); {report['needs_review']} need review.")
     console.print("Sessions, scopes, downloads and previous runtimes are retained.")
-    console.print(
-        "Download newer packages with npm install --global @jamestesting888/tum-mcp@latest"
-    )
     if report["needs_review"]:
         raise typer.Exit(2)
 
@@ -98,4 +95,3 @@ def uninstall(
         if client is None:
             raise CampusError(Code.ACTION_REQUIRED, "Choose a client.")
         uninstall_client(client, host=host)
-    typer.echo("Then remove the npm package: npm uninstall --global @jamestesting888/tum-mcp")

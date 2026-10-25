@@ -6,6 +6,8 @@ build a private, source-backed study workspace. Unofficial; independent of TUM.
 **Latest release: [0.6.0](https://www.npmjs.com/package/@jamestesting888/tum-mcp).**
 [Release notes](CHANGELOG.md).
 
+Development: **0.6.1 (unreleased)** adds the single-command update and removal below.
+
 ## Agent setup
 
 Paste this into your coding agent to install the published package:
@@ -163,11 +165,13 @@ stay local. Study progress is saved in your browser.
 ## Update
 
 ```sh
-npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp update
 ```
 
-`update` prepares the invoked package's runtime and refreshes configured clients.
+`update` downloads the latest release, validates its backend, installs it in the
+same npm location and refreshes configured clients. It never downgrades a newer
+installation. Use `tum-mcp update --local` to refresh the installed version without checking npm.
+From 0.6.0 or earlier, upgrade the npm package once to obtain this command.
 Sessions, scopes and downloads carry forward. User-edited entries and skills are
 preserved and reported for review. Reload the client; refresh its cached plugin
 if needed. Study sites are updated separately through the study workflows.
@@ -175,14 +179,14 @@ if needed. Study sites are updated separately through the study workflows.
 ## Remove
 
 ```sh
-tum-mcp uninstall --all
-npm uninstall --global @jamestesting888/tum-mcp
+tum-mcp uninstall
 ```
 
-Managed registrations and unchanged skills are removed. Settings, sessions,
+The npm package, managed registrations and unchanged skills are removed. Settings, sessions,
 downloads and study projects are preserved. After closing clients, add
 `--purge-runtime` to remove generated runtimes or `--forget-credentials` to
 remove saved local credentials. [Removal details](docs/setup.md#update-and-remove).
+Use `--client NAME` to remove just one client, or `--keep-package` to retain npm.
 
 [Guide](docs/tum-mcp.md) · [Setup](docs/setup.md) · [Study workflows](docs/study.md) · [Development](docs/development.md)
 

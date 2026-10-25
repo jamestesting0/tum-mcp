@@ -1,6 +1,6 @@
 {
   "name": "@jamestesting888/tum-mcp",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Read-only TUM Moodle, Artemis and Zulip integration with source-backed study workflows",
   "license": "MIT",
   "type": "module",
@@ -14,6 +14,9 @@
     "npm/tum-mcp.mjs",
     "npm/runtime.mjs",
     "npm/download.mjs",
+    "npm/lock.mjs",
+    "npm/npm-command.mjs",
+    "npm/package-manager.mjs",
     "npm/uv-artifacts.json",
     "npm/backend/*.whl",
     "npm/backend/requirements.txt",
@@ -31,7 +34,8 @@
     "prepack": "node npm/build.mjs",
     "test": "node --test npm/test/*.test.mjs",
     "test:consumer": "node npm/smoke-consumer.mjs",
-    "test:upgrade": "node npm/upgrade-consumer.mjs"
+    "test:upgrade": "node npm/upgrade-consumer.mjs",
+    "test:package-lifecycle": "node npm/package-consumer.mjs"
   },
   "publishConfig": {
     "access": "public"

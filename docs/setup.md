@@ -117,14 +117,18 @@ explain where sessions are saved and how to back them up.
 ## Update and remove
 
 ```sh
-npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp update
 ```
 
-`update` activates the backend bundled in the invoked npm package and refreshes
-previously configured clients. It does not fetch a newer npm version itself,
-connect services, change scopes or register additional clients. `setup --client
-NAME` explicitly registers one client and can also refresh that client's managed
+From 0.6.1, `update` retrieves the latest npm release, validates its backend in a
+temporary installation, replaces the invoked package and refreshes previously
+configured clients. It preserves the installation prefix and global/local mode.
+It does not connect services, change scopes or register additional clients.
+It never downgrades a newer installation. `update --local` skips npm and repairs
+or refreshes the installed version. Source/pinned builds use this local mode;
+temporary npx and linked source installations are not replaced automatically.
+For 0.6.0 and earlier, first install the newer npm package once.
+`setup --client NAME` explicitly registers one client and can also refresh that client's managed
 files. WSL Windows registrations keep their distribution/user/data paths.
 
 Ownership receipts track the entries and files installed by TUM MCP. Unchanged
@@ -137,34 +141,29 @@ not selected, and a damaged runtime is repaired into a fresh generation. A newer
 managed client is not silently downgraded by an older package; intentional
 rollback starts by unregistering that client, then registering the reviewed version.
 
-0.4.1/0.5.0 installations without receipts are adopted only after matching their
-retained runtime's canonical client output. The seven former workflow skills and the three website skills are replaced by
-`read-content`, `sync-study` and `prepare-study`; `audio-notes` adds
-spoken lessons derived from the prepared website. Personal overrides
-under retired names remain in the config `skills/` directory; review and merge
-retrieval guidance into `read-content` before exporting a replacement pack.
 Reload MCP servers in Cursor/Antigravity, restart Claude as appropriate, and
 update/reinstall TUM MCP from the personal source in Codex Plugins if its cached
 copy still shows the older skills. Writing source files does not activate a host.
 
 Remove a single client with `tum-mcp uninstall --client cursor` (replace the
 client as needed; add `--host windows` from WSL for a Windows client). To remove
-all managed registrations before uninstalling npm:
+the npm package and all managed registrations:
 
 ```sh
-tum-mcp uninstall --all
-npm uninstall --global @jamestesting888/tum-mcp
+tum-mcp uninstall
 ```
 
 Custom edits and user-added files are preserved. Codex's local source/catalog
 entry can be removed, but its cached/active plugin must also be removed or
-disabled through Codex Plugins. No npm uninstall hook deletes user data.
+disabled through Codex Plugins. Package removal runs only after successful
+client cleanup; conflicts preserve npm so you can review and retry. `--all`
+is accepted explicitly, and `--keep-package` removes client setup without npm.
+No npm lifecycle hook performs cleanup or reads credentials.
 
 For explicit cleanup, **close coding clients first**, then run:
 
 ```sh
-tum-mcp uninstall --all --purge-runtime --forget-credentials
-npm uninstall --global @jamestesting888/tum-mcp
+tum-mcp uninstall --purge-runtime --forget-credentials
 ```
 
 `--purge-runtime` deletes verified managed runtime generations after the Python

@@ -53,7 +53,6 @@ def test_all_removal_retires_managed_files_and_preserves_custom_files_and_saved_
                 "mcpServers"
             ]
         )
-    assert "npm uninstall" in result.output
 
 
 def test_credential_forgetting_deletes_only_local_service_records(

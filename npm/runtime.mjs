@@ -2,10 +2,11 @@ import { spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { chmod, mkdir, mkdtemp, rename, rm, rmdir, writeFile } from 'node:fs/promises';
-import { homedir, hostname } from 'node:os';
+import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { download } from './download.mjs';
+import { acquireLock } from './lock.mjs';
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const pins = JSON.parse(readFileSync(join(packageRoot, 'npm/uv-artifacts.json'), 'utf8'));
@@ -109,40 +110,7 @@ async function uvExecutable() {
   return cached;
 }
 
-export async function acquireSetupLock() {
-  const lock = join(dataRoot(), 'setup.lock');
-  const owner = { pid: process.pid, host: hostname(), nonce: randomUUID() };
-  const guard = join(dataRoot(), 'setup.claim');
-  try { await mkdir(guard, { mode: 0o700 }); }
-  catch { throw new Error('Another setup is claiming the lock. Retry; an interrupted setup.claim needs local review.'); }
-  try {
-  try { await mkdir(lock, { mode: 0o700 }); }
-  catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    let previous;
-    try { previous = JSON.parse(readFileSync(join(lock, 'owner.json'), 'utf8')); }
-    catch { throw new Error('Setup lock has no readable owner. Confirm no setup is running before removing setup.lock.'); }
-    if (!Number.isSafeInteger(previous.pid) || previous.pid <= 0 || previous.host !== hostname()) {
-      throw new Error('Setup lock belongs to an unknown owner; preserve it for local review.');
-    }
-    let alive = true;
-    try { process.kill(previous.pid, 0); }
-    catch (failure) { if (failure.code === 'ESRCH') alive = false; }
-    if (alive) throw new Error('Another setup is running; retry when it finishes.');
-    const abandoned = `${lock}.${randomUUID()}.abandoned`;
-    await rename(lock, abandoned);
-    await rm(abandoned, { recursive: true, force: true });
-    try { await mkdir(lock, { mode: 0o700 }); }
-    catch { throw new Error('Another setup acquired the lock; retry when it finishes.'); }
-  }
-  await atomicWrite(join(lock, 'owner.json'), JSON.stringify(owner));
-  } finally { await rmdir(guard); }
-  return async () => {
-    const current = JSON.parse(readFileSync(join(lock, 'owner.json'), 'utf8'));
-    if (current.nonce !== owner.nonce) throw new Error('Setup lock ownership changed; it was preserved.');
-    await rm(lock, { recursive: true, force: true });
-  };
-}
+export function acquireSetupLock() { return acquireLock(dataRoot()); }
 
 export async function ensureRuntime() {
   const backend = join(packageRoot, 'npm/backend');

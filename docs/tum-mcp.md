@@ -1,7 +1,8 @@
 # TUM MCP guide
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
-Version **0.6.0** provides read-only course retrieval and five local study workflows.
+Development version **0.6.1 (unreleased)** adds npm package management to the
+read-only course retrieval and five local study workflows in 0.6.0.
 
 ## Current capabilities
 
@@ -71,12 +72,14 @@ CI checks clean installation, updates, removal, MCP discovery and synthetic
 browser workflows on macOS, Windows, Linux and both WSL engines. See the
 [development guide](development.md#checks) for the verification layers.
 
-`update` prepares the backend bundled in the invoked package, refreshes
-previously configured clients and preserves older runtime generations.
+`update` downloads and validates the latest release, replaces the invoked npm
+installation and refreshes previously configured clients. `update --local`
+refreshes the installed version without npm. Retained runtimes keep pinned
+clients working, and newer installed versions are not silently downgraded.
 [Update and removal behavior](setup.md#update-and-remove) covers ownership
-receipts, legacy adoption, conflict handling and explicit cleanup. To obtain a newer public package after publication,
-invoke its reviewed version explicitly. It does not publish a release or replace
-customized client skills silently. If interrupted setup leaves `setup.lock`,
+receipts, conflict handling and explicit cleanup. `uninstall` removes managed
+clients and npm; `--client NAME` or `--keep-package` retains the package.
+Customized files and saved data are preserved. If interrupted setup leaves `setup.lock`,
 confirm that no setup process is running before removing that directory locally.
 An invalid or incomplete runtime is never selected for serving. Failed validation
 clears its ready marker so explicit setup can rebuild it; older runtimes remain

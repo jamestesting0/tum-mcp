@@ -1,5 +1,18 @@
 # Changes
 
+## 0.6.1 — unreleased
+
+- Make `tum-mcp update` download and validate the latest npm release before
+  replacing the invoked installation and refreshing configured clients.
+  Preserve newer installed versions; `--local` refreshes without contacting npm.
+- Make `tum-mcp uninstall` remove managed client setup and the npm package in
+  one command. Keep saved data by default; stop package removal on conflicts.
+  Client-only removal retains npm, and `--keep-package` supports managed cleanup.
+- Run npm through Node on all platforms, serialize package operations, and use
+  an external worker while Windows replaces package files.
+- Test actual global installations against a private synthetic registry, including
+  failed downloads/preparation/replacement, customized files, and data preservation.
+
 ## 0.6.0 — 2026-10-25
 
 - Merge course setup and updates into `sync-study`, with recovery for incomplete
