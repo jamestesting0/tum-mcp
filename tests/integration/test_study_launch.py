@@ -1,6 +1,7 @@
 """The short launcher serves the current project without changing agent commands."""
 
 import errno
+import socket
 import subprocess
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -129,7 +130,17 @@ def test_occupied_port_is_reported_without_opening_a_browser(
     monkeypatch.chdir(project)
     opened: list[str] = []
     monkeypatch.setattr(study_preview.typer, "launch", lambda url: opened.append(url))
-    with ThreadingHTTPServer(("127.0.0.1", 0), study_preview.Handler) as occupied:
+
+    def unexpected_server(server: ThreadingHTTPServer) -> None:
+        pytest.fail("An occupied preview port was rebound instead of rejected.")
+
+    monkeypatch.setattr(ThreadingHTTPServer, "serve_forever", unexpected_server)
+
+    class OccupiedServer(ThreadingHTTPServer):
+        # Also expose accidental SO_REUSEPORT enabling on POSIX test hosts.
+        allow_reuse_port = hasattr(socket, "SO_REUSEPORT")
+
+    with OccupiedServer(("127.0.0.1", 0), study_preview.Handler) as occupied:
         # When the user requests that port for their course.
         result = CliRunner().invoke(app, ["study", "--port", str(occupied.server_port)])
 
@@ -191,7 +202,7 @@ def test_occupied_port_error_is_actionable_on_each_socket_platform(
     def occupied(*args, **kwargs) -> None:
         raise OSError(number, "Address already in use")
 
-    monkeypatch.setattr(study_preview, "ThreadingHTTPServer", occupied)
+    monkeypatch.setattr(study_preview, "PreviewServer", occupied)
     with pytest.raises(CampusError, match="Port 8765 is in use") as caught:
         study_preview.serve(project, 8765)
     assert caught.value.code == Code.ACTION_REQUIRED
@@ -203,6 +214,6 @@ def test_unrelated_bind_errors_are_not_misreported_as_an_occupied_port(
     def denied(*args, **kwargs) -> None:
         raise PermissionError(errno.EACCES, "Permission denied")
 
-    monkeypatch.setattr(study_preview, "ThreadingHTTPServer", denied)
+    monkeypatch.setattr(study_preview, "PreviewServer", denied)
     with pytest.raises(PermissionError):
         study_preview.serve(project, 8765)

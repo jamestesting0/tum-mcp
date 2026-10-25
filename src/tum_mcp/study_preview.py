@@ -4,6 +4,7 @@ import errno
 import gzip
 import io
 import shutil
+import socket
 import subprocess
 import webbrowser
 from functools import partial
@@ -16,6 +17,17 @@ import typer
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.browsers import is_wsl
 from tum_mcp.study_store import confined
+
+
+class PreviewServer(ThreadingHTTPServer):
+    # Windows SO_REUSEADDR permits simultaneous listeners, unlike POSIX reuse.
+    allow_reuse_address = not hasattr(socket, "SO_EXCLUSIVEADDRUSE")
+    allow_reuse_port = False
+
+    def server_bind(self) -> None:
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -102,7 +114,7 @@ def serve(project: Path, port: int, *, open_browser: bool = False) -> None:
     if not confined(root, "study/index.html").is_file():
         raise CampusError(Code.ACTION_REQUIRED, "Build the study site first.")
     try:
-        server = ThreadingHTTPServer(("127.0.0.1", port), partial(Handler, directory=str(site)))
+        server = PreviewServer(("127.0.0.1", port), partial(Handler, directory=str(site)))
     except OSError as error:
         # Winsock exposes its native code instead of the POSIX errno.
         if error.errno not in {errno.EADDRINUSE, 10048}:
