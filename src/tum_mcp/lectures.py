@@ -154,17 +154,19 @@ class Lectures:
                 break
         saved = None
         if save_original:
-            from tum_mcp.study_store import confined
+            from tum_mcp.study_store import confined, read_bytes
 
-            root = data_dir() / "downloads"
             relative = (
-                f"artemis/{self.api.account.id}/course-{course_id}/{attachment_id}-{digest}.pdf"
+                f"downloads/artemis/{self.api.account.id}/course-{course_id}/"
+                f"{attachment_id}-{digest}.pdf"
             )
-            target = confined(root.resolve(), relative)
-            if root.is_symlink():
-                raise CampusError(Code.SCOPE_DENIED, "Download root cannot be a symlink.")
-            target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            private_write(target, body)
+            target = confined(data_dir(), relative)
+            before = read_bytes(target)
+            if before is not None and before != body:
+                raise CampusError(Code.WORKSPACE_CONFLICT, "The edited student copy was preserved.")
+            if before is None:
+                target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                private_write(target, body)
             saved = str(target)
         return AttachmentView(
             account_id=self.api.account.id,

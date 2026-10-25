@@ -217,8 +217,11 @@ def artemis_get_attachment(
 
 @server.tool(annotations=READ)
 def artemis_get_exercise(account_id: str, course_id: Id, exercise_id: Id) -> ExerciseView:
-    """Read a released statement and permitted own participation metadata; never starts it."""
-    return Artemis(API(find_account(account_id, Provider.ARTEMIS))).exercise(course_id, exercise_id)
+    """Read a released statement without personal submission history; never starts it."""
+    view = Artemis(API(find_account(account_id, Provider.ARTEMIS))).exercise(course_id, exercise_id)
+    return view.model_copy(
+        update={"exercise": view.exercise.model_copy(update={"student_participations": None})}
+    )
 
 
 @server.tool(annotations=READ)

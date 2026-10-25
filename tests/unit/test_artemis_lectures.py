@@ -153,3 +153,59 @@ def test_file_transport_rejects_original_and_cross_origin_paths_before_credentia
     ):
         with pytest.raises(CampusError, match="SCOPE_DENIED"):
             API(account).get_lecture_file(path)
+
+
+def test_repeated_download_preserves_a_student_edited_copy(lecture_api):
+    provider, _, _ = lecture_api
+    first = provider.attachment(9, 11, 14, save_original=True)
+    target = Path(first.saved_path)
+    target.write_bytes(b"student annotation to preserve")
+    with pytest.raises(CampusError, match="WORKSPACE_CONFLICT"):
+        provider.attachment(9, 11, 14, save_original=True)
+    assert target.read_bytes() == b"student annotation to preserve"
+
+
+def test_downloads_directory_junction_is_rejected_before_writing(
+    lecture_api, tmp_path, monkeypatch
+):
+    provider, _, _ = lecture_api
+    downloads = tmp_path / "downloads"
+    downloads.mkdir()
+    monkeypatch.setattr(Path, "is_junction", lambda path: path == downloads)
+    with pytest.raises(CampusError, match="WORKSPACE_CONFLICT"):
+        provider.attachment(9, 11, 14, save_original=True)
+    assert list(downloads.iterdir()) == []
+
+
+def test_public_statement_read_does_not_include_own_submission_history(monkeypatch):
+    from types import SimpleNamespace
+
+    from tum_mcp import server
+    from tum_mcp.artemis_models import Exercise, ExerciseView, Participation
+
+    account = Account(
+        provider=Provider.ARTEMIS,
+        origin="https://artemis.tum.de",
+        principal="7",
+        courses=(9,),
+        sensitive_reads=True,
+    )
+    view = ExerciseView(
+        account_id=account.id,
+        instance_id=account.origin,
+        course_id=9,
+        exercise=Exercise(
+            id=4,
+            title="Statement",
+            type="programming",
+            problemStatement="Read this concept.",
+            studentParticipations=(Participation(id=22),),
+        ),
+        fetched_at=1,
+        source_link=account.origin + "/courses/9/exercises/4",
+    )
+    monkeypatch.setattr(server, "find_account", lambda *args: account)
+    monkeypatch.setattr(server, "Artemis", lambda api: SimpleNamespace(exercise=lambda *args: view))
+    result = server.artemis_get_exercise(account.id, 9, 4)
+    assert result.exercise.student_participations is None
+    assert result.exercise.problem_statement == "Read this concept."
