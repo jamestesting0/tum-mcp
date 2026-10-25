@@ -1,27 +1,25 @@
-# Moodle reading
+# Moodle
 
-Moodle covers more than lecture files. `moodle_list_materials` discovers course
-sections, labels, pages, books, links, exercises and activities. Reuse the exact
-course ID. Use `moodle_list_courses` only when that ID is missing.
+Known material/discussion IDs go straight to the read tool. Discover missing IDs
+with `moodle_list_materials` in the known course; `moodle_list_courses` is only
+needed for course discovery. If an old ID is no longer indexed, rediscover its
+course/parent before concluding that the upstream item disappeared.
 
-For announcements or discussion, use `moodle_list_forums`, then
-`moodle_list_discussions` and `moodle_read_discussion`. Follow their cursors.
-Announcement boards are forums. Keep post authors, dates and permalinks. Do not
-assume a course has no updates because a file-title search found nothing.
+- Files/pages/books/labels/activity descriptions: `moodle_read_material`, with a
+  page range or cursor and modest max_chars. A root listing is not a complete
+  nested activity inventory. Follow related_materials only as
+  needed for chapters, folder contents or attachments. Check OCR/format warnings.
+- Announcements/forums: known discussion → `moodle_read_discussion`; otherwise
+  `moodle_list_forums` → `moodle_list_discussions` → relevant posts. Preserve dates,
+  authors and post permalinks. Announcement boards are forums, not file search hits.
+- Search: `moodle_search_materials` with course_id and focused text/title mode.
+  Inspect coverage. Missing index coverage is not a negative result. Prefer
+  targeted reads; `moodle_refresh` metadata discovers resources, whereas content
+  batches download/index material and are appropriate for broader requested coverage.
+- Originals: `moodle_download_material` returns a persistent local path; copy
+  needed files into the project with provenance rather than downloading again.
 
-Search `moodle_search_materials` within the course. Inspect its coverage. Use
-`moodle_refresh` in metadata/content batches when the index lacks relevant
-material. Read decisive passages with `moodle_read_material`; reuse page cursors
-instead of repeating ranges. Pages, course labels, activity descriptions and
-forum attachments can contain exam rules or study information. Activity access
-does not authorize an attempt or submission.
-
-Use `moodle_download_material` for requested reusable originals. It returns a
-local path. Copy an original into the study project only when needed and retain
-its provenance. A recording/player link is not a transcript. Some interactive
-resources expose only a link or description; say what you could actually read.
-
-Check `moodle_auth_status` when needed. For explicitly requested personal study
-records, `moodle_list_personal_records` and `moodle_read_personal_record` provide
-bounded reads. Keep the user's course and semester scope. Do not bulk-import
-private conversations, grades or submissions into a study site.
+Use `moodle_auth_status` only if session state is uncertain. Recordings may be
+link-only; activity descriptions do not authorize attempts/submissions. Explicit
+personal-record requests may use `moodle_list_personal_records` and
+`moodle_read_personal_record`; exclude such data from ordinary study-site imports.

@@ -257,7 +257,7 @@ trials, and two review passes have not been demonstrated for this pilot.
 Export refuses symbolic links and
 does not overwrite an existing destination.
 
-The activation corpus contains 80 cases across the four workflows, with development
+The activation corpus contains 86 cases across the four workflows, with development
 and held-out partitions. It covers explicit/implicit requests, unrelated
 negatives, missing credentials and unsupported-action negatives. Old trial
 results must not be reused against the consolidated skill labels. `skills evaluate TRIALS.jsonl` scores supplied fresh-session

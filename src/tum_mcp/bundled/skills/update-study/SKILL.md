@@ -1,30 +1,29 @@
 ---
 name: update-study
-description: Refresh an existing single-course study project against connected Moodle, Artemis and Zulip sources. Use to find new or changed course information and update local materials and course knowledge without losing edits.
+description: Refresh an existing TUM course project's sources, materials and AGENTS.md without losing edits. Use for upstream changes; website-only edits use prepare-study.
 ---
 
-Inspect the current directory, AGENTS.md and `.study/state.json`. Require an
-initialized course binding. Do not replace it with a new course or infer a new
-semester from a similar title. Reuse source IDs, revisions and retrieval cursors.
+Read AGENTS.md and the existing `.study/state.json` binding; missing state requires
+init-study with a course choice. Keep the course, semester and previous bindings.
+Reuse known IDs. Read-content supplies provider guidance only where needed.
 
-Compare fresh metadata for the bound sources through read-content. Include
-lecture units, slide revisions, announcements and discussion changes, not just new PDFs. Fetch changed/new
-material. A source without a reliable revision needs a content check; the old
-checked-at timestamp alone cannot prove it unchanged. Follow bounded batches.
-Keep failed or incomplete source coverage explicit. Never treat an auth error,
-partial page or outage as evidence that old resources were withdrawn.
+Start fresh metadata checks at the listing head. Resume a saved cursor only for
+an unfinished scan with the same filters; an old pagination cursor is not a marker
+for new items. Compare reliable upstream revisions, fetch changed/pending material,
+and content-check sources lacking a reliable revision. Include teaching units,
+announcements and relevant discussions. Do not reread verified unchanged files.
 
-Read [snapshot and reconciliation rules](../init-study/references/project.md). Run
-`tum-mcp study sync PROJECT --snapshot FILE` after preparing the new snapshot.
-The helper retains extra files and local edits, reports source/local conflicts,
-and marks upstream withdrawals only after complete coverage. It does not delete
-originals. Investigate conflicts before choosing which version should replace one.
+Follow [snapshot and sync semantics](../init-study/references/project.md), especially
+complete versus partial coverage and metadata-only reuse. Merge fresh deltas into
+the existing inventory programmatically; do not rewrite/reprint the whole state.
+Run `tum-mcp study sync PROJECT --snapshot FILE`. Preserve conflicts and originals;
+a failed/filtered scan does not prove withdrawal. Never alter campus websites.
 
-Refresh course-specific AGENTS.md knowledge outside the managed block only where
-verified facts changed. Preserve user goals, notes and learning progress. Record
-which facts changed and their sources. Avoid reading every unchanged resource.
+Update only changed course facts outside AGENTS.md's managed block. Keep personal
+notes and progress. If nothing changed, report that without rewriting material.
+Report changes, pending/conflicted sources, coverage and stale site units. Reuse an
+existing site check or run `tum-mcp study inspect PROJECT` once when needed.
 
-If study/ exists, report which units depend on changed sources. Use prepare-study
-when the request includes updating the site. Do not silently leave old explanations
-labelled current, or overwrite an edited renderer. Report source changes, retained
-edits, incomplete checks and the next action. Campus websites remain read-only.
+Use prepare-study only when a site update is requested. Carry the checked scope,
+revisions and delta into that phase; do not rediscover or refresh them again.
+If access blocks one source, record the gap and continue available sources.

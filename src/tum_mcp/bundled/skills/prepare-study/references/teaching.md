@@ -1,47 +1,39 @@
-# Teaching and editorial checks
+# Teaching quality gate
 
-Start with the course's actual objectives, prerequisites and assessment format.
-Choose a unit boundary the student can explain afterwards. Preserve the upstream
-lecture/week sequence when it expresses dependencies; otherwise group by topic.
+Use the course's objectives and prerequisite/notation map. Choose units by a
+coherent dependency or learning goal; keep an established course sequence when useful.
+Read relevant stored passages once and retain their locators for authoring/review.
 
-For each objective, decide what the student must recall, explain and apply.
-Write the shortest explanation that still supplies the mechanism, assumptions
-and a useful example. Add a diagram for a process or relation, a table for a
-comparison, and a worked formula when notation carries the concept. A paragraph
-is better than an irrelevant diagram. State what a symbol means, its units when
-relevant, the equation's conditions and a concrete interpretation. Check edge
-cases, signs, indexing and units against the source. Label generated examples.
+For each new/changed objective, cover the mechanism, assumptions and a useful
+example. Choose prose, a worked formula, table, code or visual by what explains it;
+no diagram quotas or equal word/card/question counts. Split independent goals,
+remove duplication and keep essential conditions/counterexamples visible. Optional
+proof detail may use disclosure; essential meaning must not be hidden there.
 
-Length follows coverage and difficulty. Do not create equal word counts, card
-counts or question counts for every unit. Merge duplicates. Split a unit when it
-requires several independent learning goals or a long uninterrupted explanation.
-Use optional detail disclosures for proofs or derivations that should not obscure
-the main idea. Keep conditions and counterexamples visible when essential.
+## Precision and language
 
-For English explanations use active voice, one idea per sentence and one action
-per instruction. Aim for at most 20 words in instructions and 25 in descriptions.
-Use one term consistently. Define necessary course terms and keep the lecturer's
-notation. Preserve uncertainty, exceptions and mathematical precision even when
-a sentence must be longer. This adapts the structural guidance in the
-[ASD-STE100-inspired skill](https://github.com/danyuchn/asd-ste100-skill/tree/c7b11cd9258708909d8574c8176d4c70969c8b29).
-It does not redistribute ASD's dictionary or certify STE compliance. Respect a
-user's requested language; do not translate technical terms inaccurately.
+Define symbols and units, verify signs/indexing/edge cases, and check equations
+against the original when OCR is uncertain. Keep prose, formulas, tables, cards
+and feedback consistent about the same assumption. Label authored examples;
+distinguish instructor facts, derived explanation and inference.
 
-Flashcards should require retrieval before reveal. Keep one idea or discriminating
-comparison per card. Prefer explanations and examples over recognition of a term.
-Avoid cards with an essay on the back, accidental clues or duplicate paraphrases.
-Self-rating is a study aid, not an assessment score.
+Use short active sentences, one idea at a time, consistent technical terms and the
+lecturer's notation. Aim around 20–25 words; do not spend iterations counting words
+or sacrifice qualifications to meet a limit. Respect the user's language. These
+local rules adapt [STE structural guidance](https://github.com/danyuchn/asd-ste100-skill/tree/c7b11cd9258708909d8574c8176d4c70969c8b29);
+that link is provenance, not required research. No certified dictionary claim.
 
-For practice, create plausible distractors from real misconceptions. Give exactly
-one defensible correct answer under explicit assumptions. Avoid trick wording,
-answer-length clues, double negatives and all/none-of-the-above shortcuts. Check
-each distractor independently. Include recall where useful, application for
-procedural objectives, and reasoning/transfer where appropriate. Explain the
-correct answer and why each alternative fails. Do not imply a few MCQs fully
-assess coding, proof writing or other constructive skills; include a worked or
-open-ended task in the content when those skills matter.
+## Retrieval and assessment
 
-Before accepting a unit, audit the objective-to-explanation/card/question map.
-Verify source locators, every answer and every equation. Remove padding and
-questions that test irrelevant trivia. Freshness and provenance are part of
-correctness. Never reuse an old assessment after its source meaning changed.
+Cards test one recall item or discriminating comparison before reveal; avoid
+essay backs and clues. Questions target realistic misconceptions with exactly one
+defensible answer under stated assumptions. Prefer application/transfer where the
+objective requires it; avoid tricks, double negatives, all/none shortcuts and
+answer-position/length clues. Check EVERY new/changed option independently. If two
+answers are defensible, repair the question/assumptions rather than forcing a key.
+
+Audit objective → explanation → card/question → source. Work the example, trace or
+counterexample independently of the written answer. A schema pass cannot verify
+subject matter. Use an open/worked task when coding or proof construction matters;
+MCQ results and self-ratings do not establish mastery or official exam coverage.
+Recheck only affected teaching and dependent claims after a change, not the whole bank.

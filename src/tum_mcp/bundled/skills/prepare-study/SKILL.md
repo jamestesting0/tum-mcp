@@ -1,50 +1,36 @@
 ---
 name: prepare-study
-description: Create or extend a local interactive study website from one initialized TUM course project. Use for source-backed explanations, formulas, diagrams, flashcards and practice questions in study/.
+description: Build or update a local TUM study website from one course project, with explanations, flashcards and practice; includes explicit synthetic demos.
 ---
 
-Require `.study/state.json` and read the course AGENTS.md. If missing, use init-study
-with an explicit course input first. Inspect an existing study/ before changes.
-Compare its source revisions with current project state. Reuse unchanged units;
-regenerate only units whose learning content or dependencies changed. Report
-missing/outdated material instead of claiming complete coverage.
+For an explicit synthetic preview, use `tum-mcp study demo PROJECT` in a separate
+directory; no campus access is needed. Otherwise require AGENTS.md and
+`.study/state.json`; initialize a missing binding through init-study with a course
+choice. Work from local sources. Fetch only missing material through read-content;
+run update-study once if fresh upstream content was requested and not already checked.
 
-Before generating a unit, read the relevant local sources and their locators.
-Choose lectures/weeks when the course uses a clear sequence, otherwise choose
-topics. Use one convention consistently. There is one course per project; the
-sidebar lists units, not unrelated courses.
+Inspect the existing study/ and affected source/unit IDs. Preserve its theme, notes
+and edits; reuse unchanged units and stable IDs. Choose one lecture/week/topic
+organization that fits course dependencies. Never fill gaps with invented course facts.
 
-Load these contracts for the work you are doing:
-- [Content and teaching](references/teaching.md): coverage, length, language and assessment quality.
-- [Fixed design system](references/design.md): formulas, visuals, tables, navigation and states.
-- [Content schema and build](references/content.md): validated data, source revisions, incremental build.
-- [Verification and known failure modes](references/verification.md): required regressions, evidence and checks scaled to the change.
+Read only the contracts needed:
+- [Teaching](references/teaching.md): new or changed explanations/assessments.
+- [Content/build](references/content.md): first build, schema questions or new block types.
+- [Design](references/design.md): new site or visual changes; reuse its tokens/renderer.
+- [Verification](references/verification.md): select checks for this change.
+  [Regression lookup](references/regressions.md) applies to changed shared behavior or failures.
 
-Reuse the bundled renderer and approved design. Prove one representative unit
-before generating a full course: cover the hardest formats it actually needs.
-Fix shared behavior there, then populate the remaining units. Do not
-repeat design research or add a framework to recreate existing components.
+Author study/content.json, not separate per-unit HTML. Build installs the bundled
+renderer; do not read/recreate all its assets or add a framework. On a new site,
+prove one unit with the hardest required formats before authoring the rest in batches.
+Review each changed answer and its assumptions; semantic checks are not replaced by
+schema or browser tests. Rebind source hashes only after reviewing their content.
 
-Write `study/content.json` with source-backed units. Each unit has concise content,
-active-recall flashcards and critically checked multiple-choice practice. Explain
-necessary terms. Use worked examples, equations, diagrams and comparison tables
-where they reduce effort; decoration is not an explanation. Apply STE sentence
-structure while retaining technical precision, conditions and uncertainty.
+Run `tum-mcp study build PROJECT`; investigate stale sources and preserved templates.
+Verify the served app using the selected checks. Reuse evidence for unchanged inputs;
+expand testing when shared code or formats change. Keep progress separate from content.
 
-Run `tum-mcp study build PROJECT`. The helper validates course/source bindings
-and structured content, then installs the reusable local renderer. It preserves
-edited templates and unrelated files. Keep learner progress separate from content;
-a revised question must not inherit an old correct-answer state.
-
-Read the verification guide before the first preview. Run `tum-mcp study serve
-PROJECT` and verify the actual generated app in a real browser. Check all new
-content for correctness; exercise shared interactions with representative cases.
-Reuse passing evidence for unchanged renderer/content revisions. After an edit,
-rerun affected checks and a sibling regression; broaden for shared changes.
-Never publish a course site or send its data elsewhere without the user's request.
-
-Report generated/retained units, coverage gaps, verified revision, checks actually
-run, unresolved issues and the local preview. A screenshot count or successful
-build is not proof of working interactions. Do not claim a site is bug-free.
-Do not claim a question bank is an official exam, that a score proves mastery,
-or that STE-inspired explanations have certified dictionary compliance.
+Keep the site local and credential-free; publication needs the user's request.
+Report changed/reused units, relevant gaps, checks actually run and the preview.
+Unrun checks are not passes; do not claim bug-free software, official exams, mastery
+or certified STE compliance.

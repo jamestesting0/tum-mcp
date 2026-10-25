@@ -58,3 +58,27 @@ def test_claude_respects_a_users_explicit_only_site_skill_preference(
     entry = tmp_path / "profile/.claude/skills/read-content/SKILL.md"
     frontmatter = yaml.safe_load(entry.read_text().split("---", 2)[1])
     assert frontmatter["disable-model-invocation"] is True
+
+
+def test_local_site_workflow_does_not_require_a_campus_server() -> None:
+    from tum_mcp.skills import bundled, implicit_invocation
+
+    skill = bundled() / "prepare-study"
+    policy = yaml.safe_load((skill / "agents/openai.yaml").read_text(encoding="utf-8"))
+    assert implicit_invocation(skill)
+    assert not policy.get("dependencies", {}).get("tools", [])
+
+
+def test_activation_cases_have_unique_ids_and_current_workflow_labels() -> None:
+    from importlib.resources import files
+
+    from tum_mcp.evaluations import Corpus
+    from tum_mcp.skill_catalog import CURRENT_SKILLS
+
+    cases = Corpus.model_validate_json(
+        (files("tum_mcp") / "bundled/activation-cases.json").read_bytes()
+    ).root
+    assert len({case.id for case in cases}) == len(cases)
+    assert {case.target_skill for case in cases} <= set(CURRENT_SKILLS)
+    assert {case.expected_skill for case in cases} <= {*CURRENT_SKILLS, None}
+    assert {case.partition for case in cases} == {"development", "held_out"}

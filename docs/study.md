@@ -42,6 +42,9 @@ Ask `update-study` to compare the project with connected upstream sources. It
 reuses known IDs and reliable revisions, retrieves changed material and updates
 course knowledge. Incomplete listings never imply withdrawal. Withdrawn sources
 keep their local originals; edited or deleted managed files are reported for review.
+Unchanged payloads can be reused when their source binding, URL, locator and
+reliable revision match. Pending content stays pending across repeated checks;
+a metadata-only check cannot make unfetched content current.
 
 The agent updates course facts outside the inventory block. The helper checks
 that its managed block has not been edited before replacing it. A failed write
@@ -56,6 +59,10 @@ lecture/week sequence when useful, or use consistent topics. Every unit has:
 - Formulas, diagrams, code or comparison tables where they explain the concept.
 - Flashcards that reveal an answer before self-rating.
 - Practice questions with one justified answer and feedback for every option.
+
+The agent uses stored material first, so local content edits work offline. Ask for
+an upstream refresh when you want new course content; an existing check is reused
+within the same request. Unchanged units and reviewed material are retained.
 
 The skill audits objective coverage, technical accuracy and distractors. Its
 STE-inspired English uses short, direct sentences while retaining necessary terms

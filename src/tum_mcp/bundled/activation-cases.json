@@ -616,12 +616,12 @@
     "expected_skill": null
   },
   {
-    "id": "negative-14",
-    "target_skill": "init-study",
+    "id": "boundary-multiple-courses",
+    "target_skill": "prepare-study",
     "prompt": "Build a study website for five unrelated courses in one project.",
-    "context": "unsupported_multi_course",
+    "context": "unsupported_multi_course_requires_one_course_or_separate_projects",
     "partition": "development",
-    "expected_skill": null
+    "expected_skill": "prepare-study"
   },
   {
     "id": "negative-15",
@@ -638,5 +638,53 @@
     "context": "package_setup",
     "partition": "held_out",
     "expected_skill": null
+  },
+  {
+    "id": "prepare-local-offline",
+    "target_skill": "prepare-study",
+    "prompt": "Build the study website from this project’s saved material while Moodle is offline.",
+    "context": "initialized_project_local_sources_current",
+    "partition": "development",
+    "expected_skill": "prepare-study"
+  },
+  {
+    "id": "prepare-fresh-upstream",
+    "target_skill": "prepare-study",
+    "prompt": "Refresh my study website with the latest upstream teaching material.",
+    "context": "initialized_project_no_source_check_yet_this_request",
+    "partition": "development",
+    "expected_skill": "prepare-study"
+  },
+  {
+    "id": "prepare-card-copy",
+    "target_skill": "prepare-study",
+    "prompt": "Correct the wording of this one flashcard without redesigning the site.",
+    "context": "existing_site_one_unit_changed",
+    "partition": "development",
+    "expected_skill": "prepare-study"
+  },
+  {
+    "id": "update-partial-source",
+    "target_skill": "update-study",
+    "prompt": "Refresh the saved course project; one connection has expired.",
+    "context": "initialized_project_other_sources_available",
+    "partition": "development",
+    "expected_skill": "update-study"
+  },
+  {
+    "id": "read-known-attachment",
+    "target_skill": "read-content",
+    "prompt": "Read page 3 of the Artemis slide attachment we already identified.",
+    "context": "known_scoped_course_lecture_attachment_ids",
+    "partition": "development",
+    "expected_skill": "read-content"
+  },
+  {
+    "id": "init-confirmed-choice",
+    "target_skill": "init-study",
+    "prompt": "Create the workspace using the course and semester I already chose.",
+    "context": "confirmed_available_course_choice_in_conversation",
+    "partition": "development",
+    "expected_skill": "init-study"
   }
 ]
