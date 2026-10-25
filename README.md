@@ -4,7 +4,7 @@ Connect your coding agent to Moodle, Artemis and Zulip. Read course content and
 build a private, source-backed study workspace. Unofficial; independent of TUM.
 
 **Development version: 0.6.0, unreleased.** The public npm release remains 0.5.0.
-The study workflows below are included in this checkout and its locally built package.
+The study workflows below are available in [local builds](docs/development.md#checks).
 [Release notes](CHANGELOG.md).
 
 ## Agent setup
@@ -19,11 +19,8 @@ Use --client claude, cursor, antigravity, or generic for a different client.
 Preserve existing settings and customized skills. Follow the activation steps.
 Help me run tum-mcp connect in an interactive terminal and choose services.
 I will complete sign-in/MFA in the browser. Never request secrets in chat.
-Ask which Artemis courses and Zulip channels to enable before reading content.
 Run tum-mcp doctor to explain what is available and what still needs setup.
 ```
-
-For the unreleased workflows, [build and install the local artifact](docs/development.md#checks).
 
 ## Connect
 
@@ -56,19 +53,6 @@ uses the WSL backend. [Browser and WSL setup](docs/setup.md#wsl).
 Setup supplies a private Python runtime. New connections use encrypted local
 files and need no native keyring, Git or Docker.
 
-For optional GitHub Pages publishing, install [GitHub CLI](https://cli.github.com/)
-and sign in on the same computer where the agent runs:
-
-```sh
-gh auth login --hostname github.com
-tum-mcp doctor --live
-```
-
-`doctor` reports whether GitHub CLI is available; `--live` also verifies its active
-GitHub authentication. No token needs to be pasted into the agent or stored by
-TUM MCP. A coding platform's GitHub connector does not automatically authenticate
-the local CLI. GitHub is optional for local study and campus access.
-
 ## Read and study
 
 | Source | Available content |
@@ -80,39 +64,69 @@ the local CLI. GitHub is optional for local study and campus access.
 Campus access is read-only. Exercise start, deployment, execution, submission,
 posting and read-state changes are unavailable.
 
-The development package has **five skills**, with source details loaded as needed:
+### Skills and example requests
 
-Their maintained source is in this repository at
-[`src/tum_mcp/bundled/skills/`](src/tum_mcp/bundled/skills/). Client setup installs
-managed copies; edit or review the repository source when developing the package.
+The development package includes five skills. Once you've chosen a course from
+your connections, try requests like these:
 
-| Skill | Purpose |
-| --- | --- |
-| `read-content` | Retrieve and explain content across all three websites |
-| `sync-study` | Initialize a chosen course or update its existing project, preserving materials and edits |
-| `prepare-study` | Build or improve study sites and address passage comments |
-| `audio-notes` | Convert prepared course content into maintained category audio under `audio/` |
-| `publish-study` | Publish a study website using a private GitHub repository and maintain later updates |
+| Skill | Use it to | Example request |
+| --- | --- | --- |
+| `read-content` | Read and explain course sources with citations | "Can you explain what we covered in last week's lecture?" |
+| `sync-study` | Create or refresh a course project | "Set up a study project for this course." |
+| `prepare-study` | Build lessons, flashcards and practice | "Make me a study website with flashcards and practice questions." |
+| `publish-study` | Put a prepared website on GitHub Pages | "Put my study site online so I can open it on my phone." |
+| `audio-notes` | Save spoken lessons under `audio/` | "Turn this into audio notes I can listen to on the go." |
 
-Ask your agent: “Initialize a study project for **[exact course and semester]**,
-then prepare its study website.” The course must be available through your
-connections. The same `sync-study` skill detects existing state and updates it.
-Each project contains one course. [Study workflow and local demo](docs/study.md).
-Launch its prepared website from the course project folder:
+Useful follow-ups in an existing project:
+
+- "Did I miss anything important on Zulip this week?"
+- "There's new course material. Can you update my study site?"
+- "I've left some comments on the site. Can you fix those parts?"
+- "Can you update the audio notes too?"
+
+Client setup installs managed copies of the
+[skill sources](src/tum_mcp/bundled/skills/). Develop or review skills in this repository.
+
+### Recommended study flow
+
+1. **`sync-study`**: Set up a project for your course and collect its material.
+   Use it again when new material is available.
+2. **`prepare-study`**: Turn that material into a study website with explanations,
+   flashcards and practice questions.
+3. **`publish-study`** (optional): Put the website online so you can study on your
+   phone. Check the [publishing requirements](#publish-for-phone-access-optional) first.
+4. **`audio-notes`** (optional): Turn the prepared content into spoken lessons.
+   Use them to revisit prepared topics while walking or commuting.
+
+Each project holds one course. To open the website locally, run this from the
+course project folder:
 
 ```sh
 tum-mcp study
 ```
 
-It opens your browser at `http://127.0.0.1:8765`. Press Ctrl+C in the terminal to stop.
-For access from your phone, ask your agent to publish the prepared website.
-This optional workflow uses GitHub CLI authentication and an eligible paid GitHub
-plan. The repository is private, but the GitHub Pages website is public. Review
-the intended content before publishing. Later builds update the same site, and
-`tum-mcp study` also prints its hosted URL. [Publishing](docs/study.md#publish-a-study-website).
-Then ask for audio notes to turn the prepared content into one spoken lesson per
-category. Existing audio is compared with the current course so only missing or
-changed categories need generation.
+Your browser opens at `http://127.0.0.1:8765`. Press **Ctrl+C** in the terminal to stop.
+See the [study guide and local demo](docs/study.md) for more examples.
+
+### Publish for phone access (optional)
+
+Publishing requires [GitHub CLI](https://cli.github.com/) on the computer where
+your agent runs and an eligible paid GitHub plan. Sign in locally, then check it:
+
+```sh
+gh auth login --hostname github.com
+tum-mcp doctor --live
+```
+
+`doctor` checks CLI availability; `--live` also verifies GitHub authentication.
+A coding platform's GitHub connector does not sign in the local CLI. No token
+needs to be pasted into the agent or stored by TUM MCP.
+
+**The repository is private. The website is public.** Review the lesson text,
+quotations and source links before asking your agent to publish.
+
+Later builds update the same site. `tum-mcp study` also prints its hosted URL.
+See [publishing details](docs/study.md#publish-a-study-website).
 
 ## Sign-in and session privacy
 
