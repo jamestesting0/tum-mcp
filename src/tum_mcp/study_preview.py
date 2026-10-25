@@ -32,6 +32,15 @@ class PreviewServer(ThreadingHTTPServer):
 
 
 class Handler(SimpleHTTPRequestHandler):
+    # OS file associations (notably Windows .mjs entries) are not web MIME types.
+    extensions_map = {
+        **SimpleHTTPRequestHandler.extensions_map,
+        ".html": "text/html",
+        ".mjs": "text/javascript",
+        ".css": "text/css",
+        ".woff2": "font/woff2",
+    }
+
     def finish(self) -> None:
         # Early HTTP rejections can leave an in-flight body unread. A hard close
         # then resets Windows TCP and discards the response. Send FIN first and

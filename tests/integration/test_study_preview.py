@@ -1,17 +1,25 @@
+import mimetypes
 from functools import partial
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
 
 import httpx2
+import pytest
 
 from tum_mcp.study_preview import Handler
 
 
-def test_loopback_preview_confines_files_and_rejects_foreign_hosts(tmp_path: Path) -> None:
+def test_loopback_preview_confines_files_and_rejects_foreign_hosts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Windows registry associations must not decide whether ES modules can run.
+    mimetypes.init()
+    monkeypatch.setitem(mimetypes.types_map, ".mjs", "text/plain")
     site = tmp_path / "study"
     site.mkdir()
     (site / "index.html").write_text("<!doctype html><title>Course</title>")
+    (site / "app.mjs").write_bytes(b"export default 42;\n")
     css = "body { color: navy; }\n" * 200
     (site / "styles.css").write_bytes(css.encode("utf-8"))
     (site / ".managed.json").write_text("private build metadata")
@@ -31,6 +39,8 @@ def test_loopback_preview_confines_files_and_rejects_foreign_hosts(tmp_path: Pat
             with httpx2.Client(trust_env=False, timeout=3) as client:
                 good = client.get(base + "/")
                 assert good.status_code == 200
+                module = client.get(base + "/app.mjs")
+                assert module.headers["content-type"].split(";")[0] == "text/javascript"
                 assert "default-src 'self'" in good.headers["content-security-policy"]
                 assert good.headers["referrer-policy"] == "no-referrer"
                 compressed = client.get(base + "/styles.css", headers={"Accept-Encoding": "gzip"})

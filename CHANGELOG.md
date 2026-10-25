@@ -16,7 +16,8 @@
 - Install all five skills for Cursor and Antigravity during setup and update,
   with ownership checks that preserve customized files during update and removal.
 - Recognize occupied preview ports and deliver complete HTTP rejection responses
-  on Windows. Reuse isolated test fixtures,
+  on Windows, and serve web assets independently of OS file associations.
+  Reuse isolated test fixtures,
   retain native/platform coverage and expose slow tests and failures in CI.
 - Group Artemis and Zulip implementation by provider, retaining read-only campus
   tools and Moodle compatibility. Fix OCR with aliased macOS temporary paths.
