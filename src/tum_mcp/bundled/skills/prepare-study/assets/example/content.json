@@ -91,7 +91,7 @@
             ],
             [
               "How do I test one edge?",
-              "Scan up to deg(v) entries.",
+              "Scan up to \\(\\deg(v)\\) entries.",
               "Read one cell: \\(O(1)\\)."
             ]
           ],
@@ -1175,7 +1175,7 @@
           "kind": "formula",
           "mathml": null,
           "latex": "d(v)\\leftarrow\\min\\{d(v),\\ d(u)+w(u,v)\\}",
-          "plain": "Replace the tentative distance only if the route through u is cheaper.",
+          "plain": "Replace the tentative distance only if the route through \\(u\\) is cheaper.",
           "symbols": [
             {
               "symbol": "\\(d(v)\\)",
