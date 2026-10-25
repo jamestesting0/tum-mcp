@@ -115,7 +115,7 @@ export function renderReading(unit) {
       case 'diagram': section.append(diagram(block)); break;
       case 'code': {
         const region = node('div', 'code-region'); region.tabIndex = 0;
-        region.setAttribute('role', 'region'); region.setAttribute('aria-label', `${block.language} example`);
+        region.setAttribute('role', 'region'); region.setAttribute('aria-label', `${block.language} code`);
         region.append(node('span', 'small', block.language), append(node('pre'), node('code', '', block.code)));
         section.append(region, node('p', '', block.explanation)); break;
       }

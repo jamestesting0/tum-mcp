@@ -238,7 +238,7 @@
           "sources": [
             "bfs"
           ],
-          "description": "Undirected graph: A–B, A–C, B–D, C–E, D–F and E–F. The dark vertex is being expanded. Pale vertices are seen.",
+          "description": "Undirected graph: A–B, A–C, B–D, C–E, D–F and E–F. The highlighted vertex is being expanded. The caption and seen list describe each step.",
           "nodes": [
             {
               "key": "a",
@@ -473,7 +473,7 @@
             [
               "BFS",
               "First-in, first-out queue",
-              "Fewest edges when all edge weights are equal."
+              "Minimum edge count; also minimum cost for equal positive weights."
             ],
             [
               "DFS",

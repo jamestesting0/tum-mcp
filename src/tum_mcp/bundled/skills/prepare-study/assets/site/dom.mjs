@@ -14,7 +14,7 @@ export function append(parent, ...children) { parent.append(...children); return
 export function focusHeading(heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
 export function sourcesNote(ids, sources, synthetic) {
   const detail = node('details', 'source-note');
-  detail.append(node('summary', '', `${ids.length === 1 ? 'Source' : 'Sources'} · ${synthetic ? 'synthetic notes' : 'reference'}`));
+  detail.append(node('summary', '', `${ids.length === 1 ? 'Source' : 'Sources'}${synthetic ? ' · synthetic notes' : ''}`));
   const list = node('ul');
   for (const id of ids) {
     const source = sources[id];
