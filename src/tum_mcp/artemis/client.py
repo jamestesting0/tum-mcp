@@ -5,7 +5,7 @@ import time
 from datetime import UTC, datetime
 from typing import Literal
 
-from tum_mcp.artemis_models import (
+from tum_mcp.artemis.models import (
     Courses,
     Details,
     Exercise,

@@ -10,7 +10,7 @@ from tum_mcp.errors import CampusError
 from tum_mcp.settings import Account, Provider
 from tum_mcp.transport import API
 from tum_mcp.zulip import Zulip
-from tum_mcp.zulip_models import Query
+from tum_mcp.zulip.models import Query
 
 
 @pytest.fixture

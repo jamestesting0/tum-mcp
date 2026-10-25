@@ -2,7 +2,7 @@
 
 from pydantic import AwareDatetime, Field, RootModel
 
-from tum_mcp.artemis_models import Exercise, Reference, Wire
+from tum_mcp.artemis.models import Exercise, Reference, Wire
 from tum_mcp.moodle.models import TextPage
 from tum_mcp.settings import Frozen, PositiveId
 

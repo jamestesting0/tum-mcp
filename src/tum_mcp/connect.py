@@ -10,7 +10,7 @@ from playwright.sync_api import Error as BrowserError
 from playwright.sync_api import Page, sync_playwright
 from pydantic import SecretStr
 
-from tum_mcp.artemis_models import Identity as ArtemisIdentity
+from tum_mcp.artemis.models import Identity as ArtemisIdentity
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.auth import Cookie, LoginProgress, Session, SessionStore
@@ -20,7 +20,7 @@ from tum_mcp.moodle.config import BASE_URL, Paths
 from tum_mcp.parsing import decode
 from tum_mcp.settings import ARTEMIS, ZULIP, Account, Provider, preferences, save_account
 from tum_mcp.transport import API, MAX_RESPONSE
-from tum_mcp.zulip_models import Identity as ZulipIdentity
+from tum_mcp.zulip.models import Identity as ZulipIdentity
 
 
 def connect_zulip(email: str, key: SecretStr) -> Account:

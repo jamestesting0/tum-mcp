@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic import Field
 
 from tum_mcp.artemis import Artemis
-from tum_mcp.artemis_models import ExerciseView
+from tum_mcp.artemis.models import ExerciseView
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.git_ops import repository_url, run_git

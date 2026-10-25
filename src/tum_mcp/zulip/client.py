@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.parsing import decode
 from tum_mcp.transport import API
-from tum_mcp.zulip_models import (
+from tum_mcp.zulip.models import (
     Channel,
     Channels,
     CitedMessage,

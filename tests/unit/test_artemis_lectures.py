@@ -4,9 +4,9 @@ import httpx2
 import pytest
 
 from tum_mcp.artemis import Artemis
+from tum_mcp.artemis.lectures import Lectures
 from tum_mcp.credentials import Credential
 from tum_mcp.errors import CampusError
-from tum_mcp.lectures import Lectures
 from tum_mcp.moodle.models import Extracted, TextPage
 from tum_mcp.settings import Account, Provider
 from tum_mcp.transport import API
@@ -72,7 +72,7 @@ def lecture_api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     api = API(account, Credential(account_id=account.id), httpx2.MockTransport(request))
     monkeypatch.setattr(
-        "tum_mcp.lectures.run_extraction",
+        "tum_mcp.artemis.lectures.run_extraction",
         lambda body, mime: Extracted(
             pages=[TextPage(number=i, text=f"Page {i}") for i in range(1, 21)]
         ),
@@ -181,7 +181,7 @@ def test_public_statement_read_does_not_include_own_submission_history(monkeypat
     from types import SimpleNamespace
 
     from tum_mcp import server
-    from tum_mcp.artemis_models import Exercise, ExerciseView, Participation
+    from tum_mcp.artemis.models import Exercise, ExerciseView, Participation
 
     account = Account(
         provider=Provider.ARTEMIS,

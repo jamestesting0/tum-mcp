@@ -7,9 +7,8 @@ from datetime import UTC, datetime
 from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
-from tum_mcp.artemis import Artemis
-from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_models import (
+from tum_mcp.artemis.client import Artemis
+from tum_mcp.artemis.lecture_models import (
     AttachmentView,
     Lecture,
     LectureDirectory,
@@ -17,6 +16,7 @@ from tum_mcp.lecture_models import (
     LectureUnit,
     LectureView,
 )
+from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
 from tum_mcp.moodle.errors import MoodleError
 from tum_mcp.moodle.extract_worker import run_extraction

@@ -7,10 +7,10 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from tum_mcp.artemis import Artemis
-from tum_mcp.artemis_models import CourseDirectory, ExerciseView, FeedbackView, Overview
+from tum_mcp.artemis.lecture_models import AttachmentView, LectureDirectory, LectureView
+from tum_mcp.artemis.models import CourseDirectory, ExerciseView, FeedbackView, Overview
 from tum_mcp.checkpoints import Checkpoint
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_models import AttachmentView, LectureDirectory, LectureView
 from tum_mcp.moodle.server import server
 from tum_mcp.settings import (
     Account,
@@ -23,7 +23,7 @@ from tum_mcp.settings import (
 )
 from tum_mcp.transport import API
 from tum_mcp.zulip import Zulip
-from tum_mcp.zulip_models import Channels, MessagePage, Query, Topics
+from tum_mcp.zulip.models import Channels, MessagePage, Query, Topics
 
 READ = ToolAnnotations(read_only_hint=True, destructive_hint=False, open_world_hint=True)
 Id = Annotated[int, Field(gt=0)]
@@ -175,7 +175,7 @@ def artemis_list_exercises(account_id: str, course_id: Id) -> Overview:
 @server.tool(annotations=READ)
 def artemis_list_lectures(account_id: str, course_id: Id) -> LectureDirectory:
     """List student-visible lecture metadata in an enabled course, including tutorials."""
-    from tum_mcp.lectures import Lectures
+    from tum_mcp.artemis.lectures import Lectures
 
     return Lectures(Artemis(API(find_account(account_id, Provider.ARTEMIS)))).directory(course_id)
 
@@ -183,7 +183,7 @@ def artemis_list_lectures(account_id: str, course_id: Id) -> LectureDirectory:
 @server.tool(annotations=READ)
 def artemis_get_lecture(account_id: str, course_id: Id, lecture_id: Id) -> LectureView:
     """Read released lecture text, slide metadata, video/online links and exercise references."""
-    from tum_mcp.lectures import Lectures
+    from tum_mcp.artemis.lectures import Lectures
 
     return Lectures(Artemis(API(find_account(account_id, Provider.ARTEMIS)))).lecture(
         course_id, lecture_id
@@ -203,7 +203,7 @@ def artemis_get_attachment(
     save_original: bool = False,
 ) -> AttachmentView:
     """Read cited pages from the student PDF; optionally save that student copy locally."""
-    from tum_mcp.lectures import Lectures
+    from tum_mcp.artemis.lectures import Lectures
 
     return Lectures(Artemis(API(find_account(account_id, Provider.ARTEMIS)))).attachment(
         course_id,
