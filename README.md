@@ -135,19 +135,33 @@ cookies are retained; identity-provider cookies are discarded when it closes.
 Sessions stay on your computer in encrypted files with owner-restricted keys.
 Configured local clients share those connections and selected scopes.
 
-## Course content and study privacy
+## Your study project
 
-The agent retrieves material for your request through your configured AI provider.
-Moodle's document cache expires after 30 days and is capped at 1 GiB. Saved
-originals and study projects stay local until you remove them, except for website
-files you explicitly choose to publish.
+The agent keeps each course in its own folder. After preparing the website,
+your project looks like this, with audio added when requested:
 
-Study sites run on your computer without analytics, external fonts or CDNs.
-Card ratings and practice results stay in browser storage, separated by course
-and content revision. Updating course material preserves your notes and flags
-changed sources before rebuilding dependent units.
-Passage comments are saved in the course project; your agent reads them when you
-ask it to address feedback.
+```text
+my-course/
+├── AGENTS.md                 Course overview and source index for your agent
+├── materials/
+│   ├── content/              Lectures, slides and reading
+│   ├── exercises/            Exercise sheets and practice material
+│   ├── exams/                Available exam and revision material
+│   └── other/                Announcements and course information
+├── study/
+│   ├── content.json          Lessons, flashcards and practice questions
+│   └── index.html            Your study website
+├── audio/                    Optional audio notes
+│   ├── scripts/              Narration text
+│   └── tracks/               Audio lessons
+└── .study/
+    ├── state.json            Course identity and source versions
+    └── comments.json         Passage comments, when added
+```
+
+Your agent uses your configured AI provider to work with course material.
+Publishing uploads only the generated website; materials, audio and comments
+stay local. Study progress is saved in your browser.
 
 ## Update
 
