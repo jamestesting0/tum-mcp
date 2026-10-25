@@ -52,12 +52,12 @@ jobs:
           node npm/build.mjs
           npm test
           npm pack --ignore-scripts --pack-destination dist
+      - name: Verify single-command npm updates and removal
+        run: npm run test:package-lifecycle
       - name: Verify clean campus consumer installation and MCP
         run: npm run test:consumer
       - name: Verify updates and removal from public releases
         run: npm run test:upgrade
-      - name: Verify single-command npm updates and removal
-        run: npm run test:package-lifecycle
       - name: Lint and format
         run: |
           uv run ruff check src tests scripts

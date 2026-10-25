@@ -59,6 +59,7 @@ export async function registryFixture() {
 export async function futureRelease({ source, directory, python, version, run, npm, broken = false }) {
   const staged = join(directory, version + (broken ? '-broken' : ''));
   cpSync(source, staged, { recursive: true });
+  console.log(`Package fixture ${version}: copied package`);
   const manifest = JSON.parse(readFileSync(join(staged, 'package.json'), 'utf8'));
   manifest.version = version;
   manifest.scripts.postinstall = "node -e \"require('node:fs').writeFileSync('install-script-ran','unexpected')\"";
@@ -68,10 +69,12 @@ export async function futureRelease({ source, directory, python, version, run, n
   const wheel = `tum_mcp-${version}-py3-none-any.whl`;
   const fixture = fileURLToPath(new URL('../tests/integration/package_release_fixture.py', import.meta.url));
   await run(python, ['-I', fixture, join(backend, before.wheel), join(backend, wheel), version]);
+  console.log(`Package fixture ${version}: prepared backend wheel`);
   rmSync(join(backend, before.wheel));
   writeFileSync(join(backend, 'manifest.json'), JSON.stringify({ ...before, wheel,
     wheelSha256: broken ? '0'.repeat(64) : createHash('sha256').update(readFileSync(join(backend, wheel))).digest('hex'),
   }));
   const packed = JSON.parse(await npm(['pack', staged, '--ignore-scripts', '--pack-destination', directory, '--json']));
+  console.log(`Package fixture ${version}: packed release`);
   return { manifest, path: join(directory, packed[0].filename) };
 }

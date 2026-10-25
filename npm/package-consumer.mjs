@@ -50,12 +50,15 @@ try {
   releaseWindowsProfile = isolatedWindowsProfile(root, env);
   console.log('Package lifecycle: install and prepare isolated global clients');
   await npm(['install', '--global', '--prefix', prefix, '--ignore-scripts', artifact]);
+  console.log('Package lifecycle: installed global package; preparing managed runtime');
   await call(['setup', '--client', 'codex', '--client', 'claude', '--client', 'cursor']);
+  console.log('Package lifecycle: prepared clients; creating unpublished release fixture');
   const original = state();
   const nextVersion = version.split('.').slice(0, 2).concat(Number(version.split('.')[2]) + 1).join('.');
   const laterVersion = version.split('.').slice(0, 2).concat(Number(version.split('.')[2]) + 2).join('.');
   const futureDirectory = join(root, 'unpublished fixtures'); mkdirSync(futureDirectory);
   const next = await futureRelease({ source, directory: futureDirectory, python: original.python, version: nextVersion, run, npm });
+  console.log('Package lifecycle: prepared unpublished release fixture');
   registry.release(next.manifest, next.path);
   const project = join(home, 'University/course');
   const saved = [
