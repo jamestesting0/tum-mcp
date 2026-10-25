@@ -1,47 +1,6 @@
 import data from './data.mjs';
 import { node, button, append, sourcesNote, focusHeading } from './dom.mjs';
-
-export function renderFlashcards(unit, ui, progress, persist) {
-  const root = node('div');
-  const meta = node('div', 'recall-meta');
-  const count = node('p', 'small', `Card ${ui.card + 1} of ${unit.flashcards.length}`);
-  meta.append(count);
-  const card = unit.flashcards[ui.card];
-  const key = `${unit.key}:${unit.revision}:${card.key}`;
-  const surface = node('section', 'surface');
-  const prompt = node('h2', 'recall-prompt', card.front);
-  const answer = node('div', 'card-answer'); answer.hidden = !ui.revealed;
-  answer.append(node('p', '', card.back), sourcesNote(card.sources, data.sources, data.course.synthetic));
-  const status = node('p', 'small'); status.setAttribute('aria-live', 'polite');
-  const again = button('Again', () => rate(false));
-  const got = button('Got it', () => rate(true));
-  again.setAttribute('aria-pressed', String(progress.cards[key] === false));
-  got.setAttribute('aria-pressed', String(progress.cards[key] === true));
-  const ratings = append(node('div', 'cluster card-actions'), again, got); ratings.hidden = !ui.revealed;
-  const reveal = button(ui.revealed ? 'Hide answer' : 'Show answer', () => {
-    ui.revealed = !ui.revealed; answer.hidden = !ui.revealed; ratings.hidden = !ui.revealed;
-    reveal.textContent = ui.revealed ? 'Hide answer' : 'Show answer';
-    reveal.setAttribute('aria-expanded', String(ui.revealed));
-  }, 'primary');
-  reveal.setAttribute('aria-expanded', String(ui.revealed));
-  function rate(remembered) {
-    progress.cards[key] = remembered; persist();
-    again.setAttribute('aria-pressed', String(!remembered)); got.setAttribute('aria-pressed', String(remembered));
-    status.textContent = remembered ? 'Remembered.' : 'Marked for review.';
-  }
-  surface.append(prompt, append(node('div', 'card-actions'), reveal), answer, ratings, status);
-  const navigation = node('div', 'unit-footer');
-  const prev = button('Previous card', () => move(-1)); prev.disabled = ui.card === 0;
-  const next = button('Next card', () => move(1)); next.disabled = ui.card === unit.flashcards.length - 1;
-  navigation.append(prev, next);
-  function move(delta) {
-    ui.card += delta; ui.revealed = false;
-    root.replaceWith(renderFlashcards(unit, ui, progress, persist));
-    focusHeading(document.querySelector('.recall-prompt'));
-  }
-  root.append(meta, surface, navigation);
-  return root;
-}
+import { iconButton } from './navigation.mjs';
 
 export function renderPractice(unit, ui, progress, persist) {
   const root = node('div');
@@ -90,8 +49,8 @@ export function renderPractice(unit, ui, progress, persist) {
   });
   if (state.checked) showFeedback();
   const navigation = node('div', 'unit-footer');
-  const prev = button('Previous question', () => move(-1)); prev.disabled = ui.question === 0;
-  const next = button('Next question', () => move(1)); next.disabled = ui.question === unit.questions.length - 1;
+  const prev = iconButton('Previous question', 'left', () => move(-1)); prev.disabled = ui.question === 0;
+  const next = iconButton('Next question', 'right', () => move(1)); next.disabled = ui.question === unit.questions.length - 1;
   function move(delta) {
     ui.question += delta; root.replaceWith(renderPractice(unit, ui, progress, persist));
     const legend = document.querySelector('legend'); focusHeading(legend);

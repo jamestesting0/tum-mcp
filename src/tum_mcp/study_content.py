@@ -1,22 +1,14 @@
-"""Source-linked study content, including a safe native MathML subset."""
+"""Source-linked study content with editable LaTeX and legacy MathML inputs."""
 
 from typing import Annotated, Literal
-from xml.etree.ElementTree import ParseError
 
-from defusedxml.common import DefusedXmlException
-from defusedxml.ElementTree import fromstring
 from pydantic import Field, field_validator, model_validator
 
 from tum_mcp.settings import Frozen
+from tum_mcp.study_math import compile_latex, safe_mathml
 from tum_mcp.study_models import Digest, Key
 
 Text = Annotated[str, Field(min_length=1, max_length=10000)]
-MATH_NS = "http://www.w3.org/1998/Math/MathML"
-MATH_TAGS = set(
-    "math mrow mi mn mo mtext mfrac msqrt mroot msub msup msubsup mtable mtr mtd "
-    "munder mover munderover mmultiscripts mprescripts none mspace mstyle".split()
-)
-MATH_ATTRS = {"display", "mathvariant", "displaystyle", "stretchy", "linethickness"}
 
 
 class Objective(Frozen):
@@ -48,25 +40,26 @@ class Symbol(Frozen):
 
 class FormulaBlock(Sourced):
     kind: Literal["formula"]
-    mathml: Annotated[str, Field(max_length=20000)]
+    mathml: Annotated[str, Field(max_length=20000)] | None = None
+    latex: Annotated[str, Field(min_length=1, max_length=5000)] | None = None
     plain: Text
     symbols: tuple[Symbol, ...] = Field(min_length=1, max_length=30)
     conditions: Text
 
     @field_validator("mathml")
     @classmethod
-    def safe_math(cls, value: str) -> str:
-        try:
-            root = fromstring(value)
-        except (ParseError, DefusedXmlException):
-            raise ValueError("Formula must be safe, valid MathML.") from None
-        if root.tag != f"{{{MATH_NS}}}math":
-            raise ValueError("Formula requires the MathML math namespace.")
-        for element in root.iter():
-            tag = element.tag.removeprefix(f"{{{MATH_NS}}}")
-            if tag not in MATH_TAGS or not set(element.attrib) <= MATH_ATTRS:
-                raise ValueError("Formula contains unsupported elements or attributes.")
+    def safe_math(cls, value: str | None) -> str | None:
+        if value is not None:
+            safe_mathml(value)
         return value
+
+    @model_validator(mode="after")
+    def expression(self) -> "FormulaBlock":
+        if (self.latex is None) == (self.mathml is None):
+            raise ValueError("Supply LaTeX or legacy MathML, not both.")
+        if self.latex is not None:
+            compile_latex(self.latex)
+        return self
 
 
 class TableBlock(Sourced):
@@ -189,6 +182,9 @@ class SourceVersion(Frozen):
 
 class Unit(Frozen):
     key: Key
+    path: tuple[Annotated[str, Field(min_length=1, max_length=150)], ...] = Field(
+        default=(), max_length=4
+    )
     label: Text
     title: Text
     summary: Text

@@ -53,11 +53,12 @@ restores files when possible and reports any remaining conflict.
 ## Prepare the website
 
 Ask `prepare-study` to create or extend `study/`. Units follow the course's
-lecture/week sequence when useful, or use consistent topics. Every unit has:
+lecture/week sequence when useful, or use consistent topics. Optional folders group
+related units, including several topics in one week. Every unit has:
 
 - A concise explanation with source links, assumptions and worked examples.
-- Formulas, diagrams, code or comparison tables where they explain the concept.
-- Flashcards that reveal an answer before self-rating.
+- Editable LaTeX formulas, diagrams, code or comparison tables where they explain the concept.
+- Flip cards with arrow navigation, Space to flip and 1/2 for Again/Got it.
 - Practice questions with one justified answer and feedback for every option.
 
 The agent uses stored material first, so local content edits work offline. Ask for
@@ -67,7 +68,9 @@ within the same request. Unchanged units and reviewed material are retained.
 The skill audits objective coverage, technical accuracy and distractors. Its
 STE-inspired English uses short, direct sentences while retaining necessary terms
 and conditions. The design contract uses TUM blue/navy with quiet reading surfaces,
-local fonts, light/dark themes, keyboard navigation and a phone layout.
+local fonts, light/dark themes, keyboard navigation and a phone layout. The outline
+collapses, with About, Reset progress and a theme icon in its sidebar. Content,
+Flashcards and Practice navigation also appears at the end of the unit.
 
 Content lives in `study/content.json`; shared renderer modules and CSS keep the
 site extensible. Source hashes identify affected units. A stale source stops a
@@ -85,6 +88,15 @@ The preview binds `127.0.0.1`, serves only `study/` and makes no campus requests
 No course credentials are copied into the website. Browser storage holds progress
 locally. Nothing is published by these commands.
 
+## Packaged app template
+
+The complete web-app template is packaged with `prepare-study` in `assets/site/`.
+It includes the shell, navigation, flip cards, practice, diagrams and styling.
+Agents author course content in `study/content.json`; `study build` installs the
+shared template, preserves customized files and checks sources. This keeps new
+course sites consistent without rebuilding the interface. `tum-mcp study template`
+shows the bundled files and their combined revision for reproducible development.
+
 ## Try the synthetic example
 
 After installing a locally built development artifact:
@@ -95,7 +107,7 @@ tum-mcp study serve ./algorithms-demo
 ```
 
 This creates a clearly labelled synthetic course on graphs, BFS and DFS, including
-native MathML, a step-through graph, comparison tables, flashcards and practice.
+LaTeX rendered as native MathML, a step-through graph, comparison tables, flashcards and practice.
 It uses no campus account. An existing edited demo is preserved.
 
 ## Local helper inputs

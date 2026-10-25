@@ -1,5 +1,6 @@
 import data from './data.mjs';
-import { node, button, append, sourcesNote } from './dom.mjs';
+import { node, append, sourcesNote } from './dom.mjs';
+import { iconButton } from './navigation.mjs';
 
 function formula(block) {
   const box = node('div', 'surface');
@@ -7,8 +8,8 @@ function formula(block) {
   expression.tabIndex = 0; expression.setAttribute('role', 'region');
   expression.setAttribute('aria-label', `Equation: ${block.plain}`);
   const parsed = new DOMParser().parseFromString(block.mathml, 'application/xml');
-  const allowed = new Set('math mrow mi mn mo mtext mfrac msqrt mroot msub msup msubsup mtable mtr mtd munder mover munderover mmultiscripts mprescripts none mspace mstyle'.split(' '));
-  const attrs = new Set(['display', 'mathvariant', 'displaystyle', 'stretchy', 'linethickness']);
+  const allowed = new Set('math mrow mi mn mo mtext mfrac msqrt mroot msub msup msubsup mtable mtr mtd munder mover munderover mmultiscripts mprescripts none mspace mstyle menclose'.split(' '));
+  const attrs = new Set(['display', 'mathvariant', 'displaystyle', 'stretchy', 'linethickness', 'fence', 'separator', 'accent', 'accentunder', 'notation', 'columnalign', 'rowalign', 'columnspacing', 'rowspacing', 'columnlines', 'rowlines', 'scriptlevel', 'width', 'height', 'depth', 'lspace', 'rspace']);
   const valid = !parsed.querySelector('parsererror') && [...parsed.querySelectorAll('*')].every(element =>
     element.namespaceURI === 'http://www.w3.org/1998/Math/MathML' && allowed.has(element.localName) &&
     [...element.attributes].every(attr => attrs.has(attr.name) || attr.name === 'xmlns'));
@@ -80,8 +81,8 @@ function diagram(block) {
   const state = node('div', 'diagram-state'); state.setAttribute('aria-live', 'polite');
   const caption = node('p'), frontier = node('p', 'small'); state.append(caption, frontier);
   let index = 0;
-  const prev = button('Previous step', () => { index--; update(); });
-  const next = button('Next step', () => { index++; update(); });
+  const prev = iconButton('Previous step', 'left', () => { index--; update(); });
+  const next = iconButton('Next step', 'right', () => { index++; update(); });
   const counter = node('span', 'small');
   const controls = append(node('div', 'diagram-controls'), prev, counter, next);
   function update() {

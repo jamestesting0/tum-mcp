@@ -4,17 +4,35 @@ import json
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
+from typing import assert_never
 
 from filelock import FileLock
 from pydantic import Field, JsonValue, ValidationError
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
-from tum_mcp.study_content import StudyContent
+from tum_mcp.study_content import (
+    CodeBlock,
+    DiagramBlock,
+    FormulaBlock,
+    StudyContent,
+    TableBlock,
+    TextBlock,
+)
+from tum_mcp.study_math import compile_latex
 from tum_mcp.study_models import Digest, StudyState
 from tum_mcp.study_store import Write, apply, confined, digest, load_state, read_bytes
 
-TEMPLATE_FILES = ("index.html", "styles.css", "app.mjs", "dom.mjs", "reading.mjs", "learning.mjs")
+TEMPLATE_FILES = (
+    "index.html",
+    "styles.css",
+    "app.mjs",
+    "dom.mjs",
+    "reading.mjs",
+    "learning.mjs",
+    "navigation.mjs",
+    "flashcards.mjs",
+)
 
 
 class BuildRecord(Frozen):
@@ -64,8 +82,18 @@ def stale_units(root: Path, state: StudyState, content: StudyContent) -> tuple[s
 def _app_data(state: StudyState, content: StudyContent) -> dict[str, JsonValue]:
     units: list[JsonValue] = []
     for unit in content.units:
-        value = unit.model_dump(mode="json")
-        value["revision"] = digest(unit.model_dump_json().encode())
+        value = unit.model_dump(mode="json", exclude_none=True)
+        for block, rendered in zip(unit.blocks, value["blocks"], strict=True):
+            match block:
+                case FormulaBlock():
+                    rendered["mathml"] = block.mathml or compile_latex(block.latex or "")
+                case TextBlock() | TableBlock() | CodeBlock() | DiagramBlock():
+                    pass
+                case unreachable:
+                    assert_never(unreachable)
+        value["revision"] = digest(
+            unit.model_dump_json(exclude={"path"}, exclude_none=True).encode()
+        )
         units.append(value)
     referenced = {source.key for unit in content.units for source in unit.sources}
     sources: dict[str, JsonValue] = {

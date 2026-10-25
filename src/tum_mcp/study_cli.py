@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import asdict
+from importlib.resources import files
 from pathlib import Path
 from typing import Annotated, Literal, assert_never
 
@@ -10,6 +11,29 @@ import typer
 from tum_mcp.errors import CampusError, Code
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
+
+
+@app.command()
+def template() -> None:
+    """Describe the packaged study starter; build installs it without overwriting edits."""
+    from tum_mcp.study_build import TEMPLATE_FILES
+    from tum_mcp.study_store import digest
+
+    source = files("tum_mcp") / "bundled/skills/prepare-study/assets/site"
+    hashes = {name: digest((source / name).read_bytes()) for name in TEMPLATE_FILES}
+    typer.echo(
+        json.dumps(
+            {
+                "template": "prepare-study/assets/site",
+                "revision": digest(json.dumps(hashes, sort_keys=True).encode()),
+                "files": list(TEMPLATE_FILES),
+                "author": "study/content.json",
+                "install": "tum-mcp study build PROJECT",
+                "synthetic_preview": "tum-mcp study demo PROJECT",
+            },
+            indent=2,
+        )
+    )
 
 
 @app.command()
@@ -102,8 +126,6 @@ def serve(project: Path, port: Annotated[int, typer.Option(min=0, max=65535)] = 
 @app.command()
 def demo(project: Path) -> None:
     """Create the synthetic Algorithms & Graphs course for local design review."""
-    from importlib.resources import files
-
     from tum_mcp.study_build import build as build_site
     from tum_mcp.study_store import Write, apply, confined, read_bytes
     from tum_mcp.study_sync import sync

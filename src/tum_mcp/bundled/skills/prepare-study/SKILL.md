@@ -11,7 +11,9 @@ run update-study once if fresh upstream content was requested and not already ch
 
 Inspect the existing study/ and affected source/unit IDs. Preserve its theme, notes
 and edits; reuse unchanged units and stable IDs. Choose one lecture/week/topic
-organization that fits course dependencies. Never fill gaps with invented course facts.
+organization that fits course dependencies. Group related units with optional path
+folders; avoid repeated week labels and needless nesting. Author formulas in LaTeX.
+Never fill gaps with invented course facts.
 
 Read only the contracts needed:
 - [Teaching](references/teaching.md): new or changed explanations/assessments.

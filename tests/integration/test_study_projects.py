@@ -1,5 +1,4 @@
 import json
-from importlib.resources import files
 from pathlib import Path
 
 import pytest
@@ -10,22 +9,6 @@ from tum_mcp.errors import CampusError, Code
 from tum_mcp.study_build import build, read_content, stale_units
 from tum_mcp.study_store import load_state
 from tum_mcp.study_sync import sync
-
-
-@pytest.fixture
-def inputs(tmp_path: Path) -> Path:
-    example = files("tum_mcp") / "bundled/skills/prepare-study/assets/example"
-    path = tmp_path / "incoming.json"
-    path.write_bytes((example / "snapshot.json").read_bytes())
-    return path
-
-
-@pytest.fixture
-def project(tmp_path: Path) -> Path:
-    root = tmp_path / "Course space Ω"
-    result = CliRunner().invoke(app, ["study", "demo", str(root)])
-    assert result.exit_code == 0, result.output
-    return root
 
 
 def test_initialization_requires_an_explicit_course_before_creating_files(

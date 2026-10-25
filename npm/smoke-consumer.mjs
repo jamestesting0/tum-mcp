@@ -80,7 +80,11 @@ for name in ('cursor','antigravity'):
     if (process.platform === 'win32') {
       for (const name of ['HOME', 'USERPROFILE']) if (process.env[name]) browserEnv[name] = process.env[name];
     }
-    browserEvidence = JSON.parse(run(first.python, ['-I', '-c', readFileSync(new URL('../tests/integration/browser_consumer_fixture.py', import.meta.url), 'utf8')], 180000, browserEnv));
+    const fixture = readFileSync(new URL('../tests/integration/browser_consumer_fixture.py', import.meta.url), 'utf8');
+    const studyFixture = readFileSync(new URL('../tests/integration/study_browser_fixture.py', import.meta.url), 'utf8');
+    // Isolated Python intentionally cannot import helpers from the checkout.
+    const combined = fixture.replace('from study_browser_fixture import study_website', studyFixture);
+    browserEvidence = JSON.parse(run(first.python, ['-I', '-c', combined], 180000, browserEnv));
   }
   const protocol = `import os,sys,anyio
 from mcp import ClientSession
@@ -105,6 +109,10 @@ anyio.run(check)
   run(first.python, ['-I', '-c', protocol], 60000);
   const demoProject = join(root, 'Synthetic course');
   run(process.execPath, [launcher, 'study', 'demo', demoProject]);
+  const template = JSON.parse(run(process.execPath, [launcher, 'study', 'template']));
+  assert.equal(template.author, 'study/content.json');
+  assert.ok(template.files.includes('flashcards.mjs') && template.files.includes('navigation.mjs'));
+  assert.match(template.revision, /^[a-f0-9]{64}$/);
   const study = JSON.parse(run(process.execPath, [launcher, 'study', 'inspect', demoProject]));
   assert.equal(study.course.synthetic, true); assert.deepEqual(study.stale_units, []);
   assert.ok(readFileSync(join(demoProject, 'study', 'reading.mjs'), 'utf8').includes('renderReading'));

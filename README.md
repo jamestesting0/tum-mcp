@@ -68,6 +68,10 @@ posting and read-state changes are unavailable.
 
 The development package has **four skills**, with source details loaded as needed:
 
+Their maintained source is in this repository at
+[`src/tum_mcp/bundled/skills/`](src/tum_mcp/bundled/skills/). Client setup installs
+managed copies; edit or review the repository source when developing the package.
+
 | Skill | Purpose |
 | --- | --- |
 | `read-content` | Retrieve and explain content across all three websites |

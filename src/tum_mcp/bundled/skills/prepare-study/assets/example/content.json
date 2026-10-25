@@ -42,7 +42,6 @@
         {
           "kind": "formula",
           "title": "Count each edge twice",
-          "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><munderover><mo>∑</mo><mrow><mi>v</mi><mo>∈</mo><mi>V</mi></mrow><mrow/></munderover><mi>deg</mi><mo>(</mo><mi>v</mi><mo>)</mo><mo>=</mo><mn>2</mn><mo>|</mo><mi>E</mi><mo>|</mo></mrow></math>",
           "plain": "The sum of all vertex degrees equals twice the number of edges.",
           "symbols": [
             {
@@ -61,7 +60,8 @@
           "conditions": "For a simple undirected graph. Six edges contribute twelve to the total degree.",
           "sources": [
             "graphs"
-          ]
+          ],
+          "latex": "\\sum_{v\\in V}\\deg(v)=2|E|"
         },
         {
           "kind": "table",
@@ -191,6 +191,9 @@
             "graphs"
           ]
         }
+      ],
+      "path": [
+        "Foundations"
       ]
     },
     {
@@ -440,7 +443,6 @@
         {
           "kind": "formula",
           "title": "Distance grows by one edge",
-          "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>d</mi><mo>(</mo><mi>v</mi><mo>)</mo><mo>=</mo><mi>d</mi><mo>(</mo><mi>u</mi><mo>)</mo><mo>+</mo><mn>1</mn></mrow></math>",
           "plain": "When u first discovers v, the distance to v is the distance to u plus one.",
           "symbols": [
             {
@@ -459,7 +461,8 @@
           "conditions": "Here d counts edges. For equal positive weights, minimum edge count also minimizes total cost. In this diagram, d(F) = 3.",
           "sources": [
             "bfs"
-          ]
+          ],
+          "latex": "d(v)=d(u)+1"
         },
         {
           "kind": "table",
@@ -618,6 +621,10 @@
             "bfs"
           ]
         }
+      ],
+      "path": [
+        "Algorithms",
+        "Traversals"
       ]
     },
     {
@@ -705,7 +712,6 @@
         {
           "kind": "formula",
           "title": "The same broad work bound",
-          "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>T</mi><mo>=</mo><mi>O</mi><mo>(</mo><mo>|</mo><mi>V</mi><mo>|</mo><mo>+</mo><mo>|</mo><mi>E</mi><mo>|</mo><mo>)</mo></mrow></math>",
           "plain": "With adjacency lists, DFS runs in time proportional to vertices plus edges.",
           "symbols": [
             {
@@ -724,7 +730,8 @@
           "conditions": "Mark seen vertices to avoid repeated traversal through cycles.",
           "sources": [
             "dfs"
-          ]
+          ],
+          "latex": "T(V,E)=O(|V|+|E|)"
         }
       ],
       "flashcards": [
@@ -813,6 +820,10 @@
             "dfs"
           ]
         }
+      ],
+      "path": [
+        "Algorithms",
+        "Traversals"
       ]
     }
   ]

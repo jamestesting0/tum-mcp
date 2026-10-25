@@ -2,6 +2,11 @@
 
 Edit study/content.json. Preserve unaffected unit objects and stable IDs. Build
 copies the renderer; ordinary content edits need no HTML/CSS/JS asset inspection.
+The skill packages the complete starter in assets/site, with a synthetic format
+example in assets/example. `tum-mcp study template` reports its file list and
+revision without dumping code. `study build` safely installs/updates it; do not
+hand-copy a second shell. Template revision identifies the packaged base, not
+preserved custom files. Inspect those files only when a needed extension touches them.
 For unfamiliar fields or validation failures, redirect `tum-mcp study schema content`
 to a private file and inspect needed definitions. The bundled example is a format
 reference: inspect one relevant object, not the entire course or asset tree.
@@ -9,13 +14,16 @@ reference: inspect one relevant object, not the entire course or asset tree.
 
 Top level: schema_version=1, course_key, organization=lectures/weeks/topics,
 introduction, units. Units carry key/label/title/summary/minutes, objectives,
-sources, blocks, flashcards and questions. Sources pair a resource key with its
+sources, blocks, flashcards and questions. Optional path contains up to four folder
+labels (for example ["W00", "Structural patterns"]); group when it improves course
+navigation, not to add unnecessary depth. Preserve unit keys; moving folders does
+not change progress revisions. Sources pair a resource key with its
 exact current SHA-256 from state; citations use those declared keys.
 
 | Block | Specific requirements |
 | --- | --- |
 | text | paragraphs and/or points, never an empty explanation. |
-| formula | Native safe MathML, plain equivalent, symbol definitions and conditions. Keep the math namespace; no script, links, events, styles or foreign XML. |
+| formula | latex string without dollar delimiters, plus plain equivalent, symbol definitions and conditions. JSON escapes backslashes, e.g. "\\frac{a}{b}". Build compiles bounded mathematical LaTeX locally; unsupported syntax, macros, links and unsafe XML fail validation. Keep mathml only for legacy input; never supply both. |
 | table | Column labels, rectangular rows and a meaningful caption. |
 | code | Language, literal code and explanation; label authored examples. Do not execute downloaded code. |
 | diagram | Positioned nodes/edges/frames in 600×320. Long labels need shape=box, centers x=70–530. Optional directed edges/labels. state_labels=caption omits traversal bookkeeping for concept diagrams. Self-loops require an extension. |

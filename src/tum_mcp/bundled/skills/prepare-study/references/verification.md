@@ -27,7 +27,8 @@ light/dark, top/scrolled views. Add tablet/zoom when breakpoints or dense notati
 change. Run keyboard/reduced-motion checks per changed renderer, not per question.
 
 Exercise shared branches once with suitable data: card reveal/rating; wrong/correct
-answer, retry/advance; diagram endpoints; focus/escape/skip link; storage failure,
+answer, retry/advance; card flip/arrow/1/2 shortcuts without hijacking tabs or inputs;
+diagram endpoints; outline collapse/current folders/skip link; storage failure,
 reload and course-scoped reset. Independently review EVERY new/changed question's
 meaning/options; repeating generic clicks for every question/theme proves less.
 An accessibility scanner complements visual/keyboard checks, not subject review.
