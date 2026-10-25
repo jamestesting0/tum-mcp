@@ -26,7 +26,7 @@ def image_text(path: Path) -> str:
     if executable is None:
         raise MoodleError(ErrorCode.NEEDS_OCR, "Install Tesseract to read scanned documents.")
     result = subprocess.run(
-        [executable, str(path), "stdout", "-l", "eng"],
+        [executable, str(path.resolve()), "stdout", "-l", "eng"],
         check=True,
         capture_output=True,
         timeout=45,
