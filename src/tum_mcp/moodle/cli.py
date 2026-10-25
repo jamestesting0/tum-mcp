@@ -3,9 +3,9 @@ import logging
 import anyio
 import typer
 
-from tum_moodle.auth import SessionStore
-from tum_moodle.config import Paths
-from tum_moodle.login import login
+from tum_mcp.moodle.auth import SessionStore
+from tum_mcp.moodle.config import Paths
+from tum_mcp.moodle.login import login
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -27,7 +27,7 @@ def status() -> None:
 @app.command()
 def serve() -> None:
     """Start the MCP stdio server."""
-    from tum_moodle.server import server
+    from tum_mcp.moodle.server import server
 
     logging.getLogger("httpx2").setLevel(logging.WARNING)
     server.run()

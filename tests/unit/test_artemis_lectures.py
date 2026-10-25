@@ -7,9 +7,9 @@ from tum_mcp.artemis import Artemis
 from tum_mcp.credentials import Credential
 from tum_mcp.errors import CampusError
 from tum_mcp.lectures import Lectures
+from tum_mcp.moodle.models import Extracted, TextPage
 from tum_mcp.settings import Account, Provider
 from tum_mcp.transport import API
-from tum_moodle.models import Extracted, TextPage
 
 
 @pytest.fixture

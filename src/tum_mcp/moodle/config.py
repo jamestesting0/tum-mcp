@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from tum_moodle.platforms import data_root
+from tum_mcp.moodle.platforms import data_root
 
 BASE_URL: Final = "https://www.moodle.tum.de"
 MAX_BYTES: Final = 50 * 1024 * 1024

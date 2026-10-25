@@ -1,10 +1,10 @@
 from functools import cached_property
 
-from tum_moodle.course_scope import current_term, select_courses
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.http_client import MoodleHTTP
-from tum_moodle.models import Course, CoursePage, Material
-from tum_moodle.parsing import materials_from_html
+from tum_mcp.moodle.course_scope import current_term, select_courses
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.http_client import MoodleHTTP
+from tum_mcp.moodle.models import Course, CoursePage, Material
+from tum_mcp.moodle.parsing import materials_from_html
 
 
 class Moodle:

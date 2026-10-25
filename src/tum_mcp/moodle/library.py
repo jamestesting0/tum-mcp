@@ -4,9 +4,9 @@ import time
 from contextlib import closing
 from pathlib import Path
 
-from tum_moodle.config import CACHE_BYTES, CACHE_DAYS, Paths, private_write
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.models import Extracted, Material, SearchHit
+from tum_mcp.moodle.config import CACHE_BYTES, CACHE_DAYS, Paths, private_write
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.models import Extracted, Material, SearchHit
 
 
 class Library:

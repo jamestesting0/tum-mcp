@@ -1,6 +1,4 @@
 The project's original code and documentation are provided under the MIT License.
 
-The TUM logo at plugin/assets/tum-logo.png (assets/tum-logo.png in the packaged
-plugin) is excluded from the MIT License. It belongs to the Technical University
-of Munich and remains subject to its original rights. No trademark rights are
-granted by this project. See plugin/assets/README.md for the source of the image.
+No TUM logo is distributed. TUM names and trademarks belong to their respective
+owners; no trademark rights or university endorsement are granted by this project.

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tum_moodle.secret_files import _secure_windows_path, local_cipher
+from tum_mcp.moodle.secret_files import _secure_windows_path, local_cipher
 
 pytestmark = pytest.mark.skipif(os.name != "nt", reason="Requires native Windows ACLs.")
 

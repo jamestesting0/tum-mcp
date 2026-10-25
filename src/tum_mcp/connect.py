@@ -13,14 +13,14 @@ from pydantic import SecretStr
 from tum_mcp.artemis_models import Identity as ArtemisIdentity
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.auth import Cookie, LoginProgress, Session, SessionStore
+from tum_mcp.moodle.browser_runtime import browser_driver
+from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError, discover_browsers
+from tum_mcp.moodle.config import BASE_URL, Paths
 from tum_mcp.parsing import decode
 from tum_mcp.settings import ARTEMIS, ZULIP, Account, Provider, preferences, save_account
 from tum_mcp.transport import API, MAX_RESPONSE
 from tum_mcp.zulip_models import Identity as ZulipIdentity
-from tum_moodle.auth import Cookie, LoginProgress, Session, SessionStore
-from tum_moodle.browser_runtime import browser_driver
-from tum_moodle.browsers import BrowserChoice, BrowserSetupError, discover_browsers
-from tum_moodle.config import BASE_URL, Paths
 
 
 def connect_zulip(email: str, key: SecretStr) -> Account:

@@ -11,10 +11,10 @@ from keyring.backend import KeyringBackend
 from keyring.errors import KeyringError
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from tum_moodle.config import Paths, private_write
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.platforms import System, system
-from tum_moodle.secret_files import local_cipher, secure_directory
+from tum_mcp.moodle.config import Paths, private_write
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.platforms import System, system
+from tum_mcp.moodle.secret_files import local_cipher, secure_directory
 
 KEYCHAIN_SERVICE: Final = "tum-moodle-integration"
 

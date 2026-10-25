@@ -1,9 +1,9 @@
 from pydantic import Field, JsonValue
 
-from tum_moodle.config import BASE_URL
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.models import Material, Model, Post
-from tum_moodle.parsing import file_id, main_text
+from tum_mcp.moodle.config import BASE_URL
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.models import Material, Model, Post
+from tum_mcp.moodle.parsing import file_id, main_text
 
 
 class Author(Model):

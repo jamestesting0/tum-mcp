@@ -14,7 +14,7 @@ from rich.theme import Theme
 
 from tum_mcp import __version__
 from tum_mcp.connect import ServiceChoice
-from tum_moodle.browsers import BrowserChoice, BrowserSetupError
+from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError
 
 STYLES = {
     "title": "bold",

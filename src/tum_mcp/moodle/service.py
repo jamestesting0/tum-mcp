@@ -2,17 +2,17 @@ import time
 
 from pydantic import JsonValue
 
-from tum_moodle.auth import SessionStore
-from tum_moodle.config import Paths
-from tum_moodle.downloads import save_download
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.extract_worker import run_extraction
-from tum_moodle.forums import posts_from_api
-from tum_moodle.http_client import Download, MoodleHTTP
-from tum_moodle.library import Library
-from tum_moodle.models import Extracted, Material, TextPage
-from tum_moodle.moodle import Moodle
-from tum_moodle.parsing import (
+from tum_mcp.moodle.auth import SessionStore
+from tum_mcp.moodle.config import Paths
+from tum_mcp.moodle.downloads import save_download
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.extract_worker import run_extraction
+from tum_mcp.moodle.forums import posts_from_api
+from tum_mcp.moodle.http_client import Download, MoodleHTTP
+from tum_mcp.moodle.library import Library
+from tum_mcp.moodle.models import Extracted, Material, TextPage
+from tum_mcp.moodle.moodle import Moodle
+from tum_mcp.moodle.parsing import (
     discussions_from_html,
     files_from_html,
     linked_pages_from_html,

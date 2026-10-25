@@ -27,7 +27,7 @@ def run_selector(
         "import sys\n"
         "from tum_mcp import connect\n"
         "from tum_mcp.connect import ConnectionResult\n"
-        "import tum_moodle.browsers as browsers\n"
+        "import tum_mcp.moodle.browsers as browsers\n"
         "browsers.discover_browsers=lambda:(browsers.BrowserChoice('First browser','first'),"
         + ("browsers.BrowserChoice('Second browser','second')," if browser_keys else "")
         + ")\n"

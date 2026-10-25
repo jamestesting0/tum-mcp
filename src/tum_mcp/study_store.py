@@ -7,8 +7,8 @@ from pathlib import Path, PurePosixPath
 from pydantic import ValidationError
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.config import private_write
 from tum_mcp.study_models import StudyState
-from tum_moodle.config import private_write
 
 START = "<!-- tum-mcp:study:start -->"
 END = "<!-- tum-mcp:study:end -->"

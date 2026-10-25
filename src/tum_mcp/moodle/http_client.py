@@ -12,9 +12,9 @@ import httpx2
 from filelock import FileLock, Timeout
 from pydantic import JsonValue, TypeAdapter
 
-from tum_moodle.auth import Cookie, Session, SessionStore
-from tum_moodle.config import BASE_URL, MAX_BYTES, private_write
-from tum_moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.auth import Cookie, Session, SessionStore
+from tum_mcp.moodle.config import BASE_URL, MAX_BYTES, private_write
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
 
 
 def safe_url(url: str) -> str:

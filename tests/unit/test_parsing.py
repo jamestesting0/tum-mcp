@@ -1,8 +1,8 @@
 from datetime import date
 
-from tum_moodle.course_scope import current_term, select_courses
-from tum_moodle.models import Course, Material
-from tum_moodle.parsing import discussions_from_html, materials_from_html
+from tum_mcp.moodle.course_scope import current_term, select_courses
+from tum_mcp.moodle.models import Course, Material
+from tum_mcp.moodle.parsing import discussions_from_html, materials_from_html
 
 
 def test_semester_labels_override_stale_in_progress_dates() -> None:

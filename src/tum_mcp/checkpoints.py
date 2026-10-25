@@ -5,11 +5,11 @@ import time
 from filelock import FileLock
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.config import private_write
 from tum_mcp.parsing import decode
 from tum_mcp.settings import Frozen, data_dir
 from tum_mcp.zulip import Zulip
 from tum_mcp.zulip_models import Query
-from tum_moodle.config import private_write
 
 
 class Checkpoint(Frozen):

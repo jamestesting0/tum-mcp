@@ -13,14 +13,14 @@ import typer
 from tum_mcp import __version__
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.browsers import BrowserSetupError
+from tum_mcp.moodle.errors import MoodleError
 from tum_mcp.settings import (
     Provider,
     find_account,
     preferences,
     save_account,
 )
-from tum_moodle.browsers import BrowserSetupError
-from tum_moodle.errors import MoodleError
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 skills_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
@@ -75,8 +75,8 @@ def connect() -> None:
     from rich.text import Text
 
     from tum_mcp.connect import ConnectionResult, connect_services
+    from tum_mcp.moodle.browsers import discover_browsers
     from tum_mcp.ui import heading, select_browser, select_services, terminal_console
-    from tum_moodle.browsers import discover_browsers
 
     console = terminal_console()
     if not sys.stdin.isatty():

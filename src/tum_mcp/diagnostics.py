@@ -13,11 +13,11 @@ from tum_mcp import __version__
 from tum_mcp.client_hosts import ClientHost, client_home
 from tum_mcp.clients import CLIENTS, client_config_path, read_client_config
 from tum_mcp.errors import CampusError
+from tum_mcp.moodle.browsers import BrowserSetupError, discover_browsers, is_wsl
+from tum_mcp.moodle.platforms import data_root
 from tum_mcp.settings import Frozen, Preferences, Provider, config_path, data_path
 from tum_mcp.skills import inspect_skills
 from tum_mcp.ui import State
-from tum_moodle.browsers import BrowserSetupError, discover_browsers, is_wsl
-from tum_moodle.platforms import data_root
 
 
 class Check(Frozen):
@@ -74,10 +74,10 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             detail="Local encrypted session saved; live authentication not checked.",
         )
         if live:
-            from tum_moodle.auth import SessionStore
-            from tum_moodle.config import Paths
-            from tum_moodle.errors import MoodleError
-            from tum_moodle.http_client import MoodleHTTP
+            from tum_mcp.moodle.auth import SessionStore
+            from tum_mcp.moodle.config import Paths
+            from tum_mcp.moodle.errors import MoodleError
+            from tum_mcp.moodle.http_client import MoodleHTTP
 
             try:
                 MoodleHTTP(SessionStore(Paths(moodle_root), storage="file")).get("/my/courses.php")

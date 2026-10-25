@@ -9,9 +9,9 @@ from tum_mcp.cli import app, main
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.diagnostics import collect_diagnostics
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle import auth
 from tum_mcp.settings import Account, Provider, save_account
 from tum_mcp.ui import State
-from tum_moodle import auth
 
 
 def test_doctor_is_local_only_and_does_not_create_state_or_access_keychain(
@@ -147,7 +147,7 @@ def test_connect_rejects_all_legacy_selection_arguments_before_opening_a_browser
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "tum_moodle.browsers.discover_browsers", lambda: pytest.fail("No browser discovery")
+        "tum_mcp.moodle.browsers.discover_browsers", lambda: pytest.fail("No browser discovery")
     )
     result = CliRunner().invoke(app, ["connect", *arguments])
     assert result.exit_code == 2
@@ -156,13 +156,13 @@ def test_connect_rejects_all_legacy_selection_arguments_before_opening_a_browser
 def test_all_campus_authentication_tools_direct_users_to_the_same_selector(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from tum_mcp.moodle.server import moodle_login
     from tum_mcp.server import tum_connect
-    from tum_moodle.server import moodle_login
 
     monkeypatch.setenv("TUM_MOODLE_SESSION_STORAGE", "file")
     monkeypatch.setattr(auth, "system_keyring", lambda: pytest.fail("No native store"))
     monkeypatch.setattr(
-        "tum_moodle.server.subprocess.Popen",
+        "tum_mcp.moodle.server.subprocess.Popen",
         lambda *args, **kwargs: pytest.fail("No background browser"),
     )
     assert "tum-mcp connect" in tum_connect()

@@ -10,10 +10,10 @@ from keyring.backend import KeyringBackend
 from tum_mcp import connect
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.errors import CampusError
+from tum_mcp.moodle.auth import Cookie
+from tum_mcp.moodle.browsers import BrowserChoice
 from tum_mcp.settings import ARTEMIS, ZULIP, Account, Provider, preferences
 from tum_mcp.transport import API
-from tum_moodle.auth import Cookie
-from tum_moodle.browsers import BrowserChoice
 
 
 def test_zulip_browser_reads_use_session_json_routes_without_api_keys() -> None:

@@ -8,15 +8,15 @@ from pathlib import Path
 from filelock import FileLock
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.browser_runtime import NODE_HASHES, NODE_VERSION
+from tum_mcp.moodle.browsers import is_wsl, windows_host, wsl_path
+from tum_mcp.moodle.config import private_write
+from tum_mcp.moodle.downloads import downloads_root
+from tum_mcp.moodle.platforms import data_root
 from tum_mcp.runtime_leases import removal_marker, require_idle_runtimes
 from tum_mcp.settings import data_dir, data_path, preferences
 from tum_mcp.uninstall import uninstall_client
 from tum_mcp.updates import installation_targets
-from tum_moodle.browser_runtime import NODE_HASHES, NODE_VERSION
-from tum_moodle.browsers import is_wsl, windows_host, wsl_path
-from tum_moodle.config import private_write
-from tum_moodle.downloads import downloads_root
-from tum_moodle.platforms import data_root
 
 
 def remove_clients(*, purge_runtime: bool = False, forget_credentials: bool = False) -> int:

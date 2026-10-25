@@ -5,10 +5,10 @@ import pytest
 from keyring.backend import KeyringBackend
 from keyring.errors import KeyringLocked
 
-from tum_moodle import auth
-from tum_moodle.auth import Cookie, LoginProgress, Session, SessionStore
-from tum_moodle.config import Paths
-from tum_moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle import auth
+from tum_mcp.moodle.auth import Cookie, LoginProgress, Session, SessionStore
+from tum_mcp.moodle.config import Paths
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
 
 
 @pytest.fixture

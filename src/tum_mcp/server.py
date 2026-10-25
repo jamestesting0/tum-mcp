@@ -11,6 +11,7 @@ from tum_mcp.artemis_models import CourseDirectory, ExerciseView, FeedbackView, 
 from tum_mcp.checkpoints import Checkpoint
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_models import AttachmentView, LectureDirectory, LectureView
+from tum_mcp.moodle.server import server
 from tum_mcp.settings import (
     Account,
     CourseMapping,
@@ -23,7 +24,6 @@ from tum_mcp.settings import (
 from tum_mcp.transport import API
 from tum_mcp.zulip import Zulip
 from tum_mcp.zulip_models import Channels, MessagePage, Query, Topics
-from tum_moodle.server import server
 
 READ = ToolAnnotations(read_only_hint=True, destructive_hint=False, open_world_hint=True)
 Id = Annotated[int, Field(gt=0)]

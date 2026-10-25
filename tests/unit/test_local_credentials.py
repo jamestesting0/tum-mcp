@@ -5,12 +5,12 @@ import pytest
 from keyring.backend import KeyringBackend
 
 from tum_mcp.credentials import Credential, Vault
+from tum_mcp.moodle import auth
+from tum_mcp.moodle.auth import Cookie, Session, SessionStore
+from tum_mcp.moodle.config import Paths
+from tum_mcp.moodle.errors import MoodleError
+from tum_mcp.moodle.secret_files import local_cipher
 from tum_mcp.settings import Account, Provider
-from tum_moodle import auth
-from tum_moodle.auth import Cookie, Session, SessionStore
-from tum_moodle.config import Paths
-from tum_moodle.errors import MoodleError
-from tum_moodle.secret_files import local_cipher
 
 
 def no_keychain() -> KeyringBackend:

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from tum_moodle import extraction
-from tum_moodle.extraction import extract_office
+from tum_mcp.moodle import extraction
+from tum_mcp.moodle.extraction import extract_office
 
 
 def test_word_document_text_is_extracted() -> None:

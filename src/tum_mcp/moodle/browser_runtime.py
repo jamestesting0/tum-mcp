@@ -18,9 +18,9 @@ from typing import Final
 import httpx2
 from filelock import FileLock, Timeout
 
-from tum_moodle.browsers import BrowserChoice, BrowserSetupError, windows_host, wsl_path
-from tum_moodle.config import private_write
-from tum_moodle.platforms import app_root
+from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError, windows_host, wsl_path
+from tum_mcp.moodle.config import private_write
+from tum_mcp.moodle.platforms import app_root
 
 NODE_VERSION: Final = "22.23.3"
 NODE_HASHES: Final = {

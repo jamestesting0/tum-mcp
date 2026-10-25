@@ -10,8 +10,8 @@ import httpx2
 import pytest
 from playwright.sync_api import sync_playwright
 
-from tum_moodle import browser_runtime
-from tum_moodle.browsers import BrowserChoice, BrowserSetupError
+from tum_mcp.moodle import browser_runtime
+from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError
 
 
 @pytest.mark.parametrize("mode", ["success", "text-corruption", "failure", "timeout"])

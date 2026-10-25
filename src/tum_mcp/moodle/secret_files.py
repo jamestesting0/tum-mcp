@@ -10,8 +10,8 @@ from pathlib import Path
 from cryptography.fernet import Fernet
 from filelock import FileLock
 
-from tum_moodle.config import private_write
-from tum_moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.config import private_write
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
 
 
 @lru_cache(maxsize=64)

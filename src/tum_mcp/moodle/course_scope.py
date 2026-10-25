@@ -2,7 +2,7 @@ import re
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from tum_moodle.models import Course
+from tum_mcp.moodle.models import Course
 
 
 def current_term(today: date | None = None) -> str:

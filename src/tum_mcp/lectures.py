@@ -17,11 +17,11 @@ from tum_mcp.lecture_models import (
     LectureUnit,
     LectureView,
 )
+from tum_mcp.moodle.config import private_write
+from tum_mcp.moodle.errors import MoodleError
+from tum_mcp.moodle.extract_worker import run_extraction
 from tum_mcp.parsing import decode
 from tum_mcp.settings import data_dir
-from tum_moodle.config import private_write
-from tum_moodle.errors import MoodleError
-from tum_moodle.extract_worker import run_extraction
 
 
 def released(date: datetime | None) -> bool:

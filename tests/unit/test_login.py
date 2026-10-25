@@ -5,11 +5,11 @@ import anyio
 import pytest
 from playwright.async_api import Error as BrowserError
 
-from tum_moodle import login as login_module
-from tum_moodle.auth import SessionStore
-from tum_moodle.browsers import BrowserChoice
-from tum_moodle.config import Paths
-from tum_moodle.errors import MoodleError
+from tum_mcp.moodle import login as login_module
+from tum_mcp.moodle.auth import SessionStore
+from tum_mcp.moodle.browsers import BrowserChoice
+from tum_mcp.moodle.config import Paths
+from tum_mcp.moodle.errors import MoodleError
 
 
 @pytest.mark.parametrize(

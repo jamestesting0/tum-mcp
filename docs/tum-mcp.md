@@ -38,8 +38,8 @@ and `tum-mcp setup --client codex`. The following commands are for maintainers.
 
 ```sh
 uv sync --locked
-uv run ruff check src tests plugin/scripts scripts
-uv run ruff format --check src tests plugin/scripts scripts
+uv run ruff check src tests scripts
+uv run ruff format --check src tests scripts
 uv run pytest -q -m 'not live'
 node npm/build.mjs
 npm test

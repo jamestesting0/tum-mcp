@@ -4,10 +4,10 @@ import httpx2
 import pytest
 from keyring.backend import KeyringBackend
 
-from tum_moodle import http_client
-from tum_moodle.auth import Cookie, Session, SessionStore
-from tum_moodle.config import Paths
-from tum_moodle.errors import MoodleError
+from tum_mcp.moodle import http_client
+from tum_mcp.moodle.auth import Cookie, Session, SessionStore
+from tum_mcp.moodle.config import Paths
+from tum_mcp.moodle.errors import MoodleError
 
 
 def make_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SessionStore:

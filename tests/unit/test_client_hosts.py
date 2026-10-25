@@ -9,8 +9,8 @@ from tum_mcp import client_hosts
 from tum_mcp.client_hosts import ClientHost, StdioLaunch
 from tum_mcp.clients import client_config_path, install_client
 from tum_mcp.errors import CampusError
+from tum_mcp.moodle.browsers import BrowserSetupError
 from tum_mcp.uninstall import uninstall_client
-from tum_moodle.browsers import BrowserSetupError
 
 
 def test_windows_registration_requires_wsl(monkeypatch: pytest.MonkeyPatch) -> None:

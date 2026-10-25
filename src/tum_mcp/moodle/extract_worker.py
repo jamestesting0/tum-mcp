@@ -10,9 +10,9 @@ from typing import Final
 
 import psutil
 
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.extraction import extract
-from tum_moodle.models import Extracted
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.extraction import extract
+from tum_mcp.moodle.models import Extracted
 
 EXTRACTION_SECONDS: Final = 60
 
@@ -34,7 +34,7 @@ def run_extraction(body: bytes, content_type: str) -> Extracted:
         path = Path(directory) / "document"
         path.write_bytes(body)
         with subprocess.Popen(
-            [sys.executable, "-m", "tum_moodle.extract_worker", str(path), content_type],
+            [sys.executable, "-m", "tum_mcp.moodle.extract_worker", str(path), content_type],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             start_new_session=os.name == "posix",

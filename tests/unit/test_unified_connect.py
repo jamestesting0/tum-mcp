@@ -10,12 +10,12 @@ from tum_mcp import connect
 from tum_mcp.connect import ServiceChoice
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.errors import CampusError
+from tum_mcp.moodle import auth
+from tum_mcp.moodle.auth import SessionStore
+from tum_mcp.moodle.browsers import BrowserChoice
+from tum_mcp.moodle.config import BASE_URL, Paths
 from tum_mcp.settings import ARTEMIS, ZULIP, Account, Provider, preferences, save_account
 from tum_mcp.transport import API
-from tum_moodle import auth
-from tum_moodle.auth import SessionStore
-from tum_moodle.browsers import BrowserChoice
-from tum_moodle.config import BASE_URL, Paths
 
 
 @pytest.mark.parametrize(

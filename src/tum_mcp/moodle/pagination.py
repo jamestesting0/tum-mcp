@@ -3,8 +3,8 @@ import hashlib
 
 from pydantic import JsonValue
 
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.models import Extracted
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.models import Extracted
 
 
 def offset_of(cursor: str | None) -> int:

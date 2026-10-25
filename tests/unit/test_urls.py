@@ -1,7 +1,7 @@
 import pytest
 
-from tum_moodle.errors import MoodleError
-from tum_moodle.http_client import safe_url
+from tum_mcp.moodle.errors import MoodleError
+from tum_mcp.moodle.http_client import safe_url
 
 
 @pytest.mark.parametrize(

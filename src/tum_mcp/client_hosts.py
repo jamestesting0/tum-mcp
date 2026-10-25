@@ -7,10 +7,10 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Literal, NotRequired, TypedDict, assert_never
 
+from tum_mcp.moodle.browsers import BrowserSetupError, is_wsl, windows_host, wsl_path
+from tum_mcp.moodle.downloads import downloads_root
+from tum_mcp.moodle.platforms import data_root
 from tum_mcp.settings import config_path, data_path
-from tum_moodle.browsers import BrowserSetupError, is_wsl, windows_host, wsl_path
-from tum_moodle.downloads import downloads_root
-from tum_moodle.platforms import data_root
 
 
 class ClientHost(StrEnum):

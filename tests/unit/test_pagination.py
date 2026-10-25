@@ -1,8 +1,8 @@
 import pytest
 
-from tum_moodle.errors import MoodleError
-from tum_moodle.models import Extracted, TextPage
-from tum_moodle.pagination import excerpt, offset_of
+from tum_mcp.moodle.errors import MoodleError
+from tum_mcp.moodle.models import Extracted, TextPage
+from tum_mcp.moodle.pagination import excerpt, offset_of
 
 
 def test_continuation_preserves_selected_page_range() -> None:

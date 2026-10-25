@@ -7,9 +7,9 @@ from urllib.parse import unquote, urlsplit
 
 from pydantic import JsonValue
 
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.http_client import Download
-from tum_moodle.models import Material
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.http_client import Download
+from tum_mcp.moodle.models import Material
 
 
 def downloads_root() -> Path:

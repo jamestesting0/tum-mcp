@@ -24,7 +24,7 @@ def setup(
     typer.echo("Runtime ready. Complete service connections and select scopes separately.")
     if not client:
         typer.echo("Select adapters with --client codex, claude, cursor, antigravity, or generic.")
-    from tum_moodle.browsers import is_wsl
+    from tum_mcp.moodle.browsers import is_wsl
 
     if is_wsl() and host == ClientHost.LOCAL:
         typer.echo("For a Windows desktop client, repeat setup with --host windows.")

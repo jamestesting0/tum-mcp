@@ -3,12 +3,12 @@ from typing import Literal
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
-from tum_moodle.config import BASE_URL
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.models import Extracted, Material, TextPage
-from tum_moodle.pagination import excerpt, offset_of
-from tum_moodle.parsing import files_from_html, main_text
-from tum_moodle.service import Service
+from tum_mcp.moodle.config import BASE_URL
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.models import Extracted, Material, TextPage
+from tum_mcp.moodle.pagination import excerpt, offset_of
+from tum_mcp.moodle.parsing import files_from_html, main_text
+from tum_mcp.moodle.service import Service
 
 
 class Member(BaseModel):

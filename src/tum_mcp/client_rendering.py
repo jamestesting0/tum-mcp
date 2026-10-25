@@ -14,8 +14,8 @@ from tum_mcp import __version__
 from tum_mcp.client_config import Marketplace, client_config_path, read_client_config
 from tum_mcp.client_hosts import ClientHost, StdioLaunch, client_launch, storage_environment
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.config import private_write
 from tum_mcp.skills import export_pack, implicit_invocation, inspect_skills
-from tum_moodle.config import private_write
 
 
 def same_tree(left: Path, right: Path) -> bool:

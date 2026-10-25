@@ -9,9 +9,9 @@ import pypdfium2
 from defusedxml import ElementTree
 from pypdf import PdfReader
 
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.models import Extracted, TextPage
-from tum_moodle.parsing import main_text
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.models import Extracted, TextPage
+from tum_mcp.moodle.parsing import main_text
 
 
 def image_text(path: Path) -> str:

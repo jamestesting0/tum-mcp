@@ -11,7 +11,7 @@ def test_stdio_server_reports_login_required(tmp_path: Path) -> None:
     async def check() -> None:
         params = StdioServerParameters(
             command=sys.executable,
-            args=["-m", "tum_moodle", "serve"],
+            args=["-m", "tum_mcp.moodle", "serve"],
             env={**os.environ, "TUM_MOODLE_DATA_DIR": str(tmp_path)},
         )
         async with stdio_client(params) as (reader, writer):

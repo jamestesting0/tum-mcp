@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from tum_moodle.downloads import list_downloads, save_download
-from tum_moodle.errors import MoodleError
-from tum_moodle.http_client import Download
-from tum_moodle.models import Material
+from tum_mcp.moodle.downloads import list_downloads, save_download
+from tum_mcp.moodle.errors import MoodleError
+from tum_mcp.moodle.http_client import Download
+from tum_mcp.moodle.models import Material
 
 
 def test_download_creates_a_real_local_file_with_safe_name(

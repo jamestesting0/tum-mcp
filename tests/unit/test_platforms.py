@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from tum_moodle import platforms
-from tum_moodle.platforms import System
+from tum_mcp.moodle import platforms
+from tum_mcp.moodle.platforms import System
 
 
 @pytest.mark.parametrize(

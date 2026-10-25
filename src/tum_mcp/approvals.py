@@ -11,9 +11,9 @@ from filelock import FileLock
 from tum_mcp.action_models import Action, ActionReceipt, Grant, action_fingerprint
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.config import private_write
 from tum_mcp.parsing import decode
 from tum_mcp.settings import data_dir
-from tum_moodle.config import private_write
 
 
 class Approvals:

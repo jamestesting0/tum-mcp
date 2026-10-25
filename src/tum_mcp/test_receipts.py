@@ -6,10 +6,10 @@ from cryptography.fernet import InvalidToken
 
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.config import private_write
 from tum_mcp.parsing import decode
 from tum_mcp.settings import data_dir
 from tum_mcp.workspace import WorkspaceReceipt
-from tum_moodle.config import private_write
 
 if TYPE_CHECKING:
     from tum_mcp.runner import TestReceipt

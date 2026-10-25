@@ -1,7 +1,7 @@
 import pytest
 from keyring.backend import KeyringBackend
 
-from tum_moodle import auth
+from tum_mcp.moodle import auth
 
 
 class MemoryKeyring(KeyringBackend):

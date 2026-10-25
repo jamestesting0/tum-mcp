@@ -10,9 +10,9 @@ import httpx2
 
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.auth import Session
+from tum_mcp.moodle.http_client import cookie_jar
 from tum_mcp.settings import Account, Provider
-from tum_moodle.auth import Session
-from tum_moodle.http_client import cookie_jar
 
 READ_PATHS: Final = {
     Provider.ZULIP: re.compile(

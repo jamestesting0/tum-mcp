@@ -6,9 +6,9 @@ import psutil
 import pytest
 from PIL import Image, ImageDraw, ImageFont
 
-from tum_moodle import extract_worker
-from tum_moodle.errors import MoodleError
-from tum_moodle.extract_worker import run_extraction
+from tum_mcp.moodle import extract_worker
+from tum_mcp.moodle.errors import MoodleError
+from tum_mcp.moodle.extract_worker import run_extraction
 
 
 def test_worker_extracts_text_with_process_limits() -> None:

@@ -3,8 +3,8 @@
 from pydantic import AwareDatetime, Field, RootModel
 
 from tum_mcp.artemis_models import Exercise, Reference, Wire
+from tum_mcp.moodle.models import TextPage
 from tum_mcp.settings import Frozen, PositiveId
-from tum_moodle.models import TextPage
 
 
 class Attachment(Wire):

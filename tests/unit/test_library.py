@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from tum_moodle.config import Paths
-from tum_moodle.library import Library
-from tum_moodle.models import Extracted, Material, TextPage
+from tum_mcp.moodle.config import Paths
+from tum_mcp.moodle.library import Library
+from tum_mcp.moodle.models import Extracted, Material, TextPage
 
 
 def material() -> Material:

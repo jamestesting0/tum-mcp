@@ -4,8 +4,8 @@ from urllib.parse import parse_qs, urljoin, urlsplit
 
 from bs4 import BeautifulSoup, Tag
 
-from tum_moodle.config import BASE_URL
-from tum_moodle.models import Material
+from tum_mcp.moodle.config import BASE_URL
+from tum_mcp.moodle.models import Material
 
 
 def text_of(node: Tag) -> str:

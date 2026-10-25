@@ -17,10 +17,10 @@ from urllib.parse import urlsplit
 
 from playwright.sync_api import Route, sync_playwright
 
-from tum_moodle.auth import Cookie, Session, SessionStore
-from tum_moodle.browser_runtime import browser_driver
-from tum_moodle.browsers import discover_browsers, is_wsl
-from tum_moodle.config import Paths
+from tum_mcp.moodle.auth import Cookie, Session, SessionStore
+from tum_mcp.moodle.browser_runtime import browser_driver
+from tum_mcp.moodle.browsers import discover_browsers, is_wsl
+from tum_mcp.moodle.config import Paths
 
 HTML = """<!doctype html><title>Synthetic local sign-in</title>
 <button onclick="document.cookie='MoodleSession=synthetic-browser-only; path=/; secure';

@@ -13,9 +13,9 @@ from tum_mcp.artemis_models import ExerciseView
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.git_ops import repository_url, run_git
+from tum_mcp.moodle.config import private_write
 from tum_mcp.parsing import decode
 from tum_mcp.settings import Frozen, PositiveId, preferences
-from tum_moodle.config import private_write
 
 
 class WorkspaceReceipt(Frozen):

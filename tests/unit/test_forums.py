@@ -1,8 +1,8 @@
 import pytest
 
-from tum_moodle.errors import MoodleError
-from tum_moodle.forums import posts_from_api
-from tum_moodle.models import Material
+from tum_mcp.moodle.errors import MoodleError
+from tum_mcp.moodle.forums import posts_from_api
+from tum_mcp.moodle.models import Material
 
 
 def test_structured_forum_posts_keep_reply_relationships() -> None:

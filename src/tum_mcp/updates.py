@@ -10,8 +10,8 @@ from tum_mcp.client_hosts import ClientHost, client_home
 from tum_mcp.client_installs import ClientName, Installation, load_receipt, receipt_path
 from tum_mcp.clients import CLIENTS, client_config_path, install_client, read_client_config
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.browsers import BrowserSetupError, is_wsl
 from tum_mcp.settings import config_path
-from tum_moodle.browsers import BrowserSetupError, is_wsl
 
 
 @dataclass(frozen=True, slots=True)

@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from tum_moodle import cli, server
+from tum_mcp.moodle import cli, server
 
 
 def test_server_keeps_session_keys_out_of_request_logs(

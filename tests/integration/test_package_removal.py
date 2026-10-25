@@ -8,9 +8,9 @@ from tum_mcp.cli import app
 from tum_mcp.client_config import client_config_path
 from tum_mcp.clients import install_client
 from tum_mcp.errors import CampusError
+from tum_mcp.moodle import auth
 from tum_mcp.removal import remove_clients
 from tum_mcp.runtime_leases import require_idle_runtimes, runtime_lease
-from tum_moodle import auth
 
 
 @pytest.fixture

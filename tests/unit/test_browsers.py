@@ -3,8 +3,8 @@ from pathlib import Path, PureWindowsPath
 
 import pytest
 
-from tum_moodle import browsers
-from tum_moodle.browsers import BrowserSetupError, WindowsHost
+from tum_mcp.moodle import browsers
+from tum_mcp.moodle.browsers import BrowserSetupError, WindowsHost
 
 
 def test_linux_discovery_supports_multiple_chromium_browsers_without_launching(

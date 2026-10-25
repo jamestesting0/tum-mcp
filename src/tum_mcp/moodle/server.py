@@ -7,16 +7,16 @@ from typing import Annotated, Literal
 from mcp.types import ToolAnnotations
 from pydantic import Field, JsonValue, TypeAdapter
 
-from tum_moodle.auth import SessionStore
-from tum_moodle.config import Paths
-from tum_moodle.downloads import list_downloads
-from tum_moodle.errors import ErrorCode, MoodleError
-from tum_moodle.http_client import MoodleHTTP
-from tum_moodle.models import Post, TextPage
-from tum_moodle.pagination import excerpt, offset_of
-from tum_moodle.personal_records import PersonalRecords
-from tum_moodle.protocol import StrictMCPServer
-from tum_moodle.service import Service
+from tum_mcp.moodle.auth import SessionStore
+from tum_mcp.moodle.config import Paths
+from tum_mcp.moodle.downloads import list_downloads
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.http_client import MoodleHTTP
+from tum_mcp.moodle.models import Post, TextPage
+from tum_mcp.moodle.pagination import excerpt, offset_of
+from tum_mcp.moodle.personal_records import PersonalRecords
+from tum_mcp.moodle.protocol import StrictMCPServer
+from tum_mcp.moodle.service import Service
 
 server = StrictMCPServer("TUM Moodle")
 READ = ToolAnnotations(read_only_hint=True, open_world_hint=True)
@@ -55,7 +55,7 @@ def moodle_login() -> dict[str, str]:
     if status["state"] == "AUTHENTICATING":
         return {"state": "AUTHENTICATING", "message": "Complete sign-in in the open window."}
     subprocess.Popen(
-        [sys.executable, "-m", "tum_moodle", "login"],
+        [sys.executable, "-m", "tum_mcp.moodle", "login"],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -277,7 +277,7 @@ def moodle_read_personal_record(
     description="Delete this integration's managed document cache and search index.",
 )
 def moodle_clear_cache() -> dict[str, str]:
-    from tum_moodle.library import Library
+    from tum_mcp.moodle.library import Library
 
     store = SessionStore(Paths.default())
     Library(store.paths, store.generation()).clear()

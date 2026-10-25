@@ -10,12 +10,12 @@ from keyring.errors import KeyringError
 from pydantic import Field, SecretStr, ValidationError
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle import auth
+from tum_mcp.moodle.auth import Cookie
+from tum_mcp.moodle.config import private_write
+from tum_mcp.moodle.errors import MoodleError
+from tum_mcp.moodle.secret_files import local_cipher
 from tum_mcp.settings import Account, Frozen, data_dir
-from tum_moodle import auth
-from tum_moodle.auth import Cookie
-from tum_moodle.config import private_write
-from tum_moodle.errors import MoodleError
-from tum_moodle.secret_files import local_cipher
 
 SERVICE: Final = "tum-mcp"
 

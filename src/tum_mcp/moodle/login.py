@@ -6,11 +6,11 @@ from filelock import FileLock, Timeout
 from playwright.async_api import Error as BrowserError
 from playwright.async_api import async_playwright
 
-from tum_moodle.auth import Cookie, LoginProgress, Session, SessionStore
-from tum_moodle.browser_runtime import browser_driver
-from tum_moodle.browsers import BrowserSetupError, discover_browsers
-from tum_moodle.config import BASE_URL, Paths
-from tum_moodle.errors import ErrorCode, MoodleError
+from tum_mcp.moodle.auth import Cookie, LoginProgress, Session, SessionStore
+from tum_mcp.moodle.browser_runtime import browser_driver
+from tum_mcp.moodle.browsers import BrowserSetupError, discover_browsers
+from tum_mcp.moodle.config import BASE_URL, Paths
+from tum_mcp.moodle.errors import ErrorCode, MoodleError
 
 
 async def login(paths: Paths) -> None:

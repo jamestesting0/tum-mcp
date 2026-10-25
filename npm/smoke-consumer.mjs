@@ -41,9 +41,9 @@ try {
   assert.ok(diagnostics.services.every(service => service.state !== 'Ready'));
   const storage = `import os
 from pathlib import Path
-from tum_moodle import auth
-from tum_moodle.auth import Cookie,Session,SessionStore
-from tum_moodle.config import Paths
+from tum_mcp.moodle import auth
+from tum_mcp.moodle.auth import Cookie,Session,SessionStore
+from tum_mcp.moodle.config import Paths
 from tum_mcp.clients import install_client,client_config_path,read_client_config
 from tum_mcp.credentials import Credential,Vault
 from tum_mcp.settings import Account,Provider
@@ -86,7 +86,7 @@ for name in ('cursor','antigravity'):
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters,stdio_client
 from tum_mcp.client_hosts import ClientHost,client_launch
-from tum_moodle.browsers import is_wsl
+from tum_mcp.moodle.browsers import is_wsl
 async def check():
     launch=client_launch(ClientHost.WINDOWS if is_wsl() else ClientHost.LOCAL)
     params=StdioServerParameters(**(launch.entry()|{'env':{**os.environ,**launch.entry().get('env',{})}}))

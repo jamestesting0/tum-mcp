@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import pytest
 
-from tum_moodle.auth import system_keyring
+from tum_mcp.moodle.auth import system_keyring
 
 
 def test_native_credential_store_round_trip() -> None:

@@ -12,8 +12,8 @@ from uuid import uuid4
 from filelock import FileLock, Timeout
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import data_dir, data_path
-from tum_moodle.config import private_write
 
 
 def removal_marker() -> Path:

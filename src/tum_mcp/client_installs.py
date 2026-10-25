@@ -10,9 +10,9 @@ from pydantic import Field, JsonValue, ValidationError, model_validator
 
 from tum_mcp.client_hosts import ClientHost
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen, config_path
 from tum_mcp.skill_catalog import CURRENT_SKILLS, LEGACY_SKILLS
-from tum_moodle.config import private_write
 
 ClientName = Literal["codex", "claude", "cursor", "antigravity", "generic"]
 

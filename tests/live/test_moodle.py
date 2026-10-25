@@ -6,7 +6,7 @@ import pytest
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-from tum_moodle.service import Service
+from tum_mcp.moodle.service import Service
 
 pytestmark = [
     pytest.mark.live,
