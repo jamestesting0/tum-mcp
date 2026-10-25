@@ -36,13 +36,9 @@ Select services with **Space**, then **Enter**. Choose an installed browser and
 complete sign-in there. Only selected tabs open; Zulip needs no API key.
 Enable the [course and channel scopes](docs/tum-mcp.md#connections-and-scopes) you want to use.
 
-| Client | Setup |
-| --- | --- |
-| Codex | `--client codex` · plugin and skills; enable/restart when prompted |
-| Claude Code | `--client claude` · MCP registration and skills |
-| Cursor | `--client cursor` · MCP registration and all five skills; restart |
-| Google Antigravity | `--client antigravity` · MCP registration and all five skills; restart |
-| Other MCP clients | `--client generic` · configuration for manual installation |
+Choose a client with `--client`: `codex`, `claude`, `cursor` or `antigravity`.
+Setup configures MCP and installs all five skills; follow any activation or
+restart prompts. Use `generic` for manual MCP setup.
 
 For existing Cursor and Antigravity setups, run `tum-mcp update` to add the skills.
 Updates and uninstall preserve customized files and report them for review.
@@ -51,7 +47,7 @@ Supports macOS, Windows, glibc Linux x86_64/ARM64 and WSL 3.x. In WSL, sign-in
 opens a Windows browser. Add `--host windows` to setup for a Windows client that
 uses the WSL backend. [Browser and WSL setup](docs/setup.md#wsl).
 
-Setup supplies a private Python runtime. New connections use encrypted local
+Setup supplies a private Python runtime. Connections use encrypted local
 files and need no native keyring, Git or Docker.
 
 ## Read and study
@@ -186,7 +182,7 @@ npm uninstall --global @jamestesting888/tum-mcp
 Managed registrations and unchanged skills are removed. Settings, sessions,
 downloads and study projects are preserved. After closing clients, add
 `--purge-runtime` to remove generated runtimes or `--forget-credentials` to
-remove saved local sessions and historical Git tokens. [Removal details](docs/setup.md#update-and-remove).
+remove saved local credentials. [Removal details](docs/setup.md#update-and-remove).
 
 [Guide](docs/tum-mcp.md) · [Setup](docs/setup.md) · [Study workflows](docs/study.md) · [Development](docs/development.md)
 

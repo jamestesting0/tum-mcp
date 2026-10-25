@@ -35,11 +35,10 @@ Run **`tum-mcp connect`**, with no arguments, in an interactive terminal:
 3. Complete TUM sign-in/MFA in the opened window. Only selected service tabs open.
 4. Return to the terminal for the saved-connection result.
 
-Moodle uses exactly the same selector and storage flow as Artemis and Zulip.
-No API key or Keychain prompt is needed. A temporary browser profile keeps the
-connection separate from your everyday browser. Ctrl+C closes it and preserves
+All three services use the same sign-in and encrypted session storage flow.
+No API key or native credential-store prompt is needed. A temporary browser
+profile keeps the connection separate from your everyday browser. Ctrl+C closes it and preserves
 connections that already completed. A dumb terminal uses numbered prompts.
-Old service arguments and `--service`/`--auth` flags are no longer accepted.
 
 Chrome, Edge, Brave, Chromium, Vivaldi and Opera are detected in their standard
 locations. Selected preview channels and Opera GX are detected where installed.
@@ -113,7 +112,7 @@ browser discovery still requires functioning interop.
 Sessions are encrypted with owner-restricted local key files. This avoids native
 credential-store prompts, but anyone obtaining both key and ciphertext can
 decrypt them. [Storage locations and recovery](tum-mcp.md#connections-and-scopes)
-explain migration and backup. Existing Moodle data and downloads are preserved.
+explain where sessions are saved and how to back them up.
 
 ## Update and remove
 
@@ -172,23 +171,11 @@ npm uninstall --global @jamestesting888/tum-mcp
 helper exits, and removes unchanged managed bootstrap/browser-driver caches.
 Active tracked backends or unrecognized runtime files stop automatic removal.
 Paths overlapping configured assignment work, downloads or Moodle data are
-protected. `--forget-credentials` removes local encrypted service sessions, keys
-and participation Git tokens; it does not revoke remote credentials. Native
-Keychain/Credential Manager/Secret Service records and legacy Moodle sessions
-stay intact. Settings, custom skills, course cache, downloads and assignment
-work are retained by these commands. No command recursively deletes the campus
+protected. `--forget-credentials` removes saved local credentials and session
+keys; it does not revoke remote credentials. Settings, custom skills, course
+cache, downloads and assignment work are retained by these commands.
+No command recursively deletes the campus
 data root. Course audio and optional shared speech models/runtimes also remain.
 Remove a shared speech cache only when explicitly requested and no other course
 needs it; its host paths are documented in the audio skill. If removal is
-interrupted, run npm `setup` to recover before reuse.
-
-## Existing Moodle-only installations
-
-The older `tum-moodle` commands and sixteen `moodle_*` tools remain compatible.
-The separate source/plugin installer retains its original native credential
-store: macOS Keychain, Windows Credential Manager, or Linux Secret Service.
-Its native-store identity, existing session paths and downloads remain intact.
-The combined `tum-mcp serve` uses local-file storage and directs all login
-requests to `tum-mcp connect`. Reconnect once through that selector to create the
-new session; no automatic extraction of older native-store secrets occurs.
-Disable the older plugin when activating TUM MCP to avoid duplicate tools.
+interrupted, run `tum-mcp setup --client NAME` to recover before reuse.

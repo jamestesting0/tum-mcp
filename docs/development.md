@@ -2,8 +2,6 @@
 
 The npm package is the distribution. Its wheel contains one Python package,
 `src/tum_mcp/`, with peer `moodle/`, `artemis/` and `zulip/` provider packages.
-The retired standalone Moodle plugin and its checkout installer are no longer
-maintained.
 Client adapters still generate the configuration each host needs.
 
 ## Checks
@@ -97,14 +95,7 @@ tag and artifact integrity before pushing the release documentation.
 
 Client setup installs managed copies of the repository's skills; those copies are
 outputs, not another source tree. Use `skills customize` for a personal override.
-The Codex adapter generates a small host plugin because that client uses it to
-load skills and MCP together; it is separate from the removed top-level Moodle
-plugin distribution.
-
-Keep Moodle's existing native-store service/account identity, session paths and
-download locations stable during migrations. Environment variable names and the
-`tum-moodle` CLI alias remain compatible; its implementation now resides inside
-`tum_mcp.moodle`. No automatic native-store secret extraction occurs.
+The Codex adapter generates a small host plugin to load skills and MCP together.
 
 Extraction uses bounded subprocesses. POSIX enforces CPU/process-group limits;
 Windows terminates the worker and observed children. Study imports and preview

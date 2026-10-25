@@ -20,8 +20,8 @@
   Reuse isolated test fixtures,
   retain native/platform coverage and expose slow tests and failures in CI.
 - Preserve Windows CRLF study instructions through repeated synchronization.
-- Group Artemis and Zulip implementation by provider, retaining read-only campus
-  tools and Moodle compatibility. Fix OCR with aliased macOS temporary paths.
+- Group Artemis and Zulip implementation by provider, retaining read-only
+  course tools. Fix OCR with aliased macOS temporary paths.
 
 Upgrading does not rebuild personal study sites automatically. Ask your agent to
 update the prepared website; customized renderer files are preserved for review.

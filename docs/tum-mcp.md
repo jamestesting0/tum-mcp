@@ -5,15 +5,14 @@ Version **0.6.0** provides read-only course retrieval and five local study workf
 
 ## Current capabilities
 
-All sixteen `moodle_*` compatibility tools remain available, including materials,
-announcements, forums and explicitly scoped private-record reads. Artemis adds
+The sixteen `moodle_*` tools provide materials, announcements, forums and
+explicitly scoped private-record reads. Artemis adds
 available-course metadata, lectures and learning units, student PDF attachments,
 released non-quiz statements and permitted exact-commit feedback. Zulip provides
 scoped channel/topic search and cited discussion reads.
 
 Website access is read-only. There are no public exercise workspace, test-run,
-submission, start, deployment, rebuild or push workflows. The retained internal
-remote gate rejects every action even if an old verification flag is enabled.
+submission, start, deployment, rebuild or push workflows.
 Local downloads, source inventories, study-site builds and checkpoint storage
 are local operations; they do not post, submit or mark campus content as read.
 
@@ -67,15 +66,10 @@ and Python 3.13.15; an existing matching uv, including the verified cached downl
 is reused. Source checkouts and system
 Python are unnecessary for consumers. Supported bootstrap targets are macOS
 arm64/x64, Windows arm64/x64, and glibc Linux arm64/x64; hands-on verification is
-recorded separately. New campus sessions use permission-restricted local keys and need no Secret Service.
-Clean consumer bootstrap, idempotent setup, diagnostics, and skill validation
-passed on macOS ARM64 and in Linux ARM64 and x86_64 containers. The x86_64 check
-ran through Docker amd64 emulation on an ARM64 Mac; packaged MCP protocol checks
-and an encrypted credential round trip through a real GNOME Secret Service in an
-isolated D-Bus session also passed. Real Linux desktop browser sign-in, macOS x64,
-and Windows hands-on checks remain open. New storage and terminal behavior need
-the current checkout’s test evidence; earlier native-store results do not certify them. The installer targets glibc Linux
-x86_64/amd64 and aarch64/ARM64.
+recorded separately. Campus sessions use permission-restricted local keys.
+CI checks clean installation, updates, removal, MCP discovery and synthetic
+browser workflows on macOS, Windows, Linux and both WSL engines. See the
+[development guide](development.md#checks) for the verification layers.
 
 `update` prepares the backend bundled in the invoked package, refreshes
 previously configured clients and preserves older runtime generations.
@@ -108,10 +102,9 @@ tum-mcp scope zulip ACCOUNT_ID --channel CHANNEL_ID
 `connect` takes no arguments or connection options. Move with up/down, toggle
 services with Space, and press Enter. Choose a browser when more than one is
 installed. Only selected tabs open in one temporary browser context. Moodle,
-Artemis and Zulip all follow this flow; no separate Moodle login is needed.
+Artemis and Zulip all follow this flow.
 Sign-in/MFA stays in the browser. `TERM=dumb` uses numbered prompts. Ctrl+C
-cancels and retains completed connections. Old service/campus arguments and
-`--service`/`--auth` flags are rejected before any browser opens.
+cancels and retains completed connections.
 
 Detection covers Chrome, Edge, Brave, Chromium, Vivaldi, Opera and selected
 preview channels. Set `TUM_MCP_BROWSER` to an executable path for another
@@ -121,41 +114,30 @@ Only service-owned cookies are saved; identity-provider cookies are discarded
 when the temporary browser closes. Existing browser profiles are never imported.
 
 Zulip uses its read-only `/json/` routes with the browser session; no API key is
-required. Reconnect through the same selector when a session expires. Existing
-API-key records remain readable for compatibility, but key entry is not part of
-onboarding. See [Zulip's dispatcher](https://github.com/zulip/zulip/blob/12.0/zerver/lib/rest.py).
+required. Reconnect through the same selector when a session expires.
+See [Zulip's dispatcher](https://github.com/zulip/zulip/blob/12.0/zerver/lib/rest.py).
 Existing scopes survive reconnection; new identities start with empty scopes.
 Private Zulip channels require `--private-channel ID` as well as `--channel ID`.
 `--sensitive` enables own Artemis participation/feedback reads. It grants no
 website mutation or local execution permission.
 
 Settings live outside the installed package in `TUMMCP/config/preferences.json`.
-The default data directory is beside the legacy `TUMMoodle` directory on each OS.
-Existing Moodle data and its native-store identity are retained in place. New
-campus connections deliberately do not read or migrate native-store secrets;
-reconnect each service once to use local-file storage. The combined MCP process
-uses that storage for all `moodle_*` compatibility tools. The separate Moodle-only
-installer keeps its native-store default.
-Historical Git credentials remain local data for legacy cleanup; the current
-package provides no assignment Git workflow.
-
-New Moodle sessions live under `TUMMoodle/local-session/`; campus credentials live
-under `TUMMCP/credentials/local/`. Each directory has an independent `session.key`.
+Moodle sessions live under `TUMMoodle/local-session/`; Artemis and Zulip credentials
+live under `TUMMCP/credentials/local/`. Each directory has an independent `session.key`.
 Encrypted records and keys have owner-only permissions: 0700 directories / 0600
 keys on POSIX; protected current-user DACLs on Windows through PowerShell. No
-administrator privileges are requested. This avoids Keychain/Secret Service
+administrator privileges are requested. This avoids native credential-store
 prompts but protects less than a native store. A copy of both ciphertext and key
 is sufficient to decrypt a session. Do not share, sync publicly, or package them.
 
 Missing or damaged keys fail closed. Restore the matching key from a private
 backup. To start fresh, stop clients and move the affected **local storage folder**
-to a private backup before reconnecting; this also resets its stored Git tokens.
-Never remove the legacy Moodle directory or downloads to repair a login.
-Native-store records remain available to the older installation for rollback.
+to a private backup before reconnecting. Keep downloaded course materials when
+repairing a login.
 
 Zulip message text is retrieved live and is not persisted. Retrieved excerpts may
-be transmitted to the coding agent's configured AI provider. Moodle's existing
-document cache retains its documented plaintext/expiry behavior.
+be transmitted to the coding agent's configured AI provider. Moodle caches
+documents and extracted text locally in plaintext.
 
 Course nicknames can be mapped in `mappings` using explicit per-service IDs.
 The tools resolve one exact mapping; ambiguity never grants broader access.
@@ -191,11 +173,9 @@ progress are preserved during package updates/removal.
 ## Client and skill setup
 
 `setup --client codex` prepares a local plugin/marketplace entry using the
-portable Agent Plugins schemas. Enable it in
-Codex Plugins, restart, and verify real tool and skill loading. Disable the legacy
-TUM Moodle plugin when switching so duplicate tools/skills are not active.
-The old installation remains available for rollback. Setup reports required UI
-steps and never equates writing files with activation.
+portable Agent Plugins schemas. Enable it in Codex Plugins, restart, and verify
+real tool and skill loading. Setup reports required UI steps and never equates
+writing files with activation.
 
 The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
@@ -291,5 +271,5 @@ it is described as verified. Test data and public fixtures are synthetic. Real
 course material, local agent notes and screenshots stay under ignored local paths.
 Maintainer checks include a reviewed tarball inventory, integrity checks and an
 isolated consumer install. Never publish or stage npm packages as a test. Registry
-publication requires separate user authorization and remains paused for this work.
+publication is an explicit maintainer action.
 `tum-mcp status` reports registry state as `not_checked`; it reads local configuration.
