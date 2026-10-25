@@ -15,11 +15,12 @@ def test_comment_endpoint_is_same_origin_bounded_and_confined(project: Path) -> 
     with ThreadingHTTPServer(
         ("127.0.0.1", 0), partial(Handler, directory=str(project / "study"))
     ) as server:
-        Thread(target=server.serve_forever, daemon=True).start()
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
         try:
             base = f"http://127.0.0.1:{server.server_port}"
             endpoint = base + "/_study/comments"
-            with httpx2.Client(trust_env=False) as client:
+            with httpx2.Client(trust_env=False, timeout=3) as client:
                 current = client.get(endpoint)
                 assert current.status_code == 200
                 assert current.json()["comments"] == []
@@ -84,3 +85,5 @@ def test_comment_endpoint_is_same_origin_bounded_and_confined(project: Path) -> 
                 ] == str(first.id)
         finally:
             server.shutdown()
+            worker.join(timeout=2)
+            assert not worker.is_alive(), "Comment test server did not stop."

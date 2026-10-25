@@ -4,7 +4,33 @@ from pathlib import Path
 
 import pytest
 
+from tum_mcp import skills
 from tum_mcp.clients import client_config_path, install_client
+from tum_mcp.skill_catalog import CURRENT_SKILLS
+
+
+@pytest.fixture(scope="module")
+def transaction_skill_pack(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Exercise ownership transactions without reinstalling the full teaching site."""
+    root = tmp_path_factory.mktemp("transaction-skills")
+    for name in CURRENT_SKILLS:
+        skill = root / name
+        (skill / "assets").mkdir(parents=True)
+        (skill / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: Synthetic transaction fixture.\n---\n",
+            encoding="utf-8",
+        )
+        (skill / "assets/payload.bin").write_bytes(b"\x00\xffsynthetic-owned-asset")
+    return root
+
+
+@pytest.fixture(autouse=True)
+def use_transaction_skill_pack(
+    transaction_skill_pack: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Full pack/metadata/export fidelity belongs to campus-client, migration and
+    # installed-consumer checks. These cases own rollback and preservation rules.
+    monkeypatch.setattr(skills, "bundled", lambda: transaction_skill_pack)
 
 
 @pytest.mark.parametrize("name", ["codex", "claude", "cursor", "antigravity", "generic"])

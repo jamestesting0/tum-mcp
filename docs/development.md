@@ -12,7 +12,7 @@ Client adapters still generate the configuration each host needs.
 uv sync --locked
 uv run ruff check src tests scripts
 uv run ruff format --check src tests scripts
-uv run pytest -q
+uv run pytest -v -x --tb=short --durations=20 -o faulthandler_timeout=60
 uv build
 node npm/build.mjs
 npm test
@@ -25,6 +25,31 @@ Python 3.13 is the managed runtime. Install Tesseract for OCR tests. Default tes
 use synthetic sources and credentials. No language-server installation is needed.
 Set `TUM_MOODLE_SYSTEM_KEYRING=1` for a unique synthetic native-store round trip.
 The ordinary campus runtime uses encrypted local files and owner-restricted keys.
+Set `TUM_MCP_BROWSER_INTEGRATION=1` to include the real HTTP static-export browser
+check locally; CI enables it. Set environment variables using your shell's syntax.
+Verbose test IDs, immediate first-failure output, slowest-test timings and a stack
+dump after 60 seconds make a stalled boundary visible. The dump is diagnostic;
+it does not skip a slow test or extend the CI deadline.
+
+Each layer owns a different failure boundary:
+
+| Layer | What it must prove |
+| --- | --- |
+| Unit | Parsing, policy, malformed input and failure branches with synthetic collaborators |
+| Integration | Real files, CLI/MCP, transactions, HTTP confinement and isolated project updates |
+| Installed consumer | Actual npm/wheel contents, managed runtime and complete browser workflows |
+| Public upgrade | Earlier published versions, repair, ownership conflicts and removal |
+| Native platform | OS credential/ACL behavior; WSL Windows browser transport on both engines |
+
+Study integration fixtures build the real starter once, then copy it into a fresh
+project for each test. Launcher tests only need an HTML entry point. Neither
+shares mutable course state. Client transaction tests use five small synthetic
+skills, including nested binary assets; full-pack export, migration and installed
+consumer tests retain the actual bundled files. Browser checks keep the phone/desktop and light/dark
+rendering matrix; long revision-state journeys run once per layout. Keep native
+ACL/keyring and installed-artifact checks even when a mocked unit test is faster.
+For a regression, extend its existing owner test and demonstrate failure without
+the fix; do not add another test that only checks the same implementation text.
 
 CI runs macOS, Windows and Linux, plus both distribution engines on WSL 3.x.
 Consumer checks install the actual npm artifact, discover tools, build a study

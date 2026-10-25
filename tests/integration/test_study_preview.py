@@ -13,7 +13,7 @@ def test_loopback_preview_confines_files_and_rejects_foreign_hosts(tmp_path: Pat
     site.mkdir()
     (site / "index.html").write_text("<!doctype html><title>Course</title>")
     css = "body { color: navy; }\n" * 200
-    (site / "styles.css").write_text(css)
+    (site / "styles.css").write_bytes(css.encode("utf-8"))
     (site / ".managed.json").write_text("private build metadata")
     (tmp_path / "AGENTS.md").write_text("outside study")
     (site / "folder").mkdir()
@@ -28,7 +28,7 @@ def test_loopback_preview_confines_files_and_rejects_foreign_hosts(tmp_path: Pat
         thread.start()
         try:
             base = f"http://127.0.0.1:{server.server_port}"
-            with httpx2.Client(trust_env=False) as client:
+            with httpx2.Client(trust_env=False, timeout=3) as client:
                 good = client.get(base + "/")
                 assert good.status_code == 200
                 assert "default-src 'self'" in good.headers["content-security-policy"]
@@ -46,7 +46,8 @@ def test_loopback_preview_confines_files_and_rejects_foreign_hosts(tmp_path: Pat
                     plain = client.get(base + "/styles.css", headers={"Accept-Encoding": encoding})
                     assert plain.text == css and "content-encoding" not in plain.headers
                 for path in ("/.managed.json", "/folder/", "/../AGENTS.md", "/%2e%2e/AGENTS.md"):
-                    assert client.get(base + path).status_code == 404
+                    response = client.get(base + path)
+                    assert response.status_code == 404, (path, response.status_code)
                 if linked:
                     assert client.get(base + "/linked.txt").status_code == 404
                 assert client.get(base, headers={"Host": "attacker.invalid"}).status_code == 403
@@ -57,3 +58,4 @@ def test_loopback_preview_confines_files_and_rejects_foreign_hosts(tmp_path: Pat
         finally:
             server.shutdown()
             thread.join(timeout=2)
+            assert not thread.is_alive(), "Preview test server did not stop."

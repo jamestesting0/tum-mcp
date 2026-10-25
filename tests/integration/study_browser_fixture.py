@@ -177,7 +177,10 @@ def study_website(browser: Browser) -> dict[str, object]:
                 page.keyboard.down("Space")
                 page.keyboard.up("Space")
                 assert page.locator(".flashcard").get_attribute("data-revealed") == "true"
-                revision_checks(page, content)
+                # Hierarchy/state transitions depend on layout, not color scheme.
+                # Keep both widths; the surrounding rendering checks cover both themes.
+                if theme == "light":
+                    revision_checks(page, content)
                 context.close()
         context = browser.new_context(viewport={"width": 390, "height": 900}, has_touch=True)
         context.route("**/*", serve)
