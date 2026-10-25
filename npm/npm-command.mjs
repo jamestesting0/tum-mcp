@@ -1,8 +1,48 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { delimiter, dirname, join, basename } from 'node:path';
+import { homedir } from 'node:os';
+import { delimiter, dirname, join, basename, resolve, relative, isAbsolute, sep } from 'node:path';
 
 export const packageName = '@jamestesting888/tum-mcp';
+
+function canonical(value) {
+  let path = resolve(value.replace(/^~(?=$|[/\\])/, homedir()));
+  const tail = [];
+  while (!existsSync(path)) { tail.unshift(basename(path)); path = dirname(path); }
+  return join(realpathSync(path), ...tail);
+}
+
+export function packageStorage(root, dataDirectory) {
+  const home = homedir();
+  const base = process.platform === 'darwin' ? join(home, 'Library/Application Support')
+    : process.platform === 'win32' ? process.env.LOCALAPPDATA || join(home, 'AppData/Local')
+    : process.env.XDG_DATA_HOME || join(home, '.local/share');
+  const storage = {
+    TUM_MCP_DATA_DIR: canonical(dataDirectory),
+    TUM_MCP_CONFIG_DIR: canonical(process.env.TUM_MCP_CONFIG_DIR || join(dataDirectory, 'config')),
+    TUM_MOODLE_DATA_DIR: canonical(process.env.TUM_MOODLE_DATA_DIR || join(base, 'TUMMoodle')),
+    TUM_MOODLE_DOWNLOAD_DIR: canonical(process.env.TUM_MOODLE_DOWNLOAD_DIR || join(home, 'Downloads/TUM Moodle')),
+  };
+  const config = storage.TUM_MCP_CONFIG_DIR;
+  const settings = join(config, 'preferences.json');
+  let workspace = join(home, 'University');
+  if (existsSync(settings)) {
+    try {
+      const prefs = JSON.parse(readFileSync(settings, 'utf8'));
+      if (prefs.workspace_root !== undefined) {
+        if (typeof prefs.workspace_root !== 'string') throw new Error('Invalid storage path');
+        workspace = prefs.workspace_root;
+      }
+    } catch { throw new Error('Storage settings could not be verified; package files and saved data were preserved.'); }
+  }
+  for (const path of [...Object.values(storage), workspace]) {
+    const inside = relative(root, canonical(path));
+    if (inside === '' || (inside.split(sep)[0] !== '..' && !isAbsolute(inside))) {
+      throw new Error('Package installation overlaps saved data or course work. Move that data outside the package before update/removal.');
+    }
+  }
+  return storage;
+}
 
 export function npmCli() {
   const paths = (process.env.PATH || '').split(delimiter);

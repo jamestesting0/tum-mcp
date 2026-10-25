@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { registryFixture, futureRelease, isolatedWindowsProfile } from './package-fixtures.mjs';
@@ -27,13 +27,14 @@ writeFileSync(env.NPM_CONFIG_USERCONFIG, '', { mode: 0o600 });
 let releaseWindowsProfile = () => {};
 
 async function run(command, args, expected = 0) {
-  const child = spawn(command, args, { env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(command, args, { env, cwd: root, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '', stderr = '';
+  child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8');
   child.stdout.on('data', data => { stdout += data; });
   child.stderr.on('data', data => { stderr += data; });
   const timeout = setTimeout(() => child.kill(), 600000);
   try {
-    const status = await new Promise((resolve, reject) => { child.on('error', reject); child.on('exit', resolve); });
+    const status = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
     assert.equal(status, expected, `${command} failed: ${stdout}\n${stderr}`);
     return stdout;
   } finally { clearTimeout(timeout); }
@@ -47,6 +48,7 @@ const records = [];
 
 try {
   releaseWindowsProfile = isolatedWindowsProfile(root, env);
+  console.log('Package lifecycle: install and prepare isolated global clients');
   await npm(['install', '--global', '--prefix', prefix, '--ignore-scripts', artifact]);
   await call(['setup', '--client', 'codex', '--client', 'claude', '--client', 'cursor']);
   const original = state();
@@ -77,6 +79,17 @@ try {
     assert.deepEqual(claude().mcpServers.other, other);
   };
 
+  const dataDirectory = env.TUM_MCP_DATA_DIR;
+  env.TUM_MCP_DATA_DIR = join(source, 'personal-data');
+  mkdirSync(env.TUM_MCP_DATA_DIR); writeFileSync(join(env.TUM_MCP_DATA_DIR, 'note.txt'), 'Preserve overlapping data');
+  await call(['uninstall'], 2);
+  assert.equal(readFileSync(join(env.TUM_MCP_DATA_DIR, 'note.txt'), 'utf8'), 'Preserve overlapping data');
+  const relocated = join(root, 'relocated personal-data'); renameSync(env.TUM_MCP_DATA_DIR, relocated);
+  saved.push([join(relocated, 'note.txt'), 'Preserve overlapping data']);
+  env.TUM_MCP_DATA_DIR = dataDirectory;
+  Object.assign(env, { TUM_MCP_DATA_DIR: 'data', TUM_MCP_CONFIG_DIR: 'config', TUM_MOODLE_DATA_DIR: 'moodle', TUM_MOODLE_DOWNLOAD_DIR: 'downloads' });
+  console.log('Package lifecycle: download, validate and install the newer release');
+
   const updated = await call(['update']);
   assert.equal(metadata().version, nextVersion, updated);
   assert.ok(!existsSync(join(source, 'install-script-ran')), 'npm lifecycle scripts must stay disabled');
@@ -93,6 +106,7 @@ try {
   assert.equal(metadata().version, nextVersion, 'A published older latest tag must not downgrade a newer installation');
   registry.release(next.manifest, next.path);
   records.push('download, validate, install and refresh; repeat update is idempotent');
+  console.log('Package lifecycle: exercise registry and preparation failures');
 
   registry.unavailable(true);
   await call(['update'], 2);
@@ -104,6 +118,7 @@ try {
   assert.equal(metadata().version, nextVersion);
   assert.equal(claude().mcpServers.tum.command, current.python); retained();
   records.push('registry and corrupt preparation failures preserve package and client runtime');
+  console.log('Package lifecycle: exercise npm replacement failure');
 
   const later = await futureRelease({ source, directory: futureDirectory, python: current.python, version: laterVersion, run, npm });
   registry.release(later.manifest, later.path);
@@ -118,6 +133,7 @@ try {
   assert.equal(metadata().version, nextVersion);
   assert.equal(claude().mcpServers.tum.command, current.python); retained();
   records.push('npm replacement failure retains the installed package and pinned clients');
+  console.log('Package lifecycle: check concurrency, customized files and client-only removal');
 
   registry.release(next.manifest, next.path);
   const unlock = await acquireLock(prefix, 'tum-mcp-package');
@@ -134,6 +150,7 @@ try {
   assert.equal(readFileSync(edited, 'utf8'), before + '\nPersonal guidance.\n'); retained();
   writeFileSync(edited, before);
   records.push('concurrent operations, client-only removal and customization conflicts are safe');
+  console.log('Package lifecycle: remove npm and runtimes, then check a fresh installation');
 
   await call(['uninstall', '--purge-runtime']);
   assert.ok(!existsSync(source));
@@ -147,6 +164,7 @@ try {
   assert.ok(!existsSync(source)); retained();
   assert.ok(!existsSync(join(env.TUM_MCP_DATA_DIR, 'runtimes')));
   records.push('reinstalled package can be removed without registered clients');
+  console.log('Package lifecycle: check project-local update and uninstall');
   const local = join(root, 'local project');
   await npm(['install', '--prefix', local, '--global=false', '--ignore-scripts', artifact]);
   const localSource = join(local, 'node_modules/@jamestesting888/tum-mcp');
@@ -162,4 +180,6 @@ try {
   assert.equal(readFileSync(personal, 'utf8'), 'Local project notes'); retained();
   records.push('local npm updates maintain project metadata and removal preserves project files');
   console.log(JSON.stringify({ platform: process.platform, scenarios: records, passed: true, publicPublicationUsed: false, realAccountsUsed: false }));
+} catch (error) {
+  console.error(error); process.exitCode = 1;
 } finally { await registry.close(); releaseWindowsProfile(); rmSync(root, { recursive: true, force: true }); }

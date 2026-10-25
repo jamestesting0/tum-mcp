@@ -127,6 +127,8 @@ It does not connect services, change scopes or register additional clients.
 It never downgrades a newer installation. `update --local` skips npm and repairs
 or refreshes the installed version. Source/pinned builds use this local mode;
 temporary npx and linked source installations are not replaced automatically.
+Automatic replacement also stops if the package directory contains configured
+sessions, downloads or course work; move that data outside the package first.
 For 0.6.0 and earlier, first install the newer npm package once.
 `setup --client NAME` explicitly registers one client and can also refresh that client's managed
 files. WSL Windows registrations keep their distribution/user/data paths.

@@ -1,11 +1,11 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { homedir, tmpdir } from 'node:os';
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { tmpdir } from 'node:os';
+import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { acquireLock } from './lock.mjs';
-import { installationTarget, npmCli, packageName, runNpm } from './npm-command.mjs';
+import { installationTarget, npmCli, packageName, packageStorage, runNpm } from './npm-command.mjs';
 
 function runLauncher(root, args, quiet = false) {
   const result = spawnSync(process.execPath, [join(root, 'npm/tum-mcp.mjs'), ...args], {
@@ -86,17 +86,18 @@ export async function managePackage(action, args, dataDirectory) {
   const inside = relative(root, process.cwd());
   if (inside === '' || (inside.split(sep)[0] !== '..' && !isAbsolute(inside))) throw new Error('Run package update/removal from outside the installed package directory.');
   const target = installationTarget(root);
+  const storage = packageStorage(root, dataDirectory);
+  const configDirectory = storage.TUM_MCP_CONFIG_DIR;
   const npm = npmCli();
   const temporary = await mkdtemp(join(tmpdir(), 'tum-mcp-package-'));
   try {
     for (const name of ['package-manager.mjs', 'npm-command.mjs', 'lock.mjs']) await copyFile(join(root, 'npm', name), join(temporary, name));
-    const configDirectory = resolve((process.env.TUM_MCP_CONFIG_DIR || join(dataDirectory, 'config')).replace(/^~(?=$|[/\\])/, homedir()));
     const job = { action, args, root, dataDirectory, configDirectory, target, npm, temporary };
     const path = join(temporary, 'job.json');
     await writeFile(path, JSON.stringify(job), { mode: 0o600, flag: 'wx' });
     // This worker and its cwd survive Windows replacing/removing the package files.
     const result = spawnSync(process.execPath, [join(temporary, 'package-manager.mjs'), '--job', path], {
-      cwd: temporary, stdio: 'inherit', shell: false,
+      cwd: temporary, stdio: 'inherit', shell: false, env: { ...process.env, ...storage },
     });
     return result.status ?? (result.signal === 'SIGINT' ? 130 : 2);
   } finally { await rm(temporary, { recursive: true, force: true }); }

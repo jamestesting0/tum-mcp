@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import { chmodSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { release } from 'node:os';
 import { delimiter, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function isolatedWindowsProfile(root, env) {
   if (process.platform !== 'linux' || !(env.WSL_DISTRO_NAME || /microsoft|wsl/i.test(release()))) return () => {};
@@ -65,7 +66,8 @@ export async function futureRelease({ source, directory, python, version, run, n
   const backend = join(staged, 'npm/backend');
   const before = JSON.parse(readFileSync(join(backend, 'manifest.json'), 'utf8'));
   const wheel = `tum_mcp-${version}-py3-none-any.whl`;
-  await run(python, ['-I', 'tests/integration/package_release_fixture.py', join(backend, before.wheel), join(backend, wheel), version]);
+  const fixture = fileURLToPath(new URL('../tests/integration/package_release_fixture.py', import.meta.url));
+  await run(python, ['-I', fixture, join(backend, before.wheel), join(backend, wheel), version]);
   rmSync(join(backend, before.wheel));
   writeFileSync(join(backend, 'manifest.json'), JSON.stringify({ ...before, wheel,
     wheelSha256: broken ? '0'.repeat(64) : createHash('sha256').update(readFileSync(join(backend, wheel))).digest('hex'),
