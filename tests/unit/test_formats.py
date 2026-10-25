@@ -36,10 +36,12 @@ def test_powerpoint_slides_keep_numeric_order() -> None:
     ]
 
 
-def test_ocr_finds_intel_homebrew_without_shell_path(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ocr_finds_intel_homebrew_without_shell_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(extraction.shutil, "which", lambda _: None)
     executable = Path("/usr/local/bin/tesseract")
-    scan = Path("/scan.png")
+    scan = (tmp_path / "scan space.png").resolve()
     monkeypatch.setattr(Path, "is_file", lambda path: path == executable)
 
     def run(
