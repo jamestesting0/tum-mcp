@@ -121,7 +121,8 @@ reliable revision match. Pending content stays pending across repeated checks;
 a metadata-only check cannot make unfetched content current.
 
 The agent updates course facts outside the inventory block. The helper checks
-that its managed block has not been edited before replacing it. A failed write
+that its managed block has not been edited before replacing it. LF/CRLF
+conversions are accepted, and synchronization preserves the existing line-ending style. A failed write
 restores files when possible and reports any remaining conflict.
 
 ## Prepare the website

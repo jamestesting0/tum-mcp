@@ -99,8 +99,15 @@ def replace_agents(existing: str, block: str, previous: StudyState | None) -> st
         raise CampusError(Code.WORKSPACE_CONFLICT, "Study instruction markers need local review.")
     start, end = existing.index(START), existing.index(END) + len(END)
     old = existing[start:end]
-    if end < start or previous is None or digest(old.encode()) != previous.agents_block_sha256:
+    # Windows editors may change line endings without editing inventory content.
+    canonical = old.replace("\r\n", "\n")
+    if (
+        end < start
+        or previous is None
+        or digest(canonical.encode()) != previous.agents_block_sha256
+    ):
         raise CampusError(
             Code.WORKSPACE_CONFLICT, "Edited study inventory instructions were preserved."
         )
-    return existing[:start] + block + existing[end:]
+    replacement = block.replace("\n", "\r\n") if "\r\n" in old else block
+    return existing[:start] + replacement + existing[end:]

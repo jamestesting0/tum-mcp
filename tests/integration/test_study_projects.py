@@ -92,16 +92,23 @@ def test_metadata_without_reliable_revision_does_not_claim_payload_freshness(
     )
 
 
+@pytest.mark.parametrize("newline", ["\n", "\r\n"], ids=["lf", "crlf"])
 def test_custom_course_instructions_and_extra_files_survive_updates(
-    project: Path, inputs: Path
+    project: Path, inputs: Path, newline: str
 ) -> None:
     agents = project / "AGENTS.md"
-    prefix = b"# My course rules\n\n"
-    agents.write_bytes(prefix + agents.read_bytes())
+    prefix = ("# My course rules" + newline * 2).encode()
+    suffix = (newline + "Personal rule to keep." + newline).encode()
+    block = agents.read_text(encoding="utf-8").replace("\n", newline).encode()
+    agents.write_bytes(prefix + block + suffix)
     note = project / "materials/content/personal-note.md"
     note.write_bytes(b"personal notes")
     sync(project, inputs)
-    assert agents.read_bytes().startswith(prefix)
+    sync(project, inputs)  # The stored digest must remain valid after another update.
+    current = agents.read_bytes()
+    assert current.startswith(prefix) and current.endswith(suffix)
+    if newline == "\r\n":
+        assert b"\n" not in current.replace(b"\r\n", b"")
     assert note.read_bytes() == b"personal notes"
 
 
@@ -174,7 +181,7 @@ def test_interrupted_write_restores_the_previous_project(
 
 
 def test_adding_a_verified_source_binding_preserves_course_progress_namespace(project, inputs):
-    before = (project / "study/data.mjs").read_text()
+    before = (project / "study/data.mjs").read_text(encoding="utf-8")
     previous = json.loads(before.removeprefix("export default ").removesuffix(";\n"))
     incoming = json.loads(inputs.read_bytes())
     # Synthetic sources remain synthetic; a new source mapping must not change course identity.
@@ -184,11 +191,14 @@ def test_adding_a_verified_source_binding_preserves_course_progress_namespace(pr
     incoming["coverage"].append(
         {"binding": "extra", "status": "partial", "checked_at": "2026-10-25"}
     )
-    inputs.write_text(json.dumps(incoming))
+    inputs.write_text(json.dumps(incoming), encoding="utf-8")
     sync(project, inputs)
     build(project)
     current = json.loads(
-        (project / "study/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
+        (project / "study/data.mjs")
+        .read_text(encoding="utf-8")
+        .removeprefix("export default ")
+        .removesuffix(";\n")
     )
     assert current["course"]["identity"] == previous["course"]["identity"]
     assert [u["revision"] for u in current["units"]] == [u["revision"] for u in previous["units"]]
@@ -201,7 +211,7 @@ def test_repeated_pending_metadata_never_promotes_old_content_to_current(
     source = next(r for r in incoming["resources"] if r["key"] == "bfs")
     old_payload = source.pop("text")
     source["revision"] = "new-unfetched-version"
-    inputs.write_text(json.dumps(incoming))
+    inputs.write_text(json.dumps(incoming), encoding="utf-8")
     for _ in range(2):
         sync(project, inputs)
         item = next(r for r in load_state(project).resources if r.resource.key == "bfs")
@@ -210,7 +220,7 @@ def test_repeated_pending_metadata_never_promotes_old_content_to_current(
             build(project)
         assert error.value.code == Code.STALE_RESULT
     source["text"] = old_payload + "\nVerified new source content.\n"
-    inputs.write_text(json.dumps(incoming))
+    inputs.write_text(json.dumps(incoming), encoding="utf-8")
     sync(project, inputs)
     assert (
         next(r for r in load_state(project).resources if r.resource.key == "bfs").status
@@ -238,7 +248,7 @@ def test_equal_revision_on_another_source_does_not_reuse_old_payload(
             {"binding": "another", "status": "partial", "checked_at": "2026-10-25"}
         )
         source["binding"] = "another"
-    inputs.write_text(json.dumps(incoming))
+    inputs.write_text(json.dumps(incoming), encoding="utf-8")
     sync(project, inputs)
     item = next(r for r in load_state(project).resources if r.resource.key == "bfs")
     assert item.status == "needs_fetch"
@@ -255,7 +265,7 @@ def test_complete_inventory_reuses_unchanged_payloads_without_withdrawing_them(
     for source in incoming["resources"]:
         source.pop("text", None)
     incoming["coverage"][0]["status"] = "complete"
-    inputs.write_text(json.dumps(incoming))
+    inputs.write_text(json.dumps(incoming), encoding="utf-8")
     report = sync(project, inputs)
     current = load_state(project)
     assert report.imported == 0 and report.withdrawn == 0 and report.conflicts == ()
