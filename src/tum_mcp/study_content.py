@@ -2,13 +2,13 @@
 
 from typing import Annotated, Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import AfterValidator, Field, field_validator, model_validator
 
 from tum_mcp.settings import Frozen
-from tum_mcp.study_math import compile_latex, safe_mathml
+from tum_mcp.study_math import compile_latex, safe_mathml, validate_inline
 from tum_mcp.study_models import Digest, Key
 
-Text = Annotated[str, Field(min_length=1, max_length=10000)]
+Text = Annotated[str, Field(min_length=1, max_length=10000), AfterValidator(validate_inline)]
 
 
 class Objective(Frozen):

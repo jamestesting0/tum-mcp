@@ -9,8 +9,26 @@ from typing import Annotated, Literal, assert_never
 import typer
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.study_comment_cli import app as comments_app
+from tum_mcp.study_publish_cli import app as publish_app
 
-app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
+app = typer.Typer(invoke_without_command=True, pretty_exceptions_show_locals=False)
+app.add_typer(comments_app, name="comments", help="Read and address local passage comments.")
+app.add_typer(
+    publish_app, name="publish", help="Publish a study website in a private GitHub repository."
+)
+
+
+@app.callback()
+def launch(
+    context: typer.Context,
+    port: Annotated[int, typer.Option(min=0, max=65535, help="Local app port.")] = 8765,
+) -> None:
+    """Open this course's study app, or run a study management command."""
+    if context.invoked_subcommand is None:
+        from tum_mcp.study_preview import serve as preview
+
+        preview(Path.cwd(), port, open_browser=True)
 
 
 @app.command()
@@ -65,6 +83,14 @@ def synchronize(project: Path, snapshot: Annotated[Path, typer.Option()]) -> Non
 
 
 @app.command()
+def status(project: Path) -> None:
+    """Choose initialization, synchronization or local recovery without writing files."""
+    from tum_mcp.study_status import project_status
+
+    typer.echo(project_status(project).model_dump_json(indent=2))
+
+
+@app.command()
 def inspect(project: Path) -> None:
     """Show course identity, source coverage and units that need regeneration."""
     from tum_mcp.study_build import read_content, stale_units
@@ -92,11 +118,19 @@ def inspect(project: Path) -> None:
 
 
 @app.command()
-def build(project: Path) -> None:
+def build(
+    project: Path,
+    local_only: Annotated[
+        bool, typer.Option(help="Skip configured GitHub publishing for this build.")
+    ] = False,
+) -> None:
     """Validate current source-linked content and build the local study app."""
     from tum_mcp.study_build import build as build_site
 
-    typer.echo(json.dumps(asdict(build_site(project)), indent=2))
+    result = build_site(project, publish=not local_only)
+    typer.echo(json.dumps(asdict(result), indent=2))
+    if result.publication is not None and result.publication.status in {"pending", "failed"}:
+        raise typer.Exit(2)
 
 
 @app.command()
@@ -117,7 +151,7 @@ def schema(kind: Literal["snapshot", "content"]) -> None:
 
 @app.command()
 def serve(project: Path, port: Annotated[int, typer.Option(min=0, max=65535)] = 8765) -> None:
-    """Preview only study/ on this computer, without request logging or external hosting."""
+    """Preview study/ and save local passage comments, without external hosting or logs."""
     from tum_mcp.study_preview import serve as preview
 
     preview(project, port)
@@ -140,4 +174,4 @@ def demo(project: Path) -> None:
     sync(root, example / "snapshot.json", course_input="Algorithms & Graphs")
     apply(root, (Write("study/content.json", before, desired),))
     typer.echo(json.dumps(asdict(build_site(root)), indent=2))
-    typer.echo("Synthetic course only. Preview with: tum-mcp study serve PROJECT")
+    typer.echo("Synthetic course only. Run tum-mcp study inside the project to open it.")

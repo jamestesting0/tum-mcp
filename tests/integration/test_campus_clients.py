@@ -31,7 +31,7 @@ def test_skills_and_client_configuration_use_utf8_with_a_legacy_locale(
     uninstall_client("claude", home)
 
     # Then every skill remains readable and unrelated Unicode settings survive.
-    assert len(report.checked_skills) == 4
+    assert len(report.checked_skills) == 5
     assert report.errors == ()
     assert json.loads(config.read_text(encoding="utf-8")) == original
 

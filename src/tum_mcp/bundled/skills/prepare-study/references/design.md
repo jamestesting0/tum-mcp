@@ -1,9 +1,11 @@
 # Study design contract
 
-Use the bundled renderer and tokens; preserve an established custom theme. One
-course outline and one focused unit, with Content/Flashcards/Practice peer views.
-Visible text must support learning/navigation. Keep sources and essential assumptions;
-remove promotional/admin copy, technical banners, repeated tips and mastery claims.
+Use the bundled renderer and tokens; preserve an established custom theme. The site is
+a quiet reading tool: one course outline, one focused unit, and the learning activity
+as the focal object. Visible text supports learning or navigation. Keep sources and
+essential assumptions; remove promotional or admin copy, technical banners, repeated
+tips and mastery claims. Use short sentence-case labels such as Save, Continue and
+Try again. Component contracts live in [components](components.md).
 
 ## Tokens
 
@@ -21,55 +23,79 @@ remove promotional/admin copy, technical banners, repeated tips and mastery clai
 | --warning | #f5eddd | #3d3327 |
 
 Blue/navy derive from [TUM's stylesheet](https://www.tum.de/typo3conf/ext/in2template/Resources/Public/Css/styles.css).
-Use these fixed values; do not repeat reference-site research. One accent, neutral
-1px rules, no gradients/shadows/accent stripes. Selection uses wash, emphasis and
-semantic state; correctness also has a text label, never color alone.
+Use these fixed values; do not repeat reference-site research. One accent, neutral 1px
+rules, no gradients, shadows or coloured edge stripes. State uses wash, weight and a
+text label or glyph; correctness is never shown by color alone.
 
-## Geometry and type
+## Type and space
 
-- Local fonts: Avenir Next/Segoe UI/system sans; Georgia/Cambria headings; native math.
-  Body 18px/1.7, secondary 14px/1.5, UI 15px/1.45. Titles 32–44px, sections 24–28px;
-  weights 400/500/600. Prose ≤66ch; preserve technical terms and notation.
-- Spacing: 4/8/12/16/24/32/48/64px. Controls 6px radius, content surfaces 12px.
-- Desktop: 248px outline or 56px collapsed rail; ≤900px reading region with 48–64px
-  padding. Main owns reading scroll; long outlines scroll independently. No toolbar.
-- Below 800px: single document scroll, collapsible outline, 20px side padding.
-  Grid children have min-width/min-height zero. Long names wrap, including outline
-  summaries. Primary content never scrolls horizontally; wide tables/formulas/code/
-  diagrams use labelled keyboard-scrollable regions with legible text, also at zoom.
+- One bundled primary typeface (OFL, `fonts-license.txt`): Atkinson Hyperlegible
+  Next for headings, reading and interface text. It distinguishes similar letters
+  and numerals. Use weight 600 for the page title, 500 for section headings and
+  controls, and 400 for reading text. Do not mix decorative heading families.
+  Local woff2 subsets use unicode-range and font-display swap; no webfont service.
+  Code retains the system monospace stack (`--font-mono`); formulas retain native
+  math fonts for correct notation. These are functional exceptions, not UI styles.
+- Sizes: reading 18px/1.7 (questions and options 18px/1.5); dense blocks (tables, code,
+  glossary, objectives) and interface 15px; labels 14px. Titles 32–44px, sections
+  24px; card text 28px, 18px on phones. Weights 400/500/600. Labels use sentence case
+  without letter spacing; only the page title tightens (-0.015em). Numerals are lining.
+  Preserve technical terms and notation.
+- Spacing 4/8/12/16/24/32/48/64px. Controls 6px radius, content surfaces 12px.
+- Math uses `--math-max` (24px) and `--math-min` (18px). Equations adapt to their
+  container, including outline changes: reflow chained relations at the top level,
+  then fit each complete line. Keep fractions, matrices and grouped expressions
+  intact. An indivisible oversized expression gets local scrolling, never clipping
+  or unreadably small text. Recompute after font loading and width changes.
 
-## Learning components
+## Layout
 
-| Component | Contract |
-| --- | --- |
-| Outline/heading | Course + semester, consistent lecture/week/topic organization. Group related units with optional path folders instead of repeating week labels. Native disclosures reveal current ancestry. Icon control collapses/restores the outline; no focus mode. Title, purpose, time and optional objectives stay in the reading area. |
-| Views | Top semantic tabs with real panels and roving arrow/Home/End keys. Repeat Content/Flashcards/Practice as bottom navigation links. No previous/next unit controls; the outline selects units. |
-| Utilities | About disclosure; Reset progress beside a sun/moon theme icon at the outline's end. No settings drawer or top toolbar. Icon-only controls have accessible names, hover titles and 44px targets. |
-| Source | Compact disclosure with a usable link and locator. No unnecessary personal/contact information. |
-| Formula | Author LaTeX; build compiles it locally to safe native MathML. Keep a readable equivalent, symbol/unit glossary, assumptions and interpretation. No formula screenshots or external math service. Legacy MathML is accepted when updating an older project. |
-| Visual | Accessible SVG/native visual plus explanation. Processes have explicit steps/captions, labelled state and no autoplay; concept maps need no fake traversal controls. |
-| Table/code | Tables have caption and column/row headers. Code is literal, labelled by language and explained. Wide content remains usable without breaking the page. |
-| Card | One large clickable card flips between question and answer. Keep sources/ratings outside its button; inactive face is inaccessible. Arrow icons move, Space flips, 1 marks Again, 2 Got it; ratings require reveal, with no automatic advance. Show concise key hints. Keep the card tall enough for its longer face; no text clipping. |
-| Practice | One question, native radio group, explicit Check answer; retained feedback explains choice and alternatives. Retry/next are deliberate. |
+- One reading column: the 66ch prose measure plus 48px side padding on desktop.
+  Header, tabs, cards, practice and the next-step link share that column.
+- Desktop: 248px outline, fully hidden when collapsed, with no rail. Main owns reading
+  scroll; long outlines scroll independently. No toolbar.
+- Below 800px: single document scroll and 20px side padding. A collapsed outline is a
+  sticky bar with the menu button, the current title and a 1px bottom rule; scroll
+  padding keeps anchored content below it. Choosing a unit collapses the outline.
+  Opening it shows a fixed viewport overlay with its own scroll, immediately visible
+  from any reading position. Keep the reading position, make the background inert,
+  trap keyboard focus inside, and return focus on close/Escape. Do not insert the
+  expanded outline into the document flow or require a scroll to reach it.
+- Grid children have min-width/min-height zero. Long names wrap, including outline
+  summaries. Primary content never scrolls horizontally. Wide tables, formulas and
+  code use labelled keyboard-scrollable regions; diagrams fit the column.
 
-## State, access and extension
+## Motion
 
-Controls respond immediately: opacity/press 140ms ease-out, optional 0.99 scale;
-card rotation 180deg around Y over 240ms, backfaces hidden. Theme colors switch
-immediately; reduced motion replaces flipping with an instant face change.
-Shortcuts apply only to active flashcards. Preserve native tab/control keys, text
-editing, modifier shortcuts and IME composition; ignore held-key repeats. Restore
-focus after card replacement. Grouping alone must not reset learning progress.
-Progress/theme stay local. Storage failure leaves a visible conditional warning and
-working in-memory practice. Reset affects this course only; changed unit revisions
-must not inherit old answers. Preserve customized renderer files and user notes.
+Controls respond immediately: opacity/press 140ms ease-out, optional 0.99 scale. The
+card turns 180deg around Y over 240ms with hidden backfaces. The inactive face also
+switches to `visibility: hidden` at mid-turn, because WebKit can paint a hidden
+backface. The next-step arrow moves 4px on hover. Theme colors switch immediately.
+Reduced motion removes the turn, the nudge and transitions. No autoplay, scroll-driven
+or decorative motion.
 
-Target WCAG 2.2 AA: visible focus, landmarks/skip link, labelled 44px controls,
-keyboard operation, text alternatives and aria-live state/feedback. Essential
-information cannot depend on hover. Keep UI messages specific to an actual gap/error.
+## Access
 
-The app uses index.html, styles.css, app/dom/navigation/reading/learning/flashcards.mjs and generated
-data.mjs. Author content.json; extend shared components only for a real course
-need, with validated data, safe rendering and accessible fallback. No CDN fonts,
-scripts, analytics or campus credentials. Keep previews local unless publication
-is requested. Use [verification](verification.md), not screenshot count, as the gate.
+Target WCAG 2.2 AA: visible focus-visible rings, landmarks and skip link, labelled
+44px controls, keyboard operation, text alternatives and aria-live state/feedback.
+Programmatic focus targets (headings, legends) use tabindex -1 without a ring.
+Essential information never depends on hover. Messages name an actual gap or error.
+
+## State and storage
+
+Progress, theme, revision selection and the last visited view stay local per course.
+Storage failure shows a visible conditional warning and keeps in-memory practice.
+Reset lives on the course home and needs confirmation in an app dialog; it clears this
+course's ratings and answers and keeps comments and topic choices. Changed unit
+revisions never inherit old answers. Grouping or moving folders never resets progress.
+Preserve customized renderer files and user notes.
+
+## Files and extension
+
+The app uses index.html, styles.css, app/dom/mathml/navigation/reading/formulas/learning/question-review/flashcards/
+revision, anchors/comments/comment-ui/comment-store/comment-popover.mjs, the font-*.woff2
+subsets with fonts-license.txt, and generated data.mjs. Author content.json; extend shared components only for a real course need,
+with validated data, safe rendering and accessible fallback. No CDN fonts, scripts,
+analytics or campus credentials. Keep local module preloads and preview compression so
+the first reading view is not delayed. Keep previews local unless publication is
+requested. Use [verification](verification.md), not screenshot count, as the gate.

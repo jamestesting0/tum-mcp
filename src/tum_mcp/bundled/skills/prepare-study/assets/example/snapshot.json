@@ -30,7 +30,7 @@
       "url": "https://example.invalid/study/graphs",
       "locator": "Synthetic notes, sections 1–3",
       "revision": "1",
-      "text": "# Synthetic notes: graphs and representations\nA graph G=(V,E) contains vertices V and edges E. In a simple undirected graph,\nan edge joins two different vertices and has no direction. The degree of a\nvertex is the number of incident edges. Each edge contributes two to the sum\nof all degrees, so sum(deg(v))=2|E|. Six edges give a degree sum of twelve.\nAn adjacency list stores the neighbors of each vertex. It uses O(V+E) memory.\nTesting an edge may scan O(deg(v)) neighbors. An adjacency matrix uses O(V²)\nmemory and supports O(1) edge lookup. A sparse graph has far fewer edges than\nV², so adjacency lists usually save memory. These are generated teaching notes,\nnot a TUM lecture or official exam.\n"
+      "text": "# Synthetic notes: graphs and representations\nA graph G=(V,E) contains vertices V and edges E. In a simple undirected graph,\nan edge joins two different vertices and has no direction. The degree of a\nvertex is the number of incident edges. Each edge contributes two to the sum\nof all degrees, so sum(deg(v))=2|E|. Six edges give a degree sum of twelve.\nAn adjacency list stores the neighbors of each vertex. It uses O(V+E) memory.\nTesting an edge may scan O(deg(v)) neighbors. An adjacency matrix uses O(V²)\nmemory and supports O(1) edge lookup. A sparse graph has far fewer edges than\nV², so adjacency lists usually save memory. These are generated teaching notes,\nnot a TUM lecture or official exam.\n\nFor the three-vertex path A–B–C, the adjacency matrix is [[0,1,0],[1,0,1],[0,1,0]]. Squaring it gives [[1,0,1],[0,2,0],[1,0,1]]. The squared entry counts walks of exactly two edges, allowing repeated vertices.\n"
     },
     {
       "key": "bfs",
@@ -81,6 +81,26 @@
       "locator": "Generated sample",
       "revision": "1",
       "text": "This is a local design preview. All material is synthetic, and no campus account was accessed."
+    },
+    {
+      "key": "weighted",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Weighted paths",
+      "url": "https://example.invalid/study/weighted",
+      "locator": "Generated notes, sections 1–3",
+      "revision": "1",
+      "text": "Synthetic notes. In a directed graph with nonnegative weights, path cost is the sum of its edge weights. Edges are S→A (2), S→B (5), A→B (1), A→T (6), B→T (2). Minimum cost from S to T is 5 along S–A–B–T. The two-edge path S–A–T costs 8. Dijkstra settles the vertex with smallest tentative distance. The settled order is S (0), A (2), B (3), T (5). Relax u→v by setting d(v) to the minimum of its current value and d(u)+w(u,v). Nonnegative edge weights justify settling a distance. BFS minimizes edge count and need not minimize arbitrary weighted cost."
+    },
+    {
+      "key": "probability",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Conditional probability",
+      "url": "https://example.invalid/study/probability",
+      "locator": "Generated notes, sections 1–3",
+      "revision": "1",
+      "text": "Synthetic notes. Conditional probability P(H|E)=P(E|H)P(H)/P(E), provided P(E)>0. Suppose 20% of messages are urgent, an alert catches 80% of urgent messages and flags 10% of other messages. Among 1000 messages: 160 urgent alerts, 40 urgent without alert, 80 nonurgent alerts, 720 nonurgent without alert. Therefore P(urgent|alert)=160/240=2/3. This differs from P(alert|urgent)=0.8. The probability of an alert is 0.8×0.2+0.1×0.8=0.24. For n independent trials with identical success probability p, P(X=k)=binomial(n,k)p^k(1-p)^(n-k) for integer 0≤k≤n. With n=3,p=1/2, probabilities for k=0,1,2,3 are 1/8,3/8,3/8,1/8. Expected count is the sum of kP(X=k)=np=1.5. A change in independence or p invalidates that binomial model."
     }
   ]
 }

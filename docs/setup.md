@@ -94,13 +94,18 @@ browser discovery still requires functioning interop.
   tools. Saved sessions are **Not verified** until checked; registration alone
   does not prove a desktop client is running the server.
 - `tum-mcp doctor --live` verifies saved local sessions with bounded service
-  reads. `--json` provides structured output; combine the flags if needed.
+  reads and checks optional GitHub CLI authentication. `--json` provides structured
+  output; combine the flags if needed. Default doctor checks only CLI availability.
+- For optional study publishing, install GitHub CLI and complete
+  `gh auth login --hostname github.com` interactively on the agent's execution host.
+  The [publishing workflow](study.md#publish-a-study-website) uses private repositories
+  with public Pages websites and requires an eligible paid GitHub plan.
 - An expired session uses the same `tum-mcp connect` selector. Reconnecting the
   same identity preserves course/channel scopes.
 - If no browser appears, check its installation or `TUM_MCP_BROWSER`. A managed
   or incompatible Chromium build may prevent automation; try another browser.
-- Git is optional for assignment workspaces. Docker is optional for approved
-  isolated tests. Missing either does not prevent course reads.
+- Git and Docker are optional. Neither is needed for course reads or the
+  GitHub CLI based study publisher.
 - Do not paste passwords, cookies, MFA codes or API keys into chat or bug reports.
 
 Sessions are encrypted with owner-restricted local key files. This avoids native
@@ -133,7 +138,8 @@ rollback starts by unregistering that client, then registering the reviewed vers
 
 0.4.1/0.5.0 installations without receipts are adopted only after matching their
 retained runtime's canonical client output. The seven former workflow skills and the three website skills are replaced by
-`read-content`, `init-study`, `update-study` and `prepare-study`. Personal overrides
+`read-content`, `sync-study` and `prepare-study`; `audio-notes` adds
+spoken lessons derived from the prepared website. Personal overrides
 under retired names remain in the config `skills/` directory; review and merge
 retrieval guidance into `read-content` before exporting a replacement pack.
 Reload MCP servers in Cursor/Antigravity, restart Claude as appropriate, and
@@ -169,7 +175,10 @@ and participation Git tokens; it does not revoke remote credentials. Native
 Keychain/Credential Manager/Secret Service records and legacy Moodle sessions
 stay intact. Settings, custom skills, course cache, downloads and assignment
 work are retained by these commands. No command recursively deletes the campus
-data root. If removal is interrupted, run npm `setup` to recover before reuse.
+data root. Course audio and optional shared speech models/runtimes also remain.
+Remove a shared speech cache only when explicitly requested and no other course
+needs it; its host paths are documented in the audio skill. If removal is
+interrupted, run npm `setup` to recover before reuse.
 
 ## Existing Moodle-only installations
 

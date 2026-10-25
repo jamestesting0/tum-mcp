@@ -1,37 +1,19 @@
 import data from './data.mjs';
-import { node, append, sourcesNote } from './dom.mjs';
+import { node, studyText, append, sourcesNote } from './dom.mjs';
 import { iconButton } from './navigation.mjs';
+import { renderFormula } from './formulas.mjs';
 
-function formula(block) {
-  const box = node('div', 'surface');
-  const expression = node('div', 'equation');
-  expression.tabIndex = 0; expression.setAttribute('role', 'region');
-  expression.setAttribute('aria-label', `Equation: ${block.plain}`);
-  const parsed = new DOMParser().parseFromString(block.mathml, 'application/xml');
-  const allowed = new Set('math mrow mi mn mo mtext mfrac msqrt mroot msub msup msubsup mtable mtr mtd munder mover munderover mmultiscripts mprescripts none mspace mstyle menclose'.split(' '));
-  const attrs = new Set(['display', 'mathvariant', 'displaystyle', 'stretchy', 'linethickness', 'fence', 'separator', 'accent', 'accentunder', 'notation', 'columnalign', 'rowalign', 'columnspacing', 'rowspacing', 'columnlines', 'rowlines', 'scriptlevel', 'width', 'height', 'depth', 'lspace', 'rspace']);
-  const valid = !parsed.querySelector('parsererror') && [...parsed.querySelectorAll('*')].every(element =>
-    element.namespaceURI === 'http://www.w3.org/1998/Math/MathML' && allowed.has(element.localName) &&
-    [...element.attributes].every(attr => attrs.has(attr.name) || attr.name === 'xmlns'));
-  if (valid) expression.append(document.importNode(parsed.documentElement, true));
-  else expression.append(node('p', '', block.plain));
-  box.append(expression, node('p', '', block.plain));
-  const glossary = node('dl', 'symbols');
-  for (const symbol of block.symbols) glossary.append(node('dt', '', symbol.symbol), node('dd', '', symbol.meaning));
-  box.append(glossary, node('p', 'small', block.conditions));
-  return box;
-}
 function table(block) {
   const region = node('div', 'table-region');
-  region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', block.caption);
-  const grid = node('table'); grid.append(node('caption', '', block.caption));
+  region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', studyText('span', '', block.caption).textContent);
+  const grid = node('table'); grid.append(studyText('caption', '', block.caption));
   const headings = node('tr');
-  for (const label of block.columns) { const th = node('th', '', label); th.scope = 'col'; headings.append(th); }
+  for (const label of block.columns) { const th = studyText('th', '', label); th.scope = 'col'; headings.append(th); }
   grid.append(append(node('thead'), headings));
   const body = node('tbody');
   for (const cells of block.rows) {
     const row = node('tr');
-    cells.forEach((text, index) => { const cell = node(index ? 'td' : 'th', '', text); if (!index) cell.scope = 'row'; row.append(cell); });
+    cells.forEach((text, index) => { const cell = studyText(index ? 'td' : 'th', '', text); if (!index) cell.scope = 'row'; row.append(cell); });
     body.append(row);
   }
   region.append(append(grid, body));
@@ -44,7 +26,11 @@ function svgNode(tag, attributes) {
 }
 function diagram(block) {
   const box = node('div', 'surface diagram');
-  const graph = svgNode('svg', { viewBox: '0 0 600 320', class: 'graph', role: 'img', 'aria-label': block.description });
+  // Crop unused canvas height so the drawing, not empty space, fills narrow screens.
+  const reach = item => item.shape === 'box' ? 28 : 24;
+  const top = Math.max(0, Math.min(...block.nodes.map(item => item.y - reach(item))) - 24);
+  const bottom = Math.min(320, Math.max(...block.nodes.map(item => item.y + reach(item))) + 24);
+  const graph = svgNode('svg', { viewBox: `0 ${top} 600 ${bottom - top}`, class: 'graph', role: 'img', 'aria-label': studyText('span', '', block.description).textContent });
   const nodes = new Map(block.nodes.map(item => [item.key, item]));
   function boundary(item, ux, uy) {
     return item.shape === 'box' ? Math.min(72 / (Math.abs(ux) || 1e-9), 30 / (Math.abs(uy) || 1e-9)) : 26;
@@ -77,7 +63,7 @@ function diagram(block) {
     group.append(item.shape === 'box' ? svgNode('rect', { x: item.x - 70, y: item.y - 28, width: 140, height: 56, rx: 6 }) : svgNode('circle', { cx: item.x, cy: item.y, r: 24 }), label);
     groups.set(item.key, group); graph.append(group);
   }
-  const description = node('p', 'small', block.description);
+  const description = studyText('p', 'small', block.description);
   const state = node('div', 'diagram-state'); state.setAttribute('aria-live', 'polite');
   const caption = node('p'), frontier = node('p', 'small'); state.append(caption, frontier);
   let index = 0;
@@ -90,39 +76,39 @@ function diagram(block) {
     for (const [key, group] of groups) {
       group.classList.toggle('active', frame.active.includes(key)); group.classList.toggle('visited', frame.visited.includes(key) && !frame.active.includes(key));
     }
-    caption.textContent = frame.caption;
+    caption.replaceChildren(...studyText('span', '', frame.caption).childNodes);
     frontier.hidden = block.state_labels === 'caption' || (block.frames.length === 1 && !frame.frontier.length && !frame.visited.length);
     frontier.textContent = `Frontier: ${frame.frontier.map(key => nodes.get(key).label).join(', ') || 'empty'} · Seen: ${frame.visited.map(key => nodes.get(key).label).join(', ') || 'none'}`;
     counter.textContent = `${index + 1} / ${block.frames.length}`;
     prev.disabled = index === 0; next.disabled = index === block.frames.length - 1;
   }
-  const region = node('div', 'graph-region'); region.tabIndex = 0;
-  region.setAttribute('role', 'region'); region.setAttribute('aria-label', block.title);
+  const region = node('div', 'graph-region');
   region.append(graph);
   update(); controls.hidden = block.frames.length < 2; box.append(description, region, state, controls);
   return box;
 }
 export function renderReading(unit) {
   const root = node('div');
-  for (const block of unit.blocks) {
-    const section = node('section', 'read-section'); section.append(node('h2', '', block.title));
+  for (const [index, block] of unit.blocks.entries()) {
+    const section = node('section', 'read-section'); section.dataset.blockIndex = String(index);
+    const material = node('div', 'reading-material'); material.dataset.commentTarget = 'content'; material.append(studyText('h2', '', block.title));
     switch (block.kind) {
       case 'text':
-        for (const text of block.paragraphs) section.append(node('p', '', text));
-        if (block.points.length) section.append(append(node('ul'), ...block.points.map(text => node('li', '', text))));
+        for (const text of block.paragraphs) material.append(studyText('p', '', text));
+        if (block.points.length) material.append(append(node('ul'), ...block.points.map(text => studyText('li', '', text))));
         break;
-      case 'formula': section.append(formula(block)); break;
-      case 'table': section.append(table(block)); break;
-      case 'diagram': section.append(diagram(block)); break;
+      case 'formula': material.append(renderFormula(block)); break;
+      case 'table': material.append(table(block)); break;
+      case 'diagram': material.append(diagram(block)); break;
       case 'code': {
         const region = node('div', 'code-region'); region.tabIndex = 0;
         region.setAttribute('role', 'region'); region.setAttribute('aria-label', `${block.language} code`);
         region.append(node('span', 'small', block.language), append(node('pre'), node('code', '', block.code)));
-        section.append(region, node('p', '', block.explanation)); break;
+        material.append(region, studyText('p', '', block.explanation)); break;
       }
       default: throw new Error('Unsupported study block. Rebuild the site with a compatible renderer.');
     }
-    section.append(sourcesNote(block.sources, data.sources, data.course.synthetic)); root.append(section);
+    section.append(material, sourcesNote(block.sources, data.sources, data.course.synthetic)); root.append(section);
   }
   return root;
 }

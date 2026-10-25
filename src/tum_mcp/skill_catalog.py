@@ -2,7 +2,13 @@
 
 from typing import Final
 
-CURRENT_SKILLS: Final = ("read-content", "init-study", "update-study", "prepare-study")
+CURRENT_SKILLS: Final = (
+    "read-content",
+    "sync-study",
+    "prepare-study",
+    "audio-notes",
+    "publish-study",
+)
 LEGACY_SKILLS: Final = dict.fromkeys(
     (
         "tum-moodle-study",
@@ -18,3 +24,5 @@ LEGACY_SKILLS: Final = dict.fromkeys(
     ),
     "read-content",
 )
+
+LEGACY_SKILLS.update({"init-study": "sync-study", "update-study": "sync-study"})

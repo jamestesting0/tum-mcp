@@ -1,30 +1,86 @@
+# Python environments, caches and build output.
 .venv/
 venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.cache/
 .coverage
 .coverage.*
 htmlcov/
 dist/
 build/
 *.egg-info/
+
+# JavaScript dependencies and generated browser-test reports.
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+
+# Editor, OS and temporary files.
 .DS_Store
+._*
+Thumbs.db
+Desktop.ini
 .idea/
 .vscode/
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Local environment values; keep distributable configuration examples.
 .env
 .env.*
 !.env.example
-.omo/
+!.env.*.example
 
-# Machine-local agent instructions and handoff notes; public docs stay tracked.
+# Machine-local agent instructions, settings and handoff notes.
+.omo/
+/.agents/
+/.codex/
+/.claude/
+/.claude.json
+/.cursor/
+/.gemini/
 /AGENTS.md
 /docs/local/
 /docs/DESIGN.md
 /DESIGN.md
 
-# Local Moodle state and downloads must never be published.
+# Local scratch work and generated captures, including accidental null output paths.
+/local/
+/tmp/
+/temp/
+/artifacts/
+/screenshots/
+/null/
+
+# Campus runtime data, personal study state and downloads.
+/TUMMCP/
+/TUMMoodle/
+/data/
+/credentials/
+/local-session/
+/runtimes/
+/runtime-leases/
+/runtime-cleanup.lock
+/runtime-removal.pending
+/config/preferences.json
+/config/preferences.lock
+.study/
+.study-*.lock
+.tum-mcp-workspace.json
+downloads/
+
+# Session secrets, browser authentication and interrupted private writes.
 session.enc
 session.key
 *.enc
@@ -36,9 +92,9 @@ library.sqlite*
 *.sqlite3*
 storage-state*.json
 playwright/.auth/
-downloads/
-npm/backend/
-*.tgz
+.write-*
 
-# Atomic backend build staging; never distributed.
+# Generated distribution artifacts; keep source manifests and uv.lock tracked.
+/npm/backend/
+*.tgz
 /npm/.backend-build-*

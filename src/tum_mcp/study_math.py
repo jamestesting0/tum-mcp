@@ -10,6 +10,7 @@ from latex2mathml import exceptions
 from latex2mathml.converter import convert
 
 MATH_NS = "http://www.w3.org/1998/Math/MathML"
+INLINE_MATH = re.compile(r"\\\((.*?)\\\)", re.DOTALL)
 MATH_TAGS = set(
     "math mrow mi mn mo mtext mfrac msqrt mroot msub msup msubsup mtable mtr mtd "
     "munder mover munderover mmultiscripts mprescripts none mspace mstyle menclose".split()
@@ -37,6 +38,8 @@ MATH_ATTRS = {
     "depth",
     "lspace",
     "rspace",
+    "minsize",
+    "maxsize",
 }
 PARSE_ERRORS = (
     exceptions.NumeratorNotFoundError,
@@ -75,6 +78,8 @@ def safe_mathml(value: str) -> str:
         "munderover": 3,
     }
     for element in root.iter():
+        if not element.tag.startswith(f"{{{MATH_NS}}}"):
+            raise ValueError("Every formula element requires the MathML namespace.")
         tag = element.tag.removeprefix(f"{{{MATH_NS}}}")
         if tag not in MATH_TAGS or not set(element.attrib) <= MATH_ATTRS:
             raise ValueError("Formula contains unsupported elements or attributes.")
@@ -106,3 +111,13 @@ def compile_latex(value: str) -> str:
     except PARSE_ERRORS:
         raise ValueError("Cannot compile this LaTeX expression.") from None
     return safe_mathml(result)
+
+
+def validate_inline(value: str) -> str:
+    """Inline delimiters are explicit, so currency and literal code stay untouched."""
+    for match in INLINE_MATH.finditer(value):
+        compile_latex(match[1])
+    remaining = INLINE_MATH.sub("", value)
+    if r"\(" in remaining or r"\)" in remaining:
+        raise ValueError("Inline LaTeX needs matching \\( and \\) delimiters.")
+    return value

@@ -41,6 +41,37 @@ class DoctorReport(Frozen):
     remote_actions: str = "disabled"
 
 
+def github_check(*, live: bool) -> Check:
+    """Check the optional publishing prerequisite without reading credential files."""
+    executable = shutil.which("gh")
+    if executable is None:
+        return Check(
+            label="GitHub publishing",
+            state=State.MISSING,
+            detail="Optional: install GitHub CLI, then gh auth login --hostname github.com.",
+        )
+    if not live:
+        return Check(
+            label="GitHub publishing",
+            state=State.CONFIGURED,
+            location=executable,
+            detail="GitHub CLI found; authentication not checked. Use doctor --live to verify.",
+        )
+    from tum_mcp.study_github import Account, GitHub
+
+    try:
+        account = GitHub(executable).require("user", Account)
+        return Check(
+            label="GitHub publishing",
+            state=State.READY,
+            location=executable,
+            detail=f"Authenticated as {account.login}; repository/Pages permissions "
+            "and paid-plan eligibility are checked at publication.",
+        )
+    except CampusError as error:
+        return Check(label="GitHub publishing", state=State.ACTION, detail=error.message)
+
+
 def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> DoctorReport:
     base = home or Path.home()
     data = data_path()
@@ -264,6 +295,13 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
         except (subprocess.SubprocessError, OSError, UnicodeError):
             node_state, node_detail = State.ACTION, "Found Node.js; version check failed."
     runtime.append(Check(label="Node.js", state=node_state, detail=node_detail, location=node))
+    github = github_check(live=live)
+    runtime.append(github)
+    if github.state in {State.MISSING, State.ACTION}:
+        next_steps.append(
+            "Optional website publishing: install GitHub CLI if needed, then "
+            "gh auth login --hostname github.com and tum-mcp doctor --live."
+        )
     try:
         skills = inspect_skills()
         runtime.append(

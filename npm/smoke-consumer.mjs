@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, release } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -33,7 +33,7 @@ try {
   run(process.execPath, [launcher, 'setup', '--client', 'generic']);
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'data/runtime.json'), 'utf8')), first);
   const skills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate']));
-  assert.equal(skills.checked_skills.length, 4);
+  assert.deepEqual(skills.checked_skills.toSorted(), ['audio-notes', 'prepare-study', 'publish-study', 'read-content', 'sync-study']);
   assert.deepEqual(skills.errors, []);
   const diagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--json']));
   assert.equal(diagnostics.live_authentication, 'not_checked');
@@ -72,6 +72,18 @@ for name in ('cursor','antigravity'):
     assert read_client_config(client_config_path(name,home)).mcpServers['tum']['args']==['-I','-m','tum_mcp','serve']
 `;
   run(first.python, ['-I', '-c', storage], 60000);
+  const studyProject = join(root, 'course Ω');
+  const status = () => JSON.parse(run(process.execPath, [launcher, 'study', 'status', studyProject]));
+  assert.equal(status().mode, 'initialize');
+  assert.equal(existsSync(studyProject), false);
+  run(process.execPath, [launcher, 'study', 'demo', studyProject]);
+  const boundStatus = status();
+  assert.equal(boundStatus.mode, 'sync');
+  assert.equal(boundStatus.course.synthetic, true);
+  const studyState = join(studyProject, '.study/state.json');
+  writeFileSync(studyState, 'synthetic damaged study state');
+  assert.equal(status().mode, 'recover');
+  assert.equal(readFileSync(studyState, 'utf8'), 'synthetic damaged study state');
   let browserEvidence = null;
   if (process.env.TUM_MCP_BROWSER_INTEGRATION === '1' || /microsoft|wsl/i.test(release())) {
     // Windows browsers require the OS account's known-folder environment. They
@@ -81,10 +93,24 @@ for name in ('cursor','antigravity'):
       for (const name of ['HOME', 'USERPROFILE']) if (process.env[name]) browserEnv[name] = process.env[name];
     }
     const fixture = readFileSync(new URL('../tests/integration/browser_consumer_fixture.py', import.meta.url), 'utf8');
-    const studyFixture = readFileSync(new URL('../tests/integration/study_browser_fixture.py', import.meta.url), 'utf8');
+    const revisionFixture = readFileSync(new URL('../tests/integration/study_revision_fixture.py', import.meta.url), 'utf8');
+    const popoverFixture = readFileSync(new URL('../tests/integration/study_popover_fixture.py', import.meta.url), 'utf8');
+    const commentsFixture = readFileSync(new URL('../tests/integration/study_comments_fixture.py', import.meta.url), 'utf8')
+      .replace('from study_popover_fixture import popover_checks', popoverFixture);
+    const activityCommentsFixture = readFileSync(new URL('../tests/integration/study_activity_comments_fixture.py', import.meta.url), 'utf8')
+      .replace('from study_comments_fixture import open_notes, select_passage', '');
+    const tableFixture = readFileSync(new URL('../tests/integration/study_table_fixture.py', import.meta.url), 'utf8');
+    const inlineFixture = readFileSync(new URL('../tests/integration/study_inline_fixture.py', import.meta.url), 'utf8')
+      .replace('from study_comments_fixture import open_notes, select_passage', '');
+    const studyFixture = readFileSync(new URL('../tests/integration/study_browser_fixture.py', import.meta.url), 'utf8')
+      .replace(/^from study_revision_fixture import (?:\([\s\S]*?\)|[^\r\n]+)\r?\n/m, revisionFixture)
+      .replace('from study_comments_fixture import comment_checks', commentsFixture)
+      .replace('from study_table_fixture import table_layout_checks', tableFixture)
+      .replace('from study_inline_fixture import inline_math_checks, mobile_outline_checks', inlineFixture)
+      .replace('from study_activity_comments_fixture import activity_comment_checks', activityCommentsFixture);
     // Isolated Python intentionally cannot import helpers from the checkout.
     const combined = fixture.replace('from study_browser_fixture import study_website', studyFixture);
-    browserEvidence = JSON.parse(run(first.python, ['-I', '-c', combined], 180000, browserEnv));
+    browserEvidence = JSON.parse(run(first.python, ['-I', '-c', combined], 300000, browserEnv));
   }
   const protocol = `import os,sys,anyio
 from mcp import ClientSession
@@ -111,10 +137,10 @@ anyio.run(check)
   run(process.execPath, [launcher, 'study', 'demo', demoProject]);
   const template = JSON.parse(run(process.execPath, [launcher, 'study', 'template']));
   assert.equal(template.author, 'study/content.json');
-  assert.ok(template.files.includes('flashcards.mjs') && template.files.includes('navigation.mjs'));
+  assert.ok(['flashcards.mjs', 'navigation.mjs', 'revision.mjs'].every(file => template.files.includes(file)));
   assert.match(template.revision, /^[a-f0-9]{64}$/);
   const study = JSON.parse(run(process.execPath, [launcher, 'study', 'inspect', demoProject]));
   assert.equal(study.course.synthetic, true); assert.deepEqual(study.stale_units, []);
   assert.ok(readFileSync(join(demoProject, 'study', 'reading.mjs'), 'utf8').includes('renderReading'));
-  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 4, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
+  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 5, studyStateRoutingPassed: true, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
 } finally { rmSync(root, { recursive: true, force: true }); }

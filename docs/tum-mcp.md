@@ -2,7 +2,7 @@
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
 Development version **0.6.0 is unreleased**; public npm latest remains 0.5.0.
-This checkout provides read-only course retrieval and four local study workflows.
+This checkout provides read-only course retrieval and five local study workflows.
 
 ## Current capabilities
 
@@ -130,11 +130,6 @@ Private Zulip channels require `--private-channel ID` as well as `--channel ID`.
 `--sensitive` enables own Artemis participation/feedback reads. It grants no
 website mutation or local execution permission.
 
-On 24 October 2026, both saved browser-session credentials passed identity
-verification through the actual MCP process. Scoped Artemis exercise listing and
-statement retrieval, plus a bounded Zulip channel search, passed. No participation
-was started, code pushed, message sent, or read flag changed by these checks.
-
 Settings live outside the installed package in `TUMMCP/config/preferences.json`.
 The default data directory is beside the legacy `TUMMoodle` directory on each OS.
 Existing Moodle data and its native-store identity are retained in place. New
@@ -175,16 +170,18 @@ prerequisites. Client registration is distinguished
 from activation; the host must confirm a running MCP connection after setup.
 
 Use `doctor --live` for bounded authenticated identity checks on saved local
-sessions. This reads Moodle's course overview and Artemis/Zulip identity only;
+sessions and optional GitHub CLI authentication. Campus checks read Moodle's
+course overview and Artemis/Zulip identity only;
 it does not broaden content scopes. `doctor --json` emits schema-versioned JSON
 without terminal styling; combine both flags for live automation. Paths appear
 in JSON for troubleshooting. Default diagnostics do not create state folders.
 
 ## Study workflows
 
-`read-content` retrieves course information across the three websites. `init-study`
-requires an explicitly chosen available course; `update-study` reconciles its
-sources; `prepare-study` creates or extends its local interactive site. See the
+`read-content` retrieves course information across the three websites. `sync-study`
+uses read-only local status to initialize an explicitly chosen available course or
+reconcile an existing project. Incomplete state is preserved for recovery.
+`prepare-study` creates or extends its local interactive site. See the
 [study guide](study.md) for examples, state structure and helper commands.
 
 One project holds one course. Source revisions, coverage and course knowledge
@@ -203,12 +200,19 @@ steps and never equates writing files with activation.
 
 The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
-The shipped pack contains exactly four skills: `read-content`, `init-study`,
-`update-study` and `prepare-study`. Website-specific retrieval guidance is loaded
-from references within read-content. Teaching, schema and design contracts live
+The shipped pack contains five skills: `read-content`, `sync-study`,
+`prepare-study`, `audio-notes` and `publish-study`. Website-specific retrieval
+guidance is loaded from references within read-content. Teaching, schema and design contracts live
 with prepare-study; the renderer and synthetic example ship as reusable assets.
-Old seven-skill and three-site packs are retired only when managed copies remain
-unchanged. Personal overrides are preserved and require a deliberate merge into
+Audio Notes converts prepared content into category tracks and maintains coverage,
+scripts, voice settings, candidates and archives under the course's `audio/` root.
+Publish Study uses host GitHub CLI authentication to create a private repository
+and a public Pages website after explicit publication consent. It chooses a course
+and semester name, updates the same site after successful study builds, and shows
+the hosted URL alongside the local launcher URL. No tokens or original course
+downloads are uploaded. See [publishing](study.md#publish-a-study-website).
+Old seven-skill, three-site and separate init/update packs are retired only when
+managed copies remain unchanged. Personal overrides are preserved and require a deliberate merge into
 the consolidated workflows before export.
 
 `scripts/verify_campus_clients.py` checks real host discovery in disposable
@@ -257,8 +261,8 @@ trials, and two review passes have not been demonstrated for this pilot.
 Export refuses symbolic links and
 does not overwrite an existing destination.
 
-The activation corpus contains 86 cases across the four workflows, with development
-and held-out partitions. It covers explicit/implicit requests, unrelated
+The activation corpus covers the reading, study and audio workflows, with
+development and held-out partitions. It covers explicit/implicit requests, unrelated
 negatives, missing credentials and unsupported-action negatives. Old trial
 results must not be reused against the consolidated skill labels. `skills evaluate TRIALS.jsonl` scores supplied fresh-session
 records separately by host/version/model. Each record follows `Trial` in

@@ -8,11 +8,25 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from playwright.sync_api import Browser, Route
+from study_activity_comments_fixture import activity_comment_checks
+from study_comments_fixture import comment_checks
+from study_inline_fixture import inline_math_checks, mobile_outline_checks
+from study_revision_fixture import (
+    identity_checks,
+    learning_flow_checks,
+    practice_navigation_checks,
+    revision_checks,
+)
+from study_table_fixture import table_layout_checks
 
 
 def study_website(browser: Browser) -> dict[str, object]:
     """Exercise packaged study assets through the same owned Chromium/WSL transport."""
+    from tum_mcp.errors import CampusError
+    from tum_mcp.study_build import TEMPLATE_FILES
     from tum_mcp.study_cli import demo
+    from tum_mcp.study_comment_models import OPERATION
+    from tum_mcp.study_comments import change_comment, read_comments
 
     with tempfile.TemporaryDirectory(prefix="tum-study-browser-") as temporary:
         project = Path(temporary) / "Synthetic course"
@@ -24,24 +38,37 @@ def study_website(browser: Browser) -> dict[str, object]:
 
         def serve(route: Route) -> None:
             url = urlsplit(route.request.url)
+            if url.netloc == "study.invalid" and url.path == "/_study/comments":
+                try:
+                    result = (
+                        change_comment(
+                            project, OPERATION.validate_python(route.request.post_data_json)
+                        )
+                        if route.request.method == "POST"
+                        else read_comments(project)
+                    )
+                    etag = f'"{result["revision"]}"'
+                    unchanged = (
+                        route.request.method == "GET"
+                        and route.request.headers.get("if-none-match") == etag
+                    )
+                    route.fulfill(
+                        status=304 if unchanged else 200,
+                        headers={"ETag": etag},
+                        content_type="application/json",
+                        body="" if unchanged else json.dumps(result),
+                    )
+                except CampusError as error:
+                    route.fulfill(
+                        status=409,
+                        content_type="application/json",
+                        body=json.dumps({"error": error.message}),
+                    )
+                return
             name = url.path.removeprefix("/") or "index.html"
-            assert url.netloc == "study.invalid" and name in {
-                "index.html",
-                "styles.css",
-                "app.mjs",
-                "dom.mjs",
-                "reading.mjs",
-                "learning.mjs",
-                "navigation.mjs",
-                "flashcards.mjs",
-                "data.mjs",
-            }
-            mime = (
-                "text/html"
-                if name.endswith(".html")
-                else "text/css"
-                if name.endswith(".css")
-                else "text/javascript"
+            assert url.netloc == "study.invalid" and name in {*TEMPLATE_FILES, "data.mjs"}
+            mime = {".html": "text/html", ".css": "text/css", ".woff2": "font/woff2"}.get(
+                Path(name).suffix, "text/javascript"
             )
             route.fulfill(status=200, content_type=mime, body=(site / name).read_bytes())
 
@@ -69,6 +96,10 @@ def study_website(browser: Browser) -> dict[str, object]:
                 )
                 assert page.locator(".code-region code").inner_text() == code["code"]
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+                assert page.locator(".sidebar").get_by_text("About", exact=True).count() == 0
+                if width == 390 and theme == "light":
+                    comment_checks(page, project)
+                    table_layout_checks(page, project)
                 page.get_by_role("button", name="Next step", exact=True).click()
                 page.get_by_role("button", name="Previous step", exact=True).click()
                 content_tab = page.get_by_role("tab", name="Content", exact=True)
@@ -91,6 +122,7 @@ def study_website(browser: Browser) -> dict[str, object]:
                 page.get_by_role("button", name="Check answer", exact=True).click()
                 assert page.get_by_role("heading", name="Correct", exact=True).is_visible()
                 assert page.get_by_text(option["feedback"], exact=True).is_visible()
+                practice_navigation_checks(page, len(unit["questions"]))
                 if width < 800:
                     page.get_by_role("button", name="Expand course outline", exact=True).click()
                 page.get_by_role("button", name="Collapse course outline", exact=True).click()
@@ -104,21 +136,36 @@ def study_website(browser: Browser) -> dict[str, object]:
                 )
                 theme_button.click()
                 assert page.locator("html").get_attribute("data-theme") != theme
-                page.get_by_role("navigation", name="Study views", exact=True).get_by_role(
-                    "link", name="Flashcards", exact=True
+                if width < 800:
+                    page.get_by_role("button", name="Collapse course outline", exact=True).click()
+                # The single forward link replaces repeated view tabs at the end of a view.
+                page.get_by_role("tab", name="Content", exact=True).click()
+                page.get_by_role("navigation", name="Up next", exact=True).get_by_role(
+                    "link"
                 ).click()
+                flashcards_tab = page.get_by_role("tab", name="Flashcards", exact=False)
+                assert flashcards_tab.get_attribute("aria-selected") == "true"
                 page.locator(".flashcard").focus()
                 page.keyboard.press("Space")
                 assert page.locator(".flashcard").get_attribute("data-revealed") == "false"
                 page.keyboard.press("Space")
+                # A rating saves and advances to the next unrevealed card.
                 page.keyboard.press("1")
+                position = page.locator("[data-flashcards] .recall-meta")
+                assert position.inner_text().startswith("2 /")
+                assert page.locator(".flashcard").get_attribute("data-revealed") == "false"
+                assert page.evaluate("document.activeElement.classList.contains('flashcard')")
+                page.keyboard.press("ArrowLeft")
+                page.keyboard.press("Space")
                 assert (
                     page.locator('[data-card-action="again"]').get_attribute("aria-pressed")
                     == "true"
                 )
+                # Space on a focused rating activates that rating instead of flipping.
                 page.get_by_role("button", name="Again", exact=True).focus()
                 page.keyboard.press("Space")
-                assert page.locator(".flashcard").get_attribute("data-revealed") == "true"
+                assert position.inner_text().startswith("2 /")
+                assert page.locator(".flashcard").get_attribute("data-revealed") == "false"
                 page.keyboard.press("ArrowRight")
                 assert page.locator(".flashcard").get_attribute("data-revealed") == "false"
                 assert not page.locator(".card-ratings").is_visible()
@@ -130,11 +177,47 @@ def study_website(browser: Browser) -> dict[str, object]:
                 page.keyboard.down("Space")
                 page.keyboard.up("Space")
                 assert page.locator(".flashcard").get_attribute("data-revealed") == "true"
+                revision_checks(page, content)
+                context.close()
+        context = browser.new_context(viewport={"width": 390, "height": 900}, has_touch=True)
+        context.route("**/*", serve)
+        page = context.new_page()
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        learning_flow_checks(page, content)
+        mobile_outline_checks(page, content)
+        inline_math_checks(page, project, content)
+        context.close()
+        for view in ("flashcards", "practice"):
+            for pooled in (False, True):
+                context = browser.new_context(viewport={"width": 390, "height": 900})
+                context.route("**/*", serve)
+                page = context.new_page()
+                page.on("pageerror", lambda error: errors.append(str(error)))
+                activity_comment_checks(page, project, content, view, pooled)
                 context.close()
         # Long technical identifiers must wrap in both outline layouts.
         stressed = json.loads(
             (site / "data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
         )
+        for unit in stressed["units"]:
+            unit["flashcards"][0]["key"] = "same-item-key"
+            unit["questions"][0]["key"] = "same-item-key"
+
+        def serve_identity(route: Route) -> None:
+            if urlsplit(route.request.url).path == "/data.mjs":
+                route.fulfill(
+                    content_type="text/javascript",
+                    body="export default " + json.dumps(stressed) + ";",
+                )
+            else:
+                serve(route)
+
+        context = browser.new_context()
+        context.route("**/*", serve_identity)
+        page = context.new_page()
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        identity_checks(page, stressed["units"])
+        context.close()
         stressed["course"]["title"] = "CourseIdentifierWithoutSpaces" * 5
         for unit in stressed["units"]:
             unit["title"] = "LongTechnicalIdentifierWithoutSpaces" * 5

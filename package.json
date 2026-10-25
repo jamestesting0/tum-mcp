@@ -20,6 +20,7 @@
     "npm/backend/manifest.json",
     "LICENSE",
     "NOTICE",
+    "CHANGELOG.md",
     "README.md",
     "docs/setup.md",
     "docs/development.md",

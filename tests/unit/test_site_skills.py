@@ -16,12 +16,13 @@ def test_pack_contains_reading_and_study_workflows_with_valid_references(
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path))
     # When the exported site pack is validated against the running tool inventory.
     report = validate_skills()
-    # Then only the four workflows are discoverable and every reference resolves.
+    # Then the reading, study and audio workflows are discoverable and references resolve.
     assert set(report.checked_skills) == {
         "read-content",
-        "init-study",
-        "update-study",
+        "sync-study",
         "prepare-study",
+        "audio-notes",
+        "publish-study",
     }
     assert report.errors == () and report.reference_characters > 0
     assert report.activation_evaluated is False
@@ -60,10 +61,11 @@ def test_claude_respects_a_users_explicit_only_site_skill_preference(
     assert frontmatter["disable-model-invocation"] is True
 
 
-def test_local_site_workflow_does_not_require_a_campus_server() -> None:
+@pytest.mark.parametrize("name", ["prepare-study", "audio-notes"])
+def test_local_study_workflow_does_not_require_a_campus_server(name: str) -> None:
     from tum_mcp.skills import bundled, implicit_invocation
 
-    skill = bundled() / "prepare-study"
+    skill = bundled() / name
     policy = yaml.safe_load((skill / "agents/openai.yaml").read_text(encoding="utf-8"))
     assert implicit_invocation(skill)
     assert not policy.get("dependencies", {}).get("tools", [])
@@ -82,3 +84,30 @@ def test_activation_cases_have_unique_ids_and_current_workflow_labels() -> None:
     assert {case.target_skill for case in cases} <= set(CURRENT_SKILLS)
     assert {case.expected_skill for case in cases} <= {*CURRENT_SKILLS, None}
     assert {case.partition for case in cases} == {"development", "held_out"}
+
+
+@pytest.mark.parametrize("name", ["codex", "claude"])
+def test_audio_workflow_installs_with_its_complete_reference_bundle(
+    name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.skills import bundled
+
+    # Given a fresh client profile and the canonical audio skill bundle.
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    home = tmp_path / "profile"
+    source = bundled() / "audio-notes"
+    # When the host installs its managed study skills.
+    install_client(name, home)
+    # Then the audio skill is discoverable and its linked resources survive export.
+    entries = list(home.rglob("audio-notes/SKILL.md"))
+    assert len(entries) == 1
+    entry = entries[0]
+    frontmatter = yaml.safe_load(entry.read_text(encoding="utf-8").split("---", 2)[1])
+    assert frontmatter["name"] == "audio-notes"
+    expected = {path.relative_to(source) for path in source.rglob("*") if path.is_file()}
+    installed = {
+        path.relative_to(entry.parent) for path in entry.parent.rglob("*") if path.is_file()
+    }
+    assert installed == expected
+    for relative in expected - {Path("SKILL.md")}:
+        assert (entry.parent / relative).read_bytes() == (source / relative).read_bytes()

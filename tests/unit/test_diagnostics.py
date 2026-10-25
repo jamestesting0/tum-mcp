@@ -1,4 +1,6 @@
 import io
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -12,6 +14,58 @@ from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle import auth
 from tum_mcp.settings import Account, Provider, save_account
 from tum_mcp.ui import State
+
+
+@pytest.fixture(autouse=True)
+def no_live_github_account(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default diagnostics tests must never use the developer's GitHub account."""
+    original = shutil.which
+    monkeypatch.setattr(shutil, "which", lambda name: None if name == "gh" else original(name))
+
+
+def test_doctor_reports_optional_github_without_running_authentication(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given an installed CLI, with subprocess execution forbidden.
+    from tum_mcp.diagnostics import github_check
+
+    monkeypatch.setattr(shutil, "which", lambda name: "/synthetic/gh")
+    monkeypatch.setattr(
+        subprocess, "run", lambda *a, **k: pytest.fail("Local doctor must not authenticate")
+    )
+    # When default diagnostics inspect the optional publisher.
+    result = github_check(live=False)
+    # Then availability is configured, without claiming verified authentication.
+    assert result.state == State.CONFIGURED and result.location == "/synthetic/gh"
+
+
+@pytest.mark.parametrize("authenticated", [True, False])
+def test_live_doctor_checks_github_without_exposing_cli_errors(
+    monkeypatch: pytest.MonkeyPatch,
+    authenticated: bool,
+) -> None:
+    # Given a synthetic GitHub identity endpoint, including a secret-bearing failure.
+    from tum_mcp.diagnostics import github_check
+
+    monkeypatch.setattr(shutil, "which", lambda name: "/synthetic/gh")
+    calls: list[list[str]] = []
+
+    def run(arguments: list[str], **kwargs: str) -> subprocess.CompletedProcess[bytes]:
+        calls.append(arguments)
+        return subprocess.CompletedProcess(
+            arguments,
+            0 if authenticated else 1,
+            b'{"login":"synthetic-student"}',
+            b"synthetic-secret (HTTP 401)",
+        )
+
+    monkeypatch.setattr(subprocess, "run", run)
+    # When live authentication is explicitly requested.
+    result = github_check(live=True)
+    # Then only the account identity is checked and no credentials appear in output.
+    assert result.state == (State.READY if authenticated else State.ACTION)
+    assert len(calls) == 1 and calls[0][-1] == "user"
+    assert "synthetic-secret" not in result.model_dump_json()
 
 
 def test_doctor_is_local_only_and_does_not_create_state_or_access_keychain(

@@ -123,11 +123,13 @@ def customize_skill(name: str) -> Path:
 def export_pack(destination: Path) -> None:
     if destination.exists():
         raise CampusError(Code.WORKSPACE_CONFLICT, "Export destination already exists.")
-    if legacy_overrides():
+    previous = legacy_overrides()
+    if previous:
+        targets = ", ".join(sorted({LEGACY_SKILLS[path.name] for path in previous}))
         raise CampusError(
             Code.WORKSPACE_CONFLICT,
             "Legacy skill customizations were preserved in the config skills directory. "
-            "Review and merge them into read-content before export/update.",
+            f"Review and merge them into {targets} before export/update.",
         )
     chosen_sources: list[Path] = []
     for source in sorted(bundled().iterdir()):

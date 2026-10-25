@@ -128,260 +128,260 @@
     "expected_skill": "read-content"
   },
   {
-    "id": "init-study-01",
-    "target_skill": "init-study",
-    "prompt": "$init-study Initialize a study project for Algorithms WS26/27.",
+    "id": "sync-study-init-01",
+    "target_skill": "sync-study",
+    "prompt": "$sync-study Initialize a study project for Algorithms WS26/27.",
     "context": "connected_course_metadata",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-02",
-    "target_skill": "init-study",
+    "id": "sync-study-init-02",
+    "target_skill": "sync-study",
     "prompt": "Set up one course workspace with a materials directory and AGENTS.md.",
     "context": "course_selected",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-03",
-    "target_skill": "init-study",
+    "id": "sync-study-init-03",
+    "target_skill": "sync-study",
     "prompt": "Create a study project.",
     "context": "course_missing_requires_input",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-04",
-    "target_skill": "init-study",
+    "id": "sync-study-init-04",
+    "target_skill": "sync-study",
     "prompt": "Create a new project for the exact available course named Patterns in Software Engineering.",
     "context": "connected_course_metadata",
     "partition": "held_out",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-05",
-    "target_skill": "init-study",
-    "prompt": "$init-study Prepare reusable course resources and a concise course knowledge map.",
+    "id": "sync-study-init-05",
+    "target_skill": "sync-study",
+    "prompt": "$sync-study Prepare reusable course resources and a concise course knowledge map.",
     "context": "course_selected",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-06",
-    "target_skill": "init-study",
+    "id": "sync-study-init-06",
+    "target_skill": "sync-study",
     "prompt": "Start a synthetic algorithms workspace for design review.",
     "context": "explicit_synthetic_demo",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-07",
-    "target_skill": "init-study",
+    "id": "sync-study-init-07",
+    "target_skill": "sync-study",
     "prompt": "Initialize this existing directory for the course I selected.",
     "context": "existing_user_agents_rules",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-08",
-    "target_skill": "init-study",
+    "id": "sync-study-init-08",
+    "target_skill": "sync-study",
     "prompt": "Bind this project to Algorithms and record any sources that cannot be read.",
     "context": "partially_connected_course",
     "partition": "held_out",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-09",
-    "target_skill": "init-study",
-    "prompt": "$init-study Initialize Algorithms WS26/27 here.",
+    "id": "sync-study-init-09",
+    "target_skill": "sync-study",
+    "prompt": "$sync-study Initialize Algorithms WS26/27 here.",
     "context": "directory_already_bound_other_course_requires_separate_project",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-10",
-    "target_skill": "init-study",
+    "id": "sync-study-init-10",
+    "target_skill": "sync-study",
     "prompt": "Set up my course study files without copying all lecture text into AGENTS.md.",
     "context": "course_selected",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-11",
-    "target_skill": "init-study",
+    "id": "sync-study-init-11",
+    "target_skill": "sync-study",
     "prompt": "Create a one-course study notebook with source links and revisions.",
     "context": "course_selected",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-12",
-    "target_skill": "init-study",
+    "id": "sync-study-init-12",
+    "target_skill": "sync-study",
     "prompt": "Organize downloaded exams, exercises and course content for my chosen course.",
     "context": "course_selected",
     "partition": "held_out",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-13",
-    "target_skill": "init-study",
-    "prompt": "$init-study Initialize the study workspace for Software Engineering.",
+    "id": "sync-study-init-13",
+    "target_skill": "sync-study",
+    "prompt": "$sync-study Initialize the study workspace for Software Engineering.",
     "context": "ambiguous_semester_requires_resolution",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-14",
-    "target_skill": "init-study",
+    "id": "sync-study-init-14",
+    "target_skill": "sync-study",
     "prompt": "Build a source inventory before I begin studying this course.",
     "context": "course_selected",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-15",
-    "target_skill": "init-study",
+    "id": "sync-study-init-15",
+    "target_skill": "sync-study",
     "prompt": "Create the course project using Moodle announcements and Artemis lectures too.",
     "context": "course_selected",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "init-study-16",
-    "target_skill": "init-study",
+    "id": "sync-study-init-16",
+    "target_skill": "sync-study",
     "prompt": "Prepare a reusable study workspace for this available course without changing the websites.",
     "context": "course_selected",
     "partition": "held_out",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-01",
-    "target_skill": "update-study",
-    "prompt": "$update-study Refresh my course project against upstream material.",
+    "id": "sync-study-update-01",
+    "target_skill": "sync-study",
+    "prompt": "$sync-study Refresh my course project against upstream material.",
     "context": "initialized_study_project",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-02",
-    "target_skill": "update-study",
+    "id": "sync-study-update-02",
+    "target_skill": "sync-study",
     "prompt": "Check whether new lectures have appeared and update my materials.",
     "context": "initialized_study_project",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-03",
-    "target_skill": "update-study",
+    "id": "sync-study-update-03",
+    "target_skill": "sync-study",
     "prompt": "Compare the current source inventory with Moodle and Artemis.",
     "context": "initialized_study_project",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-04",
-    "target_skill": "update-study",
+    "id": "sync-study-update-04",
+    "target_skill": "sync-study",
     "prompt": "Update AGENTS.md with verified new course information.",
     "context": "initialized_study_project",
     "partition": "held_out",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-05",
-    "target_skill": "update-study",
-    "prompt": "$update-study Sync my course notes while preserving edits.",
+    "id": "sync-study-update-05",
+    "target_skill": "sync-study",
+    "prompt": "$sync-study Sync my course notes while preserving edits.",
     "context": "locally_edited_managed_material",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-06",
-    "target_skill": "update-study",
+    "id": "sync-study-update-06",
+    "target_skill": "sync-study",
     "prompt": "Check announcements and discussion changes since the last sync.",
     "context": "initialized_study_project",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-07",
-    "target_skill": "update-study",
+    "id": "sync-study-update-07",
+    "target_skill": "sync-study",
     "prompt": "Refresh the project, but leave my study website for later.",
     "context": "initialized_project_with_site",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-08",
-    "target_skill": "update-study",
+    "id": "sync-study-update-08",
+    "target_skill": "sync-study",
     "prompt": "The course has revised its slides. Update the stored source revisions.",
     "context": "initialized_study_project",
     "partition": "held_out",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-09",
-    "target_skill": "update-study",
-    "prompt": "$update-study Refresh this course workspace.",
+    "id": "sync-study-update-09",
+    "target_skill": "sync-study",
+    "prompt": "$sync-study Refresh this course workspace.",
     "context": "no_study_state_requires_initialization",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-10",
-    "target_skill": "update-study",
+    "id": "sync-study-update-10",
+    "target_skill": "sync-study",
     "prompt": "Check stale content without treating a failed login as deleted material.",
     "context": "expired_source_session",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-11",
-    "target_skill": "update-study",
+    "id": "sync-study-update-11",
+    "target_skill": "sync-study",
     "prompt": "Find resources missing from this course project.",
     "context": "initialized_study_project",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-12",
-    "target_skill": "update-study",
+    "id": "sync-study-update-12",
+    "target_skill": "sync-study",
     "prompt": "Compare upstream sources and report which site units need regeneration.",
     "context": "initialized_project_with_site",
     "partition": "held_out",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-13",
-    "target_skill": "update-study",
-    "prompt": "$update-study Sync the project after a partial source listing.",
+    "id": "sync-study-update-13",
+    "target_skill": "sync-study",
+    "prompt": "$sync-study Sync the project after a partial source listing.",
     "context": "partial_source_coverage",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-14",
-    "target_skill": "update-study",
+    "id": "sync-study-update-14",
+    "target_skill": "sync-study",
     "prompt": "Reconcile withdrawn upstream materials while keeping local originals.",
     "context": "complete_source_coverage",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-15",
-    "target_skill": "update-study",
+    "id": "sync-study-update-15",
+    "target_skill": "sync-study",
     "prompt": "Keep my learning progress and personal instructions during a course update.",
     "context": "initialized_project_with_site",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
-    "id": "update-study-16",
-    "target_skill": "update-study",
+    "id": "sync-study-update-16",
+    "target_skill": "sync-study",
     "prompt": "Refresh the current course; do not replace it with next semester.",
     "context": "initialized_study_project",
     "partition": "held_out",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
     "id": "prepare-study-01",
@@ -521,7 +521,7 @@
   },
   {
     "id": "negative-02",
-    "target_skill": "init-study",
+    "target_skill": "sync-study",
     "prompt": "Push and submit my assignment.",
     "context": "remote_mutation",
     "partition": "development",
@@ -529,7 +529,7 @@
   },
   {
     "id": "negative-03",
-    "target_skill": "update-study",
+    "target_skill": "sync-study",
     "prompt": "Deploy the exercise and trigger a rebuild.",
     "context": "remote_mutation",
     "partition": "development",
@@ -553,7 +553,7 @@
   },
   {
     "id": "negative-06",
-    "target_skill": "init-study",
+    "target_skill": "sync-study",
     "prompt": "Mark all course messages as read.",
     "context": "remote_mutation",
     "partition": "development",
@@ -561,7 +561,7 @@
   },
   {
     "id": "negative-07",
-    "target_skill": "update-study",
+    "target_skill": "sync-study",
     "prompt": "Solve and submit the live quiz.",
     "context": "remote_mutation",
     "partition": "development",
@@ -585,7 +585,7 @@
   },
   {
     "id": "negative-10",
-    "target_skill": "init-study",
+    "target_skill": "sync-study",
     "prompt": "Initialize a git repository.",
     "context": "unrelated_init",
     "partition": "development",
@@ -593,7 +593,7 @@
   },
   {
     "id": "negative-11",
-    "target_skill": "update-study",
+    "target_skill": "sync-study",
     "prompt": "Update my operating system.",
     "context": "unrelated_update",
     "partition": "development",
@@ -625,7 +625,7 @@
   },
   {
     "id": "negative-15",
-    "target_skill": "update-study",
+    "target_skill": "sync-study",
     "prompt": "Delete my course materials permanently.",
     "context": "destructive_cleanup",
     "partition": "development",
@@ -665,11 +665,11 @@
   },
   {
     "id": "update-partial-source",
-    "target_skill": "update-study",
+    "target_skill": "sync-study",
     "prompt": "Refresh the saved course project; one connection has expired.",
     "context": "initialized_project_other_sources_available",
     "partition": "development",
-    "expected_skill": "update-study"
+    "expected_skill": "sync-study"
   },
   {
     "id": "read-known-attachment",
@@ -681,10 +681,218 @@
   },
   {
     "id": "init-confirmed-choice",
-    "target_skill": "init-study",
+    "target_skill": "sync-study",
     "prompt": "Create the workspace using the course and semester I already chose.",
     "context": "confirmed_available_course_choice_in_conversation",
     "partition": "development",
-    "expected_skill": "init-study"
+    "expected_skill": "sync-study"
+  },
+  {
+    "id": "prepare-study-comments-01",
+    "target_skill": "prepare-study",
+    "prompt": "Address the open passage comments in this study project and verify the explanations.",
+    "context": "initialized_study_project_with_comments",
+    "partition": "development",
+    "expected_skill": "prepare-study"
+  },
+  {
+    "id": "prepare-study-comments-02",
+    "target_skill": "prepare-study",
+    "prompt": "I highlighted unclear parts of the local study website. Improve those sections from the cited material.",
+    "context": "prepared_study_site_with_comments",
+    "partition": "development",
+    "expected_skill": "prepare-study"
+  },
+  {
+    "id": "prepare-study-comments-negative",
+    "target_skill": "prepare-study",
+    "prompt": "Post a reply to my Moodle forum thread.",
+    "context": "connected_moodle_course",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "audio-notes-01",
+    "target_skill": "audio-notes",
+    "prompt": "$audio-notes Create one audio file per category from my prepared course website.",
+    "context": "prepared_study_content_no_audio_yet",
+    "partition": "development",
+    "expected_skill": "audio-notes"
+  },
+  {
+    "id": "audio-notes-02",
+    "target_skill": "audio-notes",
+    "prompt": "Complete the audio notes for sections added to the study website this week.",
+    "context": "prepared_content_updated_existing_audio_manifest",
+    "partition": "development",
+    "expected_skill": "audio-notes"
+  },
+  {
+    "id": "audio-notes-03",
+    "target_skill": "audio-notes",
+    "prompt": "Turn the existing interactive lessons into spoken explanations I can follow without looking at a screen.",
+    "context": "prepared_course_with_formulas_tables_code_and_diagrams",
+    "partition": "held_out",
+    "expected_skill": "audio-notes"
+  },
+  {
+    "id": "audio-notes-04",
+    "target_skill": "audio-notes",
+    "prompt": "Check which prepared course topics my current audio misses, then generate the missing narration.",
+    "context": "legacy_audio_scripts_without_verified_coverage",
+    "partition": "development",
+    "expected_skill": "audio-notes"
+  },
+  {
+    "id": "audio-notes-05",
+    "target_skill": "audio-notes",
+    "prompt": "Update the Privacy recording after I corrected its explanation; reuse the other category audio.",
+    "context": "one_prepared_category_changed_existing_voice_profile",
+    "partition": "development",
+    "expected_skill": "audio-notes"
+  },
+  {
+    "id": "audio-notes-06",
+    "target_skill": "audio-notes",
+    "prompt": "Resume the interrupted course audio build, keeping everything under audio/.",
+    "context": "prepared_content_with_pending_plan_and_cached_chunks",
+    "partition": "held_out",
+    "expected_skill": "audio-notes"
+  },
+  {
+    "id": "audio-notes-07",
+    "target_skill": "audio-notes",
+    "prompt": "Make category audio from these prepared lessons using ElevenLabs' free website, without paying or logging in.",
+    "context": "prepared_study_content_browser_available",
+    "partition": "development",
+    "expected_skill": "audio-notes"
+  },
+  {
+    "id": "audio-notes-08",
+    "target_skill": "audio-notes",
+    "prompt": "A topic moved to another category in the study site. Bring both audio tracks up to date.",
+    "context": "prepared_category_mapping_changed_existing_audio",
+    "partition": "held_out",
+    "expected_skill": "audio-notes"
+  },
+  {
+    "id": "audio-notes-site-only",
+    "target_skill": "audio-notes",
+    "prompt": "Improve the interactive course explanations and flashcards.",
+    "context": "prepared_study_content_without_audio_request",
+    "partition": "development",
+    "expected_skill": "prepare-study"
+  },
+  {
+    "id": "audio-notes-source-only",
+    "target_skill": "audio-notes",
+    "prompt": "Read the new Moodle announcement and explain the instructor's change.",
+    "context": "connected_scoped_moodle_course",
+    "partition": "held_out",
+    "expected_skill": "read-content"
+  },
+  {
+    "id": "audio-notes-transcription-negative",
+    "target_skill": "audio-notes",
+    "prompt": "Transcribe this recording of my lecture into text.",
+    "context": "audio_recording_without_prepared_course",
+    "partition": "held_out",
+    "expected_skill": null
+  },
+  {
+    "id": "audio-notes-voice-cloning-negative",
+    "target_skill": "audio-notes",
+    "prompt": "Clone my lecturer's voice from this recording.",
+    "context": "recording_without_prepared_course",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "sync-study-damaged-state",
+    "target_skill": "sync-study",
+    "prompt": "Refresh this course project; its saved state is damaged.",
+    "context": "invalid_state_requires_preservation_and_recovery",
+    "partition": "held_out",
+    "expected_skill": "sync-study"
+  },
+  {
+    "id": "sync-study-orphaned-materials",
+    "target_skill": "sync-study",
+    "prompt": "Set up the current course around these existing study files.",
+    "context": "missing_state_existing_materials_requires_inspection",
+    "partition": "held_out",
+    "expected_skill": "sync-study"
+  },
+  {
+    "id": "sync-study-same-binding",
+    "target_skill": "sync-study",
+    "prompt": "Bring this course up to date without asking me to select it again.",
+    "context": "valid_bound_project",
+    "partition": "held_out",
+    "expected_skill": "sync-study"
+  },
+  {
+    "id": "sync-study-different-semester",
+    "target_skill": "sync-study",
+    "prompt": "Initialize next semester in this project that is bound to last semester.",
+    "context": "different_semester_requires_separate_project",
+    "partition": "held_out",
+    "expected_skill": "sync-study"
+  },
+  {
+    "id": "publish-study-first",
+    "target_skill": "publish-study",
+    "prompt": "Publish my prepared study website to GitHub Pages so I can open it on my phone.",
+    "context": "prepared_site_no_publication_config",
+    "partition": "development",
+    "expected_skill": "publish-study"
+  },
+  {
+    "id": "publish-study-retry",
+    "target_skill": "publish-study",
+    "prompt": "The configured study site deployment is still pending; finish verifying it.",
+    "context": "saved_publication_pending_commit",
+    "partition": "development",
+    "expected_skill": "publish-study"
+  },
+  {
+    "id": "publish-study-auth",
+    "target_skill": "publish-study",
+    "prompt": "Set up GitHub authentication for publishing this prepared course website.",
+    "context": "github_cli_not_authenticated",
+    "partition": "held_out",
+    "expected_skill": "publish-study"
+  },
+  {
+    "id": "publish-study-private-website",
+    "target_skill": "publish-study",
+    "prompt": "Publish this course site, but make sure only I can open the website.",
+    "context": "requires_private_website_no_publication_consent",
+    "partition": "held_out",
+    "expected_skill": "publish-study"
+  },
+  {
+    "id": "publish-study-content-only",
+    "target_skill": "publish-study",
+    "prompt": "Improve the flashcards in my published study site and keep its hosted version current.",
+    "context": "configured_publication_auto_sync",
+    "partition": "held_out",
+    "expected_skill": "prepare-study"
+  },
+  {
+    "id": "publish-study-sources",
+    "target_skill": "publish-study",
+    "prompt": "Update the selected course's sources and its existing hosted study website.",
+    "context": "bound_course_configured_publication_auto_sync",
+    "partition": "held_out",
+    "expected_skill": "sync-study"
+  },
+  {
+    "id": "publish-study-unrelated-github",
+    "target_skill": "publish-study",
+    "prompt": "Create a private GitHub repository for my unrelated Python library.",
+    "context": "not_a_course_study_project",
+    "partition": "development",
+    "expected_skill": null
   }
 ]

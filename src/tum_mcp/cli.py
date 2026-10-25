@@ -184,7 +184,10 @@ def doctor(
         bool, typer.Option("--json", help="Print machine-readable diagnostics.")
     ] = False,
     live: Annotated[
-        bool, typer.Option("--live", help="Verify saved local sessions with the services.")
+        bool,
+        typer.Option(
+            "--live", help="Verify saved campus sessions and optional GitHub authentication."
+        ),
     ] = False,
 ) -> None:
     """Show service readiness, client registrations, prerequisites and useful next actions."""
@@ -216,7 +219,9 @@ def doctor(
         for index, action in enumerate(report.next_steps, 1):
             console.print(Text(f"{index}. {action}"))
         console.print()
-    console.print(Text("Course websites are read-only. Study projects stay local.", style="muted"))
+    console.print(
+        Text("Campus websites are read-only. Study publication is optional.", style="muted")
+    )
     console.print(
         Text("Use --live for a fresh session check; --json for automation.", style="muted")
     )

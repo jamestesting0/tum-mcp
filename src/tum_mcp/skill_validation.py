@@ -70,7 +70,7 @@ def validate_skills() -> ValidationReport:
             "Legacy skill customizations need review before exporting the consolidated pack."
         )
     if set(checked) != set(CURRENT_SKILLS):
-        errors.append("Expected the four content and study workflows.")
+        errors.append("Expected the registered content and study workflows.")
     if {
         "artemis_submit",
         "artemis_start_exercise",

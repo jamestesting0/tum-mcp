@@ -18,9 +18,11 @@ from tum_mcp.study_content import (
     StudyContent,
     TableBlock,
     TextBlock,
+    Unit,
 )
-from tum_mcp.study_math import compile_latex
+from tum_mcp.study_math import INLINE_MATH, compile_latex
 from tum_mcp.study_models import Digest, StudyState
+from tum_mcp.study_publish_models import PublishReport
 from tum_mcp.study_store import Write, apply, confined, digest, load_state, read_bytes
 
 TEMPLATE_FILES = (
@@ -28,16 +30,31 @@ TEMPLATE_FILES = (
     "styles.css",
     "app.mjs",
     "dom.mjs",
+    "mathml.mjs",
     "reading.mjs",
+    "formulas.mjs",
     "learning.mjs",
+    "question-review.mjs",
     "navigation.mjs",
     "flashcards.mjs",
+    "revision.mjs",
+    "anchors.mjs",
+    "comments.mjs",
+    "comment-ui.mjs",
+    "comment-store.mjs",
+    "comment-popover.mjs",
+    "font-sans-latin.woff2",
+    "font-sans-latin-ext.woff2",
+    "font-serif-latin.woff2",
+    "font-serif-latin-ext.woff2",
+    "font-serif-greek.woff2",
+    "fonts-license.txt",
 )
 
 
 class BuildRecord(Frozen):
     schema_version: int = 1
-    files: dict[str, Digest] = Field(default_factory=dict, max_length=10)
+    files: dict[str, Digest] = Field(default_factory=dict, max_length=len(TEMPLATE_FILES) + 1)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +62,7 @@ class BuildReport:
     units: int
     preserved_templates: tuple[str, ...]
     generation: str
+    publication: PublishReport | None = None
 
 
 def read_content(root: Path) -> StudyContent:
@@ -79,6 +97,10 @@ def stale_units(root: Path, state: StudyState, content: StudyContent) -> tuple[s
     return tuple(stale)
 
 
+def unit_revision(unit: Unit) -> str:
+    return digest(unit.model_dump_json(exclude={"path"}, exclude_none=True).encode())
+
+
 def _app_data(state: StudyState, content: StudyContent) -> dict[str, JsonValue]:
     units: list[JsonValue] = []
     for unit in content.units:
@@ -91,9 +113,7 @@ def _app_data(state: StudyState, content: StudyContent) -> dict[str, JsonValue]:
                     pass
                 case unreachable:
                     assert_never(unreachable)
-        value["revision"] = digest(
-            unit.model_dump_json(exclude={"path"}, exclude_none=True).encode()
-        )
+        value["revision"] = unit_revision(unit)
         units.append(value)
     referenced = {source.key for unit in content.units for source in unit.sources}
     sources: dict[str, JsonValue] = {
@@ -118,11 +138,30 @@ def _app_data(state: StudyState, content: StudyContent) -> dict[str, JsonValue]:
         "organization": content.organization,
         "units": units,
         "sources": sources,
+        "inlineMath": _inline_math(content.model_dump(mode="json")),
         "incompleteSources": sum(item.status != "complete" for item in state.coverage),
     }
 
 
-def build(root: Path) -> BuildReport:
+def _inline_math(value: JsonValue) -> dict[str, str]:
+    """Compile each distinct inline expression once, excluding literal payloads."""
+    match value:
+        case str():
+            return {item[1]: compile_latex(item[1]) for item in INLINE_MATH.finditer(value)}
+        case list():
+            return {key: math for item in value for key, math in _inline_math(item).items()}
+        case dict():
+            return {
+                key: math
+                for field, item in value.items()
+                if field not in {"code", "latex", "mathml"}
+                for key, math in _inline_math(item).items()
+            }
+        case _:
+            return {}
+
+
+def build(root: Path, *, publish: bool = True) -> BuildReport:
     root = root.expanduser().resolve()
     with FileLock(str(confined(root, ".study-update.lock"))):
         state, content = load_state(root), read_content(root)
@@ -165,8 +204,15 @@ def build(root: Path) -> BuildReport:
         updated = BuildRecord(files=owned).model_dump_json(indent=2).encode()
         writes.append(Write("study/.managed.json", previous, updated))
         apply(root, tuple(writes))
-        return BuildReport(
+        report = BuildReport(
             units=len(content.units),
             preserved_templates=tuple(preserved),
             generation=state.generation,
         )
+    if publish:
+        from tum_mcp.study_publish import after_build
+
+        return BuildReport(
+            report.units, report.preserved_templates, report.generation, after_build(root)
+        )
+    return report

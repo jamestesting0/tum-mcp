@@ -88,8 +88,11 @@ Inventory: {counts["current"]} current, {counts["needs_fetch"]} need retrieval,
 Read the source map and relevant files before requesting the same content again.
 Check time-sensitive facts and incomplete sources upstream. Retain source links
 and page/post locators. Do not treat partial coverage as a deleted resource.
-Course websites are read-only. Never start, deploy, submit, rebuild, push or post.
+Campus websites are read-only. Never start, deploy, submit, rebuild, push or post there.
 Keep personal learning notes and progress separate from regenerated source files.
+When `.study/github.json` configures publication, study builds update that site's
+private GitHub repository automatically. Use publish-study for deployment recovery;
+never upload materials, credentials, local comments or the whole course project.
 {END}"""
 
 

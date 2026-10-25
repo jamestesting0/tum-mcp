@@ -13,13 +13,28 @@ reference: inspect one relevant object, not the entire course or asset tree.
 `tum-mcp study demo PROJECT` is only for an explicitly requested synthetic demo.
 
 Top level: schema_version=1, course_key, organization=lectures/weeks/topics,
-introduction, units. Units carry key/label/title/summary/minutes, objectives,
-sources, blocks, flashcards and questions. Optional path contains up to four folder
-labels (for example ["W00", "Structural patterns"]); group when it improves course
-navigation, not to add unnecessary depth. Preserve existing unit labels and keys
+introduction, units. The introduction opens the course home: one or two sentences on
+what the course covers and where to start. Summary and objectives show on Content;
+minutes show in the header, on the home and in the next-step link. Sources render as
+one inline line, so keep source titles short and locators precise. Units carry key/label/title/summary/minutes, objectives,
+sources, blocks, flashcards and questions. For a single course, use no path or one
+category label (for example ["W00"]), followed by the topics. Do not add a course-name
+folder inside its own site. The schema accepts up to four folder labels for legacy
+sites and multi-area showcases; that ceiling is not the authoring target. Flatten
+needless nested labels when revising the organization. Preserve existing unit labels and keys
 when grouping; the renderer omits a repeated label from the breadcrumb. Moving folders does
 not change progress revisions. Sources pair a resource key with its
 exact current SHA-256 from state; citations use those declared keys.
+
+Use `\(v_i\)` for variables and short mathematical expressions inside teaching text,
+including paragraphs, objectives, table cells, formula glossaries, card faces,
+question options and feedback. JSON escapes the backslashes: `"Use \\(v_i\\)."`.
+Build validates and compiles these expressions locally; no browser LaTeX dependency.
+Use the same notation in the equation and its explanation. Long equations belong
+in formula blocks, which retain auto-fit and local scrolling. Keep source titles,
+navigation category labels and SVG node/edge labels plain; describe their notation
+in the adjacent teaching text. Dollar signs remain literal currency. Code blocks,
+source excerpts in comments and student notes never interpret inline markup.
 
 | Block | Specific requirements |
 | --- | --- |
@@ -32,7 +47,7 @@ exact current SHA-256 from state; citations use those declared keys.
 Every block has a title and sources. Frames name active/frontier/visited node
 keys; visited is shown as seen, not necessarily finished. Flashcards use one
 objective plus front/back/sources. Questions use an objective, prompt, level,
-3–5 distinct options with individual feedback, one correct key, explanation and
+exactly four distinct options with individual feedback, one correct key, explanation and
 sources. Every objective needs a question; counts follow learning needs, not quotas.
 
 Run `tum-mcp study build PROJECT` after a coherent batch. It blocks stale or
@@ -44,5 +59,7 @@ Build preserves edited templates and reports them. Verify their compatibility;
 unknown files remain untouched. Add block types only with schema, safe rendering
 and accessible fallback. Do not change renderer code to bypass invalid content.
 
-Preview: `tum-mcp study serve PROJECT --port 0` prints an available loopback URL.
+Launch: `tum-mcp study` inside the project opens the browser at 127.0.0.1:8765.
+Keep the same address/port to retain browser progress; `--port PORT` selects another.
+For unattended checks, `tum-mcp study serve PROJECT --port 0` prints a URL without opening a browser.
 It serves only study/; the app needs no campus credentials or external services.

@@ -4,6 +4,22 @@ Use the course's objectives and prerequisite/notation map. Choose units by a
 coherent dependency or learning goal; keep an established course sequence when useful.
 Read relevant stored passages once and retain their locators for authoring/review.
 
+## Lesson shape
+
+Each unit reads as one short lesson, built from the existing block types:
+
+1. Summary: the problem the unit solves, in one or two sentences.
+2. Objectives: observable outcomes such as trace, explain, choose or compute.
+3. Bridge: the first section names the prerequisite and notation it builds on.
+4. Mechanism, then one worked example or trace the student can follow step by step.
+5. Pitfall: the common misconception or limiting condition, where it applies.
+6. Recap: for units with more than three sections, a final text block with two to
+   four points a student should recall without the page.
+
+Flashcards test recall of those points; practice tests application. Review mode
+reuses Again ratings and wrong answers, so every objective needs at least one card
+or question that a student can genuinely get wrong.
+
 For each new/changed objective, cover the mechanism, assumptions and a useful
 example. Choose prose, a worked formula, table, code or visual by what explains it;
 no diagram quotas or equal word/card/question counts. Split independent goals,
@@ -26,8 +42,11 @@ that link is provenance, not required research. No certified dictionary claim.
 ## Retrieval and assessment
 
 Cards test one recall item or discriminating comparison before reveal; avoid
-essay backs and clues. Questions target realistic misconceptions with exactly one
-defensible answer under stated assumptions. Prefer application/transfer where the
+essay backs and clues. Multiple-choice questions have exactly four options: one
+defensible answer under stated assumptions and three plausible distractors based
+on realistic misconceptions. Give specific feedback for all four options; revise
+the question if a third useful distractor is missing instead of adding filler.
+Prefer application/transfer where the
 objective requires it; avoid tricks, double negatives, all/none shortcuts and
 answer-position/length clues. Check EVERY new/changed option independently. If two
 answers are defensible, repair the question/assumptions rather than forcing a key.

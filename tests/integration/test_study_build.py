@@ -37,3 +37,26 @@ def test_latex_is_compiled_into_generated_data_without_rewriting_author_input(
     rendered = next(b for b in data["units"][0]["blocks"] if b["kind"] == "formula")
     assert rendered["latex"] == formula["latex"]
     assert "<math" in rendered["mathml"] and "<script" not in rendered["mathml"]
+
+
+def test_inline_notation_is_compiled_once_while_code_and_currency_stay_literal(
+    project: Path,
+) -> None:
+    path = project / "study/content.json"
+    content = json.loads(path.read_bytes())
+    unit = content["units"][0]
+    unit["summary"] = r"Use \(v_i\) for a vertex. A notebook costs $5."
+    unit["flashcards"][0]["back"] = r"The vertex is \(v_i\)."
+    code = next(b for u in content["units"] for b in u["blocks"] if b["kind"] == "code")
+    code["code"] = r'print("\(literal code\)")'
+    original = json.dumps(content)
+    path.write_text(original)
+    build(project, publish=False)
+    data = json.loads(
+        (project / "study/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
+    )
+    assert "v_i" in data["inlineMath"]
+    assert "<msub>" in data["inlineMath"]["v_i"]
+    assert "literal code" not in data["inlineMath"]
+    assert data["units"][0]["summary"] == unit["summary"]
+    assert path.read_text() == original
