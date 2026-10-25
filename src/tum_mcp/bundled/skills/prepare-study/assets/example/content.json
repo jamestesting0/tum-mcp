@@ -277,7 +277,7 @@
             "bfs"
           ],
           "kind": "diagram",
-          "description": "Undirected graph: A–B, A–C, B–D, C–E, D–F and E–F. The highlighted vertex \\(i\\)s being expanded. The caption and seen list describe each step.",
+          "description": "Undirected graph: A–B, A–C, B–D, C–E, D–F and E–F. The highlighted vertex is being expanded. The caption and seen list describe each step.",
           "nodes": [
             {
               "key": "a",
@@ -470,7 +470,7 @@
               ]
             },
             {
-              "caption": "The queue is empty. Every reachable vertex \\(i\\)s discovered.",
+              "caption": "The queue is empty. Every reachable vertex is discovered.",
               "active": [],
               "frontier": [],
               "visited": [
@@ -568,7 +568,7 @@
           "key": "enqueue",
           "objective": "queue",
           "front": "When should BFS mark a vertex as seen?",
-          "back": "When the vertex \\(i\\)s enqueued. This prevents several neighbors from adding it again.",
+          "back": "When the vertex is enqueued. This prevents several neighbors from adding it again.",
           "sources": [
             "bfs"
           ]
@@ -586,7 +586,7 @@
           "key": "cost",
           "objective": "cost",
           "front": "Why is adjacency-list BFS \\(O(|V|+|E|)\\)?",
-          "back": "Each vertex \\(i\\)s expanded at most once. The algorithm inspects each adjacency entry a bounded number of times.",
+          "back": "Each vertex is expanded at most once. The algorithm inspects each adjacency entry a bounded number of times.",
           "sources": [
             "bfs"
           ]

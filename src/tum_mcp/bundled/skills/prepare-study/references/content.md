@@ -30,7 +30,9 @@ Use `\(v_i\)` for variables and short mathematical expressions inside teaching t
 including paragraphs, objectives, table cells, formula glossaries, card faces,
 question options and feedback. JSON escapes the backslashes: `"Use \\(v_i\\)."`.
 Build validates and compiles these expressions locally; no browser LaTeX dependency.
-Use the same notation in the equation and its explanation. Long equations belong
+Use the same notation in the equation and its explanation. Convert complete
+mathematical tokens, never letters inside ordinary words; read the surrounding
+prose after notation edits. Long equations belong
 in formula blocks, which retain auto-fit and local scrolling. Keep source titles,
 navigation category labels and SVG node/edge labels plain; describe their notation
 in the adjacent teaching text. Dollar signs remain literal currency. Code blocks,
