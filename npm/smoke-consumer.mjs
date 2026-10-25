@@ -110,7 +110,9 @@ for name in ('cursor','antigravity'):
       .replace('from study_activity_comments_fixture import activity_comment_checks', activityCommentsFixture);
     // Isolated Python intentionally cannot import helpers from the checkout.
     const combined = fixture.replace('from study_browser_fixture import study_website', studyFixture);
-    browserEvidence = JSON.parse(run(first.python, ['-I', '-c', combined], 300000, browserEnv));
+    const browserScript = join(root, 'browser-consumer.py');
+    writeFileSync(browserScript, combined, { mode: 0o600 });
+    browserEvidence = JSON.parse(run(first.python, ['-I', browserScript], 300000, browserEnv));
   }
   const protocol = `import os,sys,anyio
 from mcp import ClientSession
