@@ -104,7 +104,8 @@ def serve(project: Path, port: int, *, open_browser: bool = False) -> None:
     try:
         server = ThreadingHTTPServer(("127.0.0.1", port), partial(Handler, directory=str(site)))
     except OSError as error:
-        if error.errno != errno.EADDRINUSE:
+        # Winsock exposes its native code instead of the POSIX errno.
+        if error.errno not in {errno.EADDRINUSE, 10048}:
             raise
         raise CampusError(
             Code.ACTION_REQUIRED,

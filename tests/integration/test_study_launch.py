@@ -1,5 +1,6 @@
 """The short launcher serves the current project without changing agent commands."""
 
+import errno
 import subprocess
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -12,6 +13,16 @@ from typer.testing import CliRunner
 from tum_mcp import study_preview
 from tum_mcp.cli import app
 from tum_mcp.errors import CampusError, Code
+
+
+@pytest.fixture
+def project(tmp_path: Path) -> Path:
+    # Launcher tests need a built entry point, not a full teaching-content rebuild.
+    root = tmp_path / "Course space Ω"
+    site = root / "study"
+    site.mkdir(parents=True)
+    (site / "index.html").write_bytes(b"<!doctype html><title>Course</title>")
+    return root
 
 
 def test_no_arguments_launches_current_project_at_a_stable_address(
@@ -171,3 +182,27 @@ def test_browser_launch_failure_keeps_the_server_available(
     assert result.exit_code == 0, result.output
     assert len(served) == 1 and served[0] in result.output
     assert opened == ([] if wsl and not browser_available else served)
+
+
+@pytest.mark.parametrize("number", [errno.EADDRINUSE, 10048], ids=["posix", "winsock"])
+def test_occupied_port_error_is_actionable_on_each_socket_platform(
+    project: Path, monkeypatch: pytest.MonkeyPatch, number: int
+) -> None:
+    def occupied(*args, **kwargs) -> None:
+        raise OSError(number, "Address already in use")
+
+    monkeypatch.setattr(study_preview, "ThreadingHTTPServer", occupied)
+    with pytest.raises(CampusError, match="Port 8765 is in use") as caught:
+        study_preview.serve(project, 8765)
+    assert caught.value.code == Code.ACTION_REQUIRED
+
+
+def test_unrelated_bind_errors_are_not_misreported_as_an_occupied_port(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def denied(*args, **kwargs) -> None:
+        raise PermissionError(errno.EACCES, "Permission denied")
+
+    monkeypatch.setattr(study_preview, "ThreadingHTTPServer", denied)
+    with pytest.raises(PermissionError):
+        study_preview.serve(project, 8765)
