@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
-import { chmodSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cp } from 'node:fs/promises';
 import { release } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -58,7 +59,8 @@ export async function registryFixture() {
 
 export async function futureRelease({ source, directory, python, version, run, npm, broken = false }) {
   const staged = join(directory, version + (broken ? '-broken' : ''));
-  cpSync(source, staged, { recursive: true });
+  // Avoid Node 22's native cpSync fast path on Windows Unicode fixture paths.
+  await cp(source, staged, { recursive: true });
   console.log(`Package fixture ${version}: copied package`);
   const manifest = JSON.parse(readFileSync(join(staged, 'package.json'), 'utf8'));
   manifest.version = version;
