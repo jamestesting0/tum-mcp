@@ -1,6 +1,6 @@
 # Changes
 
-## 0.6.1 — unreleased
+## 0.6.1 — 2026-10-25
 
 - Make `tum-mcp update` download and validate the latest npm release before
   replacing the invoked installation and refreshing configured clients.

@@ -3,10 +3,8 @@
 Connect your coding agent to Moodle, Artemis and Zulip. Read course content and
 build a private, source-backed study workspace. Unofficial; independent of TUM.
 
-**Latest release: [0.6.0](https://www.npmjs.com/package/@jamestesting888/tum-mcp).**
+**Latest release: [0.6.1](https://www.npmjs.com/package/@jamestesting888/tum-mcp).**
 [Release notes](CHANGELOG.md).
-
-Development: **0.6.1 (unreleased)** adds the single-command update and removal below.
 
 ## Agent setup
 
