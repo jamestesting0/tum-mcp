@@ -64,7 +64,7 @@ jobs:
         if: runner.os != 'Linux'
         env:
           TUM_MOODLE_SYSTEM_KEYRING: "1"
-        run: uv run pytest -q
+        run: uv run pytest -v -x --tb=short --durations=20 -o faulthandler_timeout=60
       - name: Test in a Linux desktop keyring session
         if: runner.os == 'Linux'
         env:
@@ -72,7 +72,7 @@ jobs:
         run: |
           dbus-run-session -- sh -e -c '
             printf "ci-test-only" | gnome-keyring-daemon --unlock --components=secrets
-            uv run pytest -q
+            uv run pytest -v -x --tb=short --durations=20 -o faulthandler_timeout=60
           '
       - name: Build Python distribution
         run: uv build
