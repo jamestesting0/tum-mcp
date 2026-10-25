@@ -10,7 +10,7 @@ choice. Work from local sources. Fetch only missing material through read-conten
 run update-study once if fresh upstream content was requested and not already checked.
 
 Inspect the existing study/ and affected source/unit IDs. Preserve its theme, notes
-and edits; reuse unchanged units and stable IDs. Choose one lecture/week/topic
+and edits; reuse unchanged units, labels and stable IDs. Choose one lecture/week/topic
 organization that fits course dependencies. Group related units with optional path
 folders; avoid repeated week labels and needless nesting. Author formulas in LaTeX.
 Never fill gaps with invented course facts.

@@ -14,7 +14,7 @@ whole matrix for each unit. These failure modes remain part of the design contra
 | Wide content overflows | No page-wide horizontal scroll. Table/formula/code/diagram regions scroll by keyboard; labels and notation stay legible at narrow widths/zoom. |
 | Long names stretch outlines | Stress course AND unit titles with unbroken identifiers. Inspect sidebar and mobile summary as well as main content. |
 | Hidden storage failure | Block storage, rate/answer; memory-only study works and its warning is visible outside closed settings, also on mobile. |
-| Unrelated change resets progress | Adding a binding preserves course namespace; unchanged units retain progress on reload. Revised units get separate answers; reset leaves other courses intact. |
+| Unrelated change resets progress | Adding a binding preserves course namespace; moving folders retains existing unit labels/revisions and progress on reload. Revised units get separate answers; reset leaves other courses intact. |
 | Answer leaks / early advance | Card faces alternate visually and in the accessibility tree; sources/ratings require reveal. Space/1/2/arrows work only in the right context and respect modifiers/inputs/tab arrows. Feedback remains; advance is explicit. |
 | Plausible wrong trace | Independently compute ordering, frontier, discovery versus processing and directed endpoints. First/last controls are bounded; no autoplay. |
 | Valid key, invalid teaching | Verify every changed option/assumption; compare prose, formulas, tables and cards. Repair ambiguity rather than force an answer. |

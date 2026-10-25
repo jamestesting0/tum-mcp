@@ -76,8 +76,9 @@ function render() {
   main = node('main', 'main'); main.id = 'content'; main.tabIndex = -1;
   const reading = node('div', 'reading'); reading.append(persistenceNote);
   const heading = node('div', 'unit-header'); unitHeading = node('h1', '', unit.title);
-  const location = [...(unit.path || []), unit.label].join(' · ');
-  heading.append(node('p', 'eyebrow', `${location} · ${unit.minutes} min`), unitHeading, node('p', 'unit-summary', unit.summary));
+  const ancestry = unit.path || [];
+  const breadcrumb = [...ancestry, ...(ancestry.includes(unit.label) ? [] : [unit.label])].join(' · ');
+  heading.append(node('p', 'eyebrow', `${breadcrumb} · ${unit.minutes} min`), unitHeading, node('p', 'unit-summary', unit.summary));
   const objectives = node('details'); objectives.append(node('summary', 'small', `What you will learn · ${unit.objectives.length} objectives`));
   objectives.append(append(node('ul', 'objectives'), ...unit.objectives.map(item => node('li', '', item.text)))); heading.append(objectives);
   const tabs = node('div', 'tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Study view'); tabButtons.clear();

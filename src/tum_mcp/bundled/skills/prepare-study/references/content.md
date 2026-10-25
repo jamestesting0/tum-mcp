@@ -16,7 +16,8 @@ Top level: schema_version=1, course_key, organization=lectures/weeks/topics,
 introduction, units. Units carry key/label/title/summary/minutes, objectives,
 sources, blocks, flashcards and questions. Optional path contains up to four folder
 labels (for example ["W00", "Structural patterns"]); group when it improves course
-navigation, not to add unnecessary depth. Preserve unit keys; moving folders does
+navigation, not to add unnecessary depth. Preserve existing unit labels and keys
+when grouping; the renderer omits a repeated label from the breadcrumb. Moving folders does
 not change progress revisions. Sources pair a resource key with its
 exact current SHA-256 from state; citations use those declared keys.
 

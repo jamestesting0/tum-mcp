@@ -138,6 +138,7 @@ def study_website(browser: Browser) -> dict[str, object]:
         stressed["course"]["title"] = "CourseIdentifierWithoutSpaces" * 5
         for unit in stressed["units"]:
             unit["title"] = "LongTechnicalIdentifierWithoutSpaces" * 5
+            unit["label"] = unit["path"][-1]
 
         def serve_stress(route: Route) -> None:
             if urlsplit(route.request.url).path == "/data.mjs":
@@ -157,6 +158,13 @@ def study_website(browser: Browser) -> dict[str, object]:
             for view in ("content", "flashcards", "practice"):
                 page.goto("https://study.invalid/#bfs/" + view)
                 page.locator("h1").wait_for()
+                assert (
+                    page.locator(".unit-header .eyebrow")
+                    .inner_text()
+                    .lower()
+                    .count(stressed["units"][1]["label"].lower())
+                    == 1
+                )
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
                 assert page.locator(".sidebar,.main,.reading").evaluate_all(
                     "elements => elements.filter(e => e.clientWidth)"
