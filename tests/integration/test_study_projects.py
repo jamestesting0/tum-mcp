@@ -209,3 +209,74 @@ def test_adding_a_verified_source_binding_preserves_course_progress_namespace(pr
     )
     assert current["course"]["identity"] == previous["course"]["identity"]
     assert [u["revision"] for u in current["units"]] == [u["revision"] for u in previous["units"]]
+
+
+def test_repeated_pending_metadata_never_promotes_old_content_to_current(
+    project: Path, inputs: Path
+) -> None:
+    incoming = json.loads(inputs.read_bytes())
+    source = next(r for r in incoming["resources"] if r["key"] == "bfs")
+    old_payload = source.pop("text")
+    source["revision"] = "new-unfetched-version"
+    inputs.write_text(json.dumps(incoming))
+    for _ in range(2):
+        sync(project, inputs)
+        item = next(r for r in load_state(project).resources if r.resource.key == "bfs")
+        assert item.status == "needs_fetch"
+        with pytest.raises(CampusError) as error:
+            build(project)
+        assert error.value.code == Code.STALE_RESULT
+    source["text"] = old_payload + "\nVerified new source content.\n"
+    inputs.write_text(json.dumps(incoming))
+    sync(project, inputs)
+    assert (
+        next(r for r in load_state(project).resources if r.resource.key == "bfs").status
+        == "current"
+    )
+    assert stale_units(project, load_state(project), read_content(project)) == ("bfs",)
+
+
+@pytest.mark.parametrize("identity_change", ["url", "binding", "locator"])
+def test_equal_revision_on_another_source_does_not_reuse_old_payload(
+    project: Path, inputs: Path, identity_change: str
+) -> None:
+    incoming = json.loads(inputs.read_bytes())
+    source = next(r for r in incoming["resources"] if r["key"] == "bfs")
+    source.pop("text")
+    if identity_change == "url":
+        source["url"] += "?edition=another-source"
+    elif identity_change == "locator":
+        source["locator"] = "Another passage, pages 20–24"
+    else:
+        incoming["course"]["bindings"].append(
+            {"key": "another", "provider": "sample", "course_id": "another"}
+        )
+        incoming["coverage"].append(
+            {"binding": "another", "status": "partial", "checked_at": "2026-10-25"}
+        )
+        source["binding"] = "another"
+    inputs.write_text(json.dumps(incoming))
+    sync(project, inputs)
+    item = next(r for r in load_state(project).resources if r.resource.key == "bfs")
+    assert item.status == "needs_fetch"
+    with pytest.raises(CampusError) as error:
+        build(project)
+    assert error.value.code == Code.STALE_RESULT
+
+
+def test_complete_inventory_reuses_unchanged_payloads_without_withdrawing_them(
+    project: Path, inputs: Path
+) -> None:
+    incoming = json.loads(inputs.read_bytes())
+    original = load_state(project)
+    for source in incoming["resources"]:
+        source.pop("text", None)
+    incoming["coverage"][0]["status"] = "complete"
+    inputs.write_text(json.dumps(incoming))
+    report = sync(project, inputs)
+    current = load_state(project)
+    assert report.imported == 0 and report.withdrawn == 0 and report.conflicts == ()
+    assert len(current.resources) == len(original.resources)
+    assert all(r.status == "current" for r in current.resources)
+    assert [r.sha256 for r in current.resources] == [r.sha256 for r in original.resources]
+    assert stale_units(project, current, read_content(project)) == ()

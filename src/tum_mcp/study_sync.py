@@ -171,7 +171,11 @@ def _reconcile(
         else:
             unchanged = bool(
                 prior
+                and prior.status == "current"
                 and before is not None
+                and resource.binding == prior.resource.binding
+                and resource.url == prior.resource.url
+                and resource.locator == prior.resource.locator
                 and resource.revision is not None
                 and resource.revision == prior.resource.revision
             )
