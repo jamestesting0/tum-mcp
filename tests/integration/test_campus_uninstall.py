@@ -19,14 +19,15 @@ def test_claude_uninstall_preserves_unrelated_user_state(
     home.mkdir()
     config = home / ".claude.json"
     config.write_text(
-        json.dumps({"customSetting": 42, "mcpServers": {"other": {"command": "keep"}}})
+        json.dumps({"customSetting": 42, "mcpServers": {"other": {"command": "keep"}}}),
+        encoding="utf-8",
     )
     install_client("claude", home)
     # When the integration is removed twice.
     uninstall_client("claude", home)
     uninstall_client("claude", home)
     # Then only its managed registration/skills disappear and the profile remains intact.
-    assert json.loads(config.read_text()) == {
+    assert json.loads(config.read_text(encoding="utf-8")) == {
         "customSetting": 42,
         "mcpServers": {"other": {"command": "keep"}},
     }
@@ -40,15 +41,17 @@ def test_generic_setup_and_uninstall_preserve_unrelated_configuration(
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path))
     target = config_dir() / "mcp.json"
     original = {"extra": 42, "mcpServers": {"other": {"command": "keep"}}}
-    target.write_text(json.dumps(original))
+    target.write_text(json.dumps(original), encoding="utf-8")
     install_client("generic")
-    assert json.loads(target.read_text())["mcpServers"]["other"] == {"command": "keep"}
+    assert json.loads(target.read_text(encoding="utf-8"))["mcpServers"]["other"] == {
+        "command": "keep"
+    }
     uninstall_client("generic")
-    assert json.loads(target.read_text()) == original
+    assert json.loads(target.read_text(encoding="utf-8")) == original
     customized = {"mcpServers": {"tum": {"command": "custom"}}}
-    target.write_text(json.dumps(customized))
+    target.write_text(json.dumps(customized), encoding="utf-8")
     with pytest.raises(CampusError, match="customized"):
         install_client("generic")
     with pytest.raises(CampusError, match="customized"):
         uninstall_client("generic")
-    assert json.loads(target.read_text()) == customized
+    assert json.loads(target.read_text(encoding="utf-8")) == customized

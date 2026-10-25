@@ -14,9 +14,11 @@ def previous_pack(root: Path) -> Path:
         skill = root / name
         (skill / "references").mkdir(parents=True)
         (skill / "SKILL.md").write_text(
-            f"---\nname: {name}\ndescription: Previous lifecycle workflow.\n---\n"
+            f"---\nname: {name}\ndescription: Previous lifecycle workflow.\n---\n", encoding="utf-8"
         )
-        (skill / "references/project.md").write_text("A preserved old reference.\n")
+        (skill / "references/project.md").write_text(
+            "A preserved old reference.\n", encoding="utf-8"
+        )
     return root
 
 
@@ -62,7 +64,9 @@ def test_customized_old_installed_skill_blocks_the_whole_refresh_without_loss(
         old_source.setattr(skills, "bundled", lambda: old)
         install_client(client, home, announce=False)
     entry = next(home.rglob("update-study/SKILL.md"))
-    entry.write_text(entry.read_text() + "Personal workflow to retain.\n")
+    entry.write_text(
+        entry.read_text(encoding="utf-8") + "Personal workflow to retain.\n", encoding="utf-8"
+    )
     before = {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()}
     with pytest.raises(CampusError, match="Customized or removed client file preserved"):
         install_client(client, home, announce=False)

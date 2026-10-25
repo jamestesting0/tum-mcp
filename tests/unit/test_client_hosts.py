@@ -79,7 +79,7 @@ def test_windows_profile_registration_is_repeatable_and_conflict_safe(
     else:
         changed = json.loads(before)
         changed["mcpServers"]["tum"]["command"] = "custom-launcher"
-        path.write_text(json.dumps(changed))
+        path.write_text(json.dumps(changed), encoding="utf-8")
         with pytest.raises(CampusError, match="preserve|customized|different|Customized|changed"):
             install_client(name, host=ClientHost.WINDOWS)
         path.write_bytes(before)
@@ -104,7 +104,7 @@ def test_legacy_windows_registration_can_gain_download_path_binding(
     python = runtime / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     python.parent.mkdir(parents=True)
     python.write_bytes(b"synthetic-not-executed")
-    (runtime / ".tum-mcp-ready").write_text("a" * 64)
+    (runtime / ".tum-mcp-ready").write_text("a" * 64, encoding="utf-8")
     old_args = [
         "--distribution",
         "Fixture",

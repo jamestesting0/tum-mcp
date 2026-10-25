@@ -35,13 +35,13 @@ def test_legacy_personal_overrides_are_preserved_and_require_review_before_expor
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path))
     legacy = tmp_path / "config/skills/tum-artemis-local-fix/SKILL.md"
     legacy.parent.mkdir(parents=True)
-    legacy.write_text("personal customization to preserve")
+    legacy.write_text("personal customization to preserve", encoding="utf-8")
     destination = tmp_path / "export"
     # When the consolidated pack is exported.
     with pytest.raises(CampusError, match="Legacy skill customizations"):
         export_pack(destination)
     # Then the override stays intact and an incomplete new pack is not created.
-    assert legacy.read_text() == "personal customization to preserve"
+    assert legacy.read_text(encoding="utf-8") == "personal customization to preserve"
     assert not destination.exists()
 
 
@@ -52,12 +52,12 @@ def test_claude_respects_a_users_explicit_only_site_skill_preference(
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     custom = customize_skill("read-content")
     policy = custom / "agents/openai.yaml"
-    policy.write_text("policy:\n  allow_implicit_invocation: false\n")
+    policy.write_text("policy:\n  allow_implicit_invocation: false\n", encoding="utf-8")
     # When the Claude adapter installs the site skill.
     install_client("claude", tmp_path / "profile")
     # Then the equivalent host invocation control is preserved.
     entry = tmp_path / "profile/.claude/skills/read-content/SKILL.md"
-    frontmatter = yaml.safe_load(entry.read_text().split("---", 2)[1])
+    frontmatter = yaml.safe_load(entry.read_text(encoding="utf-8").split("---", 2)[1])
     assert frontmatter["disable-model-invocation"] is True
 
 

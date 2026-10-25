@@ -33,7 +33,7 @@ def table_layout_checks(page: Page, project: Path) -> None:
         ],
     ]
     try:
-        source.write_text(json.dumps(content))
+        source.write_text(json.dumps(content), encoding="utf-8")
         build(project)
         page.reload()
         page.locator("table tbody th").first.wait_for()

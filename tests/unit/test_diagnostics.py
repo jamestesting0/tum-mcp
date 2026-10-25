@@ -150,10 +150,10 @@ def test_doctor_reports_invalid_client_entries_without_overwriting_them(
     target = tmp_path / ".cursor/mcp.json"
     target.parent.mkdir()
     original = '{"mcpServers":{"tum":42}}'
-    target.write_text(original)
+    target.write_text(original, encoding="utf-8")
     result = collect_diagnostics(home=tmp_path)
     assert next(item for item in result.clients if item.label == "Cursor").state == State.FAILED
-    assert target.read_text() == original
+    assert target.read_text(encoding="utf-8") == original
 
 
 def test_windows_cli_uses_utf8_even_when_redirected_from_a_legacy_code_page(
@@ -237,7 +237,7 @@ def test_wsl_doctor_reports_both_client_profiles_without_creating_state(
     monkeypatch.setattr(diagnostics, "discover_browsers", lambda: ())
     target = windows / ".cursor/mcp.json"
     target.parent.mkdir(parents=True)
-    target.write_text('{"mcpServers":{"tum":{"command":"wsl.exe","args":[]}}}')
+    target.write_text('{"mcpServers":{"tum":{"command":"wsl.exe","args":[]}}}', encoding="utf-8")
     report = diagnostics.collect_diagnostics(home=tmp_path / "Linux user")
     clients = {item.label: item for item in report.clients}
     assert clients["Cursor (Windows)"].state == State.CONFIGURED

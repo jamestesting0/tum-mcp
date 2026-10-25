@@ -45,7 +45,8 @@ def test_claude_install_preserves_other_settings_and_customized_skills(
     home.mkdir()
     config = home / ".claude.json"
     config.write_text(
-        json.dumps({"customSetting": 42, "mcpServers": {"other": {"command": "keep"}}})
+        json.dumps({"customSetting": 42, "mcpServers": {"other": {"command": "keep"}}}),
+        encoding="utf-8",
     )
     # When setup runs twice using the same package.
     install_client("claude", home)
@@ -104,7 +105,7 @@ def test_skill_export_rejects_symlinked_private_files_before_creating_output(
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     custom = customize_skill("read-content")
     private = tmp_path / "private.txt"
-    private.write_text("synthetic-private-canary")
+    private.write_text("synthetic-private-canary", encoding="utf-8")
     try:
         (custom / "unexpected.txt").symlink_to(private)
     except OSError:

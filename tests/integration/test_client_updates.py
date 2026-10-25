@@ -73,7 +73,7 @@ def test_customized_mcp_entry_is_preserved_before_any_update_writes(
     path = client_config_path(name, home)
     current = json.loads(path.read_text(encoding="utf-8"))
     current["mcpServers"]["tum"]["env"] = {"USER_CHOICE": "synthetic-preference"}
-    path.write_text(json.dumps(current))
+    path.write_text(json.dumps(current), encoding="utf-8")
     before = {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()}
     monkeypatch.setattr(sys, "executable", str(tmp_path / "next/python"))
     # When an update encounters the edited entry.
@@ -94,7 +94,9 @@ def test_customized_skill_blocks_its_client_without_overwriting_any_file(
     home = tmp_path / "profile"
     install_client(name, home)
     skill = next(home.rglob("read-content/SKILL.md"))
-    skill.write_text(skill.read_text(encoding="utf-8") + "\nPersonal instruction to retain.\n")
+    skill.write_text(
+        skill.read_text(encoding="utf-8") + "\nPersonal instruction to retain.\n", encoding="utf-8"
+    )
     before = {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()}
     monkeypatch.setattr(sys, "executable", str(tmp_path / "next/python"))
     # When the runtime and bundled files are refreshed.
@@ -152,7 +154,7 @@ def test_update_continues_other_clients_but_reports_a_customized_client(
         install_client(name, home)
     cursor = client_config_path("cursor", home)
     custom = {"mcpServers": {"tum": {"command": "user-custom-launcher"}}}
-    cursor.write_text(json.dumps(custom))
+    cursor.write_text(json.dumps(custom), encoding="utf-8")
     saved = tmp_path / "data/credentials/local/synthetic.enc"
     saved.parent.mkdir(parents=True)
     saved.write_bytes(b"synthetic-encrypted-record-to-retain")
@@ -232,7 +234,7 @@ def test_update_does_not_silently_downgrade_a_newer_managed_client(
     record = receipt_path("cursor", ClientHost.LOCAL, home)
     receipt = json.loads(record.read_text(encoding="utf-8"))
     receipt["version"] = "99.0.0"
-    record.write_text(json.dumps(receipt))
+    record.write_text(json.dumps(receipt), encoding="utf-8")
     before = client_config_path("cursor", home).read_bytes()
     # When an older installed package attempts to refresh it.
     with pytest.raises(CampusError, match="newer managed client"):

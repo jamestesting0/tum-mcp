@@ -18,12 +18,12 @@ def test_loopback_preview_confines_files_and_rejects_foreign_hosts(
     monkeypatch.setitem(mimetypes.types_map, ".mjs", "text/plain")
     site = tmp_path / "study"
     site.mkdir()
-    (site / "index.html").write_text("<!doctype html><title>Course</title>")
+    (site / "index.html").write_text("<!doctype html><title>Course</title>", encoding="utf-8")
     (site / "app.mjs").write_bytes(b"export default 42;\n")
     css = "body { color: navy; }\n" * 200
     (site / "styles.css").write_bytes(css.encode("utf-8"))
-    (site / ".managed.json").write_text("private build metadata")
-    (tmp_path / "AGENTS.md").write_text("outside study")
+    (site / ".managed.json").write_text("private build metadata", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text("outside study", encoding="utf-8")
     (site / "folder").mkdir()
     linked = False
     try:

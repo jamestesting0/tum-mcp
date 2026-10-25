@@ -48,6 +48,8 @@ skills, including nested binary assets; full-pack export, migration and installe
 consumer tests retain the actual bundled files. Browser checks keep the phone/desktop and light/dark
 rendering matrix; long revision-state journeys run once per layout. Keep native
 ACL/keyring and installed-artifact checks even when a mocked unit test is faster.
+Text fixtures use explicit UTF-8; line-ending cases cover LF and CRLF without
+changing the meaning of the managed inventory or user notes.
 For a regression, extend its existing owner test and demonstrate failure without
 the fix; do not add another test that only checks the same implementation text.
 

@@ -36,7 +36,7 @@ def test_real_container_blocks_host_secrets_network_and_git_metadata(
     assert executable is not None
     for args in (["init", "--quiet"],):
         subprocess.run([executable, "-C", str(directory), *args], check=True, capture_output=True)  # noqa: S603
-    (directory / "source.txt").write_text("fixture source\n")
+    (directory / "source.txt").write_text("fixture source\n", encoding="utf-8")
     subprocess.run([executable, "-C", str(directory), "add", "source.txt"], check=True)  # noqa: S603
     receipt = WorkspaceReceipt(
         account_id=account.id,
@@ -51,7 +51,7 @@ def test_real_container_blocks_host_secrets_network_and_git_metadata(
         workspace=directory,
         prepared_at=0,
     )
-    (directory / ".tum-mcp-workspace.json").write_text(receipt.model_dump_json())
+    (directory / ".tum-mcp-workspace.json").write_text(receipt.model_dump_json(), encoding="utf-8")
     script = (
         'set -eu; test -z "${TUM_MCP_HOST_CANARY:-}"; test -z "${SSH_AUTH_SOCK:-}"; '
         "test ! -e /var/run/docker.sock; test ! -e /Users; "
@@ -68,7 +68,7 @@ def test_real_container_blocks_host_secrets_network_and_git_metadata(
         timeout_seconds=30,
     )
     settings = Preferences(accounts=(account,), workspace_root=root, test_recipes=(recipe,))
-    (config_dir() / "preferences.json").write_text(settings.model_dump_json())
+    (config_dir() / "preferences.json").write_text(settings.model_dump_json(), encoding="utf-8")
     # When the real container executes a hostile test recipe.
     result = run_tests(directory, recipe.name)
     # Then it cannot reach host secrets/network or alter host Git execution settings.
@@ -76,4 +76,4 @@ def test_real_container_blocks_host_secrets_network_and_git_metadata(
     assert "ISOLATION_OK" in result.output_excerpt
     assert "synthetic-secret-do-not-forward" not in result.output_excerpt
     assert result.fingerprint_before == result.fingerprint_after
-    assert "malicious" not in (directory / ".git/config").read_text()
+    assert "malicious" not in (directory / ".git/config").read_text(encoding="utf-8")

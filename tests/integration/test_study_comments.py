@@ -101,14 +101,14 @@ def test_cli_handoff_reports_changed_content_and_requires_current_revision(
     source = project / "study/content.json"
     value = json.loads(source.read_bytes())
     value["units"][0]["summary"] += " Reviewed example."
-    source.write_text(json.dumps(value))
+    source.write_text(json.dumps(value), encoding="utf-8")
     runner = CliRunner()
     result = runner.invoke(app, ["study", "comments", "list", str(project)])
     assert result.exit_code == 0, result.output
     listed = json.loads(result.output)
     assert listed["comments"][0]["content_state"] == "content_changed"
     resolution = tmp_path / "resolution.txt"
-    resolution.write_text("Revised the explanation and checked it.")
+    resolution.write_text("Revised the explanation and checked it.", encoding="utf-8")
     args = [
         "study",
         "comments",
@@ -135,14 +135,14 @@ def test_cli_handoff_reports_changed_content_and_requires_current_revision(
 
 def test_comment_symlink_cannot_escape(project: Path, tmp_path: Path) -> None:
     outside = tmp_path / "private.json"
-    outside.write_text("preserved")
+    outside.write_text("preserved", encoding="utf-8")
     try:
         (project / ".study/comments.json").symlink_to(outside)
     except OSError:
         pytest.skip("This Windows account cannot create symbolic links.")
     with pytest.raises(CampusError):
         read_comments(project)
-    assert outside.read_text() == "preserved"
+    assert outside.read_text(encoding="utf-8") == "preserved"
 
 
 def test_comment_listing_is_paged_without_losing_revision(project: Path) -> None:
@@ -191,7 +191,7 @@ def test_activity_targets_remain_filterable_and_legacy_content_notes_load(projec
     raw = project / ".study/comments.json"
     document = json.loads(raw.read_bytes())
     document["comments"][1]["anchor"].pop("view")
-    raw.write_text(json.dumps(document))
+    raw.write_text(json.dumps(document), encoding="utf-8")
     before = raw.read_bytes()
     assert read_comments(project)["comments"][1]["anchor"]["view"] == "content"
     assert raw.read_bytes() == before

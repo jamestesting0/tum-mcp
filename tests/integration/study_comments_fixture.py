@@ -187,7 +187,7 @@ def comment_checks(page: Page, project: Path) -> None:
     block = unit["blocks"][note["anchor"]["block_index"]]
     block["paragraphs"][0] = "A replacement explanation with a different opening."
     try:
-        source.write_text(json.dumps(value))
+        source.write_text(json.dumps(value), encoding="utf-8")
         build(project)
         page.reload()
         open_notes(page)

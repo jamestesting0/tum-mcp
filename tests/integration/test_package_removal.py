@@ -31,23 +31,28 @@ def test_all_removal_retires_managed_files_and_preserves_custom_files_and_saved_
     for name in ("codex", "claude", "cursor", "antigravity", "generic"):
         install_client(name, profile)
     note = profile / ".codex/plugins/local/tum-mcp/personal-note.txt"
-    note.write_text("keep my note")
+    note.write_text("keep my note", encoding="utf-8")
     saved = tmp_path / "data/credentials/local/session.key"
     saved.parent.mkdir(parents=True)
     saved.write_bytes(b"synthetic-key-to-retain")
     work = profile / "University/assignment/Main.java"
     work.parent.mkdir(parents=True)
-    work.write_text("class Main {}")
+    work.write_text("class Main {}", encoding="utf-8")
     # When all managed clients are removed.
     result = CliRunner().invoke(app, ["uninstall", "--all"])
     # Then managed entries/skills disappear while personal files and sessions remain.
     assert result.exit_code == 0, result.output
-    assert note.read_text() == "keep my note" and work.is_file()
+    assert note.read_text(encoding="utf-8") == "keep my note" and work.is_file()
     assert saved.read_bytes() == b"synthetic-key-to-retain"
     assert not (profile / ".claude/skills/read-content").exists()
     assert not (profile / ".codex/plugins/local/tum-mcp/plugin.json").exists()
     for name in ("claude", "cursor", "antigravity"):
-        assert "tum" not in json.loads(client_config_path(name, profile).read_text())["mcpServers"]
+        assert (
+            "tum"
+            not in json.loads(client_config_path(name, profile).read_text(encoding="utf-8"))[
+                "mcpServers"
+            ]
+        )
     assert "npm uninstall" in result.output
 
 
@@ -107,7 +112,7 @@ def test_cleanup_refuses_runtime_paths_that_overlap_assignment_work(
     config = tmp_path / "data/config"
     config.mkdir(parents=True)
     (config / "preferences.json").write_text(
-        json.dumps({"workspace_root": str(tmp_path / "data/runtimes/assignment")})
+        json.dumps({"workspace_root": str(tmp_path / "data/runtimes/assignment")}), encoding="utf-8"
     )
     # When automatic runtime cleanup is requested.
     with pytest.raises(CampusError, match="overlap user work"):

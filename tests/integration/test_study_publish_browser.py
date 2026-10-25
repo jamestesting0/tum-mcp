@@ -169,4 +169,4 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
     assert requests and all("/_study/comments" not in url for url in requests)
     assert all(url.startswith(f"http://127.0.0.1:{server.server_port}/course/") for url in requests)
     if evidence:
-        (evidence / "captures.json").write_text(json.dumps(captures, indent=2))
+        (evidence / "captures.json").write_text(json.dumps(captures, indent=2), encoding="utf-8")

@@ -49,7 +49,7 @@ def inline_math_checks(page: Page, project: Path, content: dict) -> None:
     unit["questions"][0]["options"][0]["text"] = r"The value \(4\)."
     unit["questions"][0]["explanation"] = r"Substitute \(n=2\) to get \(4\)."
     try:
-        source.write_text(json.dumps(changed))
+        source.write_text(json.dumps(changed), encoding="utf-8")
         build(project, publish=False)
         page.goto(f"https://study.invalid/#{unit['key']}/content")
         page.reload()

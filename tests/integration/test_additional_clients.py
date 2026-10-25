@@ -70,9 +70,9 @@ def test_antigravity_reuses_existing_legacy_config_without_creating_a_competing_
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     legacy = tmp_path / ".gemini/antigravity/mcp_config.json"
     legacy.parent.mkdir(parents=True)
-    legacy.write_text('{"mcpServers": {}}')
+    legacy.write_text('{"mcpServers": {}}', encoding="utf-8")
     install_client("antigravity", tmp_path)
-    assert "tum" in json.loads(legacy.read_text())["mcpServers"]
+    assert "tum" in json.loads(legacy.read_text(encoding="utf-8"))["mcpServers"]
     assert not (tmp_path / ".gemini/config/mcp_config.json").exists()
 
 
@@ -99,7 +99,7 @@ def test_symbolic_client_configuration_is_preserved(
     path = client_config_path("cursor", tmp_path)
     path.parent.mkdir()
     original = tmp_path / "dotfiles.json"
-    original.write_text('{"mcpServers":{}}')
+    original.write_text('{"mcpServers":{}}', encoding="utf-8")
     try:
         path.symlink_to(original)
     except OSError:
@@ -108,7 +108,7 @@ def test_symbolic_client_configuration_is_preserved(
         install_client("cursor", tmp_path)
     with pytest.raises(CampusError, match="symbolic link"):
         uninstall_client("cursor", tmp_path)
-    assert path.is_symlink() and original.read_text() == '{"mcpServers":{}}'
+    assert path.is_symlink() and original.read_text(encoding="utf-8") == '{"mcpServers":{}}'
 
 
 @pytest.mark.parametrize("name", ["cursor", "antigravity"])

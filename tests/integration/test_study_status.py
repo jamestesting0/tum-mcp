@@ -1,5 +1,6 @@
 """The unified workflow routes without writing or mistaking damaged state for setup."""
 
+import io
 import json
 from pathlib import Path
 from typing import Literal, assert_never
@@ -34,9 +35,13 @@ def test_status_accepts_new_and_unmanaged_projects_without_creating_state(
 
 def test_existing_binding_routes_to_sync_even_when_the_optional_site_is_broken(
     project: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(io, "text_encoding", lambda encoding, stacklevel=2: encoding or "cp1252")
     notes = project / "AGENTS.md"
-    notes.write_text(notes.read_text(encoding="utf-8") + "\nPersonal rule to keep.\n")
+    notes.write_text(
+        notes.read_text(encoding="utf-8") + "\nPersonal rule to keep.\n", encoding="utf-8"
+    )
     (project / "study/content.json").write_bytes(b"broken optional website input")
     material = project / "materials/content/material-bfs.md"
     material.write_bytes(b"My local annotation")
@@ -62,7 +67,7 @@ def test_orphaned_material_requires_inspection_before_adoption(
     tmp_path: Path, existing: str
 ) -> None:
     if existing == "managed-rules":
-        (tmp_path / "AGENTS.md").write_text(START + "\nOld managed course.\n")
+        (tmp_path / "AGENTS.md").write_text(START + "\nOld managed course.\n", encoding="utf-8")
     else:
         (tmp_path / existing).mkdir()
         (tmp_path / existing / "note.txt").write_bytes(b"Retain this material")
@@ -95,7 +100,7 @@ def test_damaged_state_never_routes_to_initialization(
                 state["resources"].append(state["resources"][0])
             else:
                 state["resources"][0]["resource"]["binding"] = "unknown-binding"
-            path.write_text(json.dumps(state))
+            path.write_text(json.dumps(state), encoding="utf-8")
         case unreachable:
             assert_never(unreachable)
     before = path.read_bytes() if path.is_file() else None
@@ -115,7 +120,10 @@ def test_managed_instruction_conflicts_keep_the_known_course(
         case "missing":
             path.unlink()
         case "edited":
-            path.write_text(path.read_text().replace("Course study inventory", "My inventory"))
+            path.write_text(
+                path.read_text(encoding="utf-8").replace("Course study inventory", "My inventory"),
+                encoding="utf-8",
+            )
         case "non-utf8":
             path.write_bytes(b"\xff\xfe")
         case unreachable:

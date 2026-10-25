@@ -34,7 +34,7 @@ def change_lesson(project: Path) -> None:
     path = project / "study/content.json"
     content = json.loads(path.read_bytes())
     content["introduction"] += " Updated synthetic lesson."
-    path.write_text(json.dumps(content))
+    path.write_text(json.dumps(content), encoding="utf-8")
 
 
 def test_proposal_has_no_uploads_or_authentication(project: Path, github: GitHubFixture) -> None:
@@ -52,9 +52,9 @@ def test_proposal_has_no_uploads_or_authentication(project: Path, github: GitHub
 
 def test_first_publication_exports_only_the_site(project: Path, github: GitHubFixture) -> None:
     # Given private source, comment and arbitrary files alongside the generated app.
-    (project / "study/private.txt").write_text("synthetic-private-original")
-    (project / ".study/comments.json").write_text("synthetic-local-comment")
-    (project / ".env").write_text("synthetic-credential-file")
+    (project / "study/private.txt").write_text("synthetic-private-original", encoding="utf-8")
+    (project / ".study/comments.json").write_text("synthetic-local-comment", encoding="utf-8")
+    (project / ".env").write_text("synthetic-credential-file", encoding="utf-8")
     # When public site publication is explicitly authorized.
     result = first_publish(project)
     # Then the private repository contains only the site and its ownership marker.

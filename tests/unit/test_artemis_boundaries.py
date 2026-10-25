@@ -145,11 +145,11 @@ def test_existing_unrelated_workspace_is_preserved(
     existing = tmp_path / "course-77/exercise-11-graded"
     existing.mkdir(parents=True)
     note = existing / "notes.txt"
-    note.write_text("Keep my work")
+    note.write_text("Keep my work", encoding="utf-8")
     # When preparation is requested, then it stops before credentials/network cloning.
     with pytest.raises(CampusError, match="WORKSPACE_CONFLICT"):
         workspace.prepare(artemis, artemis.exercise(77, 11), "graded")
-    assert note.read_text() == "Keep my work"
+    assert note.read_text(encoding="utf-8") == "Keep my work"
 
 
 def test_unselected_course_is_denied_before_credentials() -> None:

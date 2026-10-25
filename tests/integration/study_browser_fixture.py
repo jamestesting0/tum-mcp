@@ -200,7 +200,10 @@ def study_website(browser: Browser) -> dict[str, object]:
                 context.close()
         # Long technical identifiers must wrap in both outline layouts.
         stressed = json.loads(
-            (site / "data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
+            (site / "data.mjs")
+            .read_text(encoding="utf-8")
+            .removeprefix("export default ")
+            .removesuffix(";\n")
         )
         for unit in stressed["units"]:
             unit["flashcards"][0]["key"] = "same-item-key"

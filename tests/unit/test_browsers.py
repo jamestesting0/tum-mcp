@@ -13,7 +13,7 @@ def test_linux_discovery_supports_multiple_chromium_browsers_without_launching(
     executables = {}
     for command in ("brave-browser", "microsoft-edge", "chromium", "vivaldi", "opera"):
         path = tmp_path / command
-        path.write_text("not executed")
+        path.write_text("not executed", encoding="utf-8")
         path.chmod(0o700)
         executables[command] = str(path)
     monkeypatch.setattr(browsers.sys, "platform", "linux")
@@ -61,7 +61,7 @@ def test_explicit_custom_browser_is_validated_without_executing_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = tmp_path / "custom Chromium"
-    path.write_text("not executed")
+    path.write_text("not executed", encoding="utf-8")
     path.chmod(0o700)
     monkeypatch.setenv("TUM_MCP_BROWSER", str(path))
     monkeypatch.setattr(browsers, "is_wsl", lambda: False)

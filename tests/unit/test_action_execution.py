@@ -104,7 +104,7 @@ def tested_workspace(campus, tmp_path: Path) -> Path:
     directory = tmp_path / "assignments" / "exercise"
     directory.mkdir(parents=True)
     run_git(directory, ["init", "--initial-branch=main"])
-    (directory / "main.py").write_text("print('fixture')\n")
+    (directory / "main.py").write_text("print('fixture')\n", encoding="utf-8")
     run_git(directory, ["add", "main.py"])
     run_git(
         directory,
@@ -133,7 +133,7 @@ def tested_workspace(campus, tmp_path: Path) -> Path:
         workspace=directory,
         prepared_at=0,
     )
-    (directory / ".tum-mcp-workspace.json").write_text(workflow.model_dump_json())
+    (directory / ".tum-mcp-workspace.json").write_text(workflow.model_dump_json(), encoding="utf-8")
     recipe = Recipe(
         name="full-suite",
         account_id=account.id,
@@ -148,7 +148,7 @@ def tested_workspace(campus, tmp_path: Path) -> Path:
             "test_recipes": (recipe,),
         }
     )
-    (config_dir() / "preferences.json").write_text(config.model_dump_json())
+    (config_dir() / "preferences.json").write_text(config.model_dump_json(), encoding="utf-8")
     content = fingerprint(directory)
     evidence = Receipt(
         account_id=account.id,
@@ -210,14 +210,14 @@ def test_dirty_content_and_changed_recipe_invalidate_passing_tests(
 ) -> None:
     preflight, _, _ = campus
     assert preflight().submit(tested_workspace).action.kind == "submit"
-    (tested_workspace / "main.py").write_text("print('changed')\n")
+    (tested_workspace / "main.py").write_text("print('changed')\n", encoding="utf-8")
     with pytest.raises(CampusError, match="Commit the reviewed changes"):
         preflight().submit(tested_workspace)
     run_git(tested_workspace, ["restore", "main.py"])
     config = preferences()
     recipe = config.test_recipes[0].model_copy(update={"verification_level": "targeted"})
     (config_dir() / "preferences.json").write_text(
-        config.model_copy(update={"test_recipes": (recipe,)}).model_dump_json()
+        config.model_copy(update={"test_recipes": (recipe,)}).model_dump_json(), encoding="utf-8"
     )
     with pytest.raises(CampusError, match="passing isolated test receipt"):
         preflight().submit(tested_workspace)

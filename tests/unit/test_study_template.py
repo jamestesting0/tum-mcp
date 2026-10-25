@@ -43,7 +43,9 @@ def test_template_is_available_without_auth_and_fingerprints_packaged_assets(
     )
     assert before["author"] == "study/content.json"
     stylesheet = copied / relative / "styles.css"
-    stylesheet.write_text(stylesheet.read_text() + "\n/* changed template */\n")
+    stylesheet.write_text(
+        stylesheet.read_text(encoding="utf-8") + "\n/* changed template */\n", encoding="utf-8"
+    )
     after = json.loads(CliRunner().invoke(app, ["study", "template"]).output)
     assert before["revision"] != after["revision"]
     assert not (tmp_path / "no-campus-state").exists()

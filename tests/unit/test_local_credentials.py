@@ -22,7 +22,7 @@ def test_file_backed_moodle_preserves_legacy_session_without_accessing_keychain(
 ) -> None:
     legacy = tmp_path / "session.enc"
     legacy.write_bytes(b"legacy-encrypted-data-to-preserve")
-    (tmp_path / "generation").write_text("legacy-generation")
+    (tmp_path / "generation").write_text("legacy-generation", encoding="utf-8")
     monkeypatch.setattr(auth, "system_keyring", no_keychain)
     store = SessionStore(Paths(tmp_path), storage="file")
     session = Session(
@@ -36,7 +36,7 @@ def test_file_backed_moodle_preserves_legacy_session_without_accessing_keychain(
     assert store.load().cookies[0].value == "synthetic-secret"
     assert b"synthetic-secret" not in store.file("session.enc").read_bytes()
     assert legacy.read_bytes() == b"legacy-encrypted-data-to-preserve"
-    assert (tmp_path / "generation").read_text() == "legacy-generation"
+    assert (tmp_path / "generation").read_text(encoding="utf-8") == "legacy-generation"
     store.logout()
     assert legacy.is_file()
     assert not store.file("session.enc").exists()
