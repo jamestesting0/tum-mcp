@@ -108,3 +108,7 @@ required content. Verify phone/tablet/desktop, light/dark, reduced motion, keybo
 long labels, empty lists and formula/table overflow on a real browser.
 Keep source/course content private and preview locally unless publication is
 explicitly requested. Record any actual unresolved issue; do not invent a pass.
+
+Use the [verification guide](verification.md) for the required regression checks
+and change-based test scope. Reuse established design decisions and components;
+do not repeat visual research for each learning unit or ordinary content update.

@@ -119,6 +119,38 @@ def study_website(browser) -> dict[str, object]:
                 page.keyboard.press("Escape")
                 assert page.locator("html").get_attribute("data-focus") == "false"
                 context.close()
+        # Long technical identifiers must wrap in both outline layouts.
+        stressed = json.loads(
+            (site / "data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
+        )
+        stressed["course"]["title"] = "CourseIdentifierWithoutSpaces" * 5
+        for unit in stressed["units"]:
+            unit["title"] = "LongTechnicalIdentifierWithoutSpaces" * 5
+
+        def serve_stress(route: Route) -> None:
+            if urlsplit(route.request.url).path == "/data.mjs":
+                route.fulfill(
+                    status=200,
+                    content_type="text/javascript",
+                    body="export default " + json.dumps(stressed) + ";",
+                )
+            else:
+                serve(route)
+
+        for width in (390, 1440):
+            context = browser.new_context(viewport={"width": width, "height": 900})
+            context.route("**/*", serve_stress)
+            page = context.new_page()
+            page.on("pageerror", lambda error: errors.append(str(error)))
+            for view in ("content", "flashcards", "practice"):
+                page.goto("https://study.invalid/#bfs/" + view)
+                page.locator("h1").wait_for()
+                assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+                assert page.locator(".sidebar,.main,.reading,.mobile-course").evaluate_all(
+                    "elements => elements.filter(e => e.clientWidth)"
+                    ".every(e => e.scrollWidth <= e.clientWidth)"
+                )
+            context.close()
         assert errors == [], errors
         return {
             "views": ["content", "flashcards", "practice"],

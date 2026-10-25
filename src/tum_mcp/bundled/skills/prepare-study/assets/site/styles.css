@@ -54,6 +54,7 @@ li + li { margin-top: var(--s2); }
 .unit-list { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s3); }
 .unit-link { display: block; min-height: 44px; padding: var(--s3); border-radius: var(--r1); color: var(--muted); font-size: var(--text-ui); text-decoration: none; line-height: 1.45; }
 .unit-link span { display: block; margin-bottom: var(--s1); font-size: var(--text-small); }
+.unit-link, .mobile-course summary { overflow-wrap: anywhere; }
 .unit-link:hover { background: var(--surface); color: var(--ink); }
 .unit-link[aria-current="page"] { color: var(--accent); background: var(--wash); font-weight: 600; }
 .sidebar-footer { margin-top: auto; padding-top: var(--s6); border-top: 1px solid var(--line); }
