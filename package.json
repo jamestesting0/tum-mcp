@@ -1,16 +1,54 @@
 {
   "name": "@jamestesting888/tum-mcp",
-  "version": "0.5.1",
-  "description": "Local-first TUM Moodle, Artemis, and Zulip integration with campus workflow skills",
+  "version": "0.6.0",
+  "description": "Read-only TUM Moodle, Artemis and Zulip integration with source-backed study workflows",
   "license": "MIT",
   "type": "module",
-  "bin": {"tum-mcp": "npm/tum-mcp.mjs"},
-  "engines": {"node": ">=22.14.0"},
-  "files": ["npm/tum-mcp.mjs", "npm/runtime.mjs", "npm/download.mjs", "npm/uv-artifacts.json", "npm/backend/*.whl", "npm/backend/requirements.txt", "npm/backend/manifest.json", "LICENSE", "NOTICE", "README.md", "docs/setup.md", "docs/development.md", "docs/tum-mcp.md"],
-  "scripts": {"prepack": "node npm/build.mjs", "test": "node --test npm/test/*.test.mjs", "test:consumer": "node npm/smoke-consumer.mjs", "test:upgrade": "node npm/upgrade-consumer.mjs"},
-  "publishConfig": {"access": "public"},
-  "repository": {"type": "git", "url": "git+https://github.com/jamestesting0/tum-mcp.git"},
+  "bin": {
+    "tum-mcp": "npm/tum-mcp.mjs"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "files": [
+    "npm/tum-mcp.mjs",
+    "npm/runtime.mjs",
+    "npm/download.mjs",
+    "npm/uv-artifacts.json",
+    "npm/backend/*.whl",
+    "npm/backend/requirements.txt",
+    "npm/backend/manifest.json",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "docs/setup.md",
+    "docs/development.md",
+    "docs/tum-mcp.md",
+    "docs/study.md"
+  ],
+  "scripts": {
+    "prepack": "node npm/build.mjs",
+    "test": "node --test npm/test/*.test.mjs",
+    "test:consumer": "node npm/smoke-consumer.mjs",
+    "test:upgrade": "node npm/upgrade-consumer.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jamestesting0/tum-mcp.git"
+  },
   "homepage": "https://github.com/jamestesting0/tum-mcp#readme",
-  "bugs": {"url": "https://github.com/jamestesting0/tum-mcp/issues"},
-  "keywords": ["mcp", "tum", "moodle", "artemis", "zulip", "codex"]
+  "bugs": {
+    "url": "https://github.com/jamestesting0/tum-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "tum",
+    "moodle",
+    "artemis",
+    "zulip",
+    "codex"
+  ]
 }

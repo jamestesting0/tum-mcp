@@ -1,0 +1,819 @@
+{
+  "schema_version": 1,
+  "course_key": "algorithms-demo",
+  "organization": "topics",
+  "introduction": "Study graph representations, breadth-first search and depth-first search. Start with graph notation, then compare how queues and stacks guide exploration.",
+  "units": [
+    {
+      "key": "graphs",
+      "label": "Topic 01",
+      "title": "Think in graphs",
+      "summary": "Describe a network, then choose a representation that fits the questions you need to answer.",
+      "minutes": 6,
+      "objectives": [
+        {
+          "key": "model",
+          "text": "Explain vertices, edges and degree."
+        },
+        {
+          "key": "storage",
+          "text": "Choose a graph representation for a sparse network."
+        }
+      ],
+      "sources": [
+        {
+          "key": "graphs",
+          "sha256": "35b97ff091088449633a6179beba16f0a886c9a2686ca3b4b90a07784d83bf2b"
+        }
+      ],
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "A small language for connections",
+          "paragraphs": [
+            "A graph describes relationships. A vertex represents an object. An edge represents a connection between two objects.",
+            "In an undirected graph, the connection works in both directions. A simple graph has no self-loops or repeated edges."
+          ],
+          "points": [],
+          "sources": [
+            "graphs"
+          ]
+        },
+        {
+          "kind": "formula",
+          "title": "Count each edge twice",
+          "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><munderover><mo>∑</mo><mrow><mi>v</mi><mo>∈</mo><mi>V</mi></mrow><mrow/></munderover><mi>deg</mi><mo>(</mo><mi>v</mi><mo>)</mo><mo>=</mo><mn>2</mn><mo>|</mo><mi>E</mi><mo>|</mo></mrow></math>",
+          "plain": "The sum of all vertex degrees equals twice the number of edges.",
+          "symbols": [
+            {
+              "symbol": "V",
+              "meaning": "The set of vertices."
+            },
+            {
+              "symbol": "E",
+              "meaning": "The set of edges."
+            },
+            {
+              "symbol": "deg(v)",
+              "meaning": "The number of edges incident to vertex v."
+            }
+          ],
+          "conditions": "For a simple undirected graph. Six edges contribute twelve to the total degree.",
+          "sources": [
+            "graphs"
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Choose the representation",
+          "columns": [
+            "Question",
+            "Adjacency list",
+            "Adjacency matrix"
+          ],
+          "rows": [
+            [
+              "How much memory?",
+              "O(V + E)",
+              "O(V²)"
+            ],
+            [
+              "How do I list neighbors?",
+              "Read the stored neighbor list.",
+              "Scan one row."
+            ],
+            [
+              "How do I test one edge?",
+              "Scan up to deg(v) entries.",
+              "Read one cell: O(1)."
+            ]
+          ],
+          "caption": "Common trade-offs for a graph with V vertices and E edges.",
+          "sources": [
+            "graphs"
+          ]
+        },
+        {
+          "kind": "text",
+          "title": "Match the structure to the task",
+          "paragraphs": [
+            "For a large sparse network, use adjacency lists when neighbor traversal matters. A matrix can be useful when frequent edge lookup matters more than memory."
+          ],
+          "points": [],
+          "sources": [
+            "graphs"
+          ]
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "degree",
+          "objective": "model",
+          "front": "What does the degree of a vertex count?",
+          "back": "It counts the edges incident to that vertex.",
+          "sources": [
+            "graphs"
+          ]
+        },
+        {
+          "key": "double",
+          "objective": "model",
+          "front": "Why does the degree sum count each undirected edge twice?",
+          "back": "Each edge has two endpoints. It contributes one to the degree of each endpoint.",
+          "sources": [
+            "graphs"
+          ]
+        },
+        {
+          "key": "sparse",
+          "objective": "storage",
+          "front": "Why does an adjacency list suit a sparse graph?",
+          "back": "It stores existing neighbors. It avoids reserving a cell for every possible pair of vertices.",
+          "sources": [
+            "graphs"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "degree-sum",
+          "objective": "model",
+          "prompt": "A simple undirected graph has six edges. What is the sum of all vertex degrees?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "0",
+              "text": "6",
+              "feedback": "This counts each edge once. An edge contributes to two endpoint degrees."
+            },
+            {
+              "key": "1",
+              "text": "12",
+              "feedback": "Each of the six edges contributes two to the degree sum."
+            },
+            {
+              "key": "2",
+              "text": "36",
+              "feedback": "This resembles a square-size calculation. The degree sum depends on edges, not matrix cells."
+            }
+          ],
+          "correct": "1",
+          "explanation": "Count endpoints of edges: 2 × 6 = 12.",
+          "sources": [
+            "graphs"
+          ]
+        },
+        {
+          "key": "sparse-choice",
+          "objective": "storage",
+          "prompt": "A network has many vertices and few edges. You mainly traverse neighbors. Which representation fits this task?",
+          "level": "reason",
+          "options": [
+            {
+              "key": "0",
+              "text": "An adjacency list",
+              "feedback": "It stores existing connections and gives direct access to each neighbor list."
+            },
+            {
+              "key": "1",
+              "text": "An adjacency matrix for its smaller memory use",
+              "feedback": "A matrix uses O(V²) memory, including absent edges."
+            },
+            {
+              "key": "2",
+              "text": "A matrix because every graph is dense",
+              "feedback": "The prompt describes a sparse graph. Density is a property of this graph, not all graphs."
+            }
+          ],
+          "correct": "0",
+          "explanation": "The task favors neighbor traversal and compact storage of existing edges.",
+          "sources": [
+            "graphs"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "bfs",
+      "label": "Topic 02",
+      "title": "Follow the frontier",
+      "summary": "Use a queue to explore a graph in layers. See why the order gives shortest paths in an unweighted graph.",
+      "minutes": 9,
+      "objectives": [
+        {
+          "key": "queue",
+          "text": "Trace a FIFO frontier without duplicate discoveries."
+        },
+        {
+          "key": "distance",
+          "text": "Explain the shortest-path guarantee and its assumptions."
+        },
+        {
+          "key": "cost",
+          "text": "Relate adjacency-list traversal to O(V + E) time."
+        }
+      ],
+      "sources": [
+        {
+          "key": "bfs",
+          "sha256": "b18c467a50a846a8cfdd39b2e1cab65e4d057d37290c42fad25ba23cc269a67e"
+        }
+      ],
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "Explore one layer at a time",
+          "paragraphs": [
+            "Breadth-first search keeps the next vertices in a queue. The first vertex added is the first vertex removed. This is FIFO order.",
+            "Mark a vertex as seen when you enqueue it. Each vertex enters the queue at most once."
+          ],
+          "points": [],
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "kind": "diagram",
+          "title": "Watch the frontier move",
+          "sources": [
+            "bfs"
+          ],
+          "description": "Undirected graph: A–B, A–C, B–D, C–E, D–F and E–F. The dark vertex is being expanded. Pale vertices are seen.",
+          "nodes": [
+            {
+              "key": "a",
+              "label": "A",
+              "x": 70,
+              "y": 160
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "x": 220,
+              "y": 70
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "x": 220,
+              "y": 250
+            },
+            {
+              "key": "d",
+              "label": "D",
+              "x": 380,
+              "y": 70
+            },
+            {
+              "key": "e",
+              "label": "E",
+              "x": 380,
+              "y": 250
+            },
+            {
+              "key": "f",
+              "label": "F",
+              "x": 530,
+              "y": 160
+            }
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "b"
+            },
+            {
+              "start": "a",
+              "end": "c"
+            },
+            {
+              "start": "b",
+              "end": "d"
+            },
+            {
+              "start": "c",
+              "end": "e"
+            },
+            {
+              "start": "d",
+              "end": "f"
+            },
+            {
+              "start": "e",
+              "end": "f"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Start with A. Mark A as seen and put it in the queue.",
+              "active": [],
+              "frontier": [
+                "a"
+              ],
+              "visited": [
+                "a"
+              ]
+            },
+            {
+              "caption": "Expand A. Discover B and C, in alphabetical order.",
+              "active": [
+                "a"
+              ],
+              "frontier": [
+                "b",
+                "c"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c"
+              ]
+            },
+            {
+              "caption": "Expand B. Discover D. C stays at the front of the queue.",
+              "active": [
+                "b"
+              ],
+              "frontier": [
+                "c",
+                "d"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d"
+              ]
+            },
+            {
+              "caption": "Expand C. Discover E after D.",
+              "active": [
+                "c"
+              ],
+              "frontier": [
+                "d",
+                "e"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e"
+              ]
+            },
+            {
+              "caption": "Expand D. Discover F at distance three.",
+              "active": [
+                "d"
+              ],
+              "frontier": [
+                "e",
+                "f"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+              ]
+            },
+            {
+              "caption": "Expand E. F is already seen, so do not enqueue it again.",
+              "active": [
+                "e"
+              ],
+              "frontier": [
+                "f"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+              ]
+            },
+            {
+              "caption": "Expand F. Its neighbors are already seen.",
+              "active": [
+                "f"
+              ],
+              "frontier": [],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+              ]
+            },
+            {
+              "caption": "The queue is empty. Every reachable vertex is discovered.",
+              "active": [],
+              "frontier": [],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "code",
+          "title": "Keep discovery separate from processing",
+          "language": "Python · authored example",
+          "code": "from collections import deque\n\nfrontier = deque([start])\nseen = {start}\nwhile frontier:\n    vertex = frontier.popleft()\n    for neighbor in adjacency[vertex]:\n        if neighbor not in seen:\n            seen.add(neighbor)\n            frontier.append(neighbor)",
+          "explanation": "Store neighbors in alphabetical order to reproduce the trace. Mark a vertex seen when you enqueue it. This prevents repeated discovery through another edge. The example assumes an adjacency list and a valid start vertex.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "kind": "formula",
+          "title": "Distance grows by one edge",
+          "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>d</mi><mo>(</mo><mi>v</mi><mo>)</mo><mo>=</mo><mi>d</mi><mo>(</mo><mi>u</mi><mo>)</mo><mo>+</mo><mn>1</mn></mrow></math>",
+          "plain": "When u first discovers v, the distance to v is the distance to u plus one.",
+          "symbols": [
+            {
+              "symbol": "u",
+              "meaning": "The vertex being expanded."
+            },
+            {
+              "symbol": "v",
+              "meaning": "A neighbor that was not seen before."
+            },
+            {
+              "symbol": "d(x)",
+              "meaning": "The shortest number of edges from the start to x."
+            }
+          ],
+          "conditions": "Here d counts edges. For equal positive weights, minimum edge count also minimizes total cost. In this diagram, d(F) = 3.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Choose the search order",
+          "columns": [
+            "Method",
+            "Frontier",
+            "Shortest-path guarantee"
+          ],
+          "rows": [
+            [
+              "BFS",
+              "First-in, first-out queue",
+              "Fewest edges when all edge weights are equal."
+            ],
+            [
+              "DFS",
+              "Recursion or stack",
+              "No shortest-path guarantee."
+            ],
+            [
+              "Dijkstra",
+              "Minimum-priority queue",
+              "Minimum total weight for nonnegative edges."
+            ]
+          ],
+          "caption": "The frontier determines what “next” means.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "kind": "text",
+          "title": "Account for the work",
+          "paragraphs": [
+            "An adjacency list lets the search expand each vertex once and inspect each adjacency entry. The total time is O(V + E).",
+            "Try the trace again without looking at the next caption. Predict the queue before each step."
+          ],
+          "points": [],
+          "sources": [
+            "bfs"
+          ]
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "enqueue",
+          "objective": "queue",
+          "front": "When should BFS mark a vertex as seen?",
+          "back": "When the vertex is enqueued. This prevents several neighbors from adding it again.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "key": "distance",
+          "objective": "distance",
+          "front": "When does BFS guarantee a shortest path?",
+          "back": "When distance means the number of edges, or all edges have equal weight. Arbitrary weights require a different method.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "key": "cost",
+          "objective": "cost",
+          "front": "Why is adjacency-list BFS O(V + E)?",
+          "back": "Each vertex is expanded at most once. The algorithm inspects each adjacency entry a bounded number of times.",
+          "sources": [
+            "bfs"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "frontier",
+          "objective": "queue",
+          "prompt": "Start at A and inspect neighbors alphabetically. After expanding B, which queue remains?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "0",
+              "text": "C, D",
+              "feedback": "A added B and C. Removing B leaves C, then B adds D."
+            },
+            {
+              "key": "1",
+              "text": "D, C",
+              "feedback": "This puts a newly discovered vertex before the older frontier entry. A FIFO queue does not do that."
+            },
+            {
+              "key": "2",
+              "text": "C, A, D",
+              "feedback": "A is already seen. It must not be enqueued again."
+            }
+          ],
+          "correct": "0",
+          "explanation": "The oldest waiting vertex remains first. New vertices join the back.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "key": "shortest",
+          "objective": "distance",
+          "prompt": "In the diagram, how many edges are on a shortest path from A to F?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "0",
+              "text": "2",
+              "feedback": "F has no neighbor directly adjacent to A. Two edges are not enough."
+            },
+            {
+              "key": "1",
+              "text": "3",
+              "feedback": "A–B–D–F and A–C–E–F each use three edges."
+            },
+            {
+              "key": "2",
+              "text": "5",
+              "feedback": "A longer traversal can use five edges. BFS reaches F after three layers."
+            }
+          ],
+          "correct": "1",
+          "explanation": "The frontier layers are A; B and C; D and E; then F.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "key": "complexity",
+          "objective": "cost",
+          "prompt": "With adjacency lists, why is BFS O(V + E) rather than O(V × E)?",
+          "level": "reason",
+          "options": [
+            {
+              "key": "0",
+              "text": "Each vertex causes a full scan of every graph edge",
+              "feedback": "BFS scans the current vertex’s adjacency list, not all edges for each vertex."
+            },
+            {
+              "key": "1",
+              "text": "Vertices are expanded once, and adjacency entries are inspected a bounded number of times",
+              "feedback": "The vertex work and adjacency work add. They are not multiplied."
+            },
+            {
+              "key": "2",
+              "text": "The queue automatically removes all edge processing",
+              "feedback": "The queue determines order. The algorithm still inspects neighbors."
+            }
+          ],
+          "correct": "1",
+          "explanation": "Add the vertex work and edge work: O(V) + O(E) = O(V + E).",
+          "sources": [
+            "bfs"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "dfs",
+      "label": "Topic 03",
+      "title": "Go deep, then return",
+      "summary": "Follow a branch, keep the return path, and understand why depth-first order is different from shortest-path order.",
+      "minutes": 6,
+      "objectives": [
+        {
+          "key": "backtrack",
+          "text": "Explain backtracking and the purpose of seen markers."
+        },
+        {
+          "key": "not-shortest",
+          "text": "Give a counterexample to a shortest-path claim for DFS."
+        }
+      ],
+      "sources": [
+        {
+          "key": "dfs",
+          "sha256": "08b064d0d126cb706e99bea83b12c6f2c85f6549464d9c28015f692e9a611789"
+        }
+      ],
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "Keep a route back",
+          "paragraphs": [
+            "Depth-first search follows an unseen neighbor before it continues with other branches. Recursion stores where to return. An explicit stack can store the same pending work.",
+            "When a branch has no unseen neighbor, return to an earlier vertex and inspect its remaining neighbors. This return is backtracking."
+          ],
+          "points": [],
+          "sources": [
+            "dfs"
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Two orders, two behaviors",
+          "columns": [
+            "Property",
+            "BFS",
+            "DFS"
+          ],
+          "rows": [
+            [
+              "What waits?",
+              "A queue of the frontier.",
+              "A stack or recursive return path."
+            ],
+            [
+              "What comes next?",
+              "The oldest waiting vertex.",
+              "Work from the current deepest branch."
+            ],
+            [
+              "What about cycles?",
+              "Mark seen on discovery.",
+              "Mark seen on discovery."
+            ],
+            [
+              "Shortest paths?",
+              "Fewest edges in an unweighted graph.",
+              "Not guaranteed."
+            ]
+          ],
+          "caption": "Both methods need seen markers for graph traversal.",
+          "sources": [
+            "dfs"
+          ]
+        },
+        {
+          "kind": "text",
+          "title": "A direct edge can be discovered late",
+          "paragraphs": [
+            "Use the graph from Topic 02. An alphabetical recursive DFS can discover C along A–B–D–F–E–C. That tree path has five edges.",
+            "The graph also contains the direct edge A–C. It has one edge. The first DFS discovery path is therefore not necessarily shortest."
+          ],
+          "points": [],
+          "sources": [
+            "dfs"
+          ]
+        },
+        {
+          "kind": "formula",
+          "title": "The same broad work bound",
+          "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>T</mi><mo>=</mo><mi>O</mi><mo>(</mo><mo>|</mo><mi>V</mi><mo>|</mo><mo>+</mo><mo>|</mo><mi>E</mi><mo>|</mo><mo>)</mo></mrow></math>",
+          "plain": "With adjacency lists, DFS runs in time proportional to vertices plus edges.",
+          "symbols": [
+            {
+              "symbol": "V",
+              "meaning": "The set of vertices."
+            },
+            {
+              "symbol": "E",
+              "meaning": "The set of edges."
+            },
+            {
+              "symbol": "O(·)",
+              "meaning": "An asymptotic upper bound, not an exact operation count."
+            }
+          ],
+          "conditions": "Mark seen vertices to avoid repeated traversal through cycles.",
+          "sources": [
+            "dfs"
+          ]
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "return",
+          "objective": "backtrack",
+          "front": "What does backtracking do in DFS?",
+          "back": "It returns to earlier pending work after the current branch has no unseen neighbor.",
+          "sources": [
+            "dfs"
+          ]
+        },
+        {
+          "key": "seen",
+          "objective": "backtrack",
+          "front": "Why does graph DFS need seen markers?",
+          "back": "A cycle can lead back to an earlier vertex. A seen marker prevents repeated traversal.",
+          "sources": [
+            "dfs"
+          ]
+        },
+        {
+          "key": "counterexample",
+          "objective": "not-shortest",
+          "front": "How can DFS miss a shorter path?",
+          "back": "It can discover a vertex through a long branch before it examines a direct or shorter connection.",
+          "sources": [
+            "dfs"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "cycle",
+          "objective": "backtrack",
+          "prompt": "A DFS neighbor is already seen. What should ordinary traversal do?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "0",
+              "text": "Skip revisiting it and continue the remaining search",
+              "feedback": "This avoids repeating work through a cycle."
+            },
+            {
+              "key": "1",
+              "text": "Remove its seen marker before entering it again",
+              "feedback": "Removing the marker can reintroduce repeated traversal."
+            },
+            {
+              "key": "2",
+              "text": "Restart the whole traversal from that vertex",
+              "feedback": "Restarting is not ordinary DFS and can repeat the same cycle."
+            }
+          ],
+          "correct": "0",
+          "explanation": "The return path preserves pending work. Seen markers prevent visiting the same vertex again.",
+          "sources": [
+            "dfs"
+          ]
+        },
+        {
+          "key": "dfs-path",
+          "objective": "not-shortest",
+          "prompt": "DFS discovers C via A–B–D–F–E–C, but edge A–C exists. What follows?",
+          "level": "reason",
+          "options": [
+            {
+              "key": "0",
+              "text": "The DFS tree path is not a shortest path to C",
+              "feedback": "It has five edges, while the direct connection has one."
+            },
+            {
+              "key": "1",
+              "text": "DFS always finds a shortest path after backtracking",
+              "feedback": "Backtracking does not change the first-discovery tree into a shortest-path tree."
+            },
+            {
+              "key": "2",
+              "text": "The direct edge cannot belong to an undirected graph",
+              "feedback": "An undirected graph can contain the direct edge and the longer route."
+            }
+          ],
+          "correct": "0",
+          "explanation": "A single counterexample disproves the claim that DFS always gives shortest paths.",
+          "sources": [
+            "dfs"
+          ]
+        }
+      ]
+    }
+  ]
+}

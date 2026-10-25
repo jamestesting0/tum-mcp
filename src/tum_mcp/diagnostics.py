@@ -264,41 +264,6 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
         except (subprocess.SubprocessError, OSError, UnicodeError):
             node_state, node_detail = State.ACTION, "Found Node.js; version check failed."
     runtime.append(Check(label="Node.js", state=node_state, detail=node_detail, location=node))
-    git = shutil.which("git")
-    runtime.append(
-        Check(
-            label="Git",
-            state=State.READY if git else State.MISSING,
-            detail="Optional: assignment workspace preparation.",
-            location=git,
-        )
-    )
-    docker = shutil.which("docker")
-    running = False
-    if docker:
-        try:
-            running = (
-                subprocess.run(  # noqa: S603
-                    [docker, "info", "--format", "{{.ServerVersion}}"],
-                    capture_output=True,
-                    timeout=3,
-                    check=False,
-                ).returncode
-                == 0
-            )
-        except (subprocess.SubprocessError, OSError):
-            pass
-    runtime.append(
-        Check(
-            label="Docker",
-            state=State.READY if running else State.ACTION if docker else State.MISSING,
-            detail="Engine reachable; reviewed image and course recipe still required."
-            if running
-            else "CLI found; engine unavailable. Optional for isolated tests; reads still work."
-            if docker
-            else "Optional: start an engine for isolated assignment tests. Reads still work.",
-        )
-    )
     try:
         skills = inspect_skills()
         runtime.append(

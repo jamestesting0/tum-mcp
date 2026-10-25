@@ -1,12 +1,12 @@
 # Development
 
-[README](../README.md) · [Setup](setup.md)
+[README](../README.md) · [Setup](setup.md) · [Study workflows](study.md)
 
 For the combined campus package, see the [TUM MCP guide](tum-mcp.md) and
 [current verification limits](tum-mcp.md#build-and-test-the-local-package). This page also
 covers the preserved Moodle-only installer. Keep design working notes, agent handoffs and machine-specific QA under
-`docs/local/`, which is ignored by Git and excluded from packages. `DESIGN.md`
-belongs there, never in public documentation. Public CLI documentation must
+`docs/local/`, which is ignored by Git and excluded from packages. Local `DESIGN.md` working notes belong there. The reusable study design contract
+is intentionally bundled at `skills/prepare-study/references/design.md`. Public CLI documentation must
 match help output and the actual keyboard flow.
 
 ## Checks
@@ -91,6 +91,11 @@ local keys, without opening native stores. Test both paths with synthetic fixtur
 Extraction runs in a subprocess with a 60-second wall limit and 512 MiB aggregate
 memory monitoring. POSIX also enforces a CPU limit and kills the process group;
 Windows terminates the worker and its observed child processes.
+
+The `study_*` modules implement confined snapshot imports, source-aware reconciliation,
+validated teaching blocks and a static loopback preview. `lectures.py` projects
+student-visible Artemis lecture units and reads student PDF variants through the
+read-only transport. Local study tests never require campus credentials.
 
 ## Manual desktop verification
 

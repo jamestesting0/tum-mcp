@@ -23,6 +23,11 @@ class Courses(RootModel[tuple[Reference, ...]]):
     pass
 
 
+class CourseDirectory(Frozen):
+    account_id: str
+    courses: tuple[Reference, ...]
+
+
 class Feedback(Wire):
     id: int | None = None
     text: str | None = Field(default=None, max_length=10000)

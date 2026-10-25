@@ -50,7 +50,7 @@ for (const previousVersion of ['0.4.1', '0.5.0']) {
     assert.notEqual(current.python, previous.python);
     assert.ok(existsSync(previous.python), 'Previous runtime must remain for pinned clients.');
     assert.equal(run(previous.python, ['-I', '-m', 'tum_mcp', 'version']).trim(), previousVersion);
-    assert.deepEqual(readdirSync(join(source, 'skills')).filter(name => existsSync(join(source, 'skills', name, 'SKILL.md'))).sort(), ['tum-artemis', 'tum-moodle', 'tum-zulip']);
+    assert.deepEqual(readdirSync(join(source, 'skills')).filter(name => existsSync(join(source, 'skills', name, 'SKILL.md'))).sort(), ['init-study', 'prepare-study', 'read-content', 'update-study']);
     assert.equal(JSON.parse(readFileSync(join(home, '.claude.json'))).mcpServers.tum.command, current.python);
     assert.equal(readFileSync(note, 'utf8'), 'retain this user note');
     assert.equal(readFileSync(credential, 'utf8'), 'synthetic-private-record');
@@ -79,7 +79,7 @@ for (const previousVersion of ['0.4.1', '0.5.0']) {
     assert.ok(!existsSync(join(root, 'data/runtimes')));
     assert.ok(!existsSync(join(source, 'plugin.json')) && existsSync(note));
     assert.ok(existsSync(credential) && existsSync(work) && existsSync(download));
-    records.push({ from: previousVersion, to: version, clients: clients.length, skills: 3, idempotent: true, failedPreparationRetainedRuntime: true, damagedRuntimeRepaired: true, oldRuntimeRetainedUntilExplicitRemoval: true, removalKeptWorkAndCredentials: true, realAccountsUsed: false });
+    records.push({ from: previousVersion, to: version, clients: clients.length, skills: 4, idempotent: true, failedPreparationRetainedRuntime: true, damagedRuntimeRepaired: true, oldRuntimeRetainedUntilExplicitRemoval: true, removalKeptWorkAndCredentials: true, realAccountsUsed: false });
     console.log(JSON.stringify(records.at(-1)));
   } finally { rmSync(root, { recursive: true, force: true }); }
 }

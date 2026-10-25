@@ -41,11 +41,21 @@ def test_campus_stdio_has_real_tools_and_rejects_fabricated_approval(tmp_path: P
                 "moodle_list_courses",
                 "zulip_search_messages",
                 "artemis_get_feedback",
-                "artemis_prepare_workspace",
-                "tum_run_tests",
+                "artemis_list_courses",
+                "moodle_list_forums",
+                "moodle_read_discussion",
             } <= names
             assert "artemis_submit" not in names
             assert "artemis_start_exercise" not in names
+            assert (
+                not {
+                    "artemis_prepare_workspace",
+                    "artemis_prepare_submission",
+                    "tum_run_tests",
+                    "tum_get_workflow_status",
+                }
+                & names
+            )
             assert not status.is_error
             assert status.structured_content["accounts"] == []
             assert rejected.is_error

@@ -31,7 +31,7 @@ def test_skills_and_client_configuration_use_utf8_with_a_legacy_locale(
     uninstall_client("claude", home)
 
     # Then every skill remains readable and unrelated Unicode settings survive.
-    assert len(report.checked_skills) == 3
+    assert len(report.checked_skills) == 4
     assert report.errors == ()
     assert json.loads(config.read_text(encoding="utf-8")) == original
 
@@ -55,7 +55,7 @@ def test_claude_install_preserves_other_settings_and_customized_skills(
     assert parsed["customSetting"] == 42
     assert parsed["mcpServers"]["other"] == {"command": "keep"}
     assert parsed["mcpServers"]["tum"]["args"] == ["-I", "-m", "tum_mcp", "serve"]
-    submission = home / ".claude/skills/tum-artemis/SKILL.md"
+    submission = home / ".claude/skills/read-content/SKILL.md"
     metadata = yaml.safe_load(submission.read_text(encoding="utf-8").split("---", 2)[1])
     assert metadata.get("disable-model-invocation") is not True
     submission.write_text(
@@ -71,19 +71,19 @@ def test_personal_skill_override_survives_package_export(
 ) -> None:
     # Given a user-owned customization outside package directories.
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
-    custom = customize_skill("tum-zulip")
+    custom = customize_skill("read-content")
     source = custom / "SKILL.md"
     source.write_text(
         source.read_text(encoding="utf-8") + "\nPrefer German summaries.\n", encoding="utf-8"
     )
-    assert "+Prefer German summaries." in skill_diff("tum-zulip")
+    assert "+Prefer German summaries." in skill_diff("read-content")
     # When the Codex adapter exports its installed pack.
     home = tmp_path / "profile"
     install_client("codex", home)
     # Then it installs that single customized copy and keeps the original user override intact.
-    installed = home / ".codex/plugins/local/tum-mcp/skills/tum-zulip/SKILL.md"
+    installed = home / ".codex/plugins/local/tum-mcp/skills/read-content/SKILL.md"
     assert installed.read_bytes() == source.read_bytes()
-    assert len(list((home / ".codex/plugins/local/tum-mcp/skills").glob("tum-zulip"))) == 1
+    assert len(list((home / ".codex/plugins/local/tum-mcp/skills").glob("read-content"))) == 1
     root = home / ".codex/plugins/local/tum-mcp"
     manifest = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
     assert manifest["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
@@ -102,7 +102,7 @@ def test_skill_export_rejects_symlinked_private_files_before_creating_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
-    custom = customize_skill("tum-zulip")
+    custom = customize_skill("read-content")
     private = tmp_path / "private.txt"
     private.write_text("synthetic-private-canary")
     try:

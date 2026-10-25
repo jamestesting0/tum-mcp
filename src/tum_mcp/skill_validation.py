@@ -1,11 +1,14 @@
 """Structural skill checks. Activation quality requires separate host/model trials."""
 
+import posixpath
 import re
+from pathlib import PurePosixPath
 
 import anyio
 from pydantic import Field
 
 from tum_mcp.settings import Frozen
+from tum_mcp.skill_catalog import CURRENT_SKILLS
 from tum_mcp.skills import bundled, legacy_overrides, metadata, selected
 
 
@@ -43,18 +46,39 @@ def validate_skills() -> ValidationReport:
             for tool in re.findall(r"`((?:moodle|tum|zulip|artemis)_[a-z0-9_]+)`", text):
                 if tool not in registered:
                     errors.append(f"{info.name}: unregistered tool {tool}")
-            for reference in re.findall(r"\]\((references/[^)]+)\)", text):
-                target = (chosen / reference).resolve()
-                if not target.is_relative_to(chosen.resolve()) or not target.is_file():
+            for reference in re.findall(r"\]\(([^)]+)\)", text):
+                if reference.startswith(("https://", "http://", "#")):
+                    continue
+                virtual = PurePosixPath(
+                    posixpath.normpath(
+                        str(
+                            PurePosixPath(info.name)
+                            / resource.relative_to(chosen).parent
+                            / reference.split("#")[0]
+                        )
+                    )
+                )
+                if not virtual.parts or virtual.parts[0] not in CURRENT_SKILLS:
+                    errors.append(f"{info.name}: missing or invalid reference {reference}")
+                    continue
+                root = selected(virtual.parts[0]).resolve()
+                target = root.joinpath(*virtual.parts[1:]).resolve()
+                if not target.is_relative_to(root) or not target.is_file():
                     errors.append(f"{info.name}: missing or invalid reference {reference}")
     if legacy_overrides():
         errors.append(
             "Legacy skill customizations need review before exporting the consolidated pack."
         )
-    if set(checked) != {"tum-moodle", "tum-artemis", "tum-zulip"}:
-        errors.append("Expected exactly one skill per website: Moodle, Artemis and Zulip.")
-    if {"artemis_submit", "artemis_start_exercise"} & registered:
-        errors.append("Unverified remote action tools must remain unavailable.")
+    if set(checked) != set(CURRENT_SKILLS):
+        errors.append("Expected the four content and study workflows.")
+    if {
+        "artemis_submit",
+        "artemis_start_exercise",
+        "artemis_prepare_workspace",
+        "artemis_prepare_submission",
+        "tum_run_tests",
+    } & registered:
+        errors.append("Exercise execution tools must remain unavailable.")
     return ValidationReport(
         checked_skills=tuple(checked),
         errors=tuple(errors),

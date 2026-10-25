@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "course": {
+    "key": "algorithms-demo",
+    "title": "Algorithms & Graphs",
+    "semester": "Synthetic course",
+    "synthetic": true,
+    "bindings": [
+      {
+        "key": "demo",
+        "provider": "sample",
+        "course_id": "algorithms-demo"
+      }
+    ]
+  },
+  "coverage": [
+    {
+      "binding": "demo",
+      "status": "complete",
+      "checked_at": "2026-10-25T08:00:00Z",
+      "note": "Complete generated sample, not a live website check."
+    }
+  ],
+  "resources": [
+    {
+      "key": "graphs",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Graphs and representations",
+      "url": "https://example.invalid/study/graphs",
+      "locator": "Synthetic notes, sections 1–3",
+      "revision": "1",
+      "text": "# Synthetic notes: graphs and representations\nA graph G=(V,E) contains vertices V and edges E. In a simple undirected graph,\nan edge joins two different vertices and has no direction. The degree of a\nvertex is the number of incident edges. Each edge contributes two to the sum\nof all degrees, so sum(deg(v))=2|E|. Six edges give a degree sum of twelve.\nAn adjacency list stores the neighbors of each vertex. It uses O(V+E) memory.\nTesting an edge may scan O(deg(v)) neighbors. An adjacency matrix uses O(V²)\nmemory and supports O(1) edge lookup. A sparse graph has far fewer edges than\nV², so adjacency lists usually save memory. These are generated teaching notes,\nnot a TUM lecture or official exam.\n"
+    },
+    {
+      "key": "bfs",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Breadth-first search",
+      "url": "https://example.invalid/study/bfs",
+      "locator": "Synthetic notes, sections 1–3",
+      "revision": "1",
+      "text": "# Synthetic notes: breadth-first search\nBFS uses a first-in, first-out queue. Mark a vertex as seen when it is enqueued.\nPop a vertex, inspect its neighbors, and enqueue only neighbors not yet seen.\nBFS reaches vertices in nondecreasing distance from the start. In an unweighted\ngraph, the first discovery of v from u gives d(v)=d(u)+1. This is a shortest path\nin number of edges, not in arbitrary total weight. An adjacency-list traversal\nuses O(V+E) time and O(V) auxiliary memory. Consider an undirected graph with\nedges A-B, A-C, B-D, C-E, D-F, E-F. Inspect neighbors alphabetically. Starting at\nA, expansion order is A,B,C,D,E,F. After expanding B the queue is C,D. The\nshortest distance to F is three edges. When E sees F, F is already seen and is\nnot enqueued again. Dijkstra instead uses a minimum-priority queue and supports\nnonnegative edge weights. DFS uses depth-first backtracking, not FIFO order.\nThese notes are synthetic.\n"
+    },
+    {
+      "key": "dfs",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Depth-first search",
+      "url": "https://example.invalid/study/dfs",
+      "locator": "Synthetic notes, sections 1–3",
+      "revision": "1",
+      "text": "# Synthetic notes: depth-first search\nDFS follows one branch until no unseen neighbor remains, then backtracks to an\nearlier vertex with remaining work. It uses recursion or an explicit stack.\nMark vertices as seen so cycles do not cause repeated traversal. An adjacency\nlist permits O(V+E) time. DFS does not guarantee a shortest path. On the sample\nundirected graph A-B, A-C, B-D, C-E, D-F, E-F, an alphabetical recursive DFS\nstarting at A can discover C along A,B,D,F,E,C. That tree path has five edges,\nalthough A-C is a direct edge. Backtracking means returning to a previous call\nor stack frame to inspect another branch. These notes are synthetic.\n"
+    },
+    {
+      "key": "practice-format",
+      "binding": "demo",
+      "kind": "exam",
+      "title": "Practice format guide (synthetic)",
+      "url": "https://example.invalid/study/practice-format",
+      "locator": "Generated sample",
+      "revision": "1",
+      "text": "This sample has no official exam. Practice checks recall, application and reasoning. No real deadline applies."
+    },
+    {
+      "key": "exercise-graph",
+      "binding": "demo",
+      "kind": "exercise",
+      "title": "Graph tracing task (synthetic)",
+      "url": "https://example.invalid/study/exercise-graph",
+      "locator": "Generated sample",
+      "revision": "1",
+      "text": "Trace BFS from A using the sample graph. Inspect neighbors alphabetically. Explain why the frontier changes."
+    },
+    {
+      "key": "course-note",
+      "binding": "demo",
+      "kind": "other",
+      "title": "Course announcement (synthetic)",
+      "url": "https://example.invalid/study/course-note",
+      "locator": "Generated sample",
+      "revision": "1",
+      "text": "This is a local design preview. All material is synthetic, and no campus account was accessed."
+    }
+  ]
+}

@@ -1,16 +1,16 @@
 """Campus MCP surface; the existing Moodle tools remain compatibility aliases."""
 
 import time
-from pathlib import Path
 from typing import Annotated, Literal, assert_never
 
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from tum_mcp.artemis import Artemis
-from tum_mcp.artemis_models import ExerciseView, FeedbackView, Overview
+from tum_mcp.artemis_models import CourseDirectory, ExerciseView, FeedbackView, Overview
 from tum_mcp.checkpoints import Checkpoint
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.lecture_models import AttachmentView, LectureDirectory, LectureView
 from tum_mcp.settings import (
     Account,
     CourseMapping,
@@ -26,13 +26,12 @@ from tum_mcp.zulip_models import Channels, MessagePage, Query, Topics
 from tum_moodle.server import server
 
 READ = ToolAnnotations(read_only_hint=True, destructive_hint=False, open_world_hint=True)
-LOCAL = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
 Id = Annotated[int, Field(gt=0)]
 
 
 class Status(Frozen):
     accounts: tuple["AccountStatus", ...]
-    remote_action_status: str = "disabled_pending_verified_approval_and_host_boundary"
+    remote_action_status: str = "read_only"
     fetched_at: float
 
 
@@ -161,9 +160,59 @@ def zulip_save_checkpoint(account_id: str, channel_id: Id, message_id: Id) -> Ch
 
 
 @server.tool(annotations=READ)
+def artemis_list_courses(account_id: str) -> CourseDirectory:
+    """List available Artemis course metadata; this does not grant content access."""
+    courses = Artemis(API(find_account(account_id, Provider.ARTEMIS))).courses()
+    return CourseDirectory(account_id=account_id, courses=courses.root)
+
+
+@server.tool(annotations=READ)
 def artemis_list_exercises(account_id: str, course_id: Id) -> Overview:
-    """List released programming exercises in an enabled course; excludes exams/quizzes."""
+    """List released course exercise metadata; excludes exams, quizzes and unreleased work."""
     return Artemis(API(find_account(account_id, Provider.ARTEMIS))).exercises(course_id)
+
+
+@server.tool(annotations=READ)
+def artemis_list_lectures(account_id: str, course_id: Id) -> LectureDirectory:
+    """List student-visible lecture metadata in an enabled course, including tutorials."""
+    from tum_mcp.lectures import Lectures
+
+    return Lectures(Artemis(API(find_account(account_id, Provider.ARTEMIS)))).directory(course_id)
+
+
+@server.tool(annotations=READ)
+def artemis_get_lecture(account_id: str, course_id: Id, lecture_id: Id) -> LectureView:
+    """Read released lecture text, slide metadata, video/online links and exercise references."""
+    from tum_mcp.lectures import Lectures
+
+    return Lectures(Artemis(API(find_account(account_id, Provider.ARTEMIS)))).lecture(
+        course_id, lecture_id
+    )
+
+
+@server.tool(
+    annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True)
+)
+def artemis_get_attachment(
+    account_id: str,
+    course_id: Id,
+    lecture_id: Id,
+    attachment_id: Id,
+    page_start: Id = 1,
+    page_limit: Annotated[int, Field(ge=1, le=12)] = 8,
+    save_original: bool = False,
+) -> AttachmentView:
+    """Read cited pages from the student PDF; optionally save that student copy locally."""
+    from tum_mcp.lectures import Lectures
+
+    return Lectures(Artemis(API(find_account(account_id, Provider.ARTEMIS)))).attachment(
+        course_id,
+        lecture_id,
+        attachment_id,
+        page_start=page_start,
+        page_limit=page_limit,
+        save_original=save_original,
+    )
 
 
 @server.tool(annotations=READ)
@@ -205,48 +254,3 @@ def tum_resolve_course(name: str) -> CourseMapping:
             Code.ACTION_REQUIRED, "Configure one exact course mapping in preferences.json."
         )
     return matches[0]
-
-
-from tum_mcp.runner import TestReceipt  # noqa: E402
-from tum_mcp.submission import SubmissionPreview  # noqa: E402
-from tum_mcp.workspace import WorkspaceReceipt  # noqa: E402
-
-
-@server.tool(
-    annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True)
-)
-def artemis_prepare_workspace(
-    account_id: str,
-    course_id: Id,
-    exercise_id: Id,
-    mode: Literal["graded", "practice"] = "graded",
-) -> WorkspaceReceipt:
-    """Clone an existing permitted participation; never starts an exercise or executes its code."""
-    from tum_mcp.workspace import prepare
-
-    provider = Artemis(API(find_account(account_id, Provider.ARTEMIS)))
-    return prepare(provider, provider.exercise(course_id, exercise_id), mode)
-
-
-@server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
-def tum_get_workflow_status(workspace: str) -> WorkspaceReceipt:
-    """Read a workspace's participation-bound receipt inside the configured root."""
-    from tum_mcp.workspace import workflow_status
-
-    return workflow_status(Path(workspace))
-
-
-@server.tool(annotations=LOCAL)
-def tum_run_tests(workspace: str, recipe: str) -> TestReceipt:
-    """Run a locally approved, course-bound recipe in a container without campus credentials."""
-    from tum_mcp.runner import run_tests
-
-    return run_tests(Path(workspace), recipe)
-
-
-@server.tool(annotations=READ)
-def artemis_prepare_submission(workspace: str) -> SubmissionPreview:
-    """Inspect the exact revision, tests, and destination; performs no remote mutation."""
-    from tum_mcp.submission import preview
-
-    return preview(Path(workspace))

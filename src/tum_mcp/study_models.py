@@ -1,0 +1,149 @@
+"""Validated, course-bound local inventories. No network or credential access."""
+
+from pathlib import PurePosixPath
+from typing import Annotated, Literal
+from urllib.parse import parse_qsl, urlsplit
+
+from pydantic import Field, field_validator, model_validator
+
+from tum_mcp.settings import Frozen
+
+Key = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.-]{0,99}$")]
+Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+ProviderName = Literal["moodle", "artemis", "zulip", "sample"]
+Kind = Literal["exam", "content", "exercise", "other"]
+FOLDERS = {"exam": "exams", "content": "content", "exercise": "exercises", "other": "other"}
+
+
+class Binding(Frozen):
+    key: Key
+    provider: ProviderName
+    course_id: Annotated[str, Field(min_length=1, max_length=100)]
+    account_id: str | None = Field(default=None, max_length=100)
+
+
+class Course(Frozen):
+    key: Key
+    title: Annotated[str, Field(min_length=1, max_length=200)]
+    semester: Annotated[str, Field(min_length=1, max_length=100)]
+    synthetic: bool = False
+    bindings: tuple[Binding, ...] = Field(min_length=1, max_length=30)
+
+    @model_validator(mode="after")
+    def distinct_bindings(self) -> "Course":
+        keys = [item.key for item in self.bindings]
+        if len(set(keys)) != len(keys):
+            raise ValueError("Course bindings must have unique keys.")
+        sample = [item.provider == "sample" for item in self.bindings]
+        if (any(sample) and not all(sample)) or self.synthetic != all(sample):
+            raise ValueError(
+                "Synthetic courses use sample bindings only; real courses use real providers."
+            )
+        if not self.title.strip() or not self.semester.strip():
+            raise ValueError("Course title and semester are required.")
+        return self
+
+
+class Coverage(Frozen):
+    binding: Key
+    status: Literal["complete", "partial", "unavailable"]
+    checked_at: Annotated[str, Field(min_length=1, max_length=100)]
+    note: str = Field(default="", max_length=2000)
+
+
+class Resource(Frozen):
+    key: Key
+    binding: Key
+    kind: Kind
+    title: Annotated[str, Field(min_length=1, max_length=300)]
+    url: Annotated[str, Field(max_length=4000)]
+    locator: str = Field(default="", max_length=500)
+    revision: str | None = Field(default=None, max_length=200)
+    text: str | None = Field(default=None, max_length=2_000_000)
+    source_file: str | None = Field(default=None, max_length=500)
+
+    @field_validator("url")
+    @classmethod
+    def public_link(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme not in {"https", "http"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+        ):
+            raise ValueError("Use a source link without embedded credentials.")
+        if any(
+            any(
+                secret in key.casefold()
+                for secret in ("token", "secret", "password", "sesskey", "api_key", "apikey")
+            )
+            for key, _ in parse_qsl(parsed.query)
+        ):
+            raise ValueError("Source links must not contain authentication parameters.")
+        return value
+
+    @field_validator("source_file")
+    @classmethod
+    def relative_file(cls, value: str | None) -> str | None:
+        if value is not None:
+            path = PurePosixPath(value)
+            if path.is_absolute() or ".." in path.parts or "\\" in value or ":" in value:
+                raise ValueError("Import files must be relative to the snapshot directory.")
+        return value
+
+    @model_validator(mode="after")
+    def one_payload(self) -> "Resource":
+        if self.text is not None and self.source_file is not None:
+            raise ValueError("Supply text or a file, not both.")
+        return self
+
+
+class Snapshot(Frozen):
+    schema_version: Literal[1] = 1
+    course: Course
+    coverage: tuple[Coverage, ...] = Field(max_length=30)
+    resources: tuple[Resource, ...] = Field(max_length=10000)
+
+    @model_validator(mode="after")
+    def scope(self) -> "Snapshot":
+        bindings = {item.key for item in self.course.bindings}
+        keys = [item.key for item in self.resources]
+        coverage = [item.binding for item in self.coverage]
+        if len(keys) != len(set(keys)) or len(coverage) != len(set(coverage)):
+            raise ValueError("Resource and coverage keys must be unique.")
+        if set(coverage) != bindings or any(r.binding not in bindings for r in self.resources):
+            raise ValueError("Every course binding needs explicit coverage and scoped resources.")
+        return self
+
+
+class ResourceState(Frozen):
+    resource: Resource
+    path: str | None = None
+    sha256: Digest | None = None
+    status: Literal["current", "needs_fetch", "local_edit", "withdrawn"]
+
+    @model_validator(mode="after")
+    def material_path(self) -> "ResourceState":
+        if self.status == "current" and (self.path is None or self.sha256 is None):
+            raise ValueError("Current material requires a stored path and hash.")
+        if self.path is not None:
+            path = PurePosixPath(self.path)
+            if (
+                len(path.parts) != 3
+                or path.parts[:2] != ("materials", FOLDERS[self.resource.kind])
+                or not path.name.startswith(f"material-{self.resource.key}.")
+                or "\\" in self.path
+                or ":" in self.path
+            ):
+                raise ValueError("Stored material path does not match its resource.")
+        return self
+
+
+class StudyState(Frozen):
+    schema_version: Literal[1] = 1
+    course: Course
+    coverage: tuple[Coverage, ...]
+    resources: tuple[ResourceState, ...]
+    generation: Digest
+    agents_block_sha256: Digest

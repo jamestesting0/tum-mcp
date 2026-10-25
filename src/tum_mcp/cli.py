@@ -25,12 +25,9 @@ from tum_moodle.errors import MoodleError
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 skills_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 app.add_typer(skills_app, name="skills")
-from tum_mcp.workflow_cli import app as workspace_app  # noqa: E402
+from tum_mcp.study_cli import app as study_app  # noqa: E402
 
-app.add_typer(workspace_app, name="workspace")
-from tum_mcp.action_cli import app as actions_app  # noqa: E402
-
-app.add_typer(actions_app, name="actions")
+app.add_typer(study_app, name="study")
 
 
 @app.command()
@@ -134,7 +131,6 @@ def scope(
     private_channel: Annotated[list[int] | None, typer.Option()] = None,
     course: Annotated[list[int] | None, typer.Option()] = None,
     sensitive: Annotated[bool | None, typer.Option("--sensitive/--no-sensitive")] = None,
-    workspace: Annotated[bool | None, typer.Option("--workspace/--no-workspace")] = None,
 ) -> None:
     """Replace explicitly supplied scopes. Only this local command can change grants."""
     from tum_mcp.settings import Account
@@ -146,7 +142,6 @@ def scope(
         ("private_channels", private_channel),
         ("courses", course),
         ("sensitive_reads", sensitive),
-        ("workspace_writes", workspace),
     ):
         if replacement is not None:
             values[key] = replacement
@@ -221,7 +216,7 @@ def doctor(
         for index, action in enumerate(report.next_steps, 1):
             console.print(Text(f"{index}. {action}"))
         console.print()
-    console.print(Text("Remote start, push, submit and rebuild remain disabled.", style="muted"))
+    console.print(Text("Course websites are read-only. Study projects stay local.", style="muted"))
     console.print(
         Text("Use --live for a fresh session check; --json for automation.", style="muted")
     )

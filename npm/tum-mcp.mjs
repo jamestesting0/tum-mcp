@@ -7,7 +7,7 @@ const args = process.argv.slice(2);
 const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 try {
   if (args.length === 0 || (args.length === 1 && ['--help', '-h'].includes(args[0]))) {
-    console.log(`TUM MCP ${version}\nCommands: setup [--client codex|claude|cursor|antigravity|generic], connect, scope, discover, status, doctor [--json] [--live], serve, skills, workspace, actions, logout, uninstall, update\nRun connect without arguments to select services and an installed Chromium browser. Run setup explicitly to provision the managed Python backend.`);
+    console.log(`TUM MCP ${version}\nCommands: setup [--client codex|claude|cursor|antigravity|generic], connect, scope, discover, status, doctor [--json] [--live], serve, skills, study, logout, uninstall, update\nRun connect without arguments to select services and an installed Chromium browser. Run setup explicitly to provision the managed Python backend.`);
   } else if (['--version', 'version'].includes(args[0])) {
     console.log(version);
   } else if (['setup', 'update'].includes(args[0]) && args.length === 2 && ['--help', '-h'].includes(args[1])) {

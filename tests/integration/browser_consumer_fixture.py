@@ -6,9 +6,14 @@
 # The controller supplies the isolated, installed backend interpreter.
 """Owned-browser verification with synthetic data and no live campus requests."""
 
+import io
 import json
 import sys
+import tempfile
 import time
+from contextlib import redirect_stdout
+from pathlib import Path
+from urllib.parse import urlsplit
 
 from playwright.sync_api import Route, sync_playwright
 
@@ -26,6 +31,102 @@ document.querySelector('output').textContent='Signed in';">Sign in fixture</butt
 def fixture(route: Route) -> None:
     assert route.request.url.startswith("https://fixture.invalid/")
     route.fulfill(status=200, content_type="text/html", body=HTML)
+
+
+def study_website(browser) -> dict[str, object]:
+    """Exercise packaged study assets through the same owned Chromium/WSL transport."""
+    from tum_mcp.study_cli import demo
+
+    with tempfile.TemporaryDirectory(prefix="tum-study-browser-") as temporary:
+        project = Path(temporary) / "Synthetic course"
+        with redirect_stdout(io.StringIO()):
+            demo(project)
+        site = project / "study"
+        content = json.loads((site / "content.json").read_bytes())
+        errors = []
+
+        def serve(route: Route) -> None:
+            url = urlsplit(route.request.url)
+            name = url.path.removeprefix("/") or "index.html"
+            assert url.netloc == "study.invalid" and name in {
+                "index.html",
+                "styles.css",
+                "app.mjs",
+                "dom.mjs",
+                "reading.mjs",
+                "learning.mjs",
+                "data.mjs",
+            }
+            mime = (
+                "text/html"
+                if name.endswith(".html")
+                else "text/css"
+                if name.endswith(".css")
+                else "text/javascript"
+            )
+            route.fulfill(status=200, content_type=mime, body=(site / name).read_bytes())
+
+        for width in (390, 1440):
+            for theme in ("light", "dark"):
+                context = browser.new_context(
+                    viewport={"width": width, "height": 900}, color_scheme=theme
+                )
+                context.route("**/*", serve)
+                page = context.new_page()
+                page.on("pageerror", lambda error: errors.append(str(error)))
+                page.goto("https://study.invalid/#bfs/content")
+                page.get_by_role(
+                    "heading",
+                    name=next(u["title"] for u in content["units"] if u["key"] == "bfs"),
+                    exact=True,
+                ).wait_for()
+                assert page.locator("math").count() > 0
+                code = next(
+                    block
+                    for u in content["units"]
+                    if u["key"] == "bfs"
+                    for block in u["blocks"]
+                    if block["kind"] == "code"
+                )
+                assert page.locator(".code-region code").inner_text() == code["code"]
+                assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+                page.get_by_role("button", name="Next step", exact=True).click()
+                page.get_by_role("button", name="Previous step", exact=True).click()
+                content_tab = page.get_by_role("tab", name="Content", exact=True)
+                content_tab.focus()
+                page.keyboard.press("ArrowRight")
+                page.get_by_role("button", name="Show answer", exact=True).click()
+                page.get_by_role("button", name="Got it", exact=True).click()
+                page.reload()
+                page.get_by_role("button", name="Show answer", exact=True).click()
+                assert (
+                    page.get_by_role("button", name="Got it", exact=True).get_attribute(
+                        "aria-pressed"
+                    )
+                    == "true"
+                )
+                page.get_by_role("tab", name="Practice", exact=False).click()
+                unit = next(unit for unit in content["units"] if unit["key"] == "bfs")
+                question = unit["questions"][0]
+                option = next(
+                    option for option in question["options"] if option["key"] == question["correct"]
+                )
+                page.get_by_role("radio", name=option["text"], exact=True).check()
+                page.get_by_role("button", name="Check answer", exact=True).click()
+                assert page.get_by_role("heading", name="Correct", exact=True).is_visible()
+                assert page.get_by_text(option["feedback"], exact=True).is_visible()
+                page.get_by_role("button", name="Focus mode", exact=True).click()
+                page.keyboard.press("Escape")
+                assert page.locator("html").get_attribute("data-focus") == "false"
+                context.close()
+        assert errors == [], errors
+        return {
+            "views": ["content", "flashcards", "practice"],
+            "widths": [390, 1440],
+            "themes": ["light", "dark"],
+            "source": "packaged_synthetic_demo",
+            "passed": True,
+        }
 
 
 def main() -> None:
@@ -80,6 +181,7 @@ def main() -> None:
                         "platform": platform,
                         "pipeTransport": True,
                         "encryptedSession": True,
+                        "studyWebsite": study_website(browser),
                     }
                 )
             finally:

@@ -49,7 +49,7 @@ class Artemis:
                         update={"student_participations": None, "problem_statement": None}
                     )
                     for item in overview.exercises
-                    if item.type == "programming"
+                    if item.type in {"programming", "text", "modeling", "file-upload"}
                     and item.exercise_group is None
                     and (item.release_date is None or item.release_date <= datetime.now(UTC))
                 )
@@ -59,14 +59,14 @@ class Artemis:
     def exercise(self, course_id: int, exercise_id: int) -> ExerciseView:
         if not any(item.id == exercise_id for item in self.exercises(course_id).exercises):
             raise CampusError(
-                Code.SCOPE_DENIED, "Exercise is not a released programming exercise in this course."
+                Code.SCOPE_DENIED, "Exercise is not a readable released exercise in this course."
             )
         exercise = decode(
             Details, self.api.get(f"/api/exercise/exercises/{exercise_id}/details")
         ).exercise
         if (
             exercise.id != exercise_id
-            or exercise.type != "programming"
+            or exercise.type not in {"programming", "text", "modeling", "file-upload"}
             or exercise.course is None
             or exercise.course.id != course_id
             or exercise.exercise_group is not None
@@ -97,7 +97,7 @@ class Artemis:
         if not matches:
             raise CampusError(
                 Code.ACTION_REQUIRED,
-                "No matching participation; start it manually or approve start separately.",
+                "Feedback is unavailable without an existing matching participation.",
             )
         if len(matches) != 1:
             raise CampusError(Code.CAPABILITY_UNSUPPORTED, "Participation identity is ambiguous.")
@@ -106,6 +106,11 @@ class Artemis:
     def feedback(
         self, exercise: Exercise, mode: Literal["graded", "practice"], commit: str
     ) -> FeedbackView:
+        if exercise.type != "programming":
+            raise CampusError(
+                Code.CAPABILITY_UNSUPPORTED,
+                "Commit-linked feedback applies to programming exercises only.",
+            )
         if not re.fullmatch(r"[a-fA-F0-9]{40}", commit):
             raise CampusError(Code.STALE_RESULT, "A full built commit hash is required.")
         participation = self.participation(exercise, mode)

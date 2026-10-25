@@ -44,7 +44,7 @@ def test_all_removal_retires_managed_files_and_preserves_custom_files_and_saved_
     assert result.exit_code == 0, result.output
     assert note.read_text() == "keep my note" and work.is_file()
     assert saved.read_bytes() == b"synthetic-key-to-retain"
-    assert not (profile / ".claude/skills/tum-artemis").exists()
+    assert not (profile / ".claude/skills/read-content").exists()
     assert not (profile / ".codex/plugins/local/tum-mcp/plugin.json").exists()
     for name in ("claude", "cursor", "antigravity"):
         assert "tum" not in json.loads(client_config_path(name, profile).read_text())["mcpServers"]

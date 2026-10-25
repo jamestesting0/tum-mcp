@@ -1,7 +1,7 @@
 [project]
 name = "tum-moodle-integration"
-version = "0.5.1"
-description = "Local TUM Moodle, Artemis, and Zulip tools with campus workflow skills."
+version = "0.6.0"
+description = "Read-only TUM course tools and source-backed local study workflows."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE", "NOTICE"]

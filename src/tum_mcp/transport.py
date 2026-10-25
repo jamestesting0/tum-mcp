@@ -22,6 +22,9 @@ READ_PATHS: Final = {
     Provider.ARTEMIS: re.compile(
         r"/management/info|/api/core/public/account|/api/course/courses/for-dropdown|"
         r"/api/course/courses/\d+/(for-overview|exercises-for-overview)|"
+        r"/api/lecture/courses/\d+/lectures-for-overview|"
+        r"/api/lecture/lectures/\d+/details|"
+        r"/api/core/files/attachments/attachment-video-units/\d+/student/[a-zA-Z0-9_.%-]+|"
         r"/api/exercise/exercises/\d+/details|"
         r"/api/programming/programming-exercise-participations/\d+/"
         r"student-participation-with-all-results|"
@@ -48,23 +51,31 @@ class API:
             raise CampusError(Code.SCOPE_DENIED, "This endpoint is not an enabled read operation.")
         return self._request("GET", path, params)
 
-    def _start_once(self, exercise_id: int, *, practice: bool) -> bytes:
-        """Internal executor operation; never registered as a generic HTTP MCP tool."""
-        from tum_mcp.remote_gate import require_verified_boundary
+    def get_lecture_file(self, path: str) -> bytes:
+        if self.account.provider != Provider.ARTEMIS or not re.fullmatch(
+            r"/api/core/files/attachments/attachment-video-units/\d+/student/[a-zA-Z0-9_.%-]+",
+            path,
+        ):
+            raise CampusError(Code.SCOPE_DENIED, "Only student lecture files can be retrieved.")
+        return self._request("GET", path, None, response_limit=50 * 1024 * 1024)
 
-        require_verified_boundary()
-        if self.account.provider != Provider.ARTEMIS or exercise_id <= 0:
-            raise CampusError(Code.SCOPE_DENIED, "Invalid start destination.")
-        path = f"/api/exercise/exercises/{exercise_id}/participations"
-        if practice:
-            path += "/practice"
-        return self._request(
-            "POST", path, {"useGradedParticipation": "false"} if practice else None
+    def _start_once(self, exercise_id: int, *, practice: bool) -> bytes:
+        """Retired compatibility entry point; campus access is permanently read-only."""
+        raise CampusError(
+            Code.CAPABILITY_UNSUPPORTED,
+            "Campus access is read-only; exercise start is unavailable.",
         )
 
     def _request(
-        self, method: Literal["GET", "POST"], path: str, params: Mapping[str, str] | None
+        self,
+        method: Literal["GET", "POST"],
+        path: str,
+        params: Mapping[str, str] | None,
+        *,
+        response_limit: int = MAX_RESPONSE,
     ) -> bytes:
+        if method != "GET" or not READ_PATHS[self.account.provider].fullmatch(path):
+            raise CampusError(Code.SCOPE_DENIED, "Campus access permits read requests only.")
         credential = None
         if path not in PUBLIC_PATHS:
             credential = self.credential or Vault().load(self.account)
@@ -133,7 +144,7 @@ class API:
                 body = bytearray()
                 for chunk in response.iter_bytes():
                     body.extend(chunk)
-                    if len(body) > MAX_RESPONSE:
+                    if len(body) > response_limit:
                         raise CampusError(
                             Code.INVALID_RESPONSE, "Response exceeded the retrieval budget."
                         )

@@ -187,122 +187,21 @@ def test_release_gate_blocks_remote_actions_even_with_a_valid_grant(campus) -> N
     assert visited == []
 
 
-def test_fake_approval_and_scope_or_credential_changes_never_reach_post(
-    campus,
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("legacy_flag", [False, True])
+def test_a_legacy_verified_flag_and_valid_grant_cannot_enable_remote_actions(
+    campus, monkeypatch: pytest.MonkeyPatch, legacy_flag: bool
 ) -> None:
-    monkeypatch.setattr(remote_gate, "REMOTE_ACTIONS_VERIFIED", True)
+    # Given retained approval data and any value of the retired release flag.
+    monkeypatch.setattr(remote_gate, "REMOTE_ACTIONS_VERIFIED", legacy_flag)
     preflight, visited, _ = campus
     review = preflight().start(77, 11, "graded")
-    with pytest.raises(CampusError, match="exact action"):
-        actions.execute(review)
     approve(review)
-    account = find_account(review.action.account_id, Provider.ARTEMIS)
-    Vault().save(account, Credential(account_id=account.id))
-    with pytest.raises(CampusError, match="changed since approval"):
+    visited.clear()
+    # When an old caller attempts execution, it is denied before campus access.
+    with pytest.raises(CampusError) as error:
         actions.execute(review)
-    review = preflight().start(77, 11, "graded")
-    approve(review)
-    save_account(account)
-    with pytest.raises(CampusError, match="changed since approval"):
-        actions.execute(review)
-    assert all(not request.startswith("POST") for request in visited)
-
-
-@pytest.mark.parametrize("lost_response", [False, True])
-def test_one_post_and_no_automatic_retry_after_a_lost_response(
-    campus,
-    monkeypatch: pytest.MonkeyPatch,
-    lost_response: bool,
-) -> None:
-    # Given an exact synthetic start approval with a simulated verified adapter.
-    monkeypatch.setattr(remote_gate, "REMOTE_ACTIONS_VERIFIED", True)
-    preflight, visited, state = campus
-    review = preflight().start(77, 11, "graded")
-    approve(review)
-    state["lose_response"] = lost_response
-    # When the server either replies or loses its reply after creating participation.
-    receipt = actions.execute(review)
-    # Then a second invocation never duplicates the remote effect.
-    assert receipt.status == ("unknown" if lost_response else "confirmed")
-    assert receipt.participation_id == (None if lost_response else 9)
-    assert receipt.action == review.action
-    with pytest.raises(CampusError, match="already exists"):
-        actions.execute(review)
-    assert sum(request.startswith("POST") for request in visited) == 1
-
-
-def test_changed_commit_cannot_spend_the_reviewed_submission_grant(
-    campus,
-    tested_workspace: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(remote_gate, "REMOTE_ACTIONS_VERIFIED", True)
-    preflight, _, _ = campus
-    review = preflight().submit(tested_workspace)
-    approve(review)
-    # Identical files at a different commit still require another revision approval.
-    run_git(
-        tested_workspace,
-        [
-            "-c",
-            "user.name=Fixture",
-            "-c",
-            "user.email=fixture@example.invalid",
-            "commit",
-            "--allow-empty",
-            "-m",
-            "Different exact revision",
-        ],
-    )
-    with pytest.raises(CampusError, match="changed since approval"):
-        actions.execute(review)
-    assert not list(Approvals(Vault()).root.glob("*.receipt.enc"))
-
-
-@pytest.mark.parametrize(
-    "already_pushed,lost_response", [(False, False), (False, True), (True, False)]
-)
-def test_exact_push_target_and_lost_response_are_never_retried(
-    campus,
-    tested_workspace: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    already_pushed: bool,
-    lost_response: bool,
-) -> None:
-    monkeypatch.setattr(remote_gate, "REMOTE_ACTIONS_VERIFIED", True)
-    preflight, _, _ = campus
-    review = preflight().submit(tested_workspace)
-    approve(review)
-    calls: list[list[str]] = []
-    remote_hash = review.action.commit if already_pushed else "a" * 40
-
-    def fake_git(directory: Path, arguments: list[str], account: Account) -> str:
-        nonlocal remote_hash
-        calls.append(arguments)
-        assert directory == tested_workspace and account.id == review.action.account_id
-        assert arguments[2] == review.action.repository
-        if arguments[0] == "push":
-            assert arguments == [
-                "push",
-                "--porcelain",
-                review.action.repository,
-                f"{review.action.commit}:refs/heads/main",
-            ]
-            remote_hash = review.action.commit
-            if lost_response:
-                raise CampusError(Code.OFFLINE, "Synthetic lost push reply")
-            return ""
-        assert arguments[:2] == ["ls-remote", "--heads"]
-        return f"{remote_hash}\trefs/heads/main"
-
-    monkeypatch.setattr(actions, "run_git", fake_git)
-    receipt = actions.execute(review)
-    assert receipt.status == ("unknown" if lost_response else "confirmed")
-    assert receipt.action == review.action
-    with pytest.raises(CampusError, match="no retry"):
-        actions.execute(review)
-    assert sum(arguments[0] == "push" for arguments in calls) == (0 if already_pushed else 1)
+    assert error.value.code == Code.CAPABILITY_UNSUPPORTED
+    assert visited == []
 
 
 def test_dirty_content_and_changed_recipe_invalidate_passing_tests(

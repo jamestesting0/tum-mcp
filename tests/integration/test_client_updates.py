@@ -67,7 +67,7 @@ def test_customized_skill_blocks_its_client_without_overwriting_any_file(
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     home = tmp_path / "profile"
     install_client(name, home)
-    skill = next(home.rglob("tum-moodle/SKILL.md"))
+    skill = next(home.rglob("read-content/SKILL.md"))
     skill.write_text(skill.read_text(encoding="utf-8") + "\nPersonal instruction to retain.\n")
     before = {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()}
     monkeypatch.setattr(sys, "executable", str(tmp_path / "next/python"))

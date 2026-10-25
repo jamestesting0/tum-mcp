@@ -154,14 +154,27 @@ def verify() -> dict[str, object]:
                 if actual_skills != expected_skills:
                     raise RuntimeError("Codex did not discover the complete campus skill pack.")
                 campus = next((item for item in servers["data"] if item["name"] == "tum"), None)
-                required = {"moodle_list_courses", "artemis_get_feedback", "zulip_search_messages"}
+                required = {
+                    "moodle_list_courses",
+                    "artemis_get_feedback",
+                    "zulip_search_messages",
+                    "artemis_get_lecture",
+                    "artemis_get_attachment",
+                    "moodle_read_discussion",
+                }
                 if (
                     campus is None
                     or campus.get("toolsError")
                     or not required <= campus["tools"].keys()
                 ):
                     raise RuntimeError("Codex did not discover the required campus MCP tools.")
-                if {"artemis_submit", "artemis_start_exercise"} & campus["tools"].keys():
+                if {
+                    "artemis_submit",
+                    "artemis_start_exercise",
+                    "artemis_prepare_workspace",
+                    "tum_run_tests",
+                    "artemis_prepare_submission",
+                } & campus["tools"].keys():
                     raise RuntimeError("Unverified remote-action tools were unexpectedly exposed.")
             finally:
                 process.terminate()

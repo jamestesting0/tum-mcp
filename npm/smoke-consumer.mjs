@@ -33,7 +33,7 @@ try {
   run(process.execPath, [launcher, 'setup', '--client', 'generic']);
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'data/runtime.json'), 'utf8')), first);
   const skills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate']));
-  assert.equal(skills.checked_skills.length, 3);
+  assert.equal(skills.checked_skills.length, 4);
   assert.deepEqual(skills.errors, []);
   const diagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--json']));
   assert.equal(diagnostics.live_authentication, 'not_checked');
@@ -94,8 +94,8 @@ async def check():
         await client.initialize()
         inventory=await client.list_tools()
         names={tool.name for tool in inventory.tools}
-        assert {'moodle_list_courses','zulip_search_messages','artemis_get_feedback'} <= names
-        assert not {'artemis_submit','artemis_start_exercise'} & names
+        assert {'moodle_list_courses','zulip_search_messages','artemis_get_feedback','artemis_list_lectures','artemis_get_lecture','artemis_get_attachment','moodle_read_discussion'} <= names
+        assert not {'artemis_submit','artemis_start_exercise','artemis_prepare_workspace','tum_run_tests','artemis_prepare_submission'} & names
         status=await client.call_tool('tum_status')
         assert not status.is_error and status.structured_content['accounts']==[]
         denied=await client.call_tool('artemis_prepare_submission',{'workspace':'.','approved':True})
@@ -103,5 +103,10 @@ async def check():
 anyio.run(check)
 `;
   run(first.python, ['-I', '-c', protocol], 60000);
-  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 3, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
+  const demoProject = join(root, 'Synthetic course');
+  run(process.execPath, [launcher, 'study', 'demo', demoProject]);
+  const study = JSON.parse(run(process.execPath, [launcher, 'study', 'inspect', demoProject]));
+  assert.equal(study.course.synthetic, true); assert.deepEqual(study.stale_units, []);
+  assert.ok(readFileSync(join(demoProject, 'study', 'reading.mjs'), 'utf8').includes('renderReading'));
+  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 4, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
 } finally { rmSync(root, { recursive: true, force: true }); }

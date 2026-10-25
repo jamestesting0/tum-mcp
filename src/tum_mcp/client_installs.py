@@ -11,6 +11,7 @@ from pydantic import Field, JsonValue, ValidationError, model_validator
 from tum_mcp.client_hosts import ClientHost
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen, config_path
+from tum_mcp.skill_catalog import CURRENT_SKILLS, LEGACY_SKILLS
 from tum_moodle.config import private_write
 
 ClientName = Literal["codex", "claude", "cursor", "antigravity", "generic"]
@@ -30,7 +31,7 @@ class Installation(Frozen):
     def confined_files(self) -> "Installation":
         prefix = {
             "codex": ".codex/plugins/local/tum-mcp/",
-            "claude": ".claude/skills/tum-",
+            "claude": ".claude/skills/",
         }.get(self.client)
         if not self.home.is_absolute():
             raise CampusError(Code.WORKSPACE_CONFLICT, "Installation home must be absolute.")
@@ -39,6 +40,13 @@ class Installation(Frozen):
             if (
                 prefix is None
                 or not name.startswith(prefix)
+                or (
+                    self.client == "claude"
+                    and (
+                        len(path.parts) < 4
+                        or path.parts[2] not in {*CURRENT_SKILLS, *LEGACY_SKILLS}
+                    )
+                )
                 or ".." in path.parts
                 or path.is_absolute()
                 or "\\" in name

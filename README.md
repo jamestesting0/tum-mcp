@@ -1,13 +1,14 @@
 # TUM MCP
 
-Connect your coding agent to TUM Moodle, Artemis, and Zulip. Runs locally with
-36 tools and three website skills. Unofficial; independent of TUM and OpenAI.
+Connect your coding agent to Moodle, Artemis and Zulip. Read course content and
+build a private, source-backed study workspace. Unofficial; independent of TUM.
 
-[npm package](https://www.npmjs.com/package/@jamestesting888/tum-mcp)
+**Development version: 0.6.0, unreleased.** The public npm release remains 0.5.0.
+The study workflows below are included in this checkout and its locally built package.
 
 ## Agent setup
 
-Paste this into your coding agent:
+Paste this into your coding agent to install the published package:
 
 ```text
 Install @jamestesting888/tum-mcp on this computer. Check Node.js is 22.14+.
@@ -16,12 +17,14 @@ Run npm install --global @jamestesting888/tum-mcp@latest, then:
 Use --client claude, cursor, antigravity, or generic for a different client.
 Preserve existing settings and customized skills. Follow the activation steps.
 Help me run tum-mcp connect in an interactive terminal and choose services.
-I will complete TUM sign-in/MFA in the browser. Never request secrets in chat.
+I will complete sign-in/MFA in the browser. Never request secrets in chat.
 Ask which Artemis courses and Zulip channels to enable before reading content.
 Run tum-mcp doctor to explain what is available and what still needs setup.
 ```
 
-## Quick start
+For the unreleased workflows, [build and install the local artifact](docs/development.md#checks).
+
+## Connect
 
 You need **Node.js 22.14+**, **a Chromium browser**, and your TUM account.
 
@@ -32,84 +35,92 @@ tum-mcp connect
 tum-mcp doctor
 ```
 
-Choose services with **Space**, then **Enter**. Choose an installed browser when
-prompted. Moodle, Artemis and Zulip use the same flow; only selected tabs open.
-Complete sign-in/MFA there; no Zulip API key is needed.
-New Artemis/Zulip accounts need explicit [course and channel scopes](docs/tum-mcp.md#connections-and-scopes).
+Select services with **Space**, then **Enter**. Choose an installed browser and
+complete sign-in there. Only selected tabs open; Zulip needs no API key.
+Enable the [course and channel scopes](docs/tum-mcp.md#connections-and-scopes) you want to use.
 
 | Client | Setup |
 | --- | --- |
-| Codex | `--client codex` · plugin and workflow skills; enable/restart when prompted |
-| Claude Code | `--client claude` · MCP registration and workflow skills |
+| Codex | `--client codex` · plugin and skills; enable/restart when prompted |
+| Claude Code | `--client claude` · MCP registration and skills |
 | Cursor | `--client cursor` · MCP registration; reload MCP servers |
 | Google Antigravity | `--client antigravity` · MCP registration; reload MCP servers |
-| Other local MCP clients | `--client generic` · configuration for manual installation |
+| Other MCP clients | `--client generic` · configuration for manual installation |
 
-Cursor and Antigravity workflow skills can be [exported for manual installation](docs/tum-mcp.md#client-and-skill-setup).
-Works on macOS, Windows, glibc Linux x86_64/ARM64, and WSL 3.x. From WSL,
-Windows browsers open on the Windows desktop. Use
-`tum-mcp setup --client cursor --host windows` to register a Windows client
-against that same WSL backend; replace `cursor` with your client.
-[WSL setup and requirements](docs/setup.md#wsl).
+Cursor and Antigravity can use [manually exported skills](docs/tum-mcp.md#client-and-skill-setup).
+Supports macOS, Windows, glibc Linux x86_64/ARM64 and WSL 3.x. In WSL, sign-in
+opens a Windows browser. Add `--host windows` to setup for a Windows client that
+uses the WSL backend. [Browser and WSL setup](docs/setup.md#wsl).
 
-Setup supplies a private Python runtime. Git is optional for assignment workspaces;
-Docker is optional for isolated assignment tests. No native keyring is needed by
-new campus connections, including Linux x86_64 and ARM64.
+Setup supplies a private Python runtime. New connections use encrypted local
+files and need no native keyring, Git or Docker.
 
-The agent sees one skill per website: **tum-moodle**, **tum-artemis** and
-**tum-zulip**. Each routes to the relevant workflow and loads detailed guidance
-only when needed.
+## Read and study
 
-## Available tools
-
-| Service | What your agent can do |
+| Source | Available content |
 | --- | --- |
-| Moodle | Search materials and forums, cite PDF pages, download originals |
-| Artemis | Read exercises and permitted feedback, prepare existing-participation workspaces, run approved local tests, preview submissions |
-| Zulip | Search selected channels and catch up on course discussions with citations |
+| Moodle | Materials, pages, announcements, forums, original downloads and cited PDF pages |
+| Artemis | Lectures, text/online/video units, student slide PDFs, released exercise statements and permitted own feedback |
+| Zulip | Selected course channels, discussion search and cited catch-up |
 
-Remote start, push, submit, and rebuild are disabled. Zulip posting and DMs are
-unavailable. `doctor` checks local readiness; `doctor --live` verifies saved
-sessions, and `doctor --json` gives machine-readable results. Saved configuration
-and active client connections are reported separately.
+Campus access is read-only. Exercise start, deployment, execution, submission,
+posting and read-state changes are unavailable.
 
-## Privacy
+The development package has **four skills**, with source details loaded as needed:
+
+| Skill | Purpose |
+| --- | --- |
+| `read-content` | Retrieve and explain content across all three websites |
+| `init-study` | Initialize one explicitly chosen course, reusable materials and course-specific `AGENTS.md` |
+| `update-study` | Compare upstream sources, preserve edits and identify outdated learning units |
+| `prepare-study` | Build or extend `study/` with explanations, formulas, visuals, flashcards and practice |
+
+Ask your agent: “Initialize a study project for **[exact course and semester]**,
+then prepare its study website.” The course must be available through your
+connections. Each project contains one course. [Study workflow and local demo](docs/study.md).
+
+## Sign-in and session privacy
 
 Sign-in and MFA happen in a temporary browser window. Only service-owned session
-cookies are saved; identity-provider cookies are discarded when that window
-closes. Sessions stay on your computer in encrypted files with owner-restricted
-keys, shared by your configured local clients.
+cookies are retained; identity-provider cookies are discarded when it closes.
+Sessions stay on your computer in encrypted files with owner-restricted keys.
+Configured local clients share those connections and selected scopes.
 
-Your agent retrieves course content for your requests and uses excerpts through
-your configured AI provider. Moodle's local document cache expires after 30 days
-and is capped at 1 GiB. Downloaded originals stay local until you delete them.
+## Course content and study privacy
 
-## Updates
+The agent retrieves material for your request through your configured AI provider.
+Moodle's document cache expires after 30 days and is capped at 1 GiB. Saved
+originals and study projects stay local until you remove them.
+
+Study sites run on your computer without analytics, external fonts or CDNs.
+Card ratings and practice results stay in browser storage, separated by course
+and content revision. Updating course material preserves your notes and flags
+changed sources before rebuilding dependent units.
+
+## Update
 
 ```sh
 npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp update
 ```
 
-npm downloads the new package; `update` prepares its runtime and refreshes your
-previously configured clients. Sessions, scopes and downloads carry forward.
-User-edited entries or skills are preserved and reported for review. Reload the
-client; update/reinstall the local plugin in Codex if it still uses a cached copy.
-Use `setup --client NAME` to register a new client.
+`update` prepares the invoked package's runtime and refreshes configured clients.
+Sessions, scopes and downloads carry forward. User-edited entries and skills are
+preserved and reported for review. Reload the client; refresh its cached plugin
+if needed. Study sites are updated separately through the study workflows.
 
-## Removal
+## Remove
 
 ```sh
 tum-mcp uninstall --all
 npm uninstall --global @jamestesting888/tum-mcp
 ```
 
-This removes managed registrations and unchanged skills while keeping settings,
-sessions, cache, downloads and assignment work. To remove generated runtimes too,
-close coding clients and add `--purge-runtime`. Add `--forget-credentials` to
-remove saved local sessions and Git tokens. [Removal details](docs/setup.md#update-and-remove).
+Managed registrations and unchanged skills are removed. Settings, sessions,
+downloads and study projects are preserved. After closing clients, add
+`--purge-runtime` to remove generated runtimes or `--forget-credentials` to
+remove saved local sessions and historical Git tokens. [Removal details](docs/setup.md#update-and-remove).
 
-See the [guide and verification limits](docs/tum-mcp.md), [setup and troubleshooting](docs/setup.md),
-[development guide](docs/development.md).
+[Guide](docs/tum-mcp.md) · [Setup](docs/setup.md) · [Study workflows](docs/study.md) · [Development](docs/development.md)
 
 [MIT](LICENSE) · [NOTICE](NOTICE) · [Report a problem](https://github.com/jamestesting0/tum-mcp/issues)

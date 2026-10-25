@@ -132,10 +132,10 @@ managed client is not silently downgraded by an older package; intentional
 rollback starts by unregistering that client, then registering the reviewed version.
 
 0.4.1/0.5.0 installations without receipts are adopted only after matching their
-retained runtime's canonical client output. The seven former workflow skills
-become three website skills. Personal overrides under retired names remain in
-the config `skills/` directory; review and merge them into `tum-moodle`,
-`tum-artemis` or `tum-zulip` before exporting a replacement pack.
+retained runtime's canonical client output. The seven former workflow skills and the three website skills are replaced by
+`read-content`, `init-study`, `update-study` and `prepare-study`. Personal overrides
+under retired names remain in the config `skills/` directory; review and merge
+retrieval guidance into `read-content` before exporting a replacement pack.
 Reload MCP servers in Cursor/Antigravity, restart Claude as appropriate, and
 update/reinstall TUM MCP from the personal source in Codex Plugins if its cached
 copy still shows the older skills. Writing source files does not activate a host.

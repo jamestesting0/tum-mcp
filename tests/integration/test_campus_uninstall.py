@@ -30,7 +30,7 @@ def test_claude_uninstall_preserves_unrelated_user_state(
         "customSetting": 42,
         "mcpServers": {"other": {"command": "keep"}},
     }
-    assert not (home / ".claude/skills/tum-artemis").exists()
+    assert not (home / ".claude/skills/read-content").exists()
 
 
 def test_generic_setup_and_uninstall_preserve_unrelated_configuration(

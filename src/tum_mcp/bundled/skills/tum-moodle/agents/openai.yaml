@@ -1,7 +1,0 @@
-policy:
-  allow_implicit_invocation: true
-dependencies:
-  tools:
-    - type: "mcp"
-      value: "tum"
-      description: "Local TUM MCP connection"

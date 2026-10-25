@@ -181,4 +181,4 @@ def install_claude(staged: Path, home: Path, *, launch: StdioLaunch | None = Non
             shutil.copytree(source, skills / source.name)
     existing.setdefault("mcpServers", {})["tum"] = server
     private_write(target, json.dumps(existing, indent=2).encode())
-    print("Claude configuration written. Restart; verify the three site skills and MCP tools.")
+    print("Claude configuration written. Restart; verify the four study workflows and MCP tools.")

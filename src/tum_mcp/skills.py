@@ -4,23 +4,14 @@ import shutil
 from difflib import unified_diff
 from importlib.resources import files
 from pathlib import Path
-from typing import Final, TypedDict
+from typing import TypedDict
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen, config_path
-
-LEGACY_SKILLS: Final = {
-    "tum-moodle-study": "tum-moodle",
-    "tum-artemis-prepare": "tum-artemis",
-    "tum-artemis-feedback": "tum-artemis",
-    "tum-artemis-local-fix": "tum-artemis",
-    "tum-artemis-submit": "tum-artemis",
-    "tum-zulip-research": "tum-zulip",
-    "tum-zulip-catch-up": "tum-zulip",
-}
+from tum_mcp.skill_catalog import LEGACY_SKILLS as LEGACY_SKILLS
 
 
 def legacy_overrides() -> tuple[Path, ...]:
@@ -136,7 +127,7 @@ def export_pack(destination: Path) -> None:
         raise CampusError(
             Code.WORKSPACE_CONFLICT,
             "Legacy skill customizations were preserved in the config skills directory. "
-            "Review and merge them into tum-moodle, tum-artemis or tum-zulip before export/update.",
+            "Review and merge them into read-content before export/update.",
         )
     chosen_sources: list[Path] = []
     for source in sorted(bundled().iterdir()):

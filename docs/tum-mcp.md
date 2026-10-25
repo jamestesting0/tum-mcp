@@ -1,37 +1,35 @@
 # TUM MCP guide
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
-Version **0.5.1** provides interactive service and browser selection, local-file
-credential keys, richer diagnostics, Cursor/Antigravity adapters, and WSL-backed
-Windows client setup. The package supports campus reads and local assignment
-assistance; remote-action tools remain disabled.
+Development version **0.6.0 is unreleased**; public npm latest remains 0.5.0.
+This checkout provides read-only course retrieval and four local study workflows.
 
 ## Current capabilities
 
-The campus server preserves all sixteen `moodle_*` tools and the existing Moodle
-session/keychain identity. It adds scoped Zulip channel search/topic reads,
-released Artemis programming statements, exact-revision visible feedback,
-participation-bound workspace preparation, approved container test recipes,
-submission previews, and three website skills.
+All sixteen `moodle_*` compatibility tools remain available, including materials,
+announcements, forums and explicitly scoped private-record reads. Artemis adds
+available-course metadata, lectures and learning units, student PDF attachments,
+released non-quiz statements and permitted exact-commit feedback. Zulip provides
+scoped channel/topic search and cited discussion reads.
 
-Remote start, push, submit, rebuild, Zulip posting, and DMs are unavailable.
-An internal, release-gated executor covers exact-action fingerprints, encrypted
-expiring one-use grants, account/scope/credential revalidation, and durable
-unknown-outcome receipts. Synthetic tests cover one POST or exact-commit push,
-copied/fabricated approvals, changed targets, and lost responses. No MCP write
-tool, approval issuer, or preference can open this version's gate.
-The internal executor is groundwork for Phase 5; no live-action certification is claimed.
-Revision 3 Phase 5 needs a demonstrated trusted approval/credential boundary and
-safe practice-exercise verification before those tools can be exposed. A
-submission preview never performs a commit or remote action. Native Git/browser
-tools available to an unrestricted host remain outside the MCP enforcement
-boundary; the server does not claim to prevent every host-level push.
+Website access is read-only. There are no public exercise workspace, test-run,
+submission, start, deployment, rebuild or push workflows. The retained internal
+remote gate rejects every action even if an old verification flag is enabled.
+Local downloads, source inventories, study-site builds and checkpoint storage
+are local operations; they do not post, submit or mark campus content as read.
 
-The verified public origins are `https://artemis.tum.de` and
-`https://zulip.cit.tum.de`. Public discovery on 24 October 2026 reported Artemis
-10.4, source revision `d8594cc5fb2f2ec276bd123861be7ff20c1b3cc0`, and Zulip 12.0,
-feature level 498, with TUM Shibboleth. No account permission follows from that
-public discovery. Provider routes were checked against that Artemis revision.
+Artemis lecture reads use the student overview/detail endpoints, verify the
+selected course and omit unreleased units and personal completion records.
+`artemis_get_attachment` retrieves a bounded page range from the student PDF,
+which excludes hidden slides, and optionally saves that copy locally. Original
+staff links are never fetched. Video/online links remain cited references;
+unsupported or external content is reported as a retrieval gap.
+
+Lecture routes were checked against the
+[Artemis source](https://github.com/ls1intum/Artemis/blob/88824427f7ea38512606824c58b8858e539eb2eb/src/main/java/de/tum/cit/aet/artemis/lecture/web/LectureResource.java)
+and the
+[student file boundary](https://github.com/ls1intum/Artemis/blob/88824427f7ea38512606824c58b8858e539eb2eb/src/main/java/de/tum/cit/aet/artemis/core/web/FileResource.java).
+Synthetic fixtures are the default. Live checks remain private and use explicit scopes.
 
 ## Build and test the local package
 
@@ -95,7 +93,7 @@ rerun its setup to restore that runtime, reviewing any client configuration diff
 For platforms outside the bootstrap targets, the source installation needs
 Python 3.13+, uv, and Git: run `uv sync --locked`, then
 `uv run tum-mcp setup --client generic` from the checkout. An installed Chromium browser is needed for
-browser onboarding. See [setup](setup.md) for browser choices and WSL. Docker is needed only for isolated assignment tests.
+browser onboarding. See [setup](setup.md) for browser choices and WSL.
 
 ## Connections and scopes
 
@@ -104,7 +102,7 @@ tum-mcp connect
 tum-mcp status
 tum-mcp discover artemis ACCOUNT_ID
 tum-mcp discover zulip ACCOUNT_ID
-tum-mcp scope artemis ACCOUNT_ID --course COURSE_ID --sensitive --workspace
+tum-mcp scope artemis ACCOUNT_ID --course COURSE_ID --sensitive
 tum-mcp scope zulip ACCOUNT_ID --channel CHANNEL_ID
 ```
 
@@ -127,12 +125,10 @@ Zulip uses its read-only `/json/` routes with the browser session; no API key is
 required. Reconnect through the same selector when a session expires. Existing
 API-key records remain readable for compatibility, but key entry is not part of
 onboarding. See [Zulip's dispatcher](https://github.com/zulip/zulip/blob/12.0/zerver/lib/rest.py).
-Browser login and Artemis Git access remain
-separate capabilities. Existing scopes survive reconnection; new identities start
-with empty scopes. Private channels additionally require `--private-channel ID` while
-remaining in `--channel ID`. `--sensitive` enables own Artemis participation and
-feedback reads; `--workspace` separately enables preparation under the configured
-workspace root. Neither authorizes submission.
+Existing scopes survive reconnection; new identities start with empty scopes.
+Private Zulip channels require `--private-channel ID` as well as `--channel ID`.
+`--sensitive` enables own Artemis participation/feedback reads. It grants no
+website mutation or local execution permission.
 
 On 24 October 2026, both saved browser-session credentials passed identity
 verification through the actual MCP process. Scoped Artemis exercise listing and
@@ -146,8 +142,8 @@ campus connections deliberately do not read or migrate native-store secrets;
 reconnect each service once to use local-file storage. The combined MCP process
 uses that storage for all `moodle_*` compatibility tools. The separate Moodle-only
 installer keeps its native-store default.
-Previously imported Artemis Git tokens also need re-importing into the new store;
-browser sign-in does not import them or open the old native store.
+Historical Git credentials remain local data for legacy cleanup; the current
+package provides no assignment Git workflow.
 
 New Moodle sessions live under `TUMMoodle/local-session/`; campus credentials live
 under `TUMMCP/credentials/local/`. Each directory has an independent `session.key`.
@@ -174,8 +170,8 @@ The tools resolve one exact mapping; ambiguity never grants broader access.
 
 `doctor` reads local configuration and checks runtime prerequisites. It does not
 open a browser, contact campus services, decrypt sessions, or read native stores.
-Saved sessions are **Not verified** until checked. Missing optional Git/Docker
-capabilities do not prevent course reads. Client registration is distinguished
+Saved sessions are **Not verified** until checked. Git and Docker are not
+prerequisites. Client registration is distinguished
 from activation; the host must confirm a running MCP connection after setup.
 
 Use `doctor --live` for bounded authenticated identity checks on saved local
@@ -184,38 +180,17 @@ it does not broaden content scopes. `doctor --json` emits schema-versioned JSON
 without terminal styling; combine both flags for live automation. Paths appear
 in JSON for troubleshooting. Default diagnostics do not create state folders.
 
-## Assignment workspaces and tests
+## Study workflows
 
-The user requests `artemis_prepare_workspace` with explicit account/course/
-exercise IDs and graded/practice mode. Missing participation returns
-`ACTION_REQUIRED`; preparation never starts it. Offline IDE access must be
-affirmatively enabled. Import an existing participation-scoped Git token locally:
+`read-content` retrieves course information across the three websites. `init-study`
+requires an explicitly chosen available course; `update-study` reconciles its
+sources; `prepare-study` creates or extends its local interactive site. See the
+[study guide](study.md) for examples, state structure and helper commands.
 
-```sh
-tum-mcp workspace connect-git ACCOUNT_ID COURSE_ID EXERCISE_ID
-```
-
-The hidden clone URL must match the server-reported participation repository.
-It is sanitized before storage/output. A narrow Git credential helper supplies
-the token only to that HTTPS repository. Clone uses no inherited credential
-helpers, external Git protocols, hooks, submodules, or dependency installers.
-Existing unrelated/dirty work is preserved. Local receipt files contain IDs,
-workspace, mode, branch, and revision, never tokens.
-
-Configure `test_recipes` locally with a unique `name`, exact `account_id`,
-`course_id`, an image pinned as `registry/image@sha256:DIGEST`, an `argv` array,
-`timeout_seconds`, and `verification_level` (`targeted` by default, or `full`
-after reviewing the complete test command). Submission preflight requires a
-passing `full` recipe for the exact content. Review the recipe and obtain its
-image/dependencies as a separate step. The runner uses an already-present image (`--pull=never`), no
-network, no home/keychain/SSH mounts, a read-only container filesystem, dropped
-capabilities, and CPU/memory/process/time/output limits. Only the assignment
-workspace is mounted read/write, with its Git metadata mounted read-only.
-Receipts record exit status, source fingerprints, recipe, image, timestamps,
-and bounded output. A missing engine or recipe fails
-closed. Evidence is encrypted/authenticated outside the assignment directory;
-editing a workspace JSON file cannot fabricate a passing receipt. Ordinary
-host-native testing does not acquire these isolation guarantees.
+One project holds one course. Source revisions, coverage and course knowledge
+avoid unnecessary rereads. Edited files and customized site templates are kept;
+changed sources invalidate dependent units. Study projects, originals and learner
+progress are preserved during package updates/removal.
 
 ## Client and skill setup
 
@@ -228,16 +203,18 @@ steps and never equates writing files with activation.
 
 The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
-The shipped pack contains exactly three skills: `tum-moodle`, `tum-artemis`
-and `tum-zulip`. They share known account/course context instead of repeating
-setup, and load task-specific references only when needed. Artemis combines
-statement/workspace help, local implementation, feedback and submission preview;
-Zulip combines factual research and catch-up. Remote actions remain disabled.
+The shipped pack contains exactly four skills: `read-content`, `init-study`,
+`update-study` and `prepare-study`. Website-specific retrieval guidance is loaded
+from references within read-content. Teaching, schema and design contracts live
+with prepare-study; the renderer and synthetic example ship as reusable assets.
+Old seven-skill and three-site packs are retired only when managed copies remain
+unchanged. Personal overrides are preserved and require a deliberate merge into
+the consolidated workflows before export.
 
 `scripts/verify_campus_clients.py` checks real host discovery in disposable
 profiles without running a model or changing actual user profiles. Host/model
 routing quality is a separate evaluation from structural and discovery checks.
-Claude's invocation metadata follows each site's selected policy; automatic
+Claude's invocation metadata follows each workflow's selected policy; automatic
 selection is enabled by default and never grants permission for a mutation.
 
 `setup --client cursor` writes `~/.cursor/mcp.json`.
@@ -264,9 +241,9 @@ unchanged managed entry; sessions and personal work stay intact.
 
 ```sh
 tum-mcp skills list
-tum-mcp skills inspect tum-zulip
-tum-mcp skills customize tum-zulip
-tum-mcp skills diff tum-zulip
+tum-mcp skills inspect read-content
+tum-mcp skills customize read-content
+tum-mcp skills diff read-content
 tum-mcp skills validate
 tum-mcp skills export /path/to/new/export-folder
 ```
@@ -280,9 +257,9 @@ trials, and two review passes have not been demonstrated for this pilot.
 Export refuses symbolic links and
 does not overwrite an existing destination.
 
-The activation corpus contains 140 cases grouped by website, with development
+The activation corpus contains 80 cases across the four workflows, with development
 and held-out partitions. It covers explicit/implicit requests, unrelated
-negatives, missing credentials and unsupported-action handoffs. Old trial
+negatives, missing credentials and unsupported-action negatives. Old trial
 results must not be reused against the consolidated skill labels. `skills evaluate TRIALS.jsonl` scores supplied fresh-session
 records separately by host/version/model. Each record follows `Trial` in
 `skill_validation.py` and references its retained raw trace by SHA-256. The scorer
@@ -290,19 +267,17 @@ does not launch other agents or certify the supplied traces, summary quality,
 or platform acceptance. Inspect traces and backend effects before approving a
 release; no measured activation accuracy is claimed by the structural checks.
 
-## Release scope
+## Verification and release scope
 
-Version 0.5.1 has automated installation, browser transport, storage and MCP
-checks on macOS, Windows, Linux, and both distribution engines on WSL 3.0.3.
-These checks use synthetic pages and credentials. Fresh human SSO/MFA and
-desktop-client activation on every target remain separate manual checks, as do
-host/model skill-selection trials. Remote workflows also need a
-trusted approval/host credential boundary and safe practice verification before
-they can be exposed. Browser sign-in alone does not establish a saved backend connection.
+Local source validation, real MCP protocol discovery, installation/migration
+checks and browser study-site QA are separate gates. Model-routing accuracy and
+human SSO/MFA on every desktop are not established by schema tests or generated
+configuration. No measured skill-selection accuracy is claimed.
 
-Maintainer checks include the relevant tests, a reviewed tarball inventory,
-integrity checks, and an isolated consumer install. Never publish or stage npm
-packages as a test. Review and authorization of a registry upload are separate
-from a GitHub source push.
-`tum-mcp status` reports registry state as `not_checked`, since it inspects local
-configuration without making registry requests.
+The existing desktop/WSL CI matrix must pass on the exact pushed revision before
+it is described as verified. Test data and public fixtures are synthetic. Real
+course material, local agent notes and screenshots stay under ignored local paths.
+Maintainer checks include a reviewed tarball inventory, integrity checks and an
+isolated consumer install. Never publish or stage npm packages as a test. Registry
+publication requires separate user authorization and remains paused for this work.
+`tum-mcp status` reports registry state as `not_checked`; it reads local configuration.
