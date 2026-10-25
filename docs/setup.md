@@ -20,8 +20,10 @@ tum-mcp doctor
 
 Use `--client claude`, `cursor`, `antigravity`, or `generic` for another client.
 Codex needs the plugin enabled and a restart when prompted. Cursor and
-Antigravity need their MCP servers reloaded. Generic setup writes configuration
-for manual installation. Setup preserves unrelated settings and refuses to
+Antigravity setup installs all five skills and MCP configuration; restart each
+client afterward. Existing MCP-only setups gain the skills through `tum-mcp update`
+or another setup run. Generic setup writes configuration for manual installation.
+Setup preserves unrelated settings and refuses to
 replace customized entries. It does not authenticate or fetch courses.
 
 ## Connect

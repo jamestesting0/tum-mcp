@@ -83,7 +83,7 @@ def test_customized_mcp_entry_is_preserved_before_any_update_writes(
     assert {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()} == before
 
 
-@pytest.mark.parametrize("name", ["codex", "claude"])
+@pytest.mark.parametrize("name", ["codex", "claude", "cursor", "antigravity"])
 def test_customized_skill_blocks_its_client_without_overwriting_any_file(
     name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -104,8 +104,9 @@ def test_customized_skill_blocks_its_client_without_overwriting_any_file(
     assert {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()} == before
 
 
+@pytest.mark.parametrize("name", ["codex", "claude", "cursor", "antigravity"])
 def test_failed_client_write_rolls_back_already_written_managed_files(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from tum_mcp import client_installs
     from tum_mcp.errors import CampusError
@@ -113,11 +114,11 @@ def test_failed_client_write_rolls_back_already_written_managed_files(
     # Given a changed runtime and a write error after its launcher would change.
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     home = tmp_path / "profile"
-    install_client("codex", home)
+    install_client(name, home)
     before = {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()}
     from tum_mcp.client_hosts import ClientHost
 
-    target = client_installs.receipt_path("codex", ClientHost.LOCAL, home)
+    target = client_installs.receipt_path(name, ClientHost.LOCAL, home)
     write = client_installs.private_write
     failed = False
 
@@ -132,7 +133,7 @@ def test_failed_client_write_rolls_back_already_written_managed_files(
     monkeypatch.setattr(sys, "executable", str(tmp_path / "next/python"))
     # When activation fails midway.
     with pytest.raises(CampusError, match="restored"):
-        install_client("codex", home)
+        install_client(name, home)
     # Then the prior managed launcher and all client content are restored.
     assert failed
     assert {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()} == before

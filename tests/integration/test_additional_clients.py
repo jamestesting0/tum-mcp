@@ -10,6 +10,8 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 from tum_mcp.clients import client_config_path, install_client
 from tum_mcp.errors import CampusError
+from tum_mcp.skill_catalog import CURRENT_SKILLS
+from tum_mcp.skills import bundled
 from tum_mcp.uninstall import uninstall_client
 
 
@@ -32,8 +34,20 @@ def test_additional_client_setup_is_idempotent_and_preserves_other_entries(
     assert entry["command"] == sys.executable
     assert entry["args"] == ["-I", "-m", "tum_mcp", "serve"]
     assert entry["env"]["TUM_MCP_DATA_DIR"] == str((tmp_path / "data").resolve())
+    skills = home / {"cursor": ".cursor/skills", "antigravity": ".gemini/config/skills"}[name]
+    assert {path.name for path in skills.iterdir()} == set(CURRENT_SKILLS)
+    for skill in CURRENT_SKILLS:
+        source = bundled() / skill
+        expected = {p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()}
+        actual = {
+            p.relative_to(skills / skill): p.read_bytes()
+            for p in (skills / skill).rglob("*")
+            if p.is_file()
+        }
+        assert actual == expected
     uninstall_client(name, home)
     assert json.loads(path.read_text(encoding="utf-8")) == original
+    assert not any((skills / skill).exists() for skill in CURRENT_SKILLS)
 
 
 @pytest.mark.parametrize("name", ["cursor", "antigravity"])

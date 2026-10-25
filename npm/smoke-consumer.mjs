@@ -47,6 +47,9 @@ from tum_mcp.moodle.config import Paths
 from tum_mcp.clients import install_client,client_config_path,read_client_config
 from tum_mcp.credentials import Credential,Vault
 from tum_mcp.settings import Account,Provider
+from tum_mcp.skill_catalog import CURRENT_SKILLS
+from tum_mcp.skills import bundled
+from tum_mcp.uninstall import uninstall_client
 def forbidden():
     raise AssertionError('Native credential storage must not be opened')
 auth.system_keyring=forbidden
@@ -70,6 +73,13 @@ for name in ('cursor','antigravity'):
     install_client(name,home)
     install_client(name,home)
     assert read_client_config(client_config_path(name,home)).mcpServers['tum']['args']==['-I','-m','tum_mcp','serve']
+    skills=home/{'cursor':'.cursor/skills','antigravity':'.gemini/config/skills'}[name]
+    assert {path.name for path in skills.iterdir()}==set(CURRENT_SKILLS)
+    for skill in CURRENT_SKILLS:
+        source=bundled()/skill
+        assert {path.relative_to(source):path.read_bytes() for path in source.rglob('*') if path.is_file()}=={path.relative_to(skills/skill):path.read_bytes() for path in (skills/skill).rglob('*') if path.is_file()}
+    uninstall_client(name,home)
+    assert not any((skills/skill).exists() for skill in CURRENT_SKILLS)
 `;
   run(first.python, ['-I', '-c', storage], 60000);
   const studyProject = join(root, 'course Ω');

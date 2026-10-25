@@ -10,6 +10,7 @@ from tum_mcp.client_hosts import ClientHost, StdioLaunch
 from tum_mcp.clients import client_config_path, install_client
 from tum_mcp.errors import CampusError
 from tum_mcp.moodle.browsers import BrowserSetupError
+from tum_mcp.skill_catalog import CURRENT_SKILLS
 from tum_mcp.uninstall import uninstall_client
 
 
@@ -68,6 +69,11 @@ def test_windows_profile_registration_is_repeatable_and_conflict_safe(
     assert path.read_bytes() == before
     entry = json.loads(before)["mcpServers"]["tum"]
     assert entry["command"] == "wsl.exe" and entry["args"] == list(launch.arguments)
+    skill_root = {"cursor": ".cursor/skills", "antigravity": ".gemini/config/skills"}.get(name)
+    if skill_root is not None:
+        assert all(
+            (profile / skill_root / skill / "SKILL.md").is_file() for skill in CURRENT_SKILLS
+        )
     if name == "codex":
         assert not (path.parent / "scripts").exists()
     else:
@@ -81,6 +87,8 @@ def test_windows_profile_registration_is_repeatable_and_conflict_safe(
         remaining = json.loads(path.read_bytes())
         assert remaining["custom"] == "München"
         assert remaining["mcpServers"] == {"other": {"command": "keep"}}
+        if skill_root is not None:
+            assert not any((profile / skill_root / skill).exists() for skill in CURRENT_SKILLS)
 
 
 def test_legacy_windows_registration_can_gain_download_path_binding(

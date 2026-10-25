@@ -13,6 +13,8 @@
 - Support inline LaTeX variables and a mobile outline overlay that keeps your place.
 - Add category audio guidance and optional GitHub Pages publication. First
   publication requires consent to a public website; the repository stays private.
+- Install all five skills for Cursor and Antigravity during setup and update,
+  with ownership checks that preserve customized files during update and removal.
 - Recognize occupied preview ports on Windows. Reuse isolated test fixtures,
   retain native/platform coverage and expose slow tests and failures in CI.
 - Group Artemis and Zulip implementation by provider, retaining read-only campus

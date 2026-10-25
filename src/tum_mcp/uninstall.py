@@ -1,6 +1,5 @@
 """Remove only unchanged managed registrations and files; retain user campus data."""
 
-import errno
 import hashlib
 from pathlib import Path
 
@@ -17,6 +16,7 @@ from tum_mcp.client_installs import (
     commit_writes,
     load_receipt,
     managed_writes,
+    prune_removed_folders,
     read_owned_file,
     receipt_path,
 )
@@ -45,7 +45,13 @@ def _uninstall_client(name: ClientName, home: Path | None, *, host: ClientHost) 
         print(f"{name.title()}: no managed registration to remove.")
         return False
     if previous is None:
-        desired, server, catalog, _ = rendered_client(name, client_launch(host), host)
+        launch = client_launch(host)
+        # Older Cursor/Antigravity registrations installed MCP only. Without
+        # a receipt, their skill files belong to the user and must survive.
+        if name in {"codex", "claude"}:
+            desired, server, catalog, _ = rendered_client(name, launch, host)
+        else:
+            desired, server, catalog = {}, dict(launch.entry()), None
         previous = legacy_installation(name, host, base, entry, server)
         if previous is None and entry == server:
             previous = Installation(
@@ -92,27 +98,9 @@ def _uninstall_client(name: ClientName, home: Path | None, *, host: ClientHost) 
     record = receipt_path(name, host, base)
     writes.append(Write(record, record.read_bytes() if record.is_file() else None, None))
     commit_writes(tuple(writes))
-    _prune_empty_directories(base, previous)
+    prune_removed_folders(base, tuple(previous.files))
     print(f"{name.title()}: managed registration and unchanged skill files removed.")
     if name == "codex":
         print("Remove/disable the cached TUM MCP plugin in Codex Plugins, then restart.")
     print("Campus sessions, settings, downloads and assignment work were preserved.")
     return True
-
-
-def _prune_empty_directories(base: Path, previous: Installation) -> None:
-    boundary = base / (".codex/plugins/local" if previous.client == "codex" else ".claude/skills")
-    directories: set[Path] = set()
-    for relative in previous.files:
-        parent = (base / relative).parent
-        while parent != boundary and parent.is_relative_to(boundary):
-            directories.add(parent)
-            parent = parent.parent
-    for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
-        try:
-            directory.rmdir()
-        except OSError as error:
-            if error.errno not in {errno.ENOTEMPTY, errno.ENOENT}:
-                raise CampusError(
-                    Code.WORKSPACE_CONFLICT, "Empty client directories need local cleanup."
-                ) from None

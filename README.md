@@ -41,11 +41,13 @@ Enable the [course and channel scopes](docs/tum-mcp.md#connections-and-scopes) y
 | --- | --- |
 | Codex | `--client codex` · plugin and skills; enable/restart when prompted |
 | Claude Code | `--client claude` · MCP registration and skills |
-| Cursor | `--client cursor` · MCP registration; reload MCP servers |
-| Google Antigravity | `--client antigravity` · MCP registration; reload MCP servers |
+| Cursor | `--client cursor` · MCP registration and all five skills; restart |
+| Google Antigravity | `--client antigravity` · MCP registration and all five skills; restart |
 | Other MCP clients | `--client generic` · configuration for manual installation |
 
-Cursor and Antigravity can use [manually exported skills](docs/tum-mcp.md#client-and-skill-setup).
+For existing Cursor and Antigravity setups, run `tum-mcp update` to add the skills.
+Updates and uninstall preserve customized files and report them for review.
+
 Supports macOS, Windows, glibc Linux x86_64/ARM64 and WSL 3.x. In WSL, sign-in
 opens a Windows browser. Add `--host windows` to setup for a Windows client that
 uses the WSL backend. [Browser and WSL setup](docs/setup.md#wsl).

@@ -13,6 +13,7 @@ from pydantic import JsonValue
 from tum_mcp import __version__
 from tum_mcp.client_config import Marketplace, client_config_path, read_client_config
 from tum_mcp.client_hosts import ClientHost, StdioLaunch, client_launch, storage_environment
+from tum_mcp.client_installs import MANAGED_ROOTS
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
 from tum_mcp.skills import export_pack, implicit_invocation, inspect_skills
@@ -28,13 +29,26 @@ def rendered_client(
     name: str, launch: StdioLaunch, host: ClientHost
 ) -> tuple[dict[str, bytes], dict[str, JsonValue], dict[str, JsonValue] | None, str]:
     """Reuse the existing adapters in a disposable profile before touching real files."""
-    if name not in {"codex", "claude"}:
+    if name not in MANAGED_ROOTS:
         return {}, dict(launch.entry()), None, "Reload your client's MCP servers after setup."
     with tempfile.TemporaryDirectory(prefix="tum-mcp-render-") as temporary:
         root = Path(temporary)
         staged = root / "staged"
         staged.mkdir()
-        export_pack(staged / "skills")
+        skills = staged / "skills"
+        export_pack(skills)
+        if name in {"cursor", "antigravity"}:
+            content = {
+                f"{MANAGED_ROOTS[name]}/{path.relative_to(skills).as_posix()}": path.read_bytes()
+                for path in skills.rglob("*")
+                if path.is_file()
+            }
+            return (
+                content,
+                dict(launch.entry()),
+                None,
+                "All five skills installed. Restart your client and verify skills and MCP tools.",
+            )
         profile = root / "profile"
         messages = io.StringIO()
         with redirect_stdout(messages):

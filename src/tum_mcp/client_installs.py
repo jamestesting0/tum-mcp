@@ -4,7 +4,7 @@ import hashlib
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Literal
+from typing import Final, Literal
 
 from pydantic import Field, JsonValue, ValidationError, model_validator
 
@@ -15,6 +15,12 @@ from tum_mcp.settings import Frozen, config_path
 from tum_mcp.skill_catalog import CURRENT_SKILLS, LEGACY_SKILLS
 
 ClientName = Literal["codex", "claude", "cursor", "antigravity", "generic"]
+MANAGED_ROOTS: Final = {
+    "codex": ".codex/plugins/local/tum-mcp",
+    "claude": ".claude/skills",
+    "cursor": ".cursor/skills",
+    "antigravity": ".gemini/config/skills",
+}
 
 
 class Installation(Frozen):
@@ -29,22 +35,20 @@ class Installation(Frozen):
 
     @model_validator(mode="after")
     def confined_files(self) -> "Installation":
-        prefix = {
-            "codex": ".codex/plugins/local/tum-mcp/",
-            "claude": ".claude/skills/",
-        }.get(self.client)
+        prefix = MANAGED_ROOTS.get(self.client)
+        skill_index = len(PurePosixPath(prefix).parts) if prefix else 0
         if not self.home.is_absolute():
             raise CampusError(Code.WORKSPACE_CONFLICT, "Installation home must be absolute.")
         for name, digest in self.files.items():
             path = PurePosixPath(name)
             if (
                 prefix is None
-                or not name.startswith(prefix)
+                or not name.startswith(prefix + "/")
                 or (
-                    self.client == "claude"
+                    self.client in {"claude", "cursor", "antigravity"}
                     and (
-                        len(path.parts) < 4
-                        or path.parts[2] not in {*CURRENT_SKILLS, *LEGACY_SKILLS}
+                        len(path.parts) < skill_index + 2
+                        or path.parts[skill_index] not in {*CURRENT_SKILLS, *LEGACY_SKILLS}
                     )
                 )
                 or ".." in path.parts
@@ -175,8 +179,14 @@ def prune_removed_folders(home: Path, removed_files: tuple[str, ...]) -> None:
     directories: set[Path] = set()
     for name in removed_files:
         relative = PurePosixPath(name)
-        boundary = home / (
-            ".codex/plugins/local" if relative.parts[0] == ".codex" else ".claude/skills"
+        boundary = (
+            home
+            / {
+                ".codex": ".codex/plugins/local",
+                ".claude": MANAGED_ROOTS["claude"],
+                ".cursor": MANAGED_ROOTS["cursor"],
+                ".gemini": MANAGED_ROOTS["antigravity"],
+            }[relative.parts[0]]
         )
         parent = (home / name).parent
         while parent != boundary and parent.is_relative_to(boundary):

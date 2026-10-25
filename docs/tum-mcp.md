@@ -221,8 +221,10 @@ routing quality is a separate evaluation from structural and discovery checks.
 Claude's invocation metadata follows each workflow's selected policy; automatic
 selection is enabled by default and never grants permission for a mutation.
 
-`setup --client cursor` writes `~/.cursor/mcp.json`.
-`setup --client antigravity` writes `~/.gemini/config/mcp_config.json`; an existing
+`setup --client cursor` writes `~/.cursor/mcp.json` and installs all five skills
+under `~/.cursor/skills/`.
+`setup --client antigravity` installs the same skills under `~/.gemini/config/skills/`
+and writes `~/.gemini/config/mcp_config.json`; an existing
 legacy `~/.gemini/antigravity/mcp_config.json` is reused when no current file exists.
 Both merge the `tum` stdio entry and preserve unrelated settings.
 From WSL, append `--host windows` to any client setup command to target its
@@ -236,12 +238,19 @@ in the host after setup; actual host activation is not certified by writing file
 See the official [Cursor MCP documentation](https://cursor.com/docs/mcp) and
 [Antigravity MCP documentation](https://antigravity.google/docs/mcp).
 
-These two adapters install MCP configuration only. Export the workflow skills
-below and install them using the host's documented skill mechanism after review.
-This avoids claiming equivalent invocation controls across clients. No new
-Cursor/Antigravity model-routing or native desktop activation result is claimed.
-`uninstall --client cursor` and `uninstall --client antigravity` remove only an
-unchanged managed entry; sessions and personal work stay intact.
+Both adapters install complete skill bundles, including references and website
+assets. Existing MCP-only registrations gain skills through setup or `tum-mcp update`.
+Ownership receipts track installed files: updates replace only unchanged managed
+files, and uninstall removes only unchanged managed files and the MCP entry.
+An edited managed file blocks that client's update or uninstall for review.
+Unrelated skills, extra user files, sessions and personal work stay intact.
+Without an ownership receipt, uninstall preserves manually installed skills.
+Restart the client and verify that its skills and MCP tools appear; writing files
+does not establish model-routing quality or native desktop activation.
+See the official [Cursor skills guide](https://cursor.com/help/customization/skills)
+and [Antigravity skills guide](https://antigravity.google/docs/skills?app=antigravity-ide).
+
+Manual export remains available for other clients or a separate reviewed copy:
 
 ```sh
 tum-mcp skills list
