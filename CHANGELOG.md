@@ -13,6 +13,8 @@
 - Support inline LaTeX variables and a mobile outline overlay that keeps your place.
 - Add category audio guidance and optional GitHub Pages publication. First
   publication requires consent to a public website; the repository stays private.
+- Recognize occupied preview ports on Windows. Reuse isolated test fixtures,
+  retain native/platform coverage and expose slow tests and failures in CI.
 - Group Artemis and Zulip implementation by provider, retaining read-only campus
   tools and Moodle compatibility. Fix OCR with aliased macOS temporary paths.
 
