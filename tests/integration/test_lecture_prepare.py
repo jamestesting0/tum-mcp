@@ -26,7 +26,7 @@ from tum_mcp.tum_live.client import TumLive
 
 
 @pytest.fixture
-def lecture_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def lecture_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, lecture_extension: Path):
     root = tmp_path / "course"
     root.mkdir()
     account = Account(provider=Provider.TUM_LIVE, origin=TUM_LIVE, principal="7")

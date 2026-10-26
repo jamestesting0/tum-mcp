@@ -12,6 +12,7 @@ from filelock import FileLock, Timeout
 from pydantic import Field, ValidationError
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.lecture_processing.installer_uv import installer_uv
 from tum_mcp.lecture_processing.runtime_process import isolated_run, worker_path
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen, data_dir
@@ -40,7 +41,11 @@ class ModelAsset(Frozen):
 
 
 def supported() -> bool:
-    return platform.system() == "Darwin" and platform.machine() == "arm64"
+    if platform.system() != "Darwin" or platform.machine() != "arm64":
+        return False
+    major = platform.mac_ver()[0].split(".", 1)[0]
+    # The separately locked MLX/Metal wheels target macOS 15; no source build fallback.
+    return major.isdecimal() and int(major) >= 15
 
 
 def lock_path() -> Path:
@@ -109,7 +114,7 @@ def status() -> RuntimeStatus:
         if installed
         else "runtime_not_installed"
         if supported()
-        else "automatic_asr_requires_native_apple_silicon_macos",
+        else "automatic_asr_requires_native_apple_silicon_macos_15_or_later",
         models=tuple(models),
     )
 
@@ -118,9 +123,10 @@ def install() -> RuntimeStatus:
     if not supported():
         raise CampusError(
             Code.CAPABILITY_UNSUPPORTED,
-            "Automatic ASR requires native Apple Silicon macOS. Timed captions remain supported.",
+            "Automatic ASR requires native Apple Silicon macOS 15+. "
+            "Timed captions remain supported.",
         )
-    uv = shutil.which("uv")
+    uv = installer_uv()
     if not uv:
         raise CampusError(
             Code.ACTION_REQUIRED,
@@ -129,7 +135,7 @@ def install() -> RuntimeStatus:
     destination = runtime_root()
     destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     try:
-        with FileLock(str(destination.with_suffix(".lock")), timeout=1):
+        with FileLock(str(destination) + ".lock", timeout=1):
             if status().installed:
                 return status()
             if destination.exists():

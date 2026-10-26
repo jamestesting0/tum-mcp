@@ -55,6 +55,16 @@ class ServiceChoice(StrEnum):
         }[self]
 
 
+def available_services() -> tuple[ServiceChoice, ...]:
+    from tum_mcp.extensions import lecture_enabled
+
+    return tuple(
+        service
+        for service in ServiceChoice
+        if service != ServiceChoice.TUM_LIVE or lecture_enabled()
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class ConnectionResult:
     service: ServiceChoice
@@ -75,6 +85,10 @@ def connect_services(
     """Open only selected services in one temporary context, without native-store access."""
     if not services or len(set(services)) != len(services):
         raise CampusError(Code.SCOPE_DENIED, "Select each service exactly once.")
+    if ServiceChoice.TUM_LIVE in services:
+        from tum_mcp.extensions import require_lecture
+
+        require_lecture()
     available = (browser,) if browser is not None else discover_browsers()
     if not available:
         raise BrowserSetupError("Install a Chromium browser, then run tum-mcp connect.")

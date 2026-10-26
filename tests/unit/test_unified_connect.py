@@ -30,7 +30,10 @@ from tum_mcp.transport import API
     ],
 )
 def test_only_selected_tabs_open_and_all_sessions_use_local_files(
-    selected: tuple[ServiceChoice, ...], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    selected: tuple[ServiceChoice, ...],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    lecture_extension: Path,
 ) -> None:
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "campus"))
     monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "moodle"))

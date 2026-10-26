@@ -52,6 +52,23 @@ uses the WSL backend. [Browser and WSL setup](docs/setup.md#wsl).
 Setup supplies a private Python runtime. Connections use encrypted local
 files and need no native keyring, Git or Docker.
 
+## Lecture Notes (optional)
+
+```sh
+tum-mcp install lecture
+```
+
+This adds Prepare Lecture and the TUM-Live recording tools to configured clients.
+Restart the client to load them. Default setup keeps the existing six skills.
+The extension prepares an isolated recognizer on native Apple Silicon macOS 15+;
+model weights download only when recognition needs them. Captions and imported
+WebVTT work on other supported hosts. Use `tum-mcp install lecture --no-asr` to
+skip recognizer setup.
+
+`tum-mcp uninstall lecture` removes the extension from managed clients while
+preserving course notes, evidence, saved sessions and model caches. Customized
+skill files are preserved and reported for review.
+
 ## Read and study
 
 | Source | Available content |

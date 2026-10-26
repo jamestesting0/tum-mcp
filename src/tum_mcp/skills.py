@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen, config_path
 from tum_mcp.skill_catalog import LEGACY_SKILLS as LEGACY_SKILLS
+from tum_mcp.skill_catalog import active_skills
 
 
 def legacy_overrides() -> tuple[Path, ...]:
@@ -96,8 +97,9 @@ def metadata(path: Path) -> SkillMetadata:
 
 def inspect_skills() -> list[SkillInfo]:
     result: list[SkillInfo] = []
+    active = active_skills()
     for source in sorted(bundled().iterdir()):
-        if source.is_dir():
+        if source.is_dir() and source.name in active:
             path = selected(source.name)
             info = metadata(path)
             result.append(
@@ -132,8 +134,9 @@ def export_pack(destination: Path) -> None:
             f"Review and merge them into {targets} before export/update.",
         )
     chosen_sources: list[Path] = []
+    active = active_skills()
     for source in sorted(bundled().iterdir()):
-        if source.is_dir():
+        if source.is_dir() and source.name in active:
             chosen = selected(source.name)
             metadata(chosen)
             chosen_sources.append(chosen)

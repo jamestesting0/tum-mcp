@@ -24,6 +24,13 @@ runtime_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=Fa
 app.add_typer(runtime_app, name="runtime")
 
 
+@app.callback()
+def optional_lecture() -> None:
+    from tum_mcp.extensions import require_lecture
+
+    require_lecture()
+
+
 @runtime_app.command(name="status")
 def runtime_status() -> None:
     """Check host, decoder and optional engine without installing anything."""

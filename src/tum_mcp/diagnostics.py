@@ -131,6 +131,10 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
     services.append(check)
     needs_connection = check.state == State.ACTION
     for provider in Provider:
+        from tum_mcp.extensions import lecture_enabled
+
+        if provider == Provider.TUM_LIVE and not lecture_enabled():
+            continue
         accounts = [a for a in prefs.accounts if a.provider == provider]
         if not accounts:
             needs_connection = True

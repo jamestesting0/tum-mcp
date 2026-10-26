@@ -47,7 +47,8 @@ def rendered_client(
                 content,
                 dict(launch.entry()),
                 None,
-                "All five skills installed. Restart your client and verify skills and MCP tools.",
+                f"{len(inspect_skills())} skills installed. "
+                "Restart your client to reload skills and MCP tools.",
             )
         profile = root / "profile"
         messages = io.StringIO()

@@ -19,6 +19,7 @@ from tum_mcp.exercise_data import (
     render_exercises,
     stale_exercises,
 )
+from tum_mcp.extensions import require_lecture
 from tum_mcp.lecture_assets import asset_writes
 from tum_mcp.lecture_content import LectureContent
 from tum_mcp.lecture_data import read_lectures, render_lectures, stale_lectures
@@ -302,6 +303,8 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
         state = load_state(root)
         content = read_content(root) if app_path(root, "content.json").exists() else None
         exercises = read_exercises(root)
+        if app_path(root, "lectures.json").exists():
+            require_lecture()
         lectures = read_lectures(root)
         if content is None and exercises is None and lectures is None:
             raise CampusError(

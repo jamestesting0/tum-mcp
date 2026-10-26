@@ -942,5 +942,69 @@
     "context": "scoped_moodle_course",
     "partition": "held_out",
     "expected_skill": "read-content"
+  },
+  {
+    "id": "prepare-lecture-01",
+    "target_skill": "prepare-lecture",
+    "prompt": "Prepare timestamped notes from this lecture recording, especially the professor’s explanations beyond the slides.",
+    "context": "lecture_extension_installed_bound_course",
+    "partition": "development",
+    "expected_skill": "prepare-lecture"
+  },
+  {
+    "id": "prepare-lecture-02",
+    "target_skill": "prepare-lecture",
+    "prompt": "Update the Lecture Notes workspace using the cached transcript and course slides.",
+    "context": "lecture_extension_installed_bound_course",
+    "partition": "held_out",
+    "expected_skill": "prepare-lecture"
+  },
+  {
+    "id": "prepare-lecture-03",
+    "target_skill": "prepare-lecture",
+    "prompt": "Resolve a critical handwritten derivation at this timestamp while preparing my lecture notes.",
+    "context": "lecture_extension_installed_bound_course",
+    "partition": "development",
+    "expected_skill": "prepare-lecture"
+  },
+  {
+    "id": "prepare-lecture-04",
+    "target_skill": "prepare-lecture",
+    "prompt": "Read the professor’s selected lecture recording and capture caveats, examples and advice in my course app.",
+    "context": "lecture_extension_installed_bound_course",
+    "partition": "held_out",
+    "expected_skill": "prepare-lecture"
+  },
+  {
+    "id": "prepare-lecture-05",
+    "target_skill": "prepare-lecture",
+    "prompt": "Explain this source paragraph without changing the app.",
+    "context": "lecture_extension_installed_bound_course",
+    "partition": "development",
+    "expected_skill": "read-content"
+  },
+  {
+    "id": "prepare-lecture-06",
+    "target_skill": "prepare-lecture",
+    "prompt": "Build a Study lesson with flashcards and practice on this topic.",
+    "context": "lecture_extension_installed_bound_course",
+    "partition": "held_out",
+    "expected_skill": "prepare-study"
+  },
+  {
+    "id": "prepare-lecture-07",
+    "target_skill": "prepare-lecture",
+    "prompt": "Prepare guided weekly exercises from the released problem sheet.",
+    "context": "lecture_extension_installed_bound_course",
+    "partition": "development",
+    "expected_skill": "prepare-exercises"
+  },
+  {
+    "id": "prepare-lecture-08",
+    "target_skill": "prepare-lecture",
+    "prompt": "Create spoken revision lessons from the existing course app.",
+    "context": "lecture_extension_installed_bound_course",
+    "partition": "held_out",
+    "expected_skill": "audio-notes"
   }
 ]

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Prepare Lecture"
+  short_description: "Capture extra teaching as timestamped lecture notes"
+policy:
+  allow_implicit_invocation: true

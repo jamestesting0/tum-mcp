@@ -186,8 +186,10 @@ def schema(kind: Literal["snapshot", "content", "exercises", "lectures"]) -> Non
 
             result = ExerciseContent.model_json_schema()
         case "lectures":
+            from tum_mcp.extensions import require_lecture
             from tum_mcp.lecture_content import LectureContent
 
+            require_lecture()
             result = LectureContent.model_json_schema()
         case unreachable:
             assert_never(unreachable)

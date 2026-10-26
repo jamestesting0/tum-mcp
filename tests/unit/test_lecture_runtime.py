@@ -67,3 +67,32 @@ def test_failed_runtime_install_preserves_previous_user_files(
     assert keep.read_text() == "keep"
     assert not runtime.runtime_root().exists()
     assert not list(runtime.runtime_root().parent.glob("lecture-install-*"))
+
+
+def test_optional_install_reuses_the_launchers_verified_uv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import hashlib
+    import json
+
+    from tum_mcp.lecture_processing.installer_uv import installer_uv
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path))
+    executable = tmp_path / ("uv.exe" if sys.platform == "win32" else "uv")
+    executable.write_bytes(b"synthetic verified uv control")
+    (tmp_path / "uv-owner.json").write_text(
+        json.dumps({"sha256": hashlib.sha256(executable.read_bytes()).hexdigest()})
+    )
+    assert installer_uv() == str(executable)
+
+
+@pytest.mark.parametrize(
+    "version,expected", [("14.7", False), ("15.0", True), ("26.0", True), ("", False)]
+)
+def test_pinned_mlx_wheel_os_floor_is_reported_before_install(
+    version: str, expected: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(runtime.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(runtime.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(runtime.platform, "mac_ver", lambda: (version, (), "arm64"))
+    assert runtime.supported() is expected

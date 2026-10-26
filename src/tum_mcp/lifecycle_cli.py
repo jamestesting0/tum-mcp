@@ -1,5 +1,6 @@
 """Trusted local setup, update and removal commands."""
 
+import json
 import os
 from typing import Annotated, Literal, assert_never
 
@@ -7,6 +8,24 @@ import typer
 
 from tum_mcp.client_hosts import ClientHost
 from tum_mcp.errors import CampusError, Code
+
+
+def install(
+    extension: Annotated[Literal["lecture"], typer.Argument()],
+    asr: Annotated[
+        bool,
+        typer.Option(
+            help="Provision the isolated recognizer on supported hosts; models load when needed."
+        ),
+    ] = True,
+) -> None:
+    """Install the optional Lecture tools and Prepare Lecture workflow."""
+    from tum_mcp.extensions import install_lecture
+
+    report = install_lecture(asr=asr)
+    typer.echo(json.dumps(report, indent=2))
+    if report["clients"]["needs_review"]:
+        raise typer.Exit(2)
 
 
 def setup(
@@ -32,11 +51,15 @@ def setup(
 
 def update() -> None:
     """Refresh configured clients after the npm launcher prepares the chosen version."""
+    from tum_mcp.extensions import lecture_installation, prepare_recognizer
     from tum_mcp.ui import State, heading, status_rows, terminal_console
     from tum_mcp.updates import refresh_clients
 
     console = terminal_console()
     heading(console, "Update", "Refresh configured clients for this installed package version.")
+    lecture = lecture_installation(strict=True)
+    if lecture is not None and lecture.enabled:
+        prepare_recognizer(lecture.asr_requested)
     report = refresh_clients()
     rows = []
     for item in report["clients"]:
@@ -59,6 +82,7 @@ def update() -> None:
 
 
 def uninstall(
+    extension: Annotated[Literal["lecture"] | None, typer.Argument()] = None,
     client: Literal["codex", "claude", "cursor", "antigravity", "generic"] | None = None,
     host: ClientHost = ClientHost.LOCAL,
     all_clients: Annotated[
@@ -78,6 +102,20 @@ def uninstall(
     ] = False,
 ) -> None:
     """Remove managed client files; preserve personal work and saved data by default."""
+
+    if extension == "lecture":
+        if client or all_clients or purge_runtime or forget_credentials or host != ClientHost.LOCAL:
+            raise CampusError(
+                Code.SCOPE_DENIED,
+                "Lecture-only removal cannot use package/client/data cleanup options.",
+            )
+        from tum_mcp.extensions import uninstall_lecture
+
+        report = uninstall_lecture()
+        typer.echo(json.dumps(report, indent=2))
+        if report["clients"]["needs_review"]:
+            raise typer.Exit(2)
+        return
 
     if (client is None) == (not all_clients):
         raise CampusError(Code.ACTION_REQUIRED, "Choose --client NAME or --all.")

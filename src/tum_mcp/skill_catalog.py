@@ -10,6 +10,16 @@ CURRENT_SKILLS: Final = (
     "audio-notes",
     "publish-course",
 )
+OPTIONAL_SKILLS: Final = ("prepare-lecture",)
+BUNDLED_SKILLS: Final = (*CURRENT_SKILLS, *OPTIONAL_SKILLS)
+
+
+def active_skills() -> tuple[str, ...]:
+    from tum_mcp.extensions import lecture_enabled
+
+    return BUNDLED_SKILLS if lecture_enabled() else CURRENT_SKILLS
+
+
 LEGACY_SKILLS: Final = dict.fromkeys(
     (
         "tum-moodle-study",

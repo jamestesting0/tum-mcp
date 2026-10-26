@@ -17,7 +17,7 @@ FIXTURES = Path(__file__).parents[1] / "fixtures/course_app"
 
 
 @pytest.fixture
-def lecture_project(exercise_project: Path) -> Path:
+def lecture_project(exercise_project: Path, lecture_extension: Path) -> Path:
     state = load_state(exercise_project)
     source = next(item for item in state.resources if item.resource.key == "graphs")
     payload = json.loads((FIXTURES / "lectures.json").read_bytes())

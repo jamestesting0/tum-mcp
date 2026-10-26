@@ -19,7 +19,7 @@ from tum_mcp.study_sync import sync
 
 @pytest.mark.parametrize("failure", ["whole_silence", "invented_frame", "generated_diagram"])
 def test_invalid_recording_or_frame_blocks_new_build_before_source_sync(
-    tmp_path: Path, failure: str
+    tmp_path: Path, failure: str, lecture_extension: Path
 ) -> None:
     # Synthetic data with a realistic provider binding; this test performs no campus reads.
     recording = Recording(
