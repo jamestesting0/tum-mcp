@@ -88,6 +88,9 @@ a.course-title:hover, a.course-title[aria-current="page"] { color: var(--accent)
 .unit-group > summary:hover { background: var(--surface); }
 .group-children { margin-top: var(--s1); margin-inline-start: var(--s3); padding-inline-start: var(--s2); }
 .unit-link .unit-title { margin: 0; font-size: var(--text-ui); }
+.study-unit-link { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--s2); }
+.study-unit-link > span { margin: 0; max-width: 100%; }
+.study-unit-link > [data-study-progress] { flex-basis: 100%; }
 [data-outline="collapsed"] .shell { grid-template-columns: 0 minmax(0, 1fr); }
 [data-outline="collapsed"] .sidebar { padding: 0; border: 0; }
 .outline-toggle { position: fixed; z-index: 3; top: calc(50dvh - var(--target) / 2); left: calc(var(--outline) - var(--target) / 2); height: var(--target); border: 0; border-radius: 0; background: transparent; opacity: 0; }
@@ -100,7 +103,7 @@ a.course-title:hover, a.course-title[aria-current="page"] { color: var(--accent)
 [data-outline="collapsed"] .outline-boundary { left: 0; }
 .revision-link { color: var(--ink); font-weight: 500; }
 .revision-topics { font-size: var(--text-ui); }
-.revision-topics > summary { cursor: pointer; min-height: var(--target); padding-block: var(--s2); color: var(--muted); }
+.revision-topics[open] > summary { margin-bottom: var(--s2); }
 .topic-options { max-height: 360px; overflow: auto; margin-top: var(--s2); }
 .topic-option { display: flex; align-items: flex-start; gap: var(--s3); min-height: var(--target); padding: var(--s3); border-radius: var(--r1); cursor: pointer; }
 .topic-option:hover, .topic-option:has(input:checked) { background: var(--wash); }
@@ -375,11 +378,11 @@ button[aria-pressed="true"] { color: var(--accent); background: var(--wash); bor
 .sidebar .exercise-sheet .unit-link { border: 0; border-radius: var(--r1); padding-block: var(--s2); }
 .exercise-review { margin-block: var(--s4); }
 .exercise-disclosure { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--line); }
-.exercise-disclosure > summary, .response-writing > summary, .starter-code > summary, .plot-data > summary { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); font-size: var(--text-ui); font-weight: 500; list-style: none; cursor: pointer; }
-.exercise-disclosure > summary::-webkit-details-marker, .response-writing > summary::-webkit-details-marker, .starter-code > summary::-webkit-details-marker, .plot-data > summary::-webkit-details-marker { display: none; }
-.exercise-disclosure > summary::before, .response-writing > summary::before, .starter-code > summary::before, .plot-data > summary::before { content: ''; width: 6px; height: 6px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg); margin-inline-end: var(--s1); }
-.exercise-disclosure[open] > summary::before, .response-writing[open] > summary::before, .starter-code[open] > summary::before, .plot-data[open] > summary::before { transform: rotate(135deg); }
-.exercise-disclosure > summary:hover, .response-writing > summary:hover, .starter-code > summary:hover, .plot-data > summary:hover { background: var(--wash); }
+.revision-topics > summary, .exercise-disclosure > summary, .response-writing > summary, .starter-code > summary, .plot-data > summary { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); font-size: var(--text-ui); font-weight: 500; list-style: none; cursor: pointer; }
+.revision-topics > summary::-webkit-details-marker, .exercise-disclosure > summary::-webkit-details-marker, .response-writing > summary::-webkit-details-marker, .starter-code > summary::-webkit-details-marker, .plot-data > summary::-webkit-details-marker { display: none; }
+.revision-topics > summary::before, .exercise-disclosure > summary::before, .response-writing > summary::before, .starter-code > summary::before, .plot-data > summary::before { content: ''; flex-shrink: 0; width: 6px; height: 6px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg); margin-inline-end: var(--s1); }
+.revision-topics[open] > summary::before, .exercise-disclosure[open] > summary::before, .response-writing[open] > summary::before, .starter-code[open] > summary::before, .plot-data[open] > summary::before { transform: rotate(135deg); }
+.revision-topics > summary:hover, .exercise-disclosure > summary:hover, .response-writing > summary:hover, .starter-code > summary:hover, .plot-data > summary:hover { background: var(--wash); }
 .exercise-disclosure[open] > summary { margin-bottom: var(--s3); }
 .exercise-step { padding-block: var(--s2); }
 .exercise-step .step-body > .section-heading h2 { font-size: var(--text-section); line-height: 1.4; }

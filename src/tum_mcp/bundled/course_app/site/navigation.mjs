@@ -104,7 +104,7 @@ function outline(currentIndex) {
       }
       parent = folders.get(key);
     });
-    const link = node('a', 'unit-link'); link.href = `#${unit.key}/content`;
+    const link = node('a', 'unit-link study-unit-link'); link.href = `#${unit.key}/content`;
     if (index === currentIndex) link.setAttribute('aria-current', 'page');
     if (!ancestry.length) link.append(node('span', '', unit.label));
     link.append(studyText('span', 'unit-title', unit.title));

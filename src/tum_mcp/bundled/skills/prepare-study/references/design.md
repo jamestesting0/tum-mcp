@@ -64,6 +64,9 @@ text label or glyph; correctness is never shown by color alone.
 - Grid children have min-width/min-height zero. Long names wrap, including outline
   summaries. Primary content never scrolls horizontally. Wide tables, formulas and
   code use labelled keyboard-scrollable regions; diagrams fit the column.
+- Study outline labels and titles share a row when they fit; wrap at the available
+  width and keep progress on its own line. Revision Topics uses the shared compact
+  disclosure button and chevron, with a 44px target and native keyboard behavior.
 
 ## Motion
 
