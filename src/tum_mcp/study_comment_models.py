@@ -54,9 +54,19 @@ class ExerciseAnchor(Frozen):
     suffix: str = Field(default="", max_length=80)
 
 
+class LectureAnchor(Frozen):
+    view: Literal["lectures"] = "lectures"
+    lecture_key: Key
+    section_key: Key
+    semantic_revision: Digest
+    quote: str = Field(min_length=1, max_length=2000)
+    prefix: str = Field(default="", max_length=80)
+    suffix: str = Field(default="", max_length=80)
+
+
 class Comment(Frozen):
     id: UUID
-    anchor: Anchor | ExerciseAnchor
+    anchor: Anchor | ExerciseAnchor | LectureAnchor
     text: NoteText
     status: Literal["open", "resolved"] = "open"
     resolution: str = Field(default="", max_length=2000)
@@ -65,7 +75,7 @@ class Comment(Frozen):
 
 
 class Comments(Frozen):
-    schema_version: Literal[1, 2] = 1
+    schema_version: Literal[1, 2, 3] = 1
     course_identity: Digest
     comments: tuple[Comment, ...] = Field(default=(), max_length=500)
 
@@ -84,7 +94,7 @@ class Change(Frozen):
 class Create(Change):
     op: Literal["create"]
     id: UUID
-    anchor: Anchor | ExerciseAnchor
+    anchor: Anchor | ExerciseAnchor | LectureAnchor
     text: NoteText
 
 

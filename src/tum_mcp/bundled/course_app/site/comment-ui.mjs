@@ -92,7 +92,7 @@ function commentRow(initial, actions) {
     quote.hidden = Boolean(location); jump.title = location ? '' : item.anchor.quote;
     jump.setAttribute('aria-describedby', location ? text.id : `${text.id} ${quote.id}`);
     jump.disabled = !location;
-    status.textContent = !location ? 'Passage unavailable.' : (item.anchor.exercise_revision || item.anchor.unit_revision) !== actions.revision(item) ? 'Content changed.' : '';
+    status.textContent = !location ? 'Passage unavailable.' : (item.anchor.semantic_revision || item.anchor.exercise_revision || item.anchor.unit_revision) !== actions.revision(item) ? 'Content changed.' : '';
     status.hidden = !status.textContent;
     resolution.textContent = item.status === 'resolved' ? item.resolution ? `Resolved · ${item.resolution}` : 'Resolved' : '';
     resolution.hidden = !resolution.textContent;

@@ -13,16 +13,16 @@ export function renderCommentedView(unit, view, activity, activate) {
   if (data.hosted) return { root: activity };
   active = new AbortController(); const { signal } = active;
   const root = node('div', 'commented-reading'), reading = node('div'), store = commentStore(); reading.append(activity);
-  const isExercise = view === 'exercises';
-  const owners = new Set(view === 'content' || isExercise ? [unit.key] : unit[view === 'flashcards' ? 'flashcards' : 'questions'].map(item => item.origin?.key || unit.key));
-  const relevant = item => (isExercise ? item.anchor.exercise_key === unit.key && item.anchor.set_key === unit.setKey : owners.has(item.anchor.unit_key)) && (item.anchor.view || 'content') === view;
+  const isExercise = view === 'exercises', isLecture = view === 'lectures';
+  const owners = new Set(view === 'content' || isExercise || isLecture ? [unit.key] : unit[view === 'flashcards' ? 'flashcards' : 'questions'].map(item => item.origin?.key || unit.key));
+  const relevant = item => (isLecture ? item.anchor.lecture_key === unit.key : isExercise ? item.anchor.exercise_key === unit.key && item.anchor.set_key === unit.setKey : owners.has(item.anchor.unit_key)) && (item.anchor.view || 'content') === view;
   const message = node('p', 'comment-message small'); message.setAttribute('role', 'status');
   const failure = node('p', 'comment-error small'); failure.setAttribute('role', 'status');
   let showResolved = false, locations = new Map(), groups = new Map(), activeHost, selectedId, savedId;
   let signature, selectionTimer, syncTimer;
   const resolved = button('Resolved', () => { showResolved = !showResolved; paintList(); }, 'quiet'); resolved.hidden = true;
   const list = createCommentsList({
-    revision: item => isExercise ? unit.revision : data.units.find(owner => owner.key === item.anchor.unit_key)?.revision, locate, show,
+    revision: item => isLecture || isExercise ? unit.revision : data.units.find(owner => owner.key === item.anchor.unit_key)?.revision, locate, show,
     label: item => unit.revision ? '' : data.units.find(owner => owner.key === item.anchor.unit_key)?.title,
     edit: (item, trigger) => openComposer(item, trigger),
     status: item => mutate({ op: 'status', id: item.id, status: item.status === 'open' ? 'resolved' : 'open' }, item),
@@ -95,7 +95,7 @@ export function renderCommentedView(unit, view, activity, activate) {
     message.textContent = found?.pending && view === 'practice' ? 'Check an answer first.' : '';
     if (found?.range) {
       const rect = found.range.getBoundingClientRect();
-      if (rect.bottom < 0 || rect.top > innerHeight) found.range.startContainer.parentElement.scrollIntoView({ block: 'center' });
+      if (rect.bottom < 0 || rect.top > innerHeight) found.range.startContainer.parentElement.scrollIntoView({ block: 'center', behavior: 'instant' });
     }
     paintList();
     popup.show(state.marker, () => locations.get(selectedId)?.range?.getBoundingClientRect() || state.marker.getBoundingClientRect());
@@ -117,6 +117,7 @@ export function renderCommentedView(unit, view, activity, activate) {
     popup.position();
   }
   function hostFor(item) {
+    if (isLecture) return [...reading.querySelectorAll('[data-lecture-section]')].find(section => section.dataset.lectureSection === item.anchor.section_key)?.querySelector('h2');
     if (isExercise) return reading.querySelector('h1');
     if (view !== 'content') {
       const current = reading.querySelector('[data-comment-target]');
@@ -146,12 +147,12 @@ export function renderCommentedView(unit, view, activity, activate) {
         state.marker.dataset.commentUi = ''; state.marker.setAttribute('aria-haspopup', 'dialog');
         state.marker.setAttribute('aria-controls', popup.element.id); state.marker.setAttribute('aria-expanded', 'false');
         const face = node('span', 'comment-marker-face'); face.append(iconGlyph('comment'), node('span', 'comment-count')); state.marker.append(face);
-        if (view === 'content' || isExercise) host.append(state.marker);
+        if (view === 'content' || isExercise || isLecture) host.append(state.marker);
         else { host.classList.add('comment-position'); host.firstElementChild.after(state.marker); }
       }
       const count = state.items.filter(item => item.status === 'open').length;
       state.marker.dataset.openCount = String(count); state.marker.dataset.count = String(count || state.items.length);
-      const label = `${count || state.items.length} ${count ? '' : 'resolved '}${(count || state.items.length) === 1 ? 'comment' : 'comments'} on ${view === 'content' ? state.items[0].anchor.block_title : view === 'flashcards' ? 'this card' : 'this question'}`;
+      const label = `${count || state.items.length} ${count ? '' : 'resolved '}${(count || state.items.length) === 1 ? 'comment' : 'comments'} on ${isLecture ? 'this section' : view === 'content' ? state.items[0].anchor.block_title : view === 'flashcards' ? 'this card' : 'this question'}`;
       state.marker.setAttribute('aria-label', label); state.marker.title = label;
       const number = state.marker.querySelector('.comment-count'); if (number.textContent !== state.marker.dataset.count) number.textContent = state.marker.dataset.count;
     }

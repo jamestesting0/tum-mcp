@@ -1,5 +1,6 @@
 import data from './data.mjs';
 import { node, studyText, append, sourcesNote } from './dom.mjs';
+import { renderCommentedView } from './comments.mjs';
 import { renderBlockBody } from './reading.mjs';
 
 const lectures = [...(data.lectures?.lectures || [])].sort((a, b) => b.recording.recorded_on.localeCompare(a.recording.recorded_on) || a.key.localeCompare(b.key));
@@ -80,7 +81,7 @@ export function renderLectures(hash) {
   header.append(meta); root.append(header, summary);
   if (sectionKey && !lecture.sections.some(section => section.key === decode(sectionKey))) root.append(node('p', 'notice', 'That section is no longer here. The lecture notes are below.'));
   for (const section of lecture.sections) {
-    const topic = node('section', 'read-section lecture-section'); topic.dataset.lectureSection = section.key;
+    const topic = node('section', 'read-section lecture-section'); topic.dataset.lectureSection = section.key; topic.dataset.commentTarget = 'lectures';
     if (section.key === decode(sectionKey)) topic.dataset.lectureActiveSection = '';
     const title = studyText('h2', '', section.title), times = node('div', 'cluster lecture-times');
     for (const cite of section.citations) if (cite.key && !section.figures.some(figure => figure.evidence === cite.key)) times.append(timeLink(cite.url, cite.start_s, cite.end_s));
@@ -93,5 +94,6 @@ export function renderLectures(hash) {
     for (const figure of section.figures) topic.append(figureView(figure));
     root.append(topic);
   }
-  return { root, heading, title: lecture.title, current: lecture.key, lecture };
+  const comments = renderCommentedView(lecture, 'lectures', root);
+  return { root: comments.root, heading, title: lecture.title, current: lecture.key, lecture };
 }

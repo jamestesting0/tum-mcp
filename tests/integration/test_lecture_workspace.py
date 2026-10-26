@@ -73,7 +73,10 @@ def test_notes_deep_links_figure_and_workspace_return(
         expect(figure).to_be_visible()
         assert page.locator(".lecture-figure .lecture-time").get_attribute("href").endswith("?t=37")
         assert page.locator(".lecture-image").get_attribute("target") == "_blank"
-        assert figure.evaluate("image => image.complete && image.naturalWidth === 640")
+        page.wait_for_function(
+            "() => { const image = document.querySelector('.lecture-figure img');"
+            "return image.complete && image.naturalWidth === 640; }"
+        )
         page.screenshot(path=str(directory / f"{width}-{theme}-reading.png"))
         page.locator(".lecture-image").focus()
         expect(page.locator(".lecture-image")).to_be_focused()
