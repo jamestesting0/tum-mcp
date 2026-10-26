@@ -106,6 +106,17 @@ def test_unknown_scope_is_rejected_without_falling_back_to_default(tmp_path: Pat
         policies.read(ACCOUNT)
 
 
+def test_oversized_valid_policy_is_refused_and_preserved(tmp_path: Path) -> None:
+    policies = store(tmp_path)
+    original = policies.create(ACCOUNT)
+    path = tmp_path / f"{ACCOUNT}.json"
+    body = original.model_dump_json().encode() + b" " * (64 * 1024)
+    path.write_bytes(body)
+    with pytest.raises(CampusError):
+        policies.read(ACCOUNT)
+    assert path.read_bytes() == body
+
+
 def test_policy_file_has_private_permissions(tmp_path: Path) -> None:
     import os
     import stat

@@ -70,3 +70,21 @@ def test_invalid_page_bounds_and_inconsistent_counts_are_rejected() -> None:
             CoursePage.from_wire(listing(), offset=offset, limit=limit)
     with pytest.raises(CampusError):
         CoursePage.from_wire(listing(), offset=25, limit=1)
+
+
+def test_large_course_page_is_bounded_and_cursor_tracks_only_returned_courses() -> None:
+    item = json.loads(listing())["courses"][0]
+    item["courseTitle"]["value"] = "講" * 4000
+    rows = [dict(item, id=number) for number in range(1, 11)]
+    body = json.dumps({"totalCount": 10, "courses": rows}).encode()
+    page = CoursePage.from_wire(body, offset=0, limit=10)
+    assert len(page.model_dump_json().encode()) <= 30_000
+    assert page.courses and len(page.courses) < len(rows)
+    assert page.next_offset == len(page.courses)
+    assert page.coverage_status == "partial"
+    tail = CoursePage.from_wire(
+        json.dumps({"totalCount": 10, "courses": rows[page.next_offset :]}).encode(),
+        offset=page.next_offset,
+        limit=10,
+    )
+    assert tail.courses[0].id == page.courses[-1].id + 1

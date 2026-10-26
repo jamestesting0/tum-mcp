@@ -1,25 +1,36 @@
 """Anonymous, allowlisted reads of the public Studocu MCP."""
 
-import json
-from typing import Any, Final
+from itertools import islice
+from typing import Final, Literal, TypedDict
 
 import httpx2
+from pydantic import JsonValue
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import studocu_enabled
+from tum_mcp.studocu.rpc import read_reply
 
 ENDPOINT: Final = "https://mcp.studocu.com/mcp"
 PUBLIC_TOOLS: Final = {"search-courses", "search-documents", "search-institutions"}
 MAX_RESPONSE: Final = 4 * 1024 * 1024
 
 
+class SearchReply(TypedDict):
+    data: dict[str, JsonValue]
+    coverage: Literal["partial"]
+    untrusted: Literal[True]
+
+
 def search(
-    name: str, arguments: dict[str, Any], *, transport: httpx2.BaseTransport | None = None
-) -> dict:
+    name: str, arguments: dict[str, JsonValue], *, transport: httpx2.BaseTransport | None = None
+) -> SearchReply:
     if name not in PUBLIC_TOOLS:
         raise CampusError(Code.SCOPE_DENIED, "Only public search operations are supported.")
     if not studocu_enabled():
         raise CampusError(Code.CAPABILITY_UNSUPPORTED, "The Studocu extension is disabled.")
+    limit = arguments.get("limit", 50 if name == "search-documents" else 10)
+    if type(limit) is not int or not 1 <= limit <= 50:
+        raise CampusError(Code.INVALID_RESPONSE, "Use a search limit between 1 and 50.")
     body = {
         "jsonrpc": "2.0",
         "id": 1,
@@ -44,50 +55,38 @@ def search(
                     raise CampusError(Code.AUTH_REQUIRED, "Studocu refused this search request.")
                 if response.status_code != 200:
                     raise CampusError(Code.OFFLINE, "Studocu search is unavailable.")
-                data = bytearray()
-                for chunk in response.iter_bytes():
-                    data.extend(chunk)
-                    if len(data) > MAX_RESPONSE:
-                        raise CampusError(Code.INVALID_RESPONSE, "Studocu response is too large.")
-        if data.startswith(b"event:") or data.startswith(b"data:"):
-            messages = [line[5:].strip() for line in data.splitlines() if line.startswith(b"data:")]
-            data = bytearray(messages[-1] if messages else b"")
-        result = json.loads(data)
-        if (
-            not isinstance(result, dict)
-            or result.get("error")
-            or not isinstance(result.get("result"), dict)
-        ):
-            raise ValueError
-        result = result["result"]
-        if result.get("isError"):
+                result = read_reply(response, MAX_RESPONSE)
+        if result.isError:
             raise CampusError(Code.INVALID_RESPONSE, "Studocu search returned an error.")
-        content = result.get("structuredContent", {})
-        if not isinstance(content, dict):
-            raise ValueError
+        content = result.structuredContent
         if name == "search-courses":
             courses = content.get("courses", [])
             if not isinstance(courses, list):
                 raise ValueError
             content = {
-                "courses": [
-                    {
-                        key: item[key]
-                        for key in (
-                            "course_id",
-                            "name",
-                            "code",
-                            "institution_id",
-                            "institution_name",
-                        )
-                        if key in item
-                    }
-                    for item in courses
-                    if isinstance(item, dict)
-                    and isinstance(item.get("course_id"), int)
-                    and item["course_id"] > 0
-                    and item.get("institution_id") == arguments.get("institution_id")
-                ]
+                "courses": list(
+                    islice(
+                        (
+                            {
+                                key: item[key]
+                                for key in (
+                                    "course_id",
+                                    "name",
+                                    "code",
+                                    "institution_id",
+                                    "institution_name",
+                                )
+                                if key in item
+                            }
+                            for item in courses
+                            if isinstance(item, dict)
+                            and type(item.get("course_id")) is int
+                            and item["course_id"] > 0
+                            and item.get("institution_id") == arguments.get("institution_id")
+                        ),
+                        limit,
+                    )
+                )
             }
         if name == "search-documents":
             documents = content.get("documents", [])
@@ -100,7 +99,9 @@ def search(
                 document_id = str(item.get("id", ""))
                 if not document_id.isascii() or not document_id.isdigit() or int(document_id) <= 0:
                     continue
-                if item.get("course_id") != arguments.get("course_id"):
+                if type(item.get("course_id")) is not int or item.get("course_id") != arguments.get(
+                    "course_id"
+                ):
                     continue
                 keep = {
                     key: item[key]
@@ -129,7 +130,14 @@ def search(
                 keep["suggested_type"] = kind
                 keep["classification"] = "heuristic_review_required"
                 safe.append(keep)
+                if len(safe) == limit:
+                    break
             content = {"documents": safe}
+        if name == "search-institutions":
+            institutions = content.get("institutions")
+            if not isinstance(institutions, list):
+                raise ValueError
+            content = {"institutions": institutions[:limit]}
         return {"data": content, "coverage": "partial", "untrusted": True}
     except httpx2.HTTPError:
         raise CampusError(Code.OFFLINE, "Studocu search could not be reached.") from None

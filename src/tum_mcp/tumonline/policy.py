@@ -13,6 +13,7 @@ from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen, config_dir
 
 ACCOUNT_PATTERN: Final = re.compile(r"[a-f0-9]{64}")
+MAX_POLICY_BYTES: Final = 16 * 1024
 
 
 class Scope(StrEnum):
@@ -53,7 +54,7 @@ class PolicyStore:
 
     def __init__(self, root: Path | None = None) -> None:
         self.root = root if root is not None else config_dir() / "tumonline"
-        if self.root.is_symlink():
+        if self.root.is_symlink() or self.root.is_junction():
             raise CampusError(Code.SCOPE_DENIED, "TUMonline policy directory cannot be a symlink.")
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.root.chmod(0o700)
@@ -64,10 +65,14 @@ class PolicyStore:
         return self.root / f"{account_id}.json"
 
     def _read(self, path: Path, account_id: str) -> Policy:
-        if path.is_symlink():
-            raise CampusError(Code.SCOPE_DENIED, "TUMonline policy cannot be a symlink.")
+        if path.is_symlink() or path.is_junction() or not path.is_file():
+            raise CampusError(Code.SCOPE_DENIED, "TUMonline policy must be a regular local file.")
         try:
-            policy = Policy.model_validate_json(path.read_bytes())
+            with path.open("rb") as stream:
+                body = stream.read(MAX_POLICY_BYTES + 1)
+            if len(body) > MAX_POLICY_BYTES:
+                raise CampusError(Code.SCOPE_DENIED, "TUMonline policy exceeds its size limit.")
+            policy = Policy.model_validate_json(body)
         except (ValidationError, OSError):
             raise CampusError(
                 Code.SCOPE_DENIED, "TUMonline policy is missing or invalid."

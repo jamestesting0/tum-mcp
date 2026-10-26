@@ -77,8 +77,10 @@ class CoursePage(Frozen):
             raise CampusError(Code.INVALID_RESPONSE, "Course page metadata is inconsistent.")
         if not wire.courses and offset < wire.totalCount:
             raise CampusError(Code.OFFLINE, "TUMonline returned an incomplete page; retry.")
-        courses = tuple(
-            Course(
+        courses: list[Course] = []
+        size = 256
+        for item in wire.courses:
+            course = Course(
                 id=item.id,
                 number=item.courseNumber.databaseValue,
                 title=item.courseTitle.value,
@@ -86,12 +88,17 @@ class CoursePage(Frozen):
                 kind=item.courseTypeDto.courseTypeShortName.value,
                 source_link="https://campus.tum.de/tumonline/ee/ui/ca2/app/desktop/",
             )
-            for item in wire.courses
-        )
+            cost = len(course.model_dump_json().encode()) + 1
+            if size + cost > 30_000:
+                if not courses:
+                    raise CampusError(Code.INVALID_RESPONSE, "Course exceeds the output budget.")
+                break
+            courses.append(course)
+            size += cost
         position = offset + len(courses)
         complete = position >= wire.totalCount
         return cls(
-            courses=courses,
+            courses=tuple(courses),
             coverage_status="complete" if complete else "partial",
             next_offset=position if courses and not complete else None,
         )
