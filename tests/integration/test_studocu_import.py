@@ -3,7 +3,7 @@ import json
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 from pypdf import PdfWriter
@@ -131,6 +131,8 @@ def test_selection_requires_explicit_decision_and_reason(
 def test_import_preserves_original_and_campus_sources(
     project_with_selection: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Persisted material names must stay POSIX even when parsed on Windows.
+    monkeypatch.setattr("tum_mcp.study_sync.Path", PureWindowsPath)
     project = project_with_selection
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)

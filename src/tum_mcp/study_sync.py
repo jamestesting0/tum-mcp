@@ -1,7 +1,7 @@
 """Reconcile source snapshots without overwriting notes or inferring remote deletion."""
 
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from filelock import FileLock
 from pydantic import ValidationError
@@ -270,7 +270,7 @@ def _reconcile(
         confined(root, f"materials/{folder}").mkdir(mode=0o700, parents=True, exist_ok=True)
     for item in ordered:
         if item.path is not None and item.resource.studocu is not None:
-            confined(root, str(Path(item.path).parent)).mkdir(
+            confined(root, PurePosixPath(item.path).parent.as_posix()).mkdir(
                 mode=0o700, parents=True, exist_ok=True
             )
     context = private_path(root, "course.md")
