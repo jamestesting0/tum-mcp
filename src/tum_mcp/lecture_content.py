@@ -40,7 +40,27 @@ class Lecture(Frozen):
 
     @property
     def semantic_revision(self) -> Digest:
-        payload = self.model_dump(mode="json", exclude={"checked_at", "coverage", "sources"})
+        """Hash authored teaching; source freshness is checked independently."""
+        payload = {
+            "key": self.key,
+            "title": self.title,
+            "overview": self.overview,
+            "takeaways": self.takeaways,
+            "sections": [
+                {
+                    "key": section.key,
+                    "title": section.title,
+                    "blocks": [
+                        block.model_dump(mode="json", exclude={"sources"})
+                        for block in section.blocks
+                    ],
+                    "figures": [
+                        {"caption": figure.caption, "alt": figure.alt} for figure in section.figures
+                    ],
+                }
+                for section in self.sections
+            ],
+        }
         return hashlib.sha256(
             json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()

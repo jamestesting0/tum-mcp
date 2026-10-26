@@ -69,6 +69,36 @@ def test_harmless_receipt_update_preserves_semantic_revision_but_text_edit_does_
     assert LectureContent.model_validate(value).lectures[0].semantic_revision != before
 
 
+def test_reconciled_recording_and_figure_provenance_does_not_edit_teaching() -> None:
+    value = json.loads(FIXTURE.read_bytes())
+    before = LectureContent.model_validate(value).lectures[0].semantic_revision
+    lecture = value["lectures"][0]
+    lecture["recording"]["duration_s"] = 600.5
+    lecture["coverage"]["eligible"][0]["end_s"] = 600.5
+    lecture["coverage"]["processed"][0]["end_s"] = 600.5
+    lecture["sources"][0]["sha256"] = "b" * 64
+    for evidence in value["evidence"]:
+        evidence["source_sha256"] = "b" * 64
+    figure = lecture["sections"][0]["figures"][0]
+    figure.update(
+        {
+            "sha256": "c" * 64,
+            "asset": "lecture-assets/" + "c" * 64 + ".png",
+            "width": 320,
+            "height": 180,
+            "captured_at_s": 37.55,
+        }
+    )
+    assert LectureContent.model_validate(value).lectures[0].semantic_revision == before
+
+
+def test_figure_caption_is_authored_teaching_and_changes_revision() -> None:
+    value = json.loads(FIXTURE.read_bytes())
+    before = LectureContent.model_validate(value).lectures[0].semantic_revision
+    value["lectures"][0]["sections"][0]["figures"][0]["caption"] = "A revised explanation."
+    assert LectureContent.model_validate(value).lectures[0].semantic_revision != before
+
+
 @pytest.mark.parametrize("query", ["jwt=synthetic", "access_token=synthetic", "password=synthetic"])
 def test_source_links_reject_authentication_parameters(query: str) -> None:
     with pytest.raises(ValidationError):
