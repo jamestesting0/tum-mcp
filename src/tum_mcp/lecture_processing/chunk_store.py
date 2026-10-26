@@ -8,7 +8,7 @@ from pydantic import Field, ValidationError, model_validator
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_evidence import Interval
-from tum_mcp.lecture_processing.runtime import MODELS, profile
+from tum_mcp.lecture_processing.runtime import MODELS, recognition_profile
 from tum_mcp.lecture_processing.transcript_models import AudioQuality, Passage
 from tum_mcp.lecture_processing.transcription import analyze, passages, recognize, uncertainty
 from tum_mcp.lecture_processing.validity import Validity, require_content
@@ -63,7 +63,7 @@ def process_chunk(
                 source_revision,
                 audio_hash,
                 span.model_dump(),
-                profile(),
+                recognition_profile(),
                 MODELS,
                 language,
                 "pcm-v1-greedy-word-timing",

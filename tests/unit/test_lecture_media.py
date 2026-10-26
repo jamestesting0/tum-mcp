@@ -154,3 +154,22 @@ def test_budget_and_cancellation_preserve_existing_cache_files(tmp_path) -> None
             client.get(MediaRef(url=GRANT.resolve("one.ts")))
     assert keep.read_text() == "Preserve this."
     assert list(tmp_path.glob("*.bin")) == []
+
+
+def test_metadata_is_reused_for_selected_frames_within_one_finished_vod_job() -> None:
+    from tum_mcp.lecture_processing.playlists import load_manifest
+
+    requests = []
+
+    def respond(request):
+        requests.append(request.url.path)
+        return httpx2.Response(
+            200,
+            content=b"#EXTM3U\n#EXT-X-TARGETDURATION:10\n#EXTINF:10,\npart.ts\n#EXT-X-ENDLIST\n",
+        )
+
+    with MediaHTTP(GRANT, TransferBudget(), httpx2.MockTransport(respond)) as client:
+        first = load_manifest(client)
+        selected = load_manifest(client, full_resolution=True)
+        assert first.revision == selected.revision and len(requests) == 1
+    assert not client.playlist_cache

@@ -11,6 +11,7 @@ from pathlib import Path
 from filelock import FileLock, Timeout
 from pydantic import Field, ValidationError
 
+from tum_mcp.bundled.lecture_runtime.worker import decoding_options
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_processing.installer_uv import installer_uv
 from tum_mcp.lecture_processing.runtime_process import isolated_run, worker_path
@@ -55,6 +56,14 @@ def lock_path() -> Path:
 def profile() -> str:
     digest = hashlib.sha256(lock_path().read_bytes()).hexdigest()[:16]
     return f"{ENGINE}-cp313-darwin-arm64-{digest}"
+
+
+def recognition_profile() -> str:
+    """Decoder changes invalidate inference without reinstalling identical dependencies."""
+    options = hashlib.sha256(json.dumps(decoding_options(), sort_keys=True).encode()).hexdigest()[
+        :16
+    ]
+    return f"{profile()}-decode-{options}"
 
 
 def runtime_root() -> Path:
@@ -149,12 +158,22 @@ def install() -> RuntimeStatus:
             ) as folder:
                 candidate = Path(folder) / "runtime"
                 isolated_run(
-                    (uv, "venv", "--python", "3.13", "--relocatable", str(candidate)), timeout=300
+                    (
+                        uv,
+                        "--no-config",
+                        "venv",
+                        "--python",
+                        "3.13",
+                        "--relocatable",
+                        str(candidate),
+                    ),
+                    timeout=300,
                 )
                 executable = candidate / "bin/python"
                 isolated_run(
                     (
                         uv,
+                        "--no-config",
                         "pip",
                         "sync",
                         "--python",

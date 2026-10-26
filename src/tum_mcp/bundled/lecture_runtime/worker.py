@@ -8,6 +8,16 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 
+def decoding_options() -> dict[str, float | bool]:
+    """Shared inference identity; importing this module loads no model libraries."""
+    return {
+        "word_timestamps": True,
+        "temperature": 0.0,
+        "condition_on_previous_text": False,
+        "hallucination_silence_threshold": 2.0,
+    }
+
+
 def sha256(path: Path) -> str:
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
@@ -73,7 +83,10 @@ def pinned_model(repo: str, revision: str) -> dict:
 
     path = Path(
         snapshot_download(
-            repo_id=repo, revision=revision, allow_patterns=["config.json", "weights.npz"]
+            repo_id=repo,
+            revision=revision,
+            allow_patterns=["config.json", "weights.npz"],
+            token=False,
         )
     )
     if path.name != revision:
@@ -105,11 +118,8 @@ def recognize(request: dict) -> dict:
     result = mlx_whisper.transcribe(
         audio,
         path_or_hf_repo=str(model),
-        word_timestamps=True,
-        temperature=0.0,
-        condition_on_previous_text=False,
         verbose=None,
-        hallucination_silence_threshold=2.0,
+        **decoding_options(),
         **options,
     )
     return {

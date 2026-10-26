@@ -58,7 +58,14 @@ def load_manifest(client: MediaHTTP, *, full_resolution: bool = False) -> Manife
         if ref.key in visited:
             raise CampusError(Code.INVALID_RESPONSE, "HLS playlist reference cycle.")
         visited.add(ref.key)
-        playlist = parse_playlist(client.get(ref, limit=MAX_PLAYLIST_BYTES).body)
+        client.budget.check()
+        payload = client.playlist_cache.get(ref.key)
+        if payload is None:
+            payload = client.get(ref, limit=MAX_PLAYLIST_BYTES).body
+            if len(client.playlist_cache) >= 6:
+                client.playlist_cache.pop(next(iter(client.playlist_cache)))
+            client.playlist_cache[ref.key] = payload
+        playlist = parse_playlist(payload)
         if not playlist.is_variant:
             return media_manifest(playlist, grant, url)
         url = grant.resolve(

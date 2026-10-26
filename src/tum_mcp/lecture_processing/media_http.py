@@ -60,8 +60,10 @@ class MediaHTTP:
     ) -> None:
         self.grant, self.budget, self.transport = grant, budget, transport
         self.client: httpx2.Client | None = None
+        self.playlist_cache: dict[str, bytes] = {}
 
     def __enter__(self) -> "MediaHTTP":
+        self.playlist_cache.clear()
         # HTTP loggers must never emit a signed request URL, even under global DEBUG.
         logging.getLogger("httpx2").setLevel(logging.WARNING)
         logging.getLogger("httpcore2").setLevel(logging.WARNING)
@@ -91,6 +93,7 @@ class MediaHTTP:
     ) -> None:
         if self.client is not None:
             self.client.close()
+        self.playlist_cache.clear()
 
     def get(
         self, ref: MediaRef, previous: CacheEntry | None = None, *, limit: int = MAX_BODY

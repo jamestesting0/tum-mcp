@@ -22,9 +22,13 @@ and relevant verified lecture materials. Imported original-time WebVTT uses
 `--transcript PATH`. Whole-silent recordings are invalid: stop processing them.
 Missing speech, source material or recognition capability remains a real gap.
 
+Preparation fetches no preview images by default. Use `--previews` only to locate
+a visual question; it does not authorize whole-video vision analysis.
+
 Read the entire retained transcript through bounded `lecture transcript` pages
 with `--recording KEY --start SECONDS --end SECONDS --limit N --offset N`.
-Compare it with the supplied course materials before selecting teaching points.
+Text pages omit word-level detail by default; use `--words` only for alignment
+review. Compare the transcript with the supplied course materials before selecting teaching points.
 Do not claim a point is absent from materials that were unavailable for comparison.
 Request a full frame through `prepare --frame-at SECONDS` only when text and
 materials cannot resolve critical notation, a live derivation or demonstration.

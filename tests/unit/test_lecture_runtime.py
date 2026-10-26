@@ -96,3 +96,14 @@ def test_pinned_mlx_wheel_os_floor_is_reported_before_install(
     monkeypatch.setattr(runtime.platform, "machine", lambda: "arm64")
     monkeypatch.setattr(runtime.platform, "mac_ver", lambda: (version, (), "arm64"))
     assert runtime.supported() is expected
+
+
+def test_decoding_settings_invalidate_inference_without_reinstalling_dependencies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dependency_profile = runtime.profile()
+    before = runtime.recognition_profile()
+    current = runtime.decoding_options()
+    monkeypatch.setattr(runtime, "decoding_options", lambda: {**current, "temperature": 0.1})
+    assert runtime.recognition_profile() != before
+    assert runtime.profile() == dependency_profile

@@ -2,6 +2,7 @@
 
 import json
 import math
+import re
 from pathlib import Path
 
 from filelock import FileLock, Timeout
@@ -48,6 +49,7 @@ def prepare(
     transcript: Path | None = None,
     frame_at: tuple[float, ...] = (),
     language: str = "",
+    include_previews: bool = False,
 ) -> Receipt:
     root = root.expanduser().resolve()
     binding, slug, recording_id = select(root, url)
@@ -83,6 +85,7 @@ def prepare(
                     transcript,
                     frame_at,
                     language,
+                    include_previews,
                 )
     except Timeout:
         raise CampusError(
@@ -101,8 +104,13 @@ def _evidence(
     imported: Path | None,
     frame_at: tuple[float, ...],
     language: str,
+    include_previews: bool,
 ) -> PreparedReceipt:
     issues: list[str] = []
+    if language and re.fullmatch(r"[a-z]{2,3}", language) is None:
+        raise CampusError(
+            Code.SCOPE_DENIED, "Use an ISO recognition language code such as en or de."
+        )
     for seconds in frame_at:
         if not math.isfinite(seconds) or not any(
             span.start_s <= seconds < span.end_s for span in valid.eligible
@@ -111,7 +119,9 @@ def _evidence(
                 Code.SCOPE_DENIED, "Selected frame is outside eligible original recording time."
             )
     source_revision = revision(watch, valid, manifest)
-    imported, frame_at = previous_selection(directory, valid, source_revision, imported, frame_at)
+    imported, frame_at, cached_previews = previous_selection(
+        directory, valid, source_revision, imported, frame_at
+    )
     write_progress(directory, source_revision, "evidence")
     cache = MediaCache(confined(directory, "media"), client, limit=9 * 1024**3)
     acquisition = Acquisition(manifest, cache, valid)
@@ -142,9 +152,9 @@ def _evidence(
         else:
             issues.append(capability.reason if not capability.installed else "ffmpeg_unavailable")
         processed, uncertain = audio.processed, audio.uncertain
-    inventory = FrameInventory()
+    inventory = FrameInventory(candidates=cached_previews)
     view = next((view for view in watch.views if view.playlist_url == client.grant.playlist), None)
-    if view is not None and view.sprite is not None:
+    if include_previews and view is not None and view.sprite is not None:
         try:
             disk_guard(directory, reserve=256 * 1024**2)
             payload = service.file(watch, view.sprite.file_id, duration_s=manifest.duration_s)
@@ -211,7 +221,7 @@ def _evidence(
                     media_revision,
                     digest(transcript_bytes),
                     [(frame.sha256, frame.captured_at_s) for frame in captured],
-                    runtime.profile() if not captions else "captions",
+                    runtime.recognition_profile() if not captions else "captions",
                 ],
                 sort_keys=True,
             ).encode()

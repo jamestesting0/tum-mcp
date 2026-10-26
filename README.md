@@ -65,6 +65,11 @@ model weights download only when recognition needs them. Captions and imported
 WebVTT work on other supported hosts. Use `tum-mcp install lecture --no-asr` to
 skip recognizer setup.
 
+Lecture preparation starts with timed text and available lecture materials.
+Preview images require `lecture prepare --previews`; full frames require selected
+`--frame-at` timestamps. Notes focus on the professor’s explanations, examples and
+caveats, with timestamp links and only the visuals needed to understand them.
+
 `tum-mcp uninstall lecture` removes the extension from managed clients while
 preserving course notes, evidence, saved sessions and model caches. Customized
 skill files are preserved and reported for review.

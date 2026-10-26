@@ -65,6 +65,13 @@ def prepare(
     language: Annotated[
         str, typer.Option(help="Known ISO language code, otherwise detect speech.")
     ] = "",
+    previews: Annotated[
+        bool,
+        typer.Option(
+            "--previews",
+            help="Explicitly discover cheap seek previews for unresolved visual questions.",
+        ),
+    ] = False,
 ) -> None:
     """Prepare selected evidence in the bound course; authored notes remain a separate review."""
     from tum_mcp.lecture_processing.preparation import prepare as run
@@ -82,6 +89,7 @@ def prepare(
                 transcript=transcript,
                 frame_at=tuple(frame_at or ()),
                 language=language,
+                include_previews=previews,
             ).model_dump_json(indent=2)
         )
 
@@ -124,6 +132,9 @@ def read_transcript(
     end: Annotated[float, typer.Option(min=0, max=28800)] = 28800,
     limit: Annotated[int, typer.Option(min=1, max=200)] = 50,
     offset: Annotated[int, typer.Option(min=0, max=100000)] = 0,
+    words: Annotated[
+        bool, typer.Option(help="Include word timing/probability for precise alignment or repair.")
+    ] = False,
 ) -> None:
     """Read bounded cached passages on the original recording clock."""
     root = project.expanduser().resolve()
@@ -142,7 +153,17 @@ def read_transcript(
             {
                 "as_of": receipt.checked_at,
                 "mode": "offline_cached",
-                "passages": [p.model_dump(mode="json") for p in page],
+                "passages": [
+                    p.model_dump(
+                        mode="json", exclude=set() if words else {"words"}, exclude_defaults=True
+                    )
+                    for p in page
+                ],
+                "uncertain_intervals": [
+                    span.model_dump(mode="json")
+                    for span in receipt.uncertain
+                    if span.start_s < end and start < span.end_s
+                ],
                 "next_offset": offset + limit if len(selected) > offset + limit else None,
             },
             indent=2,

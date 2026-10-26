@@ -14,7 +14,7 @@ from tum_mcp.lecture_evidence import Interval, merge_intervals
 from tum_mcp.lecture_processing.audio import render_audio
 from tum_mcp.lecture_processing.chunk_store import Chunk, process_chunk
 from tum_mcp.lecture_processing.media import AcquiredSegment
-from tum_mcp.lecture_processing.runtime import profile
+from tum_mcp.lecture_processing.runtime import recognition_profile
 from tum_mcp.lecture_processing.transcript_models import Passage
 from tum_mcp.lecture_processing.transcription import (
     chunks,
@@ -37,6 +37,10 @@ class AudioResult(Frozen):
     inference_s: float = 0
 
 
+class RecognizerUnavailable(CampusError):
+    """A shared runtime/model failure; retrying every audio chunk cannot repair it."""
+
+
 def run_span(
     validity: Validity,
     span: Interval,
@@ -48,7 +52,7 @@ def run_span(
     require_content(validity)
     identity = [
         revision,
-        profile(),
+        recognition_profile(),
         language,
         span.model_dump(),
         [
@@ -70,9 +74,22 @@ def run_span(
             raise CampusError(Code.INVALID_RESPONSE, "Audio checkpoint is malformed.") from None
     with tempfile.TemporaryDirectory(prefix="audio-", dir=directory) as folder:
         audio = render_audio(segments, span, Path(folder))
-        chunk, cached = process_chunk(
-            audio, span, validity, directory / "chunks", revision, language=language
-        )
+        try:
+            chunk, cached = process_chunk(
+                audio, span, validity, directory / "chunks", revision, language=language
+            )
+        except CampusError as error:
+            if error.code in {
+                Code.ACTION_REQUIRED,
+                Code.CAPABILITY_UNSUPPORTED,
+                Code.OFFLINE,
+                Code.RATE_LIMITED,
+            }:
+                raise RecognizerUnavailable(
+                    error.code,
+                    "Shared lecture recognizer is unavailable; cached evidence was preserved.",
+                ) from None
+            raise
     private_write(path, chunk.model_dump_json().encode())
     return chunk, cached
 
@@ -105,6 +122,8 @@ def prepare_audio(
                 detected.append(sample.language)
             if sample.issues:
                 issues.append("representative_sample_uncertain")
+        except RecognizerUnavailable as error:
+            return AudioResult(issues=(f"recognizer_{error.code.value.lower()}",))
         except CampusError as error:
             issues.append(f"preflight_{error.code.value.lower()}")
     expected = language or (max(set(detected), key=detected.count) if detected else "")
@@ -130,6 +149,9 @@ def prepare_audio(
             if chunk.issues:
                 uncertain.append(span)
                 issues.extend(chunk.issues)
+        except RecognizerUnavailable as error:
+            issues.append(f"recognizer_{error.code.value.lower()}")
+            break
         except CampusError as error:
             issues.append(f"chunk_{index}_{error.code.value.lower()}")
         if progress is not None:

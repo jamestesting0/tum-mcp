@@ -1,3 +1,4 @@
+import io
 import json
 import shutil
 import subprocess
@@ -7,6 +8,7 @@ from pathlib import Path
 import httpx2
 import pytest
 from filelock import FileLock
+from PIL import Image
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
@@ -101,6 +103,11 @@ def lecture_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, lecture_ext
                     b"\n00:05.000 --> 00:10.000\nThe amplitudes satisfy normalization.\n"
                 ),
             )
+        if request.url.path == "/api/v2/streams/11/files/15":
+            output = io.BytesIO()
+            with Image.new("RGB", (160, 90), "white") as image:
+                image.save(output, format="PNG")
+            return httpx2.Response(200, content=output.getvalue())
         raise AssertionError(request.url.path)
 
     credential = Credential(
@@ -428,4 +435,69 @@ def test_native_decode_cancel_resume_reuses_bytes_and_inference(
     assert final["chunks_reused"] == 2 and len(calls) == 3
     assert (
         final["bytes_downloaded"] < 1024 and final["source_revision"] == receipt["source_revision"]
+    )
+    compact = json.loads(invoke("transcript", str(root), "--recording", "live-2464-11").output)
+    detailed = json.loads(
+        invoke("transcript", str(root), "--recording", "live-2464-11", "--words").output
+    )
+    assert "words" not in compact["passages"][0] and detailed["passages"][0]["words"]
+    assert compact["passages"][0]["interval"] == detailed["passages"][0]["interval"]
+    invoke(
+        "prepare",
+        str(root),
+        "--recording",
+        "https://live.rbg.tum.de/w/950943622/11",
+        "--language",
+        "en",
+        "--frame-at",
+        "3.55",
+    )
+    with_frame = json.loads(evidence_bytes(root, "live-2464-11", "frames.json"))
+    invoke(
+        "prepare",
+        str(root),
+        "--recording",
+        "https://live.rbg.tum.de/w/950943622/11",
+        "--language",
+        "en",
+    )
+    assert (
+        json.loads(evidence_bytes(root, "live-2464-11", "frames.json"))["captured"]
+        == with_frame["captured"]
+    )
+    assert len(with_frame["captured"]) == 1 and len(calls) == 3
+
+
+@pytest.mark.parametrize("requested", [False, True])
+def test_seek_previews_are_fetched_only_when_explicitly_requested(
+    lecture_project, requested: bool
+) -> None:
+    root, watch, visited = lecture_project
+    watch["views"][0]["sprite"] = {"fileId": 15, "intervalSeconds": 10}
+    args = ["prepare", str(root), "--recording", "https://live.rbg.tum.de/w/950943622/11"]
+    if requested:
+        args.append("--previews")
+    invoke(*args)
+    frames = json.loads(evidence_bytes(root, "live-2464-11", "frames.json"))
+    assert len(frames["candidates"]) == (1 if requested else 0)
+    assert ("/api/v2/streams/11/files/15" in visited) is requested
+    assert frames["captured"] == []
+
+
+def test_explicit_visual_requests_cannot_bypass_whole_silence_gate(lecture_project) -> None:
+    root, watch, visited = lecture_project
+    watch["views"][0]["sprite"] = {"fileId": 15, "intervalSeconds": 10}
+    watch["silences"] = [{"start": 0, "end": 10}]
+    result = invoke(
+        "prepare",
+        str(root),
+        "--recording",
+        "https://live.rbg.tum.de/w/950943622/11",
+        "--previews",
+        "--frame-at",
+        "0",
+    )
+    assert json.loads(result.output)["status"] == "invalid"
+    assert not any(
+        "/files/" in path or "subtitles" in path or path.endswith(".ts") for path in visited
     )
