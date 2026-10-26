@@ -48,6 +48,7 @@ def template() -> None:
                 "files": list(TEMPLATE_FILES),
                 "author": "app/content.json",
                 "exercise_author": "app/exercises.json",
+                "lecture_author": "app/lectures.json (optional Lecture extension)",
                 "install": "tum-mcp study build PROJECT",
                 "synthetic_preview": "tum-mcp study demo PROJECT",
             },
@@ -114,6 +115,7 @@ def inspect(project: Path) -> None:
     """Show course identity, source coverage and units that need regeneration."""
     from tum_mcp.course_context import context_review
     from tum_mcp.exercise_data import read_exercises, stale_exercises
+    from tum_mcp.lecture_data import lecture_health, read_lectures, stale_lectures
     from tum_mcp.study_build import read_content, stale_units
     from tum_mcp.study_store import load_state, private_folder
 
@@ -125,6 +127,7 @@ def inspect(project: Path) -> None:
         else ()
     )
     exercises = read_exercises(root)
+    lectures = read_lectures(root)
     typer.echo(
         json.dumps(
             {
@@ -136,6 +139,10 @@ def inspect(project: Path) -> None:
                 "resources": len(state.resources),
                 "content_path": f"{app_folder(root)}/content.json",
                 "exercises_path": f"{app_folder(root)}/exercises.json",
+                "lectures_path": f"{app_folder(root)}/lectures.json",
+                "lectures": len(lectures.lectures) if lectures else 0,
+                "stale_lectures": stale_lectures(root, state, lectures) if lectures else (),
+                "lecture_evidence": lecture_health(root, lectures) if lectures else (),
                 "stale_units": stale,
                 "stale_exercises": stale_exercises(root, state, exercises) if exercises else (),
             },
@@ -165,7 +172,7 @@ def build(
 
 
 @app.command()
-def schema(kind: Literal["snapshot", "content", "exercises"]) -> None:
+def schema(kind: Literal["snapshot", "content", "exercises", "lectures"]) -> None:
     """Print the machine-readable input schema for the calling agent."""
     from tum_mcp.study_content import StudyContent
     from tum_mcp.study_models import Snapshot
@@ -179,6 +186,12 @@ def schema(kind: Literal["snapshot", "content", "exercises"]) -> None:
             from tum_mcp.exercise_content import ExerciseContent
 
             result = ExerciseContent.model_json_schema()
+        case "lectures":
+            from tum_mcp.extensions import require_lecture
+            from tum_mcp.lecture_content import LectureContent
+
+            require_lecture()
+            result = LectureContent.model_json_schema()
         case unreachable:
             assert_never(unreachable)
     typer.echo(json.dumps(result, indent=2))
@@ -193,21 +206,46 @@ def serve(project: Path, port: Annotated[int, typer.Option(min=0, max=65535)] = 
 
 
 @app.command()
-def demo(project: Path) -> None:
+def demo(
+    project: Path,
+    lectures: Annotated[
+        bool,
+        typer.Option("--lectures", help="Include the optional synthetic Lecture Notes preview."),
+    ] = False,
+) -> None:
     """Create a minimal component-template preview, not a teaching example."""
     from tum_mcp.study_build import build as build_site
     from tum_mcp.study_store import Write, apply, read_bytes
     from tum_mcp.study_sync import read_snapshot, sync
 
+    if lectures:
+        from tum_mcp.extensions import require_lecture
+
+        require_lecture()
     root = project.expanduser().resolve()
     example = Path(str(files("tum_mcp") / "bundled/course_app/example"))
     writes = []
-    for name in ("content.json", "exercises.json"):
+    for name in ("content.json", "exercises.json", *(("lectures.json",) if lectures else ())):
         desired = (example / name).read_bytes()
         before = read_bytes(app_path(root, name))
         if before is not None and before != desired:
             raise CampusError(Code.WORKSPACE_CONFLICT, "Existing edited content was preserved.")
         writes.append(Write(f"{app_folder(root)}/{name}", before, desired))
+    if lectures:
+        from tum_mcp.lecture_content import LectureContent
+        from tum_mcp.study_store import private_name, private_path
+
+        notes = LectureContent.model_validate_json((example / "lectures.json").read_bytes())
+        for lecture in notes.lectures:
+            for section in lecture.sections:
+                for figure in section.figures:
+                    desired = (example / figure.asset).read_bytes()
+                    before = read_bytes(private_path(root, figure.asset))
+                    if before is not None and before != desired:
+                        raise CampusError(
+                            Code.WORKSPACE_CONFLICT, "Edited demo figure was preserved."
+                        )
+                    writes.append(Write(private_name(root, figure.asset), before, desired))
     snapshot = example / "snapshot.json"
     sync(root, snapshot, course_input=read_snapshot(snapshot).course.title)
     apply(root, tuple(writes))

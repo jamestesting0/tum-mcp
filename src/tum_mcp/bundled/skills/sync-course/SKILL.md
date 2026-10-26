@@ -47,3 +47,9 @@ locators, gaps and changed IDs without repeating source checks. Review dependenc
 before building; report an untouched stale workspace instead of silently rebinding
 it. Never publish stale or conflicted content. Use publish-course
 only to resume pending deployment or handle publication failures.
+
+When the Lecture extension is installed and the user selects TUM-Live sources,
+retain the canonical course slug and numeric course ID as separate binding fields.
+Sync selected safe source receipts without copying signed media URLs or raw
+transcripts into the browser app. Source sync does not automatically author
+Lecture Notes; use prepare-lecture for that requested workspace.

@@ -8,7 +8,7 @@ from typing import Annotated, Final, Literal
 from urllib.parse import urlsplit
 
 from filelock import FileLock
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
@@ -16,12 +16,14 @@ from tum_mcp.moodle.platforms import app_root
 
 ARTEMIS: Final = "https://artemis.tum.de"
 ZULIP: Final = "https://zulip.cit.tum.de"
+TUM_LIVE: Final = "https://live.rbg.tum.de"
 PositiveId = Annotated[int, Field(gt=0)]
 
 
 class Provider(StrEnum):
     ARTEMIS = "artemis"
     ZULIP = "zulip"
+    TUM_LIVE = "tum_live"
 
 
 class Frozen(BaseModel):
@@ -65,6 +67,12 @@ class Account(Frozen):
         value = f"{self.provider}\0{self.origin}\0{self.principal}"
         return hashlib.sha256(value.encode()).hexdigest()
 
+    @model_validator(mode="after")
+    def live_origin(self) -> "Account":
+        if self.provider == Provider.TUM_LIVE and self.origin != TUM_LIVE:
+            raise ValueError("TUM-Live accounts use the canonical service origin.")
+        return self
+
 
 class CourseMapping(Frozen):
     name: str
@@ -73,6 +81,11 @@ class CourseMapping(Frozen):
     artemis_id: PositiveId | None = None
     zulip_account: str | None = None
     channel_ids: tuple[PositiveId, ...] = ()
+    tum_live_account: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    tum_live_id: PositiveId | None = Field(default=None, exclude_if=lambda value: value is None)
+    tum_live_slug: str | None = Field(
+        default=None, pattern=r"^[A-Za-z0-9_-]{1,100}$", exclude_if=lambda value: value is None
+    )
 
 
 class TestRecipe(Frozen):
@@ -86,7 +99,7 @@ class TestRecipe(Frozen):
 
 
 class Preferences(Frozen):
-    schema_version: int = Field(default=1, ge=1, le=1)
+    schema_version: Literal[1, 2] = 1
     accounts: tuple[Account, ...] = ()
     mappings: tuple[CourseMapping, ...] = ()
     workspace_root: Path = Field(default_factory=lambda: Path.home() / "University")
@@ -96,6 +109,17 @@ class Preferences(Frozen):
     assistance_mode: str = Field(default="debug", pattern="^(explain|hints|debug|implement)$")
     max_local_iterations: int = Field(default=3, ge=1, le=20)
     test_recipes: tuple[TestRecipe, ...] = ()
+
+    @model_validator(mode="after")
+    def provider_version(self) -> "Preferences":
+        live = any(account.provider == Provider.TUM_LIVE for account in self.accounts)
+        live = live or any(
+            item.tum_live_account or item.tum_live_id or item.tum_live_slug
+            for item in self.mappings
+        )
+        if live and self.schema_version < 2:
+            raise ValueError("TUM-Live settings require schema version 2; do not downgrade them.")
+        return self
 
 
 def data_path() -> Path:
@@ -148,7 +172,16 @@ def save_account(account: Account, *, preserve_settings: bool = False) -> None:
         accounts = tuple(item for item in current.accounts if item.id != account.id) + (updated,)
         private_write(
             config_dir() / "preferences.json",
-            current.model_copy(update={"accounts": accounts}).model_dump_json(indent=2).encode(),
+            current.model_copy(
+                update={
+                    "accounts": accounts,
+                    "schema_version": max(
+                        current.schema_version, 2 if account.provider == Provider.TUM_LIVE else 1
+                    ),
+                }
+            )
+            .model_dump_json(indent=2)
+            .encode(),
         )
 
 

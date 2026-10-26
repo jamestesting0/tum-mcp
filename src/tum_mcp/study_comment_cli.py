@@ -18,9 +18,10 @@ def list_comments(
     status: Annotated[Literal["open", "resolved", "all"], typer.Option()] = "open",
     unit: Annotated[str | None, typer.Option()] = None,
     view: Annotated[
-        Literal["content", "flashcards", "practice", "exercises"] | None, typer.Option()
+        Literal["content", "flashcards", "practice", "exercises", "lectures"] | None, typer.Option()
     ] = None,
     exercise: Annotated[str | None, typer.Option()] = None,
+    lecture: Annotated[str | None, typer.Option()] = None,
     limit: Annotated[int, typer.Option(min=1, max=100)] = 20,
     offset: Annotated[int, typer.Option(min=0)] = 0,
 ) -> None:
@@ -28,6 +29,7 @@ def list_comments(
     from tum_mcp.course_app_paths import app_path
     from tum_mcp.exercise_content import exercise_revision
     from tum_mcp.exercise_data import read_exercises
+    from tum_mcp.lecture_data import read_lectures
     from tum_mcp.study_build import read_content, unit_revision
     from tum_mcp.study_comments import read_comments
 
@@ -42,6 +44,8 @@ def list_comments(
     exercises = (
         {item.key: item for group in content.sets for item in group.exercises} if content else {}
     )
+    notes = read_lectures(root)
+    lectures = {item.key: item for item in notes.lectures} if notes else {}
     chosen = []
     for item in result["comments"]:
         if status != "all" and item["status"] != status:
@@ -51,21 +55,31 @@ def list_comments(
             continue
         if exercise is not None and anchor.get("exercise_key") != exercise:
             continue
+        if lecture is not None and anchor.get("lecture_key") != lecture:
+            continue
         if view is not None and anchor["view"] != view:
             continue
-        is_exercise = anchor["view"] == "exercises"
-        current = (
-            exercises.get(anchor["exercise_key"]) if is_exercise else units.get(anchor["unit_key"])
-        )
+        if anchor["view"] == "lectures":
+            current = lectures.get(anchor["lecture_key"])
+            revision = current.semantic_revision if current else None
+            previous = anchor["semantic_revision"]
+            exists = current and any(s.key == anchor["section_key"] for s in current.sections)
+        elif anchor["view"] == "exercises":
+            current = exercises.get(anchor["exercise_key"])
+            revision = exercise_revision(current) if current else None
+            previous = anchor["exercise_revision"]
+            exists = current is not None
+        else:
+            current = units.get(anchor["unit_key"])
+            revision = unit_revision(current) if current else None
+            previous = anchor["unit_revision"]
+            exists = current is not None
         context = (
             "missing_unit"
-            if current is None
-            else (
-                "current"
-                if (exercise_revision(current) if is_exercise else unit_revision(current))
-                == anchor.get("exercise_revision", anchor.get("unit_revision"))
-                else "content_changed"
-            )
+            if not exists
+            else "current"
+            if revision == previous
+            else "content_changed"
         )
         chosen.append(item | {"content_state": context})
     result["comments"] = chosen[offset : offset + limit]

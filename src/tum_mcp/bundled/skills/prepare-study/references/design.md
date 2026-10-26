@@ -142,3 +142,15 @@ with validated data, safe rendering and accessible fallback. No CDN fonts, scrip
 analytics or campus credentials. Keep local module preloads and preview compression so
 the first reading view is not delayed. Keep previews local unless publication is
 requested. Use [verification](verification.md), not screenshot count, as the gate.
+
+### Optional Lecture Notes
+
+The optional Lecture extension adds a third workspace in the existing sidebar
+selector. Lecture Notes uses recent-first dated lecture rows, overview/takeaways
+and coherent topic sections in the same reading column. Reuse safe block bodies
+for formulas and explanatory diagrams. No activity tabs, ratings or reset control.
+Keep timestamp/range links quiet beside sections and measured capture-time links
+beside figures. Captures retain dimensions, alt/caption, lazy loading and a
+keyboard-accessible original-size link. Put attribution/additional-explanation
+review in private metadata; no visible AI-added labels. Partial coverage/as-of
+information stays secondary, with detail available on demand.

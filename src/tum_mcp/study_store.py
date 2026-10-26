@@ -96,7 +96,7 @@ def load_state(root: Path) -> StudyState:
 class Write:
     relative: str
     before: bytes | None
-    after: bytes
+    after: bytes | None
 
 
 def apply(root: Path, writes: tuple[Write, ...]) -> None:
@@ -110,7 +110,10 @@ def apply(root: Path, writes: tuple[Write, ...]) -> None:
             if item.before == item.after:
                 continue
             path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            private_write(path, item.after)
+            if item.after is None:
+                path.unlink(missing_ok=True)
+            else:
+                private_write(path, item.after)
             applied.append((item, path))
     except OSError:
         restored = True

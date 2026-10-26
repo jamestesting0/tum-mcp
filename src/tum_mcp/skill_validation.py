@@ -8,7 +8,7 @@ import anyio
 from pydantic import Field
 
 from tum_mcp.settings import Frozen
-from tum_mcp.skill_catalog import CURRENT_SKILLS
+from tum_mcp.skill_catalog import BUNDLED_SKILLS, active_skills
 from tum_mcp.skills import bundled, legacy_overrides, metadata, selected
 
 
@@ -22,16 +22,19 @@ class ValidationReport(Frozen):
     recall: float | None = None
 
 
-def validate_skills() -> ValidationReport:
-    from tum_mcp.server import server
+def validate_skills(*, include_optional: bool = False) -> ValidationReport:
+    from tum_mcp.server import LECTURE_TOOLS, server
 
     registered = {tool.name for tool in anyio.run(server.list_tools)}
+    names = BUNDLED_SKILLS if include_optional else active_skills()
+    # Optional declarations are real packaged callables; listing them is not activation proof.
+    registered.update(tool.__name__ for tool in LECTURE_TOOLS)
     checked: list[str] = []
     errors: list[str] = []
     characters = 0
     reference_characters = 0
     for source in sorted(bundled().iterdir()):
-        if not source.is_dir():
+        if not source.is_dir() or source.name not in names:
             continue
         chosen = selected(source.name)
         info = metadata(chosen)
@@ -58,7 +61,7 @@ def validate_skills() -> ValidationReport:
                         )
                     )
                 )
-                if not virtual.parts or virtual.parts[0] not in CURRENT_SKILLS:
+                if not virtual.parts or virtual.parts[0] not in BUNDLED_SKILLS:
                     errors.append(f"{info.name}: missing or invalid reference {reference}")
                     continue
                 root = selected(virtual.parts[0]).resolve()
@@ -69,7 +72,7 @@ def validate_skills() -> ValidationReport:
         errors.append(
             "Legacy skill customizations need review before exporting the consolidated pack."
         )
-    if set(checked) != set(CURRENT_SKILLS):
+    if set(checked) != set(names):
         errors.append("Expected the registered content and study workflows.")
     if {
         "artemis_submit",

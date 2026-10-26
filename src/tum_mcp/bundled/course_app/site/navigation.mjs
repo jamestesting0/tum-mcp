@@ -3,6 +3,7 @@ import { node, studyText, button } from './dom.mjs';
 
 const paths = {
   book: 'M12 5C8 3 5 3 3 4v15c3-1 6-1 9 1m0-15c4-2 7-2 9-1v15c-3-1-6-1-9 1V5',
+  lecture: 'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',
   pencil: 'm5 15 10-10 4 4L9 19H5v-4m8-8 4 4',
   chevron: 'm8 10 4 4 4-4',
   left: 'm15 18-6-6 6-6', right: 'm9 6 6 6-6 6',
@@ -41,9 +42,9 @@ document.addEventListener('pointerdown', event => {
 });
 function workspacePicker(context) {
   closePicker();
-  const name = value => value === 'exercises' ? 'Exercises' : 'Study';
+  const name = value => ({ study: 'Study', exercises: 'Exercises', lectures: 'Lecture Notes' })[value];
   const label = node('span', 'workspace-name', name(context.workspace));
-  const badge = node('span', 'workspace-badge'); badge.append(iconGlyph(context.workspace === 'exercises' ? 'pencil' : 'book'));
+  const badge = node('span', 'workspace-badge'); badge.append(iconGlyph(({ study: 'book', exercises: 'pencil', lectures: 'lecture' })[context.workspace]));
   if ((context.workspaces || ['study']).length < 2) {
     const passive = node('div', 'workspace-current'); passive.append(badge, label); return passive;
   }
@@ -56,7 +57,7 @@ function workspacePicker(context) {
   const links = context.workspaces.map(value => {
     const link = node('a', 'workspace-item'); link.href = context.workspaceHref(value);
     link.setAttribute('role', 'menuitemradio'); link.setAttribute('aria-label', name(value)); link.setAttribute('aria-checked', String(value === context.workspace)); link.tabIndex = -1;
-    link.append(iconGlyph(value === 'study' ? 'book' : 'pencil'), node('span', '', name(value)));
+    link.append(iconGlyph(({ study: 'book', exercises: 'pencil', lectures: 'lecture' })[value]), node('span', '', name(value)));
     if (value === context.workspace) link.append(iconGlyph('check'));
     link.addEventListener('click', event => { if (value === context.workspace) event.preventDefault(); closePicker(true); });
     menu.append(link); return link;

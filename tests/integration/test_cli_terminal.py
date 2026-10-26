@@ -112,6 +112,22 @@ def test_dumb_terminal_uses_a_numbered_prompt(tmp_path: Path) -> None:
     assert "\x1b[" not in output
 
 
+def test_dumb_terminal_selects_both_campus_services_when_lecture_enabled(
+    tmp_path: Path, lecture_extension: Path
+) -> None:
+    code, output = run_selector(tmp_path, b"4,5\n", terminal="dumb")
+    assert code == 0, output
+    assert "SELECTED=tumonline,tum_live" in output
+
+
+def test_narrow_terminal_selects_tumonline_when_lecture_enabled(
+    tmp_path: Path, lecture_extension: Path
+) -> None:
+    code, output = run_selector(tmp_path, b"\x1b[B\x1b[B\x1b[B \r", columns=40)
+    assert code == 0, output
+    assert "SELECTED=tumonline" in output
+
+
 def test_empty_no_color_variable_disables_selector_color(tmp_path: Path) -> None:
     code, output = run_selector(tmp_path, b" \r", no_color=True)
     assert code == 0, output

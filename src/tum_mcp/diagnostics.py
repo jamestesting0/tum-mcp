@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from tum_mcp import __version__
 from tum_mcp.client_hosts import ClientHost, client_home
 from tum_mcp.clients import CLIENTS, client_config_path, read_client_config
+from tum_mcp.connect import ServiceChoice
 from tum_mcp.errors import CampusError
 from tum_mcp.moodle.browsers import BrowserSetupError, discover_browsers, is_wsl
 from tum_mcp.moodle.platforms import data_root
@@ -130,18 +131,24 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
     services.append(check)
     needs_connection = check.state == State.ACTION
     for provider in Provider:
+        from tum_mcp.extensions import lecture_enabled
+
+        if provider == Provider.TUM_LIVE and not lecture_enabled():
+            continue
         accounts = [a for a in prefs.accounts if a.provider == provider]
         if not accounts:
             needs_connection = True
             services.append(
                 Check(
-                    label=provider.value.title(),
+                    label=ServiceChoice(provider.value).label,
                     state=State.ACTION,
                     detail="No account configured. Run tum-mcp connect.",
                 )
             )
         for index, account in enumerate(accounts):
-            label = provider.value.title() + (f" {index + 1}" if len(accounts) > 1 else "")
+            label = ServiceChoice(provider.value).label + (
+                f" {index + 1}" if len(accounts) > 1 else ""
+            )
             path = data / "credentials/local" / f"{account.id}.enc"
             key = data / "credentials/local/session.key"
             saved = path.is_file() and key.is_file()
@@ -156,14 +163,18 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             if live and saved:
                 from tum_mcp.artemis import Artemis
                 from tum_mcp.transport import API
+                from tum_mcp.tum_live import TumLive
                 from tum_mcp.zulip import Zulip
 
                 try:
                     api = API(account)
-                    if provider == Provider.ARTEMIS:
-                        Artemis(api).identity()
-                    else:
-                        Zulip(api).identity()
+                    match provider:
+                        case Provider.ARTEMIS:
+                            Artemis(api).identity()
+                        case Provider.ZULIP:
+                            Zulip(api).identity()
+                        case Provider.TUM_LIVE:
+                            TumLive(api).identity()
                     state = State.READY
                     detail = "Live identity verified; read access follows your campus account."
                 except CampusError as error:

@@ -184,6 +184,7 @@ def _reconcile(
         ).encode()
     )
     state = StudyState(
+        schema_version=max(snapshot.schema_version, previous.schema_version if previous else 1),
         course=snapshot.course,
         coverage=snapshot.coverage,
         resources=ordered,

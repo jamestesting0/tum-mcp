@@ -449,3 +449,14 @@ button[aria-pressed="true"] { color: var(--accent); background: var(--wash); bor
 .plot-legend svg { width: 32px; height: 12px; }
 
 @media (max-width: 799px) { .step-navigation { top: calc(var(--target) + 2 * var(--s1) + 1px); } }
+
+.lecture-meta { margin-top: var(--s3); }
+.lecture-takeaways { margin-bottom: var(--s12); }
+.lecture-times { margin-block: var(--s2) var(--s4); }
+.lecture-time { display: inline-flex; align-items: center; min-height: var(--target); }
+.lecture-material + .lecture-material { margin-top: var(--s6); }
+.lecture-material .section-heading { margin-bottom: var(--s3); }
+.lecture-figure { margin: var(--s6) 0; }
+.lecture-image { display: block; border-radius: var(--r1); overflow: hidden; }
+.lecture-image img { display: block; width: 100%; height: auto; }
+.lecture-figure figcaption { margin-top: var(--s2); }

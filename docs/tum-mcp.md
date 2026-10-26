@@ -145,7 +145,10 @@ account, other IT and miscellaneous readers are also unavailable. No campus writ
 operations are provided.
 
 Run `tum-mcp manage tumonline --show` to inspect the policy and
-`tum-mcp manage tumonline` in a terminal to allow or revoke studies and courses.
+`tum-mcp manage tumonline` in a terminal to select permissions with Space and
+save with Enter. Studies and courses can be allowed or revoked; the remaining
+categories are shown as unavailable and cannot be selected. On basic terminals,
+the command offers a numbered text prompt instead.
 When multiple accounts exist, add `--account ACCOUNT_ID`. Reconnecting preserves
 the policy. `tum-mcp manage tumonline --disconnect` removes the local TUMonline
 credential and retains the policy; it does not revoke remote sessions. An expired

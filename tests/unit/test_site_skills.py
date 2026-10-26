@@ -76,14 +76,14 @@ def test_activation_cases_have_unique_ids_and_current_workflow_labels() -> None:
     from importlib.resources import files
 
     from tum_mcp.evaluations import Corpus
-    from tum_mcp.skill_catalog import CURRENT_SKILLS
+    from tum_mcp.skill_catalog import BUNDLED_SKILLS
 
     cases = Corpus.model_validate_json(
         (files("tum_mcp") / "bundled/activation-cases.json").read_bytes()
     ).root
     assert len({case.id for case in cases}) == len(cases)
-    assert {case.target_skill for case in cases} <= set(CURRENT_SKILLS)
-    assert {case.expected_skill for case in cases} <= {*CURRENT_SKILLS, None}
+    assert {case.target_skill for case in cases} <= set(BUNDLED_SKILLS)
+    assert {case.expected_skill for case in cases} <= {*BUNDLED_SKILLS, None}
     assert {case.partition for case in cases} == {"development", "held_out"}
 
 

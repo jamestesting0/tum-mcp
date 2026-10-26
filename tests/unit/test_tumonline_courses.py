@@ -3,6 +3,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
+from tum_mcp.errors import CampusError, Code
 from tum_mcp.tumonline.courses import CoursePage
 
 
@@ -42,9 +43,16 @@ def test_projection_drops_unrequested_fields_and_builds_fixed_origin_links() -> 
     assert "example.invalid" not in encoded
 
 
-def test_empty_incomplete_page_is_never_reported_as_complete() -> None:
-    page = CoursePage.from_wire(b'{"totalCount":25,"courses":[]}', offset=0, limit=20)
-    assert page.coverage_status == "partial"
+@pytest.mark.parametrize("offset", [0, 10])
+def test_empty_incomplete_page_is_retryable_failure(offset: int) -> None:
+    with pytest.raises(CampusError) as raised:
+        CoursePage.from_wire(b'{"totalCount":25,"courses":[]}', offset=offset, limit=20)
+    assert raised.value.code == Code.OFFLINE
+
+
+def test_empty_completed_page_is_valid() -> None:
+    page = CoursePage.from_wire(b'{"totalCount":25,"courses":[]}', offset=25, limit=20)
+    assert page.coverage_status == "complete"
     assert page.next_offset is None
 
 

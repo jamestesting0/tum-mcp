@@ -47,3 +47,8 @@ records. For missing tools, check runtime/skill installation; for an expired ses
 use `tum-mcp connect`; for server-denied access, report that restriction. Use
 `tum-mcp --help` or a command's `--help` for CLI discovery. Do not retry unchanged
 failures. Continue independent work and report the gap.
+
+With the optional Lecture extension installed, bounded `tum_live_*` metadata tools
+can inspect selected TUM-Live recordings. Prefer cached/supplied timed transcripts
+for source questions. Creating or updating the Lecture Notes workspace belongs to
+prepare-lecture; do not start long media processing for a simple source lookup.

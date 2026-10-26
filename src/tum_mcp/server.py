@@ -11,6 +11,7 @@ from tum_mcp.artemis.lecture_models import AttachmentView, LectureDirectory, Lec
 from tum_mcp.artemis.models import CourseDirectory, ExerciseView, FeedbackView, Overview
 from tum_mcp.checkpoints import Checkpoint
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.extensions import lecture_enabled, require_lecture
 from tum_mcp.moodle.server import server
 from tum_mcp.settings import (
     Account,
@@ -22,6 +23,13 @@ from tum_mcp.settings import (
     preferences,
 )
 from tum_mcp.transport import API
+from tum_mcp.tum_live import TumLive
+from tum_mcp.tum_live.models import (
+    CoursePage,
+    InvalidRecordingMetadata,
+    RecordingMetadata,
+    RecordingPage,
+)
 from tum_mcp.zulip import Zulip
 from tum_mcp.zulip.models import Channels, MessagePage, Query, Topics
 
@@ -78,6 +86,8 @@ def tum_connect() -> str:
 @server.tool(annotations=READ)
 def tum_capabilities(account_id: str, provider: Provider) -> CapabilityStatus:
     """Verify provider identity and report independent, enabled read capabilities."""
+    if provider == Provider.TUM_LIVE:
+        require_lecture()
     api = API(find_account(account_id, provider))
     match provider:
         case Provider.ZULIP:
@@ -100,8 +110,53 @@ def tum_capabilities(account_id: str, provider: Provider) -> CapabilityStatus:
                 provider=provider,
                 identity_verified=True,
             )
+        case Provider.TUM_LIVE:
+            TumLive(api).identity()
+            return CapabilityStatus(
+                account_id=account_id,
+                instance_id=api.account.origin,
+                provider=provider,
+                identity_verified=True,
+            )
         case unreachable:
             assert_never(unreachable)
+
+
+def tum_live_courses(
+    account_id: str, cursor: str | None = None, limit: Annotated[int, Field(ge=1, le=100)] = 20
+) -> CoursePage:
+    """List enrolled TUM-Live courses; use an explicit known slug for other accessible courses."""
+    require_lecture()
+    return TumLive(API(find_account(account_id, Provider.TUM_LIVE))).courses(cursor, limit)
+
+
+def tum_live_recordings(
+    account_id: str,
+    course_slug: str,
+    cursor: str | None = None,
+    limit: Annotated[int, Field(ge=1, le=100)] = 20,
+) -> RecordingPage:
+    """List safe recording metadata in one server-accessible TUM-Live course."""
+    require_lecture()
+    return TumLive(API(find_account(account_id, Provider.TUM_LIVE))).recordings(
+        course_slug, cursor, limit
+    )
+
+
+def tum_live_recording(
+    account_id: str, course_slug: str, recording_id: Id
+) -> RecordingMetadata | InvalidRecordingMetadata:
+    """Inspect one verified recording without retrieving captions, images, media or ASR."""
+    require_lecture()
+    return TumLive(API(find_account(account_id, Provider.TUM_LIVE))).recording(
+        course_slug, recording_id
+    )
+
+
+LECTURE_TOOLS = (tum_live_courses, tum_live_recordings, tum_live_recording)
+if lecture_enabled():
+    for lecture_tool in LECTURE_TOOLS:
+        server.add_tool(lecture_tool, annotations=READ)
 
 
 @server.tool(annotations=READ)

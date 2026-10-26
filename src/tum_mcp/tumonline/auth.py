@@ -100,7 +100,10 @@ def resume_session(
         limits=httpx2.Limits(max_connections=2, max_keepalive_connections=1),
         socket_options=[(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)],
     )
-    logging.getLogger("httpx2").setLevel(logging.WARNING)
+    # HTTP transport and HTTP/2 compression debug logs include raw headers.
+    for name in ("httpx2", "httpcore2.http11", "httpcore2.http2", "hpack.hpack", "hpack.table"):
+        logger = logging.getLogger(name)
+        logger.setLevel(max(logger.getEffectiveLevel(), logging.WARNING))
     try:
         with httpx2.Client(
             transport=backend,

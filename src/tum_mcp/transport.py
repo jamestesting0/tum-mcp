@@ -15,6 +15,12 @@ from tum_mcp.moodle.http_client import cookie_jar
 from tum_mcp.settings import Account, Provider
 
 READ_PATHS: Final = {
+    Provider.TUM_LIVE: re.compile(
+        r"/api/v2/users/me|/api/v2/courses/enrolled|/api/v2/courses/[A-Za-z0-9_-]{1,100}|"
+        r"/api/v2/streams/[A-Za-z0-9_-]{1,100}/\d+/watch|"
+        r"/api/v2/streams/[A-Za-z0-9_-]{1,100}/\d+/subtitles/[A-Za-z0-9_-]{1,30}|"
+        r"/api/v2/streams/\d+/files/\d+"
+    ),
     Provider.ZULIP: re.compile(
         r"/api/v1/(server_settings|users/me|streams|users/me/subscriptions|"
         r"users/me/\d+/topics|messages(?:/\d+)?)"
@@ -59,6 +65,19 @@ class API:
             raise CampusError(Code.SCOPE_DENIED, "Only student lecture files can be retrieved.")
         return self._request("GET", path, None, response_limit=50 * 1024 * 1024)
 
+    def get_tum_live_file(self, stream_id: int, file_id: int) -> bytes:
+        """Keep the binary budget separate from the metadata-response limit."""
+        if self.account.provider != Provider.TUM_LIVE or min(stream_id, file_id) <= 0:
+            raise CampusError(
+                Code.SCOPE_DENIED, "Only a discovered TUM-Live file can be retrieved."
+            )
+        return self._request(
+            "GET",
+            f"/api/v2/streams/{stream_id}/files/{file_id}",
+            None,
+            response_limit=64 * 1024 * 1024,
+        )
+
     def _start_once(self, exercise_id: int, *, practice: bool) -> bytes:
         """Retired compatibility entry point; campus access is permanently read-only."""
         raise CampusError(
@@ -101,7 +120,7 @@ class API:
                             credential.username.get_secret_value(),
                             credential.api_key.get_secret_value(),
                         )
-                case Provider.ARTEMIS:
+                case Provider.ARTEMIS | Provider.TUM_LIVE:
                     cookies = cookie_jar(
                         Session(generation="", cookies=list(credential.cookies), verified_at=0)
                     )
@@ -114,6 +133,7 @@ class API:
             socket_options=[(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)],
         )
         logging.getLogger("httpx2").setLevel(logging.WARNING)
+        logging.getLogger("httpcore2").setLevel(logging.WARNING)
         try:
             with (
                 httpx2.Client(

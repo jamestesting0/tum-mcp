@@ -143,14 +143,15 @@ class GitHubFixture:
             return 201, {"sha": sha}
         if action == "git/trees" and method == "POST":
             files = dict(self.trees[body["base_tree"]])
-            files.update(
-                {
-                    entry["path"]: entry["content"].encode()
-                    if "content" in entry
-                    else self.blobs[entry["sha"]]
-                    for entry in body["tree"]
-                }
-            )
+            for entry in body["tree"]:
+                if "sha" in entry and entry["sha"] is None:
+                    files.pop(entry["path"], None)
+                else:
+                    files[entry["path"]] = (
+                        entry["content"].encode()
+                        if "content" in entry
+                        else self.blobs[entry["sha"]]
+                    )
             return 201, {"sha": self.tree(files)}
         if action == "git/commits" and method == "POST":
             return 201, {"sha": self.commit(body["tree"], body["parents"])}

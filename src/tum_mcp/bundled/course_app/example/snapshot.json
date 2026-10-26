@@ -31,6 +31,16 @@
       "locator": "Component fixture",
       "revision": "1",
       "text": "Synthetic component fixture: a path connects A and B; 2 + 2 = 4. The examples demonstrate rendering and controls, not a course syllabus."
+    },
+    {
+      "key": "lecture-demo",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Synthetic lecture transcript and board",
+      "url": "https://example.invalid/lectures/synthetic",
+      "locator": "Synthetic0:00\u20131:00 transcript; board0:37.5",
+      "revision": "1",
+      "text": "Synthetic recording transcript. 0:00\u20130:20: BFS explores an unweighted graph with a queue. 0:20\u20131:00: When a vertex at distance d is removed, undiscovered neighbors get distance d+1. FIFO preserves the layer order, so first discovery gives minimum edge count. Mark at enqueue time. A\u2013B\u2013C has distances0,1,2. Equal edge costs are essential; this is not a guarantee of minimum arbitrary weighted cost. Synthetic source board at0:37.5 shows the path. End at1:00."
     }
   ]
 }

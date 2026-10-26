@@ -13,7 +13,7 @@ from rich.text import Text
 from rich.theme import Theme
 
 from tum_mcp import __version__
-from tum_mcp.connect import ServiceChoice
+from tum_mcp.connect import ServiceChoice, available_services
 from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError
 
 STYLES = {
@@ -92,27 +92,39 @@ def status_rows(console: Console, rows: list[tuple[str, State, str]]) -> None:
 
 def select_services() -> tuple[ServiceChoice, ...] | None:
     console = terminal_console()
+    choices = available_services()
     if os.environ.get("TERM") == "dumb":
-        console.print("Connect services\n1. Moodle\n2. Artemis\n3. Zulip\n4. TUMonline")
+        console.print(
+            "Connect services\n"
+            + "\n".join(f"{index}. {service.label}" for index, service in enumerate(choices, 1))
+        )
         console.print("Enter numbers separated by commas. Ctrl+C cancels.")
-        choices = tuple(ServiceChoice)
         while True:
             answer = console.input("Services: ").strip()
             numbers = [value.strip() for value in answer.split(",")]
-            if numbers and all(value in {"1", "2", "3", "4"} for value in numbers):
+            if numbers and all(
+                value in {str(index) for index in range(1, len(choices) + 1)} for value in numbers
+            ):
                 return tuple(dict.fromkeys(choices[int(value) - 1] for value in numbers))
-            console.print("Choose at least one of 1, 2, 3 or 4.")
+            console.print(f"Choose at least one service from 1 to {len(choices)}.")
     console.print("Up/down: move · Space: select")
     console.print("Enter: continue · Ctrl+C: cancel")
     console.print()
     labels = (
-        ("Moodle · Materials", "Artemis · Exercises", "Zulip · Discussions", "TUMonline · Studies")
+        (
+            "Moodle · Materials",
+            "Artemis · Exercises",
+            "Zulip · Discussions",
+            "TUMonline · Studies",
+            "TUM-Live · Recordings",
+        )
         if console.width < 70
         else (
             "Moodle    Materials, forums and downloads",
             "Artemis   Programming exercises and feedback",
             "Zulip     Selected course discussions",
             "TUMonline  Studies and courses",
+            "TUM-Live  Lecture recordings",
         )
     )
     colors = (
@@ -125,11 +137,14 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
             ("instruction", ""),
         ]
     )
+    labels = tuple(
+        label for label, service in zip(labels, ServiceChoice, strict=True) if service in choices
+    )
     result = questionary.checkbox(
         "Connect services",
         choices=[
             questionary.Choice(label, value=service.value)
-            for label, service in zip(labels, ServiceChoice, strict=True)
+            for label, service in zip(labels, choices, strict=True)
         ],
         qmark="",
         pointer=">",

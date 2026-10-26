@@ -36,6 +36,7 @@ class PublicationSetup(Frozen):
     repository: RepositoryName
     public_site: Literal[True]
     include_exercises: bool = Field(default=False, strict=True)
+    include_lectures: bool = Field(default=False, strict=True)
 
 
 class Publication(PublicationSetup):

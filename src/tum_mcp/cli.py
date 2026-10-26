@@ -13,6 +13,7 @@ import typer
 from tum_mcp import __version__
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.extensions import lecture_enabled, require_lecture
 from tum_mcp.moodle.browsers import BrowserSetupError
 from tum_mcp.moodle.errors import MoodleError
 from tum_mcp.settings import (
@@ -30,6 +31,9 @@ app.add_typer(manage_app, name="manage")
 from tum_mcp.study_cli import app as study_app  # noqa: E402
 
 app.add_typer(study_app, name="study")
+from tum_mcp.lecture_cli import app as lecture_app  # noqa: E402
+
+app.add_typer(lecture_app, name="lecture", hidden=not lecture_enabled())
 
 
 @app.command()
@@ -65,6 +69,7 @@ def status() -> None:
                     for account in preferences().accounts
                 ],
                 "remote_actions": "disabled",
+                "extensions": {"lecture": lecture_enabled()},
                 "registry": "not_checked",
             },
             indent=2,
@@ -104,7 +109,7 @@ def connect() -> None:
         console.print("Cancelled. No browser was opened.")
         raise typer.Exit(130) from None
     console.print(Text(f"Browser: {browser.label}"))
-    console.print(Text("Opening " + ", ".join(value.value.title() for value in selected) + "."))
+    console.print(Text("Opening " + ", ".join(value.label for value in selected) + "."))
     console.print("Complete TUM sign-in/MFA in the browser window.")
     if browser.windows_host:
         console.print("Preparing the private Windows browser driver on first use.")
@@ -117,7 +122,7 @@ def connect() -> None:
 
     def connected(result: ConnectionResult) -> None:
         console.print(
-            Text.assemble(("· ", "ready"), (f"Connected  {result.service.value.title()}", "bold"))
+            Text.assemble(("· ", "ready"), (f"Connected  {result.service.label}", "bold"))
         )
         if result.account is not None:
             console.print(Text(f"Account ID: {result.account.id}"))
@@ -141,12 +146,18 @@ def discover(provider: Provider, account_id: str) -> None:
     from tum_mcp.transport import API
     from tum_mcp.zulip import Zulip
 
+    if provider == Provider.TUM_LIVE:
+        require_lecture()
     api = API(find_account(account_id, provider))
     match provider:
         case Provider.ZULIP:
             typer.echo(Zulip(api).channels().model_dump_json(indent=2))
         case Provider.ARTEMIS:
             typer.echo(Artemis(api).courses().model_dump_json(indent=2))
+        case Provider.TUM_LIVE:
+            from tum_mcp.tum_live import TumLive
+
+            typer.echo(TumLive(api).courses().model_dump_json(indent=2))
         case unreachable:
             assert_never(unreachable)
 
@@ -207,9 +218,10 @@ def doctor(
     )
 
 
-from tum_mcp.lifecycle_cli import setup, uninstall, update  # noqa: E402
+from tum_mcp.lifecycle_cli import install, setup, uninstall, update  # noqa: E402
 
 app.command()(setup)
+app.command()(install)
 app.command()(update)
 app.command()(uninstall)
 
@@ -240,11 +252,16 @@ def export_skills(destination: Path) -> None:
 
 
 @skills_app.command("validate")
-def validate_skill_pack() -> None:
+def validate_skill_pack(
+    all_skills: Annotated[
+        bool,
+        typer.Option("--all", help="Include packaged optional workflows without installing them."),
+    ] = False,
+) -> None:
     """Check metadata and real tool references; does not claim routing accuracy."""
     from tum_mcp.skill_validation import validate_skills
 
-    report = validate_skills()
+    report = validate_skills(include_optional=all_skills)
     typer.echo(report.model_dump_json(indent=2))
     if report.errors:
         raise typer.Exit(1)

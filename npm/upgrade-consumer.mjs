@@ -1,3 +1,4 @@
+import { lectureLifecycle } from './lecture-consumer.mjs';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -60,6 +61,8 @@ for (const previousVersion of ['0.8.0']) {
     const first = readFileSync(join(root, 'data/runtime.json'), 'utf8');
     call(currentPrefix, ['update', '--local']);
     assert.equal(readFileSync(join(root, 'data/runtime.json'), 'utf8'), first, 'Update must be idempotent.');
+    const lectureEvidence = lectureLifecycle(root, args => call(currentPrefix, args));
+    assert.equal(lectureEvidence.installed_skills, 7);
     // An invalid prepared package must not replace the existing selected runtime.
     const backend = join(currentPrefix, 'node_modules/@jamestesting888/tum-mcp/npm/backend');
     const manifestPath = join(backend, 'manifest.json'); const manifestBytes = readFileSync(manifestPath);

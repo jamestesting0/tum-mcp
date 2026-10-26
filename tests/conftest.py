@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from keyring.backend import KeyringBackend
 
@@ -25,3 +27,22 @@ def memory_keyring(monkeypatch: pytest.MonkeyPatch) -> KeyringBackend:
     backend = MemoryKeyring()
     monkeypatch.setattr(auth, "system_keyring", lambda: backend)
     return backend
+
+
+@pytest.fixture
+def lecture_extension(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Opt in explicitly for lecture scenarios; ordinary fixtures keep the base surface."""
+    from tum_mcp.extensions import LectureInstallation
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "lecture-data"))
+    folder = tmp_path / "lecture-data/config"
+    monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(folder))
+    folder.mkdir(parents=True)
+    selected = LectureInstallation(
+        enabled=True,
+        installed_at="2026-10-26T10:00:00Z",
+        package_version="fixture",
+        asr_requested=False,
+    )
+    (folder / "lecture-extension.json").write_text(selected.model_dump_json())
+    return folder

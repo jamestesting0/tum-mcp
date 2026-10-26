@@ -13,6 +13,7 @@ try {
 Usage: tum-mcp COMMAND [OPTIONS]
 
   setup       Configure your coding client and managed runtime
+  install     Install an optional extension: tum-mcp install lecture
   connect     Sign in to selected campus services
   status      Show saved connections
   discover    List accessible courses or channels
@@ -30,7 +31,9 @@ Run setup to provision the managed backend, then connect to sign in.
 Reads use your campus account permissions; no local scope selection is needed.`);
   } else if (['--version', 'version'].includes(args[0])) {
     console.log(version);
-  } else if (['setup', 'update', 'uninstall'].includes(args[0]) && args.some(arg => ['--help', '-h'].includes(arg))) {
+  } else if (args[0] === 'install' && args.some(arg => ['--help', '-h'].includes(arg))) {
+    console.log('Usage: tum-mcp install lecture [--asr|--no-asr]\nInstall the optional Lecture workflow and tools. Recognition dependencies are isolated; models load on demand.');
+  } else if (['setup', 'update', 'uninstall'].includes(args[0]) && args[1] !== 'lecture' && args.some(arg => ['--help', '-h'].includes(arg))) {
     const help = {
       update: 'Usage: tum-mcp update [--local]\nInstall the latest npm release and refresh configured clients.\n--local refreshes this installed version without contacting npm.',
       setup: 'Usage: tum-mcp setup [--client codex|claude|cursor|antigravity|generic] [--host local|windows]\nProvision the managed runtime and register explicitly selected clients.',
@@ -38,12 +41,13 @@ Reads use your campus account permissions; no local scope selection is needed.`)
     };
     console.log(help[args[0]]);
   } else {
+    if (args[0] === 'install' && args[1] !== 'lecture') throw new Error('Usage: tum-mcp install lecture [--asr|--no-asr].');
     let packageAction = args[0] === 'update';
     if (args[0] === 'update') {
       if (args.length > 2 || (args.length === 2 && args[1] !== '--local')) throw new Error('Usage: tum-mcp update [--local]. Use --help for details.');
       if (args[1] === '--local') { packageAction = false; args = ['update']; }
     }
-    if (args[0] === 'uninstall') {
+    if (args[0] === 'uninstall' && args[1] !== 'lecture') {
       const { values } = parseArgs({ args: args.slice(1), options: {
         all: { type: 'boolean' }, client: { type: 'string' }, host: { type: 'string' },
         'keep-package': { type: 'boolean' }, 'purge-runtime': { type: 'boolean' }, 'forget-credentials': { type: 'boolean' },
@@ -58,7 +62,7 @@ Reads use your campus account permissions; no local scope selection is needed.`)
     if (packageAction) {
       process.exitCode = await managePackage(args[0], args.slice(1), dataRoot());
     } else {
-      let python = ['setup', 'update'].includes(args[0]) ? await ensureRuntime() : currentPython();
+      let python = ['setup', 'update', 'install'].includes(args[0]) ? await ensureRuntime() : currentPython();
       if (args[0] === 'uninstall' && !python) python = await ensureRuntime();
       if (!python) throw new Error('SETUP_REQUIRED: Run tum-mcp setup first.');
       const forwarded = args;

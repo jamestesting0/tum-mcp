@@ -4,6 +4,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import assert_never
 from urllib.parse import urlsplit
 
 from playwright.sync_api import Error as BrowserError
@@ -18,8 +19,9 @@ from tum_mcp.moodle.browser_runtime import browser_driver
 from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError, discover_browsers
 from tum_mcp.moodle.config import BASE_URL, Paths
 from tum_mcp.parsing import decode
-from tum_mcp.settings import ARTEMIS, ZULIP, Account, Provider, preferences, save_account
+from tum_mcp.settings import ARTEMIS, TUM_LIVE, ZULIP, Account, Provider, preferences, save_account
 from tum_mcp.transport import API, MAX_RESPONSE
+from tum_mcp.tum_live.wire import Identity as LiveIdentity
 from tum_mcp.tumonline.identity import AccountRef
 from tum_mcp.zulip.models import Identity as ZulipIdentity
 
@@ -43,6 +45,27 @@ class ServiceChoice(StrEnum):
     ARTEMIS = "artemis"
     ZULIP = "zulip"
     TUMONLINE = "tumonline"
+    TUM_LIVE = "tum_live"
+
+    @property
+    def label(self) -> str:
+        return {
+            ServiceChoice.MOODLE: "Moodle",
+            ServiceChoice.ARTEMIS: "Artemis",
+            ServiceChoice.ZULIP: "Zulip",
+            ServiceChoice.TUMONLINE: "TUMonline",
+            ServiceChoice.TUM_LIVE: "TUM-Live",
+        }[self]
+
+
+def available_services() -> tuple[ServiceChoice, ...]:
+    from tum_mcp.extensions import lecture_enabled
+
+    return tuple(
+        service
+        for service in ServiceChoice
+        if service != ServiceChoice.TUM_LIVE or lecture_enabled()
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +88,10 @@ def connect_services(
     """Open only selected services in one temporary context, without native-store access."""
     if not services or len(set(services)) != len(services):
         raise CampusError(Code.SCOPE_DENIED, "Select each service exactly once.")
+    if ServiceChoice.TUM_LIVE in services:
+        from tum_mcp.extensions import require_lecture
+
+        require_lecture()
     available = (browser,) if browser is not None else discover_browsers()
     if not available:
         raise BrowserSetupError("Install a Chromium browser, then run tum-mcp connect.")
@@ -74,6 +101,7 @@ def connect_services(
         ServiceChoice.ARTEMIS: ARTEMIS,
         ServiceChoice.ZULIP: ZULIP,
         ServiceChoice.TUMONLINE: "https://campus.tum.de/tumonline/ee/ui/ca2/app/desktop/",
+        ServiceChoice.TUM_LIVE: TUM_LIVE,
     }
     connected: dict[ServiceChoice, ConnectionResult] = {}
     attempt: str | None = None
@@ -118,6 +146,7 @@ def connect_services(
                             ServiceChoice.MOODLE: "/my/courses.php",
                             ServiceChoice.ARTEMIS: "/api/core/public/account",
                             ServiceChoice.ZULIP: "/json/users/me",
+                            ServiceChoice.TUM_LIVE: "/api/v2/users/me",
                         }[service]
                         response = context.request.get(
                             origin + identity_path, max_redirects=0, timeout=10000
@@ -130,6 +159,11 @@ def connect_services(
                                 Code.INVALID_RESPONSE, "Identity response exceeded budget."
                             )
                         if service == ServiceChoice.MOODLE and b"logout.php" not in payload:
+                            continue
+                        if (
+                            service == ServiceChoice.TUM_LIVE
+                            and decode(LiveIdentity, payload).user is None
+                        ):
                             continue
                         allowed_hosts = {urlsplit(origin).hostname}
                         if service == ServiceChoice.MOODLE:
@@ -176,29 +210,41 @@ def _save_connection(
         )
         return ConnectionResult(service)
     provider = Provider(service.value)
-    origin = ARTEMIS if provider == Provider.ARTEMIS else ZULIP
-    principal = (
-        str(decode(ArtemisIdentity, payload).id)
-        if provider == Provider.ARTEMIS
-        else str(decode(ZulipIdentity, payload).user_id)
-    )
+    origin = {Provider.ARTEMIS: ARTEMIS, Provider.ZULIP: ZULIP, Provider.TUM_LIVE: TUM_LIVE}[
+        provider
+    ]
+    principal = _principal(provider, payload)
     account = existing_account(Account(provider=provider, origin=origin, principal=principal))
     credential = Credential(
         account_id=account.id, authentication="browser_session", cookies=cookies
     )
-    verification = API(account, credential).get(
-        "/api/core/public/account" if provider == Provider.ARTEMIS else "/api/v1/users/me"
-    )
-    verified = (
-        str(decode(ArtemisIdentity, verification).id)
-        if provider == Provider.ARTEMIS
-        else str(decode(ZulipIdentity, verification).user_id)
-    )
+    path = {
+        Provider.ARTEMIS: "/api/core/public/account",
+        Provider.ZULIP: "/api/v1/users/me",
+        Provider.TUM_LIVE: "/api/v2/users/me",
+    }[provider]
+    verification = API(account, credential).get(path)
+    verified = _principal(provider, verification)
     if verified != principal:
         raise CampusError(Code.SCOPE_DENIED, "Identity changed during connection.")
     Vault().replace_login(account, credential)
     save_account(account, preserve_settings=True)
     return ConnectionResult(service, account)
+
+
+def _principal(provider: Provider, payload: bytes) -> str:
+    match provider:
+        case Provider.ARTEMIS:
+            return str(decode(ArtemisIdentity, payload).id)
+        case Provider.ZULIP:
+            return str(decode(ZulipIdentity, payload).user_id)
+        case Provider.TUM_LIVE:
+            identity = decode(LiveIdentity, payload)
+            if identity.user is None:
+                raise CampusError(Code.AUTH_REQUIRED, "Complete TUM-Live sign-in.")
+            return str(identity.user.id)
+        case unreachable:
+            assert_never(unreachable)
 
 
 def existing_account(candidate: Account) -> Account:

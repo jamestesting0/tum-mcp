@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 from tum_mcp.errors import CampusError
+from tum_mcp.lecture_data import read_lectures
 from tum_mcp.settings import Frozen
 from tum_mcp.study_store import END, START, confined, load_state, private_path, replace_agents
 
@@ -22,6 +23,8 @@ class ProjectStatus(Frozen):
     course: CourseSummary | None = None
     generation: str | None = None
     resources: int = 0
+    lecture_notes: Literal["absent", "authored", "invalid"] = "absent"
+    lectures: int = 0
 
 
 def _instructions(root: Path) -> str:
@@ -87,10 +90,17 @@ def project_status(project: Path) -> ProjectStatus:
             generation=state.generation,
             resources=len(state.resources),
         )
+    try:
+        lectures = read_lectures(root)
+        lecture_notes = "authored" if lectures else "absent"
+    except CampusError:
+        lectures, lecture_notes = None, "invalid"
     return ProjectStatus(
         mode="sync",
         reason="bound_course",
         course=course,
         generation=state.generation,
         resources=len(state.resources),
+        lecture_notes=lecture_notes,
+        lectures=len(lectures.lectures) if lectures else 0,
     )

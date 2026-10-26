@@ -12,7 +12,7 @@ from tum_mcp.client_hosts import ClientHost
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen, config_path
-from tum_mcp.skill_catalog import CURRENT_SKILLS, LEGACY_SKILLS
+from tum_mcp.skill_catalog import BUNDLED_SKILLS, LEGACY_SKILLS
 
 ClientName = Literal["codex", "claude", "cursor", "antigravity", "generic"]
 MANAGED_ROOTS: Final = {
@@ -48,7 +48,7 @@ class Installation(Frozen):
                     self.client in {"claude", "cursor", "antigravity"}
                     and (
                         len(path.parts) < skill_index + 2
-                        or path.parts[skill_index] not in {*CURRENT_SKILLS, *LEGACY_SKILLS}
+                        or path.parts[skill_index] not in {*BUNDLED_SKILLS, *LEGACY_SKILLS}
                     )
                 )
                 or ".." in path.parts

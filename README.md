@@ -54,6 +54,28 @@ uses the WSL backend. [Browser and WSL setup](docs/setup.md#wsl).
 Setup supplies a private Python runtime. Connections use encrypted local
 files and need no native keyring, Git or Docker.
 
+## Lecture Notes (optional)
+
+```sh
+tum-mcp install lecture
+```
+
+This adds Prepare Lecture and the TUM-Live recording tools to configured clients.
+Restart the client to load them. Default setup keeps the existing six skills.
+The extension prepares an isolated recognizer on native Apple Silicon macOS 15+;
+model weights download only when recognition needs them. Captions and imported
+WebVTT work on other supported hosts. Use `tum-mcp install lecture --no-asr` to
+skip recognizer setup.
+
+Lecture preparation starts with timed text and available lecture materials.
+Preview images require `lecture prepare --previews`; full frames require selected
+`--frame-at` timestamps. Notes focus on the professor’s explanations, examples and
+caveats, with timestamp links and only the visuals needed to understand them.
+
+`tum-mcp uninstall lecture` removes the extension from managed clients while
+preserving course notes, evidence, saved sessions and model caches. Customized
+skill files are preserved and reported for review.
+
 ## Read and study
 
 | Source | Available content |
@@ -62,6 +84,7 @@ files and need no native keyring, Git or Docker.
 | Artemis | Lectures, text/online/video units, student slide PDFs, released exercise statements and permitted own feedback |
 | Zulip | Selected course channels, discussion search and cited catch-up |
 | TUMonline | Study names and degrees, public course catalog metadata and course curriculum positions |
+| TUM-Live (optional Lecture extension) | Selected recording metadata, captions/local transcription, critical source frames and timestamped notes |
 
 TUMonline enables studies and courses by default; its full curriculum, grades, progress,
 exams, admissions, account and other readers are not yet available. The catalog is
@@ -73,7 +96,9 @@ posting and read-state changes are unavailable.
 
 ### Skills and example requests
 
-The package includes six skills. Once you've chosen a course from
+The base package enables six skills. `tum-mcp install lecture` adds the optional
+`prepare-lecture` skill for timestamped Lecture Notes. See the
+[Lecture Notes guide](docs/lecture-notes.md). Once you've chosen a course from
 your connections, try requests like these:
 
 | Skill | Use it to | Example request |

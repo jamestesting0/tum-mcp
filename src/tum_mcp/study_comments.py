@@ -15,6 +15,7 @@ from tum_mcp.study_comment_models import (
     Create,
     Delete,
     Edit,
+    LectureAnchor,
     Operation,
     SetStatus,
 )
@@ -83,6 +84,32 @@ def change_comment(root: Path, operation: Operation) -> dict:
                     raise CampusError(Code.WORKSPACE_CONFLICT, "This comment is already saved.")
                 if len(items) >= 500:
                     raise CampusError(Code.ACTION_REQUIRED, "The project has reached 500 comments.")
+                if isinstance(operation.anchor, LectureAnchor):
+                    from tum_mcp.lecture_data import read_lectures
+
+                    content = read_lectures(root)
+                    lecture = (
+                        next(
+                            (
+                                item
+                                for item in content.lectures
+                                if item.key == operation.anchor.lecture_key
+                            ),
+                            None,
+                        )
+                        if content
+                        else None
+                    )
+                    if lecture is None or not any(
+                        item.key == operation.anchor.section_key for item in lecture.sections
+                    ):
+                        raise CampusError(
+                            Code.SCOPE_DENIED, "This lecture passage no longer exists."
+                        )
+                    if lecture.semantic_revision != operation.anchor.semantic_revision:
+                        raise CampusError(
+                            Code.STALE_RESULT, "Lecture notes changed. Reload before commenting."
+                        )
                 items.append(
                     Comment(
                         id=operation.id,
@@ -122,7 +149,11 @@ def change_comment(root: Path, operation: Operation) -> dict:
                         assert_never(unreachable)
             case unreachable:
                 assert_never(unreachable)
-        updated = document.model_copy(update={"schema_version": 2, "comments": tuple(items)})
+        version = max(
+            document.schema_version,
+            3 if any(isinstance(item.anchor, LectureAnchor) for item in items) else 2,
+        )
+        updated = document.model_copy(update={"schema_version": version, "comments": tuple(items)})
         after = updated.model_dump_json(indent=2).encode()
         if len(after) > LIMIT:
             raise CampusError(Code.ACTION_REQUIRED, "Comments exceed the local storage limit.")

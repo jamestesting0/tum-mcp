@@ -71,6 +71,22 @@ def test_cancelled_manager_leaves_policy_unchanged(
     assert policies.read(ACCOUNT) == original
 
 
+def test_manager_preserves_previously_configured_unavailable_scopes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.tumonline import manage
+
+    monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path))
+    policies = PolicyStore()
+    policies.create(ACCOUNT)
+    policies.set_scope(ACCOUNT, Scope.EXAMS, True)
+    monkeypatch.setattr(manage, "interactive_terminal", lambda: True)
+    monkeypatch.setattr(manage, "choose_studies", lambda current: False)
+    result = CliRunner().invoke(app, ["manage", "tumonline"])
+    assert result.exit_code == 0, result.output
+    assert policies.read(ACCOUNT).allowed == frozenset({Scope.EXAMS})
+
+
 def test_noninteractive_manager_cannot_modify_permissions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

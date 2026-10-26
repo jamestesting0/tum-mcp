@@ -75,6 +75,8 @@ class CoursePage(Frozen):
         wire = CourseListWire.model_validate_json(body)
         if len(wire.courses) > limit or offset + len(wire.courses) > wire.totalCount:
             raise CampusError(Code.INVALID_RESPONSE, "Course page metadata is inconsistent.")
+        if not wire.courses and offset < wire.totalCount:
+            raise CampusError(Code.OFFLINE, "TUMonline returned an incomplete page; retry.")
         courses = tuple(
             Course(
                 id=item.id,

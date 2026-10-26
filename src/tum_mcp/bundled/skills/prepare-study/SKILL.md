@@ -80,3 +80,7 @@ category audio is also requested, finish the affected course content first, then
 continue with audio-notes and pass the current content, changed unit IDs and source
 review gaps. Audio outputs belong under audio/. A website-only request never triggers
 narration or external speech generation.
+
+For timestamped notes about the professor’s additional explanations beyond slides,
+use the optional prepare-lecture workflow when installed. Preserve existing
+Lecture Notes while updating Study; do not duplicate or automatically author it.
