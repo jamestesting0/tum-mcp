@@ -5,7 +5,7 @@ from typing import Literal
 
 import typer
 
-from tum_mcp.extensions import selection, set_studocu
+from tum_mcp.extensions import lecture_enabled, selection, set_studocu
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 
@@ -18,7 +18,7 @@ def install(name: Literal["studocu"]) -> None:
 @app.command()
 def status() -> None:
     """Show the local extension selection without contacting a provider."""
-    typer.echo(selection().model_dump_json(indent=2))
+    typer.echo(json.dumps({**selection().model_dump(), "lecture": lecture_enabled()}, indent=2))
 
 
 @app.command()

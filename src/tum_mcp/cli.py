@@ -13,7 +13,7 @@ import typer
 from tum_mcp import __version__
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.extensions import lecture_enabled, require_lecture
+from tum_mcp.extensions import lecture_enabled, require_lecture, studocu_enabled
 from tum_mcp.moodle.browsers import BrowserSetupError
 from tum_mcp.moodle.errors import MoodleError
 from tum_mcp.settings import (
@@ -75,7 +75,7 @@ def status() -> None:
                     for account in preferences().accounts
                 ],
                 "remote_actions": "disabled",
-                "extensions": {"lecture": lecture_enabled()},
+                "extensions": {"lecture": lecture_enabled(), "studocu": studocu_enabled()},
                 "registry": "not_checked",
             },
             indent=2,

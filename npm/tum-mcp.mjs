@@ -35,7 +35,7 @@ Reads use your campus account permissions; no local scope selection is needed.`)
     console.log(version);
   } else if (args[0] === 'install' && args.some(arg => ['--help', '-h'].includes(arg))) {
     console.log('Usage: tum-mcp install lecture [--asr|--no-asr] | tum-mcp install studocu\nInstall an optional Lecture or Studocu workflow and its tools. Lecture recognition dependencies are isolated; models load on demand.');
-  } else if (['setup', 'update', 'uninstall'].includes(args[0]) && args[1] !== 'lecture' && args.some(arg => ['--help', '-h'].includes(arg))) {
+  } else if (['setup', 'update', 'uninstall'].includes(args[0]) && !['lecture', 'studocu'].includes(args[1]) && args.some(arg => ['--help', '-h'].includes(arg))) {
     const help = {
       update: 'Usage: tum-mcp update [--local]\nInstall the latest npm release and refresh configured clients.\n--local refreshes this installed version without contacting npm.',
       setup: 'Usage: tum-mcp setup [--client codex|claude|cursor|antigravity|generic] [--host local|windows]\nProvision the managed runtime and register explicitly selected clients.',
@@ -49,7 +49,7 @@ Reads use your campus account permissions; no local scope selection is needed.`)
       if (args.length > 2 || (args.length === 2 && args[1] !== '--local')) throw new Error('Usage: tum-mcp update [--local]. Use --help for details.');
       if (args[1] === '--local') { packageAction = false; args = ['update']; }
     }
-    if (args[0] === 'uninstall' && args[1] !== 'lecture') {
+    if (args[0] === 'uninstall' && !['lecture', 'studocu'].includes(args[1])) {
       const { values } = parseArgs({ args: args.slice(1), options: {
         all: { type: 'boolean' }, client: { type: 'string' }, host: { type: 'string' },
         'keep-package': { type: 'boolean' }, 'purge-runtime': { type: 'boolean' }, 'forget-credentials': { type: 'boolean' },

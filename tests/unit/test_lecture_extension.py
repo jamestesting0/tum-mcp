@@ -106,3 +106,28 @@ def test_removal_preserves_notes_evidence_and_saved_sessions(isolated_extension:
     assert not result["enabled"] and not lecture_enabled()
     assert keep.read_text() == "User-owned notes and private evidence"
     assert {item["name"] for item in inspect_skills()} == set(CURRENT_SKILLS)
+
+
+def test_optional_extensions_have_coherent_status_and_symmetric_removal(isolated_extension):
+    import json
+
+    from typer.testing import CliRunner
+
+    from tum_mcp.cli import app
+    from tum_mcp.extensions import studocu_enabled
+
+    runner = CliRunner()
+    assert runner.invoke(app, ["install", "lecture", "--no-asr"]).exit_code == 0
+    assert runner.invoke(app, ["install", "studocu"]).exit_code == 0
+    state = runner.invoke(app, ["extensions", "status"])
+    assert state.exit_code == 0
+    assert json.loads(state.stdout)["lecture"] is True
+    assert json.loads(state.stdout)["studocu"] is True
+    assert json.loads(runner.invoke(app, ["status"]).stdout)["extensions"] == {
+        "lecture": True,
+        "studocu": True,
+    }
+    removed = runner.invoke(app, ["uninstall", "studocu"])
+    assert removed.exit_code == 0, removed.output
+    assert not studocu_enabled() and lecture_enabled()
+    assert {item["name"] for item in inspect_skills()} == {*CURRENT_SKILLS, "prepare-lecture"}

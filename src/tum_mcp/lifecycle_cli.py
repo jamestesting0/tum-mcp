@@ -87,7 +87,7 @@ def update() -> None:
 
 
 def uninstall(
-    extension: Annotated[Literal["lecture"] | None, typer.Argument()] = None,
+    extension: Annotated[Literal["lecture", "studocu"] | None, typer.Argument()] = None,
     client: Literal["codex", "claude", "cursor", "antigravity", "generic"] | None = None,
     host: ClientHost = ClientHost.LOCAL,
     all_clients: Annotated[
@@ -108,12 +108,20 @@ def uninstall(
 ) -> None:
     """Remove managed client files; preserve personal work and saved data by default."""
 
-    if extension == "lecture":
+    if extension is not None:
         if client or all_clients or purge_runtime or forget_credentials or host != ClientHost.LOCAL:
             raise CampusError(
                 Code.SCOPE_DENIED,
-                "Lecture-only removal cannot use package/client/data cleanup options.",
+                "Extension-only removal cannot use package/client/data cleanup options.",
             )
+        if extension == "studocu":
+            from tum_mcp.extensions import set_studocu
+
+            state = set_studocu(False)
+            typer.echo(json.dumps({"extension": extension, "state": state}))
+            if state == "disabled_needs_review":
+                raise typer.Exit(2)
+            return
         from tum_mcp.extensions import uninstall_lecture
 
         report = uninstall_lecture()

@@ -38,5 +38,19 @@ export function lectureLifecycle(root, command) {
   command(['skills', 'export', customExport]);
   assert.match(readFileSync(join(customExport, 'prepare-lecture/SKILL.md'), 'utf8'), /Personal lecture preference/);
   command(['uninstall', 'lecture']);
+  // The independently optional extensions must survive each other's client refreshes.
+  command(['install', 'studocu']);
+  command(['install', 'lecture', '--no-asr']);
+  command(['update', '--local']);
+  const both = JSON.parse(command(['skills', 'validate']));
+  assert.equal(both.checked_skills.length, 8);
+  assert.deepEqual(both.errors, []);
+  command(['uninstall', 'studocu']);
+  assert.ok(JSON.parse(command(['skills', 'validate'])).checked_skills.includes('prepare-lecture'));
+  command(['install', 'studocu']);
+  command(['uninstall', 'lecture']);
+  assert.ok(JSON.parse(command(['skills', 'validate'])).checked_skills.includes('sync-studocu'));
+  command(['uninstall', 'studocu']);
+  assert.equal(JSON.parse(command(['skills', 'validate'])).checked_skills.length, 6);
   return { base_skills: 6, installed_skills: 7, update_preserved: true, notes_and_customization_preserved: true };
 }
