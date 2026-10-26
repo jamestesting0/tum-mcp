@@ -56,7 +56,7 @@ CI runs macOS, Windows and Linux, plus both distribution engines on WSL 3.x.
 Consumer checks install the actual npm artifact, discover tools, build a study
 site and test available Chromium browsers with temporary profiles and synthetic
 pages. WSL verifies Windows browser transport. No live account is used.
-Upgrade checks cover public 0.7.0, client refresh, customized-file conflicts,
+Upgrade checks cover public 0.8.0, client refresh, customized-file conflicts,
 failed preparation, runtime repair and removal that preserves work/credentials.
 The package-lifecycle check uses a local synthetic registry and real isolated
 global npm prefixes to verify downloads, backend validation, replacement,

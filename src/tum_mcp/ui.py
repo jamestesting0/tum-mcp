@@ -72,14 +72,14 @@ def status_rows(console: Console, rows: list[tuple[str, State, str]]) -> None:
                 style = "ready"
             case State.FAILED:
                 style = "failed"
-            case State.ACTION | State.MISSING | State.UNCONFIGURED:
+            case State.ACTION | State.MISSING | State.UNCONFIGURED | State.CONFIGURED:
                 style = "attention"
-            case State.CONFIGURED | State.DISABLED | State.INFO:
-                style = ""
+            case State.DISABLED | State.INFO:
+                style = "muted"
             case unreachable:
                 assert_never(unreachable)
         # Terminal ANSI palettes vary; keep the actual status in the default foreground.
-        state_text = Text.assemble(("· " if style else "  ", style), state.value)
+        state_text = Text.assemble(("· ", style), state.value)
         if narrow:
             table.add_row(Text.assemble((label, "bold"), "  ", state_text))
             table.add_row(Text(detail))

@@ -1,5 +1,11 @@
 # Changes
 
+## 0.8.1 — 2026-10-26
+
+- Give every doctor/update status a dot: yellow for unverified or attention-needed
+  states, green for ready/updated, neutral for information/disabled, and red only
+  for failures. Keep status labels readable with terminal colors disabled.
+
 ## 0.8.0 — 2026-10-26
 
 - Read Artemis courses, lectures, exercises, own feedback and accessible Zulip
