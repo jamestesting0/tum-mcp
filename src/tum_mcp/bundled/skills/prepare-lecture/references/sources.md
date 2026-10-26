@@ -19,12 +19,23 @@ tum-mcp lecture prepare PROJECT --recording https://live.rbg.tum.de/w/SLUG/ID
 tum-mcp lecture prepare PROJECT --recording URL --transcript lecture.vtt
 ```
 
-Use `--language en` only when the language is known. The private pinned MLX runtime
-is supported on native Apple Silicon macOS 15+; other hosts can use captions and
-imported WebVTT. `install lecture --no-asr` skips ASR provisioning. Models load
-lazily. Missing runtime/model access stops shared recognition early; it does not
-repeatedly download a long recording for failing recognition attempts. Respect
-capability errors instead of substituting an unreviewed recognizer or paid API.
+Use `--language en` only when the language is known. `install lecture` provisions
+an isolated, hash-locked local recognizer: MLX on Apple Silicon macOS 15+, otherwise
+CPU int8 on Windows x64, Intel macOS 13+, Apple Silicon macOS 14 and glibc 2.28+
+Linux/WSL x86_64/ARM64. Native Windows ARM64 and musl/32-bit systems use captions
+or imported WebVTT. `runtime status` reports actual support and installation;
+`install lecture --no-asr` skips provisioning. FFmpeg/ffprobe on PATH are needed
+for audio extraction/frames, but not imported captions or cached text. On Windows,
+the CPU runtime also needs the Microsoft Visual C++ runtime.
+
+Models load lazily from pinned public revisions. An advanced
+`TUM_MCP_LECTURE_ENGINE=cpu` override selects CPU instead of Metal; keep it the
+same during installation and preparation. Missing native libraries/runtime/model
+access stops shared recognition early; it does not repeatedly download a long
+recording for failing recognition attempts. Respect capability errors instead of
+substituting an unreviewed recognizer or paid API. Recognition can mishear technical
+terms even with good sentence confidence; compare consequential wording with the
+materials and source audio.
 
 Whole-recording silence markers are terminally invalid. Where duration metadata
 is absent, bounded playlist metadata can establish it before the silence decision.

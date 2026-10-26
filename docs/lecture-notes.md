@@ -53,9 +53,38 @@ bounded muxed segments rather than guessing alternative download URLs.
 
 Use the existing course binding and campus connection. Authentication is separate
 from HTTP media retrieval; do not export cookies or pass signed URLs to download
-commands. The supported optional local ASR profile uses native Apple Silicon
-macOS 15+ with separately pinned dependencies; other hosts can use captions and
-imported original-time WebVTT. Weights are lazy, outside the base package.
+commands. Captions and imported original-time WebVTT work without a recognizer.
+Automatic ASR installs separately with hash-locked CPython 3.13 wheels and lazy,
+revision-pinned public model weights; neither is part of the base runtime.
+
+| Host | Local recognizer |
+| --- | --- |
+| Apple Silicon macOS 15+ | MLX acceleration by default |
+| Apple Silicon macOS 14 | CPU int8 |
+| Intel macOS 13+ | CPU int8 |
+| Windows x64 | CPU int8; Microsoft Visual C++ runtime required |
+| Linux/WSL x86_64 or ARM64, glibc 2.28+ | CPU int8 |
+
+Native Windows ARM64, 32-bit systems and musl Linux have no supported locked
+runtime. Use captions/imported WebVTT there. CPU inference requires compatible
+CTranslate2 instructions (SSE4.1 on x86); installation verifies native imports and
+int8 support before selecting the runtime. See the upstream
+[CTranslate2 requirements](https://opennmt.net/CTranslate2/installation.html).
+Windows, Linux x64 and Apple Silicon recognition have native CI smoke checks;
+Intel Mac and Linux ARM64 compatibility also depends on the published wheels.
+
+FFmpeg and ffprobe must be on PATH for recording audio extraction or selected
+video frames. They are unnecessary for imported captions and cached text.
+`lecture runtime status` reports the selected engine and missing prerequisites.
+Use `lecture runtime install` to retry after fixing a prerequisite. Advanced users
+can set `TUM_MCP_LECTURE_ENGINE=cpu` consistently for installation and preparation
+to bypass Metal; the default `auto` retains existing MLX runtimes and model caches.
+An engine switch uses separate caches. No cloud transcription API is configured.
+
+CPU decoding uses int8, one worker and at most four threads. It consumes the full
+retained audio, with word timestamps and no VAD retiming. ASR remains fallible,
+especially for names and notation; compare important wording with slides and the
+recording rather than treating confidence scores as proof.
 
 ```sh
 tum-mcp lecture inspect PROJECT

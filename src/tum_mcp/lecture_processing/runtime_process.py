@@ -11,7 +11,23 @@ def isolated_run(argv: tuple[str, ...], payload: bytes = b"", timeout: int = 120
     environment = {
         key: value
         for key, value in os.environ.items()
-        if key in {"HOME", "PATH", "TMPDIR", "SYSTEMROOT", "LANG", "LC_ALL", "HF_HUB_CACHE"}
+        if key.upper()
+        in {
+            "HOME",
+            "PATH",
+            "TMPDIR",
+            "SYSTEMROOT",
+            "LANG",
+            "LC_ALL",
+            "HF_HUB_CACHE",
+            "USERPROFILE",
+            "HOMEDRIVE",
+            "HOMEPATH",
+            "LOCALAPPDATA",
+            "APPDATA",
+            "TEMP",
+            "TMP",
+        }
     }
     environment.update(HF_HUB_DISABLE_TELEMETRY="1", TOKENIZERS_PARALLELISM="false")
     try:

@@ -1,28 +1,23 @@
-"""Explicit wheel-only Apple Silicon runtime, independent of base installation."""
+"""Explicit wheel-only local recognition runtime, independent of base installation."""
 
 import hashlib
 import json
 import platform
-import re
 import shutil
 import tempfile
 from pathlib import Path
 
 from filelock import FileLock, Timeout
-from pydantic import Field, ValidationError
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 from tum_mcp.bundled.lecture_runtime.worker import decoding_options
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_processing.installer_uv import installer_uv
+from tum_mcp.lecture_processing.runtime_assets import ModelAsset, model  # noqa: F401
 from tum_mcp.lecture_processing.runtime_process import isolated_run, worker_path
-from tum_mcp.moodle.config import private_write
+from tum_mcp.lecture_processing.runtime_spec import lock_path, selected, supported  # noqa: F401
 from tum_mcp.settings import Frozen, data_dir
-
-ENGINE = "mlx-whisper-0.4.3"
-MODELS = {
-    "base": ("mlx-community/whisper-base-mlx", "1e3e249fb8d01c655324bd6841b1deadffd6d04c"),
-    "small.en": ("mlx-community/whisper-small.en-mlx", "52a88bf6e98b114a210c21bb83e22d6e1505cb73"),
-}
 
 
 class RuntimeStatus(Frozen):
@@ -32,37 +27,21 @@ class RuntimeStatus(Frozen):
     profile: str
     reason: str
     models: tuple[str, ...] = ()
-
-
-class ModelAsset(Frozen):
-    path: Path
-    revision: str = Field(pattern=r"^[a-f0-9]{40}$")
-    config_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    weights_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-
-
-def supported() -> bool:
-    if platform.system() != "Darwin" or platform.machine() != "arm64":
-        return False
-    major = platform.mac_ver()[0].split(".", 1)[0]
-    # The separately locked MLX/Metal wheels target macOS 15; no source build fallback.
-    return major.isdecimal() and int(major) >= 15
-
-
-def lock_path() -> Path:
-    return worker_path().with_name("requirements.lock")
+    engine: str = ""
 
 
 def profile() -> str:
     digest = hashlib.sha256(lock_path().read_bytes()).hexdigest()[:16]
-    return f"{ENGINE}-cp313-darwin-arm64-{digest}"
+    machine = platform.machine().lower().replace("amd64", "x86_64")
+    system = platform.system().lower()
+    return f"{selected().engine}-cp313-{system}-{machine}-{digest}"
 
 
 def recognition_profile() -> str:
     """Decoder changes invalidate inference without reinstalling identical dependencies."""
-    options = hashlib.sha256(json.dumps(decoding_options(), sort_keys=True).encode()).hexdigest()[
-        :16
-    ]
+    options = hashlib.sha256(
+        json.dumps(decoding_options(selected().backend), sort_keys=True).encode()
+    ).hexdigest()[:16]
     return f"{profile()}-decode-{options}"
 
 
@@ -71,11 +50,22 @@ def runtime_root() -> Path:
 
 
 def python_path() -> Path:
-    return runtime_root() / "bin/python"
+    return executable_at(runtime_root())
+
+
+def executable_at(root: Path) -> Path:
+    return root / ("Scripts/python.exe" if platform.system() == "Windows" else "bin/python")
 
 
 def expected_versions() -> dict[str, str]:
-    return dict(re.findall(r"^([a-zA-Z0-9_-]+)==([^\s;\\]+)", lock_path().read_text(), re.M))
+    result: dict[str, str] = {}
+    for line in lock_path().read_text().splitlines():
+        if not line or line[0].isspace() or line.startswith("#"):
+            continue
+        requirement = Requirement(line.rstrip(" \\"))
+        if requirement.marker is None or requirement.marker.evaluate({"python_version": "3.13"}):
+            result[canonicalize_name(requirement.name)] = next(iter(requirement.specifier)).version
+    return result
 
 
 def _versions(executable: Path) -> dict[str, str]:
@@ -102,18 +92,14 @@ def status() -> RuntimeStatus:
         versions = _versions(python_path())
         installed = all(versions.get(k) == v for k, v in expected_versions().items())
         if installed:
-            for name in MODELS:
+            for name, (_, revision) in selected().models.items():
                 receipt = runtime_root() / f"model-{name}.json"
                 if receipt.is_file():
-                    try:
-                        asset = ModelAsset.model_validate_json(receipt.read_bytes())
-                        if (
-                            asset.revision == MODELS[name][1]
-                            and (asset.path / "weights.npz").is_file()
-                        ):
-                            models.append(name)
-                    except ValidationError:
-                        pass
+                    from tum_mcp.lecture_processing.runtime_assets import read_asset
+
+                    asset = read_asset(receipt)
+                    if asset is not None and asset.revision == revision:
+                        models.append(name)
     return RuntimeStatus(
         supported=supported(),
         installed=installed,
@@ -123,8 +109,9 @@ def status() -> RuntimeStatus:
         if installed
         else "runtime_not_installed"
         if supported()
-        else "automatic_asr_requires_native_apple_silicon_macos_15_or_later",
+        else "automatic_asr_host_or_engine_unsupported",
         models=tuple(models),
+        engine=selected().backend,
     )
 
 
@@ -132,7 +119,7 @@ def install() -> RuntimeStatus:
     if not supported():
         raise CampusError(
             Code.CAPABILITY_UNSUPPORTED,
-            "Automatic ASR requires native Apple Silicon macOS 15+. "
+            "Automatic ASR has no locked wheels for this host or selected engine. "
             "Timed captions remain supported.",
         )
     uv = installer_uv()
@@ -169,7 +156,7 @@ def install() -> RuntimeStatus:
                     ),
                     timeout=300,
                 )
-                executable = candidate / "bin/python"
+                executable = executable_at(candidate)
                 isolated_run(
                     (
                         uv,
@@ -193,6 +180,11 @@ def install() -> RuntimeStatus:
                         Code.INVALID_RESPONSE,
                         "Installed lecture dependency versions differ from their lock.",
                     )
+                isolated_run(
+                    (str(executable), "-I", str(worker_path())),
+                    json.dumps({"action": "health", "backend": selected().backend}).encode(),
+                    timeout=60,
+                )
                 candidate.rename(destination)
     except Timeout:
         raise CampusError(
@@ -206,28 +198,5 @@ def call_worker(action: str, **arguments: str | int) -> bytes:
         raise CampusError(
             Code.ACTION_REQUIRED, "Run tum-mcp lecture runtime install, or supply timed captions."
         )
-    payload = json.dumps({"action": action, **arguments}).encode()
+    payload = json.dumps({"action": action, "backend": selected().backend, **arguments}).encode()
     return isolated_run((str(python_path()), "-I", str(worker_path())), payload)
-
-
-def model(name: str) -> ModelAsset:
-    if name not in MODELS:
-        raise CampusError(Code.INVALID_RESPONSE, "Unknown pinned lecture model.")
-    repo, revision = MODELS[name]
-    root = runtime_root()
-    with FileLock(str(root / "models.lock"), timeout=1200):
-        receipt = root / f"model-{name}.json"
-        if receipt.is_file():
-            try:
-                existing = ModelAsset.model_validate_json(receipt.read_bytes())
-                if existing.revision == revision:
-                    return existing
-            except ValidationError:
-                raise CampusError(
-                    Code.INVALID_RESPONSE, "Pinned model receipt is invalid."
-                ) from None
-        asset = ModelAsset.model_validate_json(call_worker("model", repo=repo, revision=revision))
-        if asset.revision != revision:
-            raise CampusError(Code.INVALID_RESPONSE, "Pinned model revision could not be verified.")
-        private_write(receipt, asset.model_dump_json().encode())
-        return asset

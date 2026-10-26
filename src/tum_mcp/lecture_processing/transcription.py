@@ -1,5 +1,6 @@
 """Pinned recognition, original-time passages, and conservative uncertainty checks."""
 
+import json
 import re
 from collections import Counter
 from pathlib import Path
@@ -75,6 +76,7 @@ def recognize(audio: Path, channel: int, *, model: str = "base", language: str =
                 model=str(asset.path),
                 config_sha256=asset.config_sha256,
                 weights_sha256=asset.weights_sha256,
+                supporting_sha256=json.dumps(asset.supporting_sha256),
                 language=language,
             )
         )
