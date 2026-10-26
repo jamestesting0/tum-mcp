@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx2
 import pytest
-from filelock import FileLock
+from filelock import BaseFileLock, FileLock, SoftFileLock
 from PIL import Image
 from typer.testing import CliRunner
 
@@ -194,17 +194,19 @@ def test_unknown_duration_whole_silence_stops_after_playlist_and_blocks_old_cach
     assert read.exit_code != 0 and "invalid" in str(read.exception).lower()
 
 
-def test_known_whole_silence_never_opens_media_client(lecture_project) -> None:
+@pytest.mark.parametrize("lock_backend", [FileLock, SoftFileLock], ids=["native", "soft"])
+def test_known_whole_silence_never_opens_media_client(
+    lecture_project, lock_backend: type[BaseFileLock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(preparation, "FileLock", lock_backend)
     root, watch, visited = lecture_project
     watch["stream"]["duration"] = 10
     watch["silences"] = [{"start": 0, "end": 10}]
     result = invoke("prepare", str(root), "--recording", "https://live.rbg.tum.de/w/950943622/11")
     assert json.loads(result.output)["reason"] == "whole_recording_silence"
     assert not any(path.endswith(".m3u8") for path in visited)
-    assert set(p.name for p in (root / ".tum-mcp/lectures/live-2464-11").iterdir()) == {
-        "receipt.json",
-        "prepare.lock",
-    }
+    files = {p.name for p in (root / ".tum-mcp/lectures/live-2464-11").iterdir()}
+    assert files - {"prepare.lock"} == {"receipt.json"}
 
 
 def test_wrong_course_and_concurrent_preparation_preserve_user_files(lecture_project) -> None:
