@@ -114,6 +114,7 @@ def inspect(project: Path) -> None:
     """Show course identity, source coverage and units that need regeneration."""
     from tum_mcp.course_context import context_review
     from tum_mcp.exercise_data import read_exercises, stale_exercises
+    from tum_mcp.lecture_data import lecture_health, read_lectures, stale_lectures
     from tum_mcp.study_build import read_content, stale_units
     from tum_mcp.study_store import load_state, private_folder
 
@@ -125,6 +126,7 @@ def inspect(project: Path) -> None:
         else ()
     )
     exercises = read_exercises(root)
+    lectures = read_lectures(root)
     typer.echo(
         json.dumps(
             {
@@ -136,6 +138,10 @@ def inspect(project: Path) -> None:
                 "resources": len(state.resources),
                 "content_path": f"{app_folder(root)}/content.json",
                 "exercises_path": f"{app_folder(root)}/exercises.json",
+                "lectures_path": f"{app_folder(root)}/lectures.json",
+                "lectures": len(lectures.lectures) if lectures else 0,
+                "stale_lectures": stale_lectures(root, state, lectures) if lectures else (),
+                "lecture_evidence": lecture_health(root, lectures) if lectures else (),
                 "stale_units": stale,
                 "stale_exercises": stale_exercises(root, state, exercises) if exercises else (),
             },
@@ -165,7 +171,7 @@ def build(
 
 
 @app.command()
-def schema(kind: Literal["snapshot", "content", "exercises"]) -> None:
+def schema(kind: Literal["snapshot", "content", "exercises", "lectures"]) -> None:
     """Print the machine-readable input schema for the calling agent."""
     from tum_mcp.study_content import StudyContent
     from tum_mcp.study_models import Snapshot
@@ -179,6 +185,10 @@ def schema(kind: Literal["snapshot", "content", "exercises"]) -> None:
             from tum_mcp.exercise_content import ExerciseContent
 
             result = ExerciseContent.model_json_schema()
+        case "lectures":
+            from tum_mcp.lecture_content import LectureContent
+
+            result = LectureContent.model_json_schema()
         case unreachable:
             assert_never(unreachable)
     typer.echo(json.dumps(result, indent=2))

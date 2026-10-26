@@ -19,6 +19,9 @@ from tum_mcp.exercise_data import (
     render_exercises,
     stale_exercises,
 )
+from tum_mcp.lecture_assets import asset_writes
+from tum_mcp.lecture_content import LectureContent
+from tum_mcp.lecture_data import read_lectures, render_lectures, stale_lectures
 from tum_mcp.settings import Frozen
 from tum_mcp.study_content import (
     StudyContent,
@@ -87,6 +90,8 @@ class BuildReport:
     generation: str
     publication: PublishReport | None = None
     exercises: int = 0
+    lectures: int = 0
+    lecture_coverage: tuple[dict[str, JsonValue], ...] = ()
 
 
 def read_content(root: Path) -> StudyContent:
@@ -126,7 +131,11 @@ def unit_revision(unit: Unit) -> str:
 
 
 def _app_data(
-    state: StudyState, content: StudyContent | None, exercises: ExerciseContent | None = None
+    state: StudyState,
+    content: StudyContent | None,
+    exercises: ExerciseContent | None = None,
+    lectures: LectureContent | None = None,
+    root: Path | None = None,
 ) -> dict[str, JsonValue]:
     units: list[JsonValue] = []
     for unit in content.units if content else ():
@@ -144,6 +153,8 @@ def _app_data(
             for ex in group.exercises
             for source in ex.sources
         )
+    if lectures:
+        referenced.update(source.key for lecture in lectures.lectures for source in lecture.sources)
     sources: dict[str, JsonValue] = {
         item.resource.key: {
             "title": item.resource.title,
@@ -164,7 +175,9 @@ def _app_data(
         "generation": state.generation,
         "introduction": content.introduction
         if content
-        else "Course exercises with prepared guidance.",
+        else "Course exercises with prepared guidance."
+        if exercises
+        else "Lecture notes from course recordings.",
         "organization": content.organization if content else "topics",
         "units": units,
         "sources": sources,
@@ -172,11 +185,18 @@ def _app_data(
         "incompleteSources": sum(item.status != "complete" for item in state.coverage),
     }
     payload["workspaces"] = (["study"] if content else []) + (["exercises"] if exercises else [])
+    if lectures:
+        if root is None:
+            raise CampusError(Code.ACTION_REQUIRED, "Lecture projection needs its bound project.")
+        value = render_lectures(root, lectures)
+        payload["lectures"] = value
+        payload["workspaces"].append("lectures")
+        payload["inlineMath"] = {**payload["inlineMath"], **_inline_math(value)}
     if exercises:
         value = render_exercises(exercises)
         payload["exercises"] = value
         payload["inlineMath"] = {
-            **(_inline_math(content.model_dump(mode="json")) if content else {}),
+            **payload["inlineMath"],
             **_inline_math(value),
         }
     return payload
@@ -282,14 +302,18 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
         state = load_state(root)
         content = read_content(root) if app_path(root, "content.json").exists() else None
         exercises = read_exercises(root)
-        if content is None and exercises is None:
+        lectures = read_lectures(root)
+        if content is None and exercises is None and lectures is None:
             raise CampusError(
-                Code.ACTION_REQUIRED, "Prepare app/content.json or app/exercises.json."
+                Code.ACTION_REQUIRED,
+                "Prepare app/content.json, app/exercises.json or app/lectures.json.",
             )
         stale = stale_units(root, state, content) if content else ()
         if exercises:
             stale += stale_exercises(root, state, exercises)
             check_prerequisites(exercises, content)
+        if lectures:
+            stale += stale_lectures(root, state, lectures)
         if stale:
             raise CampusError(
                 Code.STALE_RESULT, "Refresh content for changed source units: " + ", ".join(stale)
@@ -312,7 +336,7 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             )
         source = files("tum_mcp") / "bundled/course_app/site"
         desired = {name: (source / name).read_bytes() for name in TEMPLATE_FILES}
-        payload = _app_data(state, content, exercises)
+        payload = _app_data(state, content, exercises, lectures, root)
         data = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
         desired["data.mjs"] = ("export default " + data + ";\n").encode()
         writes: list[Write] = []
@@ -331,12 +355,13 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             writes.append(Write(f"{folder}/{name}", before, after))
             owned[name] = digest(after)
         updated = BuildRecord(files=owned).model_dump_json(indent=2).encode()
-        if (exercises or upgrading) and preserved:
+        if (exercises or lectures or upgrading) and preserved:
             raise CampusError(
                 Code.WORKSPACE_CONFLICT,
-                "Customized templates were preserved; review Exercises support before building.",
+                "Customized templates were preserved; review workspace support before building.",
             )
         writes.append(Write(f"{folder}/.managed.json", previous, updated))
+        writes.extend(asset_writes(root, lectures))
         if upgrading:
             try:
                 _upgrade_layout(root, tuple(writes), state)
@@ -351,6 +376,13 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             preserved_templates=tuple(preserved),
             generation=state.generation,
             exercises=sum(len(group.exercises) for group in exercises.sets) if exercises else 0,
+            lectures=len(lectures.lectures) if lectures else 0,
+            lecture_coverage=tuple(
+                {"key": lecture.key, "status": lecture.coverage.status, "as_of": lecture.checked_at}
+                for lecture in lectures.lectures
+            )
+            if lectures
+            else (),
         )
     if publish:
         from tum_mcp.study_publish import after_build
@@ -361,5 +393,7 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             report.generation,
             publication=after_build(root),
             exercises=report.exercises,
+            lectures=report.lectures,
+            lecture_coverage=report.lecture_coverage,
         )
     return report
