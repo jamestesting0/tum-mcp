@@ -85,8 +85,8 @@ a.course-title:hover, a.course-title[aria-current="page"] { color: var(--accent)
 .unit-group > summary::-webkit-details-marker { display: none; }
 .unit-group > summary::before { content: ''; flex: 0 0 6px; width: 6px; height: 6px; border-top: 1.5px solid var(--muted); border-right: 1.5px solid var(--muted); transform: rotate(45deg); }
 .unit-group[open] > summary::before { transform: rotate(135deg); }
-.unit-group > summary:hover { background: var(--wash); }
-.group-children { margin-inline-start: var(--s3); padding-inline-start: var(--s2); }
+.unit-group > summary:hover { background: var(--surface); }
+.group-children { margin-top: var(--s1); margin-inline-start: var(--s3); padding-inline-start: var(--s2); }
 .unit-link .unit-title { margin: 0; font-size: var(--text-ui); }
 [data-outline="collapsed"] .shell { grid-template-columns: 0 minmax(0, 1fr); }
 [data-outline="collapsed"] .sidebar { padding: 0; border: 0; }
@@ -372,6 +372,7 @@ button[aria-pressed="true"] { color: var(--accent); background: var(--wash); bor
 .exercise-list > .small { margin-top: var(--s6); }
 .exercise-sheet { margin-block: var(--s3); }
 .exercise-sheet .unit-link { border-bottom: 1px solid var(--line); border-radius: 0; }
+.sidebar .exercise-sheet .unit-link { border: 0; border-radius: var(--r1); padding-block: var(--s2); }
 .exercise-review { margin-block: var(--s4); }
 .exercise-disclosure { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--line); }
 .exercise-disclosure > summary, .response-writing > summary, .starter-code > summary, .plot-data > summary { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); font-size: var(--text-ui); font-weight: 500; list-style: none; cursor: pointer; }

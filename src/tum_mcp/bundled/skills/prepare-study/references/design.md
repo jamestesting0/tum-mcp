@@ -100,7 +100,9 @@ of the sidebar. Use a rounded square workspace glyph, name and chevron; open an
 upward menu with the two workspace names and an explicit current indicator. Keep
 theme as an adjacent quiet icon. The outline body scrolls independently above it.
 Category rows use a small chevron and compact spacing with a 44px click target;
-keep native collapse/keyboard behavior and wrap long names.
+keep native collapse/keyboard behavior and wrap long names. Use a neutral category
+hover, a 4px gap before children, and rounded selected child rows so parent and
+selection never merge into one colored block.
 On phones this same footer appears inside the open outline overlay. No heading
 switch, duplicate navigation links or second toolbar. Support keyboard navigation,
 Escape, outside dismissal and focus return. A lone workspace has a passive label.
