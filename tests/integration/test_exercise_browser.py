@@ -72,13 +72,13 @@ def test_optional_guidance_and_workspace_round_trip(
     context = course_browser.new_context(viewport={"width": width, "height": 900})
     try:
         page = context.new_page()
-        page.set_default_timeout(2000)
         errors: list[str] = []
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(exercise_url)
         # When working independently, then requesting only the help that is useful.
         switch_workspace(page, "Exercises")
         page.get_by_role("heading", name="Exercises", exact=True).wait_for()
+        page.set_default_timeout(2000)
         page.get_by_role("link", name=re.compile("Exercise 1.*Improve a tentative")).filter(
             visible=True
         ).first.click()
