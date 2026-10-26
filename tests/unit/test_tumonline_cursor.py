@@ -36,3 +36,12 @@ def test_cursor_tampering_and_oversized_values_are_rejected() -> None:
     for invalid in (token[:-1] + "!", "x" * 1000):
         with pytest.raises(CampusError):
             codec.decode(invalid, binding, now=1001)
+
+
+def test_course_cursor_cannot_be_reused_for_a_different_search() -> None:
+    codec = CursorCodec(b"synthetic-key")
+    first = CursorBinding(account_id=ACCOUNT, revision=0, limit=20, query_hash="a" * 64)
+    second = CursorBinding(account_id=ACCOUNT, revision=0, limit=20, query_hash="b" * 64)
+    cursor = codec.encode(first, offset=20, now=1000)
+    with pytest.raises(CampusError):
+        codec.decode(cursor, second, now=1001)

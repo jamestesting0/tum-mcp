@@ -42,7 +42,7 @@ def test_vault_refresh_updates_rotated_cookies_under_account_lease(tmp_path: Pat
     )
     before = vault.load(account)
 
-    def refresh(current):
+    def refresh(current, checkpoint):
         assert current.generation == before.generation
         return (rotated,), "synthetic-result"
 
@@ -64,7 +64,7 @@ def test_failed_refresh_preserves_saved_credential(tmp_path: Path) -> None:
     )
     before = vault.load(account)
 
-    def fail(current):
+    def fail(current, checkpoint):
         raise CampusError("AUTH_REQUIRED", "synthetic failure")
 
     with pytest.raises(CampusError):

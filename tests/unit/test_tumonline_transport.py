@@ -142,3 +142,32 @@ def test_disconnected_account_is_denied_before_network(tmp_path: Path) -> None:
     client = PublicCourses(policies, transport, vault=vault)
     with pytest.raises(CampusError, match="AUTH_REQUIRED"):
         client.list(ACCOUNT, offset=0, limit=20)
+
+
+@pytest.mark.parametrize("query", ["Mathematik", "C++", "A/B"])
+def test_search_is_sent_to_upstream_filter_without_credentials(tmp_path: Path, query: str) -> None:
+    policies = PolicyStore(tmp_path)
+    policies.create(ACCOUNT)
+    seen = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        seen.append(request)
+        return httpx2.Response(200, json=payload())
+
+    result = PublicCourses(policies, httpx2.MockTransport(handler)).list(
+        ACCOUNT, offset=0, limit=20, query=query
+    )
+    assert result.courses[0].title == "Synthetic course"
+    assert seen[0].url.params["$filter"] == "filterTerm-like=" + query
+    assert "authorization" not in seen[0].headers and "cookie" not in seen[0].headers
+
+
+@pytest.mark.parametrize("query", ["x", "a;termId-eq=999", "a=b", " ", "x" * 81])
+def test_invalid_search_fails_before_network(tmp_path: Path, query: str) -> None:
+    policies = PolicyStore(tmp_path)
+    policies.create(ACCOUNT)
+    reader = PublicCourses(
+        policies, httpx2.MockTransport(lambda _: pytest.fail("network must not be contacted"))
+    )
+    with pytest.raises(CampusError):
+        reader.list(ACCOUNT, offset=0, limit=20, query=query)

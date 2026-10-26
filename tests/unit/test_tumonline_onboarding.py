@@ -63,7 +63,7 @@ def test_connect_context_verifies_same_identity_twice_and_discards_idp_cookies(
     ]
     calls = []
 
-    def refresh(cookies, transport=None, *, expected=None):
+    def refresh(cookies, transport=None, *, expected=None, read_studies=True):
         calls.append((cookies, expected))
         return SESSION
 
@@ -115,3 +115,82 @@ def test_forgetting_credentials_invalidates_an_inflight_login(
     _forget_local_credentials()
     with pytest.raises(CampusError, match="STALE_RESULT"):
         save_connection(SESSION, attempt=pending)
+
+
+def test_reconnect_does_not_fetch_studies_when_scope_revoked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from unittest.mock import MagicMock
+
+    import httpx2
+
+    from tum_mcp.tumonline import auth
+    from tum_mcp.tumonline.onboarding import connect_context
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
+    save_connection(SESSION, attempt=begin_login())
+    PolicyStore().set_scope(ACCOUNT.id, Scope.STUDIES_COURSES, False)
+    calls = []
+
+    def handler(request):
+        calls.append(request.url.path)
+        if request.method == "POST":
+            return httpx2.Response(201, json={"accessToken": "synthetic-token"})
+        if request.url.path.endswith("/desktop/profile"):
+            return httpx2.Response(
+                200,
+                json={
+                    "resource": [
+                        {"content": {"desktopProfileLibDto": {"obfuscatedId": "synthetic-student"}}}
+                    ]
+                },
+            )
+        pytest.fail("A revoked studies scope must not fetch the study chooser")
+
+    original = auth.resume_session
+
+    def resume(cookies, **kwargs):
+        return original(cookies, httpx2.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(auth, "resume_session", resume)
+    context = MagicMock()
+    context.cookies.return_value = [
+        {"name": "session", "value": "synthetic-cookie", "domain": "campus.tum.de", "secure": True}
+    ]
+    assert connect_context(context, begin_login()) == ACCOUNT
+    assert calls and not any(path.endswith("/myStudies/chooser") for path in calls)
+    assert not PolicyStore().read(ACCOUNT.id).allows(Scope.STUDIES_COURSES)
+
+
+def test_connect_reports_server_outage_instead_of_waiting_for_login(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from unittest.mock import MagicMock
+
+    import httpx2
+
+    from tum_mcp.tumonline import auth
+    from tum_mcp.tumonline.onboarding import connect_context
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
+    calls = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        calls.append(request.url.path)
+        return httpx2.Response(503)
+
+    original = auth.resume_session
+    monkeypatch.setattr(
+        auth,
+        "resume_session",
+        lambda cookies, **kwargs: original(cookies, httpx2.MockTransport(handler), **kwargs),
+    )
+    context = MagicMock()
+    context.cookies.return_value = [
+        {"name": "session", "value": "synthetic-cookie", "domain": "campus.tum.de", "secure": True}
+    ]
+    with pytest.raises(CampusError, match="OFFLINE"):
+        connect_context(context, begin_login())
+    assert len(calls) == 1

@@ -169,17 +169,26 @@ class Vault:
     def refresh_browser_session[T](
         self,
         account: CredentialOwner,
-        refresh: Callable[[Credential], tuple[tuple[Cookie, ...], T]],
+        refresh: Callable[
+            [Credential, Callable[[tuple[Cookie, ...]], None]], tuple[tuple[Cookie, ...], T]
+        ],
     ) -> tuple[Credential, T]:
         """Serialize a browser-session refresh and preserve rotated service cookies."""
         with self.lease(account):
             credential = self.load(account)
             if credential.authentication != "browser_session":
                 raise CampusError(Code.AUTH_REQUIRED, "Reconnect this browser account.")
-            cookies, result = refresh(credential)
-            if cookies != credential.cookies:
-                with self.lock:
-                    credential = self._write(
-                        account, credential.model_copy(update={"cookies": cookies})
-                    )
+
+            def checkpoint(cookies: tuple[Cookie, ...]) -> None:
+                nonlocal credential
+                if not cookies:
+                    raise CampusError(Code.AUTH_REQUIRED, "Reconnect this browser account.")
+                if cookies != credential.cookies:
+                    with self.lock:
+                        credential = self._write(
+                            account, credential.model_copy(update={"cookies": cookies})
+                        )
+
+            cookies, result = refresh(credential, checkpoint)
+            checkpoint(cookies)
             return credential, result

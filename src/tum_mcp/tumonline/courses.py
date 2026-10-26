@@ -1,11 +1,22 @@
 """Minimal projections of TUMonline's observed public course listing."""
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
+
+
+def search_query(value: str | None) -> str | None:
+    """Restrict the portal's matrix-filter grammar to literal search terms."""
+    if value is None:
+        return None
+    value = value.strip()
+    if not 2 <= len(value) <= 80 or not re.fullmatch(r"[\w .+/-]+", value):
+        raise CampusError(Code.SCOPE_DENIED, "Invalid TUMonline course search.")
+    return value
 
 
 class Wire(BaseModel):

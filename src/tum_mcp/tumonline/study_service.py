@@ -1,11 +1,13 @@
 """Read the account's own study names under the TUMonline study scope."""
 
+from collections.abc import Callable
+
 import httpx2
 
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.auth import Cookie
-from tum_mcp.tumonline.auth import ResumedSession, resume_session
+from tum_mcp.tumonline.auth import IdentityMismatch, ResumedSession, resume_session
 from tum_mcp.tumonline.identity import AccountRef
 from tum_mcp.tumonline.policy import PolicyStore, Scope
 from tum_mcp.tumonline.studies import Study, project_studies
@@ -27,10 +29,20 @@ class StudyService:
             if policies.read(account_id) != policy:
                 raise CampusError(Code.STALE_RESULT, "TUMonline permissions changed; retry.")
 
-        def refresh(credential: Credential) -> tuple[tuple[Cookie, ...], ResumedSession]:
-            session = resume_session(
-                credential.cookies, self.transport, expected=account, authorize=authorize
-            )
+        def refresh(
+            credential: Credential, checkpoint: Callable[[tuple[Cookie, ...]], None]
+        ) -> tuple[tuple[Cookie, ...], ResumedSession]:
+            try:
+                session = resume_session(
+                    credential.cookies,
+                    self.transport,
+                    expected=account,
+                    authorize=authorize,
+                    checkpoint_cookies=checkpoint,
+                )
+            except IdentityMismatch:
+                checkpoint(credential.cookies)
+                raise
             return session.cookies, session
 
         authorize()

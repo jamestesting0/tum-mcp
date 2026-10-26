@@ -1,5 +1,6 @@
 """Narrow, locally scoped TUMonline tools."""
 
+import hashlib
 import time
 from typing import Annotated, Literal
 
@@ -10,7 +11,7 @@ from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.server import server
 from tum_mcp.settings import Frozen
-from tum_mcp.tumonline.courses import Course
+from tum_mcp.tumonline.courses import Course, search_query
 from tum_mcp.tumonline.curriculum import CurriculumPosition, PublicCurriculum
 from tum_mcp.tumonline.cursor import CursorBinding, CursorCodec
 from tum_mcp.tumonline.identity import AccountRef
@@ -25,6 +26,7 @@ AccountId = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
 Limit = Annotated[int, Field(ge=1, le=100)]
 CourseId = Annotated[int, Field(gt=0, le=2147483647)]
 Cursor = Annotated[str | None, Field(max_length=512)]
+Search = Annotated[str | None, Field(max_length=80)]
 codec = CursorCodec()
 
 
@@ -91,16 +93,20 @@ def tumonline_status() -> OnlineStatus:
 
 @server.tool(annotations=READ)
 def tumonline_list_courses(
-    account_id: AccountId, cursor: Cursor = None, limit: Limit = 20
+    account_id: AccountId, cursor: Cursor = None, limit: Limit = 20, query: Search = None
 ) -> CourseResult:
-    """List one page of public TUMonline course metadata; this does not list enrollments."""
+    """Search or list public course metadata; this does not list enrollments."""
     policies = PolicyStore()
     policy = policies.read(account_id)
     if not policy.allows(Scope.STUDIES_COURSES):
         raise CampusError(Code.SCOPE_DENIED, "TUMonline studies and courses are disabled.")
-    binding = CursorBinding(account_id=account_id, revision=policy.revision, limit=limit)
+    query = search_query(query)
+    query_hash = hashlib.sha256(query.encode()).hexdigest() if query is not None else None
+    binding = CursorBinding(
+        account_id=account_id, revision=policy.revision, limit=limit, query_hash=query_hash
+    )
     offset = codec.decode(cursor, binding) if cursor else 0
-    page = PublicCourses(policies).list(account_id, offset=offset, limit=limit)
+    page = PublicCourses(policies).list(account_id, offset=offset, limit=limit, query=query)
     if policies.read(account_id) != policy:
         raise CampusError(Code.STALE_RESULT, "TUMonline permissions changed; retry.")
     next_cursor = (

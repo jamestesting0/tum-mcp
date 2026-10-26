@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.tumonline.courses import CoursePage
+from tum_mcp.tumonline.courses import CoursePage, search_query
 from tum_mcp.tumonline.identity import AccountRef
 from tum_mcp.tumonline.policy import PolicyStore, Scope
 
@@ -43,9 +43,12 @@ class PublicCourses:
         self.transport = transport
         self.vault = vault
 
-    def list(self, account_id: str, *, offset: int = 0, limit: int = 20) -> CoursePage:
+    def list(
+        self, account_id: str, *, offset: int = 0, limit: int = 20, query: str | None = None
+    ) -> CoursePage:
         if offset < 0 or not 1 <= limit <= 100:
             raise CampusError(Code.SCOPE_DENIED, "Invalid course page bounds.")
+        query = search_query(query)
         policy = self.policies.read(account_id)
         if not policy.allows(Scope.STUDIES_COURSES):
             raise CampusError(Code.SCOPE_DENIED, "TUMonline studies and courses are disabled.")
@@ -68,9 +71,10 @@ class PublicCourses:
                 follow_redirects=False,
                 headers={"Accept": "application/json"},
             ) as client:
-                with client.stream(
-                    "GET", COURSES_URL, params={"$top": str(limit), "$skip": str(offset)}
-                ) as response:
+                params = {"$top": str(limit), "$skip": str(offset)}
+                if query is not None:
+                    params["$filter"] = "filterTerm-like=" + query
+                with client.stream("GET", COURSES_URL, params=params) as response:
                     if response.status_code in {401, 403}:
                         raise CampusError(Code.AUTH_REQUIRED, "TUMonline denied the request.")
                     if response.status_code == 429:

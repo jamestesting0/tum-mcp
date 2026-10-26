@@ -42,7 +42,7 @@ def test_tumonline_tools_use_local_scope_and_bounded_projection(
         def __init__(self, policies):
             self.policies = policies
 
-        def list(self, account_id, *, offset, limit):
+        def list(self, account_id, *, offset, limit, query=None):
             assert account_id == ACCOUNT and limit == 1
             return CoursePage(courses=(course,), coverage_status="partial", next_offset=offset + 1)
 

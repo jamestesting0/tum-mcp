@@ -24,6 +24,7 @@ class CursorBinding(Frozen):
     limit: int = Field(ge=1, le=100, strict=True)
     operation: Literal["courses", "curriculum_positions"] = "courses"
     course_id: int | None = Field(default=None, gt=0, strict=True)
+    query_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
 class CursorPayload(Frozen):

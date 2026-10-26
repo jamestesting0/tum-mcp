@@ -32,6 +32,21 @@ def tumonline(
 ) -> None:
     """Inspect TUMonline permissions and implementation availability."""
     store = PolicyStore()
+    if disconnect and show:
+        raise CampusError(Code.ACTION_REQUIRED, "Choose --show or --disconnect, not both.")
+    if disconnect and account is not None:
+        from pydantic import ValidationError
+
+        from tum_mcp.tumonline.identity import AccountRef
+        from tum_mcp.tumonline.onboarding import disconnect as remove_session
+
+        try:
+            target = AccountRef(account_id=account)
+        except ValidationError:
+            raise CampusError(Code.SCOPE_DENIED, "Invalid TUMonline account identifier.") from None
+        remove_session(target)
+        typer.echo("Local TUMonline session removed. Remote sessions are not revoked.")
+        return
     accounts = store.accounts()
     if not accounts:
         typer.echo("No TUMonline policy is configured. Run tum-mcp connect to sign in.")
@@ -42,8 +57,6 @@ def tumonline(
         account = accounts[0]
     policy = store.read(account)
     if disconnect:
-        if show:
-            raise CampusError(Code.ACTION_REQUIRED, "Choose --show or --disconnect, not both.")
         from tum_mcp.tumonline.identity import AccountRef
         from tum_mcp.tumonline.onboarding import disconnect as remove_session
 

@@ -146,3 +146,9 @@ def test_policy_change_between_refresh_and_profile_prevents_next_request() -> No
     with pytest.raises(CampusError):
         resume_session((COOKIE,), httpx2.MockTransport(handler), authorize=authorize)
     assert calls == ["POST"]
+
+
+def test_upstream_failure_is_not_reported_as_expired_login() -> None:
+    with pytest.raises(CampusError) as error:
+        resume_session((COOKIE,), httpx2.MockTransport(lambda _: httpx2.Response(503)))
+    assert error.value.code.value == "OFFLINE"

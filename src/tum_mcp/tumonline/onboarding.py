@@ -27,13 +27,20 @@ def begin_login() -> str:
 
 def disconnect(account: AccountRef) -> None:
     """Remove the saved local credential and invalidate any pending login."""
+    from tum_mcp.tumonline.transport import permitted_credential
+
     policies = PolicyStore()
+    vault = Vault()
     with FileLock(str(policies.root / "connect.lock")):
         marker = policies.root / "login-generation"
         if marker.is_symlink():
             raise CampusError(Code.SCOPE_DENIED, "TUMonline login marker cannot be a symlink.")
-        private_write(marker, uuid4().hex.encode())
-        Vault().logout(account)
+        with vault.lease(account), vault.lock:
+            record = vault.record_path(account)
+            if record.exists() or record.is_symlink():
+                permitted_credential(vault, account)
+            private_write(marker, uuid4().hex.encode())
+            record.unlink(missing_ok=True)
 
 
 def save_connection(session: ResumedSession, *, attempt: str) -> AccountRef:
@@ -81,8 +88,8 @@ def connect_context(context: BrowserContext, attempt: str) -> AccountRef | None:
     if not cookies:
         return None
     try:
-        initial = resume_session(cookies)
-        verified = resume_session(initial.cookies, expected=initial.account)
+        initial = resume_session(cookies, read_studies=False)
+        verified = resume_session(initial.cookies, expected=initial.account, read_studies=False)
     except CampusError as error:
         if error.code == Code.AUTH_REQUIRED:
             return None

@@ -135,6 +135,9 @@ names and degrees, public course catalog metadata and public curriculum position
 for a selected course by default. The position endpoint is anonymous: no student
 session or identifier is sent. These positions are a partial view, not a full
 program curriculum or personal enrollment list; page order can change upstream.
+Course catalog searches accept a title or course number using 2–80 letters,
+numbers, spaces, dots, underscores, plus signs, slashes or hyphens; continue pages
+with the same query.
 Full curriculum structure is unavailable because its public API requires a separate
 service account. Grades and progress need
 separate consent, but their readers are not yet available; exams, admission,
@@ -146,7 +149,9 @@ Run `tum-mcp manage tumonline --show` to inspect the policy and
 When multiple accounts exist, add `--account ACCOUNT_ID`. Reconnecting preserves
 the policy. `tum-mcp manage tumonline --disconnect` removes the local TUMonline
 credential and retains the policy; it does not revoke remote sessions. An expired
-session requires `tum-mcp connect` again.
+session requires `tum-mcp connect` again. If the policy is missing or corrupt, use
+`tum-mcp manage tumonline --account ACCOUNT_ID --disconnect` to remove that saved
+session without resetting permissions or affecting other providers.
 
 The policy governs what these TUMonline tools return to all MCP clients sharing
 the same local configuration. A local program running as the same user can access

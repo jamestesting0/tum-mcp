@@ -109,3 +109,65 @@ def test_local_disconnect_preserves_policy_and_does_not_touch_other_accounts(
     assert PolicyStore().read(ACCOUNT) == policy
     with pytest.raises(CampusError, match="AUTH_REQUIRED"):
         Vault().load(account)
+
+
+@pytest.mark.parametrize("policy_state", ["missing", "corrupt"])
+def test_disconnect_with_unreadable_policy_removes_only_the_target_credential(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, policy_state: str
+) -> None:
+    from tum_mcp.credentials import Credential, Vault
+    from tum_mcp.moodle.auth import Cookie
+    from tum_mcp.tumonline.identity import AccountRef
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
+    policies = PolicyStore()
+    policies.create(ACCOUNT)
+    target = AccountRef(account_id=ACCOUNT)
+    other = AccountRef(account_id="b" * 64)
+    vault = Vault()
+    for account in (target, other):
+        vault.save(
+            account,
+            Credential(
+                account_id=account.id,
+                authentication="browser_session",
+                cookies=(Cookie(name="session", value="synthetic", domain="campus.tum.de"),),
+            ),
+        )
+    policy_path = policies.root / f"{ACCOUNT}.json"
+    if policy_state == "missing":
+        policy_path.unlink()
+    else:
+        policy_path.write_text("{corrupt", encoding="utf-8")
+    result = CliRunner().invoke(app, ["manage", "tumonline", "--account", ACCOUNT, "--disconnect"])
+    assert result.exit_code == 0, result.output
+    with pytest.raises(CampusError, match="AUTH_REQUIRED"):
+        vault.load(target)
+    assert vault.load(other).account_id == other.id
+    if policy_state == "corrupt":
+        assert policy_path.read_text(encoding="utf-8") == "{corrupt"
+
+
+def test_targeted_disconnect_cannot_remove_other_provider_credentials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.credentials import Credential, Vault
+    from tum_mcp.moodle.auth import Cookie
+    from tum_mcp.settings import ARTEMIS, Account, Provider
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
+    other = Account(provider=Provider.ARTEMIS, origin=ARTEMIS, principal="synthetic-student")
+    vault = Vault()
+    vault.save(
+        other,
+        Credential(
+            account_id=other.id,
+            authentication="browser_session",
+            cookies=(Cookie(name="session", value="synthetic", domain="artemis.tum.de"),),
+        ),
+    )
+    result = CliRunner().invoke(app, ["manage", "tumonline", "--account", other.id, "--disconnect"])
+    assert isinstance(result.exception, CampusError)
+    assert vault.load(other).account_id == other.id

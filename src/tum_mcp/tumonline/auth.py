@@ -53,6 +53,13 @@ class ResumedSession(Frozen):
     studies: bytes = Field(default=b"", repr=False, exclude=True)
 
 
+class IdentityMismatch(CampusError):
+    """The refreshed session belongs to a different account."""
+
+    def __init__(self) -> None:
+        super().__init__(Code.SCOPE_DENIED, "TUMonline account identity changed.")
+
+
 def read_response(client: httpx2.Client, request: httpx2.Request, expected: int) -> bytes:
     """Bound response bytes and return only generic failures."""
     with client.stream(
@@ -60,8 +67,12 @@ def read_response(client: httpx2.Client, request: httpx2.Request, expected: int)
     ) as response:
         if response.status_code == 429:
             raise CampusError(Code.RATE_LIMITED, "TUMonline rate limit; retry later.")
+        if response.status_code >= 500:
+            raise CampusError(Code.OFFLINE, "TUMonline is temporarily unavailable.")
         if response.status_code != expected:
-            raise CampusError(Code.AUTH_REQUIRED, "Reconnect the TUMonline account.")
+            if response.status_code in {401, 403} or response.is_redirect:
+                raise CampusError(Code.AUTH_REQUIRED, "Reconnect the TUMonline account.")
+            raise CampusError(Code.INVALID_RESPONSE, "TUMonline returned an unexpected response.")
         body = bytearray()
         for chunk in response.iter_bytes():
             if len(body) + len(chunk) > MAX_RESPONSE:
@@ -76,6 +87,8 @@ def resume_session(
     *,
     expected: AccountRef | None = None,
     authorize: Callable[[], None] | None = None,
+    read_studies: bool = True,
+    checkpoint_cookies: Callable[[tuple[Cookie, ...]], None] | None = None,
 ) -> ResumedSession:
     """Refresh service cookies and bind the account to the authenticated desktop identity."""
     if not cookies or any(c.domain.lstrip(".") != "campus.tum.de" or not c.secure for c in cookies):
@@ -96,46 +109,62 @@ def resume_session(
             follow_redirects=False,
             headers={"Accept": "application/json"},
         ) as client:
+
+            def service_cookies() -> tuple[Cookie, ...]:
+                return tuple(
+                    Cookie(
+                        name=c.name,
+                        value=c.value,
+                        domain=c.domain,
+                        path=c.path,
+                        secure=c.secure,
+                        expires=c.expires or -1,
+                    )
+                    for c in client.cookies.jar
+                    if c.domain.lstrip(".") == "campus.tum.de" and c.secure
+                )
+
+            def read_and_checkpoint(request: httpx2.Request, status: int) -> bytes:
+                try:
+                    return read_response(client, request, status)
+                finally:
+                    retained = service_cookies()
+                    if checkpoint_cookies is not None and retained:
+                        checkpoint_cookies(retained)
+
             refresh_request = client.build_request(
                 "POST", ORIGIN + REFRESH, content=b"", headers={"Content-Type": "application/json"}
             )
             if authorize is not None:
                 authorize()
-            refresh = Refresh.model_validate_json(read_response(client, refresh_request, 201))
+            refresh_body = read_and_checkpoint(refresh_request, 201)
+            refresh = Refresh.model_validate_json(refresh_body)
             token = refresh.accessToken.get_secret_value()
             if not token:
                 raise CampusError(Code.AUTH_REQUIRED, "Reconnect the TUMonline account.")
+
             identity_request = client.build_request(
                 "GET", ORIGIN + PROFILE, headers={"Authorization": "Bearer " + token}
             )
             if authorize is not None:
                 authorize()
             identity = ProfileResponse.model_validate_json(
-                read_response(client, identity_request, 200)
+                read_and_checkpoint(identity_request, 200)
             )
             account = account_for_subject(
                 identity.resource[0].content.desktopProfileLibDto.obfuscatedId
             )
             if expected is not None and account != expected:
-                raise CampusError(Code.SCOPE_DENIED, "TUMonline account identity changed.")
-            studies_request = client.build_request(
-                "GET", ORIGIN + STUDIES, headers={"Authorization": "Bearer " + token}
-            )
-            if authorize is not None:
-                authorize()
-            studies = read_response(client, studies_request, 200)
-            retained = tuple(
-                Cookie(
-                    name=c.name,
-                    value=c.value,
-                    domain=c.domain,
-                    path=c.path,
-                    secure=c.secure,
-                    expires=c.expires or -1,
+                raise IdentityMismatch()
+            studies = b""
+            if read_studies:
+                studies_request = client.build_request(
+                    "GET", ORIGIN + STUDIES, headers={"Authorization": "Bearer " + token}
                 )
-                for c in client.cookies.jar
-                if c.domain.lstrip(".") == "campus.tum.de" and c.secure
-            )
+                if authorize is not None:
+                    authorize()
+                studies = read_and_checkpoint(studies_request, 200)
+            retained = service_cookies()
             if not retained:
                 raise CampusError(Code.AUTH_REQUIRED, "TUMonline session cookies are unavailable.")
             return ResumedSession(
