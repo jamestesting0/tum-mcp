@@ -30,7 +30,7 @@ def test_scope_projection_and_referenced_figures_only(
 ) -> None:
     build(lecture_project, publish=False)
     (lecture_project / "study/unrelated.png").write_bytes(b"PRIVATE_FILE")
-    (lecture_project / ".tum-mcp/comments.json").write_text("PRIVATE_COMMENT")
+    (lecture_project / ".tum-mcp/comments.json").write_text("PRIVATE_COMMENT", encoding="utf-8")
     site = export_site(
         lecture_project, include_exercises=include_exercises, include_lectures=include_lectures
     )
@@ -72,7 +72,7 @@ def test_excluded_lecture_math_source_and_content_are_removed(lecture_project: P
         encoding="utf-8",
     )
     notes = root / "study/lectures.json"
-    value = json.loads(notes.read_text())
+    value = json.loads(notes.read_text(encoding="utf-8"))
     lecture = value["lectures"][0]
     lecture["sources"] = [{"key": "lecture-only", "sha256": source.sha256}]
     lecture["overview"] += r" LECTURE_ONLY_TEXT \(\mathrm{LECTUREONLYMATH}\)"
@@ -80,7 +80,7 @@ def test_excluded_lecture_math_source_and_content_are_removed(lecture_project: P
         block["sources"] = ["lecture-only"]
     for evidence in value["evidence"]:
         evidence.update(source_key="lecture-only", source_sha256=source.sha256)
-    notes.write_text(json.dumps(value))
+    notes.write_text(json.dumps(value), encoding="utf-8")
     build(root, publish=False)
     assert not any(
         b"LECTURE_ONLY" in value or b"LECTUREONLYMATH" in value
@@ -184,16 +184,17 @@ def test_lecture_referencing_studocu_is_excluded_or_denied(lecture_project: Path
         status="current",
     )
     (root / ".tum-mcp/state.json").write_text(
-        state.model_copy(update={"resources": (*state.resources, source)}).model_dump_json()
+        state.model_copy(update={"resources": (*state.resources, source)}).model_dump_json(),
+        encoding="utf-8",
     )
     notes = root / "study/lectures.json"
-    value = json.loads(notes.read_text())
+    value = json.loads(notes.read_text(encoding="utf-8"))
     value["lectures"][0]["sources"] = [{"key": "private-lecture", "sha256": source.sha256}]
     for block in value["lectures"][0]["sections"][0]["blocks"]:
         block["sources"] = ["private-lecture"]
     for evidence in value["evidence"]:
         evidence.update(source_key="private-lecture", source_sha256=source.sha256)
-    notes.write_text(json.dumps(value))
+    notes.write_text(json.dumps(value), encoding="utf-8")
     build(root, publish=False)
     assert b"private-lecture" not in export_site(root)["data.mjs"]
     with pytest.raises(CampusError):

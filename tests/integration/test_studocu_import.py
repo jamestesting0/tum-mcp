@@ -44,11 +44,12 @@ def project_with_selection(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> P
                     }
                 ],
             }
-        )
+        ),
+        encoding="utf-8",
     )
     sync(project, snapshot, course_input="Course")
     selection = tmp_path / "selection.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": []}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": []}), encoding="utf-8")
     plan(project, selection)
     record_discovery(
         project, "123", [{"id": "42", "course_id": 123}, {"id": "43", "course_id": 123}]
@@ -72,7 +73,8 @@ def project_with_selection(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> P
                     }
                 ],
             }
-        )
+        ),
+        encoding="utf-8",
     )
     plan(project, selection)
     return project
@@ -93,12 +95,13 @@ def test_different_course_requires_explicit_confirmation(
     sync(project, tmp_path / "snapshot.json", course_input="Course")
     record_courses([{"course_id": 456, "institution_id": 92, "name": "Different Course"}])
     selection = tmp_path / "different-selection.json"
-    selection.write_text(json.dumps({"course_id": "456", "documents": []}))
+    selection.write_text(json.dumps({"course_id": "456", "documents": []}), encoding="utf-8")
     with pytest.raises(CampusError):
         plan(project, selection)
     assert all(item.provider != "studocu" for item in load_state(project).course.bindings)
     selection.write_text(
-        json.dumps({"course_id": "456", "confirmed_course": True, "documents": []})
+        json.dumps({"course_id": "456", "confirmed_course": True, "documents": []}),
+        encoding="utf-8",
     )
     plan(project, selection)
     assert (
@@ -123,7 +126,7 @@ def test_selection_requires_explicit_decision_and_reason(
     }
     entry.pop(missing)
     selection = tmp_path / "incomplete-selection.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [entry]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [entry]}), encoding="utf-8")
     with pytest.raises(CampusError):
         plan(project_with_selection, selection)
 
@@ -204,12 +207,13 @@ def test_unverified_and_wrong_course_candidates_are_not_selectable(
                     }
                 ],
             }
-        )
+        ),
+        encoding="utf-8",
     )
     with pytest.raises(CampusError):
         plan(project, selection)
     record_courses([{"course_id": 999, "institution_id": 12}])
-    selection.write_text(json.dumps({"course_id": "999", "documents": []}))
+    selection.write_text(json.dumps({"course_id": "999", "documents": []}), encoding="utf-8")
     with pytest.raises(CampusError):
         plan(project, selection)
 
@@ -225,14 +229,14 @@ def test_review_decision_can_be_selected_later(
     )
     item.update({"decision": "review", "reason": "Course year needs checking"})
     selection = tmp_path / "review.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     plan(project, selection)
     from tum_mcp.studocu.state import request_browser_download
 
     with pytest.raises(CampusError):
         request_browser_download(project, "42")
     item.update({"decision": "include", "reason": "Confirmed relevant mock exam"})
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     plan(project, selection)
     assert request_browser_download(project, "42").state == "action_required"
 
@@ -247,7 +251,9 @@ def test_same_year_and_type_duplicates_share_one_original_via_alias(
     )
     second = first | {"document_id": "43", "url": "https://www.studocu.com/de/document/43"}
     selection = tmp_path / "more.json"
-    selection.write_text(json.dumps({"course_id": queue.course_id, "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": queue.course_id, "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -278,7 +284,9 @@ def duplicate_pair(project: Path, tmp_path: Path) -> Path:
     )
     second = first | {"document_id": "43", "url": "https://www.studocu.com/de/document/43"}
     selection = tmp_path / "pair.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -307,7 +315,7 @@ def test_metadata_changes_do_not_split_identical_aliases(
     ]
     next(item for item in entries if item["document_id"] == document_id)[field] = value
     selection = tmp_path / "metadata.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     sources = {item.resource.key: item for item in load_state(project).resources}
     assert getattr(sources[f"studocu-{document_id}"].resource.studocu, field) == value
@@ -339,13 +347,13 @@ def test_pending_receipt_is_not_accepted_as_a_completed_import(
     pdf = duplicate_pair(project, tmp_path)
     document = next(item for item in load_queue(project).documents if item.document_id == "43")
     receipt = project / ".tum-mcp/studocu/incoming" / f"{document.staged_name}.json"
-    data = json.loads(receipt.read_text())
+    data = json.loads(receipt.read_text(encoding="utf-8"))
     data["validation"] = "pending"
-    receipt.write_text(json.dumps(data))
+    receipt.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(CampusError):
         import_staged(project, "43", document.staged_name)
     assert import_staged(project, "43", stage(project, "43", pdf))["state"] == "already_imported"
-    assert json.loads(receipt.read_text())["validation"] == "pending"
+    assert json.loads(receipt.read_text(encoding="utf-8"))["validation"] == "pending"
 
 
 @pytest.mark.parametrize("document_id", ["42", "43"])
@@ -409,10 +417,10 @@ def test_alias_works_in_study_exercises_and_handbook_without_exporting_private_c
     state = load_state(project)
     source = next(item for item in state.resources if item.resource.key == "studocu-43")
     fixtures = Path(__file__).parents[1] / "fixtures"
-    content = json.loads((fixtures / "course_app/content.json").read_text())
+    content = json.loads((fixtures / "course_app/content.json").read_text(encoding="utf-8"))
     content["course_key"] = "course"
     content["units"] = [next(unit for unit in content["units"] if unit["key"] == "weighted")]
-    exercises = json.loads((fixtures / "exercises.json").read_text())
+    exercises = json.loads((fixtures / "exercises.json").read_text(encoding="utf-8"))
     exercises["course_key"] = "course"
 
     def cite_alias(value):
@@ -433,17 +441,18 @@ def test_alias_works_in_study_exercises_and_handbook_without_exporting_private_c
 
     app = project / "app"
     app.mkdir(exist_ok=True)
-    (app / "content.json").write_text(json.dumps(cite_alias(content)))
-    (app / "exercises.json").write_text(json.dumps(cite_alias(exercises)))
+    (app / "content.json").write_text(json.dumps(cite_alias(content)), encoding="utf-8")
+    (app / "exercises.json").write_text(json.dumps(cite_alias(exercises)), encoding="utf-8")
     build(project, publish=False)
-    data = (app / "data.mjs").read_text()
+    data = (app / "data.mjs").read_text(encoding="utf-8")
     assert "https://www.studocu.com/de/document/43" in data
     with pytest.raises(CampusError):
         export_site(project, include_exercises=True)
     handbook = project / ".tum-mcp/course.md"
     handbook.write_text(
         f"---\ncourse_key: course\nsemester: Winter\nreviewed_generation: {state.generation}\n"
-        f"reviewed_sources:\n  studocu-43: {source.sha256}\n---\n# Course\n"
+        f"reviewed_sources:\n  studocu-43: {source.sha256}\n---\n# Course\n",
+        encoding="utf-8",
     )
     assert context_review(project, state).status == "current"
     (project / "materials/studocu/exams/material-studocu-42.pdf").write_bytes(b"edited")
@@ -467,7 +476,7 @@ def test_refresh_separates_aliases_without_losing_the_old_original(
     ]
     next(item for item in entries if item["document_id"] == document_id)["refresh"] = True
     selection = tmp_path / "refresh-alias.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -498,7 +507,7 @@ def test_reclassifying_an_existing_document_during_refresh_keeps_import_resumabl
     ]
     selection = tmp_path / "refresh-change.json"
     entries[0]["refresh"] = True
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -508,7 +517,7 @@ def test_reclassifying_an_existing_document_during_refresh_keeps_import_resumabl
     staged = stage(project, "42", pdf) if staged_before_reclassification else None
     entries[0]["refresh"] = False
     entries[0]["group"] = "summaries"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     source = next(
         item for item in load_state(project).resources if item.resource.key == "studocu-42"
@@ -534,7 +543,7 @@ def test_reclassifying_either_document_safely_separates_aliases(
     ]
     next(item for item in entries if item["document_id"] == document_id)["group"] = "summaries"
     selection = tmp_path / "reclassify-alias.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     sources = {item.resource.key: item for item in load_state(project).resources}
     for key in ("studocu-42", "studocu-43"):
@@ -550,13 +559,13 @@ def test_existing_duplicate_is_consolidated_only_if_both_files_are_unchanged(
     project = project_with_selection
     body = duplicate_pair(project, tmp_path).read_bytes()
     state_file = project / ".tum-mcp/state.json"
-    state = json.loads(state_file.read_text())
+    state = json.loads(state_file.read_text(encoding="utf-8"))
     legacy = next(item for item in state["resources"] if item["resource"]["key"] == "studocu-43")
     legacy["alias_of"] = None
     legacy["path"] = "materials/studocu/exams/material-studocu-43.pdf"
     legacy_path = project / legacy["path"]
     legacy_path.write_bytes(b"user edits" if edited else body)
-    state_file.write_text(json.dumps(state))
+    state_file.write_text(json.dumps(state), encoding="utf-8")
     queue = load_queue(project)
     for item in queue.documents:
         (project / ".tum-mcp/studocu/incoming" / item.staged_name).write_bytes(body)
@@ -567,7 +576,7 @@ def test_existing_duplicate_is_consolidated_only_if_both_files_are_unchanged(
         for item in queue.documents
     ]
     selection = tmp_path / "resume.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     source = next(
         item for item in load_state(project).resources if item.resource.key == "studocu-43"
@@ -599,7 +608,7 @@ def test_simultaneous_matching_reclassification_keeps_alias(
     for item in entries:
         item[field] = value
     selection = tmp_path / "both-groups.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     sources = {item.resource.key: item for item in load_state(project).resources}
     assert sources["studocu-43"].alias_of == "studocu-42"
@@ -623,7 +632,9 @@ def test_uncertain_or_distinct_documents_keep_separate_originals(
         first | {"document_id": "43", "url": "https://www.studocu.com/de/document/43"} | changes
     )
     selection = tmp_path / "distinct.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -654,7 +665,9 @@ def test_corrected_metadata_consolidates_previously_uncertain_matches(
         "year": None,
     }
     selection = tmp_path / "uncertain.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -664,7 +677,9 @@ def test_corrected_metadata_consolidates_previously_uncertain_matches(
     for doc_id in ("42", "43"):
         import_staged(project, doc_id, stage(project, doc_id, pdf))
     second["year"] = 2024
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     sources = {item.resource.key: item for item in load_state(project).resources}
     assert sources["studocu-43"].alias_of == "studocu-42"
@@ -686,7 +701,9 @@ def test_group_change_consolidates_with_an_existing_matching_original(
         "group": "other",
     }
     selection = tmp_path / "different-group.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -696,7 +713,9 @@ def test_group_change_consolidates_with_an_existing_matching_original(
     for doc_id in ("42", "43"):
         import_staged(project, doc_id, stage(project, doc_id, pdf))
     second["group"] = "exams"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     sources = {item.resource.key: item for item in load_state(project).resources}
     assert sources["studocu-43"].alias_of == "studocu-42"
@@ -719,11 +738,11 @@ def test_group_consolidation_rolls_back_if_retained_original_changes(
     ]
     selection = tmp_path / "rollback-consolidation.json"
     entries[1]["group"] = "other"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     before = (project / ".tum-mcp/state.json").read_bytes()
     entries[1]["group"] = "exams"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     canonical = project / "materials/studocu/exams/material-studocu-42.pdf"
     original_writer = study_store.private_write
     changed = False
@@ -761,7 +780,9 @@ def test_batch_moves_of_previously_separate_matches_share_the_new_original(
         "group": "other",
     }
     selection = tmp_path / "both-move.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -771,7 +792,9 @@ def test_batch_moves_of_previously_separate_matches_share_the_new_original(
     for doc_id in ("42", "43"):
         import_staged(project, doc_id, stage(project, doc_id, pdf))
     first["group"] = second["group"] = "summaries"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     sources = {item.resource.key: item for item in load_state(project).resources}
     assert sources["studocu-43"].alias_of == "studocu-42"
@@ -796,7 +819,9 @@ def test_batch_move_preserves_external_edit_and_restores_previous_originals(
         "group": "other",
     }
     selection = tmp_path / "batch-rollback.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -807,7 +832,9 @@ def test_batch_move_preserves_external_edit_and_restores_previous_originals(
         import_staged(project, doc_id, stage(project, doc_id, pdf))
     original_state = (project / ".tum-mcp/state.json").read_bytes()
     first["group"] = second["group"] = "summaries"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     new_path = project / "materials/studocu/summaries/material-studocu-42.pdf"
     write = study_store.private_write
     changed = False
@@ -849,7 +876,7 @@ def test_alias_promotion_rolls_back_if_inventory_write_fails(
     ]
     entries[0]["group"] = "summaries"
     selection = tmp_path / "change.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     write = study_store.private_write
 
     def fail_state(path, value):
@@ -883,7 +910,7 @@ def test_interrupted_alias_promotion_resumes_without_another_download(
     ]
     entries[0]["group"] = "summaries"
     selection = tmp_path / "resume-promotion.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     child = """import os, sys
 from pathlib import Path
 from tum_mcp import study_store
@@ -926,7 +953,7 @@ def test_alias_import_preserves_staging_if_original_changes_during_commit(
         entries[0] | {"document_id": "44", "url": "https://www.studocu.com/de/document/44"}
     )
     selection = tmp_path / "third.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     staged = stage(project, "44", pdf)
     original = project / "materials/studocu/exams/material-studocu-42.pdf"
@@ -990,24 +1017,24 @@ def test_consolidating_a_legacy_duplicate_retargets_existing_aliases(
         entries[0] | {"document_id": "44", "url": "https://www.studocu.com/de/document/44"}
     )
     selection = tmp_path / "three.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     import_staged(project, "44", stage(project, "44", pdf))
     state_path = project / ".tum-mcp/state.json"
-    data = json.loads(state_path.read_text())
+    data = json.loads(state_path.read_text(encoding="utf-8"))
     third = next(item for item in data["resources"] if item["resource"]["key"] == "studocu-44")
     third["alias_of"] = None
     third["path"] = "materials/studocu/exams/material-studocu-44.pdf"
     (project / third["path"]).write_bytes(pdf.read_bytes())
-    state_path.write_text(json.dumps(data))
+    state_path.write_text(json.dumps(data), encoding="utf-8")
     queue_path = project / ".tum-mcp/studocu/queue.json"
-    queue = json.loads(queue_path.read_text())
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
     for document in queue["documents"]:
         if document["document_id"] == "42":
             document.update({"state": "duplicate", "duplicate_of": "44"})
         if document["document_id"] == "44":
             document.update({"state": "imported", "duplicate_of": None})
-    queue_path.write_text(json.dumps(queue))
+    queue_path.write_text(json.dumps(queue), encoding="utf-8")
     plan(project, selection)
     sources = {item.resource.key: item for item in load_state(project).resources}
     assert sources["studocu-42"].alias_of == sources["studocu-43"].alias_of == "studocu-44"
@@ -1032,11 +1059,11 @@ def test_refreshing_original_promotes_one_alias_and_retargets_the_others(
         entries[0] | {"document_id": "44", "url": "https://www.studocu.com/de/document/44"}
     )
     selection = tmp_path / "three-refresh.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     import_staged(project, "44", stage(project, "44", pdf))
     entries[0]["refresh"] = True
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -1069,11 +1096,11 @@ def test_partial_family_reclassification_preserves_each_matching_alias(
         entries[0] | {"document_id": "44", "url": "https://www.studocu.com/de/document/44"}
     )
     selection = tmp_path / "partial-move.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     import_staged(project, "44", stage(project, "44", pdf))
     entries[0]["group"] = entries[1]["group"] = "summaries"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     sources = {item.resource.key: item for item in load_state(project).resources}
     assert sources["studocu-43"].alias_of == "studocu-42"
@@ -1122,14 +1149,15 @@ def test_search_records_course_scoped_discovery(
                     }
                 ],
             }
-        )
+        ),
+        encoding="utf-8",
     )
     plan(project_with_selection, selection)
-    wrong = json.loads(selection.read_text())
+    wrong = json.loads(selection.read_text(encoding="utf-8"))
     wrong["documents"][0].update(
         {"document_id": "56", "url": "https://www.studocu.com/de/document/56"}
     )
-    selection.write_text(json.dumps(wrong))
+    selection.write_text(json.dumps(wrong), encoding="utf-8")
     with pytest.raises(CampusError):
         plan(project_with_selection, selection)
 
@@ -1167,7 +1195,8 @@ def test_explicit_refresh_preserves_original_version(
                 "retained_bindings": ["moodle"],
                 "resources": [direct],
             }
-        )
+        ),
+        encoding="utf-8",
     )
     with pytest.raises(CampusError):
         sync(project, bypass)
@@ -1178,7 +1207,7 @@ def test_explicit_refresh_preserves_original_version(
     )
     entry["refresh"] = True
     selection = tmp_path / "refresh.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [entry]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [entry]}), encoding="utf-8")
     plan(project, selection)
     staged = stage(project, "42", file)
     assert import_staged(project, "42", staged)["pages"] == 2
@@ -1199,7 +1228,9 @@ def test_concurrent_imports_reconcile_latest_state(
     )
     second = first | {"document_id": "43", "url": "https://www.studocu.com/de/document/43"}
     selection = tmp_path / "both.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [first, second]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [first, second]}), encoding="utf-8"
+    )
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -1334,7 +1365,7 @@ def test_reclassify_pending_and_imported_document_without_changing_its_identity(
         .model_dump(exclude={"state", "duplicate_of", "staged_name", "validation"})
     )
     item.update({"group": "other", "document_type": "other"})
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -1345,7 +1376,7 @@ def test_reclassify_pending_and_imported_document_without_changing_its_identity(
     before = load_state(project)
     original = next(r for r in before.resources if r.resource.key == "studocu-42")
     item.update({"group": "summaries", "document_type": "summary"})
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     plan(project, selection)
     after = load_state(project)
     moved = next(r for r in after.resources if r.resource.key == "studocu-42")
@@ -1355,7 +1386,7 @@ def test_reclassify_pending_and_imported_document_without_changing_its_identity(
     assert not (project / original.path).exists()
     assert load_queue(project).documents[0].group == "summaries"
     item.update({"decision": "exclude", "reason": "Not useful after review"})
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     plan(project, selection)
     excluded = load_queue(project).documents[0]
     assert excluded.decision == "exclude" and excluded.state == "imported"
@@ -1379,7 +1410,7 @@ def test_reclassify_preserves_local_edits_and_destination_conflicts(
     )
     item["group"] = "summaries"
     selection = tmp_path / "reclassify.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     target = project / "materials/studocu/summaries/material-studocu-42.pdf"
     target.parent.mkdir(parents=True)
     target.write_bytes(b"personal file")
@@ -1416,7 +1447,7 @@ def test_reclassify_rolls_back_when_queue_write_fails(
     )
     item["group"] = "summaries"
     selection = tmp_path / "reclassify.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     state_before = (project / ".tum-mcp/state.json").read_bytes()
     queue_before = (project / ".tum-mcp/studocu/queue.json").read_bytes()
     write = study_store.private_write
@@ -1455,7 +1486,7 @@ def test_reclassify_rolls_back_if_old_file_cannot_be_removed(
     )
     item["group"] = "summaries"
     selection = tmp_path / "reclassify.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     state_before = (project / ".tum-mcp/state.json").read_bytes()
     queue_before = (project / ".tum-mcp/studocu/queue.json").read_bytes()
     old = project / "materials/studocu/exams/material-studocu-42.pdf"
@@ -1495,7 +1526,7 @@ def test_reclassify_preserves_changes_made_after_transaction_preflight(
     )
     item["group"] = "summaries"
     selection = tmp_path / "reclassify.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     state_before = (project / ".tum-mcp/state.json").read_bytes()
     queue_path = project / ".tum-mcp/studocu/queue.json"
     destination = project / "materials/studocu/summaries/material-studocu-42.pdf"
@@ -1559,14 +1590,15 @@ def test_legacy_unconfirmed_queue_requires_course_confirmation(
         )
         for item in load_queue(project).documents
     ]
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     with pytest.raises(CampusError, match="Confirm"):
         plan(project, selection)
     selection.write_text(
-        json.dumps({"course_id": "123", "confirmed_course": True, "documents": entries})
+        json.dumps({"course_id": "123", "confirmed_course": True, "documents": entries}),
+        encoding="utf-8",
     )
     plan(project, selection)
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     assert plan(project, selection).confirmed_course
     assert request_browser_download(project, "42").state == "action_required"
 
@@ -1574,18 +1606,18 @@ def test_legacy_unconfirmed_queue_requires_course_confirmation(
 def test_studocu_preserves_live_course_schema_and_binding(
     project_with_selection: Path, tmp_path: Path
 ) -> None:
-    snapshot = json.loads((tmp_path / "snapshot.json").read_text())
+    snapshot = json.loads((tmp_path / "snapshot.json").read_text(encoding="utf-8"))
     snapshot["schema_version"] = 2
     snapshot["course"]["bindings"].append(
         {"key": "live", "provider": "tum_live", "course_id": "17", "course_slug": "lecture"}
     )
     snapshot["coverage"].append({"binding": "live", "status": "partial", "checked_at": "today"})
     source = tmp_path / "live-snapshot.json"
-    source.write_text(json.dumps(snapshot))
+    source.write_text(json.dumps(snapshot), encoding="utf-8")
     project = tmp_path / "live-course"
     sync(project, source, course_input="Course")
     selection = tmp_path / "live-selection.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": []}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": []}), encoding="utf-8")
     plan(project, selection)
     record_discovery(project, "123", [{"id": "42", "course_id": 123}])
     entry = (
@@ -1593,7 +1625,7 @@ def test_studocu_preserves_live_course_schema_and_binding(
         .documents[0]
         .model_dump(exclude={"state", "duplicate_of", "staged_name", "validation", "attempt_id"})
     )
-    selection.write_text(json.dumps({"course_id": "123", "documents": [entry]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [entry]}), encoding="utf-8")
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -1630,7 +1662,7 @@ def test_interrupted_refresh_of_canonical_alias_recovers(
     ]
     entries[0]["refresh"] = True
     selection = tmp_path / "resume-refresh.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -1674,7 +1706,7 @@ def test_interrupted_promotion_preserves_an_edited_orphan(
     ]
     entries[0]["group"] = "summaries"
     selection = tmp_path / "interrupted-edited.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": entries}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": entries}), encoding="utf-8")
     child = """import os, sys
 from pathlib import Path
 from tum_mcp import study_store

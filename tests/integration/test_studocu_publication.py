@@ -21,13 +21,13 @@ def supplemented_project(project: Path, tmp_path: Path, monkeypatch: pytest.Monk
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
     record_courses([{"course_id": 123, "institution_id": 92, "name": "Algorithms & Graphs"}])
     state_path = project / ".tum-mcp/state.json"
-    state = json.loads(state_path.read_text())
+    state = json.loads(state_path.read_text(encoding="utf-8"))
     state["course"]["synthetic"] = False
     for binding in state["course"]["bindings"]:
         binding["provider"] = "moodle"
-    state_path.write_text(json.dumps(state))
+    state_path.write_text(json.dumps(state), encoding="utf-8")
     selection = tmp_path / "selection.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": []}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": []}), encoding="utf-8")
     plan(project, selection)
     record_discovery(project, "123", [{"id": "42", "course_id": 123}])
     selection.write_text(
@@ -46,7 +46,8 @@ def supplemented_project(project: Path, tmp_path: Path, monkeypatch: pytest.Monk
                     }
                 ],
             }
-        )
+        ),
+        encoding="utf-8",
     )
     plan(project, selection)
     writer = PdfWriter()
@@ -77,7 +78,7 @@ def test_changed_unreferenced_private_source_does_not_stale_official_export(
     )
     item["refresh"] = True
     selection = tmp_path / "refresh.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}))
+    selection.write_text(json.dumps({"course_id": "123", "documents": [item]}), encoding="utf-8")
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
@@ -97,9 +98,9 @@ def test_included_private_source_blocks_before_github(
     project = supplemented_project
     source = next(r for r in load_state(project).resources if r.resource.key == "studocu-42")
     path = project / "study/content.json"
-    content = json.loads(path.read_text())
+    content = json.loads(path.read_text(encoding="utf-8"))
     content["units"][0]["sources"].append({"key": source.resource.key, "sha256": source.sha256})
-    path.write_text(json.dumps(content))
+    path.write_text(json.dumps(content), encoding="utf-8")
     build(project, publish=False)
     monkeypatch.setattr(
         "tum_mcp.study_publish.GitHub.discover", lambda: pytest.fail("GitHub was contacted")
@@ -113,10 +114,10 @@ def test_included_private_source_blocks_before_github(
 def test_edited_generated_fields_cannot_enter_public_export(supplemented_project: Path) -> None:
     project = supplemented_project
     generated = project / "study/data.mjs"
-    text = generated.read_text()
+    text = generated.read_text(encoding="utf-8")
     payload = json.loads(text.removeprefix("export default ").removesuffix(";\n"))
     payload["inlineMath"]["injected"] = "synthetic private text"
-    generated.write_text("export default " + json.dumps(payload) + ";\n")
+    generated.write_text("export default " + json.dumps(payload) + ";\n", encoding="utf-8")
     with pytest.raises(CampusError):
         export_site(project)
 
@@ -125,7 +126,7 @@ def test_studocu_source_cannot_be_downgraded_to_a_campus_binding(
     supplemented_project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     state_path = supplemented_project / ".tum-mcp/state.json"
-    state = json.loads(state_path.read_text())
+    state = json.loads(state_path.read_text(encoding="utf-8"))
     source = next(item for item in state["resources"] if item["resource"]["key"] == "studocu-42")
     source["resource"]["binding"] = next(
         item["key"] for item in state["course"]["bindings"] if item["provider"] == "moodle"
@@ -134,11 +135,11 @@ def test_studocu_source_cannot_be_downgraded_to_a_campus_binding(
     source["resource"].pop("studocu")
     source["path"] = "materials/exams/material-studocu-42.pdf"
     (supplemented_project / source["path"]).write_bytes(original)
-    state_path.write_text(json.dumps(state))
+    state_path.write_text(json.dumps(state), encoding="utf-8")
     content_path = supplemented_project / "study/content.json"
-    content = json.loads(content_path.read_text())
+    content = json.loads(content_path.read_text(encoding="utf-8"))
     content["units"][0]["sources"].append({"key": "studocu-42", "sha256": source["sha256"]})
-    content_path.write_text(json.dumps(content))
+    content_path.write_text(json.dumps(content), encoding="utf-8")
     build(supplemented_project, publish=False)
     monkeypatch.setattr(
         "tum_mcp.study_publish.GitHub.discover", lambda: pytest.fail("GitHub was contacted")
@@ -152,10 +153,10 @@ def test_legacy_studocu_link_stays_readable_but_cannot_be_published(
     project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     state_path = project / ".tum-mcp/state.json"
-    state = json.loads(state_path.read_text())
+    state = json.loads(state_path.read_text(encoding="utf-8"))
     source = next(item for item in state["resources"] if item["resource"]["key"] == "graphs")
     source["resource"]["url"] = "https://www.studocu.com/de/document/42"
-    state_path.write_text(json.dumps(state))
+    state_path.write_text(json.dumps(state), encoding="utf-8")
     assert load_state(project).course.synthetic
     build(project, publish=False)
     monkeypatch.setattr(
@@ -175,7 +176,7 @@ def test_excluded_private_exercises_do_not_block_official_study_export(
     source = next(
         item for item in load_state(project).resources if item.resource.key == "studocu-42"
     )
-    data = json.loads((exercise_project / "study/exercises.json").read_text())
+    data = json.loads((exercise_project / "study/exercises.json").read_text(encoding="utf-8"))
     exercise = data["sets"][0]["exercises"][0]
     old_key = exercise["sources"][0]["key"]
 
@@ -198,7 +199,7 @@ def test_excluded_private_exercises_do_not_block_official_study_export(
     updated["sources"][0]["key"] = "studocu-42"
     updated["sources"][0]["sha256"] = source.sha256
     data["sets"][0]["exercises"][0] = updated
-    (project / "study/exercises.json").write_text(json.dumps(data))
+    (project / "study/exercises.json").write_text(json.dumps(data), encoding="utf-8")
     build(project, publish=False)
     assert b"data.hosted = true" in export_site(project, include_exercises=False)["data.mjs"]
     with pytest.raises(CampusError) as error:
@@ -211,7 +212,9 @@ def test_excluded_private_exercises_do_not_block_official_study_export(
     )
     selected["refresh"] = True
     selection = tmp_path / "refresh-exercise.json"
-    selection.write_text(json.dumps({"course_id": "123", "documents": [selected]}))
+    selection.write_text(
+        json.dumps({"course_id": "123", "documents": [selected]}), encoding="utf-8"
+    )
     plan(project, selection)
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)

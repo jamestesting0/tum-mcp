@@ -44,11 +44,11 @@ def test_customized_skill_is_preserved_and_disabled(home: Path) -> None:
     runner = CliRunner()
     assert runner.invoke(app, ["install", "studocu"]).exit_code == 0
     path = home / ".cursor/skills/sync-studocu/SKILL.md"
-    path.write_text(path.read_text() + "\nMy changes.\n")
+    path.write_text(path.read_text(encoding="utf-8") + "\nMy changes.\n", encoding="utf-8")
     result = runner.invoke(app, ["extensions", "remove", "studocu"])
     assert result.exit_code == 0
     assert "disabled_needs_review" in result.output
-    assert "My changes" in path.read_text()
+    assert "My changes" in path.read_text(encoding="utf-8")
     assert not studocu_enabled()
 
 
@@ -57,12 +57,12 @@ def test_conflict_prevents_activation_across_clients(home: Path) -> None:
     install_client("antigravity", home, announce=False)
     conflict = home / ".gemini/config/skills/sync-studocu/SKILL.md"
     conflict.parent.mkdir(parents=True)
-    conflict.write_text("Keep this personal skill.")
+    conflict.write_text("Keep this personal skill.", encoding="utf-8")
     result = CliRunner().invoke(app, ["install", "studocu"])
     assert result.exit_code != 0
     assert not studocu_enabled()
     assert not (home / ".cursor/skills/sync-studocu").exists()
-    assert conflict.read_text() == "Keep this personal skill."
+    assert conflict.read_text(encoding="utf-8") == "Keep this personal skill."
 
 
 @pytest.mark.parametrize("first_installed", ["lecture", "studocu"])
