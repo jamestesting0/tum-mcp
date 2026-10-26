@@ -1,5 +1,25 @@
 # Changes
 
+## 0.9.0 — 2026-10-26
+
+- Add read-only TUMonline study, public catalog and partial curriculum-position
+  tools, with separate account permissions, verified identity and bounded paging.
+- Add optional Studocu search and reviewed personal PDF collection through
+  `tum-mcp install studocu`. Preserve originals, course bindings and recovery
+  history; supplementary personal-use sources are excluded from publication.
+- Add optional `tum-mcp install lecture` and Prepare Lecture for timestamped
+  Lecture Notes in the existing course app. Prefer transcripts and supplied
+  materials, skip whole-silent recordings, preserve original-time coverage and
+  request only critical video frames. Publication remains an explicit opt-in.
+- Support isolated, pinned CPU recognition on Windows x64, Intel Mac and supported
+  Linux/WSL hosts, alongside Apple Silicon MLX acceleration. Keep heavy recognizer
+  dependencies optional; captions/imported WebVTT need no recognizer installation.
+- Handle persistent Studocu SSE replies, enforce response IDs/search limits and
+  bound TUMonline policy reads and catalog output. Unify extension status/removal
+  and verify both optional workflows together. Shorten the getting-started guide.
+- Preserve existing Moodle compatibility tools, sessions, downloads, customized
+  skills and existing course layouts during installation and upgrades.
+
 ## 0.8.1 — 2026-10-26
 
 - Give every doctor/update status a dot: yellow for unverified or attention-needed

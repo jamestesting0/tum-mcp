@@ -59,12 +59,16 @@ CI runs macOS, Windows and Linux, plus both distribution engines on WSL 3.x.
 Consumer checks install the actual npm artifact, discover tools, build a study
 site and test available Chromium browsers with temporary profiles and synthetic
 pages. WSL verifies Windows browser transport. No live account is used.
-Upgrade checks cover public 0.8.0, client refresh, customized-file conflicts,
+Upgrade checks cover public 0.8.0 and 0.8.1, client refresh, customized-file conflicts,
 failed preparation, runtime repair and removal that preserves work/credentials.
 The package-lifecycle check uses a local synthetic registry and real isolated
 global npm prefixes to verify downloads, backend validation, replacement,
 failure ordering and one-command removal. It does not publish a test release.
 All five jobs must pass on the exact pushed commit before completion is claimed.
+Desktop jobs additionally install the optional hash-locked CPU recognizer and
+transcribe the synthetic speech fixture; supported Apple Silicon runners also
+exercise MLX. This explicit test downloads public pinned model files, never campus
+recordings. Ordinary test runs skip it unless `TUM_MCP_LECTURE_ASR_INTEGRATION=1`.
 
 Live Moodle checks are opt-in: `TUM_MOODLE_LIVE=1 uv run pytest tests/live -q`.
 They use the developer's selected course and saved session. Keep them out of CI.

@@ -1,7 +1,7 @@
 {
   "name": "@jamestesting888/tum-mcp",
-  "version": "0.8.1",
-  "description": "Read-only TUM Moodle, Artemis and Zulip integration with source-backed study workflows",
+  "version": "0.9.0",
+  "description": "Read-only TUM campus tools and source-backed study, exercise and lecture workflows",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -28,7 +28,8 @@
     "docs/setup.md",
     "docs/development.md",
     "docs/tum-mcp.md",
-    "docs/study.md"
+    "docs/study.md",
+    "docs/lecture-notes.md"
   ],
   "scripts": {
     "prepack": "node npm/build.mjs",
@@ -54,6 +55,9 @@
     "moodle",
     "artemis",
     "zulip",
-    "codex"
+    "codex",
+    "tumonline",
+    "studocu",
+    "lecture-notes"
   ]
 }
