@@ -19,6 +19,15 @@ Object.assign(env, {
 });
 writeFileSync(env.NPM_CONFIG_USERCONFIG, '', { mode: 0o600 });
 
+function browserEnvironment() {
+  // Windows known folders must match the OS user; browser contexts remain temporary.
+  const browserEnv = { ...env };
+  if (process.platform === 'win32') {
+    for (const name of ['HOME', 'USERPROFILE']) if (process.env[name]) browserEnv[name] = process.env[name];
+  }
+  return browserEnv;
+}
+
 function run(command, args, timeout = 600000, childEnv = env) {
   const result = spawnSync(command, args, { env: childEnv, encoding: 'utf8', shell: false, timeout });
   if (result.error || result.status !== 0) throw new Error(`${command} failed: ${[result.stdout, result.stderr, result.error?.message].filter(Boolean).join('\n') || result.status}`);
@@ -99,18 +108,13 @@ for name in ('cursor','antigravity'):
   assert.equal(readFileSync(studyState, 'utf8'), 'synthetic damaged study state');
   let browserEvidence = null;
   if (process.env.TUM_MCP_BROWSER_INTEGRATION === '1' || /microsoft|wsl/i.test(release())) {
-    // Windows browsers require the OS account's known-folder environment. They
-    // still receive Playwright's separate temporary profile, never the real one.
-    const browserEnv = { ...env };
+    const browserEnv = browserEnvironment();
     const studyFixtureRoot = join(root, 'course-fixture');
     mkdirSync(studyFixtureRoot);
     for (const name of ['snapshot.json', 'content.json']) {
       writeFileSync(join(studyFixtureRoot, name), readFileSync(new URL(`../tests/fixtures/course_app/${name}`, import.meta.url)));
     }
     browserEnv.TUM_MCP_STUDY_QA_FIXTURE = studyFixtureRoot;
-    if (process.platform === 'win32') {
-      for (const name of ['HOME', 'USERPROFILE']) if (process.env[name]) browserEnv[name] = process.env[name];
-    }
     const fixture = readFileSync(new URL('../tests/integration/browser_consumer_fixture.py', import.meta.url), 'utf8');
     const revisionFixture = readFileSync(new URL('../tests/integration/study_revision_fixture.py', import.meta.url), 'utf8');
     const popoverFixture = readFileSync(new URL('../tests/integration/study_popover_fixture.py', import.meta.url), 'utf8');
@@ -229,7 +233,7 @@ with ThreadingHTTPServer(('127.0.0.1',0),Handler) as server:
         server.shutdown()
         worker.join(timeout=5)
 `;
-    run(first.python, ['-I', '-c', downloadFixture, original, browserSave], 60000);
+    run(first.python, ['-I', '-c', downloadFixture, original, browserSave], 60000, browserEnvironment());
     assert.deepEqual(readFileSync(browserSave), readFileSync(original));
     importFile = browserSave;
     studocuBrowserPassed = true;
