@@ -15,6 +15,12 @@ from tum_mcp.moodle.http_client import cookie_jar
 from tum_mcp.settings import Account, Provider
 
 READ_PATHS: Final = {
+    Provider.TUM_LIVE: re.compile(
+        r"/api/v2/users/me|/api/v2/courses/enrolled|/api/v2/courses/[A-Za-z0-9_-]{1,100}|"
+        r"/api/v2/streams/[A-Za-z0-9_-]{1,100}/\d+/watch|"
+        r"/api/v2/streams/[A-Za-z0-9_-]{1,100}/\d+/subtitles/[A-Za-z0-9_-]{1,30}|"
+        r"/api/v2/streams/\d+/files/\d+"
+    ),
     Provider.ZULIP: re.compile(
         r"/api/v1/(server_settings|users/me|streams|users/me/subscriptions|"
         r"users/me/\d+/topics|messages(?:/\d+)?)"
@@ -101,7 +107,7 @@ class API:
                             credential.username.get_secret_value(),
                             credential.api_key.get_secret_value(),
                         )
-                case Provider.ARTEMIS:
+                case Provider.ARTEMIS | Provider.TUM_LIVE:
                     cookies = cookie_jar(
                         Session(generation="", cookies=list(credential.cookies), verified_at=0)
                     )

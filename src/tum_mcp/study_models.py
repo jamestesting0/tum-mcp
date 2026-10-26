@@ -10,7 +10,7 @@ from tum_mcp.settings import Frozen
 
 Key = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.-]{0,99}$")]
 Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
-ProviderName = Literal["moodle", "artemis", "zulip", "sample"]
+ProviderName = Literal["moodle", "artemis", "zulip", "sample", "tum_live"]
 Kind = Literal["exam", "content", "exercise", "other"]
 FOLDERS = {"exam": "exams", "content": "content", "exercise": "exercises", "other": "other"}
 
@@ -20,6 +20,19 @@ class Binding(Frozen):
     provider: ProviderName
     course_id: Annotated[str, Field(min_length=1, max_length=100)]
     account_id: str | None = Field(default=None, max_length=100)
+    course_slug: str | None = Field(
+        default=None, pattern=r"^[A-Za-z0-9_-]{1,100}$", exclude_if=lambda value: value is None
+    )
+
+    @model_validator(mode="after")
+    def live_identity(self) -> "Binding":
+        if self.provider == "tum_live" and (
+            not self.course_id.isdecimal() or int(self.course_id) <= 0 or not self.course_slug
+        ):
+            raise ValueError("TUM-Live bindings need separate numeric course ID and opaque slug.")
+        if self.provider != "tum_live" and self.course_slug is not None:
+            raise ValueError("Only TUM-Live bindings use a course slug.")
+        return self
 
 
 class Course(Frozen):
@@ -76,7 +89,7 @@ class Resource(Frozen):
         if any(
             any(
                 secret in key.casefold()
-                for secret in ("token", "secret", "password", "sesskey", "api_key", "apikey")
+                for secret in ("token", "secret", "password", "sesskey", "api_key", "apikey", "jwt")
             )
             for key, _ in parse_qsl(parsed.query)
         ):
@@ -100,13 +113,17 @@ class Resource(Frozen):
 
 
 class Snapshot(Frozen):
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 1
     course: Course
     coverage: tuple[Coverage, ...] = Field(max_length=30)
     resources: tuple[Resource, ...] = Field(max_length=10000)
 
     @model_validator(mode="after")
     def scope(self) -> "Snapshot":
+        if self.schema_version < 2 and any(
+            item.provider == "tum_live" for item in self.course.bindings
+        ):
+            raise ValueError("TUM-Live sources require schema version 2; do not downgrade them.")
         bindings = {item.key for item in self.course.bindings}
         keys = [item.key for item in self.resources]
         coverage = [item.binding for item in self.coverage]
@@ -141,9 +158,17 @@ class ResourceState(Frozen):
 
 
 class StudyState(Frozen):
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 1
     course: Course
     coverage: tuple[Coverage, ...]
     resources: tuple[ResourceState, ...]
     generation: Digest
     agents_block_sha256: Digest
+
+    @model_validator(mode="after")
+    def provider_version(self) -> "StudyState":
+        if self.schema_version < 2 and any(
+            item.provider == "tum_live" for item in self.course.bindings
+        ):
+            raise ValueError("TUM-Live state requires schema version 2; do not downgrade it.")
+        return self

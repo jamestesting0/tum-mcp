@@ -80,7 +80,7 @@ def test_doctor_is_local_only_and_does_not_create_state_or_access_keychain(
     )
     report = collect_diagnostics(home=tmp_path / "profile")
     assert report.live_authentication == "not_checked"
-    assert {item.label for item in report.services} == {"Moodle", "Artemis", "Zulip"}
+    assert {item.label for item in report.services} == {"Moodle", "Artemis", "Zulip", "TUM-Live"}
     assert not any(item.state == State.READY for item in report.services)
     assert not data.exists()
     assert not (tmp_path / "moodle").exists()

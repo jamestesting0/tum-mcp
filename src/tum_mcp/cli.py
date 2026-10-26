@@ -92,7 +92,7 @@ def connect() -> None:
         console.print("Cancelled. No browser was opened.")
         raise typer.Exit(130) from None
     console.print(Text(f"Browser: {browser.label}"))
-    console.print(Text("Opening " + ", ".join(value.value.title() for value in selected) + "."))
+    console.print(Text("Opening " + ", ".join(value.label for value in selected) + "."))
     console.print("Complete TUM sign-in/MFA in the browser window.")
     if browser.windows_host:
         console.print("Preparing the private Windows browser driver on first use.")
@@ -105,7 +105,7 @@ def connect() -> None:
 
     def connected(result: ConnectionResult) -> None:
         console.print(
-            Text.assemble(("· ", "ready"), (f"Connected  {result.service.value.title()}", "bold"))
+            Text.assemble(("· ", "ready"), (f"Connected  {result.service.label}", "bold"))
         )
         if result.account is not None:
             console.print(Text(f"Account ID: {result.account.id}"))
@@ -133,6 +133,10 @@ def discover(provider: Provider, account_id: str) -> None:
             typer.echo(Zulip(api).channels().model_dump_json(indent=2))
         case Provider.ARTEMIS:
             typer.echo(Artemis(api).courses().model_dump_json(indent=2))
+        case Provider.TUM_LIVE:
+            from tum_mcp.tum_live import TumLive
+
+            typer.echo(TumLive(api).courses().model_dump_json(indent=2))
         case unreachable:
             assert_never(unreachable)
 

@@ -14,7 +14,7 @@ from tum_mcp.moodle import auth
 from tum_mcp.moodle.auth import SessionStore
 from tum_mcp.moodle.browsers import BrowserChoice
 from tum_mcp.moodle.config import BASE_URL, Paths
-from tum_mcp.settings import ARTEMIS, ZULIP, Account, Provider, preferences, save_account
+from tum_mcp.settings import ARTEMIS, TUM_LIVE, ZULIP, Account, Provider, preferences, save_account
 from tum_mcp.transport import API
 
 
@@ -24,6 +24,7 @@ from tum_mcp.transport import API
         (ServiceChoice.MOODLE,),
         (ServiceChoice.ARTEMIS,),
         (ServiceChoice.ZULIP,),
+        (ServiceChoice.TUM_LIVE,),
         (ServiceChoice.MOODLE, ServiceChoice.ZULIP),
         tuple(ServiceChoice),
     ],
@@ -41,6 +42,7 @@ def test_only_selected_tabs_open_and_all_sessions_use_local_files(
         BASE_URL + "/my/courses.php": b'<a href="logout.php">Logout</a>',
         ARTEMIS + "/api/core/public/account": b'{"id":7,"login":"fixture"}',
         ZULIP + "/json/users/me": b'{"user_id":8,"email":"fixture@example.invalid"}',
+        TUM_LIVE + "/api/v2/users/me": b'{"user":{"id":9}}',
     }
 
     def browser_get(url: str, **kwargs: object) -> MagicMock:
@@ -74,6 +76,7 @@ def test_only_selected_tabs_open_and_all_sessions_use_local_files(
         ServiceChoice.MOODLE: BASE_URL,
         ServiceChoice.ARTEMIS: ARTEMIS,
         ServiceChoice.ZULIP: ZULIP,
+        ServiceChoice.TUM_LIVE: TUM_LIVE,
     }
     assert context.new_page.call_count == len(selected)
     assert context.new_page.return_value.goto.call_args_list == [

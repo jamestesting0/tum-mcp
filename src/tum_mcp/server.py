@@ -22,6 +22,13 @@ from tum_mcp.settings import (
     preferences,
 )
 from tum_mcp.transport import API
+from tum_mcp.tum_live import TumLive
+from tum_mcp.tum_live.models import (
+    CoursePage,
+    InvalidRecordingMetadata,
+    RecordingMetadata,
+    RecordingPage,
+)
 from tum_mcp.zulip import Zulip
 from tum_mcp.zulip.models import Channels, MessagePage, Query, Topics
 
@@ -100,8 +107,47 @@ def tum_capabilities(account_id: str, provider: Provider) -> CapabilityStatus:
                 provider=provider,
                 identity_verified=True,
             )
+        case Provider.TUM_LIVE:
+            TumLive(api).identity()
+            return CapabilityStatus(
+                account_id=account_id,
+                instance_id=api.account.origin,
+                provider=provider,
+                identity_verified=True,
+            )
         case unreachable:
             assert_never(unreachable)
+
+
+@server.tool(annotations=READ)
+def tum_live_courses(
+    account_id: str, cursor: str | None = None, limit: Annotated[int, Field(ge=1, le=100)] = 20
+) -> CoursePage:
+    """List enrolled TUM-Live courses; use an explicit known slug for other accessible courses."""
+    return TumLive(API(find_account(account_id, Provider.TUM_LIVE))).courses(cursor, limit)
+
+
+@server.tool(annotations=READ)
+def tum_live_recordings(
+    account_id: str,
+    course_slug: str,
+    cursor: str | None = None,
+    limit: Annotated[int, Field(ge=1, le=100)] = 20,
+) -> RecordingPage:
+    """List safe recording metadata in one server-accessible TUM-Live course."""
+    return TumLive(API(find_account(account_id, Provider.TUM_LIVE))).recordings(
+        course_slug, cursor, limit
+    )
+
+
+@server.tool(annotations=READ)
+def tum_live_recording(
+    account_id: str, course_slug: str, recording_id: Id
+) -> RecordingMetadata | InvalidRecordingMetadata:
+    """Inspect one verified recording without retrieving captions, images, media or ASR."""
+    return TumLive(API(find_account(account_id, Provider.TUM_LIVE))).recording(
+        course_slug, recording_id
+    )
 
 
 @server.tool(annotations=READ)
