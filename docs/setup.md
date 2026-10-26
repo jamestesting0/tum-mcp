@@ -21,9 +21,15 @@ tum-mcp --help
 
 Use `--client claude`, `cursor`, `antigravity`, or `generic` for another client.
 Codex needs the plugin enabled and a restart when prompted. Cursor and
-Antigravity setup installs all six skills and MCP configuration; restart each
+Antigravity setup installs all six base skills and MCP configuration; restart each
 client afterward. Existing MCP-only setups gain the skills through `tum-mcp update`
 or another setup run. Generic setup writes configuration for manual installation.
+
+Studocu is optional: run `tum-mcp install studocu`, then reload the client. The
+extension adds the `sync-studocu` skill and its tools. `tum-mcp extensions status`
+reports the local selection; `tum-mcp extensions remove studocu` disables it and
+preserves course materials and customized files. Generic clients use
+`tum-mcp skills export DESTINATION` to install the active pack manually.
 Setup preserves unrelated settings and refuses to
 replace customized entries. It does not authenticate or fetch courses.
 

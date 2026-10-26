@@ -51,7 +51,11 @@ rather than rereading them. An unavailable source is a gap, not an empty course.
 | Filtered/time-windowed/unfinished inventory | Use partial coverage, even if that window finished. Omitted old records are retained, not withdrawn. |
 | Failed source access | Mark unavailable; preserve previous bindings/material. An auth error is not evidence of deletion. |
 
-Every binding needs coverage and an actual check time. State what scope/window was
+Every binding being checked needs coverage and an actual check time. Include
+existing Studocu bindings in the course identity and list their keys in
+`retained_bindings`; omit their coverage and resources from the campus snapshot.
+This copies their latest state unchanged without spending Studocu quota.
+State what scope/window was
 checked in note. Complete inventory does not mean all payloads were downloaded or
 learned: resource statuses separately record current/needs_fetch/local_edit/withdrawn.
 Never classify a cached current revision as proven live-fresh solely by timestamp.

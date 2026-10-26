@@ -3,6 +3,35 @@
 Six base skills cover source reading, course sync, Study preparation, Exercises preparation, audio and publishing.
 The optional `prepare-lecture` skill adds a Lecture Notes workspace; install it with
 `tum-mcp install lecture`. See [Lecture Notes](lecture-notes.md).
+The optional `sync-studocu` skill collects selected student-uploaded material separately.
+
+## Studocu materials
+
+Install the optional extension with `tum-mcp install studocu` and reload your
+client. Ask `sync-studocu` to collect materials for a course project. It can
+initialize a Studocu-only project with a verified course and semester.
+Search is anonymous and bounded; a limited result set is not a complete inventory.
+`tum-mcp studocu connect` explains how to sign in to Studocu in your own browser.
+The extension cannot infer account entitlement or download original files through
+the public MCP. Save an original that your account permits in the browser.
+
+The skill records a reviewed selection with `tum-mcp studocu plan PROJECT
+--selection FILE` and tracks it with `tum-mcp studocu status PROJECT --json`.
+Import a selected original with `tum-mcp studocu import PROJECT --document-id ID
+--file FILE`. The document-to-file association is user-selected. Originals go to
+`materials/studocu/summaries`, `materials/studocu/exams` (including mocks and
+solutions), or `materials/studocu/other`. Files remain local and retain their
+original bytes. Consult the skill's collection reference for the selection schema.
+Exact matches in the same group, type and known year share one original through
+a private alias. Each selected document retains its own source identity and URL.
+Changing a document's classification or refreshing its original separates aliases
+when they no longer match; previous versions remain in private history.
+When an existing selection is planned again, unchanged duplicate originals are
+consolidated. Edited or missing files are preserved for review.
+
+Local study material can cite student uploads. Publishing rejects included
+Studocu-backed sources; this source check cannot identify uncited copied text or
+replace a review of the published content.
 They run in your local agent, using the connected
 MCP tools to read course sources. The CLI validates and stores the resulting local
 files; it does not run an AI model.

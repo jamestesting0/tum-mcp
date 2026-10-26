@@ -160,3 +160,42 @@ def test_export_limits_reject_before_remote_read_or_write(
     with pytest.raises(CampusError):
         commit_site(GitHub.discover(), publication, site)
     assert github.requests == []
+
+
+def test_lecture_referencing_studocu_is_excluded_or_denied(lecture_project: Path, github) -> None:
+    from tum_mcp.study_models import Resource, ResourceState
+    from tum_mcp.study_store import digest
+
+    root = lecture_project
+    state = load_state(root)
+    path = root / "materials/content/material-private-lecture.md"
+    path.write_bytes(b"PRIVATE_LECTURE_SOURCE")
+    source = ResourceState(
+        resource=Resource(
+            key="private-lecture",
+            binding=state.course.bindings[0].key,
+            kind="content",
+            title="Private lecture source",
+            url="https://www.studocu.com/de/document/42",
+            revision="1",
+        ),
+        path=path.relative_to(root).as_posix(),
+        sha256=digest(path.read_bytes()),
+        status="current",
+    )
+    (root / ".tum-mcp/state.json").write_text(
+        state.model_copy(update={"resources": (*state.resources, source)}).model_dump_json()
+    )
+    notes = root / "study/lectures.json"
+    value = json.loads(notes.read_text())
+    value["lectures"][0]["sources"] = [{"key": "private-lecture", "sha256": source.sha256}]
+    for block in value["lectures"][0]["sections"][0]["blocks"]:
+        block["sources"] = ["private-lecture"]
+    for evidence in value["evidence"]:
+        evidence.update(source_key="private-lecture", source_sha256=source.sha256)
+    notes.write_text(json.dumps(value))
+    build(root, publish=False)
+    assert b"private-lecture" not in export_site(root)["data.mjs"]
+    with pytest.raises(CampusError):
+        configure(root, include_lectures=True)
+    assert github.requests == []

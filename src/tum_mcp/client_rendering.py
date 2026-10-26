@@ -16,7 +16,7 @@ from tum_mcp.client_hosts import ClientHost, StdioLaunch, client_launch, storage
 from tum_mcp.client_installs import MANAGED_ROOTS
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
-from tum_mcp.skills import export_pack, implicit_invocation, inspect_skills
+from tum_mcp.skills import export_pack, implicit_invocation
 
 
 def same_tree(left: Path, right: Path) -> bool:
@@ -26,7 +26,7 @@ def same_tree(left: Path, right: Path) -> bool:
 
 
 def rendered_client(
-    name: str, launch: StdioLaunch, host: ClientHost
+    name: str, launch: StdioLaunch, host: ClientHost, *, include_studocu: bool | None = None
 ) -> tuple[dict[str, bytes], dict[str, JsonValue], dict[str, JsonValue] | None, str]:
     """Reuse the existing adapters in a disposable profile before touching real files."""
     if name not in MANAGED_ROOTS:
@@ -36,7 +36,7 @@ def rendered_client(
         staged = root / "staged"
         staged.mkdir()
         skills = staged / "skills"
-        export_pack(skills)
+        export_pack(skills, include_studocu=include_studocu)
         if name in {"cursor", "antigravity"}:
             content = {
                 f"{MANAGED_ROOTS[name]}/{path.relative_to(skills).as_posix()}": path.read_bytes()
@@ -47,7 +47,7 @@ def rendered_client(
                 content,
                 dict(launch.entry()),
                 None,
-                f"{len(inspect_skills())} skills installed. "
+                f"{len(tuple(skills.iterdir()))} skills installed. "
                 "Restart your client to reload skills and MCP tools.",
             )
         profile = root / "profile"
@@ -79,8 +79,8 @@ def rendered_client(
 
 
 def install_codex(staged: Path, home: Path, *, launch: StdioLaunch | None = None) -> None:
-    for info in inspect_skills():
-        if (home / ".agents/skills" / info["name"]).exists():
+    for skill in (staged / "skills").iterdir():
+        if (home / ".agents/skills" / skill.name).exists():
             raise CampusError(
                 Code.WORKSPACE_CONFLICT, "Duplicate global campus skill; resolve it locally first."
             )

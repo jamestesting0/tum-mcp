@@ -22,13 +22,22 @@ class ValidationReport(Frozen):
     recall: float | None = None
 
 
-def validate_skills(*, include_optional: bool = False) -> ValidationReport:
+def validate_skills(
+    *, include_optional: bool = False, include_studocu: bool | None = None
+) -> ValidationReport:
     from tum_mcp.server import LECTURE_TOOLS, server
 
     registered = {tool.name for tool in anyio.run(server.list_tools)}
-    names = BUNDLED_SKILLS if include_optional else active_skills()
+    names = BUNDLED_SKILLS if include_optional else active_skills(include_studocu=include_studocu)
     # Optional declarations are real packaged callables; listing them is not activation proof.
     registered.update(tool.__name__ for tool in LECTURE_TOOLS)
+    if "sync-studocu" in names:
+        from tum_mcp.moodle.protocol import StrictMCPServer
+        from tum_mcp.studocu.server import register
+
+        optional = StrictMCPServer("Optional validation")
+        register(optional)
+        registered.update(tool.name for tool in anyio.run(optional.list_tools))
     checked: list[str] = []
     errors: list[str] = []
     characters = 0
@@ -46,7 +55,7 @@ def validate_skills(*, include_optional: bool = False) -> ValidationReport:
             text = resource.read_text(encoding="utf-8")
             if resource.name != "SKILL.md":
                 reference_characters += len(text)
-            for tool in re.findall(r"`((?:moodle|tum|zulip|artemis)_[a-z0-9_]+)`", text):
+            for tool in re.findall(r"`((?:moodle|tum|zulip|artemis|studocu)_[a-z0-9_]+)`", text):
                 if tool not in registered:
                     errors.append(f"{info.name}: unregistered tool {tool}")
             for reference in re.findall(r"\]\(([^)]+)\)", text):

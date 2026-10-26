@@ -8,6 +8,7 @@ from filelock import FileLock
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.study_github import Account, GitHub, Head, Pages, Repository
+from tum_mcp.study_models import is_studocu_link
 from tum_mcp.study_publish_checks import create_pages, deployed, verify_pages
 from tum_mcp.study_publish_models import (
     SETUP,
@@ -62,7 +63,6 @@ def configure(
                 previous = previous.model_copy(update=changes)
                 save_publication(root, previous)
             return previous
-        course = load_state(root).course
         interrupted = load_setup(root)
         exercise_scope = (
             include_exercises
@@ -84,6 +84,7 @@ def configure(
                 "Resume the interrupted repository setup before choosing another name.",
             )
         with FileLock(str(private_path(root, "update.lock"))):
+            course = load_state(root).course
             export_site(root, include_exercises=exercise_scope, include_lectures=lecture_scope)
         github = GitHub.discover()
         account = github.require("user", Account)
@@ -174,11 +175,18 @@ def publish(
     verify_unchanged: bool = False,
 ) -> PublishReport:
     """Upload changed site assets and verify deployment for the exact resulting commit."""
-    from tum_mcp.study_build import build
-
     root = root.expanduser().resolve()
     if rebuild:
-        build(root, publish=False)
+        publication = load_publication(root)
+        if publication is None:
+            raise CampusError(
+                Code.ACTION_REQUIRED, "Configure study publish with --public-site first."
+            )
+        build_for_publication(
+            root,
+            include_exercises=publication.include_exercises,
+            include_lectures=publication.include_lectures,
+        )
     with FileLock(str(private_path(root, "publish.lock"))):
         publication = load_publication(root)
         if publication is None:
@@ -234,6 +242,29 @@ def publish(
         publication = publication.model_copy(update={"deployed_commit": commit})
         save_publication(root, publication)
         return PublishReport("deployed", publication.repository, publication.hosted_url, commit)
+
+
+def build_for_publication(
+    root: Path, *, include_exercises: bool, include_lectures: bool = False
+) -> None:
+    """Allow a current Study-only export when excluded exercises are stale."""
+    from tum_mcp.study_build import build
+
+    try:
+        build(root, publish=False)
+    except CampusError as error:
+        if error.code != Code.STALE_RESULT:
+            raise
+        with FileLock(str(private_path(root, "update.lock"))):
+            state = load_state(root)
+            if not any(
+                binding.provider == "studocu" for binding in state.course.bindings
+            ) and not any(is_studocu_link(item.resource.url) for item in state.resources):
+                raise
+            # This validates the retained Study payload and never reads excluded exercises.
+            export_site(
+                root, include_exercises=include_exercises, include_lectures=include_lectures
+            )
 
 
 def after_build(root: Path) -> PublishReport | None:

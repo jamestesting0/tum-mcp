@@ -1,6 +1,5 @@
 """Reconcile source snapshots without overwriting notes or inferring remote deletion."""
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,13 +8,22 @@ from pydantic import ValidationError
 
 from tum_mcp.course_context import scaffold
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_models import FOLDERS, Resource, ResourceState, Snapshot, StudyState
+from tum_mcp.study_models import (
+    FOLDERS,
+    Resource,
+    ResourceState,
+    Snapshot,
+    StudyState,
+    material_path,
+    resolved_material_path,
+)
 from tum_mcp.study_store import (
     Write,
     agent_pointer,
     apply,
     confined,
     digest,
+    generation_for,
     load_state,
     private_folder,
     private_name,
@@ -78,6 +86,12 @@ def sync(root: Path, snapshot_path: Path, *, course_input: str | None = None) ->
     with FileLock(str(lock)):
         record = private_path(root, "state.json")
         previous = load_state(root) if record.exists() else None
+        if snapshot.retained_bindings and previous is None:
+            raise CampusError(Code.SCOPE_DENIED, "Cannot retain bindings in a new project.")
+        if previous is not None and not set(snapshot.retained_bindings) <= {
+            item.key for item in previous.course.bindings
+        }:
+            raise CampusError(Code.SCOPE_DENIED, "A retained binding must already exist.")
         if previous is None and course_input is None:
             raise CampusError(Code.ACTION_REQUIRED, "Use study init with an explicit course first.")
         if previous is not None and (
@@ -91,7 +105,15 @@ def sync(root: Path, snapshot_path: Path, *, course_input: str | None = None) ->
 
 
 def _reconcile(
-    root: Path, path: Path, snapshot: Snapshot, previous: StudyState | None
+    root: Path,
+    path: Path,
+    snapshot: Snapshot,
+    previous: StudyState | None,
+    *,
+    before_writes: tuple[Write, ...] = (),
+    extra_writes: tuple[Write, ...] = (),
+    require_no_conflicts: bool = False,
+    alias_of: str | None = None,
 ) -> SyncReport:
     old = {item.resource.key: item for item in previous.resources} if previous else {}
     current: list[ResourceState] = []
@@ -100,15 +122,50 @@ def _reconcile(
     conflicts: list[str] = []
     for resource in snapshot.resources:
         prior = old.pop(resource.key, None)
+        if (
+            prior is not None
+            and prior.resource.binding != resource.binding
+            and (
+                prior.resource.binding in snapshot.retained_bindings
+                or prior.resource.studocu is not None
+                or resource.studocu is not None
+            )
+        ):
+            raise CampusError(Code.SCOPE_DENIED, "A resource key belongs to another binding.")
         data, suffix = payload(resource, path)
-        if prior is not None and prior.path is not None:
-            previous_data = read_bytes(confined(root, prior.path))
+        if resource.studocu is not None and data is not None:
+            from tum_mcp.moodle.extract_worker import validate_pdf
+
+            source = resource.studocu
+            if (
+                prior is not None
+                and prior.resource.studocu is not None
+                and prior.resource.studocu.storage_group != source.storage_group
+            ):
+                raise CampusError(
+                    Code.ACTION_REQUIRED, "Reclassify Studocu material through studocu plan."
+                )
+            if prior and prior.sha256 != digest(data) and not before_writes:
+                raise CampusError(
+                    Code.ACTION_REQUIRED, "Refresh Studocu originals through the Studocu workflow."
+                )
+            if suffix != ".pdf" or source.file_sha256 != digest(data) or source.acquired_at is None:
+                raise CampusError(
+                    Code.INVALID_RESPONSE, "A validated original PDF receipt is required."
+                )
+            if validate_pdf(data) != source.page_count:
+                raise CampusError(
+                    Code.INVALID_RESPONSE, "PDF page count does not match the receipt."
+                )
+        prior_path = resolved_material_path(previous, prior) if previous and prior else None
+        if prior is not None and prior_path is not None:
+            previous_data = read_bytes(confined(root, prior_path))
             edited = previous_data is None or digest(previous_data) != prior.sha256
             if edited and (previous_data is None or previous_data != data):
                 conflicts.append(resource.key)
                 current.append(prior.model_copy(update={"status": "local_edit"}))
                 continue
-        relative = f"materials/{FOLDERS[resource.kind]}/material-{resource.key}{suffix}"
+        relative = material_path(resource, suffix)
         if (
             data is None
             and prior is not None
@@ -134,10 +191,22 @@ def _reconcile(
             )
             continue
         if data is not None:
-            writes.append(Write(relative, before, data))
+            if alias_of is not None:
+                if prior and prior.path and before is not None:
+                    writes.append(Write(relative, before, None))
+                elif before is not None:
+                    raise CampusError(Code.WORKSPACE_CONFLICT, "The alias destination is occupied.")
+            else:
+                writes.append(Write(relative, before, data))
             imported += data != before
             current.append(
-                ResourceState(resource=clean, path=relative, sha256=digest(data), status="current")
+                ResourceState(
+                    resource=clean,
+                    path=None if alias_of else relative,
+                    alias_of=alias_of,
+                    sha256=digest(data),
+                    status="current",
+                )
             )
         else:
             unchanged = bool(
@@ -163,6 +232,10 @@ def _reconcile(
         status = "withdrawn" if item.resource.binding in complete else item.status
         current.append(item.model_copy(update={"status": status}))
     ordered = tuple(sorted(current, key=lambda item: item.resource.key))
+    retained = set(snapshot.retained_bindings)
+    coverage = tuple(snapshot.coverage) + (
+        tuple(item for item in previous.coverage if item.binding in retained) if previous else ()
+    )
     block = agent_pointer(private_folder(root))
     agents = confined(root, "AGENTS.md")
     before_agents = read_bytes(agents)
@@ -173,20 +246,11 @@ def _reconcile(
             Code.WORKSPACE_CONFLICT, "Existing AGENTS.md is not UTF-8; it was preserved."
         ) from None
     updated_agents = replace_agents(existing_agents, block, previous).encode()
-    generation = digest(
-        json.dumps(
-            {
-                "course": snapshot.course.model_dump(mode="json"),
-                "resources": [r.model_dump(mode="json") for r in ordered],
-                "coverage": [c.model_dump(mode="json") for c in snapshot.coverage],
-            },
-            sort_keys=True,
-        ).encode()
-    )
+    generation = generation_for(snapshot.course, ordered, coverage)
     state = StudyState(
         schema_version=max(snapshot.schema_version, previous.schema_version if previous else 1),
         course=snapshot.course,
-        coverage=snapshot.coverage,
+        coverage=coverage,
         resources=ordered,
         generation=generation,
         agents_block_sha256=digest(block.encode()),
@@ -204,12 +268,19 @@ def _reconcile(
     )
     for folder in FOLDERS.values():
         confined(root, f"materials/{folder}").mkdir(mode=0o700, parents=True, exist_ok=True)
+    for item in ordered:
+        if item.path is not None and item.resource.studocu is not None:
+            confined(root, str(Path(item.path).parent)).mkdir(
+                mode=0o700, parents=True, exist_ok=True
+            )
     context = private_path(root, "course.md")
     if not context.exists():
         writes.append(
             Write(private_name(root, "course.md"), None, scaffold(snapshot.course).encode())
         )
-    apply(root, tuple(writes))
+    if conflicts and require_no_conflicts:
+        raise CampusError(Code.WORKSPACE_CONFLICT, "Local source edits need review before import.")
+    apply(root, (*before_writes, *writes, *extra_writes))
     return SyncReport(
         imported=imported,
         retained=len(ordered) - imported,

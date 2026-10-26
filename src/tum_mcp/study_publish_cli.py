@@ -52,8 +52,7 @@ def setup(
     """Preview publication; add --public-site to create a private repository and publish."""
     if context.invoked_subcommand is not None:
         return
-    from tum_mcp.study_build import build
-    from tum_mcp.study_publish import configure, publish
+    from tum_mcp.study_publish import build_for_publication, configure, publish
 
     root = project.expanduser().resolve()
     existing = load_publication(root)
@@ -84,7 +83,17 @@ def setup(
         raise CampusError(
             Code.WORKSPACE_CONFLICT, "This course already has a publishing repository."
         )
-    build(root, publish=False)
+    scope = (
+        include_exercises
+        if include_exercises is not None
+        else (existing.include_exercises if existing else False)
+    )
+    lecture_scope = (
+        include_lectures
+        if include_lectures is not None
+        else (existing.include_lectures if existing else False)
+    )
+    build_for_publication(root, include_exercises=scope, include_lectures=lecture_scope)
     configure(
         root,
         repository=repository,

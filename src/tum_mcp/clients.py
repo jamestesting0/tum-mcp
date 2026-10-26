@@ -47,80 +47,94 @@ def install_client(
             Code.ACTION_REQUIRED, "Runtime removal is pending; rerun npm setup to recover."
         )
     base = client_home(host, home).resolve()
-    launch = client_launch(host)
     with FileLock(str(config_dir() / "client-install.lock")):
-        if selected == "codex" and any(
-            (base / ".agents/skills" / item["name"]).exists()
-            for item in [*inspect_skills(), *({"name": name} for name in LEGACY_SKILLS)]
-        ):
-            raise CampusError(Code.WORKSPACE_CONFLICT, "Duplicate global campus skill; review it.")
-        desired, server, catalog, messages = rendered_client(selected, launch, host)
-        target = client_config_path(selected, base, host=host)
-        target_root = base if target.is_relative_to(base) else config_dir().resolve()
-        before = read_owned_file(target, target_root)
-        config = read_client_config(target, for_update=True)
-        existing = config.mcpServers.get("tum")
-        previous = load_receipt(selected, host, base)
-        if previous is not None:
-            require_supported_version(previous, __version__)
-        if previous is None and existing is not None:
-            from tum_mcp.legacy_clients import legacy_installation
-
-            previous = legacy_installation(selected, host, base, existing, server)
-        if (
-            existing is not None
-            and existing != server
-            and (previous is None or existing != previous.server)
-        ):
-            raise CampusError(Code.WORKSPACE_CONFLICT, "A customized MCP entry was preserved.")
-        writes = list(managed_writes(base, desired, previous))
-        config.mcpServers["tum"] = server
-        if selected == "codex" and "$schema" not in config.model_extra:
-            config = ClientConfiguration.model_validate(
-                config.model_dump()
-                | {"$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"}
-            )
-        writes.append(Write(target, before, config.model_dump_json(indent=2).encode()))
-        if catalog is not None:
-            path = base / ".agents/plugins/marketplace.json"
-            old_catalog = read_owned_file(path, base)
-            try:
-                market = (
-                    Marketplace.model_validate_json(old_catalog) if old_catalog else Marketplace()
-                )
-            except ValidationError:
-                raise CampusError(
-                    Code.WORKSPACE_CONFLICT, "Invalid plugin marketplace preserved."
-                ) from None
-            owned = [entry for entry in market.plugins if entry.get("name") == "tum-mcp"]
-            if (
-                len(owned) > 1
-                or owned
-                and owned[0] != catalog
-                and (previous is None or owned[0] != previous.catalog)
-            ):
-                raise CampusError(
-                    Code.WORKSPACE_CONFLICT, "Customized plugin marketplace preserved."
-                )
-            market.plugins = [
-                entry for entry in market.plugins if entry.get("name") != "tum-mcp"
-            ] + [catalog]
-            writes.append(Write(path, old_catalog, market.model_dump_json(indent=2).encode()))
-        receipt = Installation(
-            client=selected,
-            host=host,
-            home=base,
-            version=__version__,
-            server=server,
-            files={name: hashlib.sha256(data).hexdigest() for name, data in desired.items()},
-            catalog=catalog,
-        )
-        record = receipt_path(selected, host, base)
-        record_before = read_owned_file(record, config_dir().resolve())
-        writes.append(Write(record, record_before, receipt.model_dump_json(indent=2).encode()))
-        commit_writes(tuple(writes))
-        if previous:
-            prune_removed_folders(base, tuple(set(previous.files) - set(desired)))
+        writes, removed, messages = prepare_client(selected, base, host=host, include_studocu=None)
+        commit_writes(writes)
+        prune_removed_folders(base, removed)
         if announce:
             print(f"{selected.title()} registration saved for this runtime.")
             print(messages)
+
+
+def prepare_client(
+    selected: ClientName,
+    base: Path,
+    *,
+    host: ClientHost,
+    include_studocu: bool | None,
+) -> tuple[tuple[Write, ...], tuple[str, ...], str]:
+    """Plan client changes without locking or mutating the target profile."""
+    base = base.resolve()
+    launch = client_launch(host)
+    if selected == "codex" and any(
+        (base / ".agents/skills" / item["name"]).exists()
+        for item in [
+            *inspect_skills(include_studocu=include_studocu),
+            *({"name": name} for name in LEGACY_SKILLS),
+        ]
+    ):
+        raise CampusError(Code.WORKSPACE_CONFLICT, "Duplicate global campus skill; review it.")
+    desired, server, catalog, messages = rendered_client(
+        selected, launch, host, include_studocu=include_studocu
+    )
+    target = client_config_path(selected, base, host=host)
+    target_root = base if target.is_relative_to(base) else config_dir().resolve()
+    before = read_owned_file(target, target_root)
+    config = read_client_config(target, for_update=True)
+    existing = config.mcpServers.get("tum")
+    previous = load_receipt(selected, host, base)
+    if previous is not None:
+        require_supported_version(previous, __version__)
+    if previous is None and existing is not None:
+        from tum_mcp.legacy_clients import legacy_installation
+
+        previous = legacy_installation(selected, host, base, existing, server)
+    if (
+        existing is not None
+        and existing != server
+        and (previous is None or existing != previous.server)
+    ):
+        raise CampusError(Code.WORKSPACE_CONFLICT, "A customized MCP entry was preserved.")
+    writes = list(managed_writes(base, desired, previous))
+    config.mcpServers["tum"] = server
+    if selected == "codex" and "$schema" not in config.model_extra:
+        config = ClientConfiguration.model_validate(
+            config.model_dump()
+            | {"$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"}
+        )
+    writes.append(Write(target, before, config.model_dump_json(indent=2).encode()))
+    if catalog is not None:
+        path = base / ".agents/plugins/marketplace.json"
+        old_catalog = read_owned_file(path, base)
+        try:
+            market = Marketplace.model_validate_json(old_catalog) if old_catalog else Marketplace()
+        except ValidationError:
+            raise CampusError(
+                Code.WORKSPACE_CONFLICT, "Invalid plugin marketplace preserved."
+            ) from None
+        owned = [entry for entry in market.plugins if entry.get("name") == "tum-mcp"]
+        if (
+            len(owned) > 1
+            or owned
+            and owned[0] != catalog
+            and (previous is None or owned[0] != previous.catalog)
+        ):
+            raise CampusError(Code.WORKSPACE_CONFLICT, "Customized plugin marketplace preserved.")
+        market.plugins = [entry for entry in market.plugins if entry.get("name") != "tum-mcp"] + [
+            catalog
+        ]
+        writes.append(Write(path, old_catalog, market.model_dump_json(indent=2).encode()))
+    receipt = Installation(
+        client=selected,
+        host=host,
+        home=base,
+        version=__version__,
+        server=server,
+        files={name: hashlib.sha256(data).hexdigest() for name, data in desired.items()},
+        catalog=catalog,
+    )
+    record = receipt_path(selected, host, base)
+    record_before = read_owned_file(record, config_dir().resolve())
+    writes.append(Write(record, record_before, receipt.model_dump_json(indent=2).encode()))
+    removed = tuple(set(previous.files) - set(desired)) if previous else ()
+    return tuple(writes), removed, messages

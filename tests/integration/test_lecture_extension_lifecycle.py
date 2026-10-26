@@ -91,7 +91,7 @@ def test_base_and_optional_catalog_validation_do_not_claim_activation(extension_
     assert base.exit_code == optional.exit_code == 0
     assert len(json.loads(base.output)["checked_skills"]) == 6
     report = json.loads(optional.output)
-    assert len(report["checked_skills"]) == 7 and not report["activation_evaluated"]
+    assert len(report["checked_skills"]) == 8 and not report["activation_evaluated"]
 
 
 def test_real_mcp_process_exposes_live_tools_only_after_opt_in(extension_home: Path) -> None:

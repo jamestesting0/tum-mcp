@@ -11,7 +11,7 @@ from tum_mcp.errors import CampusError, Code
 
 
 def install(
-    extension: Annotated[Literal["lecture"], typer.Argument()],
+    extension: Annotated[Literal["lecture", "studocu"], typer.Argument()],
     asr: Annotated[
         bool,
         typer.Option(
@@ -19,7 +19,12 @@ def install(
         ),
     ] = True,
 ) -> None:
-    """Install the optional Lecture tools and Prepare Lecture workflow."""
+    """Install an optional Lecture or Studocu extension."""
+    if extension == "studocu":
+        from tum_mcp.extensions import set_studocu
+
+        typer.echo(json.dumps({"extension": extension, "state": set_studocu(True)}))
+        return
     from tum_mcp.extensions import install_lecture
 
     report = install_lecture(asr=asr)

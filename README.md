@@ -42,6 +42,18 @@ Choose a client with `--client`: `codex`, `claude`, `cursor` or `antigravity`.
 Setup configures MCP and installs all six skills; follow any activation or
 restart prompts. Use `generic` for manual MCP setup.
 
+The optional Studocu extension adds a separate `sync-studocu` workflow:
+
+```sh
+tum-mcp install studocu
+tum-mcp extensions status
+```
+
+Reload your client afterward. Public search is limited and incomplete. Save
+permitted original PDFs in your signed-in browser, then import them into an
+existing course project; TUM MCP does not copy your browser credentials. See
+[Studocu collection](docs/study.md#studocu-materials) for the workflow.
+
 For existing Cursor and Antigravity setups, run `tum-mcp update` to add the skills.
 Updates and uninstall preserve customized files and report them for review.
 

@@ -8,7 +8,7 @@ from tum_mcp.course_app_paths import app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.exercise_content import ExerciseContent, exercise_revision
 from tum_mcp.study_content import StudyContent, render_blocks
-from tum_mcp.study_models import StudyState
+from tum_mcp.study_models import StudyState, resolved_material_path
 from tum_mcp.study_store import confined, digest
 
 
@@ -36,16 +36,12 @@ def stale_exercises(root: Path, state: StudyState, content: ExerciseContent) -> 
         for exercise in group.exercises:
             for source in exercise.sources:
                 stored = resources.get(source.key)
-                if (
-                    stored is None
-                    or stored.status != "current"
-                    or stored.sha256 != source.sha256
-                    or not stored.path
-                ):
+                if stored is None or stored.status != "current" or stored.sha256 != source.sha256:
                     stale.append(exercise.key)
                     break
-                path = confined(root, stored.path)
-                if not path.is_file() or digest(path.read_bytes()) != source.sha256:
+                relative = resolved_material_path(state, stored)
+                path = confined(root, relative) if relative else None
+                if path is None or not path.is_file() or digest(path.read_bytes()) != source.sha256:
                     stale.append(exercise.key)
                     break
     return tuple(stale)

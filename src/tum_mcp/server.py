@@ -1,5 +1,6 @@
 """Campus MCP surface; the existing Moodle tools remain compatibility aliases."""
 
+import logging
 import time
 from typing import Annotated, Literal, assert_never
 
@@ -313,3 +314,15 @@ def tum_resolve_course(name: str) -> CourseMapping:
             Code.ACTION_REQUIRED, "Configure one exact course mapping in preferences.json."
         )
     return matches[0]
+
+
+# Optional provider failures must not prevent the campus server from starting.
+try:
+    from tum_mcp.extensions import studocu_enabled
+
+    if studocu_enabled():
+        from tum_mcp.studocu.server import register as register_studocu
+
+        register_studocu(server)
+except Exception:
+    logging.getLogger(__name__).warning("Optional Studocu tools are unavailable.")

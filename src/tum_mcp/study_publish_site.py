@@ -16,7 +16,7 @@ from tum_mcp.lecture_assets import ASSET
 from tum_mcp.settings import Frozen
 from tum_mcp.study_build import TEMPLATE_FILES
 from tum_mcp.study_github import Commit, GitHub, GitObject, Head, Response, Tree
-from tum_mcp.study_models import Digest
+from tum_mcp.study_models import Digest, is_studocu_link
 from tum_mcp.study_publish_models import GitSha, Publication, course_identity
 from tum_mcp.study_publish_projection import assets, project
 from tum_mcp.study_store import digest, load_state
@@ -70,7 +70,14 @@ def export_site(
     """Export referenced public workspaces; private evidence and arbitrary files stay local."""
     output = {name: app_path(root, name).read_bytes() for name in (*TEMPLATE_FILES, "data.mjs")}
     data = output["data.mjs"]
-    payload = project(data, include_exercises=include_exercises, include_lectures=include_lectures)
+    checked = _check_supplementary_sources(
+        root, data, include_exercises=include_exercises, include_lectures=include_lectures
+    )
+    payload = (
+        checked
+        if checked is not None
+        else project(data, include_exercises=include_exercises, include_lectures=include_lectures)
+    )
     original = json.loads(data.removeprefix(b"export default ").removesuffix(b";\n"))
     if payload != original:
         data = b"export default " + json.dumps(payload, ensure_ascii=True).encode() + b";\n"
@@ -85,6 +92,74 @@ def export_site(
     output[".nojekyll"] = b""
     preflight(output, course_identity(load_state(root).course))
     return output
+
+
+def _check_supplementary_sources(
+    root: Path, data: bytes, *, include_exercises: bool, include_lectures: bool
+) -> dict | None:
+    """Refuse exports that reference personal student uploads, from live source bindings."""
+    state = load_state(root)
+    private_bindings = {item.key for item in state.course.bindings if item.provider == "studocu"}
+    private_keys = {
+        item.resource.key
+        for item in state.resources
+        if item.resource.binding in private_bindings or is_studocu_link(item.resource.url)
+    }
+    if not private_bindings and not private_keys:
+        return None
+    from tum_mcp.exercise_data import read_exercises, stale_exercises
+    from tum_mcp.lecture_data import read_lectures, stale_lectures
+    from tum_mcp.study_build import _app_data, read_content, stale_units
+
+    try:
+        generated = json.loads(data.removeprefix(b"export default ").removesuffix(b";\n"))
+    except ValueError:
+        raise CampusError(Code.WORKSPACE_CONFLICT, "Rebuild the generated site data.") from None
+    if not isinstance(generated, dict) or not isinstance(generated.get("sources"), dict):
+        raise CampusError(Code.WORKSPACE_CONFLICT, "Rebuild the generated site data.")
+    content = read_content(root) if app_path(root, "content.json").exists() else None
+    exercises = read_exercises(root) if include_exercises else None
+    lectures = read_lectures(root) if include_lectures else None
+    if (
+        (content and stale_units(root, state, content))
+        or (exercises and stale_exercises(root, state, exercises))
+        or (lectures and stale_lectures(root, state, lectures))
+    ):
+        raise CampusError(Code.STALE_RESULT, "Rebuild after refreshing changed source material.")
+    expected = _app_data(state, content, exercises, lectures, root)
+    excluded = (not include_exercises and "exercises" in generated) or (
+        not include_lectures and "lectures" in generated
+    )
+    if not excluded and generated.get("inlineMath") != expected.get("inlineMath"):
+        raise CampusError(Code.STALE_RESULT, "Rebuild generated study data before publication.")
+    keys = {s.key for unit in content.units for s in unit.sources} if content else set()
+    if exercises:
+        keys.update(s.key for group in exercises.sets for ex in group.exercises for s in ex.sources)
+    if lectures:
+        keys.update(s.key for lecture in lectures.lectures for s in lecture.sources)
+    projection = project(
+        data, include_exercises=include_exercises, include_lectures=include_lectures
+    )
+    expected_data = b"export default " + json.dumps(expected, ensure_ascii=True).encode() + b";\n"
+    expected_projection = project(
+        expected_data, include_exercises=include_exercises, include_lectures=include_lectures
+    )
+    derived = {"generation", "incompleteSources"}
+    matches = {key: value for key, value in projection.items() if key not in derived} == {
+        key: value for key, value in expected_projection.items() if key not in derived
+    }
+    if not matches:
+        raise CampusError(Code.STALE_RESULT, "Rebuild generated study data before publication.")
+    resources = {item.resource.key: item for item in state.resources}
+    missing = keys - resources.keys()
+    protected = sorted(key for key in keys if key in private_keys)
+    if missing or protected:
+        raise CampusError(
+            Code.SCOPE_DENIED,
+            "Publication includes unavailable or personal-use sources: "
+            + ", ".join(sorted(missing) + protected),
+        )
+    return expected_projection
 
 
 def site_digest(site: dict[str, bytes]) -> str:

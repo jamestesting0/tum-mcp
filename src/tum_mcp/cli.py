@@ -31,6 +31,12 @@ app.add_typer(study_app, name="study")
 from tum_mcp.lecture_cli import app as lecture_app  # noqa: E402
 
 app.add_typer(lecture_app, name="lecture", hidden=not lecture_enabled())
+from tum_mcp.extension_cli import app as extensions_app  # noqa: E402
+
+app.add_typer(extensions_app, name="extensions")
+from tum_mcp.studocu.cli import app as studocu_app  # noqa: E402
+
+app.add_typer(studocu_app, name="studocu")
 
 
 @app.command()

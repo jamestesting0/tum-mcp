@@ -10,6 +10,9 @@ from tum_mcp import __version__
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen, config_dir, config_path
+from tum_mcp.studocu.extension import selection as selection
+from tum_mcp.studocu.extension import set_studocu as set_studocu
+from tum_mcp.studocu.extension import studocu_enabled as studocu_enabled
 
 if TYPE_CHECKING:
     from tum_mcp.lecture_processing.runtime import RuntimeStatus

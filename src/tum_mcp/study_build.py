@@ -30,7 +30,7 @@ from tum_mcp.study_content import (
     render_blocks,
 )
 from tum_mcp.study_math import INLINE_MATH, compile_latex
-from tum_mcp.study_models import Digest, StudyState
+from tum_mcp.study_models import Digest, StudyState, is_studocu_link, resolved_material_path
 from tum_mcp.study_publish_models import PublishReport
 from tum_mcp.study_store import (
     END,
@@ -121,7 +121,8 @@ def stale_units(root: Path, state: StudyState, content: StudyContent) -> tuple[s
             if current is None or current.status != "current" or current.sha256 != source.sha256:
                 stale.append(unit.key)
                 break
-            path = confined(root, current.path) if current.path else None
+            relative = resolved_material_path(state, current)
+            path = confined(root, relative) if relative else None
             if path is None or not path.is_file() or digest(path.read_bytes()) != source.sha256:
                 stale.append(unit.key)
                 break
@@ -157,9 +158,17 @@ def _app_data(
         )
     if lectures:
         referenced.update(source.key for lecture in lectures.lectures for source in lecture.sources)
+    studocu_bindings = {
+        binding.key for binding in state.course.bindings if binding.provider == "studocu"
+    }
     sources: dict[str, JsonValue] = {
         item.resource.key: {
-            "title": item.resource.title,
+            "title": item.resource.title
+            + (
+                " (Studocu student upload)"
+                if item.resource.binding in studocu_bindings or is_studocu_link(item.resource.url)
+                else ""
+            ),
             "url": item.resource.url,
             "locator": item.resource.locator,
         }

@@ -1,6 +1,7 @@
 """Confined local paths and reversible writes for course study projects."""
 
 import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -9,7 +10,7 @@ from pydantic import ValidationError
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
-from tum_mcp.study_models import StudyState
+from tum_mcp.study_models import Course, Coverage, ResourceState, StudyState
 
 START = "<!-- tum-mcp:study:start -->"
 END = "<!-- tum-mcp:study:end -->"
@@ -17,6 +18,26 @@ END = "<!-- tum-mcp:study:end -->"
 
 def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def generation_for(
+    course: Course, resources: tuple[ResourceState, ...], coverage: tuple[Coverage, ...]
+) -> str:
+    return digest(
+        json.dumps(
+            {
+                "course": course.model_dump(mode="json"),
+                "resources": [
+                    item.model_dump(
+                        mode="json", exclude={"alias_of"} if item.alias_of is None else set()
+                    )
+                    for item in resources
+                ],
+                "coverage": [item.model_dump(mode="json") for item in coverage],
+            },
+            sort_keys=True,
+        ).encode()
+    )
 
 
 def confined(root: Path, relative: str) -> Path:
@@ -101,31 +122,40 @@ class Write:
 
 def apply(root: Path, writes: tuple[Write, ...]) -> None:
     paths = [(item, confined(root, item.relative)) for item in writes]
+    expected: dict[Path, bytes | None] = {}
     for item, path in paths:
-        if read_bytes(path) != item.before:
+        current = expected[path] if path in expected else read_bytes(path)
+        if current != item.before:
             raise CampusError(Code.WORKSPACE_CONFLICT, "Study files changed; inspect and retry.")
+        expected[path] = item.after
     applied: list[tuple[Write, Path]] = []
     try:
         for item, path in paths:
+            path = confined(root, item.relative)
+            if read_bytes(path) != item.before:
+                raise CampusError(
+                    Code.WORKSPACE_CONFLICT, "Study files changed; inspect and retry."
+                )
             if item.before == item.after:
                 continue
             path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             if item.after is None:
-                path.unlink(missing_ok=True)
+                path.unlink()
             else:
                 private_write(path, item.after)
             applied.append((item, path))
-    except OSError:
+    except (OSError, CampusError):
         restored = True
         for item, path in reversed(applied):
             try:
+                path = confined(root, item.relative)
                 if read_bytes(path) != item.after:
                     restored = False
                 elif item.before is None:
                     path.unlink()
                 else:
                     private_write(path, item.before)
-            except OSError:
+            except (OSError, CampusError):
                 restored = False
         raise CampusError(
             Code.WORKSPACE_CONFLICT,

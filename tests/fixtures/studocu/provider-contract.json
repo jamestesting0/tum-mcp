@@ -1,0 +1,8 @@
+{
+  "description": "Synthetic public provider contract; no account or real document data.",
+  "public_search_tools": ["search-documents", "search-courses", "search-institutions"],
+  "document_search_limit": 50,
+  "document_search_cursor": false,
+  "original_file_tool": false,
+  "acquisition": "browser_import"
+}

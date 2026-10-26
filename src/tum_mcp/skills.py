@@ -95,11 +95,14 @@ def metadata(path: Path) -> SkillMetadata:
     return parsed
 
 
-def inspect_skills() -> list[SkillInfo]:
+def active_skill(name: str, include_studocu: bool | None = None) -> bool:
+    return name not in OPTIONAL_SKILLS or name in active_skills(include_studocu=include_studocu)
+
+
+def inspect_skills(*, include_studocu: bool | None = None) -> list[SkillInfo]:
     result: list[SkillInfo] = []
-    active = active_skills()
     for source in sorted(bundled().iterdir()):
-        if source.is_dir() and (source.name not in OPTIONAL_SKILLS or source.name in active):
+        if source.is_dir() and active_skill(source.name, include_studocu):
             path = selected(source.name)
             info = metadata(path)
             result.append(
@@ -122,7 +125,7 @@ def customize_skill(name: str) -> Path:
     return destination
 
 
-def export_pack(destination: Path) -> None:
+def export_pack(destination: Path, *, include_studocu: bool | None = None) -> None:
     if destination.exists():
         raise CampusError(Code.WORKSPACE_CONFLICT, "Export destination already exists.")
     previous = legacy_overrides()
@@ -134,9 +137,8 @@ def export_pack(destination: Path) -> None:
             f"Review and merge them into {targets} before export/update.",
         )
     chosen_sources: list[Path] = []
-    active = active_skills()
     for source in sorted(bundled().iterdir()):
-        if source.is_dir() and (source.name not in OPTIONAL_SKILLS or source.name in active):
+        if source.is_dir() and active_skill(source.name, include_studocu):
             chosen = selected(source.name)
             metadata(chosen)
             chosen_sources.append(chosen)

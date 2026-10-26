@@ -13,7 +13,7 @@ try {
 Usage: tum-mcp COMMAND [OPTIONS]
 
   setup       Configure your coding client and managed runtime
-  install     Install an optional extension: tum-mcp install lecture
+  install     Install an optional extension: lecture or studocu
   connect     Sign in to selected campus services
   status      Show saved connections
   discover    List accessible courses or channels
@@ -24,6 +24,8 @@ Usage: tum-mcp COMMAND [OPTIONS]
   serve       Run the MCP server over stdio
   version     Show the installed version
   skills      Manage local workflow skills
+  extensions  Manage optional extensions
+  studocu     Manage selected Studocu materials
   study       Prepare, preview and publish a course app
 
 Use --help for options, for example: tum-mcp study build --help
@@ -32,7 +34,7 @@ Reads use your campus account permissions; no local scope selection is needed.`)
   } else if (['--version', 'version'].includes(args[0])) {
     console.log(version);
   } else if (args[0] === 'install' && args.some(arg => ['--help', '-h'].includes(arg))) {
-    console.log('Usage: tum-mcp install lecture [--asr|--no-asr]\nInstall the optional Lecture workflow and tools. Recognition dependencies are isolated; models load on demand.');
+    console.log('Usage: tum-mcp install lecture [--asr|--no-asr] | tum-mcp install studocu\nInstall an optional Lecture or Studocu workflow and its tools. Lecture recognition dependencies are isolated; models load on demand.');
   } else if (['setup', 'update', 'uninstall'].includes(args[0]) && args[1] !== 'lecture' && args.some(arg => ['--help', '-h'].includes(arg))) {
     const help = {
       update: 'Usage: tum-mcp update [--local]\nInstall the latest npm release and refresh configured clients.\n--local refreshes this installed version without contacting npm.',
@@ -41,7 +43,7 @@ Reads use your campus account permissions; no local scope selection is needed.`)
     };
     console.log(help[args[0]]);
   } else {
-    if (args[0] === 'install' && args[1] !== 'lecture') throw new Error('Usage: tum-mcp install lecture [--asr|--no-asr].');
+    if (args[0] === 'install' && !['lecture', 'studocu'].includes(args[1])) throw new Error('Usage: tum-mcp install lecture [--asr|--no-asr] | tum-mcp install studocu.');
     let packageAction = args[0] === 'update';
     if (args[0] === 'update') {
       if (args.length > 2 || (args.length === 2 && args[1] !== '--local')) throw new Error('Usage: tum-mcp update [--local]. Use --help for details.');
