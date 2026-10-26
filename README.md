@@ -81,13 +81,16 @@ skill files are preserved and reported for review.
 | Moodle | Materials, pages, announcements, forums, original downloads and cited PDF pages |
 | Artemis | Lectures, text/online/video units, student slide PDFs, released exercise statements and permitted own feedback |
 | Zulip | Selected course channels, discussion search and cited catch-up |
+| TUM-Live (optional Lecture extension) | Selected recording metadata, captions/local transcription, critical source frames and timestamped notes |
 
 Campus access is read-only. Exercise start, deployment, execution, submission,
 posting and read-state changes are unavailable.
 
 ### Skills and example requests
 
-The package includes six skills. Once you've chosen a course from
+The base package enables six skills. `tum-mcp install lecture` adds the optional
+`prepare-lecture` skill for timestamped Lecture Notes. See the
+[Lecture Notes guide](docs/lecture-notes.md). Once you've chosen a course from
 your connections, try requests like these:
 
 | Skill | Use it to | Example request |

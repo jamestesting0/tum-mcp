@@ -1,6 +1,8 @@
 # Course study projects
 
-Six focused skills cover source reading, course sync, Study preparation, Exercises preparation, audio and publishing.
+Six base skills cover source reading, course sync, Study preparation, Exercises preparation, audio and publishing.
+The optional `prepare-lecture` skill adds a Lecture Notes workspace; install it with
+`tum-mcp install lecture`. See [Lecture Notes](lecture-notes.md).
 They run in your local agent, using the connected
 MCP tools to read course sources. The CLI validates and stores the resulting local
 files; it does not run an AI model.
@@ -35,8 +37,10 @@ failed setup retries the same saved repository rather than creating duplicates.
 Study is the default hosted workspace, including for old settings. Exercise
 statements, hints and full solutions need explicit `--include-exercises` on the
 publish command after reviewing their public exposure. `--exclude-exercises`
-returns a combined site to Study only, using the same repository and URL. An
-Exercises-only site also requires explicit inclusion.
+removes Exercises from subsequent eligible exports, using the same repository and URL. An
+Exercises-only site also requires explicit inclusion. Lecture Notes separately requires
+`--include-lectures`; old settings default to exclusion. `--exclude-lectures` also removes
+previously managed lecture images. A notes-only export with notes excluded is refused.
 
 Only the selected generated website renderer and data are uploaded. Downloaded
 originals, credentials, AGENTS.md, study inventory, passage comments, progress,
@@ -96,7 +100,7 @@ pse-ws26/
     course.md               Cited course structure, logistics, rules and unknowns
     state.json              Course binding, source versions and coverage
     notes/                  Detailed course/agent notes when needed
-  app/                      Shared Study and Exercises website
+  app/                      Shared Study, Exercises and optional Lecture Notes website
     content.json            Optional source-backed Study content
     exercises.json          Optional prepared exercise guidance
   audio/                    Optional category audio derived from the prepared website

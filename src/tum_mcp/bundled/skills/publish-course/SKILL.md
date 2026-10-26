@@ -19,8 +19,13 @@ Study is the default publication scope, including for old saved settings. Exerci
 statements, hints and full solutions require explicit inclusion with
 `--include-exercises` on the publish command. Explain that all of those will be
 public before including them. Preserve an existing choice when no change was
-requested; `--exclude-exercises` returns an existing site to Study only. An
-Exercises-only app needs explicit inclusion too. This scope belongs in authoring/
+requested; `--exclude-exercises` removes Exercises while preserving other explicitly included workspaces. An
+Exercises-only app needs explicit inclusion too.
+Lecture Notes and its selected figures separately require `--include-lectures`,
+including for old saved publications. Explain that the notes and images become
+public. `--exclude-lectures` removes them and their previously managed images
+from subsequent eligible exports. Omitted flags preserve existing choices. An
+excluded notes-only app cannot produce an empty site; keep it local. This scope belongs in authoring/
 publication, not in the student reading UI.
 
 ## First publication
@@ -42,8 +47,8 @@ publication, not in the student reading UI.
    No campus credentials, Git credential changes or new language servers are needed.
 4. Build/review the selected website, including its generated source links, for
    the intended public audience. The publisher exports only the renderer and
-   generated lesson data. Downloaded materials, AGENTS.md, local comments,
-   progress, audio and `.tum-mcp/` stay local. The course's actual explanations
+   generated data and explicitly included, referenced lecture figures. Downloaded materials, AGENTS.md, local comments,
+   progress, audio, raw recording/transcript evidence and `.tum-mcp/` stay local. The course's actual explanations
    and any embedded quotations WILL be public; file exclusion is not content review.
 5. Run `tum-mcp study publish --project PROJECT --public-site` once authorized.
    An explicit `--repository OWNER/NAME` selects another account/name. The CLI

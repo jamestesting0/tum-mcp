@@ -1,3 +1,4 @@
+import { lectureLifecycle } from './lecture-consumer.mjs';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -90,6 +91,8 @@ for name in ('cursor','antigravity'):
   const boundStatus = status();
   assert.equal(boundStatus.mode, 'sync');
   assert.equal(boundStatus.course.synthetic, true);
+  const lectureEvidence = lectureLifecycle(root, args => run(process.execPath, [launcher, ...args]));
+  assert.equal(lectureEvidence.installed_skills, 7);
   const studyState = join(studyProject, '.tum-mcp/state.json');
   writeFileSync(studyState, 'synthetic damaged study state');
   assert.equal(status().mode, 'recover');

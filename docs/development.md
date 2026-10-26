@@ -129,3 +129,20 @@ Chromium sign-in/MFA, read a PDF and forum, download a file, then restart and ch
 session reuse. Automated synthetic sign-in does not certify human SSO on every OS.
 For UI changes, exercise the generated app at narrow/wide widths in both themes;
 check keyboard navigation, reduced motion, source links and retained progress.
+
+## Optional Lecture extension
+
+Base setup exposes six workflows and no `tum_live_*` tools. `install lecture`
+records explicit selection, refreshes managed clients and provisions the optional
+recognizer only when requested/supported. `--no-asr` keeps captions/imported WebVTT.
+Heavy recognition dependencies and model weights stay outside the base environment
+and package artifacts. `lecture_processing/` owns bounded media/ASR evidence;
+`lecture_content.py`, `lecture_data.py` and `lecture_assets.py` validate the notes
+and figures used by the static app. See [the workflow guide](lecture-notes.md).
+
+Use `skills validate --all` to check the packaged optional workflow without installing
+it; default validation checks the selected six/seven. Activation statistics remain
+unmeasured until genuine fresh-session trial records exist. Default tests use
+synthetic media and course data. `test:consumer` and `test:upgrade` exercise optional
+install/update/export/removal from an actual local npm artifact. Never publish or
+stage npm as a test.

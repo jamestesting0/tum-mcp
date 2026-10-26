@@ -69,3 +69,19 @@ def test_private_learning_answers_have_independent_arithmetic_oracles() -> None:
     assert answer(questions["negative-case"]) == "−1"
     assert "S→A (2)" in questions["cheapest"].prompt
     assert Fraction(200 * 8 // 10, 200 * 8 // 10 + 800 // 10) == Fraction(2, 3)
+
+
+def test_optional_synthetic_lecture_has_reviewed_timing_formula_and_confined_image() -> None:
+    from tum_mcp.lecture_assets import figure_bytes
+    from tum_mcp.lecture_content import LectureContent
+
+    example = files("tum_mcp") / "bundled/course_app/example"
+    notes = LectureContent.model_validate_json((example / "lectures.json").read_bytes())
+    lecture = notes.lectures[0]
+    assert lecture.recording.synthetic and lecture.coverage.reviewed
+    assert lecture.recording.duration_s == 60
+    assert any(block.kind == "formula" for section in lecture.sections for block in section.blocks)
+    for section in lecture.sections:
+        for figure in section.figures:
+            assert figure.captured_at_s == 37.5
+            assert figure_bytes(Path(str(example / figure.asset)), figure)
