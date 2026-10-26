@@ -16,7 +16,7 @@ export function clock(value) {
 function timeLink(url, start, end) {
   const link = node('a', 'lecture-time small', `${clock(start)}${end == null ? '' : '–' + clock(end)}`);
   link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
-  link.setAttribute('aria-label', `Open recording at ${clock(start)}${end == null ? '' : ', through ' + clock(end)}`);
+  link.setAttribute('aria-label', `Open recording at ${link.textContent}`);
   return link;
 }
 export function lectureOutline(current = '') {

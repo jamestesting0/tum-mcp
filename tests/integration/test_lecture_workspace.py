@@ -69,6 +69,8 @@ def test_notes_deep_links_figure_and_workspace_return(
             "Why first discovery gives a shortest path"
         )
         assert page.locator(".lecture-times a").get_attribute("href").endswith("?t=20")
+        time_link = page.locator(".lecture-times a").first
+        assert time_link.inner_text() in time_link.get_attribute("aria-label")
         figure = page.get_by_role("img")
         expect(figure).to_be_visible()
         assert page.locator(".lecture-figure .lecture-time").get_attribute("href").endswith("?t=37")
