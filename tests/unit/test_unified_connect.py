@@ -24,6 +24,7 @@ from tum_mcp.transport import API
         (ServiceChoice.MOODLE,),
         (ServiceChoice.ARTEMIS,),
         (ServiceChoice.ZULIP,),
+        (ServiceChoice.TUMONLINE,),
         (ServiceChoice.MOODLE, ServiceChoice.ZULIP),
         tuple(ServiceChoice),
     ],
@@ -66,6 +67,16 @@ def test_only_selected_tabs_open_and_all_sessions_use_local_files(
         )
 
     monkeypatch.setattr(connect, "API", api)
+    from tum_mcp.tumonline import onboarding
+    from tum_mcp.tumonline.identity import account_for_subject
+
+    def connect_tumonline(context, attempt):
+        account = account_for_subject("synthetic")
+        cookie = auth.Cookie(name="session", value="synthetic-only", domain="campus.tum.de")
+        Vault().save(account, Credential(account_id=account.id, cookies=(cookie,)))
+        return account
+
+    monkeypatch.setattr(onboarding, "connect_context", connect_tumonline)
     completed = []
     results = connect.connect_services(
         selected, on_connected=completed.append, browser=BrowserChoice("Synthetic", "unused")
@@ -74,6 +85,7 @@ def test_only_selected_tabs_open_and_all_sessions_use_local_files(
         ServiceChoice.MOODLE: BASE_URL,
         ServiceChoice.ARTEMIS: ARTEMIS,
         ServiceChoice.ZULIP: ZULIP,
+        ServiceChoice.TUMONLINE: "https://campus.tum.de/tumonline/ee/ui/ca2/app/desktop/",
     }
     assert context.new_page.call_count == len(selected)
     assert context.new_page.return_value.goto.call_args_list == [

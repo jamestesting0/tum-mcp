@@ -31,12 +31,12 @@ replace customized entries. It does not authenticate or fetch courses.
 
 Run **`tum-mcp connect`**, with no arguments, in an interactive terminal:
 
-1. Use up/down to move and Space to select Moodle, Artemis and/or Zulip.
+1. Use up/down to move and Space to select Moodle, Artemis, Zulip and/or TUMonline.
 2. Press Enter. If several browsers are installed, choose one and press Enter.
 3. Complete TUM sign-in/MFA in the opened window. Only selected service tabs open.
 4. Return to the terminal for the saved-connection result.
 
-All three services use the same sign-in and encrypted session storage flow.
+The services use the same temporary-browser sign-in and encrypted session storage flow.
 No API key or native credential-store prompt is needed. A temporary browser
 profile keeps the connection separate from your everyday browser. Ctrl+C closes it and preserves
 connections that already completed. A dumb terminal uses numbered prompts.
@@ -51,6 +51,12 @@ After sign-in, Artemis and Zulip can read content available to your campus accou
 No local course/channel grants are required. Your agent uses status/discover and
 course metadata to find relevant current-semester material, then makes bounded reads.
 An account ID identifies a saved service connection; it is not your TUM login.
+TUMonline additionally has a local policy: `tum-mcp manage tumonline --show`
+shows it, `tum-mcp manage tumonline` changes the studies and courses permission,
+and `tum-mcp manage tumonline --disconnect` removes its saved local session.
+Use `--account ACCOUNT_ID` if more than one TUMonline account is configured.
+Study names, public course metadata and public course curriculum positions are available by default; full curriculum and
+grades or progress are not yet available. [Details and limitations](tum-mcp.md#tumonline-permissions).
 `tum-mcp --help` lists commands; `tum-mcp study build --help` shows command options.
 
 ## WSL

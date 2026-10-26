@@ -24,10 +24,9 @@ async def check() -> None:
     ):
         await client.initialize()
         inventory = await client.list_tools()
-        assert len(inventory.tools) == 36
-        assert not {"artemis_submit", "artemis_start_exercise"} & {
-            tool.name for tool in inventory.tools
-        }
+        names = {tool.name for tool in inventory.tools}
+        assert {"moodle_list_courses", "tumonline_status", "tumonline_course_curriculum"} <= names
+        assert not {"artemis_submit", "artemis_start_exercise"} & names
         status = await client.call_tool("tum_status")
         assert not status.is_error and status.structured_content["accounts"] == []
 

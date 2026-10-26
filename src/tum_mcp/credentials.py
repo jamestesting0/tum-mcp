@@ -1,7 +1,8 @@
 """Account-bound encrypted credentials; never included in tool results."""
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Final, Literal
+from typing import Final, Literal, Protocol
 from uuid import uuid4
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -15,9 +16,14 @@ from tum_mcp.moodle.auth import Cookie
 from tum_mcp.moodle.config import private_write
 from tum_mcp.moodle.errors import MoodleError
 from tum_mcp.moodle.secret_files import local_cipher
-from tum_mcp.settings import Account, Frozen, data_dir
+from tum_mcp.settings import Frozen, data_dir
 
 SERVICE: Final = "tum-mcp"
+
+
+class CredentialOwner(Protocol):
+    @property
+    def id(self) -> str: ...
 
 
 class RepositorySecret(Frozen):
@@ -107,29 +113,26 @@ class Vault:
         except KeyringError:
             raise CampusError(Code.AUTH_REQUIRED, "Unlock the native credential store.") from None
 
-    def save(self, account: Account, credential: Credential) -> None:
+    def save(self, account: CredentialOwner, credential: Credential) -> None:
         if credential.account_id != account.id:
             raise CampusError(Code.SCOPE_DENIED, "Credential principal does not match.")
         with self.lease(account), self.lock:
             self._write(account, credential)
 
-    def _write(self, account: Account, credential: Credential) -> None:
-        private_write(
-            self.record_path(account),
-            self.cipher(create=True).encrypt(
-                credential.model_copy(update={"generation": uuid4().hex}).encoded()
-            ),
-        )
+    def _write(self, account: CredentialOwner, credential: Credential) -> Credential:
+        saved = credential.model_copy(update={"generation": uuid4().hex})
+        private_write(self.record_path(account), self.cipher(create=True).encrypt(saved.encoded()))
+        return saved
 
-    def record_path(self, account: Account) -> Path:
+    def record_path(self, account: CredentialOwner) -> Path:
         base = self.root / "local" if self.storage == "file" else self.root
         return base / f"{account.id}.enc"
 
-    def lease(self, account: Account) -> FileLock:
+    def lease(self, account: CredentialOwner) -> FileLock:
         """Serialize effects with credential replacement/logout for this account only."""
         return FileLock(str(self.root / f"{account.id}.lease.lock"), timeout=30)
 
-    def load(self, account: Account) -> Credential:
+    def load(self, account: CredentialOwner) -> Credential:
         with self.lock:
             path = self.record_path(account)
             if path.is_symlink():
@@ -148,11 +151,11 @@ class Vault:
                 raise CampusError(Code.SCOPE_DENIED, "Stored credential principal does not match.")
             return value
 
-    def logout(self, account: Account) -> None:
+    def logout(self, account: CredentialOwner) -> None:
         with self.lease(account), self.lock:
             self.record_path(account).unlink(missing_ok=True)
 
-    def replace_login(self, account: Account, credential: Credential) -> None:
+    def replace_login(self, account: CredentialOwner, credential: Credential) -> None:
         """Rotate the login generation while preserving this identity's Git credentials."""
         if credential.account_id != account.id:
             raise CampusError(Code.SCOPE_DENIED, "Credential principal does not match.")
@@ -162,3 +165,21 @@ class Vault:
                 previous = self.load(account)
                 credential = credential.model_copy(update={"repositories": previous.repositories})
             self._write(account, credential)
+
+    def refresh_browser_session[T](
+        self,
+        account: CredentialOwner,
+        refresh: Callable[[Credential], tuple[tuple[Cookie, ...], T]],
+    ) -> tuple[Credential, T]:
+        """Serialize a browser-session refresh and preserve rotated service cookies."""
+        with self.lease(account):
+            credential = self.load(account)
+            if credential.authentication != "browser_session":
+                raise CampusError(Code.AUTH_REQUIRED, "Reconnect this browser account.")
+            cookies, result = refresh(credential)
+            if cookies != credential.cookies:
+                with self.lock:
+                    credential = self._write(
+                        account, credential.model_copy(update={"cookies": cookies})
+                    )
+            return credential, result

@@ -258,3 +258,7 @@ def tum_resolve_course(name: str) -> CourseMapping:
             Code.ACTION_REQUIRED, "Configure one exact course mapping in preferences.json."
         )
     return matches[0]
+
+
+# Import registers TUMonline tools on the existing combined server.
+import tum_mcp.tumonline.server  # noqa: E402, F401

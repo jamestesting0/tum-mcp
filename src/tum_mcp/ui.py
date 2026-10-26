@@ -93,25 +93,26 @@ def status_rows(console: Console, rows: list[tuple[str, State, str]]) -> None:
 def select_services() -> tuple[ServiceChoice, ...] | None:
     console = terminal_console()
     if os.environ.get("TERM") == "dumb":
-        console.print("Connect services\n1. Moodle\n2. Artemis\n3. Zulip")
+        console.print("Connect services\n1. Moodle\n2. Artemis\n3. Zulip\n4. TUMonline")
         console.print("Enter numbers separated by commas. Ctrl+C cancels.")
         choices = tuple(ServiceChoice)
         while True:
             answer = console.input("Services: ").strip()
             numbers = [value.strip() for value in answer.split(",")]
-            if numbers and all(value in {"1", "2", "3"} for value in numbers):
+            if numbers and all(value in {"1", "2", "3", "4"} for value in numbers):
                 return tuple(dict.fromkeys(choices[int(value) - 1] for value in numbers))
-            console.print("Choose at least one of 1, 2 or 3.")
+            console.print("Choose at least one of 1, 2, 3 or 4.")
     console.print("Up/down: move · Space: select")
     console.print("Enter: continue · Ctrl+C: cancel")
     console.print()
     labels = (
-        ("Moodle · Materials", "Artemis · Exercises", "Zulip · Discussions")
+        ("Moodle · Materials", "Artemis · Exercises", "Zulip · Discussions", "TUMonline · Studies")
         if console.width < 70
         else (
             "Moodle    Materials, forums and downloads",
             "Artemis   Programming exercises and feedback",
             "Zulip     Selected course discussions",
+            "TUMonline  Studies and courses",
         )
     )
     colors = (
