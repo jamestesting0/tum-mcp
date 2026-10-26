@@ -44,6 +44,10 @@ def test_campus_stdio_has_real_tools_and_rejects_fabricated_approval(tmp_path: P
                 "artemis_list_courses",
                 "moodle_list_forums",
                 "moodle_read_discussion",
+                "tumonline_status",
+                "tumonline_list_courses",
+                "tumonline_list_studies",
+                "tumonline_course_curriculum",
             } <= names
             assert "artemis_submit" not in names
             assert "artemis_start_exercise" not in names

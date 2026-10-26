@@ -107,7 +107,7 @@ tum-mcp study build --help
 `connect` takes no arguments or connection options. Move with up/down, toggle
 services with Space, and press Enter. Choose a browser when more than one is
 installed. Only selected tabs open in one temporary browser context. Moodle,
-Artemis and Zulip all follow this flow.
+Artemis, Zulip and TUMonline all follow this flow.
 Sign-in/MFA stays in the browser. `TERM=dumb` uses numbered prompts. Ctrl+C
 cancels and retains completed connections.
 
@@ -121,15 +121,53 @@ when the temporary browser closes. Existing browser profiles are never imported.
 Zulip uses its read-only `/json/` routes with the browser session; no API key is
 required. Reconnect through the same selector when a session expires.
 See [Zulip's dispatcher](https://github.com/zulip/zulip/blob/12.0/zerver/lib/rest.py).
-Read access follows the authenticated account's server permissions. No local course,
+For Moodle, Artemis and Zulip, read access follows the authenticated account's server permissions. No local course,
 channel, private-channel or personal-feedback grant is required. Older saved grant
 fields remain readable for compatibility and do not restrict read access. Agents
 prefer relevant current-semester courses and channels, inspect metadata first, and
 page through only the content needed for the request. Explicit older-course requests
 remain supported. Server-denied content, staff-only material and remote writes stay unavailable.
 
+### TUMonline permissions
+
+TUMonline has a separate, account-specific policy. New connections allow study
+names and degrees, public course catalog metadata and public curriculum positions
+for a selected course by default. The position endpoint is anonymous: no student
+session or identifier is sent. These positions are a partial view, not a full
+program curriculum or personal enrollment list; page order can change upstream.
+Course catalog searches accept a title or course number using 2–80 letters,
+numbers, spaces, dots, underscores, plus signs, slashes or hyphens; continue pages
+with the same query.
+Full curriculum structure is unavailable because its public API requires a separate
+service account. Grades and progress need
+separate consent, but their readers are not yet available; exams, admission,
+account, other IT and miscellaneous readers are also unavailable. No campus write
+operations are provided.
+
+Run `tum-mcp manage tumonline --show` to inspect the policy and
+`tum-mcp manage tumonline` in a terminal to select permissions with Space and
+save with Enter. Studies and courses can be allowed or revoked; the remaining
+categories are shown as unavailable and cannot be selected. On basic terminals,
+the command offers a numbered text prompt instead.
+When multiple accounts exist, add `--account ACCOUNT_ID`. Reconnecting preserves
+the policy. `tum-mcp manage tumonline --disconnect` removes the local TUMonline
+credential and retains the policy; it does not revoke remote sessions. An expired
+session requires `tum-mcp connect` again. If the policy is missing or corrupt, use
+`tum-mcp manage tumonline --account ACCOUNT_ID --disconnect` to remove that saved
+session without resetting permissions or affecting other providers.
+
+The policy governs what these TUMonline tools return to all MCP clients sharing
+the same local configuration. A local program running as the same user can access
+local files independently, and this policy does not govern other providers' tools,
+including Moodle's own grades tools. Study names are personal and permitted results
+may be transmitted to your configured agent or its AI provider. TUMonline's study
+chooser can contain extra personal fields in its upstream response; the integration
+holds that bounded response only in memory, projects the permitted fields, and does
+not save the response body. Revoking a permission prevents subsequent reads, but
+cannot recall a response already delivered to a client.
+
 Settings live outside the installed package in `TUMMCP/config/preferences.json`.
-Moodle sessions live under `TUMMoodle/local-session/`; Artemis and Zulip credentials
+Moodle sessions live under `TUMMoodle/local-session/`; Artemis, Zulip and TUMonline credentials
 live under `TUMMCP/credentials/local/`. Each directory has an independent `session.key`.
 Encrypted records and keys have owner-only permissions: 0700 directories / 0600
 keys on POSIX; protected current-user DACLs on Windows through PowerShell. No

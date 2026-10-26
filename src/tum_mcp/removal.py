@@ -58,6 +58,20 @@ def remove_clients(*, purge_runtime: bool = False, forget_credentials: bool = Fa
 
 
 def _forget_local_credentials() -> None:
+    from uuid import uuid4
+
+    from tum_mcp.tumonline.policy import PolicyStore
+
+    policies = PolicyStore()
+    with FileLock(str(policies.root / "connect.lock")):
+        marker = policies.root / "login-generation"
+        if marker.is_symlink():
+            raise CampusError(Code.SCOPE_DENIED, "TUMonline login marker cannot be a symlink.")
+        private_write(marker, uuid4().hex.encode())
+        _forget_local_credentials_locked()
+
+
+def _forget_local_credentials_locked() -> None:
     root = data_path() / "credentials"
     local = root / "local"
     if root.is_symlink() or local.is_symlink():

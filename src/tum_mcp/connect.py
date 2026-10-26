@@ -22,6 +22,7 @@ from tum_mcp.parsing import decode
 from tum_mcp.settings import ARTEMIS, TUM_LIVE, ZULIP, Account, Provider, preferences, save_account
 from tum_mcp.transport import API, MAX_RESPONSE
 from tum_mcp.tum_live.wire import Identity as LiveIdentity
+from tum_mcp.tumonline.identity import AccountRef
 from tum_mcp.zulip.models import Identity as ZulipIdentity
 
 
@@ -43,6 +44,7 @@ class ServiceChoice(StrEnum):
     MOODLE = "moodle"
     ARTEMIS = "artemis"
     ZULIP = "zulip"
+    TUMONLINE = "tumonline"
     TUM_LIVE = "tum_live"
 
     @property
@@ -51,6 +53,7 @@ class ServiceChoice(StrEnum):
             ServiceChoice.MOODLE: "Moodle",
             ServiceChoice.ARTEMIS: "Artemis",
             ServiceChoice.ZULIP: "Zulip",
+            ServiceChoice.TUMONLINE: "TUMonline",
             ServiceChoice.TUM_LIVE: "TUM-Live",
         }[self]
 
@@ -68,7 +71,7 @@ def available_services() -> tuple[ServiceChoice, ...]:
 @dataclass(frozen=True, slots=True)
 class ConnectionResult:
     service: ServiceChoice
-    account: Account | None = None
+    account: Account | AccountRef | None = None
 
 
 def connect_browser(providers: tuple[Provider, ...]) -> tuple[Account, ...]:
@@ -97,9 +100,15 @@ def connect_services(
         ServiceChoice.MOODLE: BASE_URL,
         ServiceChoice.ARTEMIS: ARTEMIS,
         ServiceChoice.ZULIP: ZULIP,
+        ServiceChoice.TUMONLINE: "https://campus.tum.de/tumonline/ee/ui/ca2/app/desktop/",
         ServiceChoice.TUM_LIVE: TUM_LIVE,
     }
     connected: dict[ServiceChoice, ConnectionResult] = {}
+    attempt: str | None = None
+    if ServiceChoice.TUMONLINE in services:
+        from tum_mcp.tumonline.onboarding import begin_login
+
+        attempt = begin_login()
     try:
         with browser_driver(selected_browser), sync_playwright() as playwright:
             instance = playwright.chromium.launch(
@@ -116,6 +125,21 @@ def connect_services(
                 while time.monotonic() < deadline:
                     for service in services:
                         if service in connected:
+                            continue
+                        if service == ServiceChoice.TUMONLINE:
+                            from tum_mcp.tumonline.onboarding import connect_context
+
+                            if attempt is None:
+                                raise CampusError(
+                                    Code.STALE_RESULT, "TUMonline login attempt missing."
+                                )
+                            account = connect_context(context, attempt)
+                            if account is None:
+                                continue
+                            result = ConnectionResult(service, account)
+                            connected[service] = result
+                            if on_connected:
+                                on_connected(result)
                             continue
                         origin = origins[service]
                         identity_path = {

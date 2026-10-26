@@ -129,8 +129,7 @@ def test_generated_client_command_starts_the_real_mcp_server(
             async with ClientSession(reader, writer) as client:
                 await client.initialize()
                 tools = await client.list_tools()
-                assert len(tools.tools) == 36
-                assert {"moodle_list_courses", "zulip_search_messages"} <= {
+                assert {"moodle_list_courses", "zulip_search_messages", "tumonline_status"} <= {
                     tool.name for tool in tools.tools
                 }
                 status = await client.call_tool("tum_status")

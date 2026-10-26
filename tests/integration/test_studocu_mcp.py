@@ -39,6 +39,10 @@ def test_enabled_tools_and_runtime_removal(tmp_path: Path) -> None:
                 "studocu_get_document",
                 "studocu_download_document",
                 "studocu_import_document",
+                "tumonline_status",
+                "tumonline_list_courses",
+                "tumonline_list_studies",
+                "tumonline_course_curriculum",
             } <= names
             for tool in registered:
                 if tool.name in {
@@ -85,6 +89,7 @@ def test_disabled_or_malformed_optional_state_preserves_campus_server(
             await client.initialize()
             names = {tool.name for tool in (await client.list_tools()).tools}
             assert "moodle_list_courses" in names
+            assert "tumonline_status" in names
             assert not any(name.startswith("studocu_") for name in names)
 
     anyio.run(check)

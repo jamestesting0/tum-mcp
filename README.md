@@ -1,6 +1,6 @@
 # TUM MCP
 
-Connect your coding agent to Moodle, Artemis and Zulip. Read course content and
+Connect your coding agent to Moodle, Artemis, Zulip and TUMonline. Read course content and
 build a private, source-backed study workspace. Unofficial; independent of TUM.
 
 **Package: [@jamestesting888/tum-mcp](https://www.npmjs.com/package/@jamestesting888/tum-mcp).**
@@ -35,7 +35,9 @@ tum-mcp --help
 
 Select services with **Space**, then **Enter**. Choose an installed browser and
 complete sign-in there. Only selected tabs open; Zulip needs no API key.
-Read access follows your campus account's permissions; no course/channel scope setup is needed.
+Moodle, Artemis and Zulip follow campus account permissions without local course/channel
+grants. TUMonline also has a local account-specific policy: use `tum-mcp manage tumonline`
+to view or change it.
 Use `tum-mcp study build --help` for a command's options.
 
 Choose a client with `--client`: `codex`, `claude`, `cursor` or `antigravity`.
@@ -93,7 +95,13 @@ skill files are preserved and reported for review.
 | Moodle | Materials, pages, announcements, forums, original downloads and cited PDF pages |
 | Artemis | Lectures, text/online/video units, student slide PDFs, released exercise statements and permitted own feedback |
 | Zulip | Selected course channels, discussion search and cited catch-up |
+| TUMonline | Study names and degrees, public course catalog metadata and course curriculum positions |
 | TUM-Live (optional Lecture extension) | Selected recording metadata, captions/local transcription, critical source frames and timestamped notes |
+
+TUMonline enables studies and courses by default; its full curriculum, grades, progress,
+exams, admissions, account and other readers are not yet available. The catalog is
+not a list of your enrollments, and course positions are a partial view of the
+curriculum. See [TUMonline permissions](docs/tum-mcp.md#tumonline-permissions).
 
 Campus access is read-only. Exercise start, deployment, execution, submission,
 posting and read-state changes are unavailable.

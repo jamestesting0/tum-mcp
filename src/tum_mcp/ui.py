@@ -115,6 +115,7 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
             "Moodle · Materials",
             "Artemis · Exercises",
             "Zulip · Discussions",
+            "TUMonline · Studies",
             "TUM-Live · Recordings",
         )
         if console.width < 70
@@ -122,6 +123,7 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
             "Moodle    Materials, forums and downloads",
             "Artemis   Programming exercises and feedback",
             "Zulip     Selected course discussions",
+            "TUMonline  Studies and courses",
             "TUM-Live  Lecture recordings",
         )
     )

@@ -326,3 +326,7 @@ try:
         register_studocu(server)
 except Exception:
     logging.getLogger(__name__).warning("Optional Studocu tools are unavailable.")
+
+
+# Import registers TUMonline tools on the existing combined server.
+import tum_mcp.tumonline.server  # noqa: E402, F401

@@ -25,6 +25,9 @@ from tum_mcp.settings import (
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 skills_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 app.add_typer(skills_app, name="skills")
+from tum_mcp.tumonline.manage import app as manage_app  # noqa: E402
+
+app.add_typer(manage_app, name="manage")
 from tum_mcp.study_cli import app as study_app  # noqa: E402
 
 app.add_typer(study_app, name="study")
@@ -85,7 +88,7 @@ def connect() -> None:
     """Select services and a browser, then complete sign-in in its temporary window."""
     from rich.text import Text
 
-    from tum_mcp.connect import ConnectionResult, connect_services
+    from tum_mcp.connect import ConnectionResult, ServiceChoice, connect_services
     from tum_mcp.moodle.browsers import discover_browsers
     from tum_mcp.ui import heading, select_browser, select_services, terminal_console
 
@@ -98,6 +101,15 @@ def connect() -> None:
         if not selected:
             console.print("No services selected. Nothing was changed.")
             return
+        if ServiceChoice.TUMONLINE in selected:
+            console.print(
+                "TUMonline defaults to study names, public courses and curriculum positions. "
+                "Grades, progress, exams and other categories are unavailable."
+            )
+            console.print(
+                "All MCP clients sharing this configuration use the same permission; "
+                "manage it with tum-mcp manage tumonline."
+            )
         browser = select_browser(discover_browsers())
     except (KeyboardInterrupt, EOFError):
         console.print("Cancelled. No browser was opened.")
@@ -127,7 +139,9 @@ def connect() -> None:
         console.print("Cancelled. Completed connections were saved.")
         raise typer.Exit(130) from None
     console.print()
-    console.print(f"Saved {len(results)} connection(s). Read access follows your campus account.")
+    console.print(
+        f"Saved {len(results)} connection(s). Read access also depends on local settings."
+    )
     console.print("Your agent can discover courses and channels, then read the relevant material.")
 
 
