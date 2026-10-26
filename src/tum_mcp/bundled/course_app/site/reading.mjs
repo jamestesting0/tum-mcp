@@ -88,24 +88,30 @@ export function renderReading(unit) {
   for (const [index, block] of unit.blocks.entries()) {
     const section = node('section', 'read-section'); section.dataset.blockIndex = String(index);
     const material = node('div', 'reading-material'); material.dataset.commentTarget = 'content'; material.append(append(node('div', 'section-heading'), studyText('h2', '', block.title), sourcesNote(block.sources, data.sources, data.course.synthetic, block.title)));
+    material.append(renderBlockBody(block));
+    section.append(material); root.append(section);
+  }
+  return root;
+}
+
+export function renderBlockBody(block) {
+  const root = node('div', 'block-body');
     switch (block.kind) {
       case 'text':
-        for (const text of block.paragraphs) material.append(studyText('p', '', text));
-        if (block.points.length) material.append(append(node('ul'), ...block.points.map(text => studyText('li', '', text))));
+        for (const text of block.paragraphs) root.append(studyText('p', '', text));
+        if (block.points.length) root.append(append(node('ul'), ...block.points.map(text => studyText('li', '', text))));
         break;
-      case 'formula': material.append(renderFormula(block)); break;
-      case 'table': material.append(table(block)); break;
-      case 'diagram': material.append(diagram(block)); break;
-      case 'plot': material.append(renderPlot(block).root); break;
+      case 'formula': root.append(renderFormula(block)); break;
+      case 'table': root.append(table(block)); break;
+      case 'diagram': root.append(diagram(block)); break;
+      case 'plot': root.append(renderPlot(block).root); break;
       case 'code': {
         const region = node('div', 'code-region'); region.tabIndex = 0;
         region.setAttribute('role', 'region'); region.setAttribute('aria-label', `${block.language} code`);
         region.append(node('span', 'small', block.language), append(node('pre'), node('code', '', block.code)));
-        material.append(region, studyText('p', '', block.explanation)); break;
+        root.append(region, studyText('p', '', block.explanation)); break;
       }
       default: throw new Error('Unsupported study block. Rebuild the site with a compatible renderer.');
     }
-    section.append(material); root.append(section);
-  }
   return root;
 }

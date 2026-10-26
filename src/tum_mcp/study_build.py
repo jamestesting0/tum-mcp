@@ -52,6 +52,7 @@ TEMPLATE_FILES = (
     "app.mjs",
     "start.mjs",
     "exercises.mjs",
+    "lectures.mjs",
     "exercise-state.mjs",
     "exercise-response.mjs",
     "graph-response.mjs",
