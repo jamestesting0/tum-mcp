@@ -89,7 +89,9 @@ def test_optional_guidance_and_workspace_round_trip(
         page.get_by_role("button", name="Check", exact=True).click()
         expect(page.get_by_text("Include the cost of reaching A", exact=False)).to_be_visible()
         page.get_by_role("button", name="Hint", exact=True).click()
-        expect(page.get_by_text("A path cost includes all edges", exact=False)).to_be_visible()
+        expect(
+            page.locator("#content").get_by_text("A path cost includes all edges", exact=False)
+        ).to_be_visible()
         switch_workspace(page, "Study")
         switch_workspace(page, "Exercises")
         assert page.get_by_label("Your answer", exact=True).input_value() == "1"
@@ -615,7 +617,9 @@ def test_ungraded_guidance_still_offers_prepared_explanation(
         page = context.new_page()
         page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/candidate")
         page.get_by_role("button", name="Explain", exact=True).click()
-        expect(page.get_by_text(step["explanation"], exact=True)).to_be_visible()
+        expect(
+            page.locator("#content").get_by_text(step["explanation"], exact=True)
+        ).to_be_visible()
         expect(page.get_by_role("button", name="Continue", exact=True)).to_be_enabled()
     finally:
         context.close()

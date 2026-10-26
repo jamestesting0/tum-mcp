@@ -34,7 +34,8 @@ def test_excluded_exercises_leave_no_statement_hint_solution_math_or_source_cana
         status="current",
     )
     (root / ".tum-mcp/state.json").write_text(
-        state.model_copy(update={"resources": (*state.resources, added)}).model_dump_json()
+        state.model_copy(update={"resources": (*state.resources, added)}).model_dump_json(),
+        encoding="utf-8",
     )
     file = root / "study/exercises.json"
     content = json.loads(file.read_bytes())
