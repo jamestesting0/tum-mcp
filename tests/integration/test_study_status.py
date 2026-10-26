@@ -62,7 +62,7 @@ def test_existing_binding_routes_to_sync_even_when_the_optional_site_is_broken(
     } == before
 
 
-@pytest.mark.parametrize("existing", [".study", "materials", "study", "managed-rules"])
+@pytest.mark.parametrize("existing", [".tum-mcp", "materials", "study", "managed-rules"])
 def test_orphaned_material_requires_inspection_before_adoption(
     tmp_path: Path, existing: str
 ) -> None:
@@ -85,7 +85,7 @@ def test_damaged_state_never_routes_to_initialization(
     project: Path,
     damage: Literal["invalid-json", "directory", "oversized", "duplicate", "unscoped"],
 ) -> None:
-    path = project / ".study/state.json"
+    path = project / ".tum-mcp/state.json"
     match damage:
         case "invalid-json":
             path.write_bytes(b'{"private-fixture": "do not print these bytes"')
@@ -121,7 +121,7 @@ def test_managed_instruction_conflicts_keep_the_known_course(
             path.unlink()
         case "edited":
             path.write_text(
-                path.read_text(encoding="utf-8").replace("Course study inventory", "My inventory"),
+                path.read_text(encoding="utf-8").replace("TUM MCP course project", "My inventory"),
                 encoding="utf-8",
             )
         case "non-utf8":
@@ -137,8 +137,8 @@ def test_symbolic_state_is_preserved(tmp_path: Path) -> None:
     outside = tmp_path / "outside.json"
     outside.write_bytes(b"Unrelated bytes")
     project = tmp_path / "course"
-    (project / ".study").mkdir(parents=True)
-    state = project / ".study/state.json"
+    (project / ".tum-mcp").mkdir(parents=True)
+    state = project / ".tum-mcp/state.json"
     try:
         state.symlink_to(outside)
     except OSError:

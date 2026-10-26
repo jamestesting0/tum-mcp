@@ -1,6 +1,7 @@
 import json
 from collections import deque
 from importlib.resources import files
+from pathlib import Path
 
 import httpx2
 import pytest
@@ -57,7 +58,7 @@ def test_mathml_refuses_script_links_foreign_xml_and_entity_expansion() -> None:
 
 
 def test_sample_frontier_and_answer_match_an_independent_bfs() -> None:
-    path = files("tum_mcp") / "bundled/skills/prepare-study/assets/example/content.json"
+    path = Path(__file__).parents[1] / "fixtures/course_app/content.json"
     content = StudyContent.model_validate_json(path.read_bytes())
     unit = next(unit for unit in content.units if unit.key == "bfs")
     diagram = next(block for block in unit.blocks if block.kind == "diagram")
@@ -81,7 +82,7 @@ def test_sample_frontier_and_answer_match_an_independent_bfs() -> None:
 
 
 def test_question_schema_rejects_an_answer_key_missing_from_its_options() -> None:
-    path = files("tum_mcp") / "bundled/skills/prepare-study/assets/example/content.json"
+    path = files("tum_mcp") / "bundled/course_app/example/content.json"
     content = json.loads(path.read_bytes())
     content["units"][0]["questions"][0]["correct"] = "missing"
     with pytest.raises(ValidationError):

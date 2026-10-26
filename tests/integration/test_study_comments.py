@@ -14,10 +14,10 @@ from tum_mcp.study_comments import change_comment, read_comments
 
 def test_comments_are_private_project_files_and_compare_and_swap(project: Path) -> None:
     first = operation(project)
-    assert not (project / ".study/comments.json").exists()
+    assert not (project / ".tum-mcp/comments.json").exists()
     saved = change_comment(project, first)
     assert saved["comments"][0]["text"] == first.text
-    file = project / ".study/comments.json"
+    file = project / ".tum-mcp/comments.json"
     if os.name != "nt":
         assert file.stat().st_mode & 0o077 == 0
     edit = Edit(
@@ -86,7 +86,7 @@ def test_foreign_identity_and_damaged_records_are_preserved(project: Path) -> No
     with pytest.raises(CampusError) as caught:
         change_comment(project, first.model_copy(update={"course_identity": "0" * 64}))
     assert caught.value.code == Code.SCOPE_DENIED
-    file = project / ".study/comments.json"
+    file = project / ".tum-mcp/comments.json"
     file.write_bytes(b"")
     with pytest.raises(CampusError):
         read_comments(project)
@@ -127,9 +127,9 @@ def test_cli_handoff_reports_changed_content_and_requires_current_revision(
         ]
         == []
     )
-    before = (project / ".study/comments.json").read_bytes()
+    before = (project / ".tum-mcp/comments.json").read_bytes()
     assert runner.invoke(app, args).exit_code != 0
-    assert (project / ".study/comments.json").read_bytes() == before
+    assert (project / ".tum-mcp/comments.json").read_bytes() == before
     assert saved["revision"] == listed["revision"]
 
 
@@ -137,7 +137,7 @@ def test_comment_symlink_cannot_escape(project: Path, tmp_path: Path) -> None:
     outside = tmp_path / "private.json"
     outside.write_text("preserved", encoding="utf-8")
     try:
-        (project / ".study/comments.json").symlink_to(outside)
+        (project / ".tum-mcp/comments.json").symlink_to(outside)
     except OSError:
         pytest.skip("This Windows account cannot create symbolic links.")
     with pytest.raises(CampusError):
@@ -188,7 +188,7 @@ def test_activity_targets_remain_filterable_and_legacy_content_notes_load(projec
     # Previously stored content comments need no migration or rewrite on read.
     content = operation(project)
     saved = change_comment(project, content)
-    raw = project / ".study/comments.json"
+    raw = project / ".tum-mcp/comments.json"
     document = json.loads(raw.read_bytes())
     document["comments"][1]["anchor"].pop("view")
     raw.write_text(json.dumps(document), encoding="utf-8")

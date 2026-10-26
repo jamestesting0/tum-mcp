@@ -3,6 +3,14 @@ name: read-content
 description: Find and explain TUM Moodle, Artemis or Zulip content with citations. Use for course questions and source retrieval; project/site changes use the study skills.
 ---
 
+For a bound local course, read `.tum-mcp/course.md` and the relevant source records
+first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is the
+discovery pointer and user's rules. Legacy `.study/` remains readable until explicit
+`study upgrade PROJECT`. The handbook's receipt describes local review, not live
+freshness; verify affected facts against sources. Reuse context already read in this
+request. Do not re-read the whole inventory for each authoring step.
+
+
 Resolve the course from the request, conversation or project binding. Reuse known
 IDs and relevant local sources; inspect only needed state entries. Check
 `tum_status` or discover IDs only when connection, scope or identity is unknown.

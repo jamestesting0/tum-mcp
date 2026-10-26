@@ -13,10 +13,18 @@ from pydantic_core import PydanticCustomError
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
 from tum_mcp.study_models import Course, Digest
-from tum_mcp.study_store import Write, apply, confined, digest, load_state, read_bytes
+from tum_mcp.study_store import (
+    Write,
+    apply,
+    digest,
+    load_state,
+    private_name,
+    private_path,
+    read_bytes,
+)
 
-CONFIG: Final = ".study/github.json"
-SETUP: Final = ".study/github-setup.json"
+CONFIG: Final = "github.json"
+SETUP: Final = "github-setup.json"
 GitSha = Annotated[str, Field(pattern=r"^[a-f0-9]{40}$")]
 RepositoryName = Annotated[
     str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$")
@@ -27,6 +35,7 @@ class PublicationSetup(Frozen):
     course_identity: Digest
     repository: RepositoryName
     public_site: Literal[True]
+    include_exercises: bool = Field(default=False, strict=True)
 
 
 class Publication(PublicationSetup):
@@ -83,7 +92,7 @@ def repository_name(course: Course) -> str:
 
 
 def load_publication(root: Path) -> Publication | None:
-    path = confined(root, CONFIG)
+    path = private_path(root, CONFIG)
     raw = read_bytes(path)
     if raw is None:
         return None
@@ -99,13 +108,22 @@ def load_publication(root: Path) -> Publication | None:
 
 
 def save_publication(root: Path, publication: Publication) -> None:
-    path = confined(root, CONFIG)
-    apply(root, (Write(CONFIG, read_bytes(path), publication.model_dump_json(indent=2).encode()),))
+    path = private_path(root, CONFIG)
+    apply(
+        root,
+        (
+            Write(
+                private_name(root, CONFIG),
+                read_bytes(path),
+                publication.model_dump_json(indent=2).encode(),
+            ),
+        ),
+    )
 
 
 def load_setup(root: Path) -> PublicationSetup | None:
     """Recover the chosen name after an interrupted repository-creation request."""
-    raw = read_bytes(confined(root, SETUP))
+    raw = read_bytes(private_path(root, SETUP))
     if raw is None:
         return None
     try:

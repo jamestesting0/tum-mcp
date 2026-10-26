@@ -18,7 +18,15 @@ from tum_mcp.study_comment_models import (
     Operation,
     SetStatus,
 )
-from tum_mcp.study_store import Write, apply, confined, digest, load_state, read_bytes
+from tum_mcp.study_store import (
+    Write,
+    apply,
+    digest,
+    load_state,
+    private_name,
+    private_path,
+    read_bytes,
+)
 
 LIMIT = 2 * 1024 * 1024
 
@@ -26,7 +34,7 @@ LIMIT = 2 * 1024 * 1024
 def _read(root: Path) -> tuple[Comments, bytes | None]:
     state = load_state(root)
     identity = digest(json.dumps([state.course.key, state.course.semester]).encode())
-    path = confined(root, ".study/comments.json")
+    path = private_path(root, "comments.json")
     if path.exists() and path.stat().st_size > LIMIT:
         raise CampusError(Code.WORKSPACE_CONFLICT, "Comments exceed the local storage limit.")
     before = read_bytes(path)
@@ -51,14 +59,16 @@ def _revision(document: Comments, before: bytes | None) -> str:
 
 def read_comments(root: Path) -> dict:
     root = root.expanduser().resolve()
-    with FileLock(str(confined(root, ".study-comments.lock"))):
+    load_state(root)
+    with FileLock(str(private_path(root, "comments.lock"))):
         document, before = _read(root)
         return document.model_dump(mode="json") | {"revision": _revision(document, before)}
 
 
 def change_comment(root: Path, operation: Operation) -> dict:
     root = root.expanduser().resolve()
-    with FileLock(str(confined(root, ".study-comments.lock"))):
+    load_state(root)
+    with FileLock(str(private_path(root, "comments.lock"))):
         document, before = _read(root)
         if operation.course_identity != document.course_identity:
             raise CampusError(Code.SCOPE_DENIED, "Comment request belongs to another course.")
@@ -112,9 +122,9 @@ def change_comment(root: Path, operation: Operation) -> dict:
                         assert_never(unreachable)
             case unreachable:
                 assert_never(unreachable)
-        updated = document.model_copy(update={"comments": tuple(items)})
+        updated = document.model_copy(update={"schema_version": 2, "comments": tuple(items)})
         after = updated.model_dump_json(indent=2).encode()
         if len(after) > LIMIT:
             raise CampusError(Code.ACTION_REQUIRED, "Comments exceed the local storage limit.")
-        apply(root, (Write(".study/comments.json", before, after),))
+        apply(root, (Write(private_name(root, "comments.json"), before, after),))
         return updated.model_dump(mode="json") | {"revision": digest(after)}

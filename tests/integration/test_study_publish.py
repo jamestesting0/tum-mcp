@@ -47,13 +47,42 @@ def test_proposal_has_no_uploads_or_authentication(project: Path, github: GitHub
     assert proposal["repository_visibility"] == "private"
     assert proposal["website_visibility"] == "public"
     assert proposal["suggested_name"].startswith("study-algorithms-graphs-")
-    assert github.requests == [] and not (project / ".study/github.json").exists()
+    assert github.requests == [] and not (project / ".tum-mcp/github.json").exists()
+
+
+def test_exercise_scope_is_explicit_and_keeps_the_existing_repository(
+    exercise_project: Path, github: GitHubFixture
+) -> None:
+    root = exercise_project
+    assert first_publish(root).exit_code == 0
+    before = load_publication(root)
+    assert before.include_exercises is False
+    saved = root / ".tum-mcp/github.json"
+    old = json.loads(saved.read_bytes())
+    old.pop("include_exercises")
+    saved.write_text(json.dumps(old))
+    assert load_publication(root).include_exercises is False
+    arguments = ["study", "publish", "--project", str(root), "--wait-seconds", "0"]
+    included = CliRunner().invoke(app, [*arguments, "--include-exercises"])
+    assert included.exit_code == 0, included.output
+    after = load_publication(root)
+    assert after.include_exercises is True
+    assert (after.repository, after.branch, after.hosted_url) == (
+        before.repository,
+        before.branch,
+        before.hosted_url,
+    )
+    assert b"sample-relaxation" in github.files(after.repository)["data.mjs"]
+    excluded = CliRunner().invoke(app, [*arguments, "--exclude-exercises"])
+    assert excluded.exit_code == 0, excluded.output
+    assert b"sample-relaxation" not in github.files(after.repository)["data.mjs"]
+    assert len(github.repositories) == 1
 
 
 def test_first_publication_exports_only_the_site(project: Path, github: GitHubFixture) -> None:
     # Given private source, comment and arbitrary files alongside the generated app.
     (project / "study/private.txt").write_text("synthetic-private-original", encoding="utf-8")
-    (project / ".study/comments.json").write_text("synthetic-local-comment", encoding="utf-8")
+    (project / ".tum-mcp/comments.json").write_text("synthetic-local-comment", encoding="utf-8")
     (project / ".env").write_text("synthetic-credential-file", encoding="utf-8")
     # When public site publication is explicitly authorized.
     result = first_publish(project)
@@ -162,7 +191,7 @@ def test_lost_creation_response_reuses_the_chosen_repository(
     assert isinstance(first.exception, CampusError) and first.exception.code == Code.OFFLINE
     assert retry.exit_code == 0, retry.output
     assert len(github.repositories) == 1
-    assert not (project / ".study/github-setup.json").exists()
+    assert not (project / ".tum-mcp/github-setup.json").exists()
 
 
 def test_remote_edits_are_not_overwritten(project: Path, github: GitHubFixture) -> None:

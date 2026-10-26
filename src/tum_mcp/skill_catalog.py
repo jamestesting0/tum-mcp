@@ -4,10 +4,11 @@ from typing import Final
 
 CURRENT_SKILLS: Final = (
     "read-content",
-    "sync-study",
+    "sync-course",
     "prepare-study",
+    "prepare-exercises",
     "audio-notes",
-    "publish-study",
+    "publish-course",
 )
 LEGACY_SKILLS: Final = dict.fromkeys(
     (
@@ -25,4 +26,11 @@ LEGACY_SKILLS: Final = dict.fromkeys(
     "read-content",
 )
 
-LEGACY_SKILLS.update({"init-study": "sync-study", "update-study": "sync-study"})
+LEGACY_SKILLS.update(
+    {
+        "init-study": "sync-course",
+        "update-study": "sync-course",
+        "sync-study": "sync-course",
+        "publish-study": "publish-course",
+    }
+)

@@ -1,5 +1,30 @@
 # Changes
 
+## 0.7.0 — 2026-10-26
+
+- Share one course app between Study and Exercises, with a single workspace
+  selector in the sidebar footer and a responsive mobile outline.
+- Add `prepare-exercises` for source-backed weekly exercises with optional hints,
+  explanations, solutions and prepared checks. Support editable tables, long math
+  and code drafts, graph selections/paths and line graph sample points. Open work
+  uses rubric comparison; the app does not execute code or grade proofs.
+- Keep step navigation in place, shorten controls and show section sources through
+  compact reference icons. Preserve browser progress, drafts and passage comments.
+- Use `.tum-mcp/` for private course state and a cited agent course handbook covering
+  course organization, schedules, coursework/platforms, assessment and bonus rules.
+  Track reviewed source versions, coverage gaps and changed supporting sources.
+- Rename `sync-study` to `sync-course` and `publish-study` to `publish-course`;
+  retain managed migration for previous skill names and preserve personal overrides.
+- Keep the shipped app a minimal reusable component template, explicitly distinct
+  from an example of good course teaching. Keep rich synthetic tests out of the package.
+
+New projects use `app/`; existing `study/` websites remain supported. Run
+`tum-mcp study upgrade PROJECT` explicitly to rename legacy `.study/` metadata;
+it preserves private records and archives the old root instructions. The separate
+`study build PROJECT --upgrade-layout` moves a verified legacy web folder to `app/`
+with a backup. Neither package installation nor update migrates course folders or
+rebuilds personal sites automatically. Exercise publication is opt-in.
+
 ## 0.6.1 — 2026-10-25
 
 - Make `tum-mcp update` download and validate the latest npm release before

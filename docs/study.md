@@ -1,13 +1,13 @@
 # Course study projects
 
-The five reading, study, audio and publishing skills ship with version **0.6.0**.
+Six focused skills cover source reading, course sync, Study preparation, Exercises preparation, audio and publishing.
 They run in your local agent, using the connected
 MCP tools to read course sources. The CLI validates and stores the resulting local
 files; it does not run an AI model.
 
 ## Publish a study website
 
-The optional `publish-study` skill makes a prepared site accessible from a phone
+The optional `publish-course` skill makes a prepared site accessible from a phone
 or another computer. Its GitHub repository is private; the Pages website is
 public. An eligible paid GitHub plan is required for Pages from private repositories.
 This workflow does not provide private website access. Review lesson text,
@@ -29,10 +29,16 @@ tum-mcp study publish --project PROJECT --public-site --repository OWNER/NAME
 
 Names use `study-<course>-<semester>` in lowercase with hyphens. A collision gets
 a stable course suffix; existing repositories are never made public. Settings in
-`.study/github.json` bind updates to that course, semester and repository. A
+`.tum-mcp/github.json` bind updates to that course, semester and repository. A
 failed setup retries the same saved repository rather than creating duplicates.
 
-Only the generated website renderer and lesson data are uploaded. Downloaded
+Study is the default hosted workspace, including for old settings. Exercise
+statements, hints and full solutions need explicit `--include-exercises` on the
+publish command after reviewing their public exposure. `--exclude-exercises`
+returns a combined site to Study only, using the same repository and URL. An
+Exercises-only site also requires explicit inclusion.
+
+Only the selected generated website renderer and data are uploaded. Downloaded
 originals, credentials, AGENTS.md, study inventory, passage comments, progress,
 audio and arbitrary files stay local. Git itself is not required: the publisher
 uses authenticated GitHub API calls through `gh`. Local publication settings do
@@ -63,7 +69,7 @@ and offline support are not included.
 
 ## Start with one course
 
-Use `sync-study` for both initial setup and later source updates. For a new project,
+Use `sync-course` for both initial setup and later source updates. For a new project,
 provide the course title and semester when known. The agent verifies
 its availability, resolves source IDs and asks about ambiguous mappings. A project
 cannot switch course or semester. Use a separate directory for another course.
@@ -86,18 +92,42 @@ pse-ws26/
     exams/                  Available revision material
     exercises/              Released statements and practice references
     other/                  Announcements and course information
-  .study/state.json         Course binding, source versions and coverage
-  study/                    Optional interactive study website
+  .tum-mcp/
+    course.md               Cited course structure, logistics, rules and unknowns
+    state.json              Course binding, source versions and coverage
+    notes/                  Detailed course/agent notes when needed
+  app/                      Shared Study and Exercises website
+    content.json            Optional source-backed Study content
+    exercises.json          Optional prepared exercise guidance
   audio/                    Optional category audio derived from the prepared website
 ```
 
-`AGENTS.md` contains a concise prerequisite/notation map, verified assessment facts,
-source locations, coverage and next actions. Detailed source content stays in
-materials. Existing user instructions are preserved; source text is untrusted data.
+`AGENTS.md` retains user rules and points agents to `.tum-mcp/course.md`. That short
+handbook explains the course's goals, lectures/tutorials, weekly work and platforms,
+assessment/bonus conditions, communication and preparation map. Claims carry source
+links/locators and checked dates; unknowns and conflicting announcements stay visible.
+Detailed source content remains in materials/. All TUM MCP course state, plans and
+agent notes live under .tum-mcp/.
+
+`sync-course` reads the relevant authoritative sources and maintains the handbook;
+the CLI scaffolds it without pretending to understand the course. Its review receipt
+records the local generation and hashes of supporting sources. `study inspect`
+reports changed supporting sources and coverage gaps so refreshes can focus on
+affected claims. A reviewed local snapshot does not establish live freshness or
+complete understanding. See the bundled sync-course context reference for the full
+source-review workflow.
+
+To rename existing private `.study/` state explicitly, close other course processes
+and run `tum-mcp study upgrade PROJECT`. It preserves unknown private files,
+comments, publication settings and the full old root instructions as
+`.tum-mcp/legacy-AGENTS.md`. Course identity, materials and browser progress stay the
+same. Existing legacy state remains readable until upgrade; two state folders are
+a conflict to reconcile, never silently merged. This differs from the web-folder
+upgrade below.
 
 ## State-based workflow
 
-`sync-study` starts with `tum-mcp study status PROJECT`, a read-only local check:
+`sync-course` starts with `tum-mcp study status PROJECT`, a read-only local check:
 
 | Mode | Action |
 | --- | --- |
@@ -112,7 +142,7 @@ The underlying `study init` and `study sync` commands remain separate.
 
 ## Keep it current
 
-Ask `sync-study` to compare the project with connected upstream sources. It
+Ask `sync-course` to compare the project with connected upstream sources. It
 reuses the saved course, semester, source IDs and reliable revisions. It retrieves
 changed material and updates course knowledge. Incomplete listings never imply withdrawal. Withdrawn sources
 keep their local originals; edited or deleted managed files are reported for review.
@@ -127,10 +157,9 @@ restores files when possible and reports any remaining conflict.
 
 ## Prepare the website
 
-Ask `prepare-study` to create or extend `study/`. Units follow the course's
+Ask `prepare-study` to create or extend the Study workspace in `app/`. Units follow the course's
 lecture/week sequence when useful, or use consistent topics. For a single course, use a flat list or one category level followed by topics,
-including several topics in one week. The multi-area demo also exercises deeper
-legacy hierarchies. Every unit has:
+including several topics in one week. Every unit has:
 
 - A concise explanation with source links, assumptions and worked examples.
 - Editable LaTeX formulas and inline variables, diagrams, code or comparison tables where they explain the concept.
@@ -173,7 +202,7 @@ glossaries, cards, questions and feedback. Code and dollar signs stay literal.
 
 Select text in Content, Flashcards or Practice, then click **Comment** to record what is unclear.
 You can also use Ctrl/Command+Alt+M after selecting text. The local preview saves
-notes in `.study/comments.json`, separately from learning progress. Click a
+notes in `.tum-mcp/comments.json`, separately from learning progress. Click a
 numbered passage marker or highlighted text to open its notes beside the quote.
 Markers sit beside section headings or the current card/question position.
 Notes can be edited, resolved or reopened; changed passages retain their original quotes.
@@ -186,7 +215,7 @@ automatically while the preview is open. Your draft is kept if a note changes
 elsewhere; choose Use latest or Keep mine before saving. Reload after the agent
 rebuilds the teaching content.
 
-Content lives in `study/content.json`; shared renderer modules and CSS keep the
+Content lives in `app/content.json`; shared renderer modules and CSS keep the
 site extensible. Source hashes identify affected units. A stale source stops a
 build until the explanation is reviewed. Unchanged units retain their revision;
 revised questions receive separate progress. Customized templates are preserved
@@ -210,10 +239,43 @@ or an unattended preview, use `tum-mcp study serve ./pse-ws26 --port 8765`.
 If port 8765 is busy, stop the other preview or choose `tum-mcp study --port 8766`.
 Keep the same address and port between sessions so browser progress remains available.
 
-The preview binds `127.0.0.1`, serves `study/` and saves comments through a bounded
+The preview binds `127.0.0.1`, serves `app/` (or the existing legacy `study/`) and saves comments through a bounded
 same-origin endpoint. It makes no campus requests.
 No course credentials are copied into the website. Browser storage holds progress
 locally. Nothing is published by these commands.
+
+## Prepare weekly exercises
+
+Ask `prepare-exercises` to prepare released weekly sheets in the same app. Study
+and Exercises can be prepared in either order. When both exist, a selector at the bottom of the sidebar
+switches workspaces and remembers the current place. On phones it lives inside the
+open course outline; there is no second switch in the reading area. Exercises are
+listed directly under sheets, optionally grouped by category.
+
+The original statement and subparts come first. Students can solve on paper, mark
+an exercise Reviewed, reveal a worked solution directly, or open **Guidance**.
+Prepared guidance offers one conceptual step, requested hints and specific repair
+feedback. Numeric checks state units/tolerance; choice checks have four options.
+Fillable tables check numeric cells and explicit text variants individually. Graph
+questions support node/edge selections and ordered paths with a visible diagram.
+Line graphs allow sample-point placement, coordinate edits and keyboard adjustment.
+Long math and programming work use saved writing areas and prepared rubrics; code
+is never executed, and symbolic work, proofs and programs are not automatically
+graded. Arbitrary graph drawing can use paper and rubric comparison. Typing, hints and step-by-step guidance are optional. Reviewed records an
+action, not mastery or an assessment result.
+
+Drafts and assistance stay in this browser. Editing a checked answer clears its
+verdict. Semantic changes start fresh progress for only that exercise, while retaining older
+browser records; source-hash review alone preserves progress.
+Reset on each workspace home affects only that workspace. Exercise passage comments
+use the existing private comment service; hosted exports do not expose it.
+
+Existing `study/` projects continue to work. New projects use `app/`. To upgrade a
+verified legacy layout explicitly, run `tum-mcp study build PROJECT --upgrade-layout`.
+It keeps the original tree at `.tum-mcp/layout-backup/`, preserves the course identity,
+learning revisions, comments, settings and personal files, and stops on customized
+generated files, an occupied backup or two layouts. Repeating a completed upgrade
+is a no-op. Do not create `app/` alongside an existing `study/` by hand.
 
 ## Create and maintain audio notes
 
@@ -225,7 +287,7 @@ Create audio notes from this prepared study website, one file per category.
 Keep course outputs under audio/; prefer free ElevenLabs with local Kokoro fallback.
 ```
 
-Audio Notes reads `study/content.json`, retaining the course's language, examples,
+Audio Notes reads `app/content.json`, retaining the course's language, examples,
 assumptions and limitations. It turns tables, formulas, code and diagram sequences
 into explanations that work without a screen. It does not independently research
 the course or create new subject matter. An audio-only request reuses the prepared
@@ -287,29 +349,32 @@ material with the previous verified coverage. This is an agent skill, not a new
 
 ## Packaged app template
 
-The complete web-app template is packaged with `prepare-study` in `assets/site/`.
+The shared web-app template is packaged in `bundled/course_app/site/`, separately from skill instructions.
 It includes the shell, navigation, flip cards, practice, diagrams and styling.
-Agents author course content in `study/content.json`; `study build` installs the
+Agents author course content in `app/content.json`; `study build` installs the
 shared template, preserves customized files and checks sources. This keeps new
 course sites consistent without rebuilding the interface. `tum-mcp study template`
 shows the bundled files and their combined revision for reproducible development.
 
-## Try the synthetic example
+## Try the component template
 
 After installing a locally built development artifact:
 
 ```sh
-tum-mcp study demo ./algorithms-demo
-tum-mcp study serve ./algorithms-demo
+tum-mcp study demo ./component-preview
+tum-mcp study serve ./component-preview
 ```
 
-This creates a clearly labelled synthetic course on graphs, BFS and DFS, including
-LaTeX rendered as native MathML, a step-through graph, comparison tables, flashcards and practice.
+This creates one small Study unit and one exercise covering prose, code, tables,
+formulas, graph/process diagrams, cards and response controls. It is a reusable
+component template, not necessarily a good teaching or question-authoring example.
+Actual course authoring follows reviewed sources and the preparation skills. Rich
+learning pilots stay in private test fixtures.
 It uses no campus account. An existing edited demo is preserved.
 
 ## Local helper inputs
 
-Agents use `tum-mcp study schema snapshot` and `tum-mcp study schema content` for
+Agents use `tum-mcp study schema snapshot`, `schema content` and `schema exercises` for
 validated input schemas. After authenticated tools verify availability, the agent
 stages a source snapshot with exact course identity, coverage and resource revisions.
 The helper does not authenticate the snapshot or grant any campus access itself.

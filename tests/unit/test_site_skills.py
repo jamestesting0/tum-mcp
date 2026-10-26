@@ -19,10 +19,11 @@ def test_pack_contains_reading_and_study_workflows_with_valid_references(
     # Then the reading, study and audio workflows are discoverable and references resolve.
     assert set(report.checked_skills) == {
         "read-content",
-        "sync-study",
+        "sync-course",
         "prepare-study",
+        "prepare-exercises",
         "audio-notes",
-        "publish-study",
+        "publish-course",
     }
     assert report.errors == () and report.reference_characters > 0
     assert report.activation_evaluated is False
@@ -61,7 +62,7 @@ def test_claude_respects_a_users_explicit_only_site_skill_preference(
     assert frontmatter["disable-model-invocation"] is True
 
 
-@pytest.mark.parametrize("name", ["prepare-study", "audio-notes"])
+@pytest.mark.parametrize("name", ["prepare-study", "prepare-exercises", "audio-notes"])
 def test_local_study_workflow_does_not_require_a_campus_server(name: str) -> None:
     from tum_mcp.skills import bundled, implicit_invocation
 

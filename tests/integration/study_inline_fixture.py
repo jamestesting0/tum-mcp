@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 from study_comments_fixture import open_notes, select_passage
 
 
@@ -62,7 +62,7 @@ def inline_math_checks(page: Page, project: Path, content: dict) -> None:
                 if view == "flashcards"
                 else ".practice-question legend"
             ).first
-            assert target.locator("math.inline-math").count() == 2
+            expect(target.locator("math.inline-math")).to_have_count(2)
             assert r"\(" not in target.text_content()
             assert not target.locator("img").count()
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")

@@ -40,7 +40,7 @@ Each layer owns a different failure boundary:
 | Public upgrade | Earlier published versions, repair, ownership conflicts and removal |
 | Native platform | OS credential/ACL behavior; WSL Windows browser transport on both engines |
 
-Study integration fixtures build the real starter once, then copy it into a fresh
+Study integration fixtures build the private rich regression fixture once, then copy it into a fresh
 project for each test. Launcher tests only need an HTML entry point. Neither
 shares mutable course state. Client transaction tests use five small synthetic
 skills, including nested binary assets; full-pack export, migration and installed
@@ -56,7 +56,7 @@ CI runs macOS, Windows and Linux, plus both distribution engines on WSL 3.x.
 Consumer checks install the actual npm artifact, discover tools, build a study
 site and test available Chromium browsers with temporary profiles and synthetic
 pages. WSL verifies Windows browser transport. No live account is used.
-Upgrade checks cover public 0.6.0, client refresh, customized-file conflicts,
+Upgrade checks cover public 0.6.1, client refresh, customized-file conflicts,
 failed preparation, runtime repair and removal that preserves work/credentials.
 The package-lifecycle check uses a local synthetic registry and real isolated
 global npm prefixes to verify downloads, backend validation, replacement,
@@ -110,12 +110,14 @@ material remain untrusted data for the skill.
 
 ## Study renderer
 
-Author `study/content.json`. Formula blocks use LaTeX compiled locally into safe
+Author `app/content.json` and optional `app/exercises.json`; legacy `study/` remains supported. Formula blocks use LaTeX compiled locally into safe
 native MathML; legacy MathML remains accepted. Unit `path` labels group the outline
 without changing learning-progress revisions. Shared modules render all units;
 content changes do not require a framework or per-unit HTML.
 
-The distributed design/teaching/verification contracts live under
+Shared renderer assets live in `src/tum_mcp/bundled/course_app/site/`. The shipped
+component preview is deliberately minimal; richer learning pilots live in
+`tests/fixtures/course_app/`. The distributed design/teaching/verification contracts live under
 `src/tum_mcp/bundled/skills/prepare-study/references/`. Local agent notes and
 screenshots belong in ignored `docs/local/` or `.omo/`. Keep real course projects,
 session files, databases, downloads and environment files out of artifacts.

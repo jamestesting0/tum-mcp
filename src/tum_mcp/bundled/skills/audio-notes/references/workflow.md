@@ -2,7 +2,7 @@
 
 ## Inputs and scope
 
-Read the course's AGENTS.md, study/content.json, relevant .study/state.json entries
+Read AGENTS.md, app/content.json (legacy study/content.json), relevant .tum-mcp/state.json entries
 and existing audio records. Use the content schema already used by prepare-study;
 `tum-mcp study schema content` describes unfamiliar fields. Reuse an existing source
 check; otherwise `tum-mcp study inspect PROJECT` identifies stale units without

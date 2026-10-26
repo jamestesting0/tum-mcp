@@ -21,14 +21,14 @@ def test_initialization_requires_an_explicit_course_before_creating_files(
 
 
 def test_one_project_cannot_change_course_identity(project: Path, inputs: Path) -> None:
-    before = (project / ".study/state.json").read_bytes()
+    before = (project / ".tum-mcp/state.json").read_bytes()
     incoming = json.loads(inputs.read_bytes())
     incoming["course"]["key"] = "another-course"
     inputs.write_text(json.dumps(incoming), encoding="utf-8")
     with pytest.raises(CampusError) as error:
         sync(project, inputs)
     assert error.value.code == Code.SCOPE_DENIED
-    assert (project / ".study/state.json").read_bytes() == before
+    assert (project / ".tum-mcp/state.json").read_bytes() == before
 
 
 def test_source_update_invalidates_only_dependent_units(project: Path, inputs: Path) -> None:
@@ -117,7 +117,7 @@ def test_edited_inventory_block_stops_update_before_any_file_is_replaced(
 ) -> None:
     agents = project / "AGENTS.md"
     agents.write_bytes(
-        agents.read_bytes().replace(b"Course study inventory", b"My edited inventory")
+        agents.read_bytes().replace(b"TUM MCP course project", b"My edited inventory")
     )
     before = {p.relative_to(project): p.read_bytes() for p in project.rglob("*") if p.is_file()}
     incoming = json.loads(inputs.read_bytes())

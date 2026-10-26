@@ -1,8 +1,8 @@
 """Source-linked study content with editable LaTeX and legacy MathML inputs."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, assert_never
 
-from pydantic import AfterValidator, Field, field_validator, model_validator
+from pydantic import AfterValidator, Field, FiniteFloat, JsonValue, field_validator, model_validator
 
 from tum_mcp.settings import Frozen
 from tum_mcp.study_math import compile_latex, safe_mathml, validate_inline
@@ -136,9 +136,63 @@ class DiagramBlock(Sourced):
         return self
 
 
+class PlotPoint(Frozen):
+    x: FiniteFloat = Field(ge=-1e12, le=1e12)
+    y: FiniteFloat = Field(ge=-1e12, le=1e12)
+
+
+class PlotSeries(Frozen):
+    key: Key
+    label: Text
+    points: tuple[PlotPoint, ...] = Field(min_length=2, max_length=200)
+
+
+class PlotBlock(Sourced):
+    kind: Literal["plot"]
+    description: Text
+    x_label: Text = Field(max_length=30)
+    y_label: Text = Field(max_length=30)
+    x_min: FiniteFloat = Field(ge=-1e12, le=1e12)
+    x_max: FiniteFloat = Field(ge=-1e12, le=1e12)
+    y_min: FiniteFloat = Field(ge=-1e12, le=1e12)
+    y_max: FiniteFloat = Field(ge=-1e12, le=1e12)
+    series: tuple[PlotSeries, ...] = Field(default=(), max_length=5)
+
+    @model_validator(mode="after")
+    def bounds(self) -> "PlotBlock":
+        if self.x_min >= self.x_max or self.y_min >= self.y_max:
+            raise ValueError("Plot axes require increasing bounds.")
+        if len({line.key for line in self.series}) != len(self.series):
+            raise ValueError("Plot series keys must be distinct.")
+        if any(
+            not (self.x_min <= point.x <= self.x_max and self.y_min <= point.y <= self.y_max)
+            for line in self.series
+            for point in line.points
+        ):
+            raise ValueError("Plot points must fit the declared axes.")
+        return self
+
+
 Block = Annotated[
-    TextBlock | FormulaBlock | TableBlock | DiagramBlock | CodeBlock, Field(discriminator="kind")
+    TextBlock | FormulaBlock | TableBlock | DiagramBlock | CodeBlock | PlotBlock,
+    Field(discriminator="kind"),
 ]
+
+
+def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
+    """Project safe blocks for both workspaces without rewriting authored notation."""
+    result: list[dict[str, JsonValue]] = []
+    for block in blocks:
+        value = block.model_dump(mode="json", exclude_none=True)
+        match block:
+            case FormulaBlock():
+                value["mathml"] = block.mathml or compile_latex(block.latex or "")
+            case TextBlock() | TableBlock() | CodeBlock() | DiagramBlock() | PlotBlock():
+                pass
+            case unreachable:
+                assert_never(unreachable)
+        result.append(value)
+    return result
 
 
 class Flashcard(Frozen):

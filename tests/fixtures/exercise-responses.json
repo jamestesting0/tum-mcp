@@ -1,0 +1,461 @@
+{
+  "schema_version": 1,
+  "course_key": "algorithms-graphs",
+  "sets": [
+    {
+      "key": "responses",
+      "title": "Response checks",
+      "exercises": [
+        {
+          "key": "response-controls",
+          "label": "Preview",
+          "title": "Exercise controls",
+          "sources": [
+            {
+              "key": "weighted",
+              "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+            }
+          ],
+          "statement": [
+            {
+              "kind": "text",
+              "title": "Component preview",
+              "sources": [
+                "weighted"
+              ],
+              "paragraphs": [
+                "Component template preview. These snippets and questions demonstrate reusable UI components; they are not necessarily good examples of teaching or question design. Author actual courses from reviewed sources.",
+                "Inspect the response controls below; each step showcases one component with minimal placeholder content."
+              ]
+            }
+          ],
+          "objectives": [
+            "Inspect optional exercise guidance."
+          ],
+          "prerequisites": [],
+          "steps": [
+            {
+              "key": "number",
+              "purpose": "Demonstrate finite decimal input.",
+              "prompt": "Enter 2 + 2.",
+              "check": {
+                "kind": "numeric",
+                "answer": 4,
+                "tolerance": 0,
+                "feedback": "Add both supplied values."
+              },
+              "hints": [
+                "Count two pairs."
+              ],
+              "explanation": "2 + 2 = 4."
+            },
+            {
+              "key": "choice",
+              "purpose": "Demonstrate four-option feedback.",
+              "prompt": "Select 2 + 2.",
+              "check": {
+                "kind": "choice",
+                "options": [
+                  {
+                    "key": "a",
+                    "text": "2",
+                    "feedback": "This repeats one addend."
+                  },
+                  {
+                    "key": "b",
+                    "text": "4",
+                    "feedback": "Adding the two values gives 4."
+                  },
+                  {
+                    "key": "c",
+                    "text": "6",
+                    "feedback": "Check the two supplied addends."
+                  },
+                  {
+                    "key": "d",
+                    "text": "8",
+                    "feedback": "This doubles the sum."
+                  }
+                ],
+                "correct": "b"
+              },
+              "hints": [],
+              "explanation": "The sum is 4."
+            },
+            {
+              "key": "paper",
+              "purpose": "Demonstrate optional open-response comparison.",
+              "prompt": "Explain the sum on paper or in the optional response box.",
+              "check": {
+                "kind": "self_check",
+                "rubric": [
+                  "Uses two groups of two.",
+                  "Counts four altogether."
+                ],
+                "model_answer": "Two pairs contain four items."
+              },
+              "hints": [],
+              "explanation": "Equivalent reasoning is welcome."
+            },
+            {
+              "key": "table",
+              "purpose": "Show editable cells with row/column labels.",
+              "prompt": "Complete the small table.",
+              "check": {
+                "kind": "table",
+                "caption": "Table input preview",
+                "columns": [
+                  "Sum",
+                  "Name"
+                ],
+                "rows": [
+                  {
+                    "label": "Two pairs",
+                    "cells": [
+                      {
+                        "kind": "numeric",
+                        "key": "sum",
+                        "answer": 4,
+                        "tolerance": 0,
+                        "feedback": "Add the two pairs."
+                      },
+                      {
+                        "kind": "text",
+                        "key": "name",
+                        "accepted": [
+                          "four",
+                          "4"
+                        ],
+                        "feedback": "Use the number name or digit."
+                      }
+                    ]
+                  }
+                ]
+              },
+              "explanation": "Both entries describe four.",
+              "hints": []
+            },
+            {
+              "key": "math",
+              "purpose": "Show long mathematical working without automatic grading.",
+              "prompt": "Write a short derivation, here or on paper.",
+              "blocks": [
+                {
+                  "kind": "formula",
+                  "title": "Formula preview",
+                  "sources": [
+                    "weighted"
+                  ],
+                  "latex": "\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}",
+                  "plain": "The sum of the first n positive integers.",
+                  "symbols": [
+                    {
+                      "symbol": "n",
+                      "meaning": "A positive integer."
+                    }
+                  ],
+                  "conditions": "Positive integer n."
+                }
+              ],
+              "check": {
+                "kind": "self_check",
+                "format": "math",
+                "rubric": [
+                  "States the positive-integer assumption.",
+                  "Explains a pairing or induction argument."
+                ],
+                "model_answer": "Pair the first and last terms; every pair sums to n + 1. Account for the middle term when n is odd."
+              },
+              "explanation": "Compare the argument, not just the final formula.",
+              "hints": []
+            },
+            {
+              "key": "code",
+              "purpose": "Show a saved code response and prepared rubric.",
+              "prompt": "Write a function returning the sum of two inputs.",
+              "check": {
+                "kind": "self_check",
+                "format": "code",
+                "language": "Python",
+                "starter_code": "def add(a, b):\n    # Return the sum.\n    pass\n",
+                "rubric": [
+                  "Returns the sum rather than printing it.",
+                  "Works for zero and negative inputs."
+                ],
+                "model_answer": "Return a + b. Test a positive pair, zero and a negative input in your own editor."
+              },
+              "explanation": "The rubric is for comparison; the app does not execute code.",
+              "hints": []
+            },
+            {
+              "key": "graph",
+              "purpose": "Show an ordered graph response.",
+              "prompt": "Build the directed path from A to C.",
+              "check": {
+                "kind": "graph",
+                "graph": {
+                  "kind": "diagram",
+                  "title": "Graph preview",
+                  "sources": [
+                    "weighted"
+                  ],
+                  "description": "A directed path A to B to C.",
+                  "nodes": [
+                    {
+                      "key": "a",
+                      "label": "A",
+                      "x": 100,
+                      "y": 130
+                    },
+                    {
+                      "key": "b",
+                      "label": "B",
+                      "x": 300,
+                      "y": 130
+                    },
+                    {
+                      "key": "c",
+                      "label": "C",
+                      "x": 500,
+                      "y": 130
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "start": "a",
+                      "end": "b",
+                      "directed": true
+                    },
+                    {
+                      "start": "b",
+                      "end": "c",
+                      "directed": true
+                    }
+                  ],
+                  "frames": [
+                    {
+                      "caption": "Choose the nodes in path order.",
+                      "active": [],
+                      "visited": [],
+                      "frontier": []
+                    }
+                  ],
+                  "state_labels": "caption"
+                },
+                "mode": "path",
+                "answers": [
+                  [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                ],
+                "feedback": "Follow the arrows from A through B to C."
+              },
+              "explanation": "The path is A \u2192 B \u2192 C.",
+              "hints": []
+            },
+            {
+              "key": "graph-nodes",
+              "purpose": "Show an ordered graph response.",
+              "prompt": "Build the directed path from A to C.",
+              "check": {
+                "kind": "graph",
+                "graph": {
+                  "kind": "diagram",
+                  "title": "Graph preview",
+                  "sources": [
+                    "weighted"
+                  ],
+                  "description": "A directed path A to B to C.",
+                  "nodes": [
+                    {
+                      "key": "a",
+                      "label": "A",
+                      "x": 100,
+                      "y": 130
+                    },
+                    {
+                      "key": "b",
+                      "label": "B",
+                      "x": 300,
+                      "y": 130
+                    },
+                    {
+                      "key": "c",
+                      "label": "C",
+                      "x": 500,
+                      "y": 130
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "start": "a",
+                      "end": "b",
+                      "directed": true
+                    },
+                    {
+                      "start": "b",
+                      "end": "c",
+                      "directed": true
+                    }
+                  ],
+                  "frames": [
+                    {
+                      "caption": "Choose the nodes in path order.",
+                      "active": [],
+                      "visited": [],
+                      "frontier": []
+                    }
+                  ],
+                  "state_labels": "caption"
+                },
+                "mode": "nodes",
+                "answers": [
+                  [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                ],
+                "feedback": "Follow the arrows from A through B to C."
+              },
+              "explanation": "The path is A \u2192 B \u2192 C.",
+              "hints": []
+            },
+            {
+              "key": "graph-edges",
+              "purpose": "Show an ordered graph response.",
+              "prompt": "Build the directed path from A to C.",
+              "check": {
+                "kind": "graph",
+                "graph": {
+                  "kind": "diagram",
+                  "title": "Graph preview",
+                  "sources": [
+                    "weighted"
+                  ],
+                  "description": "A directed path A to B to C.",
+                  "nodes": [
+                    {
+                      "key": "a",
+                      "label": "A",
+                      "x": 100,
+                      "y": 130
+                    },
+                    {
+                      "key": "b",
+                      "label": "B",
+                      "x": 300,
+                      "y": 130
+                    },
+                    {
+                      "key": "c",
+                      "label": "C",
+                      "x": 500,
+                      "y": 130
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "start": "a",
+                      "end": "b",
+                      "directed": true
+                    },
+                    {
+                      "start": "b",
+                      "end": "c",
+                      "directed": true
+                    }
+                  ],
+                  "frames": [
+                    {
+                      "caption": "Choose the nodes in path order.",
+                      "active": [],
+                      "visited": [],
+                      "frontier": []
+                    }
+                  ],
+                  "state_labels": "caption"
+                },
+                "mode": "edges",
+                "answers": [
+                  [
+                    "a--b",
+                    "b--c"
+                  ]
+                ],
+                "feedback": "Follow the arrows from A through B to C."
+              },
+              "explanation": "The path is A \u2192 B \u2192 C.",
+              "hints": []
+            },
+            {
+              "key": "plot",
+              "purpose": "Demonstrate plotting and coordinate editing.",
+              "prompt": "Plot y = x + 1 at the three x positions.",
+              "check": {
+                "kind": "plot",
+                "plot": {
+                  "kind": "plot",
+                  "title": "Line graph",
+                  "sources": [
+                    "weighted"
+                  ],
+                  "description": "Three sample positions on a line graph.",
+                  "x_label": "x",
+                  "y_label": "y",
+                  "x_min": -1,
+                  "x_max": 1,
+                  "y_min": 0,
+                  "y_max": 2,
+                  "series": []
+                },
+                "x_values": [
+                  -1,
+                  0,
+                  1
+                ],
+                "answer": [
+                  0,
+                  1,
+                  2
+                ],
+                "tolerance": 0.05,
+                "snap": 0.5,
+                "feedback": "For each x, add 1 to get the height y."
+              },
+              "hints": [],
+              "explanation": "The points are (\u22121, 0), (0, 1), (1, 2)."
+            }
+          ],
+          "solution": {
+            "origin": "authored",
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Worked solution preview",
+                "sources": [
+                  "weighted"
+                ],
+                "paragraphs": [
+                  "Two pairs contain four items. This demonstrates solution disclosure."
+                ]
+              },
+              {
+                "kind": "code",
+                "title": "Code comparison",
+                "sources": [
+                  "weighted"
+                ],
+                "language": "Python",
+                "code": "def add(a, b):\n    return a + b",
+                "explanation": "A minimal code block, not a programming lesson."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

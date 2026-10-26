@@ -10,7 +10,7 @@ from tum_mcp.errors import CampusError
 
 
 def previous_pack(root: Path) -> Path:
-    for name in ("init-study", "update-study"):
+    for name in ("init-study", "update-study", "sync-study", "publish-study"):
         skill = root / name
         (skill / "references").mkdir(parents=True)
         (skill / "SKILL.md").write_text(
@@ -19,6 +19,12 @@ def previous_pack(root: Path) -> Path:
         (skill / "references/project.md").write_text(
             "A preserved old reference.\n", encoding="utf-8"
         )
+    study = root / "prepare-study"
+    (study / "assets/site").mkdir(parents=True)
+    (study / "SKILL.md").write_text(
+        "---\nname: prepare-study\ndescription: Previous study template.\n---\n", encoding="utf-8"
+    )
+    (study / "assets/site/styles.css").write_text("/* old managed template */", encoding="utf-8")
     return root
 
 
@@ -41,9 +47,13 @@ def test_managed_old_skills_are_replaced_by_one_complete_sync_skill(
     install_client(client, home, announce=False)
     assert not (parent / "init-study/SKILL.md").exists()
     assert not (parent / "update-study").exists()
+    assert not (parent / "sync-study").exists()
+    assert not (parent / "publish-study").exists()
+    assert (parent / "publish-course/SKILL.md").is_file()
+    assert not (parent / "prepare-study/assets").exists()
     assert extra.read_bytes() == b"Keep this user file"
-    source = skills.bundled() / "sync-study"
-    target = parent / "sync-study"
+    source = skills.bundled() / "sync-course"
+    target = parent / "sync-course"
     assert {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()} == {
         p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()
     }
@@ -53,8 +63,11 @@ def test_managed_old_skills_are_replaced_by_one_complete_sync_skill(
 
 
 @pytest.mark.parametrize("client", ["codex", "claude"])
+@pytest.mark.parametrize(
+    "relative", ["update-study/SKILL.md", "prepare-study/assets/site/styles.css"]
+)
 def test_customized_old_installed_skill_blocks_the_whole_refresh_without_loss(
-    client: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    client: str, relative: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
@@ -63,7 +76,7 @@ def test_customized_old_installed_skill_blocks_the_whole_refresh_without_loss(
     with monkeypatch.context() as old_source:
         old_source.setattr(skills, "bundled", lambda: old)
         install_client(client, home, announce=False)
-    entry = next(home.rglob("update-study/SKILL.md"))
+    entry = next(home.glob("**/" + relative))
     entry.write_text(
         entry.read_text(encoding="utf-8") + "Personal workflow to retain.\n", encoding="utf-8"
     )
@@ -71,20 +84,28 @@ def test_customized_old_installed_skill_blocks_the_whole_refresh_without_loss(
     with pytest.raises(CampusError, match="Customized or removed client file preserved"):
         install_client(client, home, announce=False)
     assert {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()} == before
-    assert not list(home.rglob("sync-study/SKILL.md"))
+    assert not list(home.rglob("sync-course/SKILL.md"))
 
 
-@pytest.mark.parametrize("name", ["init-study", "update-study"])
+@pytest.mark.parametrize(
+    "name,target",
+    [
+        ("init-study", "sync-course"),
+        ("update-study", "sync-course"),
+        ("sync-study", "sync-course"),
+        ("publish-study", "publish-course"),
+    ],
+)
 def test_old_personal_overrides_remain_intact_with_the_correct_merge_target(
-    name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    name: str, target: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
     custom = tmp_path / "config/skills" / name / "SKILL.md"
     custom.parent.mkdir(parents=True)
     custom.write_bytes(b"Keep my workflow")
-    with pytest.raises(CampusError, match="merge them into sync-study"):
+    with pytest.raises(CampusError, match=f"merge them into {target}"):
         skills.export_pack(tmp_path / "export")
     assert custom.read_bytes() == b"Keep my workflow"
     assert not (tmp_path / "export").exists()
-    with pytest.raises(CampusError, match="retired; use sync-study"):
+    with pytest.raises(CampusError, match=f"retired; use {target}"):
         skills.selected(name)

@@ -1,6 +1,6 @@
 {
   "name": "@jamestesting888/tum-mcp",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Read-only TUM Moodle, Artemis and Zulip integration with source-backed study workflows",
   "license": "MIT",
   "type": "module",

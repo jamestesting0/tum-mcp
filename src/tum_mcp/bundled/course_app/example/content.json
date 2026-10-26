@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "course_key": "component-preview",
+  "introduction": "Component template preview. These snippets and questions demonstrate reusable UI components; they are not necessarily good examples of teaching or question design. Author actual courses from reviewed sources.",
+  "organization": "topics",
+  "units": [
+    {
+      "key": "components",
+      "label": "Components",
+      "title": "Reusable components",
+      "summary": "A compact rendering and interaction preview.",
+      "minutes": 1,
+      "objectives": [
+        {
+          "key": "preview",
+          "text": "Inspect the available components."
+        }
+      ],
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "About this template",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "Component template preview. These snippets and questions demonstrate reusable UI components; they are not necessarily good examples of teaching or question design. Author actual courses from reviewed sources.",
+            "Inline notation: \\(x^2\\). Prose and short lists use the same reading style."
+          ],
+          "points": [
+            "A compact list item."
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Table",
+          "sources": [
+            "components"
+          ],
+          "caption": "A small comparison",
+          "columns": [
+            "Format",
+            "Use"
+          ],
+          "rows": [
+            [
+              "Text",
+              "Explain an idea"
+            ],
+            [
+              "Diagram",
+              "Show a relation"
+            ]
+          ]
+        },
+        {
+          "kind": "code",
+          "title": "Code",
+          "sources": [
+            "components"
+          ],
+          "language": "python",
+          "code": "def double(value):\n    return value * 2",
+          "explanation": "Literal code is displayed, never executed."
+        },
+        {
+          "kind": "formula",
+          "title": "Fractions and sums",
+          "sources": [
+            "components"
+          ],
+          "latex": "\\frac{1}{n}\\sum_{i=1}^{n}x_i = \\bar{x}",
+          "plain": "The mean is the sum divided by the count.",
+          "symbols": [
+            {
+              "symbol": "n",
+              "meaning": "Count"
+            },
+            {
+              "symbol": "x_i",
+              "meaning": "One value"
+            }
+          ],
+          "conditions": "A nonempty finite list."
+        },
+        {
+          "kind": "formula",
+          "title": "Matrix",
+          "sources": [
+            "components"
+          ],
+          "latex": "\\begin{bmatrix}1&0\\\\0&1\\end{bmatrix}",
+          "plain": "A two by two identity matrix.",
+          "symbols": [
+            {
+              "symbol": "I",
+              "meaning": "Identity matrix"
+            }
+          ],
+          "conditions": "Two dimensions."
+        },
+        {
+          "kind": "diagram",
+          "title": "Graph trace",
+          "sources": [
+            "components"
+          ],
+          "description": "Two labeled nodes connected from left to right.",
+          "nodes": [
+            {
+              "key": "a",
+              "label": "A",
+              "x": 160,
+              "y": 100,
+              "shape": "circle"
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "x": 440,
+              "y": 100,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "b",
+              "directed": true,
+              "label": "link"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "First state",
+              "active": [
+                "a"
+              ],
+              "frontier": [
+                "b"
+              ]
+            },
+            {
+              "caption": "Second state",
+              "visited": [
+                "a"
+              ],
+              "active": [
+                "b"
+              ]
+            }
+          ],
+          "state_labels": "traversal"
+        },
+        {
+          "kind": "diagram",
+          "title": "Process diagram",
+          "sources": [
+            "components"
+          ],
+          "description": "Two labeled nodes connected from left to right.",
+          "nodes": [
+            {
+              "key": "a",
+              "label": "Input",
+              "x": 160,
+              "y": 100,
+              "shape": "box"
+            },
+            {
+              "key": "b",
+              "label": "Output",
+              "x": 440,
+              "y": 100,
+              "shape": "box"
+            }
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "b",
+              "directed": true,
+              "label": "link"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "First state",
+              "active": [
+                "a"
+              ],
+              "frontier": [
+                "b"
+              ]
+            },
+            {
+              "caption": "Second state",
+              "visited": [
+                "a"
+              ],
+              "active": [
+                "b"
+              ]
+            }
+          ],
+          "state_labels": "caption"
+        },
+        {
+          "kind": "plot",
+          "title": "Line graph",
+          "sources": [
+            "components"
+          ],
+          "description": "A small line graph component.",
+          "x_label": "Time",
+          "y_label": "Value",
+          "x_min": 0,
+          "x_max": 4,
+          "y_min": 0,
+          "y_max": 4,
+          "series": [
+            {
+              "key": "sample",
+              "label": "Sample",
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 2,
+                  "y": 3
+                },
+                {
+                  "x": 4,
+                  "y": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "card",
+          "objective": "preview",
+          "front": "Card front",
+          "back": "Card back: reveal, then choose Again or Got it.",
+          "sources": [
+            "components"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "choice",
+          "objective": "preview",
+          "level": "apply",
+          "prompt": "Component preview: what is 2 + 2?",
+          "options": [
+            {
+              "key": "a",
+              "text": "2",
+              "feedback": "This repeats one addend."
+            },
+            {
+              "key": "b",
+              "text": "4",
+              "feedback": "Adding the two values gives 4."
+            },
+            {
+              "key": "c",
+              "text": "6",
+              "feedback": "Check the two supplied addends."
+            },
+            {
+              "key": "d",
+              "text": "8",
+              "feedback": "This doubles the sum."
+            }
+          ],
+          "correct": "b",
+          "explanation": "2 + 2 = 4. This item demonstrates the four-choice control.",
+          "sources": [
+            "components"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "tum"
+      description: "Read connected TUM course information."
+interface:
+  display_name: "Sync Course"
+  short_description: "Initialize or refresh one shared course inventory"
+  default_prompt: "Use $sync-course to refresh the sources for my selected course, preserving my work."
+policy:
+  allow_implicit_invocation: true

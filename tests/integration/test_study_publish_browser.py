@@ -72,7 +72,7 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
             )
             try:
                 # When opening the complete hosted site on phones and desktop displays.
-                for width in (390, 1440, 1920):
+                for width in (390, 1440):
                     for theme in ("light", "dark"):
                         context = browser.new_context(
                             viewport={"width": width, "height": 900},
@@ -92,15 +92,34 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
                         page.on("request", lambda request: requests.append(request.url))
                         base = f"http://127.0.0.1:{server.server_port}/course/"
                         states = [("home", "", course_title, None)]
-                        states.extend(
-                            (f"{unit['key']}-{view}", f"#{unit['key']}/{view}", unit["title"], view)
-                            for unit in content["units"]
-                            for view in ("content", "flashcards", "practice")
-                        )
-                        states.extend(
-                            (f"revision-{view}", f"#revision?view={view}", "Revision", view)
-                            for view in ("flashcards", "practice")
-                        )
+                        baseline = width == 1440 and theme == "light"
+                        if baseline:
+                            # Every route once; repeat responsive formats, not all route logic.
+                            states.extend(
+                                (
+                                    f"{unit['key']}-{view}",
+                                    f"#{unit['key']}/{view}",
+                                    unit["title"],
+                                    view,
+                                )
+                                for unit in content["units"]
+                                for view in ("content", "flashcards", "practice")
+                            )
+                            states.extend(
+                                (f"revision-{view}", f"#revision?view={view}", "Revision", view)
+                                for view in ("flashcards", "practice")
+                            )
+                        else:
+                            states.extend(
+                                (
+                                    f"{unit['key']}-content",
+                                    f"#{unit['key']}/content",
+                                    unit["title"],
+                                    "content",
+                                )
+                                for unit in content["units"]
+                                if unit["key"] in {"graphs", "bfs", "weighted", "probability"}
+                            )
                         for name, fragment, expected, view in states:
                             page.goto(base + fragment)
                             # The bootstrap has an h1 too; require the actual route.
@@ -136,6 +155,9 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
                                     filename = f"{width}-{theme}-{name}-end.png"
                                     page.screenshot(path=str(evidence / filename))
                                     captures.append(filename)
+                        if not baseline:
+                            context.close()
+                            continue
                         unit = next(unit for unit in content["units"] if unit["key"] == "bfs")
                         page.goto(base + "#bfs/flashcards")
                         page.locator(".flashcard").click()

@@ -1,15 +1,16 @@
 # Content and build contract
 
-Edit study/content.json. Preserve unaffected unit objects and stable IDs. Build
+Edit app/content.json (legacy study/content.json). Preserve unaffected unit objects and stable IDs. Build
 copies the renderer; ordinary content edits need no HTML/CSS/JS asset inspection.
-The skill packages the complete starter in assets/site, with a synthetic format
-example in assets/example. `tum-mcp study template` reports its file list and
+The backend packages the shared renderer in bundled/course_app/site and the minimal
+component preview in bundled/course_app/example. `tum-mcp study template` reports its file list and
 revision without dumping code. `study build` safely installs/updates it; do not
 hand-copy a second shell. Template revision identifies the packaged base, not
 preserved custom files. Inspect those files only when a needed extension touches them.
 For unfamiliar fields or validation failures, redirect `tum-mcp study schema content`
 to a private file and inspect needed definitions. The bundled example is a format
-reference: inspect one relevant object, not the entire course or asset tree.
+reference, not necessarily a good example of teaching or question design. Inspect
+only the relevant object; author actual lessons using reviewed course sources.
 `tum-mcp study demo PROJECT` is only for an explicitly requested synthetic demo.
 
 Top level: schema_version=1, course_key, organization=lectures/weeks/topics,
@@ -64,4 +65,16 @@ and accessible fallback. Do not change renderer code to bypass invalid content.
 Launch: `tum-mcp study` inside the project opens the browser at 127.0.0.1:8765.
 Keep the same address/port to retain browser progress; `--port PORT` selects another.
 For unattended checks, `tum-mcp study serve PROJECT --port 0` prints a URL without opening a browser.
-It serves only study/; the app needs no campus credentials or external services.
+It serves only app/ (or legacy study/); the app needs no campus credentials or external services.
+
+The shared renderer is packaged separately from skill instructions and installed by
+`study build`; do not copy assets from another skill. Study and Exercises share
+one app and source inventory. Preserve the other workspace when authoring. Use
+app/ for new projects and the existing study/ for legacy ones; an explicit
+`study build PROJECT --upgrade-layout` keeps the original as a checked backup.
+
+Line graphs use kind plot with description, short x_label/y_label, increasing finite
+x_min/x_max/y_min/y_max, and series (key, label, ordered x/y points). Each series
+stays inside the axes. The renderer includes a data table; multiple series have
+matching dash styles and labels. Use source-backed quantities/units and sensible
+scales; a well-rendered graph does not establish the interpretation is correct.

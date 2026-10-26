@@ -1,9 +1,8 @@
 """Verify the installed study renderer with synthetic sources in owned Chromium."""
 
-import io
 import json
+import os
 import tempfile
-from contextlib import redirect_stdout
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -23,16 +22,23 @@ from study_table_fixture import table_layout_checks
 def study_website(browser: Browser) -> dict[str, object]:
     """Exercise packaged study assets through the same owned Chromium/WSL transport."""
     from tum_mcp.errors import CampusError
-    from tum_mcp.study_build import TEMPLATE_FILES
-    from tum_mcp.study_cli import demo
+    from tum_mcp.study_build import TEMPLATE_FILES, build
     from tum_mcp.study_comment_models import OPERATION
     from tum_mcp.study_comments import change_comment, read_comments
+    from tum_mcp.study_sync import sync
 
     with tempfile.TemporaryDirectory(prefix="tum-study-browser-") as temporary:
         project = Path(temporary) / "Synthetic course"
-        with redirect_stdout(io.StringIO()):
-            demo(project)
         site = project / "study"
+        site.mkdir(parents=True)
+        fixture = Path(
+            os.environ.get(
+                "TUM_MCP_STUDY_QA_FIXTURE", str(Path(__file__).parents[1] / "fixtures/course_app")
+            )
+        )
+        sync(project, fixture / "snapshot.json", course_input="Algorithms & Graphs")
+        (site / "content.json").write_bytes((fixture / "content.json").read_bytes())
+        build(project, publish=False)
         content = json.loads((site / "content.json").read_bytes())
         errors = []
 
@@ -265,6 +271,6 @@ def study_website(browser: Browser) -> dict[str, object]:
             "views": ["content", "flashcards", "practice"],
             "widths": [390, 1440],
             "themes": ["light", "dark"],
-            "source": "packaged_synthetic_demo",
+            "source": "private_synthetic_regression_fixture",
             "passed": True,
         }

@@ -92,6 +92,44 @@ Preserve customized renderer files and user notes.
 
 ## Files and extension
 
+### Shared Study and Exercises states
+
+Both preparation skills use the same course renderer. When both workspaces are
+prepared, the only workspace switch is a compact selector pinned at the bottom
+of the sidebar. Use a rounded square workspace glyph, name and chevron; open an
+upward menu with the two workspace names and an explicit current indicator. Keep
+theme as an adjacent quiet icon. The outline body scrolls independently above it.
+Category rows use a small chevron and compact spacing with a 44px click target;
+keep native collapse/keyboard behavior and wrap long names.
+On phones this same footer appears inside the open outline overlay. No heading
+switch, duplicate navigation links or second toolbar. Support keyboard navigation,
+Escape, outside dismissal and focus return. A lone workspace has a passive label.
+
+Exercises uses category headings and expandable sheets with direct numbered task
+links. The original statement comes first. Guidance and worked solutions are
+native disclosures; one active conceptual step uses the existing control/feedback
+styles. Use a compact step counter with arrow navigation beside it, a clear prompt,
+flat radio rows, and one primary action. Use short visible Check, Compare, Hint,
+Explain and Solution labels. Secondary actions have a quiet outlined button surface;
+Previous/Next are labelled arrow buttons in a persistent, sticky step header.
+Change only the active step body; preserve control position and keyboard focus
+when moving between steps. Do not add back links duplicating the
+outline or scrolling. Keep sources behind the small book icon beside each section
+title, with full locators available on demand. One help button reveals successive hints,
+then step reasoning, inline without moving focus or advancing. Avoid stacked
+bordered cards and repeated disclosure/navigation rows. Tables use real headers and
+labelled editable cells with local scrolling. Math/code use generous multiline work
+areas and rubric comparison; never claim automatic proof or program grading.
+Graph questions use the drawing itself for keyboard/touch node/edge/path
+selection. Line graphs support axes, source-backed series and editable plotted
+sample points with numeric/keyboard alternatives. Preserve drafts and invalidate verdicts whenever an answer changes. Keep one primary
+Check / Compare / Continue action. Navigation stays in the step header.
+Paper work is valid. Show only Not started, In progress, or Reviewed in lists.
+Reviewed records a voluntary review action, never mastery or an official result.
+Use existing focus, source-note, safe-block, reduced-motion and storage-warning
+patterns. Preserve scroll and typed work when switching workspace or visiting a
+prerequisite. Closed solutions stay outside the accessibility tree.
+
 The app uses index.html, styles.css, app/dom/mathml/navigation/reading/formulas/learning/question-review/flashcards/
 revision, anchors/comments/comment-ui/comment-store/comment-popover.mjs, the font-*.woff2
 subsets with fonts-license.txt, and generated data.mjs. Author content.json; extend shared components only for a real course need,

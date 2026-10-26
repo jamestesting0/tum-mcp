@@ -33,6 +33,13 @@ def setup(
             "--public-site", help="Authorize public website content in a private repository."
         ),
     ] = False,
+    include_exercises: Annotated[
+        bool | None,
+        typer.Option(
+            "--include-exercises/--exclude-exercises",
+            help="Explicitly choose whether Exercise statements, hints and solutions are public.",
+        ),
+    ] = None,
     wait_seconds: Annotated[int, typer.Option(min=0, max=60)] = 60,
 ) -> None:
     """Preview publication; add --public-site to create a private repository and publish."""
@@ -52,6 +59,7 @@ def setup(
                     "suggested_name": repository_name(course),
                     "repository_visibility": "private",
                     "website_visibility": "public",
+                    "include_exercises": include_exercises is True,
                     "authentication": "Host GitHub CLI: gh auth login --hostname github.com",
                     "requires": "An eligible paid GitHub plan for Pages from private repositories.",
                     "next": "Review website contents, then rerun with --public-site to publish.",
@@ -69,8 +77,7 @@ def setup(
             Code.WORKSPACE_CONFLICT, "This course already has a publishing repository."
         )
     build(root, publish=False)
-    if existing is None:
-        configure(root, repository=repository)
+    configure(root, repository=repository, include_exercises=include_exercises)
     result = publish(root, wait_seconds=wait_seconds, rebuild=False, verify_unchanged=True)
     report(json.dumps(asdict(result), indent=2), result.status)
 

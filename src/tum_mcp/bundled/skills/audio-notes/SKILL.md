@@ -3,7 +3,17 @@ name: audio-notes
 description: Create or update concise, easy-to-follow audio lessons, one file per category, from an existing prepared study website. Track missing and changed coverage; use prepare-study for course authoring. Excludes recording transcription and voice cloning.
 ---
 
-Use the existing course's AGENTS.md and study/content.json. Audio is a spoken
+For a bound local course, read `.tum-mcp/course.md` and the relevant source records
+first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is the
+discovery pointer and user's rules. Legacy `.study/` remains readable until explicit
+`study upgrade PROJECT`. The handbook's receipt describes local review, not live
+freshness; verify affected facts against sources. Reuse context already read in this
+request. Do not re-read the whole inventory for each authoring step.
+
+
+Use the existing course's AGENTS.md and app/content.json (legacy study/content.json).
+Audio reads prepared Study only; Exercises does not become an audio script.
+Audio is a spoken
 adaptation of the prepared course, not a second course-authoring workflow. Never
 research or invent extra course facts, examples, exam predictions or questions.
 Keep the source language, terminology, assumptions and qualifications.
@@ -60,5 +70,5 @@ actual provider/voice, listening time, checks and absolute links under audio/.
 Do not claim complete coverage or successful listening checks without evidence.
 
 When the same request also updates the website, reuse prepare-study's automatic
-publication report and use publish-study for pending deployment. Audio-only
+publication report and use publish-course for pending deployment. Audio-only
 outputs stay local; do not upload narration, candidates or the course project.

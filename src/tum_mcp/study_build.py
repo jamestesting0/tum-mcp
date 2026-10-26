@@ -1,34 +1,57 @@
 """Build a static study app while checking its exact local source revisions."""
 
 import json
+import shutil
+import tempfile
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
-from typing import assert_never
 
 from filelock import FileLock
 from pydantic import Field, JsonValue, ValidationError
 
+from tum_mcp.course_app_paths import app_folder, app_path
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.exercise_content import ExerciseContent
+from tum_mcp.exercise_data import (
+    check_prerequisites,
+    read_exercises,
+    render_exercises,
+    stale_exercises,
+)
 from tum_mcp.settings import Frozen
 from tum_mcp.study_content import (
-    CodeBlock,
-    DiagramBlock,
-    FormulaBlock,
     StudyContent,
-    TableBlock,
-    TextBlock,
     Unit,
+    render_blocks,
 )
 from tum_mcp.study_math import INLINE_MATH, compile_latex
 from tum_mcp.study_models import Digest, StudyState
 from tum_mcp.study_publish_models import PublishReport
-from tum_mcp.study_store import Write, apply, confined, digest, load_state, read_bytes
+from tum_mcp.study_store import (
+    END,
+    START,
+    Write,
+    apply,
+    confined,
+    digest,
+    load_state,
+    private_name,
+    private_path,
+    read_bytes,
+    replace_agents,
+)
 
 TEMPLATE_FILES = (
     "index.html",
     "styles.css",
     "app.mjs",
+    "start.mjs",
+    "exercises.mjs",
+    "exercise-state.mjs",
+    "exercise-response.mjs",
+    "graph-response.mjs",
+    "plot.mjs",
     "dom.mjs",
     "mathml.mjs",
     "reading.mjs",
@@ -63,12 +86,13 @@ class BuildReport:
     preserved_templates: tuple[str, ...]
     generation: str
     publication: PublishReport | None = None
+    exercises: int = 0
 
 
 def read_content(root: Path) -> StudyContent:
-    path = confined(root, "study/content.json")
+    path = app_path(root, "content.json")
     if not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
-        raise CampusError(Code.ACTION_REQUIRED, "Prepare study/content.json (maximum 8 MiB) first.")
+        raise CampusError(Code.ACTION_REQUIRED, "Prepare app/content.json (maximum 8 MiB) first.")
     try:
         return StudyContent.model_validate_json(path.read_bytes())
     except ValidationError as error:
@@ -101,21 +125,25 @@ def unit_revision(unit: Unit) -> str:
     return digest(unit.model_dump_json(exclude={"path"}, exclude_none=True).encode())
 
 
-def _app_data(state: StudyState, content: StudyContent) -> dict[str, JsonValue]:
+def _app_data(
+    state: StudyState, content: StudyContent | None, exercises: ExerciseContent | None = None
+) -> dict[str, JsonValue]:
     units: list[JsonValue] = []
-    for unit in content.units:
+    for unit in content.units if content else ():
         value = unit.model_dump(mode="json", exclude_none=True)
-        for block, rendered in zip(unit.blocks, value["blocks"], strict=True):
-            match block:
-                case FormulaBlock():
-                    rendered["mathml"] = block.mathml or compile_latex(block.latex or "")
-                case TextBlock() | TableBlock() | CodeBlock() | DiagramBlock():
-                    pass
-                case unreachable:
-                    assert_never(unreachable)
+        value["blocks"] = render_blocks(unit.blocks)
         value["revision"] = unit_revision(unit)
         units.append(value)
-    referenced = {source.key for unit in content.units for source in unit.sources}
+    referenced = (
+        {source.key for unit in content.units for source in unit.sources} if content else set()
+    )
+    if exercises:
+        referenced.update(
+            source.key
+            for group in exercises.sets
+            for ex in group.exercises
+            for source in ex.sources
+        )
     sources: dict[str, JsonValue] = {
         item.resource.key: {
             "title": item.resource.title,
@@ -125,7 +153,7 @@ def _app_data(state: StudyState, content: StudyContent) -> dict[str, JsonValue]:
         for item in state.resources
         if item.resource.key in referenced
     }
-    return {
+    payload: dict[str, JsonValue] = {
         "course": {
             "identity": digest(json.dumps([state.course.key, state.course.semester]).encode()),
             "key": state.course.key,
@@ -134,13 +162,24 @@ def _app_data(state: StudyState, content: StudyContent) -> dict[str, JsonValue]:
             "synthetic": state.course.synthetic,
         },
         "generation": state.generation,
-        "introduction": content.introduction,
-        "organization": content.organization,
+        "introduction": content.introduction
+        if content
+        else "Course exercises with prepared guidance.",
+        "organization": content.organization if content else "topics",
         "units": units,
         "sources": sources,
-        "inlineMath": _inline_math(content.model_dump(mode="json")),
+        "inlineMath": _inline_math(content.model_dump(mode="json")) if content else {},
         "incompleteSources": sum(item.status != "complete" for item in state.coverage),
     }
+    payload["workspaces"] = (["study"] if content else []) + (["exercises"] if exercises else [])
+    if exercises:
+        value = render_exercises(exercises)
+        payload["exercises"] = value
+        payload["inlineMath"] = {
+            **(_inline_math(content.model_dump(mode="json")) if content else {}),
+            **_inline_math(value),
+        }
+    return payload
 
 
 def _inline_math(value: JsonValue) -> dict[str, str]:
@@ -154,23 +193,110 @@ def _inline_math(value: JsonValue) -> dict[str, str]:
             return {
                 key: math
                 for field, item in value.items()
-                if field not in {"code", "latex", "mathml"}
+                if field not in {"code", "starter_code", "latex", "mathml"}
                 for key, math in _inline_math(item).items()
             }
         case _:
             return {}
 
 
-def build(root: Path, *, publish: bool = True) -> BuildReport:
+def _upgrade_layout(root: Path, writes: tuple[Write, ...], state: StudyState) -> None:
+    """Stage one checked layout change; keep the original tree as its backup."""
+    original = confined(root, "study")
+    backup = private_path(root, "layout-backup")
+    if backup.exists():
+        raise CampusError(Code.WORKSPACE_CONFLICT, "Layout backup is occupied; nothing moved.")
+    for path in original.rglob("*"):
+        confined(root, path.relative_to(root).as_posix())
+    agents_path = confined(root, "AGENTS.md")
+    agents_before = read_bytes(agents_path)
+    try:
+        existing = (agents_before or b"").decode()
+    except UnicodeError:
+        raise CampusError(
+            Code.WORKSPACE_CONFLICT, "Non-UTF8 instructions were preserved."
+        ) from None
+    start, end = existing.find(START), existing.find(END)
+    block = existing[start : end + len(END)]
+    updated = block.replace(
+        "| Local interactive study app | `study/` |", "| Local interactive study app | `app/` |"
+    )
+    agents = replace_agents(existing, updated, state).encode()
+    new_state = state.model_copy(update={"agents_block_sha256": digest(updated.encode())})
+    state_before = read_bytes(private_path(root, "state.json"))
+    with tempfile.TemporaryDirectory(prefix="layout-", dir=private_path(root, ".")) as temporary:
+        stage = Path(temporary)
+        shutil.copytree(original, stage / "app")
+        apply(
+            stage,
+            tuple(
+                Write("app/" + item.relative.removeprefix("study/"), item.before, item.after)
+                for item in writes
+            ),
+        )
+        if (
+            confined(root, "app").exists()
+            or backup.exists()
+            or any(read_bytes(confined(root, item.relative)) != item.before for item in writes)
+        ):
+            raise CampusError(
+                Code.WORKSPACE_CONFLICT, "Layout changed during staging; nothing moved."
+            )
+        moved = False
+        try:
+            original.rename(backup)
+            moved = True
+            (stage / "app").rename(root / "app")
+            apply(
+                root,
+                (
+                    Write("AGENTS.md", agents_before, agents),
+                    Write(
+                        private_name(root, "state.json"),
+                        state_before,
+                        new_state.model_dump_json(indent=2).encode(),
+                    ),
+                ),
+            )
+        except (OSError, CampusError):
+            try:
+                if moved:
+                    if (root / "app").exists():
+                        (root / "app").rename(stage / "app")
+                    backup.rename(original)
+            except OSError:
+                raise CampusError(
+                    Code.WORKSPACE_CONFLICT,
+                    "Layout recovery needs local review. "
+                    "Original files remain in .tum-mcp/layout-backup/.",
+                ) from None
+            raise CampusError(
+                Code.WORKSPACE_CONFLICT, "Layout upgrade failed; original study/ was restored."
+            ) from None
+
+
+def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> BuildReport:
     root = root.expanduser().resolve()
-    with FileLock(str(confined(root, ".study-update.lock"))):
-        state, content = load_state(root), read_content(root)
-        stale = stale_units(root, state, content)
+    load_state(root)
+    with FileLock(str(private_path(root, "update.lock"))):
+        state = load_state(root)
+        content = read_content(root) if app_path(root, "content.json").exists() else None
+        exercises = read_exercises(root)
+        if content is None and exercises is None:
+            raise CampusError(
+                Code.ACTION_REQUIRED, "Prepare app/content.json or app/exercises.json."
+            )
+        stale = stale_units(root, state, content) if content else ()
+        if exercises:
+            stale += stale_exercises(root, state, exercises)
+            check_prerequisites(exercises, content)
         if stale:
             raise CampusError(
                 Code.STALE_RESULT, "Refresh content for changed source units: " + ", ".join(stale)
             )
-        record_path = confined(root, "study/.managed.json")
+        folder = app_folder(root)
+        upgrading = upgrade_layout and folder == "study"
+        record_path = confined(root, f"{folder}/.managed.json")
         previous = read_bytes(record_path)
         try:
             record = BuildRecord.model_validate_json(previous) if previous else BuildRecord()
@@ -178,19 +304,22 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
             raise CampusError(
                 Code.WORKSPACE_CONFLICT, "Edited study build record needs review."
             ) from None
+        if upgrading and previous is None:
+            raise CampusError(Code.WORKSPACE_CONFLICT, "Build ownership is missing; nothing moved.")
         if not set(record.files) <= {*TEMPLATE_FILES, "data.mjs"}:
             raise CampusError(
                 Code.WORKSPACE_CONFLICT, "Unknown generated site files were preserved."
             )
-        source = files("tum_mcp") / "bundled/skills/prepare-study/assets/site"
+        source = files("tum_mcp") / "bundled/course_app/site"
         desired = {name: (source / name).read_bytes() for name in TEMPLATE_FILES}
-        data = json.dumps(_app_data(state, content), ensure_ascii=True, separators=(",", ":"))
+        payload = _app_data(state, content, exercises)
+        data = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
         desired["data.mjs"] = ("export default " + data + ";\n").encode()
         writes: list[Write] = []
         owned = dict(record.files)
         preserved: list[str] = []
         for name, after in desired.items():
-            before = read_bytes(confined(root, "study/" + name))
+            before = read_bytes(confined(root, f"{folder}/{name}"))
             if before is not None and before != after and digest(before) != record.files.get(name):
                 if name == "data.mjs":
                     raise CampusError(
@@ -199,20 +328,38 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
                     )
                 preserved.append(name)
                 continue
-            writes.append(Write("study/" + name, before, after))
+            writes.append(Write(f"{folder}/{name}", before, after))
             owned[name] = digest(after)
         updated = BuildRecord(files=owned).model_dump_json(indent=2).encode()
-        writes.append(Write("study/.managed.json", previous, updated))
-        apply(root, tuple(writes))
+        if (exercises or upgrading) and preserved:
+            raise CampusError(
+                Code.WORKSPACE_CONFLICT,
+                "Customized templates were preserved; review Exercises support before building.",
+            )
+        writes.append(Write(f"{folder}/.managed.json", previous, updated))
+        if upgrading:
+            try:
+                _upgrade_layout(root, tuple(writes), state)
+            except OSError:
+                raise CampusError(
+                    Code.WORKSPACE_CONFLICT, "Layout staging failed; original study/ was preserved."
+                ) from None
+        else:
+            apply(root, tuple(writes))
         report = BuildReport(
-            units=len(content.units),
+            units=len(content.units) if content else 0,
             preserved_templates=tuple(preserved),
             generation=state.generation,
+            exercises=sum(len(group.exercises) for group in exercises.sets) if exercises else 0,
         )
     if publish:
         from tum_mcp.study_publish import after_build
 
         return BuildReport(
-            report.units, report.preserved_templates, report.generation, after_build(root)
+            report.units,
+            report.preserved_templates,
+            report.generation,
+            publication=after_build(root),
+            exercises=report.exercises,
         )
     return report

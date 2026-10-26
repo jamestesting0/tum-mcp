@@ -76,6 +76,7 @@ Desktop.ini
 /config/preferences.json
 /config/preferences.lock
 .study/
+.tum-mcp/
 .study-*.lock
 .tum-mcp-workspace.json
 downloads/

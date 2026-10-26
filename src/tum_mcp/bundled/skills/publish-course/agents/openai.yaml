@@ -1,0 +1,6 @@
+interface:
+  display_name: "Publish Course"
+  short_description: "Publish selected course workspaces to the same site"
+  default_prompt: "Use $publish-course to review the publication scope and publish my prepared course app."
+policy:
+  allow_implicit_invocation: true

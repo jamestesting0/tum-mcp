@@ -10,13 +10,14 @@ from urllib.parse import quote
 
 from pydantic import Field, ValidationError
 
+from tum_mcp.course_app_paths import app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
-from tum_mcp.study_build import TEMPLATE_FILES
+from tum_mcp.study_build import TEMPLATE_FILES, _inline_math
 from tum_mcp.study_github import Commit, GitHub, GitObject, Head, Response, Tree
 from tum_mcp.study_models import Digest
 from tum_mcp.study_publish_models import GitSha, Publication
-from tum_mcp.study_store import confined, digest
+from tum_mcp.study_store import digest
 
 MARKER: Final = "tum-mcp-site.json"
 SITE_FILES: Final = (*TEMPLATE_FILES, "data.mjs", ".nojekyll")
@@ -40,16 +41,30 @@ def blob_sha(content: bytes) -> str:
     ).hexdigest()
 
 
-def export_site(root: Path) -> dict[str, bytes]:
+def export_site(root: Path, *, include_exercises: bool = False) -> dict[str, bytes]:
     """Export only the renderer, never materials, comments, state, audio or arbitrary files."""
-    output = {
-        name: confined(root, "study/" + name).read_bytes() for name in (*TEMPLATE_FILES, "data.mjs")
-    }
+    output = {name: app_path(root, name).read_bytes() for name in (*TEMPLATE_FILES, "data.mjs")}
     data = output["data.mjs"]
     if not data.startswith(b"export default "):
         raise CampusError(
             Code.WORKSPACE_CONFLICT, "Rebuild generated study data before publishing."
         )
+    if not include_exercises:
+        try:
+            payload = json.loads(data.removeprefix(b"export default ").removesuffix(b";\n"))
+        except ValueError:
+            raise CampusError(Code.WORKSPACE_CONFLICT, "Rebuild the generated site data.") from None
+        if "exercises" in payload:
+            if not payload.get("units"):
+                raise CampusError(
+                    Code.ACTION_REQUIRED, "Explicitly include Exercises to publish it."
+                )
+            payload.pop("exercises")
+            payload["workspaces"] = ["study"]
+            references = {s["key"] for unit in payload["units"] for s in unit["sources"]}
+            payload["sources"] = {k: v for k, v in payload["sources"].items() if k in references}
+            payload["inlineMath"] = _inline_math([payload["introduction"], payload["units"]])
+            data = b"export default " + json.dumps(payload, ensure_ascii=True).encode() + b";\n"
     output["data.mjs"] = (
         data.replace(b"export default ", b"const data = ", 1)
         + b"data.hosted = true;\nexport default data;\n"

@@ -2,7 +2,7 @@
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
 Development version **0.6.1 (unreleased)** adds npm package management to the
-read-only course retrieval and five local study workflows in 0.6.0.
+read-only course retrieval and six local course workflows.
 
 ## Current capabilities
 
@@ -162,10 +162,11 @@ in JSON for troubleshooting. Default diagnostics do not create state folders.
 
 ## Study workflows
 
-`read-content` retrieves course information across the three websites. `sync-study`
+`read-content` retrieves course information across the three websites. `sync-course`
 uses read-only local status to initialize an explicitly chosen available course or
 reconcile an existing project. Incomplete state is preserved for recovery.
-`prepare-study` creates or extends its local interactive site. See the
+`prepare-study` authors lessons; `prepare-exercises` authors guided released sheets
+in the same local app. See the
 [study guide](study.md) for examples, state structure and helper commands.
 
 One project holds one course. Source revisions, coverage and course knowledge
@@ -182,13 +183,13 @@ writing files with activation.
 
 The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
-The shipped pack contains five skills: `read-content`, `sync-study`,
-`prepare-study`, `audio-notes` and `publish-study`. Website-specific retrieval
+The shipped pack contains six skills: `read-content`, `sync-course`,
+`prepare-study`, `prepare-exercises`, `audio-notes` and `publish-course`. Website-specific retrieval
 guidance is loaded from references within read-content. Teaching, schema and design contracts live
 with prepare-study; the renderer and synthetic example ship as reusable assets.
 Audio Notes converts prepared content into category tracks and maintains coverage,
 scripts, voice settings, candidates and archives under the course's `audio/` root.
-Publish Study uses host GitHub CLI authentication to create a private repository
+Publish Course uses host GitHub CLI authentication to create a private repository
 and a public Pages website after explicit publication consent. It chooses a course
 and semester name, updates the same site after successful study builds, and shows
 the hosted URL alongside the local launcher URL. No tokens or original course
@@ -203,7 +204,7 @@ routing quality is a separate evaluation from structural and discovery checks.
 Claude's invocation metadata follows each workflow's selected policy; automatic
 selection is enabled by default and never grants permission for a mutation.
 
-`setup --client cursor` writes `~/.cursor/mcp.json` and installs all five skills
+`setup --client cursor` writes `~/.cursor/mcp.json` and installs all six skills
 under `~/.cursor/skills/`.
 `setup --client antigravity` installs the same skills under `~/.gemini/config/skills/`
 and writes `~/.gemini/config/mcp_config.json`; an existing

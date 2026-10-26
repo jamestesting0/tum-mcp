@@ -65,10 +65,10 @@ try {
     [join(root, 'data/credentials/local/session.key'), 'synthetic-private-key'],
     [join(root, 'moodle/session.enc'), 'synthetic-legacy-record'],
     [join(root, 'downloads/lecture.pdf'), 'synthetic-original'],
-    [join(project, '.study/comments.json'), '{"synthetic":"learner comment"}'],
+    [join(project, '.tum-mcp/comments.json'), '{"synthetic":"learner comment"}'],
     [join(project, 'audio/lesson.wav'), Buffer.from([0x52, 0x49, 0x46, 0x46, 0, 0xff, 0x80, 13, 10])],
     [join(project, 'materials/notes.md'), 'synthetic-course-material'],
-    [join(project, 'study/content.json'), '{"synthetic":"study content"}'],
+    [join(project, 'app/content.json'), '{"synthetic":"study content"}'],
     [join(home, '.codex/plugins/local/tum-mcp/personal-note.txt'), 'user-added-file'],
   ];
   for (const [path, body] of saved) { mkdirSync(join(path, '..'), { recursive: true }); writeFileSync(path, body); }

@@ -31,7 +31,9 @@ def test_skills_and_client_configuration_use_utf8_with_a_legacy_locale(
     uninstall_client("claude", home)
 
     # Then every skill remains readable and unrelated Unicode settings survive.
-    assert len(report.checked_skills) == 5
+    from tum_mcp.skill_catalog import CURRENT_SKILLS
+
+    assert set(report.checked_skills) == set(CURRENT_SKILLS)
     assert report.errors == ()
     assert json.loads(config.read_text(encoding="utf-8")) == original
 

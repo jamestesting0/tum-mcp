@@ -78,7 +78,7 @@ Use this section when the comment renderer changes.
 - Essential comment access works without the optional browser Highlight API; reuse
   native popover and existing tokens, with no positioning or motion dependency.
 
-The preview saves `.study/comments.json` privately in the course project. It is
+The preview saves `.tum-mcp/comments.json` privately in the course project. It is
 separate from progress and survives builds/reset. Concurrent writes are checked
 against the entire comment file; saved drafts cannot silently overwrite newer
 notes. Keep the project local, as with its course material.

@@ -5,7 +5,7 @@ from typing import Literal
 
 from tum_mcp.errors import CampusError
 from tum_mcp.settings import Frozen
-from tum_mcp.study_store import END, START, confined, load_state, replace_agents
+from tum_mcp.study_store import END, START, confined, load_state, private_path, replace_agents
 
 
 class CourseSummary(Frozen):
@@ -44,10 +44,11 @@ def project_status(project: Path) -> ProjectStatus:
         if any(parent.exists() and not parent.is_dir() for parent in root.parents):
             return ProjectStatus(mode="recover", reason="project_parent_occupied")
         root = root.resolve()
-        state_path = confined(root, ".study/state.json")
+        state_path = private_path(root, "state.json")
         if not state_path.exists():
             artifacts = any(
-                confined(root, name).exists() for name in (".study", "materials", "study")
+                confined(root, name).exists()
+                for name in (".tum-mcp", ".study", "materials", "study", "app")
             )
             instructions = _instructions(root)
             if artifacts or START in instructions or END in instructions:

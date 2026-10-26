@@ -15,6 +15,7 @@ from typing import BinaryIO
 
 import typer
 
+from tum_mcp.course_app_paths import app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.browsers import is_wsl
 from tum_mcp.study_store import confined
@@ -140,8 +141,8 @@ class Handler(SimpleHTTPRequestHandler):
 
 def serve(project: Path, port: int, *, open_browser: bool = False) -> None:
     root = project.expanduser().resolve()
-    site = confined(root, "study")
-    if not confined(root, "study/index.html").is_file():
+    site = app_path(root, "index.html").parent
+    if not (site / "index.html").is_file():
         raise CampusError(Code.ACTION_REQUIRED, "Build the study site first.")
     try:
         server = PreviewServer(("127.0.0.1", port), partial(Handler, directory=str(site)))

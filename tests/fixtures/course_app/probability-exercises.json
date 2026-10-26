@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "course_key": "probability-pilot",
+  "sets": [
+    {
+      "key": "sheet-1",
+      "title": "Conditional probability",
+      "exercises": [
+        {
+          "key": "flagged",
+          "label": "1",
+          "title": "Interpret an alert",
+          "sources": [
+            {
+              "key": "probability",
+              "sha256": "c142be61a78c4c1aa2aae74a0b152800869db96adcfedc9e6b98fea443a19241"
+            }
+          ],
+          "statement": [
+            {
+              "kind": "text",
+              "title": "The problem",
+              "sources": [
+                "probability"
+              ],
+              "paragraphs": [
+                "Of 1,000 messages, 200 are urgent and 800 are nonurgent. An alert flags 80% of urgent messages and 10% of nonurgent messages. What fraction of flagged messages are urgent? Explain why the answer is not 80%."
+              ]
+            }
+          ],
+          "parts": [
+            "Compute how many messages of each type are flagged.",
+            "Use the flagged population to form the required fraction."
+          ],
+          "objectives": [
+            "Distinguish a likelihood from the reversed conditional."
+          ],
+          "prerequisites": [
+            {
+              "unit": "probability",
+              "explanation": "A conditional probability restricts the denominator to the group being conditioned on."
+            }
+          ],
+          "steps": [
+            {
+              "key": "denominator",
+              "purpose": "Choose the conditioned population before dividing.",
+              "prompt": "How many messages are flagged altogether?",
+              "check": {
+                "kind": "numeric",
+                "answer": 240,
+                "tolerance": 0,
+                "unit": "messages",
+                "feedback": "Count flagged urgent and flagged nonurgent messages; both belong in this population."
+              },
+              "hints": [
+                "Which group does “of flagged messages” restrict us to?",
+                "Compute each flagged subgroup, then add them."
+              ],
+              "explanation": "160 urgent and 80 nonurgent messages are flagged, giving 240."
+            },
+            {
+              "key": "posterior",
+              "purpose": "Avoid reversing the conditional by comparing actual group counts.",
+              "prompt": "Explain the fraction of flagged messages that are urgent. Paper work is fine.",
+              "check": {
+                "kind": "self_check",
+                "rubric": [
+                  "Uses 160 as the urgent-and-flagged numerator.",
+                  "Uses all 240 flagged messages as the denominator.",
+                  "Distinguishes urgent given flagged from flagged given urgent."
+                ],
+                "model_answer": "160/240 = 2/3. The 80% rate is P(flagged | urgent), not P(urgent | flagged)."
+              },
+              "hints": [
+                "The numerator is the intersection; the denominator is the conditioned group."
+              ],
+              "explanation": "The group after “given” determines the denominator."
+            }
+          ],
+          "solution": {
+            "origin": "authored",
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Worked solution",
+                "sources": [
+                  "probability"
+                ],
+                "paragraphs": [
+                  "Flagged urgent: 200 × 0.8 = 160. Flagged nonurgent: 800 × 0.1 = 80. Therefore P(urgent | flagged) = 160/(160+80) = 2/3."
+                ]
+              }
+            ]
+          },
+          "transfer": {
+            "prompt": "Now only 20 of the same 1,000 messages are urgent; both alert rates stay unchanged. Is the fraction of flagged messages that are urgent still 2/3?",
+            "answer": "No. There are 16 flagged urgent and 98 flagged nonurgent messages, so the fraction is 16/114 = 8/57. The changed base rate matters."
+          }
+        }
+      ]
+    }
+  ]
+}

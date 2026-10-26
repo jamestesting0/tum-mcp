@@ -48,7 +48,7 @@ def test_comment_endpoint_is_same_origin_bounded_and_confined(project: Path) -> 
                     {"Origin": base, "Host": "attacker.invalid"},
                 ):
                     assert client.post(endpoint, json=body, headers=headers).status_code == 403
-                assert not (project / ".study/comments.json").exists()
+                assert not (project / ".tum-mcp/comments.json").exists()
                 assert (
                     client.post(
                         endpoint,
@@ -82,8 +82,8 @@ def test_comment_endpoint_is_same_origin_bounded_and_confined(project: Path) -> 
                     ).status_code
                     == 404
                 )
-                assert client.get(base + "/../.study/comments.json").status_code == 404
-                assert json.loads((project / ".study/comments.json").read_bytes())["comments"][0][
+                assert client.get(base + "/../.tum-mcp/comments.json").status_code == 404
+                assert json.loads((project / ".tum-mcp/comments.json").read_bytes())["comments"][0][
                     "id"
                 ] == str(first.id)
         finally:
@@ -137,7 +137,7 @@ def test_rejected_post_keeps_its_response_when_the_body_arrives_late(tmp_path: P
                         peer.shutdown(socket.SHUT_WR)
                         assert len(response.read(length)) == length
                         assert response.read(1) == b""
-            assert not (tmp_path / ".study").exists()
+            assert not (tmp_path / ".tum-mcp").exists()
         finally:
             server.shutdown()
             worker.join(timeout=2)

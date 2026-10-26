@@ -17,32 +17,53 @@ def list_comments(
     project: Path,
     status: Annotated[Literal["open", "resolved", "all"], typer.Option()] = "open",
     unit: Annotated[str | None, typer.Option()] = None,
-    view: Annotated[Literal["content", "flashcards", "practice"] | None, typer.Option()] = None,
+    view: Annotated[
+        Literal["content", "flashcards", "practice", "exercises"] | None, typer.Option()
+    ] = None,
+    exercise: Annotated[str | None, typer.Option()] = None,
     limit: Annotated[int, typer.Option(min=1, max=100)] = 20,
     offset: Annotated[int, typer.Option(min=0)] = 0,
 ) -> None:
     """Read feedback as literal data, with the optimistic revision needed for resolution."""
+    from tum_mcp.course_app_paths import app_path
+    from tum_mcp.exercise_content import exercise_revision
+    from tum_mcp.exercise_data import read_exercises
     from tum_mcp.study_build import read_content, unit_revision
     from tum_mcp.study_comments import read_comments
 
     result = read_comments(project)
-    units = {item.key: item for item in read_content(project.expanduser().resolve()).units}
+    root = project.expanduser().resolve()
+    units = (
+        {item.key: item for item in read_content(root).units}
+        if app_path(root, "content.json").exists()
+        else {}
+    )
+    content = read_exercises(root)
+    exercises = (
+        {item.key: item for group in content.sets for item in group.exercises} if content else {}
+    )
     chosen = []
     for item in result["comments"]:
         if status != "all" and item["status"] != status:
             continue
         anchor = item["anchor"]
-        if unit is not None and anchor["unit_key"] != unit:
+        if unit is not None and anchor.get("unit_key") != unit:
+            continue
+        if exercise is not None and anchor.get("exercise_key") != exercise:
             continue
         if view is not None and anchor["view"] != view:
             continue
-        current = units.get(anchor["unit_key"])
+        is_exercise = anchor["view"] == "exercises"
+        current = (
+            exercises.get(anchor["exercise_key"]) if is_exercise else units.get(anchor["unit_key"])
+        )
         context = (
             "missing_unit"
             if current is None
             else (
                 "current"
-                if unit_revision(current) == anchor["unit_revision"]
+                if (exercise_revision(current) if is_exercise else unit_revision(current))
+                == anchor.get("exercise_revision", anchor.get("unit_revision"))
                 else "content_changed"
             )
         )

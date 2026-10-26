@@ -1,0 +1,1746 @@
+{
+  "schema_version": 1,
+  "course_key": "algorithms-demo",
+  "organization": "topics",
+  "introduction": "Study graph representations, breadth-first search and depth-first search. Start with graph notation, then compare how queues and stacks guide exploration.",
+  "units": [
+    {
+      "key": "graphs",
+      "path": [
+        "Foundations"
+      ],
+      "label": "Topic 01",
+      "title": "Think in graphs",
+      "summary": "Describe a network, then choose a representation that fits the questions you need to answer.",
+      "minutes": 6,
+      "objectives": [
+        {
+          "key": "model",
+          "text": "Explain vertices, edges and degree."
+        },
+        {
+          "key": "storage",
+          "text": "Choose a graph representation for a sparse network."
+        }
+      ],
+      "sources": [
+        {
+          "key": "graphs",
+          "sha256": "2fa8b96f90407d5dfa424f7d864b9f5f236da5dc75433bb3d8df130e21196520"
+        }
+      ],
+      "blocks": [
+        {
+          "title": "A small language for connections",
+          "sources": [
+            "graphs"
+          ],
+          "kind": "text",
+          "paragraphs": [
+            "A graph describes relationships. A vertex represents an object. An edge represents a connection between two objects.",
+            "In an undirected graph, the connection works in both directions. A simple graph has no self-loops or repeated edges."
+          ],
+          "points": []
+        },
+        {
+          "title": "Count each edge twice",
+          "sources": [
+            "graphs"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
+          "plain": "The sum of all vertex degrees equals twice the number of edges.",
+          "symbols": [
+            {
+              "symbol": "\\(V\\)",
+              "meaning": "The set of vertices."
+            },
+            {
+              "symbol": "\\(E\\)",
+              "meaning": "The set of edges."
+            },
+            {
+              "symbol": "\\(\\deg(v)\\)",
+              "meaning": "The number of edges incident to vertex \\(v\\)."
+            }
+          ],
+          "conditions": "For a simple undirected graph. Six edges contribute twelve to the total degree."
+        },
+        {
+          "title": "Choose the representation",
+          "sources": [
+            "graphs"
+          ],
+          "kind": "table",
+          "columns": [
+            "Question",
+            "Adjacency list",
+            "Adjacency matrix"
+          ],
+          "rows": [
+            [
+              "How much memory?",
+              "\\(O(|V|+|E|)\\)",
+              "\\(O(|V|^2)\\)"
+            ],
+            [
+              "How do I list neighbors?",
+              "Read the stored neighbor list.",
+              "Scan one row."
+            ],
+            [
+              "How do I test one edge?",
+              "Scan up to \\(\\deg(v)\\) entries.",
+              "Read one cell: \\(O(1)\\)."
+            ]
+          ],
+          "caption": "Common trade-offs for a graph with \\(|V|\\) vertices and \\(|E|\\) edges."
+        },
+        {
+          "title": "Read a connection matrix",
+          "sources": [
+            "graphs"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "A=\\begin{bmatrix}0&1&0\\\\1&0&1\\\\0&1&0\\end{bmatrix},\\qquad A^2=\\begin{bmatrix}1&0&1\\\\0&2&0\\\\1&0&1\\end{bmatrix}",
+          "plain": "For the small path A–B–C, a 1 records an edge. Squaring the matrix counts walks with exactly two edges.",
+          "symbols": [
+            {
+              "symbol": "\\(A\\)",
+              "meaning": "The adjacency matrix; rows and columns follow A, B, C."
+            },
+            {
+              "symbol": "\\((A^2)_{ij}\\)",
+              "meaning": "The number of two-edge walks from vertex \\(i\\) to vertex \\(j\\)."
+            }
+          ],
+          "conditions": "A walk may repeat a vertex. The middle diagonal entry is 2: B–A–B and B–C–B. This matrix is a separate three-vertex example."
+        },
+        {
+          "title": "Match the structure to the task",
+          "sources": [
+            "graphs"
+          ],
+          "kind": "text",
+          "paragraphs": [
+            "For a large sparse network, use adjacency lists when neighbor traversal matters. A matrix can be useful when frequent edge lookup matters more than memory."
+          ],
+          "points": []
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "degree",
+          "objective": "model",
+          "front": "What does the degree of a vertex count?",
+          "back": "It counts the edges incident to that vertex.",
+          "sources": [
+            "graphs"
+          ]
+        },
+        {
+          "key": "double",
+          "objective": "model",
+          "front": "Why does the degree sum count each undirected edge twice?",
+          "back": "Each edge has two endpoints. It contributes one to the degree of each endpoint.",
+          "sources": [
+            "graphs"
+          ]
+        },
+        {
+          "key": "sparse",
+          "objective": "storage",
+          "front": "Why does an adjacency list suit a sparse graph?",
+          "back": "It stores existing neighbors. It avoids reserving a cell for every possible pair of vertices.",
+          "sources": [
+            "graphs"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "degree-sum",
+          "objective": "model",
+          "prompt": "A simple undirected graph has six edges. What is the sum of all vertex degrees?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "0",
+              "text": "6",
+              "feedback": "This counts each edge once. An edge contributes to two endpoint degrees."
+            },
+            {
+              "key": "1",
+              "text": "12",
+              "feedback": "Each of the six edges contributes two to the degree sum."
+            },
+            {
+              "key": "2",
+              "text": "36",
+              "feedback": "This resembles a square-size calculation. The degree sum depends on edges, not matrix cells."
+            },
+            {
+              "key": "3",
+              "text": "3",
+              "feedback": "This divides the edge count by two. Each edge contributes two endpoints, so multiply by two."
+            }
+          ],
+          "correct": "1",
+          "explanation": "Count endpoints of edges: 2 × 6 = 12.",
+          "sources": [
+            "graphs"
+          ]
+        },
+        {
+          "key": "sparse-choice",
+          "objective": "storage",
+          "prompt": "A network has many vertices and few edges. You mainly traverse neighbors. Which representation fits this task?",
+          "level": "reason",
+          "options": [
+            {
+              "key": "0",
+              "text": "An adjacency list",
+              "feedback": "It stores existing connections and gives direct access to each neighbor list."
+            },
+            {
+              "key": "1",
+              "text": "An adjacency matrix for its smaller memory use",
+              "feedback": "A matrix uses \\(O(|V|^2)\\) memory, including absent edges."
+            },
+            {
+              "key": "2",
+              "text": "A matrix because every graph is dense",
+              "feedback": "The prompt describes a sparse graph. Density is a property of this graph, not all graphs."
+            },
+            {
+              "key": "3",
+              "text": "An edge list because it finds every vertex’s neighbors without scanning",
+              "feedback": "An ordinary edge list may require scanning all edges to find one vertex’s neighbors. An adjacency list stores those neighbors together."
+            }
+          ],
+          "correct": "0",
+          "explanation": "The task favors neighbor traversal and compact storage of existing edges.",
+          "sources": [
+            "graphs"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "bfs",
+      "path": [
+        "Algorithms",
+        "Traversals"
+      ],
+      "label": "Topic 02",
+      "title": "Follow the frontier",
+      "summary": "Use a queue to explore a graph in layers. See why the order gives shortest paths in an unweighted graph.",
+      "minutes": 9,
+      "objectives": [
+        {
+          "key": "queue",
+          "text": "Trace a FIFO frontier without duplicate discoveries."
+        },
+        {
+          "key": "distance",
+          "text": "Explain the shortest-path guarantee and its assumptions."
+        },
+        {
+          "key": "cost",
+          "text": "Relate adjacency-list traversal to \\(O(|V|+|E|)\\) time."
+        }
+      ],
+      "sources": [
+        {
+          "key": "bfs",
+          "sha256": "b18c467a50a846a8cfdd39b2e1cab65e4d057d37290c42fad25ba23cc269a67e"
+        }
+      ],
+      "blocks": [
+        {
+          "title": "Explore one layer at a time",
+          "sources": [
+            "bfs"
+          ],
+          "kind": "text",
+          "paragraphs": [
+            "Breadth-first search keeps the next vertices in a queue. The first vertex added is the first vertex removed. This is FIFO order.",
+            "Mark a vertex as seen when you enqueue it. Each vertex enters the queue at most once."
+          ],
+          "points": []
+        },
+        {
+          "title": "Watch the frontier move",
+          "sources": [
+            "bfs"
+          ],
+          "kind": "diagram",
+          "description": "Undirected graph: A–B, A–C, B–D, C–E, D–F and E–F. The highlighted vertex is being expanded. The caption and seen list describe each step.",
+          "nodes": [
+            {
+              "key": "a",
+              "label": "A",
+              "x": 70.0,
+              "y": 160.0,
+              "shape": "circle"
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "x": 220.0,
+              "y": 70.0,
+              "shape": "circle"
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "x": 220.0,
+              "y": 250.0,
+              "shape": "circle"
+            },
+            {
+              "key": "d",
+              "label": "D",
+              "x": 380.0,
+              "y": 70.0,
+              "shape": "circle"
+            },
+            {
+              "key": "e",
+              "label": "E",
+              "x": 380.0,
+              "y": 250.0,
+              "shape": "circle"
+            },
+            {
+              "key": "f",
+              "label": "F",
+              "x": 530.0,
+              "y": 160.0,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "b",
+              "directed": false,
+              "label": ""
+            },
+            {
+              "start": "a",
+              "end": "c",
+              "directed": false,
+              "label": ""
+            },
+            {
+              "start": "b",
+              "end": "d",
+              "directed": false,
+              "label": ""
+            },
+            {
+              "start": "c",
+              "end": "e",
+              "directed": false,
+              "label": ""
+            },
+            {
+              "start": "d",
+              "end": "f",
+              "directed": false,
+              "label": ""
+            },
+            {
+              "start": "e",
+              "end": "f",
+              "directed": false,
+              "label": ""
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Start with A. Mark A as seen and put it in the queue.",
+              "active": [],
+              "frontier": [
+                "a"
+              ],
+              "visited": [
+                "a"
+              ]
+            },
+            {
+              "caption": "Expand A. Discover B and C, in alphabetical order.",
+              "active": [
+                "a"
+              ],
+              "frontier": [
+                "b",
+                "c"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c"
+              ]
+            },
+            {
+              "caption": "Expand B. Discover D. C stays at the front of the queue.",
+              "active": [
+                "b"
+              ],
+              "frontier": [
+                "c",
+                "d"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d"
+              ]
+            },
+            {
+              "caption": "Expand C. Discover E after D.",
+              "active": [
+                "c"
+              ],
+              "frontier": [
+                "d",
+                "e"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e"
+              ]
+            },
+            {
+              "caption": "Expand D. Discover F at distance three.",
+              "active": [
+                "d"
+              ],
+              "frontier": [
+                "e",
+                "f"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+              ]
+            },
+            {
+              "caption": "Expand E. F is already seen, so do not enqueue it again.",
+              "active": [
+                "e"
+              ],
+              "frontier": [
+                "f"
+              ],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+              ]
+            },
+            {
+              "caption": "Expand F. Its neighbors are already seen.",
+              "active": [
+                "f"
+              ],
+              "frontier": [],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+              ]
+            },
+            {
+              "caption": "The queue is empty. Every reachable vertex is discovered.",
+              "active": [],
+              "frontier": [],
+              "visited": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+              ]
+            }
+          ],
+          "state_labels": "traversal"
+        },
+        {
+          "title": "Keep discovery separate from processing",
+          "sources": [
+            "bfs"
+          ],
+          "kind": "code",
+          "language": "Python · authored example",
+          "code": "from collections import deque\n\nfrontier = deque([start])\nseen = {start}\nwhile frontier:\n    vertex = frontier.popleft()\n    for neighbor in adjacency[vertex]:\n        if neighbor not in seen:\n            seen.add(neighbor)\n            frontier.append(neighbor)",
+          "explanation": "Store neighbors in alphabetical order to reproduce the trace. Mark a vertex seen when you enqueue it. This prevents repeated discovery through another edge. The example assumes an adjacency list and a valid start vertex."
+        },
+        {
+          "title": "Distance grows by one edge",
+          "sources": [
+            "bfs"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "d(v)=d(u)+1",
+          "plain": "When \\(u\\) first discovers \\(v\\), the distance to \\(v\\) is the distance to \\(u\\) plus one.",
+          "symbols": [
+            {
+              "symbol": "\\(u\\)",
+              "meaning": "The vertex being expanded."
+            },
+            {
+              "symbol": "\\(v\\)",
+              "meaning": "A neighbor that was not seen before."
+            },
+            {
+              "symbol": "\\(d(x)\\)",
+              "meaning": "The shortest number of edges from the start to \\(x\\)."
+            }
+          ],
+          "conditions": "Here \\(d\\) counts edges. For equal positive weights, minimum edge count also minimizes total cost. In this diagram, \\(d(F)=3\\)."
+        },
+        {
+          "title": "Choose the search order",
+          "sources": [
+            "bfs"
+          ],
+          "kind": "table",
+          "columns": [
+            "Method",
+            "Frontier",
+            "Shortest-path guarantee"
+          ],
+          "rows": [
+            [
+              "BFS",
+              "First-in, first-out queue",
+              "Minimum edge count; also minimum cost for equal positive weights."
+            ],
+            [
+              "DFS",
+              "Recursion or stack",
+              "No shortest-path guarantee."
+            ],
+            [
+              "Dijkstra",
+              "Minimum-priority queue",
+              "Minimum total weight for nonnegative edges."
+            ]
+          ],
+          "caption": "The frontier determines what “next” means."
+        },
+        {
+          "title": "Account for the work",
+          "sources": [
+            "bfs"
+          ],
+          "kind": "text",
+          "paragraphs": [
+            "An adjacency list lets the search expand each vertex once and inspect each adjacency entry. The total time is \\(O(|V|+|E|)\\).",
+            "Try the trace again without looking at the next caption. Predict the queue before each step."
+          ],
+          "points": []
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "enqueue",
+          "objective": "queue",
+          "front": "When should BFS mark a vertex as seen?",
+          "back": "When the vertex is enqueued. This prevents several neighbors from adding it again.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "key": "distance",
+          "objective": "distance",
+          "front": "When does BFS guarantee a shortest path?",
+          "back": "BFS minimizes edge count. It also minimizes total cost when all edges have equal positive weight. With arbitrary weights, BFS does not guarantee minimum cost.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "key": "cost",
+          "objective": "cost",
+          "front": "Why is adjacency-list BFS \\(O(|V|+|E|)\\)?",
+          "back": "Each vertex is expanded at most once. The algorithm inspects each adjacency entry a bounded number of times.",
+          "sources": [
+            "bfs"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "frontier",
+          "objective": "queue",
+          "prompt": "Start at A and inspect neighbors alphabetically. After expanding B, which queue remains?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "0",
+              "text": "C, D",
+              "feedback": "A added B and C. Removing B leaves C, then B adds D."
+            },
+            {
+              "key": "1",
+              "text": "D, C",
+              "feedback": "This puts a newly discovered vertex before the older frontier entry. A FIFO queue does not do that."
+            },
+            {
+              "key": "2",
+              "text": "C, A, D",
+              "feedback": "A is already seen. It must not be enqueued again."
+            },
+            {
+              "key": "3",
+              "text": "B, C, D",
+              "feedback": "B has already been removed for expansion. The queue contains waiting vertices, not the vertex currently being expanded."
+            }
+          ],
+          "correct": "0",
+          "explanation": "The oldest waiting vertex remains first. New vertices join the back.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "key": "shortest",
+          "objective": "distance",
+          "prompt": "In the diagram, how many edges are on a shortest path from A to F?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "0",
+              "text": "2",
+              "feedback": "F has no neighbor directly adjacent to A. Two edges are not enough."
+            },
+            {
+              "key": "1",
+              "text": "3",
+              "feedback": "A–B–D–F and A–C–E–F each use three edges."
+            },
+            {
+              "key": "2",
+              "text": "5",
+              "feedback": "A longer traversal can use five edges. BFS reaches F after three layers."
+            },
+            {
+              "key": "3",
+              "text": "4",
+              "feedback": "A shortest route contains four vertices but only three edges. Distance here counts edges."
+            }
+          ],
+          "correct": "1",
+          "explanation": "The frontier layers are A; B and C; D and E; then F.",
+          "sources": [
+            "bfs"
+          ]
+        },
+        {
+          "key": "complexity",
+          "objective": "cost",
+          "prompt": "With adjacency lists, why is BFS \\(O(|V|+|E|)\\) rather than \\(O(|V|\\,|E|)\\)?",
+          "level": "reason",
+          "options": [
+            {
+              "key": "0",
+              "text": "Each vertex causes a full scan of every graph edge",
+              "feedback": "BFS scans the current vertex’s adjacency list, not all edges for each vertex."
+            },
+            {
+              "key": "1",
+              "text": "Vertices are expanded once, and adjacency entries are inspected a bounded number of times",
+              "feedback": "The vertex work and adjacency work add. They are not multiplied."
+            },
+            {
+              "key": "2",
+              "text": "The queue automatically removes all edge processing",
+              "feedback": "The queue determines order. The algorithm still inspects neighbors."
+            },
+            {
+              "key": "3",
+              "text": "Every discovered neighbor starts another full traversal from A",
+              "feedback": "BFS marks a neighbor on discovery and adds it once. Restarting from A would repeat work that ordinary BFS avoids."
+            }
+          ],
+          "correct": "1",
+          "explanation": "Add the vertex work and edge work: \\(O(|V|)+O(|E|)=O(|V|+|E|)\\).",
+          "sources": [
+            "bfs"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "dfs",
+      "path": [
+        "Algorithms",
+        "Traversals"
+      ],
+      "label": "Topic 03",
+      "title": "Go deep, then return",
+      "summary": "Follow a branch, keep the return path, and understand why depth-first order is different from shortest-path order.",
+      "minutes": 6,
+      "objectives": [
+        {
+          "key": "backtrack",
+          "text": "Explain backtracking and the purpose of seen markers."
+        },
+        {
+          "key": "not-shortest",
+          "text": "Give a counterexample to a shortest-path claim for DFS."
+        }
+      ],
+      "sources": [
+        {
+          "key": "dfs",
+          "sha256": "08b064d0d126cb706e99bea83b12c6f2c85f6549464d9c28015f692e9a611789"
+        }
+      ],
+      "blocks": [
+        {
+          "title": "Keep a route back",
+          "sources": [
+            "dfs"
+          ],
+          "kind": "text",
+          "paragraphs": [
+            "Depth-first search follows an unseen neighbor before it continues with other branches. Recursion stores where to return. An explicit stack can store the same pending work.",
+            "When a branch has no unseen neighbor, return to an earlier vertex and inspect its remaining neighbors. This return is backtracking."
+          ],
+          "points": []
+        },
+        {
+          "title": "Two orders, two behaviors",
+          "sources": [
+            "dfs"
+          ],
+          "kind": "table",
+          "columns": [
+            "Property",
+            "BFS",
+            "DFS"
+          ],
+          "rows": [
+            [
+              "What waits?",
+              "A queue of the frontier.",
+              "A stack or recursive return path."
+            ],
+            [
+              "What comes next?",
+              "The oldest waiting vertex.",
+              "Work from the current deepest branch."
+            ],
+            [
+              "What about cycles?",
+              "Mark seen on discovery.",
+              "Mark seen on discovery."
+            ],
+            [
+              "Shortest paths?",
+              "Fewest edges in an unweighted graph.",
+              "Not guaranteed."
+            ]
+          ],
+          "caption": "Both methods need seen markers for graph traversal."
+        },
+        {
+          "title": "A direct edge can be discovered late",
+          "sources": [
+            "dfs"
+          ],
+          "kind": "text",
+          "paragraphs": [
+            "Use the graph from Topic 02. An alphabetical recursive DFS can discover C along A–B–D–F–E–C. That tree path has five edges.",
+            "The graph also contains the direct edge A–C. It has one edge. The first DFS discovery path is therefore not necessarily shortest."
+          ],
+          "points": []
+        },
+        {
+          "title": "The same broad work bound",
+          "sources": [
+            "dfs"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "T(V,E)=O(|V|+|E|)",
+          "plain": "With adjacency lists, DFS runs in time proportional to vertices plus edges.",
+          "symbols": [
+            {
+              "symbol": "\\(V\\)",
+              "meaning": "The set of vertices."
+            },
+            {
+              "symbol": "\\(E\\)",
+              "meaning": "The set of edges."
+            },
+            {
+              "symbol": "\\(O(\\cdot)\\)",
+              "meaning": "An asymptotic upper bound, not an exact operation count."
+            }
+          ],
+          "conditions": "Mark seen vertices to avoid repeated traversal through cycles."
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "return",
+          "objective": "backtrack",
+          "front": "What does backtracking do in DFS?",
+          "back": "It returns to earlier pending work after the current branch has no unseen neighbor.",
+          "sources": [
+            "dfs"
+          ]
+        },
+        {
+          "key": "seen",
+          "objective": "backtrack",
+          "front": "Why does graph DFS need seen markers?",
+          "back": "A cycle can lead back to an earlier vertex. A seen marker prevents repeated traversal.",
+          "sources": [
+            "dfs"
+          ]
+        },
+        {
+          "key": "counterexample",
+          "objective": "not-shortest",
+          "front": "How can DFS miss a shorter path?",
+          "back": "It can discover a vertex through a long branch before it examines a direct or shorter connection.",
+          "sources": [
+            "dfs"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "cycle",
+          "objective": "backtrack",
+          "prompt": "A DFS neighbor is already seen. What should ordinary traversal do?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "0",
+              "text": "Skip revisiting it and continue the remaining search",
+              "feedback": "This avoids repeating work through a cycle."
+            },
+            {
+              "key": "1",
+              "text": "Remove its seen marker before entering it again",
+              "feedback": "Removing the marker can reintroduce repeated traversal."
+            },
+            {
+              "key": "2",
+              "text": "Restart the whole traversal from that vertex",
+              "feedback": "Restarting is not ordinary DFS and can repeat the same cycle."
+            },
+            {
+              "key": "3",
+              "text": "Stop the entire search as soon as a seen neighbor appears",
+              "feedback": "An undirected edge leads back to a seen parent. Stop revisiting that neighbor, but continue exploring pending branches."
+            }
+          ],
+          "correct": "0",
+          "explanation": "The return path preserves pending work. Seen markers prevent visiting the same vertex again.",
+          "sources": [
+            "dfs"
+          ]
+        },
+        {
+          "key": "dfs-path",
+          "objective": "not-shortest",
+          "prompt": "DFS discovers C via A–B–D–F–E–C, but edge A–C exists. What follows?",
+          "level": "reason",
+          "options": [
+            {
+              "key": "0",
+              "text": "The DFS tree path is not a shortest path to C",
+              "feedback": "It has five edges, while the direct connection has one."
+            },
+            {
+              "key": "1",
+              "text": "DFS always finds a shortest path after backtracking",
+              "feedback": "Backtracking does not change the first-discovery tree into a shortest-path tree."
+            },
+            {
+              "key": "2",
+              "text": "The direct edge cannot belong to an undirected graph",
+              "feedback": "An undirected graph can contain the direct edge and the longer route."
+            },
+            {
+              "key": "3",
+              "text": "Every path from A to C must therefore contain five edges",
+              "feedback": "The first DFS tree path describes one route. The direct A–C edge is a counterexample to that claim."
+            }
+          ],
+          "correct": "0",
+          "explanation": "A single counterexample disproves the claim that DFS always gives shortest paths.",
+          "sources": [
+            "dfs"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "weighted",
+      "path": [
+        "Algorithms",
+        "Shortest paths"
+      ],
+      "label": "Topic 04",
+      "title": "Find the cheapest route",
+      "summary": "A short route need not be a cheap route. Add weights and track the best known cost.",
+      "minutes": 7,
+      "objectives": [
+        {
+          "key": "cost",
+          "text": "Compare edge count with total path cost."
+        },
+        {
+          "key": "relax",
+          "text": "Apply one distance-relaxation step."
+        },
+        {
+          "key": "choose",
+          "text": "Choose a shortest-path method from the edge-cost assumptions."
+        },
+        {
+          "key": "justify",
+          "text": "Explain why nonnegative weights permit the minimum to be settled."
+        },
+        {
+          "key": "limits",
+          "text": "Identify a negative-edge counterexample to settling."
+        }
+      ],
+      "sources": [
+        {
+          "key": "weighted",
+          "sha256": "06cb13c21bad1806c0ffa971f96e08955ea494783bc7943e01582d3ba4b99ab9"
+        }
+      ],
+      "blocks": [
+        {
+          "title": "Count cost, not just edges",
+          "sources": [
+            "weighted"
+          ],
+          "kind": "text",
+          "paragraphs": [
+            "Recall BFS: first discovery is shortest in edge count because each layer adds one edge. For weighted paths, add the costs instead. A tentative distance is the cheapest complete path found so far; it can still improve.",
+            "BFS gives the fewest edges in an unweighted graph. A weighted network asks a different question: which route has the smallest total cost?",
+            "Use nonnegative edge weights. Start with distance 0 at S and infinity elsewhere. Settle the smallest tentative distance, then try its outgoing edges."
+          ],
+          "points": []
+        },
+        {
+          "title": "The algorithm as a process",
+          "sources": [
+            "weighted"
+          ],
+          "kind": "diagram",
+          "description": "A process diagram: begin with tentative distances, settle the minimum, then relax outgoing edges. Repeat selection and relaxation until the target is settled.",
+          "nodes": [
+            {
+              "key": "distances",
+              "label": "Best distances",
+              "x": 85.0,
+              "y": 160.0,
+              "shape": "box"
+            },
+            {
+              "key": "settle",
+              "label": "Settle minimum",
+              "x": 300.0,
+              "y": 160.0,
+              "shape": "box"
+            },
+            {
+              "key": "relax",
+              "label": "Relax neighbors",
+              "x": 515.0,
+              "y": 160.0,
+              "shape": "box"
+            }
+          ],
+          "edges": [
+            {
+              "start": "distances",
+              "end": "settle",
+              "directed": true,
+              "label": ""
+            },
+            {
+              "start": "settle",
+              "end": "relax",
+              "directed": true,
+              "label": ""
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Initialize S at zero and other distances at infinity.",
+              "active": [
+                "distances"
+              ],
+              "frontier": [],
+              "visited": []
+            },
+            {
+              "caption": "Settle the unsettled vertex with the smallest tentative distance.",
+              "active": [
+                "settle"
+              ],
+              "frontier": [],
+              "visited": []
+            },
+            {
+              "caption": "Try outgoing edges and improve any distance that gets cheaper. Repeat selection and relaxation.",
+              "active": [
+                "relax"
+              ],
+              "frontier": [],
+              "visited": []
+            }
+          ],
+          "state_labels": "caption"
+        },
+        {
+          "title": "Add the cost along a path",
+          "sources": [
+            "weighted"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "C(P)=\\sum_{i=0}^{m-1}w(v_i,v_{i+1})",
+          "plain": "The cost of a path is the sum of its edge weights.",
+          "symbols": [
+            {
+              "symbol": "\\(P\\)",
+              "meaning": "A path with vertices v₀ through vₘ."
+            },
+            {
+              "symbol": "\\(m\\)",
+              "meaning": "The number of edges on that path."
+            },
+            {
+              "symbol": "\\(w(u,v)\\)",
+              "meaning": "The cost of the edge from \\(u\\) to \\(v\\)."
+            }
+          ],
+          "conditions": "Compare costs in the same units. In this example every edge weight is nonnegative."
+        },
+        {
+          "title": "Settle the best distance",
+          "sources": [
+            "weighted"
+          ],
+          "kind": "diagram",
+          "description": "Directed weighted network. Edge labels are costs. Advance the steps to settle S, A, B and T.",
+          "nodes": [
+            {
+              "key": "s",
+              "label": "S",
+              "x": 70.0,
+              "y": 160.0,
+              "shape": "circle"
+            },
+            {
+              "key": "a",
+              "label": "A",
+              "x": 270.0,
+              "y": 65.0,
+              "shape": "circle"
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "x": 270.0,
+              "y": 255.0,
+              "shape": "circle"
+            },
+            {
+              "key": "t",
+              "label": "T",
+              "x": 530.0,
+              "y": 160.0,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a",
+              "directed": true,
+              "label": "2"
+            },
+            {
+              "start": "s",
+              "end": "b",
+              "directed": true,
+              "label": "5"
+            },
+            {
+              "start": "a",
+              "end": "b",
+              "directed": true,
+              "label": "1"
+            },
+            {
+              "start": "a",
+              "end": "t",
+              "directed": true,
+              "label": "6"
+            },
+            {
+              "start": "b",
+              "end": "t",
+              "directed": true,
+              "label": "2"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Begin: \\(d(S)=0\\). Other distances are infinite.",
+              "active": [
+                "s"
+              ],
+              "frontier": [],
+              "visited": []
+            },
+            {
+              "caption": "Settle S. Tentative distances become \\(d(A)=2\\) and \\(d(B)=5\\).",
+              "active": [
+                "s"
+              ],
+              "frontier": [],
+              "visited": [
+                "s"
+              ]
+            },
+            {
+              "caption": "Settle A at 2. Improve B to 3 and discover T at 8.",
+              "active": [
+                "a"
+              ],
+              "frontier": [],
+              "visited": [
+                "s",
+                "a"
+              ]
+            },
+            {
+              "caption": "Settle B at 3. Improve T to 5 through B.",
+              "active": [
+                "b"
+              ],
+              "frontier": [],
+              "visited": [
+                "s",
+                "a",
+                "b"
+              ]
+            },
+            {
+              "caption": "Settle T at 5. The cheapest route is S–A–B–T.",
+              "active": [
+                "t"
+              ],
+              "frontier": [],
+              "visited": [
+                "s",
+                "a",
+                "b",
+                "t"
+              ]
+            }
+          ],
+          "state_labels": "caption"
+        },
+        {
+          "title": "Keep the better distance",
+          "sources": [
+            "weighted"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "d(v)\\leftarrow\\min\\{d(v),\\ d(u)+w(u,v)\\}",
+          "plain": "Replace the tentative distance only if the route through \\(u\\) is cheaper.",
+          "symbols": [
+            {
+              "symbol": "\\(d(v)\\)",
+              "meaning": "The best distance to \\(v\\) found so far."
+            },
+            {
+              "symbol": "\\(u\\)",
+              "meaning": "The vertex currently being expanded."
+            },
+            {
+              "symbol": "\\(w(u,v)\\)",
+              "meaning": "The cost of its outgoing edge to \\(v\\)."
+            }
+          ],
+          "conditions": "With \\(d(A)=2\\), \\(d(B)=5\\) and \\(w(A,B)=1\\), the new distance to B is min(5, 2+1)=3. Dijkstra’s settling rule requires nonnegative weights."
+        },
+        {
+          "title": "Compare the routes",
+          "sources": [
+            "weighted"
+          ],
+          "kind": "table",
+          "columns": [
+            "Route",
+            "Edges",
+            "Total cost"
+          ],
+          "rows": [
+            [
+              "S → A → T",
+              "2",
+              "2 + 6 = 8"
+            ],
+            [
+              "S → B → T",
+              "2",
+              "5 + 2 = 7"
+            ],
+            [
+              "S → A → B → T",
+              "3",
+              "2 + 1 + 2 = 5"
+            ]
+          ],
+          "caption": "More edges can still mean less cost."
+        },
+        {
+          "kind": "text",
+          "title": "Why the minimum can be settled",
+          "sources": [
+            "weighted"
+          ],
+          "paragraphs": [
+            "Suppose a cheaper path to chosen X existed. Let Y be its first unsettled vertex. Its settled predecessor has already relaxed the edge to Y, so d(Y) is at most that prefix cost. The minimum rule gives d(X) ≤ d(Y). With nonnegative remaining edges, the prefix costs no more than the whole path. Thus d(X) is no larger than the allegedly cheaper path, a contradiction.",
+            "The nonnegative suffix is essential. With edges S→A (1), S→B (2), B→A (−3), settling A at 1 misses the path S→B→A costing −1. The minimum rule alone is insufficient."
+          ]
+        },
+        {
+          "title": "Remember the distinction",
+          "sources": [
+            "weighted"
+          ],
+          "kind": "text",
+          "paragraphs": [],
+          "points": [
+            "BFS minimizes the number of edges.",
+            "A weighted path adds its edge costs.",
+            "Relaxation improves a tentative distance; it does not make an arbitrary distance final."
+          ]
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "weighted-cost",
+          "objective": "cost",
+          "front": "Does the path with the fewest edges always have the lowest total weight?",
+          "back": "No. Add the weights. A longer path can have a lower total cost.",
+          "sources": [
+            "weighted"
+          ]
+        },
+        {
+          "key": "relax",
+          "objective": "relax",
+          "front": "When does relaxation replace \\(d(v)\\)?",
+          "back": "When \\(d(u)\\)+\\(w(u,v)\\) is smaller than the current \\(d(v)\\).",
+          "sources": [
+            "weighted"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "cheapest",
+          "objective": "cost",
+          "prompt": "A directed graph has edges S→A (2), S→B (5), A→B (1), A→T (6), B→T (2), and no others. Which route has the lowest total cost from S to T?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "d",
+              "text": "S → A → B → T, cost 3",
+              "feedback": "Three is the number of edges. It is not their total weight."
+            },
+            {
+              "key": "a",
+              "text": "S → A → T, cost 8",
+              "feedback": "This uses fewer edges, but 2+6 is larger than 5."
+            },
+            {
+              "key": "b",
+              "text": "S → B → T, cost 7",
+              "feedback": "This costs 5+2=7. Going through A improves the route to B."
+            },
+            {
+              "key": "c",
+              "text": "S → A → B → T, cost 5",
+              "feedback": "Its three weights sum to 2+1+2=5."
+            }
+          ],
+          "correct": "c",
+          "explanation": "Compare the sums. The three-edge route costs 5, less than either two-edge route.",
+          "sources": [
+            "weighted"
+          ]
+        },
+        {
+          "key": "update-b",
+          "objective": "relax",
+          "prompt": "The current \\(d(B)\\) is 5. With \\(d(A)=2\\) and \\(w(A,B)=1\\), what does relaxing A → B do?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "a",
+              "text": "Keep \\(d(B)=5\\) because B was discovered earlier",
+              "feedback": "Discovery does not settle B. A cheaper candidate may replace its tentative distance."
+            },
+            {
+              "key": "b",
+              "text": "Set \\(d(B)=3\\) because 2+1 is smaller than 5",
+              "feedback": "The candidate through A costs 3, so it improves the tentative distance."
+            },
+            {
+              "key": "c",
+              "text": "Set \\(d(B)=1\\) because that is the last edge weight",
+              "feedback": "The last edge is only part of the route. Include the cost to reach A."
+            },
+            {
+              "key": "d",
+              "text": "Set \\(d(B)=8\\) by adding the old distance to the candidate",
+              "feedback": "Relaxation compares the old and candidate distances; it does not add them."
+            }
+          ],
+          "correct": "b",
+          "explanation": "Take min(5,2+1)=3. The candidate uses the full cost from S through A to B.",
+          "sources": [
+            "weighted"
+          ]
+        },
+        {
+          "key": "method",
+          "objective": "choose",
+          "prompt": "A directed routing graph has varying nonnegative costs. You need the minimum total cost from one source. Which method has the needed guarantee?",
+          "level": "reason",
+          "options": [
+            {
+              "key": "a",
+              "text": "Dijkstra with a minimum-priority queue",
+              "feedback": "It selects the smallest tentative cost and uses nonnegativity to settle it."
+            },
+            {
+              "key": "b",
+              "text": "BFS with a FIFO queue",
+              "feedback": "FIFO layers minimize edge count; varying costs can reverse that ordering."
+            },
+            {
+              "key": "c",
+              "text": "DFS with a stack",
+              "feedback": "Depth-first exploration does not select the smallest complete path cost."
+            },
+            {
+              "key": "d",
+              "text": "Any traversal, stopping on first discovery",
+              "feedback": "First discovery can be improved by another weighted path."
+            }
+          ],
+          "correct": "a",
+          "explanation": "Use Dijkstra for nonnegative weighted paths; equal-cost edges are the special case that permits BFS.",
+          "sources": [
+            "weighted"
+          ]
+        },
+        {
+          "key": "settling-premise",
+          "objective": "justify",
+          "prompt": "The settled-prefix argument gives d(X) ≤ d(Y) ≤ cost(prefix to Y) on a hypothetical cheaper path to X. Which premise lets this bound reach the cost of the whole path?",
+          "level": "reason",
+          "options": [
+            {
+              "key": "a",
+              "text": "Every vertex has at most two neighbors",
+              "feedback": "The argument does not restrict the number of neighbors."
+            },
+            {
+              "key": "b",
+              "text": "The path with fewer edges is cheaper",
+              "feedback": "That is exactly what varying weights prevent us from assuming."
+            },
+            {
+              "key": "c",
+              "text": "The remaining suffix has nonnegative total cost",
+              "feedback": "Adding a nonnegative suffix cannot reduce the prefix cost."
+            },
+            {
+              "key": "d",
+              "text": "X was discovered before Y",
+              "feedback": "Discovery time does not compare weighted path costs."
+            }
+          ],
+          "correct": "c",
+          "explanation": "Nonnegative edges ensure a nonnegative suffix, so prefix cost ≤ whole path cost. Combined with the minimum rule this contradicts a cheaper path.",
+          "sources": [
+            "weighted"
+          ]
+        },
+        {
+          "key": "negative-case",
+          "objective": "limits",
+          "prompt": "A directed graph has only S→A (1), S→B (2), B→A (−3). A routine permanently settles A at 1 before exploring B. What is the actual shortest cost from S to A?",
+          "level": "reason",
+          "options": [
+            {
+              "key": "a",
+              "text": "1",
+              "feedback": "Inspect the other complete path before treating the first label as final."
+            },
+            {
+              "key": "b",
+              "text": "−1",
+              "feedback": "S→B→A costs 2−3=−1."
+            },
+            {
+              "key": "c",
+              "text": "−3",
+              "feedback": "The last edge excludes the cost of reaching B."
+            },
+            {
+              "key": "d",
+              "text": "0",
+              "feedback": "The source has cost zero, but reaching A requires a path."
+            }
+          ],
+          "correct": "b",
+          "explanation": "The alternate path costs −1. Its negative suffix defeats the settling proof; the graph has no cycle, so this is not a negative-cycle issue.",
+          "sources": [
+            "weighted"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "probability",
+      "path": [
+        "Mathematics",
+        "Probability"
+      ],
+      "label": "Topic 05",
+      "title": "Update a probability",
+      "summary": "Use evidence and base rates together. Then count successes in independent repeated trials.",
+      "minutes": 9,
+      "objectives": [
+        {
+          "key": "bayes",
+          "text": "Compute a conditional probability from counts."
+        },
+        {
+          "key": "binomial",
+          "text": "Use a binomial model only when its assumptions hold."
+        }
+      ],
+      "sources": [
+        {
+          "key": "probability",
+          "sha256": "c142be61a78c4c1aa2aae74a0b152800869db96adcfedc9e6b98fea443a19241"
+        }
+      ],
+      "blocks": [
+        {
+          "title": "Begin with a concrete population",
+          "sources": [
+            "probability"
+          ],
+          "kind": "text",
+          "paragraphs": [
+            "An alert catches 80% of urgent messages. That does not mean 80% of alerts are urgent. The answer also depends on how common urgent messages are.",
+            "Use 1,000 messages. Of these, 200 are urgent. The alert catches 160 urgent messages and also flags 80 of the 800 other messages."
+          ],
+          "points": []
+        },
+        {
+          "title": "Reverse the condition carefully",
+          "sources": [
+            "probability"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "P(H\\mid E)=\\frac{P(E\\mid H)P(H)}{P(E\\mid H)P(H)+P(E\\mid\\neg H)P(\\neg H)}=\\frac{0.8\\cdot0.2}{0.8\\cdot0.2+0.1\\cdot0.8}=\\frac{2}{3}",
+          "plain": "Two thirds of the flagged messages are urgent. The denominator includes both true and false alerts.",
+          "symbols": [
+            {
+              "symbol": "\\(H\\)",
+              "meaning": "The message is urgent."
+            },
+            {
+              "symbol": "\\(E\\)",
+              "meaning": "The alert flags the message."
+            },
+            {
+              "symbol": "\\(¬H\\)",
+              "meaning": "The message is not urgent."
+            },
+            {
+              "symbol": "\\(P(H)\\)",
+              "meaning": "The base rate of urgent messages: 0.2."
+            }
+          ],
+          "conditions": "The evidence must have positive probability. Here \\(P(E)=0.24\\), and the stated rates apply to this population."
+        },
+        {
+          "title": "Check the fraction with counts",
+          "sources": [
+            "probability"
+          ],
+          "kind": "table",
+          "columns": [
+            "Actual message",
+            "Alert",
+            "No alert",
+            "Total"
+          ],
+          "rows": [
+            [
+              "Urgent",
+              "160",
+              "40",
+              "200"
+            ],
+            [
+              "Not urgent",
+              "80",
+              "720",
+              "800"
+            ],
+            [
+              "Total",
+              "240",
+              "760",
+              "1,000"
+            ]
+          ],
+          "caption": "Among the 240 alerts, 160 are urgent: 160 / 240 = 2 / 3."
+        },
+        {
+          "title": "Repeat a trial under the same conditions",
+          "sources": [
+            "probability"
+          ],
+          "kind": "text",
+          "paragraphs": [
+            "A fair coin gives success probability 1/2 on each independent toss. In three tosses, there are three positions for exactly one head.",
+            "Count the arrangements, then multiply by the probability of each arrangement. This gives the binomial formula."
+          ],
+          "points": []
+        },
+        {
+          "title": "Count exactly \\(k\\) successes",
+          "sources": [
+            "probability"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "P(X=k)=\\binom{n}{k}p^k(1-p)^{n-k},\\qquad \\mathbb{E}[X]=\\sum_{k=0}^{n}kP(X=k)=np",
+          "plain": "The binomial probability combines the number of arrangements with their probability. The expected success count is \\(n\\) times \\(p\\).",
+          "symbols": [
+            {
+              "symbol": "\\(n\\)",
+              "meaning": "The fixed number of trials."
+            },
+            {
+              "symbol": "\\(p\\)",
+              "meaning": "The same success probability on each trial."
+            },
+            {
+              "symbol": "\\(X\\)",
+              "meaning": "The number of successful trials."
+            },
+            {
+              "symbol": "\\(k\\)",
+              "meaning": "An integer from 0 through \\(n\\)."
+            },
+            {
+              "symbol": "\\(E[X]\\)",
+              "meaning": "The average success count over repeated experiments."
+            }
+          ],
+          "conditions": "The trials are independent, with identical success probability. For three fair tosses, the expected number of heads is 1.5; one experiment still has an integer count."
+        },
+        {
+          "title": "Read the three-toss distribution",
+          "sources": [
+            "probability"
+          ],
+          "kind": "table",
+          "columns": [
+            "Heads \\(k\\)",
+            "Arrangements",
+            "Probability"
+          ],
+          "rows": [
+            [
+              "0",
+              "1",
+              "1/8"
+            ],
+            [
+              "1",
+              "3",
+              "3/8"
+            ],
+            [
+              "2",
+              "3",
+              "3/8"
+            ],
+            [
+              "3",
+              "1",
+              "1/8"
+            ]
+          ],
+          "caption": "The probabilities sum to 1. Symmetry gives the same probability for one and two heads."
+        },
+        {
+          "title": "Keep the assumptions visible",
+          "sources": [
+            "probability"
+          ],
+          "kind": "text",
+          "paragraphs": [],
+          "points": [
+            "\\(P(H\\mid E)\\) and \\(P(E\\mid H)\\) use different reference populations.",
+            "Include false alerts and the base rate when conditioning on an alert.",
+            "A binomial model needs independent trials with the same success probability."
+          ]
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "reverse",
+          "objective": "bayes",
+          "front": "Is \\(P(\\mathrm{urgent}\\mid\\mathrm{alert})\\) the same as \\(P(\\mathrm{alert}\\mid\\mathrm{urgent})\\)?",
+          "back": "Not generally. They condition on different populations. Use the base rate and false-alert rate to reverse the condition.",
+          "sources": [
+            "probability"
+          ]
+        },
+        {
+          "key": "counts",
+          "objective": "bayes",
+          "front": "There are 160 urgent alerts among 240 alerts. Which fraction gives \\(P(\\mathrm{urgent}\\mid\\mathrm{alert})\\)?",
+          "back": "160/240 = 2/3. The denominator is all alerts.",
+          "sources": [
+            "probability"
+          ]
+        },
+        {
+          "key": "conditions",
+          "objective": "binomial",
+          "front": "Which assumptions make a fixed success count binomial?",
+          "back": "A fixed number of independent trials, each with the same success probability.",
+          "sources": [
+            "probability"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "posterior",
+          "objective": "bayes",
+          "prompt": "The alert flags 160 urgent and 80 nonurgent messages. What fraction of flagged messages are urgent?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "a",
+              "text": "2/3",
+              "feedback": "There are 240 flagged messages, so the fraction is 160/240."
+            },
+            {
+              "key": "b",
+              "text": "4/5",
+              "feedback": "That is the sensitivity: 160 of 200 urgent messages are flagged. The question conditions on alerts."
+            },
+            {
+              "key": "c",
+              "text": "1/5",
+              "feedback": "That is the population base rate. The alert supplies additional evidence."
+            },
+            {
+              "key": "d",
+              "text": "4/25",
+              "feedback": "That is 160/1000, the joint population fraction. Restrict the denominator to flagged messages."
+            }
+          ],
+          "correct": "a",
+          "explanation": "Condition on the alert: keep only flagged messages. Of the 240 that remain, 160 are urgent.",
+          "sources": [
+            "probability"
+          ]
+        },
+        {
+          "key": "coin-count",
+          "objective": "binomial",
+          "prompt": "Three independent fair coin tosses are made. What is the probability of exactly two heads?",
+          "level": "apply",
+          "options": [
+            {
+              "key": "b",
+              "text": "1/2",
+              "feedback": "That is the probability of a head on one toss, not of two heads across three tosses."
+            },
+            {
+              "key": "c",
+              "text": "3/4",
+              "feedback": "That overcounts the outcomes with exactly two heads. Only three of the eight equally likely sequences qualify."
+            },
+            {
+              "key": "d",
+              "text": "3/8",
+              "feedback": "HHT, HTH and THH are three distinct sequences, each with probability 1/8."
+            },
+            {
+              "key": "a",
+              "text": "1/8",
+              "feedback": "One specific sequence has probability 1/8. There are three sequences with exactly two heads."
+            }
+          ],
+          "correct": "d",
+          "explanation": "Choose two positions from three: 3 arrangements. Each has probability (1/2)³, giving 3/8.",
+          "sources": [
+            "probability"
+          ]
+        }
+      ]
+    }
+  ]
+}

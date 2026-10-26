@@ -13,7 +13,7 @@ from tum_mcp.study_content import StudyContent
 
 def test_bundled_course_offers_four_choices_for_every_practice_question() -> None:
     # Given the content that supplies new synthetic study sites.
-    source = files("tum_mcp") / "bundled/skills/prepare-study/assets/example/content.json"
+    source = files("tum_mcp") / "bundled/course_app/example/content.json"
 
     # When the same schema used by the site build loads that course.
     content = StudyContent.model_validate_json(source.read_bytes())
@@ -32,7 +32,7 @@ def test_template_is_available_without_auth_and_fingerprints_packaged_assets(
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "no-campus-state"))
     source = Path(str(files("tum_mcp")))
     copied = tmp_path / "package"
-    relative = "bundled/skills/prepare-study/assets/site"
+    relative = "bundled/course_app/site"
     shutil.copytree(source / relative, copied / relative)
     monkeypatch.setattr(study_cli, "files", lambda name: copied)
     result = CliRunner().invoke(app, ["study", "template"])
@@ -41,7 +41,7 @@ def test_template_is_available_without_auth_and_fingerprints_packaged_assets(
     assert {"app.mjs", "flashcards.mjs", "navigation.mjs", "revision.mjs", "styles.css"} <= set(
         before["files"]
     )
-    assert before["author"] == "study/content.json"
+    assert before["author"] == "app/content.json"
     stylesheet = copied / relative / "styles.css"
     stylesheet.write_text(
         stylesheet.read_text(encoding="utf-8") + "\n/* changed template */\n", encoding="utf-8"

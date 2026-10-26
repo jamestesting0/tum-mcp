@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "course": {
+    "key": "component-preview",
+    "title": "Course App Components",
+    "semester": "Synthetic template",
+    "synthetic": true,
+    "bindings": [
+      {
+        "key": "demo",
+        "provider": "sample",
+        "course_id": "component-preview"
+      }
+    ]
+  },
+  "coverage": [
+    {
+      "binding": "demo",
+      "status": "complete",
+      "checked_at": "2026-10-26T00:00:00Z",
+      "note": "Synthetic component inputs only."
+    }
+  ],
+  "resources": [
+    {
+      "key": "components",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Synthetic component input",
+      "url": "https://example.invalid/components",
+      "locator": "Component fixture",
+      "revision": "1",
+      "text": "Synthetic component fixture: a path connects A and B; 2 + 2 = 4. The examples demonstrate rendering and controls, not a course syllabus."
+    }
+  ]
+}

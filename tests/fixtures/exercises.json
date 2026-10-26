@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "course_key": "algorithms-graphs",
+  "sets": [
+    {
+      "key": "sheet-1",
+      "title": "Sheet 1",
+      "category": "Weekly exercises",
+      "exercises": [
+        {
+          "key": "sample-relaxation",
+          "label": "Exercise 1",
+          "title": "Improve a tentative distance",
+          "sources": [
+            {
+              "key": "weighted",
+              "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ],
+          "statement": [
+            {
+              "kind": "text",
+              "title": "The problem",
+              "sources": [
+                "weighted"
+              ],
+              "paragraphs": [
+                "A directed graph has d(A)=2, d(B)=5 and edge A to B with weight 1. Calculate the candidate distance to B and explain whether to keep its old distance."
+              ]
+            }
+          ],
+          "objectives": [
+            "Apply relaxation without treating first discovery as final."
+          ],
+          "prerequisites": [
+            {
+              "unit": "weighted",
+              "explanation": "Relaxation compares an existing distance with the cost through a neighbor."
+            }
+          ],
+          "steps": [
+            {
+              "key": "candidate",
+              "purpose": "Distinguish the candidate path cost from the last edge weight.",
+              "prompt": "What is the cost through A?",
+              "check": {
+                "kind": "numeric",
+                "answer": 3,
+                "tolerance": 0,
+                "feedback": "Include the cost of reaching A before using the edge to B."
+              },
+              "hints": [
+                "A path cost includes all edges used to reach its endpoint.",
+                "Add the distance to A and the weight from A to B."
+              ],
+              "explanation": "The candidate is 2 + 1 = 3."
+            },
+            {
+              "key": "reason",
+              "purpose": "Explain why a discovered distance can still improve.",
+              "prompt": "Why does this replace d(B)? You can work on paper.",
+              "check": {
+                "kind": "self_check",
+                "rubric": [
+                  "Compare candidate 3 with existing distance 5.",
+                  "Explain that discovery alone does not finalize a distance."
+                ],
+                "model_answer": "Replace 5 with 3 because 3 is cheaper. First discovery does not guarantee the best weighted path."
+              },
+              "hints": [
+                "Compare the two available costs."
+              ],
+              "explanation": "Keep the minimum of the previous and candidate distances."
+            },
+            {
+              "key": "transfer-choice",
+              "purpose": "Distinguish an improvement from a more expensive route.",
+              "prompt": "Current cost is 8; a route reaches a neighbor at cost 4, then uses a link of cost 6. What should happen?",
+              "check": {
+                "kind": "choice",
+                "correct": "keep",
+                "options": [
+                  {
+                    "key": "keep",
+                    "text": "Keep 8",
+                    "feedback": "The candidate 10 is more expensive."
+                  },
+                  {
+                    "key": "edge",
+                    "text": "Replace with 6",
+                    "feedback": "Include the cost of reaching the neighbor before crossing the link."
+                  },
+                  {
+                    "key": "sum",
+                    "text": "Replace with 10",
+                    "feedback": "Compare the candidate with the existing cost before replacing it."
+                  },
+                  {
+                    "key": "add",
+                    "text": "Replace with 18",
+                    "feedback": "The current and candidate paths are alternatives, not consecutive path segments."
+                  }
+                ]
+              },
+              "hints": [
+                "Compare two complete paths."
+              ],
+              "explanation": "The candidate costs 4+6=10, so retain 8."
+            }
+          ],
+          "solution": {
+            "origin": "authored",
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Worked solution",
+                "sources": [
+                  "weighted"
+                ],
+                "paragraphs": [
+                  "The candidate distance is d(A)+w(A,B)=2+1=3. Since 3 is less than 5, replace d(B) with 3."
+                ]
+              }
+            ]
+          },
+          "transfer": {
+            "prompt": "A routing table shows current cost 8. Another route reaches a neighbor at cost 4, then crosses a link of cost 6. Should the table change?",
+            "answer": "Keep 8: the candidate route costs 10 and is more expensive."
+          }
+        },
+        {
+          "key": "sample-minimum-proof",
+          "label": "Exercise 2",
+          "title": "Why settling a distance is safe",
+          "sources": [
+            {
+              "key": "weighted",
+              "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ],
+          "statement": [
+            {
+              "kind": "text",
+              "title": "The proof problem",
+              "sources": [
+                "weighted"
+              ],
+              "paragraphs": [
+                "A directed graph has nonnegative edge weights. Every settled vertex has its shortest distance, and all its outgoing edges have been relaxed. The algorithm chooses unsettled X with the smallest tentative distance. Explain why a later path cannot make that distance smaller."
+              ]
+            }
+          ],
+          "objectives": [
+            "Use nonnegativity and the first unsettled vertex to justify the settling rule."
+          ],
+          "prerequisites": [],
+          "steps": [
+            {
+              "key": "first-unsettled",
+              "purpose": "Connect the relaxation boundary to a contradiction rather than repeat the procedure.",
+              "prompt": "Suppose a cheaper path to X exists. What can you say about its first unsettled vertex Y?",
+              "hints": [
+                "Look at the predecessor of Y on that path.",
+                "Its predecessor is settled and has already relaxed the edge to Y.",
+                "Compare d(X), d(Y), the cost of the path prefix to Y, and the complete proposed path."
+              ],
+              "check": {
+                "kind": "self_check",
+                "rubric": [
+                  "Choose the first unsettled vertex Y on the hypothetical cheaper path.",
+                  "Its settled predecessor has relaxed the edge, so d(Y) is at most the prefix cost.",
+                  "Nonnegative remaining edges make the prefix no more expensive than the complete path.",
+                  "The minimum-choice rule says d(X) is at most d(Y), contradicting a cheaper path."
+                ],
+                "model_answer": "Take the first unsettled vertex Y on the proposed cheaper path. Its settled predecessor already relaxed the edge to Y, so d(Y) is at most the prefix cost. The remaining edges are nonnegative. Thus d(X) is at most d(Y), which is at most the prefix cost and at most the whole path cost. The whole path therefore cannot be cheaper than d(X)."
+              },
+              "explanation": "The proof joins the relaxation boundary, minimum choice, and nonnegative suffix; each assumption is needed."
+            }
+          ],
+          "solution": {
+            "origin": "authored",
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Worked proof",
+                "sources": [
+                  "weighted"
+                ],
+                "paragraphs": [
+                  "Take the first unsettled vertex Y on a hypothetical cheaper path to X. Its predecessor is settled, so its outgoing edge has been relaxed and d(Y) is no greater than that path prefix. Since all suffix weights are nonnegative, the prefix costs no more than the whole path. Choosing minimum tentative X gives d(X) \u2264 d(Y) \u2264 prefix cost \u2264 whole path cost, contradicting a path cheaper than d(X)."
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

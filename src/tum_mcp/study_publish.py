@@ -22,24 +22,41 @@ from tum_mcp.study_publish_models import (
     save_publication,
 )
 from tum_mcp.study_publish_site import commit_site, export_site, site_digest
-from tum_mcp.study_store import Write, apply, confined, load_state, read_bytes
+from tum_mcp.study_store import (
+    Write,
+    apply,
+    load_state,
+    private_name,
+    private_path,
+    read_bytes,
+)
 
 
-def configure(root: Path, *, repository: str | None = None) -> Publication:
+def configure(
+    root: Path, *, repository: str | None = None, include_exercises: bool | None = None
+) -> Publication:
     """Create a private repository only after the caller explicitly requests a public site."""
     from pydantic import TypeAdapter, ValidationError
 
     root = root.expanduser().resolve()
-    with FileLock(str(confined(root, ".study-publish.lock"))):
+    with FileLock(str(private_path(root, "publish.lock"))):
         previous = load_publication(root)
         if previous is not None:
             if repository is not None and repository.casefold() != previous.repository.casefold():
                 raise CampusError(
                     Code.WORKSPACE_CONFLICT, "This course already has a publishing repository."
                 )
+            if include_exercises is not None and include_exercises != previous.include_exercises:
+                previous = previous.model_copy(update={"include_exercises": include_exercises})
+                save_publication(root, previous)
             return previous
         course = load_state(root).course
         interrupted = load_setup(root)
+        exercise_scope = (
+            include_exercises
+            if include_exercises is not None
+            else (interrupted.include_exercises if interrupted else False)
+        )
         if (
             interrupted is not None
             and repository is not None
@@ -74,13 +91,23 @@ def configure(root: Path, *, repository: str | None = None) -> Publication:
                 )
         if remote is None:
             owner, name = chosen.split("/")
-            setup_path = confined(root, SETUP)
+            setup_path = private_path(root, SETUP)
             setup = PublicationSetup(
                 course_identity=course_identity(course),
                 repository=chosen,
                 public_site=True,
+                include_exercises=exercise_scope,
             )
-            apply(root, (Write(SETUP, read_bytes(setup_path), setup.model_dump_json().encode()),))
+            apply(
+                root,
+                (
+                    Write(
+                        private_name(root, SETUP),
+                        read_bytes(setup_path),
+                        setup.model_dump_json().encode(),
+                    ),
+                ),
+            )
             endpoint = (
                 "user/repos"
                 if owner.casefold() == account.login.casefold()
@@ -110,10 +137,11 @@ def configure(root: Path, *, repository: str | None = None) -> Publication:
             branch=remote.default_branch,
             commit=head.object.sha,
             public_site=True,
+            include_exercises=exercise_scope,
         )
         # Save before uploading: an interrupted setup retries the same repository.
         save_publication(root, publication)
-        confined(root, SETUP).unlink(missing_ok=True)
+        private_path(root, SETUP).unlink(missing_ok=True)
         return publication
 
 
@@ -130,14 +158,14 @@ def publish(
     root = root.expanduser().resolve()
     if rebuild:
         build(root, publish=False)
-    with FileLock(str(confined(root, ".study-publish.lock"))):
+    with FileLock(str(private_path(root, "publish.lock"))):
         publication = load_publication(root)
         if publication is None:
             raise CampusError(
                 Code.ACTION_REQUIRED, "Configure study publish with --public-site first."
             )
-        with FileLock(str(confined(root, ".study-update.lock"))):
-            site = export_site(root)
+        with FileLock(str(private_path(root, "update.lock"))):
+            site = export_site(root, include_exercises=publication.include_exercises)
         fingerprint = site_digest(site)
         if (
             fingerprint == publication.site_digest

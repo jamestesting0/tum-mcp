@@ -33,7 +33,7 @@ try {
   run(process.execPath, [launcher, 'setup', '--client', 'generic']);
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'data/runtime.json'), 'utf8')), first);
   const skills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate']));
-  assert.deepEqual(skills.checked_skills.toSorted(), ['audio-notes', 'prepare-study', 'publish-study', 'read-content', 'sync-study']);
+  assert.deepEqual(skills.checked_skills.toSorted(), ['audio-notes', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course']);
   assert.deepEqual(skills.errors, []);
   const diagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--json']));
   assert.equal(diagnostics.live_authentication, 'not_checked');
@@ -90,7 +90,7 @@ for name in ('cursor','antigravity'):
   const boundStatus = status();
   assert.equal(boundStatus.mode, 'sync');
   assert.equal(boundStatus.course.synthetic, true);
-  const studyState = join(studyProject, '.study/state.json');
+  const studyState = join(studyProject, '.tum-mcp/state.json');
   writeFileSync(studyState, 'synthetic damaged study state');
   assert.equal(status().mode, 'recover');
   assert.equal(readFileSync(studyState, 'utf8'), 'synthetic damaged study state');
@@ -99,6 +99,12 @@ for name in ('cursor','antigravity'):
     // Windows browsers require the OS account's known-folder environment. They
     // still receive Playwright's separate temporary profile, never the real one.
     const browserEnv = { ...env };
+    const studyFixtureRoot = join(root, 'course-fixture');
+    mkdirSync(studyFixtureRoot);
+    for (const name of ['snapshot.json', 'content.json']) {
+      writeFileSync(join(studyFixtureRoot, name), readFileSync(new URL(`../tests/fixtures/course_app/${name}`, import.meta.url)));
+    }
+    browserEnv.TUM_MCP_STUDY_QA_FIXTURE = studyFixtureRoot;
     if (process.platform === 'win32') {
       for (const name of ['HOME', 'USERPROFILE']) if (process.env[name]) browserEnv[name] = process.env[name];
     }
@@ -148,11 +154,11 @@ anyio.run(check)
   const demoProject = join(root, 'Synthetic course');
   run(process.execPath, [launcher, 'study', 'demo', demoProject]);
   const template = JSON.parse(run(process.execPath, [launcher, 'study', 'template']));
-  assert.equal(template.author, 'study/content.json');
+  assert.equal(template.author, 'app/content.json');
   assert.ok(['flashcards.mjs', 'navigation.mjs', 'revision.mjs'].every(file => template.files.includes(file)));
   assert.match(template.revision, /^[a-f0-9]{64}$/);
   const study = JSON.parse(run(process.execPath, [launcher, 'study', 'inspect', demoProject]));
   assert.equal(study.course.synthetic, true); assert.deepEqual(study.stale_units, []);
-  assert.ok(readFileSync(join(demoProject, 'study', 'reading.mjs'), 'utf8').includes('renderReading'));
-  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: 5, studyStateRoutingPassed: true, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
+  assert.ok(readFileSync(join(demoProject, 'app', 'reading.mjs'), 'utf8').includes('renderReading'));
+  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: skills.checked_skills.length, studyStateRoutingPassed: true, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
 } finally { rmSync(root, { recursive: true, force: true }); }

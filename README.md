@@ -3,7 +3,7 @@
 Connect your coding agent to Moodle, Artemis and Zulip. Read course content and
 build a private, source-backed study workspace. Unofficial; independent of TUM.
 
-**Latest release: [0.6.1](https://www.npmjs.com/package/@jamestesting888/tum-mcp).**
+**Package: [@jamestesting888/tum-mcp](https://www.npmjs.com/package/@jamestesting888/tum-mcp).**
 [Release notes](CHANGELOG.md).
 
 ## Agent setup
@@ -37,7 +37,7 @@ complete sign-in there. Only selected tabs open; Zulip needs no API key.
 Enable the [course and channel scopes](docs/tum-mcp.md#connections-and-scopes) you want to use.
 
 Choose a client with `--client`: `codex`, `claude`, `cursor` or `antigravity`.
-Setup configures MCP and installs all five skills; follow any activation or
+Setup configures MCP and installs all six skills; follow any activation or
 restart prompts. Use `generic` for manual MCP setup.
 
 For existing Cursor and Antigravity setups, run `tum-mcp update` to add the skills.
@@ -63,15 +63,16 @@ posting and read-state changes are unavailable.
 
 ### Skills and example requests
 
-The package includes five skills. Once you've chosen a course from
+The package includes six skills. Once you've chosen a course from
 your connections, try requests like these:
 
 | Skill | Use it to | Example request |
 | --- | --- | --- |
 | `read-content` | Read and explain course sources with citations | "Can you explain what we covered in last week's lecture?" |
-| `sync-study` | Create or refresh a course project | "Set up a study project for this course." |
+| `sync-course` | Create or refresh a course project | "Set up a study project for this course." |
 | `prepare-study` | Build lessons, flashcards and practice | "Make me a study website with flashcards and practice questions." |
-| `publish-study` | Put a prepared website on GitHub Pages | "Put my study site online so I can open it on my phone." |
+| `prepare-exercises` | Prepare optional hints, checks and worked solutions | "Help me work through this week's exercises in the same app." |
+| `publish-course` | Put a prepared website on GitHub Pages | "Put my study site online so I can open it on my phone." |
 | `audio-notes` | Save spoken lessons under `audio/` | "Turn this into audio notes I can listen to on the go." |
 
 Useful follow-ups in an existing project:
@@ -86,11 +87,12 @@ Client setup installs managed copies of the
 
 ### Recommended study flow
 
-1. **`sync-study`**: Set up a project for your course and collect its material.
+1. **`sync-course`**: Set up a project for your course and collect its material.
    Use it again when new material is available.
 2. **`prepare-study`**: Turn that material into a study website with explanations,
-   flashcards and practice questions.
-3. **`publish-study`** (optional): Put the website online so you can study on your
+   flashcards and practice questions. Use **`prepare-exercises`** for released sheets
+   with prepared interactive guidance. Both workspaces share one app; either can come first.
+3. **`publish-course`** (optional): Put the website online so you can study on your
    phone. Check the [publishing requirements](#publish-for-phone-access-optional) first.
 4. **`audio-notes`** (optional): Turn the prepared content into spoken lessons.
    Use them to revisit prepared topics while walking or commuting.
@@ -139,19 +141,20 @@ your project looks like this, with audio added when requested:
 
 ```text
 my-course/
-├── AGENTS.md                 Course overview and source index for your agent
+├── AGENTS.md                 Your rules and a short pointer to agent context
 ├── materials/
 │   ├── content/              Lectures, slides and reading
 │   ├── exercises/            Exercise sheets and practice material
 │   ├── exams/                Available exam and revision material
 │   └── other/                Announcements and course information
-├── study/
+├── app/
 │   ├── content.json          Lessons, flashcards and practice questions
 │   └── index.html            Your study website
 ├── audio/                    Optional audio notes
 │   ├── scripts/              Narration text
 │   └── tracks/               Audio lessons
-└── .study/
+└── .tum-mcp/
+    ├── course.md             Cited course orientation, rules and unknowns
     ├── state.json            Course identity and source versions
     └── comments.json         Passage comments, when added
 ```
