@@ -10,12 +10,15 @@ Choose the route needed; known IDs go directly to the read tool.
 | Own programming feedback | `artemis_get_feedback` with the exact full built commit and graded/practice mode from the user/record. |
 | Course inventory | List both lectures and exercises. Teaching units include text, slides, video/online links and embedded exercise references. |
 
-Use `artemis_list_courses` only for missing course metadata; discovery grants no
-content access. Lecture start dates do not hide already released self-study units.
+Use `artemis_list_courses` only for missing course metadata. It lists active courses
+available to the account; titles alone may not establish a semester. Match current-term
+Moodle metadata or the course handbook when needed, rather than fetching every exercise.
+Server permissions determine access. Lecture start dates do not hide released self-study units.
 Preserve lecture/unit order and distinguish teaching from assignments.
 
 Only student PDF variants are retrieved; never substitute staff originals.
 Video links are not transcripts. Unsupported/external units are coverage gaps.
 Exams, quizzes and unreleased exercises are outside these reads. Missing
-participation is not permission to create one. Feedback needs its personal-read
-scope; distinguish pending/withheld results from visible success, never hidden-test success.
+participation is not permission to create one. Existing own participation and visible feedback
+need no extra local grant; distinguish pending/withheld results from visible success,
+never hidden-test success.

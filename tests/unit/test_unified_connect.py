@@ -124,16 +124,18 @@ def test_timeout_preserves_completed_connections_and_closes_browser(
     browser.close.assert_called_once()
 
 
-def test_reconnect_cannot_restore_scopes_revoked_during_sign_in(
+def test_reconnect_preserves_settings_changed_during_sign_in(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path))
-    original = Account(provider=Provider.ARTEMIS, origin=ARTEMIS, principal="7", courses=(1, 2))
+    original = Account(
+        provider=Provider.ARTEMIS, origin=ARTEMIS, principal="7", workspace_writes=True
+    )
     save_account(original)
     stale = preferences().accounts[0]
-    save_account(stale.model_copy(update={"courses": ()}))
+    save_account(stale.model_copy(update={"workspace_writes": False}))
     revision = preferences().accounts[0].scope_revision
-    save_account(stale, preserve_scopes=True)
+    save_account(stale, preserve_settings=True)
     current = preferences().accounts[0]
-    assert current.courses == () and current.scope_revision == revision
+    assert not current.workspace_writes and current.scope_revision == revision
     assert "synthetic" not in json.dumps(current.model_dump(mode="json"))

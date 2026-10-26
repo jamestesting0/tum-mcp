@@ -31,6 +31,7 @@ Id = Annotated[int, Field(gt=0)]
 
 class Status(Frozen):
     accounts: tuple["AccountStatus", ...]
+    read_access: Literal["server_permissions"] = "server_permissions"
     remote_action_status: str = "read_only"
     fetched_at: float
 
@@ -53,7 +54,7 @@ class CapabilityStatus(Frozen):
 
 @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
 def tum_status() -> Status:
-    """Show configured account scopes without loading secrets or making network calls."""
+    """Show connected account settings without loading secrets or making network calls."""
     return Status(
         accounts=tuple(
             AccountStatus(account_id=a.id, configuration=a) for a in preferences().accounts
@@ -64,7 +65,7 @@ def tum_status() -> Status:
 
 @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
 def tum_get_preferences() -> Preferences:
-    """Read user preferences. Permissions can only be changed through the local CLI."""
+    """Read local preferences. Campus services determine read access after sign-in."""
     return preferences()
 
 
@@ -105,19 +106,19 @@ def tum_capabilities(account_id: str, provider: Provider) -> CapabilityStatus:
 
 @server.tool(annotations=READ)
 def zulip_list_channels(account_id: str, cursor: str | None = None) -> Channels:
-    """Discover channel metadata; discovery does not grant message access."""
+    """List server-visible public and subscribed private channels with pagination."""
     return Zulip(API(find_account(account_id, Provider.ZULIP))).channel_page(cursor)
 
 
 @server.tool(annotations=READ)
 def zulip_list_topics(account_id: str, channel_id: Id, cursor: str | None = None) -> Topics:
-    """List topics in one locally enabled, server-readable channel."""
+    """List topics in one server-accessible channel."""
     return Zulip(API(find_account(account_id, Provider.ZULIP))).topics(channel_id, cursor)
 
 
 @server.tool(annotations=READ)
 def zulip_search_messages(account_id: str, search: Query) -> MessagePage:
-    """Search one enabled channel, with query-bound pagination and honest coverage."""
+    """Search one server-accessible channel with query-bound pagination and honest coverage."""
     return Zulip(API(find_account(account_id, Provider.ZULIP))).messages(search)
 
 
@@ -133,7 +134,7 @@ def zulip_read_topic(
 
 @server.tool(annotations=READ)
 def zulip_get_message(account_id: str, channel_id: Id, message_id: Id) -> MessagePage:
-    """Re-fetch a cited message, checking current channel scope before returning it."""
+    """Re-fetch a cited message, checking current server access to its channel."""
     return Zulip(API(find_account(account_id, Provider.ZULIP))).messages(
         Query(channel_id=channel_id), message_id=message_id
     )
@@ -161,7 +162,7 @@ def zulip_save_checkpoint(account_id: str, channel_id: Id, message_id: Id) -> Ch
 
 @server.tool(annotations=READ)
 def artemis_list_courses(account_id: str) -> CourseDirectory:
-    """List available Artemis course metadata; this does not grant content access."""
+    """List active Artemis course metadata available to the connected account."""
     courses = Artemis(API(find_account(account_id, Provider.ARTEMIS))).courses()
     return CourseDirectory(account_id=account_id, courses=courses.root)
 
@@ -174,7 +175,7 @@ def artemis_list_exercises(account_id: str, course_id: Id) -> Overview:
 
 @server.tool(annotations=READ)
 def artemis_list_lectures(account_id: str, course_id: Id) -> LectureDirectory:
-    """List student-visible lecture metadata in an enabled course, including tutorials."""
+    """List student-visible lecture metadata in an accessible course, including tutorials."""
     from tum_mcp.artemis.lectures import Lectures
 
     return Lectures(Artemis(API(find_account(account_id, Provider.ARTEMIS)))).directory(course_id)

@@ -112,13 +112,14 @@ def test_connect_in_a_pipe_returns_an_actionable_error_without_opening_chrome(
 
 
 @pytest.mark.parametrize("expired", [False, True])
+@pytest.mark.parametrize("provider", [Provider.ARTEMIS, Provider.ZULIP])
 def test_live_doctor_verifies_identity_without_reading_course_content(
-    expired: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    expired: bool, provider: Provider, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "campus"))
     monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "moodle"))
     account = Account(
-        provider=Provider.ARTEMIS, origin="https://artemis.tum.de", principal="7", courses=(1,)
+        provider=provider, origin=f"https://{provider.value}.example.invalid", principal="7"
     )
     save_account(account)
     Vault().save(account, Credential(account_id=account.id))
@@ -129,15 +130,21 @@ def test_live_doctor_verifies_identity_without_reading_course_content(
         if expired:
             raise CampusError(Code.AUTH_REQUIRED, "Reconnect this account.")
 
-    monkeypatch.setattr("tum_mcp.artemis.Artemis.identity", identity)
+    identity_method = (
+        "tum_mcp.artemis.Artemis.identity"
+        if provider == Provider.ARTEMIS
+        else "tum_mcp.zulip.Zulip.identity"
+    )
+    monkeypatch.setattr(identity_method, identity)
     monkeypatch.setattr(auth, "system_keyring", lambda: pytest.fail("No native-store reads"))
     local = collect_diagnostics(home=tmp_path)
     assert calls == []
     assert (
-        next(item for item in local.services if item.label == "Artemis").state == State.CONFIGURED
+        next(item for item in local.services if item.label == provider.value.title()).state
+        == State.CONFIGURED
     )
     live = collect_diagnostics(live=True, home=tmp_path)
-    checked = next(item for item in live.services if item.label == "Artemis")
+    checked = next(item for item in live.services if item.label == provider.value.title())
     assert checked.state == (State.ACTION if expired else State.READY)
     assert calls == ["identity"]
 

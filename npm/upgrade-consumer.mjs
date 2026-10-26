@@ -12,7 +12,7 @@ assert.ok(process.env.npm_execpath, 'Run with npm run test:upgrade.');
 const allowed = new Set(['PATH', 'SYSTEMROOT', 'COMSPEC', 'TMPDIR', 'TMP', 'TEMP', 'LOCALAPPDATA', 'APPDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'WSL_INTEROP', 'WSL_DISTRO_NAME', 'WSLENV']);
 const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) => allowed.has(name.toUpperCase())));
 const records = [];
-for (const previousVersion of ['0.6.1']) {
+for (const previousVersion of ['0.7.0']) {
   const root = mkdtempSync(join(tmpdir(), 'tum-mcp upgrade Ω-'));
   const home = join(root, 'profile'); mkdirSync(home);
   const env = { ...inherited, HOME: home, USERPROFILE: home,

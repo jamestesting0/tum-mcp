@@ -1,6 +1,6 @@
 # Setup and troubleshooting
 
-[README](../README.md) · [Tools and scopes](tum-mcp.md) · [Development](development.md)
+[README](../README.md) · [Tools and access](tum-mcp.md) · [Development](development.md)
 
 Use the latest package for the connection, managed update and removal flows below.
 
@@ -16,6 +16,7 @@ npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp setup --client codex
 tum-mcp connect
 tum-mcp doctor
+tum-mcp --help
 ```
 
 Use `--client claude`, `cursor`, `antigravity`, or `generic` for another client.
@@ -46,10 +47,11 @@ For another Chromium build, set `TUM_MCP_BROWSER` to its executable path before
 running connect. Compatible builds must allow Playwright automation. Safari and
 Firefox are not supported.
 
-New Artemis/Zulip accounts start without content scopes. Your agent can use
-status/discover to show account IDs and available course/channel metadata, then
-help you choose [explicit scopes](tum-mcp.md#connections-and-scopes).
+After sign-in, Artemis and Zulip can read content available to your campus account.
+No local course/channel grants are required. Your agent uses status/discover and
+course metadata to find relevant current-semester material, then makes bounded reads.
 An account ID identifies a saved service connection; it is not your TUM login.
+`tum-mcp --help` lists commands; `tum-mcp study build --help` shows command options.
 
 ## WSL
 
@@ -102,7 +104,7 @@ browser discovery still requires functioning interop.
   The [publishing workflow](study.md#publish-a-study-website) uses private repositories
   with public Pages websites and requires an eligible paid GitHub plan.
 - An expired session uses the same `tum-mcp connect` selector. Reconnecting the
-  same identity preserves course/channel scopes.
+  same identity preserves saved preferences.
 - If no browser appears, check its installation or `TUM_MCP_BROWSER`. A managed
   or incompatible Chromium build may prevent automation; try another browser.
 - Git and Docker are optional. Neither is needed for course reads or the
@@ -111,7 +113,7 @@ browser discovery still requires functioning interop.
 
 Sessions are encrypted with owner-restricted local key files. This avoids native
 credential-store prompts, but anyone obtaining both key and ciphertext can
-decrypt them. [Storage locations and recovery](tum-mcp.md#connections-and-scopes)
+decrypt them. [Storage locations and recovery](tum-mcp.md#connections-and-read-access)
 explain where sessions are saved and how to back them up.
 
 ## Update and remove
@@ -123,7 +125,7 @@ tum-mcp update
 From 0.6.1, `update` retrieves the latest npm release, validates its backend in a
 temporary installation, replaces the invoked package and refreshes previously
 configured clients. It preserves the installation prefix and global/local mode.
-It does not connect services, change scopes or register additional clients.
+It does not connect services, change preferences or register additional clients.
 It never downgrades a newer installation. `update --local` skips npm and repairs
 or refreshes the installed version. Source/pinned builds use this local mode;
 temporary npx and linked source installations are not replaced automatically.

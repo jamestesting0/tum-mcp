@@ -1,4 +1,4 @@
-"""Scoped Artemis lecture reading, always using the student attachment variant."""
+"""Artemis lecture reading, always using the student attachment variant."""
 
 import hashlib
 import re
@@ -49,8 +49,6 @@ class Lectures:
         self.api = artemis.api
 
     def directory(self, course_id: int) -> LectureDirectory:
-        if course_id not in self.api.account.courses:
-            raise CampusError(Code.SCOPE_DENIED, "Enable this Artemis course in the local CLI.")
         self.artemis.identity()
         lectures = decode(
             LectureList, self.api.get(f"/api/lecture/courses/{course_id}/lectures-for-overview")

@@ -3,6 +3,9 @@
 Reuse channel IDs or an existing mapping. Resolve missing mappings with
 `tum_get_preferences`/`tum_resolve_course`; use `zulip_list_channels` for discovery.
 Similar names do not establish course identity or message permission.
+Public and subscribed private channels returned by the server need no local grant.
+Prefer the relevant current-semester channel and requested time window; check
+channel/topic metadata before reading history. Keep cursors tied to their query.
 
 For facts, call `zulip_search_messages` with search.channel_id, a focused query,
 relevant dates and bounded limit/max_chars. Expand decisive context with

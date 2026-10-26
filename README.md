@@ -30,11 +30,13 @@ npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp setup --client codex
 tum-mcp connect
 tum-mcp doctor
+tum-mcp --help
 ```
 
 Select services with **Space**, then **Enter**. Choose an installed browser and
 complete sign-in there. Only selected tabs open; Zulip needs no API key.
-Enable the [course and channel scopes](docs/tum-mcp.md#connections-and-scopes) you want to use.
+Read access follows your campus account's permissions; no course/channel scope setup is needed.
+Use `tum-mcp study build --help` for a command's options.
 
 Choose a client with `--client`: `codex`, `claude`, `cursor` or `antigravity`.
 Setup configures MCP and installs all six skills; follow any activation or
@@ -132,7 +134,7 @@ See [publishing details](docs/study.md#publish-a-study-website).
 Sign-in and MFA happen in a temporary browser window. Only service-owned session
 cookies are retained; identity-provider cookies are discarded when it closes.
 Sessions stay on your computer in encrypted files with owner-restricted keys.
-Configured local clients share those connections and selected scopes.
+Configured local clients share those connections and saved preferences.
 
 ## Your study project
 
@@ -173,7 +175,7 @@ tum-mcp update
 same npm location and refreshes configured clients. It never downgrades a newer
 installation. Use `tum-mcp update --local` to refresh the installed version without checking npm.
 From 0.6.0 or earlier, upgrade the npm package once to obtain this command.
-Sessions, scopes and downloads carry forward. User-edited entries and skills are
+Sessions, preferences and downloads carry forward. User-edited entries and skills are
 preserved and reported for review. Reload the client; refresh its cached plugin
 if needed. Study sites are updated separately through the study workflows.
 

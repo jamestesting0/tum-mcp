@@ -15,9 +15,7 @@ from tum_mcp.transport import API
 @pytest.fixture
 def lecture_api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path))
-    account = Account(
-        provider=Provider.ARTEMIS, origin="https://artemis.tum.de", principal="7", courses=(9,)
-    )
+    account = Account(provider=Provider.ARTEMIS, origin="https://artemis.tum.de", principal="7")
     attachment = {
         "id": 14,
         "name": "Student slides",
@@ -93,13 +91,6 @@ def test_teaching_content_is_preserved_without_completion_or_hidden_units(lectur
         for word in ("completed", "hidden-future", "hidden-unit", "staff-only", "staff-original")
     )
     assert all(method == "GET" for method, _ in calls)
-
-
-def test_course_scope_is_checked_before_any_http(lecture_api):
-    provider, _, calls = lecture_api
-    with pytest.raises(CampusError, match="SCOPE_DENIED"):
-        provider.lecture(99, 11)
-    assert calls == []
 
 
 def test_lecture_must_belong_to_selected_course_before_details_request(lecture_api):

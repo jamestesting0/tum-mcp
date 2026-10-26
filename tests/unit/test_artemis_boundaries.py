@@ -20,7 +20,6 @@ def provider(
         provider=Provider.ARTEMIS,
         origin="https://artemis.tum.de",
         principal="7",
-        courses=(77,),
         sensitive_reads=sensitive,
         workspace_writes=workspace_enabled,
     )
@@ -84,7 +83,7 @@ def provider(
 
 def test_feedback_matches_exact_revision_and_mode() -> None:
     # Given a visible completed result for one precise participation/revision.
-    artemis = provider()
+    artemis = provider(sensitive=False)
     exercise = artemis.exercise(77, 11).exercise
     # When that revision is requested.
     result = artemis.feedback(exercise, "graded", COMMIT)
@@ -117,15 +116,16 @@ def test_practice_does_not_reuse_graded_participation() -> None:
 
 
 def test_course_listing_omits_sensitive_records_and_assessments() -> None:
-    # Given a course response containing participation data and a quiz.
+    # Given old local grants for another course, plus participation data and a quiz.
     artemis = provider(sensitive=False)
+    artemis.api.account = artemis.api.account.model_copy(update={"courses": (99,)})
     # When released programming exercises are listed.
     result = artemis.exercises(77)
     # Then the public projection excludes both private records and assessments.
     assert [item.id for item in result.exercises] == [11]
     assert result.exercises[0].student_participations is None
     assert result.exercises[0].problem_statement is None
-    assert artemis.exercise(77, 11).exercise.student_participations is None
+    assert artemis.exercise(77, 11).exercise.student_participations[0].id == 9
 
 
 def test_cross_course_exercise_response_is_rejected() -> None:
@@ -152,12 +152,21 @@ def test_existing_unrelated_workspace_is_preserved(
     assert note.read_text(encoding="utf-8") == "Keep my work"
 
 
-def test_unselected_course_is_denied_before_credentials() -> None:
-    # Given no configured read grant for a course.
+def test_course_access_denied_by_server_is_preserved() -> None:
+    # Given a connected identity whose server denies this course.
     account = Account(provider=Provider.ARTEMIS, origin="https://artemis.tum.de", principal="7")
-    # When a direct provider call bypasses skill instructions, then it still fails closed.
-    with pytest.raises(CampusError, match="SCOPE_DENIED"):
-        Artemis(API(account)).exercises(77)
+    routes = {
+        "/api/core/public/account": httpx2.Response(200, json={"id": 7, "login": "student"}),
+        "/api/course/courses/77/exercises-for-overview": httpx2.Response(403),
+    }
+    api = API(
+        account,
+        Credential(account_id=account.id),
+        httpx2.MockTransport(lambda request: routes[request.url.path]),
+    )
+    # When reading without local grants, then server-side authorization still applies.
+    with pytest.raises(CampusError, match="AUTH_REQUIRED"):
+        Artemis(api).exercises(77)
 
 
 def test_read_grants_do_not_authorize_workspace_creation() -> None:

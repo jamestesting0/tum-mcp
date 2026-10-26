@@ -1,5 +1,13 @@
 # Changes
 
+## 0.8.0 — 2026-10-26
+
+- Read Artemis courses, lectures, exercises, own feedback and accessible Zulip
+  channels after sign-in without separate local scope grants. Preserve server
+  permissions, bounded queries and disabled remote writes.
+- Keep standard `--help` for command discovery and guide agents toward relevant
+  current-semester metadata before retrieving course content.
+
 ## 0.7.0 — 2026-10-26
 
 - Share one course app between Study and Exercises, with a single workspace

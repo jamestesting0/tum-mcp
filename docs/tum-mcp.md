@@ -1,16 +1,16 @@
 # TUM MCP guide
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
-Development version **0.6.1 (unreleased)** adds npm package management to the
-read-only course retrieval and six local course workflows.
+The package combines read-only course retrieval, managed client installation and
+six local course workflows.
 
 ## Current capabilities
 
 The sixteen `moodle_*` tools provide materials, announcements, forums and
-explicitly scoped private-record reads. Artemis adds
+own grades, feedback and submission reads. Artemis adds
 available-course metadata, lectures and learning units, student PDF attachments,
 released non-quiz statements and permitted exact-commit feedback. Zulip provides
-scoped channel/topic search and cited discussion reads.
+bounded channel/topic search and cited discussion reads.
 
 Website access is read-only. There are no public exercise workspace, test-run,
 submission, start, deployment, rebuild or push workflows.
@@ -28,7 +28,7 @@ Lecture routes were checked against the
 [Artemis source](https://github.com/ls1intum/Artemis/blob/88824427f7ea38512606824c58b8858e539eb2eb/src/main/java/de/tum/cit/aet/artemis/lecture/web/LectureResource.java)
 and the
 [student file boundary](https://github.com/ls1intum/Artemis/blob/88824427f7ea38512606824c58b8858e539eb2eb/src/main/java/de/tum/cit/aet/artemis/core/web/FileResource.java).
-Synthetic fixtures are the default. Live checks remain private and use explicit scopes.
+Synthetic fixtures are the default. Live checks remain private and relevant to the requested task.
 
 ## Build and test the local package
 
@@ -91,15 +91,17 @@ Python 3.13+, uv, and Git: run `uv sync --locked`, then
 `uv run tum-mcp setup --client generic` from the checkout. An installed Chromium browser is needed for
 browser onboarding. See [setup](setup.md) for browser choices and WSL.
 
-## Connections and scopes
+<a id="connections-and-scopes"></a>
+
+## Connections and read access
 
 ```sh
 tum-mcp connect
 tum-mcp status
 tum-mcp discover artemis ACCOUNT_ID
 tum-mcp discover zulip ACCOUNT_ID
-tum-mcp scope artemis ACCOUNT_ID --course COURSE_ID --sensitive
-tum-mcp scope zulip ACCOUNT_ID --channel CHANNEL_ID
+tum-mcp --help
+tum-mcp study build --help
 ```
 
 `connect` takes no arguments or connection options. Move with up/down, toggle
@@ -119,10 +121,12 @@ when the temporary browser closes. Existing browser profiles are never imported.
 Zulip uses its read-only `/json/` routes with the browser session; no API key is
 required. Reconnect through the same selector when a session expires.
 See [Zulip's dispatcher](https://github.com/zulip/zulip/blob/12.0/zerver/lib/rest.py).
-Existing scopes survive reconnection; new identities start with empty scopes.
-Private Zulip channels require `--private-channel ID` as well as `--channel ID`.
-`--sensitive` enables own Artemis participation/feedback reads. It grants no
-website mutation or local execution permission.
+Read access follows the authenticated account's server permissions. No local course,
+channel, private-channel or personal-feedback grant is required. Older saved grant
+fields remain readable for compatibility and do not restrict read access. Agents
+prefer relevant current-semester courses and channels, inspect metadata first, and
+page through only the content needed for the request. Explicit older-course requests
+remain supported. Server-denied content, staff-only material and remote writes stay unavailable.
 
 Settings live outside the installed package in `TUMMCP/config/preferences.json`.
 Moodle sessions live under `TUMMoodle/local-session/`; Artemis and Zulip credentials
@@ -156,7 +160,7 @@ from activation; the host must confirm a running MCP connection after setup.
 Use `doctor --live` for bounded authenticated identity checks on saved local
 sessions and optional GitHub CLI authentication. Campus checks read Moodle's
 course overview and Artemis/Zulip identity only;
-it does not broaden content scopes. `doctor --json` emits schema-versioned JSON
+it does not change server permissions. `doctor --json` emits schema-versioned JSON
 without terminal styling; combine both flags for live automation. Paths appear
 in JSON for troubleshooting. Default diagnostics do not create state folders.
 

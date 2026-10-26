@@ -21,7 +21,7 @@ def setup(
 
     for name in client or []:
         install_client(name, host=host)
-    typer.echo("Runtime ready. Complete service connections and select scopes separately.")
+    typer.echo("Runtime ready. Run tum-mcp connect to sign in to the services you select.")
     if not client:
         typer.echo("Select adapters with --client codex, claude, cursor, antigravity, or generic.")
     from tum_mcp.moodle.browsers import is_wsl
@@ -53,7 +53,7 @@ def update() -> None:
     if rows:
         status_rows(console, rows)
     console.print(f"Refreshed {report['updated']} client(s); {report['needs_review']} need review.")
-    console.print("Sessions, scopes, downloads and previous runtimes are retained.")
+    console.print("Sessions, preferences, downloads and previous runtimes are retained.")
     if report["needs_review"]:
         raise typer.Exit(2)
 

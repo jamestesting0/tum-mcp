@@ -144,13 +144,12 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             label = provider.value.title() + (f" {index + 1}" if len(accounts) > 1 else "")
             path = data / "credentials/local" / f"{account.id}.enc"
             key = data / "credentials/local/session.key"
-            scopes = len(account.courses) if provider == Provider.ARTEMIS else len(account.channels)
-            unit = "courses" if provider == Provider.ARTEMIS else "channels"
             saved = path.is_file() and key.is_file()
             needs_connection |= not saved
             state = State.CONFIGURED if saved else State.ACTION
             detail = (
-                f"Saved locally; {scopes} enabled {unit}. Live authentication not checked."
+                "Saved locally; read access follows your campus account. "
+                "Live authentication not checked."
                 if saved
                 else "Reconnect for local encrypted storage; any legacy session is retained."
             )
@@ -165,23 +164,12 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
                         Artemis(api).identity()
                     else:
                         Zulip(api).identity()
-                    state = State.READY if scopes else State.ACTION
-                    detail = (
-                        f"Live identity verified; {scopes} enabled {unit}."
-                        if scopes
-                        else f"Live identity verified; choose {unit} with tum-mcp scope."
-                    )
+                    state = State.READY
+                    detail = "Live identity verified; read access follows your campus account."
                 except CampusError as error:
                     state, detail = State.ACTION, error.message
                     needs_connection = True
-            elif saved and not scopes:
-                state, detail = State.ACTION, f"Saved session; choose {unit} with tum-mcp scope."
             services.append(Check(label=label, state=state, detail=detail))
-            if saved and not scopes:
-                next_steps.append(
-                    f"tum-mcp discover {provider.value} ACCOUNT_ID"
-                    f" — choose {unit}, then use scope; status shows IDs"
-                )
     if needs_connection:
         next_steps.append("tum-mcp connect — sign in only to the services you select")
 

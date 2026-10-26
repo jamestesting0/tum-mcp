@@ -36,8 +36,6 @@ class Artemis:
         return decode(Courses, self.api.get("/api/course/courses/for-dropdown"))
 
     def exercises(self, course_id: int) -> Overview:
-        if course_id not in self.api.account.courses:
-            raise CampusError(Code.SCOPE_DENIED, "Enable this Artemis course in the local CLI.")
         self.identity()
         overview = decode(
             Overview, self.api.get(f"/api/course/courses/{course_id}/exercises-for-overview")
@@ -73,8 +71,6 @@ class Artemis:
             or (exercise.release_date is not None and exercise.release_date > datetime.now(UTC))
         ):
             raise CampusError(Code.SCOPE_DENIED, "Exercise identity, course, or release changed.")
-        if not self.api.account.sensitive_reads:
-            exercise = exercise.model_copy(update={"student_participations": None})
         return ExerciseView(
             account_id=self.api.account.id,
             instance_id=self.api.account.origin,
@@ -87,8 +83,6 @@ class Artemis:
     def participation(
         self, exercise: Exercise, mode: Literal["graded", "practice"]
     ) -> Participation:
-        if not self.api.account.sensitive_reads:
-            raise CampusError(Code.SCOPE_DENIED, "Enable own participation/feedback reads locally.")
         matches = [
             item
             for item in exercise.student_participations or ()

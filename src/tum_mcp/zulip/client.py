@@ -1,4 +1,4 @@
-"""Live channel-scoped retrieval; messages are never written to the cache."""
+"""Bounded live retrieval from server-accessible channels; no message cache."""
 
 import hashlib
 import json
@@ -51,17 +51,7 @@ class Zulip:
             ),
         )
         return result.model_copy(
-            update={
-                "streams": tuple(
-                    item.model_copy(
-                        update={
-                            "locally_enabled": item.stream_id in self.api.account.channels,
-                            "content_access": "not_checked",
-                        }
-                    )
-                    for item in sorted(result.streams, key=lambda stream: stream.stream_id)
-                )
-            }
+            update={"streams": tuple(sorted(result.streams, key=lambda stream: stream.stream_id))}
         )
 
     def page[T](
@@ -88,15 +78,8 @@ class Zulip:
         )
 
     def require_channel(self, channel_id: int) -> Channel:
-        account = self.api.account
-        if channel_id not in account.channels:
-            raise CampusError(Code.SCOPE_DENIED, "Enable this channel in the local CLI first.")
         for channel in self.channels().streams:
             if channel.stream_id == channel_id:
-                if channel.invite_only and channel_id not in account.private_channels:
-                    raise CampusError(
-                        Code.SCOPE_DENIED, "Private-channel access needs a separate grant."
-                    )
                 return channel
         raise CampusError(Code.SCOPE_DENIED, "Channel not discoverable for this identity.")
 

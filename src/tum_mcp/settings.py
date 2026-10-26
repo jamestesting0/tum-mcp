@@ -32,6 +32,7 @@ class Account(Frozen):
     provider: Provider
     origin: str
     principal: str = Field(min_length=1, max_length=200)
+    # Accept legacy settings without requiring or applying these grants to reads.
     channels: tuple[PositiveId, ...] = ()
     private_channels: tuple[PositiveId, ...] = ()
     courses: tuple[PositiveId, ...] = ()
@@ -133,15 +134,15 @@ def preferences() -> Preferences:
         raise CampusError(Code.SCOPE_DENIED, "Invalid preferences; inspect them locally.") from None
 
 
-def save_account(account: Account, *, preserve_scopes: bool = False) -> None:
+def save_account(account: Account, *, preserve_settings: bool = False) -> None:
     with FileLock(str(config_dir() / "preferences.lock")):
         current = preferences()
         previous = next((item for item in current.accounts if item.id == account.id), None)
         revision = previous.scope_revision + 1 if previous else 1
-        # Reconnection must not restore scopes revoked while browser sign-in was open.
+        # Preserve settings changed while browser sign-in was open.
         updated = (
             previous
-            if preserve_scopes and previous is not None
+            if preserve_settings and previous is not None
             else account.model_copy(update={"scope_revision": revision})
         )
         accounts = tuple(item for item in current.accounts if item.id != account.id) + (updated,)

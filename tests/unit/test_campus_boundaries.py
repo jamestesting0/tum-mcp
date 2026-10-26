@@ -15,9 +15,7 @@ from tum_mcp.zulip.models import Query
 
 @pytest.fixture
 def account() -> Account:
-    return Account(
-        provider=Provider.ZULIP, origin="https://zulip.cit.tum.de", principal="7", channels=(42,)
-    )
+    return Account(provider=Provider.ZULIP, origin="https://zulip.cit.tum.de", principal="7")
 
 
 def credential(account: Account) -> Credential:
@@ -129,26 +127,33 @@ def test_zulip_search_preserves_scope_and_returns_partial_coverage(account: Acco
         provider.messages(Query(channel_id=42, query="other", cursor=page.next_cursor))
 
 
-@pytest.mark.parametrize("private,wrong_message", [(True, False), (False, True)])
-def test_zulip_rejects_private_scope_and_dm_leaks(
-    account: Account, private: bool, wrong_message: bool
+def test_zulip_private_channel_read_ignores_legacy_local_grants(
+    account: Account,
 ) -> None:
-    # Given private content without its separate scope grant.
-    provider = Zulip(zulip_api(account, private=private, wrong_message=wrong_message))
-    # When a direct tool-style request bypasses all skill instructions, then policy still holds.
+    # Given server access to channel 42 and old local grants for a different channel.
+    legacy = account.model_copy(update={"channels": (99,), "private_channels": (99,)})
+    provider = Zulip(zulip_api(legacy, private=True))
+    # When it is read, then old grant settings do not block the cited content.
+    assert provider.messages(Query(channel_id=42)).messages[0].id == 100
+
+
+def test_zulip_rejects_dm_leaks_in_channel_responses(account: Account) -> None:
+    # Given a server response containing a DM instead of the requested channel.
+    provider = Zulip(zulip_api(account, wrong_message=True))
+    # When it is read, then the unrelated content is rejected.
     with pytest.raises(CampusError, match="SCOPE_DENIED"):
         provider.messages(Query(channel_id=42))
 
 
-def test_zulip_denies_unselected_channel_before_account_access(account: Account) -> None:
-    # Given a connected identity without local access to channel 43.
-    provider = Zulip(API(account))
-    # When it is searched, then the request is rejected before loading credentials.
-    with pytest.raises(CampusError, match="Enable this channel"):
+def test_zulip_rejects_channel_missing_from_server_discovery(account: Account) -> None:
+    # Given an identity whose server only exposes channel 42.
+    provider = Zulip(zulip_api(account))
+    # When channel 43 is requested, then no message retrieval can occur.
+    with pytest.raises(CampusError, match="not discoverable"):
         provider.messages(Query(channel_id=43))
 
 
-def test_catch_up_checkpoint_contains_no_message_text_and_rechecks_scope(
+def test_catch_up_checkpoint_contains_no_message_text_and_rechecks_server_access(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     account: Account,
@@ -160,11 +165,19 @@ def test_catch_up_checkpoint_contains_no_message_text_and_rechecks_scope(
     provider = Zulip(zulip_api(account))
     # When the completed summary advances its integration-owned checkpoint.
     saved = save_checkpoint(provider, 42, 100)
-    # Then only identifiers persist and a revoked scope cannot read the checkpoint.
+    # Then only identifiers persist and removed server access blocks the checkpoint.
     assert saved.message_id == 100
     assert get_checkpoint(provider, 42).message_id == 100
     path = next((tmp_path / "checkpoints").glob("*.json"))
     assert b"Use the updated statement" not in path.read_bytes()
-    revoked = account.model_copy(update={"channels": ()})
+    routes = {
+        "/api/v1/users/me": {"user_id": 7, "email": "student@example.invalid"},
+        "/api/v1/streams": {"streams": []},
+    }
+    revoked = API(
+        account,
+        credential(account),
+        httpx2.MockTransport(lambda request: httpx2.Response(200, json=routes[request.url.path])),
+    )
     with pytest.raises(CampusError, match="SCOPE_DENIED"):
-        get_checkpoint(Zulip(zulip_api(revoked)), 42)
+        get_checkpoint(Zulip(revoked), 42)

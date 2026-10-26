@@ -19,7 +19,6 @@ from tum_mcp.settings import (
     Provider,
     find_account,
     preferences,
-    save_account,
 )
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
@@ -57,6 +56,7 @@ def status() -> None:
             {
                 "version": __version__,
                 "state": "configured_not_live_verified",
+                "read_access": "server_permissions",
                 "accounts": [
                     account.model_dump(mode="json") | {"account_id": account.id}
                     for account in preferences().accounts
@@ -116,47 +116,13 @@ def connect() -> None:
         console.print("Cancelled. Completed connections were saved.")
         raise typer.Exit(130) from None
     console.print()
-    console.print(
-        f"Saved {len(results)} connection(s). Existing course/channel scopes are preserved."
-    )
-    console.print("New Artemis/Zulip accounts need scope selection before content reads.")
-    console.print("Your coding agent can use status, discover and scope to help with your choices.")
-
-
-@app.command()
-def scope(
-    provider: Provider,
-    account_id: str,
-    channel: Annotated[list[int] | None, typer.Option()] = None,
-    private_channel: Annotated[list[int] | None, typer.Option()] = None,
-    course: Annotated[list[int] | None, typer.Option()] = None,
-    sensitive: Annotated[bool | None, typer.Option("--sensitive/--no-sensitive")] = None,
-) -> None:
-    """Replace explicitly supplied scopes. Only this local command can change grants."""
-    from tum_mcp.settings import Account
-
-    current = find_account(account_id, provider)
-    values = current.model_dump()
-    for key, replacement in (
-        ("channels", channel),
-        ("private_channels", private_channel),
-        ("courses", course),
-        ("sensitive_reads", sensitive),
-    ):
-        if replacement is not None:
-            values[key] = replacement
-    updated = Account.model_validate(values)
-    if not set(updated.private_channels).issubset(updated.channels):
-        raise CampusError(
-            Code.SCOPE_DENIED, "Private channels must also be in the channel allowlist."
-        )
-    save_account(updated)
-    typer.echo("Scope saved. Remote actions and DMs remain disabled.")
+    console.print(f"Saved {len(results)} connection(s). Read access follows your campus account.")
+    console.print("Your agent can discover courses and channels, then read the relevant material.")
 
 
 @app.command()
 def discover(provider: Provider, account_id: str) -> None:
-    """Explicitly discover channel/course metadata for local scope selection."""
+    """Discover accessible channel/course metadata for focused reads."""
     from tum_mcp.artemis import Artemis
     from tum_mcp.transport import API
     from tum_mcp.zulip import Zulip

@@ -9,7 +9,25 @@ let args = process.argv.slice(2);
 const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 try {
   if (args.length === 0 || (args.length === 1 && ['--help', '-h'].includes(args[0]))) {
-    console.log(`TUM MCP ${version}\nCommands: setup [--client codex|claude|cursor|antigravity|generic], connect, scope, discover, status, doctor [--json] [--live], serve, skills, study, logout, uninstall, update\nRun connect without arguments to select services and an installed Chromium browser. Run setup explicitly to provision the managed Python backend.`);
+    console.log(`TUM MCP ${version}
+Usage: tum-mcp COMMAND [OPTIONS]
+
+  setup       Configure your coding client and managed runtime
+  connect     Sign in to selected campus services
+  status      Show saved connections
+  discover    List accessible courses or channels
+  doctor      Check installation and authentication
+  update      Update the package and configured clients
+  uninstall   Remove managed setup and the npm package
+  logout      Remove one saved connection
+  serve       Run the MCP server over stdio
+  version     Show the installed version
+  skills      Manage local workflow skills
+  study       Prepare, preview and publish a course app
+
+Use --help for options, for example: tum-mcp study build --help
+Run setup to provision the managed backend, then connect to sign in.
+Reads use your campus account permissions; no local scope selection is needed.`);
   } else if (['--version', 'version'].includes(args[0])) {
     console.log(version);
   } else if (['setup', 'update', 'uninstall'].includes(args[0]) && args.some(arg => ['--help', '-h'].includes(arg))) {

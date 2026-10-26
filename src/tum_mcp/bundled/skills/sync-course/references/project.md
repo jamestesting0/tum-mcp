@@ -1,6 +1,6 @@
 # Snapshot and reconciliation contract
 
-The CLI validates local input; it does not authenticate sources or grant scopes.
+The CLI validates local input; it does not authenticate or retrieve campus sources.
 Verify the chosen course through connected metadata first. Keep its key, semester
 and existing provider bindings; mark unavailable bindings rather than deleting them.
 

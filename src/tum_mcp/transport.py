@@ -128,7 +128,8 @@ class API:
             ):
                 if response.status_code in {401, 403}:
                     raise CampusError(
-                        Code.AUTH_REQUIRED, "Account access denied; reconnect or check scope."
+                        Code.AUTH_REQUIRED,
+                        "Account access denied; reconnect or check server permissions.",
                     )
                 if response.status_code == 429:
                     raise CampusError(Code.RATE_LIMITED, "Provider rate limit; retry later.")

@@ -15,6 +15,9 @@ and relevant inventory records; reuse this check unless state changes. Status is
 One project holds one course/semester. Resolve an explicitly different request by
 verified identity, not title spelling; use a separate directory. Synthetic bindings
 stay separate from campus courses.
+Read access needs sign-in, not local course/channel grants. For a delegated course
+choice, prefer the current semester using available metadata; do not assume every
+active Artemis course belongs to that term. Reuse the bound semester during updates.
 
 Use read-content only for needed provider guidance, reusing IDs/results. Inventory
 before downloading: Moodle materials/forums/announcements, Artemis teaching units

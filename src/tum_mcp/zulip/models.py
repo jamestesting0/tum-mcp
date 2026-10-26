@@ -29,7 +29,6 @@ class Channel(Wire):
     invite_only: bool = False
     history_public_to_subscribers: bool = False
     is_archived: bool = False
-    locally_enabled: bool = False
     content_access: Literal["not_checked"] = "not_checked"
 
 

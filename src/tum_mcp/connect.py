@@ -29,7 +29,7 @@ def connect_zulip(email: str, key: SecretStr) -> Account:
     identity = decode(ZulipIdentity, API(pending, credential).get("/api/v1/users/me"))
     account = existing_account(pending.model_copy(update={"principal": str(identity.user_id)}))
     Vault().replace_login(account, credential.model_copy(update={"account_id": account.id}))
-    save_account(account, preserve_scopes=True)
+    save_account(account, preserve_settings=True)
     return account
 
 
@@ -174,12 +174,12 @@ def _save_connection(
     if verified != principal:
         raise CampusError(Code.SCOPE_DENIED, "Identity changed during connection.")
     Vault().replace_login(account, credential)
-    save_account(account, preserve_scopes=True)
+    save_account(account, preserve_settings=True)
     return ConnectionResult(service, account)
 
 
 def existing_account(candidate: Account) -> Account:
-    """Keep approved scopes only when provider, instance and principal match exactly."""
+    """Keep saved preferences only when provider, instance and principal match exactly."""
     return next(
         (account for account in preferences().accounts if account.id == candidate.id), candidate
     )
