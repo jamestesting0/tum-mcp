@@ -561,6 +561,15 @@ wheels = [
 ]
 
 [[package]]
+name = "m3u8"
+version = "6.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/a5/73697aaa99bb32b610adc1f11d46a0c0c370351292e9b271755084a145e6/m3u8-6.0.0.tar.gz", hash = "sha256:7ade990a1667d7a653bcaf9413b16c3eb5cd618982ff46aaff57fe6d9fa9c0fd", size = 42720, upload-time = "2024-08-07T11:20:06.606Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f8/31/50f3c38b38ff28635ff9c4a4afefddccc5f1b57457b539bdbdf75ce18669/m3u8-6.0.0-py3-none-any.whl", hash = "sha256:566d0748739c552dad10f8c87150078de6a0ec25071fa48e6968e96fc6dcba5d", size = 24133, upload-time = "2024-08-07T11:20:03.96Z" },
+]
+
+[[package]]
 name = "markdown-it-py"
 version = "4.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1272,6 +1281,7 @@ dependencies = [
     { name = "jsonschema" },
     { name = "keyring" },
     { name = "latex2mathml" },
+    { name = "m3u8" },
     { name = "mcp" },
     { name = "pillow" },
     { name = "playwright" },
@@ -1301,6 +1311,7 @@ requires-dist = [
     { name = "jsonschema", specifier = ">=4.26,<5" },
     { name = "keyring", specifier = ">=25,<26" },
     { name = "latex2mathml", specifier = ">=3.81,<4" },
+    { name = "m3u8", specifier = ">=6,<7" },
     { name = "mcp", specifier = "==2.3.0" },
     { name = "pillow", specifier = ">=11,<13" },
     { name = "playwright", specifier = ">=1.58,<2" },

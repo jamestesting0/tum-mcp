@@ -1,0 +1,209 @@
+"""Explicit lecture preparation and bounded offline evidence inspection."""
+
+import json
+from pathlib import Path
+from typing import Annotated
+
+import typer
+
+from tum_mcp.errors import CampusError, Code
+from tum_mcp.lecture_processing.prepare_visuals import FrameInventory
+from tum_mcp.lecture_processing.progress import read_progress
+from tum_mcp.lecture_processing.receipts import (
+    PASSAGES,
+    evidence_bytes,
+    export_snapshot,
+    read_receipt,
+    recording_dir,
+    usable_receipt,
+)
+from tum_mcp.study_store import confined, digest, load_state, private_path
+
+app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
+runtime_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
+app.add_typer(runtime_app, name="runtime")
+
+
+@runtime_app.command(name="status")
+def runtime_status() -> None:
+    """Check host, decoder and optional engine without installing anything."""
+    from tum_mcp.lecture_processing.runtime import status
+
+    typer.echo(status().model_dump_json(indent=2))
+
+
+@runtime_app.command(name="install")
+def runtime_install() -> None:
+    """Explicitly install the private pinned wheel-only runtime; models load on demand."""
+    from tum_mcp.lecture_processing.runtime import install
+
+    typer.echo(install().model_dump_json(indent=2))
+
+
+@app.command()
+def prepare(
+    project: Path,
+    recording: Annotated[
+        list[str], typer.Option(help="Explicit canonical recording URL; repeat to select more.")
+    ],
+    transcript: Annotated[
+        Path | None, typer.Option(help="Original-time WebVTT for one selected recording.")
+    ] = None,
+    frame_at: Annotated[
+        list[float] | None,
+        typer.Option(
+            help="Critical full frame at original seconds; repeat after transcript review."
+        ),
+    ] = None,
+    language: Annotated[
+        str, typer.Option(help="Known ISO language code, otherwise detect speech.")
+    ] = "",
+) -> None:
+    """Prepare selected evidence in the bound course; authored notes remain a separate review."""
+    from tum_mcp.lecture_processing.preparation import prepare as run
+
+    if len(recording) > 1 and (transcript is not None or frame_at):
+        raise CampusError(
+            Code.SCOPE_DENIED,
+            "Use one recording when importing captions or selecting critical frames.",
+        )
+    for url in dict.fromkeys(recording):
+        typer.echo(
+            run(
+                project,
+                url,
+                transcript=transcript,
+                frame_at=tuple(frame_at or ()),
+                language=language,
+            ).model_dump_json(indent=2)
+        )
+
+
+@app.command()
+def inspect(project: Path) -> None:
+    """Show cached receipts with their as-of date; does not fetch or start recognition."""
+    root = project.expanduser().resolve()
+    state = load_state(root)
+    directory = private_path(root, "lectures")
+    receipts = [
+        read_receipt(root, folder.name).model_dump(mode="json")
+        for folder in sorted(directory.glob("live-*"))
+        if folder.is_dir() and (folder / "receipt.json").is_file()
+    ]
+    progress = {
+        folder.name: value.model_dump(mode="json")
+        for folder in sorted(directory.glob("live-*"))
+        if folder.is_dir()
+        and (value := read_progress(recording_dir(root, folder.name))) is not None
+    }
+    typer.echo(
+        json.dumps(
+            {
+                "course": state.course.title,
+                "mode": "offline_cached_as_of_receipts",
+                "recordings": receipts,
+                "progress": progress,
+            },
+            indent=2,
+        )
+    )
+
+
+@app.command(name="transcript")
+def read_transcript(
+    project: Path,
+    recording: Annotated[str, typer.Option(help="Prepared recording key from inspect.")],
+    start: Annotated[float, typer.Option(min=0, max=28800)] = 0,
+    end: Annotated[float, typer.Option(min=0, max=28800)] = 28800,
+    limit: Annotated[int, typer.Option(min=1, max=200)] = 50,
+    offset: Annotated[int, typer.Option(min=0, max=100000)] = 0,
+) -> None:
+    """Read bounded cached passages on the original recording clock."""
+    root = project.expanduser().resolve()
+    receipt = usable_receipt(root, recording)
+    if start >= end:
+        raise CampusError(Code.SCOPE_DENIED, "The evidence interval must have positive duration.")
+    passages = PASSAGES.validate_json(evidence_bytes(root, recording, "transcript.json"))
+    selected = [
+        passage
+        for passage in passages
+        if passage.interval.start_s < end and start < passage.interval.end_s
+    ]
+    page = selected[offset : offset + limit]
+    typer.echo(
+        json.dumps(
+            {
+                "as_of": receipt.checked_at,
+                "mode": "offline_cached",
+                "passages": [p.model_dump(mode="json") for p in page],
+                "next_offset": offset + limit if len(selected) > offset + limit else None,
+            },
+            indent=2,
+        )
+    )
+
+
+@app.command(name="frames")
+def read_frames(
+    project: Path,
+    recording: Annotated[str, typer.Option()],
+    start: Annotated[float, typer.Option(min=0, max=28800)] = 0,
+    end: Annotated[float, typer.Option(min=0, max=28800)] = 28800,
+    limit: Annotated[int, typer.Option(min=1, max=100)] = 20,
+    offset: Annotated[int, typer.Option(min=0, max=100000)] = 0,
+) -> None:
+    """Read cached preview candidates and measured frames; never acquires video."""
+    root = project.expanduser().resolve()
+    receipt = usable_receipt(root, recording)
+    if start >= end:
+        raise CampusError(Code.SCOPE_DENIED, "The evidence interval must have positive duration.")
+    inventory = FrameInventory.model_validate_json(evidence_bytes(root, recording, "frames.json"))
+    values = [
+        (item.approximate_s, "approximate_preview", item) for item in inventory.candidates
+    ] + [(item.captured_at_s, "measured_source_frame", item) for item in inventory.captured]
+    selected = sorted(
+        (value for value in values if start <= value[0] < end), key=lambda value: value[0]
+    )
+    page = []
+    for timestamp, kind, item in selected[offset : offset + limit]:
+        try:
+            relative = item.path.relative_to(private_path(root, f"lectures/{recording}"))
+        except ValueError:
+            raise CampusError(
+                Code.SCOPE_DENIED, "Cached frame path leaves this recording."
+            ) from None
+        path = confined(private_path(root, f"lectures/{recording}"), relative.as_posix())
+        if (
+            not path.is_file()
+            or path.stat().st_size > 32 * 1024**2
+            or digest(path.read_bytes()) != item.sha256
+        ):
+            raise CampusError(Code.STALE_RESULT, "Cached recording image changed or is missing.")
+        page.append({"kind": kind, "timestamp_s": timestamp, **item.model_dump(mode="json")})
+    typer.echo(
+        json.dumps(
+            {
+                "as_of": receipt.checked_at,
+                "mode": "offline_cached",
+                "frames": page,
+                "next_offset": offset + limit if len(selected) > offset + limit else None,
+            },
+            indent=2,
+        )
+    )
+
+
+@app.command(name="export-snapshot")
+def export(project: Path, output: Annotated[Path, typer.Option()]) -> None:
+    """Export safe source records for ordinary study sync; excludes private evidence."""
+    snapshot = export_snapshot(project.expanduser().resolve(), output.expanduser().resolve())
+    typer.echo(
+        json.dumps(
+            {
+                "output": str(output.resolve()),
+                "selected_recordings": len(snapshot.resources),
+                "coverage": "partial_additive",
+            },
+            indent=2,
+        )
+    )

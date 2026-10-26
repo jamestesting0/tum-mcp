@@ -162,3 +162,34 @@ def test_whole_silence_returns_only_minimal_invalid_metadata_without_content_rea
         "/api/v2/courses/950943622",
         "/api/v2/streams/950943622/11/watch",
     ]
+
+
+def test_offered_binary_file_has_its_own_budget_without_widening_json_reads() -> None:
+    mapping = routes()
+    watch = copy.deepcopy(WATCH)
+    watch["views"][0]["sprite"] = {"fileId": 22, "intervalSeconds": 30}
+    wire = Watch.model_validate(watch)
+    body = b"x" * (5 * 1024 * 1024)
+    mapping["/api/v2/streams/11/files/22"] = httpx2.Response(200, content=body)
+    visited = []
+    provider = client(mapping, visited)
+    assert len(provider.file(wire, 22)) == len(body)
+    assert visited == ["/api/v2/streams/11/files/22"]
+    with pytest.raises(CampusError):
+        provider.file(wire, 99)
+    assert len(visited) == 1
+
+
+def test_unknown_duration_file_guard_is_resolved_from_playlist_metadata_only() -> None:
+    watch = copy.deepcopy(WATCH)
+    watch["stream"] = STREAM | {"duration": None}
+    watch["silences"] = [{"start": 0, "end": 600}]
+    watch["views"][0]["sprite"] = {"fileId": 22, "intervalSeconds": 30}
+    wire = Watch.model_validate(watch)
+    visited = []
+    provider = client(routes(), visited)
+    with pytest.raises(CampusError, match="duration"):
+        provider.file(wire, 22)
+    with pytest.raises(CampusError, match="whole_recording_silence"):
+        provider.file(wire, 22, duration_s=599.95)
+    assert visited == []

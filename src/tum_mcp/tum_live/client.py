@@ -6,7 +6,7 @@ import time
 from collections.abc import Sequence
 
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_processing.validity import RecordingTiming, evaluate
+from tum_mcp.lecture_processing.validity import RecordingTiming, evaluate, require_content
 from tum_mcp.parsing import decode
 from tum_mcp.settings import Frozen, Provider
 from tum_mcp.transport import API
@@ -164,3 +164,21 @@ class TumLive:
             validity=validity.status,
             reason=validity.reason,
         )
+
+    def file(self, watch: Watch, file_id: int, *, duration_s: float | None = None) -> bytes:
+        """Only files offered by this recording, after resolving its actual duration."""
+        require_content(
+            evaluate(
+                RecordingTiming(
+                    duration_s=duration_s if duration_s is not None else watch.stream.duration,
+                    silences=watch.silences,
+                    start_offset_s=watch.start_offset,
+                    end_offset_s=watch.end_offset,
+                )
+            )
+        )
+        allowed = {item.file_id for item in watch.attachments}
+        allowed.update(view.sprite.file_id for view in watch.views if view.sprite is not None)
+        if file_id not in allowed:
+            raise CampusError(Code.SCOPE_DENIED, "File was not offered by the selected recording.")
+        return self.api.get_tum_live_file(watch.stream.id, file_id)

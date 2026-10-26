@@ -27,6 +27,9 @@ app.add_typer(skills_app, name="skills")
 from tum_mcp.study_cli import app as study_app  # noqa: E402
 
 app.add_typer(study_app, name="study")
+from tum_mcp.lecture_cli import app as lecture_app  # noqa: E402
+
+app.add_typer(lecture_app, name="lecture")
 
 
 @app.command()
