@@ -10,6 +10,7 @@ from threading import Thread
 
 import pytest
 from playwright.sync_api import Browser, Page, expect, sync_playwright
+from playwright.sync_api import TimeoutError as BrowserTimeout
 
 from tum_mcp.moodle.browser_runtime import browser_driver
 from tum_mcp.moodle.browsers import discover_browsers
@@ -367,7 +368,14 @@ def test_static_exercises_under_a_project_prefix(
             page.on("pageerror", lambda error: errors.append(str(error)))
             base = f"http://127.0.0.1:{server.server_port}/course/"
             page.goto(base + "#exercises/sheet-1/sample-relaxation/candidate")
-            page.get_by_label("Your answer", exact=True).fill("3")
+            try:
+                page.get_by_label("Your answer", exact=True).fill("3")
+            except BrowserTimeout:
+                pytest.fail(
+                    f"Static exercise did not become usable: url={page.url!r}, "
+                    f"page_errors={errors!r}, body={page.locator('body').inner_text()[:2000]!r}",
+                    pytrace=False,
+                )
             page.get_by_role("button", name="Check", exact=True).click()
             expect(page.get_by_text("Checked correct", exact=True)).to_be_visible()
             page.reload()

@@ -69,6 +69,10 @@ Desktop jobs additionally install the optional hash-locked CPU recognizer and
 transcribe the synthetic speech fixture; supported Apple Silicon runners also
 exercise MLX. This explicit test downloads public pinned model files, never campus
 recordings. Ordinary test runs skip it unless `TUM_MCP_LECTURE_ASR_INTEGRATION=1`.
+Recognition runs before package lifecycle checks to expose native dependency
+failures early. Windows also runs the affected browser/UTF-8 fixture checks first.
+Its complete job budget is 35 minutes for native ACL and subprocess coverage;
+the macOS and Linux budgets remain 25 minutes.
 
 Live Moodle checks are opt-in: `TUM_MOODLE_LIVE=1 uv run pytest tests/live -q`.
 They use the developer's selected course and saved session. Keep them out of CI.
