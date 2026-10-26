@@ -9,6 +9,7 @@ from pydantic import Field, ValidationError
 from tum_mcp.course_app_paths import app_folder, app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_content import LectureContent
+from tum_mcp.lecture_evidence import Figure
 from tum_mcp.lecture_processing.visuals import raster
 from tum_mcp.settings import Frozen
 from tum_mcp.study_models import Digest
@@ -61,30 +62,7 @@ def asset_writes(root: Path, content: LectureContent | None) -> tuple[Write, ...
         public = app_path(root, name)
         private = private_path(root, name)
         source = private if private.exists() else public
-        if not source.is_file() or source.stat().st_size > 16 * 1024**2:
-            raise CampusError(
-                Code.INVALID_RESPONSE, "Selected lecture figure is missing or exceeds 16 MiB."
-            )
-        payload = source.read_bytes()
-        if digest(payload) != figure.sha256:
-            raise CampusError(
-                Code.STALE_RESULT, "Selected lecture figure changed; preserve and review it."
-            )
-        signatures = {
-            ".png": payload.startswith(b"\x89PNG\r\n\x1a\n"),
-            ".jpg": payload.startswith(b"\xff\xd8\xff"),
-            ".webp": payload[:4] == b"RIFF" and payload[8:12] == b"WEBP",
-        }
-        if not signatures[source.suffix]:
-            raise CampusError(
-                Code.INVALID_RESPONSE, "Lecture figure format differs from its file extension."
-            )
-        with raster(payload) as image:
-            if image.size != (figure.width, figure.height):
-                raise CampusError(
-                    Code.INVALID_RESPONSE,
-                    "Lecture figure dimensions differ from its declared source.",
-                )
+        payload = figure_bytes(source, figure)
         before = read_bytes(public)
         if before is not None and digest(before) != figure.sha256:
             raise CampusError(
@@ -111,3 +89,31 @@ def asset_writes(root: Path, content: LectureContent | None) -> tuple[Write, ...
             )
         )
     return tuple(writes)
+
+
+def figure_bytes(source: Path, figure: Figure) -> bytes:
+    if not source.is_file() or source.stat().st_size > 16 * 1024**2:
+        raise CampusError(
+            Code.INVALID_RESPONSE, "Selected lecture figure is missing or exceeds 16 MiB."
+        )
+    payload = source.read_bytes()
+    if digest(payload) != figure.sha256:
+        raise CampusError(
+            Code.STALE_RESULT, "Selected lecture figure changed; preserve and review it."
+        )
+    signatures = {
+        ".png": payload.startswith(b"\x89PNG\r\n\x1a\n"),
+        ".jpg": payload.startswith(b"\xff\xd8\xff"),
+        ".webp": payload[:4] == b"RIFF" and payload[8:12] == b"WEBP",
+    }
+    if not signatures[source.suffix]:
+        raise CampusError(
+            Code.INVALID_RESPONSE, "Lecture figure format differs from its file extension."
+        )
+    with raster(payload) as image:
+        if image.size != (figure.width, figure.height):
+            raise CampusError(
+                Code.INVALID_RESPONSE,
+                "Lecture figure dimensions differ from its declared source.",
+            )
+    return payload

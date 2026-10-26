@@ -33,7 +33,11 @@ from tum_mcp.study_store import (
 
 
 def configure(
-    root: Path, *, repository: str | None = None, include_exercises: bool | None = None
+    root: Path,
+    *,
+    repository: str | None = None,
+    include_exercises: bool | None = None,
+    include_lectures: bool | None = None,
 ) -> Publication:
     """Create a private repository only after the caller explicitly requests a public site."""
     from pydantic import TypeAdapter, ValidationError
@@ -46,8 +50,16 @@ def configure(
                 raise CampusError(
                     Code.WORKSPACE_CONFLICT, "This course already has a publishing repository."
                 )
-            if include_exercises is not None and include_exercises != previous.include_exercises:
-                previous = previous.model_copy(update={"include_exercises": include_exercises})
+            changes = {
+                name: value
+                for name, value in (
+                    ("include_exercises", include_exercises),
+                    ("include_lectures", include_lectures),
+                )
+                if value is not None and value != getattr(previous, name)
+            }
+            if changes:
+                previous = previous.model_copy(update=changes)
                 save_publication(root, previous)
             return previous
         course = load_state(root).course
@@ -56,6 +68,11 @@ def configure(
             include_exercises
             if include_exercises is not None
             else (interrupted.include_exercises if interrupted else False)
+        )
+        lecture_scope = (
+            include_lectures
+            if include_lectures is not None
+            else (interrupted.include_lectures if interrupted else False)
         )
         if (
             interrupted is not None
@@ -66,6 +83,8 @@ def configure(
                 Code.WORKSPACE_CONFLICT,
                 "Resume the interrupted repository setup before choosing another name.",
             )
+        with FileLock(str(private_path(root, "update.lock"))):
+            export_site(root, include_exercises=exercise_scope, include_lectures=lecture_scope)
         github = GitHub.discover()
         account = github.require("user", Account)
         chosen = (
@@ -97,6 +116,7 @@ def configure(
                 repository=chosen,
                 public_site=True,
                 include_exercises=exercise_scope,
+                include_lectures=lecture_scope,
             )
             apply(
                 root,
@@ -138,6 +158,7 @@ def configure(
             commit=head.object.sha,
             public_site=True,
             include_exercises=exercise_scope,
+            include_lectures=lecture_scope,
         )
         # Save before uploading: an interrupted setup retries the same repository.
         save_publication(root, publication)
@@ -165,7 +186,11 @@ def publish(
                 Code.ACTION_REQUIRED, "Configure study publish with --public-site first."
             )
         with FileLock(str(private_path(root, "update.lock"))):
-            site = export_site(root, include_exercises=publication.include_exercises)
+            site = export_site(
+                root,
+                include_exercises=publication.include_exercises,
+                include_lectures=publication.include_lectures,
+            )
         fingerprint = site_digest(site)
         if (
             fingerprint == publication.site_digest

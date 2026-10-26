@@ -12,12 +12,14 @@ from pydantic import Field, ValidationError
 
 from tum_mcp.course_app_paths import app_path
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.lecture_assets import ASSET
 from tum_mcp.settings import Frozen
-from tum_mcp.study_build import TEMPLATE_FILES, _inline_math
+from tum_mcp.study_build import TEMPLATE_FILES
 from tum_mcp.study_github import Commit, GitHub, GitObject, Head, Response, Tree
 from tum_mcp.study_models import Digest
-from tum_mcp.study_publish_models import GitSha, Publication
-from tum_mcp.study_store import digest
+from tum_mcp.study_publish_models import GitSha, Publication, course_identity
+from tum_mcp.study_publish_projection import assets, project
+from tum_mcp.study_store import digest, load_state
 
 MARKER: Final = "tum-mcp-site.json"
 SITE_FILES: Final = (*TEMPLATE_FILES, "data.mjs", ".nojekyll")
@@ -41,40 +43,47 @@ def blob_sha(content: bytes) -> str:
     ).hexdigest()
 
 
-def export_site(root: Path, *, include_exercises: bool = False) -> dict[str, bytes]:
-    """Export only the renderer, never materials, comments, state, audio or arbitrary files."""
+def preflight(site: dict[str, bytes], identity: str) -> SiteMarker:
+    if len(site) + 1 > 100:
+        raise CampusError(
+            Code.ACTION_REQUIRED,
+            "The static export exceeds 100 managed files including its marker.",
+        )
+    if any(name not in SITE_FILES and ASSET.fullmatch(name) is None for name in site):
+        raise CampusError(Code.SCOPE_DENIED, "The export contains an unmanaged site path.")
+    marker = SiteMarker(
+        course_identity=identity, files={name: blob_sha(value) for name, value in site.items()}
+    )
+    if (
+        sum(len(value) for value in site.values()) + len(marker.model_dump_json(indent=2).encode())
+        > 16 * 1024**2
+    ):
+        raise CampusError(
+            Code.ACTION_REQUIRED, "The static study export exceeds 16 MiB including its marker."
+        )
+    return marker
+
+
+def export_site(
+    root: Path, *, include_exercises: bool = False, include_lectures: bool = False
+) -> dict[str, bytes]:
+    """Export referenced public workspaces; private evidence and arbitrary files stay local."""
     output = {name: app_path(root, name).read_bytes() for name in (*TEMPLATE_FILES, "data.mjs")}
     data = output["data.mjs"]
-    if not data.startswith(b"export default "):
-        raise CampusError(
-            Code.WORKSPACE_CONFLICT, "Rebuild generated study data before publishing."
-        )
-    if not include_exercises:
-        try:
-            payload = json.loads(data.removeprefix(b"export default ").removesuffix(b";\n"))
-        except ValueError:
-            raise CampusError(Code.WORKSPACE_CONFLICT, "Rebuild the generated site data.") from None
-        if "exercises" in payload:
-            if not payload.get("units"):
-                raise CampusError(
-                    Code.ACTION_REQUIRED, "Explicitly include Exercises to publish it."
-                )
-            payload.pop("exercises")
-            payload["workspaces"] = ["study"]
-            references = {s["key"] for unit in payload["units"] for s in unit["sources"]}
-            payload["sources"] = {k: v for k, v in payload["sources"].items() if k in references}
-            payload["inlineMath"] = _inline_math([payload["introduction"], payload["units"]])
-            data = b"export default " + json.dumps(payload, ensure_ascii=True).encode() + b";\n"
+    payload = project(data, include_exercises=include_exercises, include_lectures=include_lectures)
+    original = json.loads(data.removeprefix(b"export default ").removesuffix(b";\n"))
+    if payload != original:
+        data = b"export default " + json.dumps(payload, ensure_ascii=True).encode() + b";\n"
     output["data.mjs"] = (
         data.replace(b"export default ", b"const data = ", 1)
         + b"data.hosted = true;\nexport default data;\n"
     )
+    output.update(assets(root, payload))
     output["index.html"] = output["index.html"].replace(
         b"A private local course notebook", b"A source-backed course notebook"
     )
     output[".nojekyll"] = b""
-    if sum(len(value) for value in output.values()) > 16 * 1024 * 1024:
-        raise CampusError(Code.ACTION_REQUIRED, "The static study export exceeds 16 MiB.")
+    preflight(output, course_identity(load_state(root).course))
     return output
 
 
@@ -96,7 +105,7 @@ def remote_tree(github: GitHub, publication: Publication) -> tuple[str, Tree]:
     return head.object.sha, tree
 
 
-def verify_marker(github: GitHub, publication: Publication, tree: Tree) -> None:
+def verify_marker(github: GitHub, publication: Publication, tree: Tree) -> SiteMarker | None:
     marker = next((item for item in tree.tree if item.path == MARKER), None)
     if marker is None:
         if tree.tree and {item.path for item in tree.tree} != {"README.md"}:
@@ -115,8 +124,8 @@ def verify_marker(github: GitHub, publication: Publication, tree: Tree) -> None:
         raise CampusError(
             Code.WORKSPACE_CONFLICT, "The remote study marker needs review."
         ) from None
-    if value.course_identity != publication.course_identity or not set(value.files) <= set(
-        SITE_FILES
+    if value.course_identity != publication.course_identity or any(
+        name not in SITE_FILES and ASSET.fullmatch(name) is None for name in value.files
     ):
         raise CampusError(
             Code.SCOPE_DENIED, "The remote repository is bound to another study site."
@@ -131,15 +140,14 @@ def verify_marker(github: GitHub, publication: Publication, tree: Tree) -> None:
             Code.WORKSPACE_CONFLICT, "Remote study files were edited; review before publishing."
         )
 
+    return value
+
 
 def commit_site(github: GitHub, publication: Publication, site: dict[str, bytes]) -> str:
     """Preserve unrelated remote files and reject concurrent branch advancement."""
+    marker = preflight(site, publication.course_identity)
     head, tree = remote_tree(github, publication)
-    verify_marker(github, publication, tree)
-    marker = SiteMarker(
-        course_identity=publication.course_identity,
-        files={name: blob_sha(value) for name, value in site.items()},
-    )
+    previous = verify_marker(github, publication, tree)
     desired = {**site, MARKER: marker.model_dump_json(indent=2).encode()}
     actual = {
         item.path: item.sha for item in tree.tree if item.type == "blob" and item.mode == "100644"
@@ -147,10 +155,15 @@ def commit_site(github: GitHub, publication: Publication, site: dict[str, bytes]
     changed = {
         name: value for name, value in desired.items() if actual.get(name) != blob_sha(value)
     }
-    if not changed:
+    if set(site).intersection(actual).difference(previous.files if previous else ()):
+        raise CampusError(Code.WORKSPACE_CONFLICT, "Unmanaged remote website files need review.")
+    obsolete = set(previous.files).difference(site) if previous else set()
+    if not changed and not obsolete:
         return head
     base = f"repos/{publication.repository}"
-    entries: list[dict[str, str]] = []
+    entries: list[dict[str, str | None]] = [
+        {"path": name, "mode": "100644", "type": "blob", "sha": None} for name in sorted(obsolete)
+    ]
     for name, value in changed.items():
         entry = {"path": name, "mode": "100644", "type": "blob"}
         try:
