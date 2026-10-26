@@ -31,17 +31,14 @@ def test_status_does_not_create_models_or_download_dependencies(
 
 def test_worker_environment_omits_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CAMPUS_COOKIE", "synthetic-secret-sentinel")
-    assert (
-        isolated_run(
-            (
-                sys.executable,
-                "-I",
-                "-c",
-                "import os;print(os.environ.get('CAMPUS_COOKIE','absent'))",
-            )
+    assert isolated_run(
+        (
+            sys.executable,
+            "-I",
+            "-c",
+            "import os;print(os.environ.get('CAMPUS_COOKIE','absent'))",
         )
-        == b"absent\n"
-    )
+    ).splitlines() == [b"absent"]
 
 
 def test_hung_worker_is_terminated_and_diagnostics_are_private() -> None:
