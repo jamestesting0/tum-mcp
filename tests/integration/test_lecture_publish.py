@@ -68,7 +68,8 @@ def test_excluded_lecture_math_source_and_content_are_removed(lecture_project: P
         status="current",
     )
     (root / ".tum-mcp/state.json").write_text(
-        state.model_copy(update={"resources": (*state.resources, source)}).model_dump_json()
+        state.model_copy(update={"resources": (*state.resources, source)}).model_dump_json(),
+        encoding="utf-8",
     )
     notes = root / "study/lectures.json"
     value = json.loads(notes.read_text())

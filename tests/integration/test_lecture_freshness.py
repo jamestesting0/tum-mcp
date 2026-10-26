@@ -74,7 +74,7 @@ def test_invalid_recording_or_frame_blocks_new_build_before_source_sync(
         ),
     )
     incoming = tmp_path / "snapshot.json"
-    incoming.write_text(snapshot.model_dump_json())
+    incoming.write_text(snapshot.model_dump_json(), encoding="utf-8")
     root = tmp_path / "project"
     sync(root, incoming, course_input=snapshot.course.title)
     prepared = root / ".tum-mcp/lectures" / recording.key
