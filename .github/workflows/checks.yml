@@ -70,7 +70,7 @@ jobs:
         run: npm run test:package-lifecycle
       - name: Verify clean campus consumer installation and MCP
         run: npm run test:consumer
-      - name: Verify updates and removal from public releases
+      - name: Verify updates from 0.9.0 and safe removal
         run: npm run test:upgrade
       - name: Lint and format
         run: |

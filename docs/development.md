@@ -40,7 +40,7 @@ Each layer owns a different failure boundary:
 | Unit | Parsing, policy, malformed input and failure branches with synthetic collaborators |
 | Integration | Real files, CLI/MCP, transactions, HTTP confinement and isolated project updates |
 | Installed consumer | Actual npm/wheel contents, managed runtime and complete browser workflows |
-| Public upgrade | Earlier published versions, repair, ownership conflicts and removal |
+| Public upgrade | Published 0.9.0, repair, ownership conflicts and removal |
 | Native platform | OS credential/ACL behavior; WSL Windows browser transport on both engines |
 
 Study integration fixtures build the private rich regression fixture once, then copy it into a fresh
@@ -59,8 +59,9 @@ CI runs macOS, Windows and Linux, plus both distribution engines on WSL 3.x.
 Consumer checks install the actual npm artifact, discover tools, build a study
 site and test available Chromium browsers with temporary profiles and synthetic
 pages. WSL verifies Windows browser transport. No live account is used.
-Upgrade checks cover public 0.8.0 and 0.8.1, client refresh, customized-file conflicts,
-failed preparation, runtime repair and removal that preserves work/credentials.
+Upgrade checks start from public 0.9.0 and cover all five clients, optional-extension
+retention, customized-file conflicts, failed preparation, runtime repair and
+removal that preserves work/credentials. Earlier releases are outside this matrix.
 The package-lifecycle check uses a local synthetic registry and real isolated
 global npm prefixes to verify downloads, backend validation, replacement,
 failure ordering and one-command removal. It does not publish a test release.
