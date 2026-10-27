@@ -127,7 +127,12 @@ def test_doctor_contains_extensions_without_duplicating_runtime_entries(
     assert result.exit_code == 0, result.output
     report = json.loads(result.output)
     states = {check["label"]: check["state"] for check in report["extensions"]}
-    assert states == {"Lecture Notes": "Disabled", "Studocu": "Disabled", "Audio Notes": "Enabled"}
+    assert states == {
+        "Lecture Notes": "Disabled",
+        "Studocu": "Disabled",
+        "Audio Notes": "Enabled",
+        "Video Notes": "Disabled",
+    }
     assert all(check["label"] != "Audio Notes" for check in report["runtime"])
 
 
@@ -156,6 +161,7 @@ def test_status_alias_preserves_script_output_and_uses_doctor_for_people(profile
         "lecture": False,
         "studocu": False,
         "audio-notes": False,
+        "video-notes": False,
     }
     human = runner.invoke(app, ["status"])
     assert human.exit_code == 0, human.output

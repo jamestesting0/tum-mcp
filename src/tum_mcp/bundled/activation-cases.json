@@ -1046,5 +1046,85 @@
     "context": "initialized_study_project",
     "partition": "held_out",
     "expected_skill": "sync-course"
+  },
+  {
+    "id": "video-notes-01",
+    "target_skill": "video-notes",
+    "prompt": "$video-notes Make short explainer videos for the graph traversal topics in my study site.",
+    "context": "prepared_study_content_no_videos_yet",
+    "partition": "development",
+    "expected_skill": "video-notes"
+  },
+  {
+    "id": "video-notes-02",
+    "target_skill": "video-notes",
+    "prompt": "Animate the BFS trace from my prepared lesson like a 3Blue1Brown video.",
+    "context": "prepared_study_content_with_diagram_frames",
+    "partition": "development",
+    "expected_skill": "video-notes"
+  },
+  {
+    "id": "video-notes-03",
+    "target_skill": "video-notes",
+    "prompt": "Turn the prepared probability lesson into a narrated animation I can watch before practicing.",
+    "context": "prepared_study_content_with_formulas",
+    "partition": "held_out",
+    "expected_skill": "video-notes"
+  },
+  {
+    "id": "video-notes-04",
+    "target_skill": "video-notes",
+    "prompt": "Update the explainer videos after I changed the Dijkstra lesson.",
+    "context": "prepared_content_updated_existing_video_manifest",
+    "partition": "development",
+    "expected_skill": "video-notes"
+  },
+  {
+    "id": "video-notes-05",
+    "target_skill": "video-notes",
+    "prompt": "Finish the interrupted video render for the weighted graphs topic.",
+    "context": "pending_video_run_in_build",
+    "partition": "held_out",
+    "expected_skill": "video-notes"
+  },
+  {
+    "id": "video-notes-06",
+    "target_skill": "video-notes",
+    "prompt": "Which study topics would work as videos? Plan them but don't render yet.",
+    "context": "prepared_study_content_no_videos_yet",
+    "partition": "development",
+    "expected_skill": "video-notes"
+  },
+  {
+    "id": "video-notes-lecture-negative",
+    "target_skill": "video-notes",
+    "prompt": "Prepare notes from the professor's lecture video recording on TUM-Live.",
+    "context": "lecture_extension_installed_bound_course",
+    "partition": "held_out",
+    "expected_skill": "prepare-lecture"
+  },
+  {
+    "id": "video-notes-audio-negative",
+    "target_skill": "video-notes",
+    "prompt": "Make audio tracks of my prepared lessons for my commute.",
+    "context": "prepared_study_content_without_audio",
+    "partition": "development",
+    "expected_skill": "audio-notes"
+  },
+  {
+    "id": "video-notes-site-negative",
+    "target_skill": "video-notes",
+    "prompt": "Improve the diagrams in my study website's BFS lesson.",
+    "context": "prepared_study_content_without_video_request",
+    "partition": "development",
+    "expected_skill": "prepare-study"
+  },
+  {
+    "id": "video-notes-unbound-negative",
+    "target_skill": "video-notes",
+    "prompt": "Make me a video explaining quantum entanglement.",
+    "context": "no_course_project",
+    "partition": "held_out",
+    "expected_skill": null
   }
 ]

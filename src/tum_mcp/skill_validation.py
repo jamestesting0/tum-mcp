@@ -9,7 +9,7 @@ from pydantic import Field
 
 from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.settings import Frozen
-from tum_mcp.skill_catalog import BUNDLED_SKILLS, active_skills
+from tum_mcp.skill_catalog import BUNDLED_SKILLS, OPTIONAL_SKILLS, active_skills
 from tum_mcp.skills import bundled, legacy_overrides, metadata, selected
 
 
@@ -73,6 +73,14 @@ def validate_skills(
                 )
                 if not virtual.parts or virtual.parts[0] not in BUNDLED_SKILLS:
                     errors.append(f"{info.name}: missing or invalid reference {reference}")
+                    continue
+                if (
+                    virtual.parts[0] != info.name
+                    and virtual.parts[0] in OPTIONAL_SKILLS
+                    and info.name in OPTIONAL_SKILLS
+                ):
+                    # Exported packs omit inactive optional skills, so the link would break.
+                    errors.append(f"{info.name}: links into optional {virtual.parts[0]}")
                     continue
                 root = selected(virtual.parts[0]).resolve()
                 target = root.joinpath(*virtual.parts[1:]).resolve()

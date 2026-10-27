@@ -127,6 +127,7 @@ def test_optional_extensions_have_coherent_status_and_symmetric_removal(isolated
         "lecture": True,
         "studocu": True,
         "audio-notes": False,
+        "video-notes": False,
     }
     removed = runner.invoke(app, ["uninstall", "studocu"])
     assert removed.exit_code == 0, removed.output

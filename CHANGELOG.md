@@ -1,5 +1,19 @@
 # Changes
 
+## Unreleased
+
+- Add the optional `video-notes` extension (`tum-mcp install video-notes`): short
+  narrated, animated explainers from prepared Study topics, one per selected topic,
+  under the course's `videos/` folder. The skill plans storyboards from the prepared
+  content only; `tum-mcp video-notes` checks storyboards, measures narration, renders
+  with a pinned Manim/Typst runtime installed on first use, verifies sync, loudness,
+  captions and layout, and publishes with receipts, archives and crash recovery.
+- Play published videos in the local app above each topic's Content, with chapters,
+  captions, a transcript and a notice when the topic changed after the video was made.
+  Hosted study sites never request or include videos.
+- Keep extension selections forward compatible: unknown on/off settings from newer
+  releases are preserved, and the video setting is only written when enabled.
+
 ## 0.9.5 — 2026-10-27
 
 - Simplify the course project overview wording.

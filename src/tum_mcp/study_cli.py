@@ -212,6 +212,10 @@ def demo(
         bool,
         typer.Option("--lectures", help="Include the optional synthetic Lecture Notes preview."),
     ] = False,
+    videos: Annotated[
+        bool,
+        typer.Option("--videos", help="Include a synthetic Video Notes preview clip."),
+    ] = False,
 ) -> None:
     """Create a minimal component-template preview, not a teaching example."""
     from tum_mcp.study_build import build as build_site
@@ -222,6 +226,10 @@ def demo(
         from tum_mcp.extensions import require_lecture
 
         require_lecture()
+    if videos:
+        from tum_mcp.extension_selection import require_video_notes
+
+        require_video_notes()
     root = project.expanduser().resolve()
     example = Path(str(files("tum_mcp") / "bundled/course_app/example"))
     writes = []
@@ -250,6 +258,10 @@ def demo(
     sync(root, snapshot, course_input=read_snapshot(snapshot).course.title)
     apply(root, tuple(writes))
     typer.echo(json.dumps(asdict(build_site(root)), indent=2))
+    if videos:
+        from tum_mcp.video_project import install_demo
+
+        install_demo(root, example / "videos")
     typer.echo(
         "Component template only; not necessarily a good teaching example. "
         "Run tum-mcp study to open it."

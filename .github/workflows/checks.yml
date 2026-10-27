@@ -30,14 +30,14 @@ jobs:
         with:
           version: "0.12.5"
           enable-cache: true
-      - name: Install macOS OCR dependency
+      - name: Install macOS OCR and video render dependencies
         if: runner.os == 'macOS'
-        run: brew install tesseract
+        run: brew install tesseract cairo
       - name: Install Linux desktop dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y tesseract-ocr gnome-keyring dbus-x11
+          sudo apt-get install -y tesseract-ocr gnome-keyring dbus-x11 libcairo2-dev libpango1.0-dev
       - name: Install Windows OCR dependency
         if: runner.os == 'Windows'
         run: |
@@ -52,6 +52,10 @@ jobs:
         env:
           TUM_MCP_LECTURE_ASR_INTEGRATION: '1'
         run: uv run pytest -v tests/integration/test_lecture_runtime_native.py --tb=short
+      - name: Verify optional native video rendering
+        env:
+          TUM_MCP_VIDEO_RENDER_INTEGRATION: '1'
+        run: uv run pytest -v tests/integration/test_video_render_native.py --tb=short
       - name: Check Windows browser and UTF-8 fixture regressions
         if: runner.os == 'Windows'
         run: >-

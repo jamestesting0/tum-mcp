@@ -8,7 +8,8 @@ The optional `prepare-lecture` skill adds a Lecture Notes workspace; install it 
 `tum-mcp install lecture`. See [Lecture Notes](lecture-notes.md).
 The optional `sync-studocu` skill collects selected student-uploaded material separately.
 The optional `audio-notes` skill turns prepared lessons into spoken tracks; install
-it with `tum-mcp install audio-notes`.
+it with `tum-mcp install audio-notes`. The optional `video-notes` skill turns prepared
+topics into short narrated explainer videos; install it with `tum-mcp install video-notes`.
 
 ## Start with one course
 
@@ -43,6 +44,7 @@ pse-ws26/
     content.json            Optional source-backed Study content
     exercises.json          Optional prepared exercise guidance
   audio/                    Optional category audio derived from the prepared website
+  videos/                   Optional explainer videos derived from the prepared website
 ```
 
 `AGENTS.md` retains user rules and points agents to `.tum-mcp/course.md`. That short
@@ -241,7 +243,7 @@ previously managed lecture images. A notes-only export with notes excluded is re
 
 Only the selected generated website renderer and data are uploaded. Downloaded
 originals, credentials, AGENTS.md, study inventory, passage comments, progress,
-audio and arbitrary files stay local. Git itself is not required: the publisher
+audio, videos and arbitrary files stay local. Git itself is not required: the publisher
 uses authenticated GitHub API calls through `gh`. Local publication settings do
 not contain credentials.
 
@@ -338,6 +340,73 @@ remain pending with reusable work under `.build/`. Ask **“Complete the audio n
 for the updated study website”** to reconcile added, changed, removed or moved
 material with the previous verified coverage. This is an agent skill, not a new
 `tum-mcp study` CLI subcommand or a built-in speech service.
+
+## Create and maintain video notes
+
+Install the optional workflow with `tum-mcp install video-notes`. After
+`prepare-study` has authored the course, ask for explainer videos, for example:
+
+```text
+Plan explainer videos for the topics in this study website that benefit from animation,
+then make the BFS one first.
+```
+
+The agent proposes which topics get a video and records a reason for each topic it
+leaves text-first. Each video covers one topic, usually 3 to 8 minutes, in short
+chapters. It is a visual adaptation of the prepared lesson: the problem first, the
+course's own example before the general rule, consistent colors per symbol, one or
+two pause-and-think questions from the topic's practice, and a short recap. Nothing
+outside the prepared content is added; a missing example is reported back to
+`prepare-study`.
+
+Behind the skill, `tum-mcp video-notes` does the checkable work. It prints the
+fingerprints a storyboard cites and rejects storyboards whose sources changed. It
+measures one narration file per sentence and renders the scenes with a pinned Manim
+and Typst runtime (no LaTeX needed). It enforces that animations fit their narration
+frame by frame and reports overlapping or off-screen text. Each run produces a
+contact sheet per chapter for review, and the final video is checked for codec,
+sync, loudness, captions and chapters before publication. Unchanged chapters are
+reused, interrupted runs resume, and a failed publication restores the previous
+files.
+
+Narration follows the Audio Notes policy: the free ElevenLabs website when it really
+generates and downloads the text, otherwise local Kokoro, with no accounts or
+payments. Kokoro has no German voice, so a German topic without a working voice
+keeps its narration pending; a silent draft can be rendered for review but is never
+published.
+
+```text
+videos/
+  plan.json                  Which topics get videos, and why others are text-first
+  storyboards/03_topic.json  Beats, narration, on-screen items and source locators
+  scenes/03_topic/chapters.py  Manim scenes using the bundled helpers
+  tracks/03_topic.mp4        Published H.264/AAC video
+  captions/03_topic.vtt      Captions from measured narration
+  chapters/03_topic.vtt      Chapter markers (and a JSON copy)
+  posters/03_topic.jpg       Poster frame
+  narration/03_topic.txt     Transcript
+  manifest.json              Verified receipts for published videos
+  style.json, voice.json     Course look and actual narrator profiles
+  README.md, COVERAGE.md     Generated overview and coverage
+  .build/                    Narration audio, timing, runs and caches
+  archive/                   Superseded published files
+```
+
+Published videos appear above the topic's Content in the local app (`tum-mcp study`)
+with chapters, captions and a transcript link, and show a notice when the topic
+changed after the video was made. They load when you press play. Hosted study sites
+never include or request videos; copy files from `videos/tracks/` to watch them
+elsewhere. `tum-mcp video-notes inspect PROJECT` reports planned, stale, pending and
+published videos, and `tum-mcp study demo PROJECT --videos` adds a synthetic preview
+clip.
+
+The render runtime (about 320 MB) installs on first use with
+`tum-mcp video-notes runtime install`. Windows x64 needs nothing else. macOS 14+ on
+Apple Silicon needs `brew install cairo` and the Xcode Command Line Tools; Linux and
+WSL on x86_64 with glibc 2.28+ need `libcairo2-dev`, `libpango1.0-dev` and a C
+compiler. `runtime status` prints the exact command and never runs it for you.
+Windows on ARM, Intel Macs, Linux ARM64 and musl Linux are not supported: Manim's
+OpenGL dependencies publish no wheels there.
 
 ## Studocu materials
 

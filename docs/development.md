@@ -105,7 +105,8 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/credentials.py`, `transport.py`, `settings.py` | Shared campus credential vault, HTTP transport and account policy |
 | `src/tum_mcp/client_*.py` | Host-specific configuration and managed skill installation |
 | `src/tum_mcp/study_*.py` | Course snapshots, teaching, build, preview and project-local passage comments |
-| `src/tum_mcp/bundled/skills/` | Canonical versioned source of reading, study and audio skills and their references/assets |
+| `src/tum_mcp/bundled/skills/` | Canonical versioned source of reading, study, audio and video skills and their references/assets |
+| `src/tum_mcp/video_*.py`, `bundled/video_runtime/` | Video Notes contracts, lint, media checks, orchestration and the isolated render worker |
 | `npm/` | Private-runtime installation, updates, integrity and cleanup |
 | `tests/` | Synthetic backend, package and owned-browser checks |
 
@@ -146,6 +147,21 @@ Chromium sign-in/MFA, read a PDF and forum, download a file, then restart and ch
 session reuse. Automated synthetic sign-in does not certify human SSO on every OS.
 For UI changes, exercise the generated app at narrow/wide widths in both themes;
 check keyboard navigation, reduced motion, source links and retained progress.
+
+## Optional Video Notes runtime
+
+`install video-notes` only selects the workflow. `tum-mcp video-notes runtime install`
+creates a uv venv per lock under the data directory from
+`bundled/video_runtime/requirements.lock` (universal, hash-pinned). Everything is a
+wheel except `pycairo`, `manimpango` and `srt`, which build from hashed sources; the
+locked `pkgconf` wheel is installed first and provides `pkg-config`. Regenerate the
+lock with the command in its header. Helper code (`vnotes/`, `worker.py`, fonts) runs
+from the package, so changing it never reinstalls the runtime; it does change the
+render profile and therefore the chapter cache. Default tests use a fake worker and
+the synthetic media in `tests/fixtures/video/` (`generate.py` recreates them). Set
+`TUM_MCP_VIDEO_RENDER_INTEGRATION=1` to install the real runtime into a temporary
+data directory and render, mix, check and publish a synthetic video; the browser
+playback tests also run WebKit when Playwright's WebKit is installed.
 
 ## Optional Lecture extension
 

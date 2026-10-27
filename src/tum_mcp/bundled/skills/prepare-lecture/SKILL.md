@@ -19,7 +19,8 @@ when connecting, preparing missing evidence or choosing a critical frame.
    existing notes. Preserve the course, app layout, IDs and unrelated authoring.
    Use sync-course for a missing course/binding or missing shared materials.
    General source questions use read-content; lessons/cards use prepare-study;
-   released exercises use prepare-exercises; spoken revision uses audio-notes.
+   released exercises use prepare-exercises; spoken revision uses audio-notes;
+   generated explainer videos from Study topics use video-notes.
 2. Identify the recordings the user selected. Inspect cached evidence with
    `tum-mcp lecture inspect PROJECT`, including its as-of date, coverage and
    uncertainty. Reuse valid prepared evidence. Acquire only missing eligible

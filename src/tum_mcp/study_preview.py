@@ -3,6 +3,8 @@
 import errno
 import gzip
 import io
+import json
+import re
 import shutil
 import socket
 import subprocess
@@ -12,6 +14,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import BinaryIO
+from urllib.parse import unquote, urlsplit
 
 import typer
 
@@ -30,6 +33,54 @@ class PreviewServer(ThreadingHTTPServer):
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         super().server_bind()
+
+
+VIDEO_FOLDERS = frozenset({"tracks", "captions", "chapters", "posters", "narration"})
+VIDEO_TYPES = {
+    ".mp4": "video/mp4",
+    ".vtt": "text/vtt; charset=utf-8",
+    ".jpg": "image/jpeg",
+    ".txt": "text/plain; charset=utf-8",
+    ".json": "application/json",
+}
+VIDEO_NAME = re.compile(r"[0-9a-z][0-9a-z_.-]{0,120}")
+RANGE = re.compile(r"bytes=(\d*)-(\d*)")
+
+
+class Slice:
+    """Read at most `length` bytes of a file from `start`, for a single byte-range reply."""
+
+    def __init__(self, stream: BinaryIO, start: int, length: int) -> None:
+        stream.seek(start)
+        self.stream, self.remaining = stream, length
+
+    def read(self, size: int = -1) -> bytes:
+        size = self.remaining if size < 0 else min(size, self.remaining)
+        data = self.stream.read(size) if size else b""
+        self.remaining -= len(data)
+        return data
+
+    def close(self) -> None:
+        self.stream.close()
+
+
+def byte_range(header: str | None, size: int) -> tuple[int, int] | None | bool:
+    """(start, end) for one satisfiable range, None to send everything, False if unsatisfiable."""
+    if not header or "," in header:
+        return None
+    match = RANGE.fullmatch(header.strip())
+    if match is None or not (match[1] or match[2]):
+        return None
+    if match[1]:
+        start = int(match[1])
+        if match[2] and int(match[2]) < start:
+            return None
+        end = min(int(match[2]), size - 1) if match[2] else size - 1
+    else:
+        start, end = max(0, size - int(match[2])), size - 1
+        if int(match[2]) == 0:
+            return False
+    return (start, end) if start < size and start <= end else False
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -81,7 +132,7 @@ class Handler(SimpleHTTPRequestHandler):
     def end_headers(self) -> None:
         self.send_header(
             "Content-Security-Policy",
-            "default-src 'self'; img-src 'self' data:; "
+            "default-src 'self'; img-src 'self' data:; media-src 'self'; "
             "object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
         )
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -93,11 +144,14 @@ class Handler(SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args: str) -> None:
         return
 
+    def video_head(self) -> BinaryIO | Slice | None:
+        return _video_reply(self)
+
     def list_directory(self, path: str) -> None:
         self.send_error(404)
         return None
 
-    def send_head(self) -> BinaryIO | None:
+    def send_head(self) -> BinaryIO | Slice | None:
         allowed = {
             f"127.0.0.1:{self.server.server_port}",
             f"localhost:{self.server.server_port}",
@@ -108,6 +162,8 @@ class Handler(SimpleHTTPRequestHandler):
         }:
             self.send_error(403)
             return None
+        if urlsplit(self.path).path.startswith("/videos/"):
+            return self.video_head()
         base = Path(self.directory).resolve()
         target = Path(self.translate_path(self.path))
         try:
@@ -137,6 +193,58 @@ class Handler(SimpleHTTPRequestHandler):
             except OSError:
                 return super().send_head()
         return super().send_head()
+
+
+def _video_reply(handler: "Handler") -> BinaryIO | Slice | None:
+    path = unquote(urlsplit(handler.path).path)
+    project = Path(handler.directory).resolve().parent
+    if path == "/videos/index.json":
+        from tum_mcp.video_project import preview_index
+
+        body = json.dumps(preview_index(project)).encode()
+        handler.send_response(200)
+        handler.send_header("Content-Type", "application/json")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        return io.BytesIO(body)
+    parts = path.split("/")[2:]
+    if (
+        len(parts) != 2
+        or parts[0] not in VIDEO_FOLDERS
+        or VIDEO_NAME.fullmatch(parts[1]) is None
+        or Path(parts[1]).suffix not in VIDEO_TYPES
+    ):
+        handler.send_error(404)
+        return None
+    try:
+        target = confined(project, f"videos/{parts[0]}/{parts[1]}")
+        if not target.is_file():
+            raise CampusError(Code.WORKSPACE_CONFLICT, "missing")
+        stream = target.open("rb")
+    except (CampusError, OSError):
+        handler.send_error(404)
+        return None
+    size = target.stat().st_size
+    span = byte_range(handler.headers.get("Range"), size)
+    if span is False:
+        stream.close()
+        handler.send_response(416)
+        handler.send_header("Content-Range", f"bytes */{size}")
+        handler.send_header("Content-Length", "0")
+        handler.end_headers()
+        return None
+    handler.send_response(200 if span is None else 206)
+    handler.send_header("Content-Type", VIDEO_TYPES[target.suffix])
+    handler.send_header("Accept-Ranges", "bytes")
+    if span is None:
+        handler.send_header("Content-Length", str(size))
+        handler.end_headers()
+        return stream
+    start, end = span
+    handler.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+    handler.send_header("Content-Length", str(end - start + 1))
+    handler.end_headers()
+    return Slice(stream, start, end - start + 1)
 
 
 def serve(project: Path, port: int, *, open_browser: bool = False) -> None:

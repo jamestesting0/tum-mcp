@@ -13,6 +13,7 @@ from tum_mcp.extensions import (
     selection,
     set_audio_notes,
     set_studocu,
+    set_video_notes,
     uninstall_lecture,
 )
 from tum_mcp.ui import State, heading, select_many, status_rows, terminal_console
@@ -22,10 +23,16 @@ class ExtensionName(StrEnum):
     LECTURE = "lecture"
     STUDOCU = "studocu"
     AUDIO_NOTES = "audio-notes"
+    VIDEO_NOTES = "video-notes"
 
 
 EXTENSIONS = tuple(ExtensionName)
-LABELS = {"lecture": "Lecture Notes", "studocu": "Studocu", "audio-notes": "Audio Notes"}
+LABELS = {
+    "lecture": "Lecture Notes",
+    "studocu": "Studocu",
+    "audio-notes": "Audio Notes",
+    "video-notes": "Video Notes",
+}
 
 
 def extension_rows() -> list[tuple[str, State, str]]:
@@ -33,6 +40,7 @@ def extension_rows() -> list[tuple[str, State, str]]:
         "lecture": "Prepare Lecture, transcripts and selected recording frames.",
         "studocu": "Search and collect selected supplementary materials.",
         "audio-notes": "Create spoken lessons from prepared Study content.",
+        "video-notes": "Create narrated, animated explainers from prepared Study content.",
     }
     rows = []
     for name in EXTENSIONS:
@@ -45,11 +53,16 @@ def extension_rows() -> list[tuple[str, State, str]]:
                     enabled = selection().studocu
                 case ExtensionName.AUDIO_NOTES:
                     enabled = selection().audio_notes
+                case ExtensionName.VIDEO_NOTES:
+                    enabled = selection().video_notes
                 case unreachable:
                     assert_never(unreachable)
-            rows.append(
-                (LABELS[name], State.ENABLED if enabled else State.DISABLED, descriptions[name])
-            )
+            detail = descriptions[name]
+            if name == ExtensionName.VIDEO_NOTES and enabled:
+                from tum_mcp.video_runtime import summary
+
+                detail = f"{detail} {summary()}"
+            rows.append((LABELS[name], State.ENABLED if enabled else State.DISABLED, detail))
         except CampusError as error:
             rows.append((LABELS[name], State.FAILED, error.message))
     return rows
@@ -84,6 +97,10 @@ def remove_extensions(
                 state = set_audio_notes(False) if selection().audio_notes else "disabled"
                 report = {"extension": name, "state": state}
                 review = state == "disabled_needs_review"
+            case ExtensionName.VIDEO_NOTES:
+                state = set_video_notes(False) if selection().video_notes else "disabled"
+                report = {"extension": name, "state": state}
+                review = state == "disabled_needs_review"
             case unreachable:
                 assert_never(unreachable)
         needs_review |= review
@@ -116,7 +133,7 @@ def choose_extensions(
     if json_output or not interactive_terminal():
         raise CampusError(
             Code.ACTION_REQUIRED,
-            "Use an interactive terminal or provide lecture, studocu or audio-notes explicitly.",
+            "Use an interactive terminal or name lecture, studocu, audio-notes or video-notes.",
         )
     rows = extension_rows()
     console = terminal_console()

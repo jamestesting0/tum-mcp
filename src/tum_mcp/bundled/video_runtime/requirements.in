@@ -1,0 +1,4 @@
+# Optional Video Notes renderer, CPython 3.13, separate from the base application.
+# pkgconf provides pkg-config for the few packages built from source (see SOURCE_BUILDS).
+manim[typst]==0.22.0
+pkgconf==3.0.7.post0

@@ -227,12 +227,16 @@ The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
 The base pack contains five skills: `read-content`, `sync-course`,
 `prepare-study`, `prepare-exercises` and `publish-course`. Optional extensions add
-`prepare-lecture`, `sync-studocu` and `audio-notes`; choose them with `tum-mcp install`.
+`prepare-lecture`, `sync-studocu`, `audio-notes` and `video-notes`; choose them with
+`tum-mcp install`.
 Website-specific retrieval guidance is loaded from references within read-content.
 Teaching and content guidance lives with prepare-study; the course app and its
 synthetic example ship as reusable assets and define the site's design.
 Audio Notes converts prepared content into category tracks and maintains coverage,
 scripts, voice settings, candidates and archives under the course's `audio/` root.
+Video Notes turns prepared topics into narrated explainer videos under `videos/`;
+`tum-mcp video-notes` validates storyboards, measures narration, renders with an
+optional pinned runtime and publishes checked videos for the local app only.
 Publish Course uses host GitHub CLI authentication to create a private repository
 and a public Pages website after explicit publication consent. It chooses a course
 and semester name, updates the same site after successful study builds, and shows

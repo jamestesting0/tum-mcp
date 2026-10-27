@@ -38,6 +38,15 @@ Audio Notes is optional: use `tum-mcp install audio-notes`. It adds the
 `audio-notes` skill for prepared Study content; synthesis is set up when used.
 Existing course audio is retained when the extension is disabled.
 
+Video Notes is optional: use `tum-mcp install video-notes`. It adds the
+`video-notes` skill and the `tum-mcp video-notes` commands for prepared Study content.
+Its render runtime (about 320 MB) installs on first use; `tum-mcp video-notes runtime
+status` lists any prerequisite (macOS: `brew install cairo`; Linux/WSL: Cairo and
+Pango development packages and a C compiler) without installing it. Course videos are
+retained when the extension is disabled. Clients pinned to a runtime generation older
+than this release cannot read the enabled Video Notes setting and would hide Studocu
+tools; refresh them with `tum-mcp update` or `setup --client NAME`.
+
 ## Terminal output
 
 `tum-mcp doctor` is the overview for saved connections, optional extensions,
@@ -229,7 +238,8 @@ protected. `--forget-credentials` removes saved local credentials and session
 keys; it does not revoke remote credentials. Settings, custom skills, course
 cache, downloads and assignment work are retained by these commands.
 No command recursively deletes the campus
-data root. Course audio and optional shared speech models/runtimes also remain.
+data root. Course audio and videos, the optional video render runtime and shared
+speech models/runtimes also remain.
 Remove a shared speech cache only when explicitly requested and no other course
 needs it; its host paths are documented in the audio skill. If removal is
 interrupted, run `tum-mcp setup --client NAME` to recover before reuse.

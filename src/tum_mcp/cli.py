@@ -19,6 +19,7 @@ from tum_mcp.extensions import (
     lecture_enabled,
     require_lecture,
     studocu_enabled,
+    video_notes_enabled,
 )
 from tum_mcp.moodle.browsers import BrowserSetupError
 from tum_mcp.moodle.errors import MoodleError
@@ -50,6 +51,13 @@ app.add_typer(
     studocu_app,
     name="studocu",
     help="Collect selected materials with the optional Studocu extension.",
+)
+from tum_mcp.video_cli import app as video_app  # noqa: E402
+
+app.add_typer(
+    video_app,
+    name="video-notes",
+    help="Render and maintain videos with the optional Video Notes extension.",
 )
 
 
@@ -100,6 +108,7 @@ def status(
                     "lecture": lecture_enabled(),
                     "studocu": studocu_enabled(),
                     "audio-notes": audio_notes_enabled(),
+                    "video-notes": video_notes_enabled(),
                 },
                 "registry": "not_checked",
                 "services": [item.model_dump(mode="json") for item in report.services],

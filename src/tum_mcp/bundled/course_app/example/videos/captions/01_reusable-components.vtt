@@ -1,0 +1,21 @@
+WEBVTT
+
+1
+00:00:00.250 --> 00:00:04.971
+This preview shows how one trace moves through a small graph.
+
+2
+00:00:05.421 --> 00:00:09.713
+First, A is active and B waits on the frontier.
+
+3
+00:00:10.013 --> 00:00:13.446
+Then A is visited and B becomes active.
+
+4
+00:00:13.896 --> 00:00:19.046
+The mean is the sum of the values divided by their count.
+
+5
+00:00:19.496 --> 00:00:22.500
+Quick check: what is two plus two?

@@ -1,0 +1,14 @@
+[
+  {
+    "key": "c01",
+    "title": "A two-node trace",
+    "start": 0.0,
+    "end": 13.6
+  },
+  {
+    "key": "c02",
+    "title": "The mean",
+    "start": 13.6,
+    "end": 25.6
+  }
+]

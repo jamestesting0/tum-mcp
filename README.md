@@ -51,12 +51,14 @@ Run `tum-mcp install` to choose extensions, then reload your client.
 | `lecture` | `prepare-lecture` | Lecture Notes with the professor's extra explanations, timestamps and selected critical visuals. Prefers transcripts and slides; local recognition is optional. |
 | `studocu` | `sync-studocu` | Search and collect selected supplementary PDFs saved in your browser. Personal use only; excluded from published sites. |
 | `audio-notes` | `audio-notes` | Turn prepared Study lessons into concise audio tracks, with resumable generation and coverage tracking. Voice setup happens when used. |
+| `video-notes` | `video-notes` | Turn prepared Study topics into short narrated, animated explainers that play inside the local app, with checked sync, captions and layout. The render runtime installs when first used. |
 
 Use `tum-mcp doctor` to see installed workflows and `tum-mcp uninstall` to remove
 them.
 
 [Lecture and recognition](docs/lecture-notes.md) ·
-[Studocu collection](docs/study.md#studocu-materials) · [Setup details](docs/setup.md)
+[Studocu collection](docs/study.md#studocu-materials) ·
+[Video Notes](docs/study.md#create-and-maintain-video-notes) · [Setup details](docs/setup.md)
 
 ## Course project
 
@@ -74,6 +76,7 @@ course/
     lecture-assets/         Optional: selected lecture figures
   .tum-mcp/                 Private course state, comments and lecture evidence
   audio/                    Optional: scripts, tracks and chapters for Audio Notes
+  videos/                   Optional: storyboards, scenes and explainer videos for Video Notes
 ```
 
 ## Privacy, updates and removal

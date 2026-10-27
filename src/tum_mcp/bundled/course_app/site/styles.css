@@ -168,6 +168,13 @@ a.course-title:hover, a.course-title[aria-current="page"] { color: var(--accent)
 .tabs button { background: transparent; border-color: transparent; }
 .tabs button[aria-selected="true"] { color: var(--accent); background: var(--wash); }
 .read-section { position: relative; margin-bottom: var(--s8); }
+.video-note { margin-bottom: var(--s8); }
+.video-note .section-heading { align-items: baseline; }
+.video-note video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--aside); border-radius: var(--r1); }
+.video-chapters { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); margin: var(--s3) 0 0; padding: 0; list-style: none; }
+.video-chapters li + li { margin-top: 0; }
+.video-chapters button { min-height: var(--target); font-variant-numeric: tabular-nums; }
+.video-links { margin-top: var(--s2); }
 .section-heading { display: flex; align-items: flex-start; gap: var(--s2); margin-bottom: var(--s3); }
 .section-heading > h2, .section-heading > h3 { flex: 1; min-width: 0; padding-block: var(--s1); }
 .read-section p + p { margin-top: var(--s4); }

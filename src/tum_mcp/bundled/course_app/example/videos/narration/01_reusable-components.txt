@@ -1,0 +1,7 @@
+Reusable components
+
+A two-node trace
+This preview shows how one trace moves through a small graph. First, A is active and B waits on the frontier. Then A is visited and B becomes active.
+
+The mean
+The mean is the sum of the values divided by their count. Quick check: what is two plus two?

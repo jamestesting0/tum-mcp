@@ -66,7 +66,9 @@ category audio is also requested, finish the affected course content first, then
 use the optional audio-notes workflow (`tum-mcp install audio-notes` if missing)
 and pass the current content, changed unit IDs and source review gaps. Audio
 outputs belong under audio/. A website-only request never triggers narration or
-external speech generation.
+external speech generation. Explainer videos work the same way through the optional
+video-notes workflow (`tum-mcp install video-notes`): finish content first, pass the
+changed unit IDs, and keep videos under videos/.
 
 For timestamped notes about the professor's additional explanations beyond slides,
 use the optional prepare-lecture workflow when installed. Preserve existing

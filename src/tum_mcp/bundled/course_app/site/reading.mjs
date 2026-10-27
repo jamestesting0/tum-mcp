@@ -3,6 +3,7 @@ import { node, studyText, append, sourcesNote, svgNode } from './dom.mjs';
 import { iconButton } from './navigation.mjs';
 import { renderPlot } from './plot.mjs';
 import { renderFormula } from './formulas.mjs';
+import { videoPanel } from './video.mjs';
 
 function table(block) {
   const region = node('div', 'table-region');
@@ -97,6 +98,8 @@ export function diagram(block) {
 }
 export function renderReading(unit) {
   const root = node('div');
+  const video = videoPanel(unit);
+  if (video) root.append(video);
   for (const [index, block] of unit.blocks.entries()) {
     const section = node('section', 'read-section'); section.dataset.blockIndex = String(index);
     const material = node('div', 'reading-material'); material.dataset.commentTarget = 'content'; material.append(append(node('div', 'section-heading'), studyText('h2', '', block.title), sourcesNote(block.sources, data.sources, data.course.synthetic, block.title)));
