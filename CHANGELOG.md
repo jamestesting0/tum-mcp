@@ -1,5 +1,9 @@
 # Changes
 
+## 0.9.5 — 2026-10-27
+
+- Simplify the course project overview wording.
+
 ## 0.9.4 — 2026-10-27
 
 - Document the course project folders, including optional extension outputs.

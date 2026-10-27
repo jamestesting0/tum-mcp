@@ -60,7 +60,7 @@ them.
 
 ## Course project
 
-Each course has its own folder. Optional extension files appear when used:
+After initialization, a course project looks something like this:
 
 ```text
 course/
@@ -75,8 +75,6 @@ course/
   .tum-mcp/                 Private course state, comments and lecture evidence
   audio/                    Optional: scripts, tracks and chapters for Audio Notes
 ```
-
-Existing projects may use `study/` instead of `app/`.
 
 ## Privacy, updates and removal
 
