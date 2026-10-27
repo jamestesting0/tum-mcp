@@ -150,6 +150,6 @@ def test_select_save_reload_locate_and_ambiguous_passage_stays_unavailable(
         page.locator(".comment-marker").click()
         expect(page.get_by_text("Passage unavailable.", exact=True).first).to_be_visible()
         # Time/source/figure controls cannot become selected prose anchors.
-        assert page.locator(".lecture-times [data-comment-target]").count() == 0
+        assert page.locator(".citation-panel [data-comment-target]").count() == 0
     finally:
         context.close()

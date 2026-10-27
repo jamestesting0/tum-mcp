@@ -1,10 +1,10 @@
 import data from './data.mjs';
-import { node, studyText, button, append, focusHeading, scrollReadingTo } from './dom.mjs';
+import { node, studyText, button, append, focusHeading, scrollReadingTo, confirmAction } from './dom.mjs';
 import { renderCommentedView, stopComments } from './comments.mjs';
 import { renderReading } from './reading.mjs';
 import { renderPractice } from './learning.mjs';
 import { renderFlashcards, flashcardShortcut } from './flashcards.mjs';
-import { renderSidebar, nextStep, iconButton } from './navigation.mjs';
+import { renderSidebar, nextStep, contentsOutline, iconGlyph } from './navigation.mjs';
 import { revisionDeck, topicPicker, itemKey } from './revision.mjs';
 import { exerciseState, exercisePrefix } from './exercise-state.mjs';
 import { renderExercises, exerciseOutline } from './exercises.mjs';
@@ -36,8 +36,10 @@ const preferredTheme = readStored('study-space:theme', null);
 document.documentElement.dataset.theme = ['light', 'dark'].includes(preferredTheme) ? preferredTheme : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 const states = new Map(), answers = new Map(), views = ['content', 'flashcards', 'practice'];
 const selectionKey = `${storageKey}:revision`, lastKey = `${storageKey}:last`;
-const storedSelection = readStored(selectionKey, []);
-const selectedTopics = new Set(Array.isArray(storedSelection) ? storedSelection.filter(key => data.units.some(unit => unit.key === key)) : []);
+// Until the student chooses topics, Revision covers the whole course.
+const storedSelection = readStored(selectionKey, null);
+const selectedTopics = new Set(Array.isArray(storedSelection)
+  ? storedSelection.filter(key => data.units.some(unit => unit.key === key)) : data.units.map(unit => unit.key));
 const narrow = matchMedia('(max-width: 799px)');
 const navigationState = { collapsed: narrow.matches };
 let currentIndex = 0, currentView = 'content', revising = false, home = false, reviewing = false;
@@ -61,10 +63,11 @@ function practiceLabel(result) {
 }
 // Review mode pools only items the student marked Again or answered incorrectly.
 function needsReview(kind, key) { return progress[kind === 'flashcards' ? 'cards' : 'questions'][key] === false; }
-function reviewCount(units) {
-  return units.reduce((sum, unit) => sum + unit.flashcards.filter(item => needsReview('flashcards', itemKey(unit, item))).length
-    + unit.questions.filter(item => needsReview('questions', itemKey(unit, item))).length, 0);
+function reviewItems(units, kind) {
+  return units.reduce((sum, unit) => sum + unit[kind].filter(item => needsReview(kind, itemKey(unit, item))).length, 0);
 }
+function reviewCount(units) { return reviewItems(units, 'flashcards') + reviewItems(units, 'questions'); }
+function selectedUnits() { return data.units.filter(unit => selectedTopics.has(unit.key)); }
 function persist() {
   try { if (workspaces.includes('study')) localStorage.setItem(storageKey, JSON.stringify(progress)); }
   catch { memoryOnly = true; }
@@ -175,40 +178,45 @@ function renderPanel() {
 }
 function confirmReset(trigger) {
   const isExercise = workspace === 'exercises';
-  const dialog = node('dialog', 'confirm-dialog');
-  const title = node('h2', '', 'Reset progress?'); title.id = 'reset-title'; dialog.setAttribute('aria-labelledby', title.id);
-  const cancel = button('Cancel', () => dialog.close(), 'quiet');
-  const reset = button('Reset', () => {
-    if (isExercise) {
-      try {
-        for (const key of Object.keys(localStorage)) if (key.startsWith(exercisePrefix)) localStorage.removeItem(key);
-      } catch { memoryOnly = true; }
-      exercises.clear(); delete positions.exercises; store(positionKey, positions);
-    } else { progress.cards = {}; progress.questions = {}; states.clear(); answers.clear(); }
-    persist();
-    dialog.close(); render(); document.querySelector('.home-reset')?.focus();
-  }, 'primary');
-  dialog.append(title, node('p', '', isExercise ? 'This clears exercise responses, hints and review status for this course. Study progress and comments stay.' : 'This clears practice answers and card ratings for this course. Comments and topic choices stay.'),
-    append(node('div', 'cluster comment-actions'), cancel, reset));
-  dialog.addEventListener('close', () => { dialog.remove(); if (trigger.isConnected) trigger.focus(); });
-  document.body.append(dialog); dialog.showModal(); cancel.focus();
+  confirmAction({
+    title: 'Reset progress?', action: 'Reset', trigger,
+    message: isExercise ? 'This clears exercise responses, hints and review status for this course. Study progress and comments stay.' : 'This clears practice answers and card ratings for this course. Comments and topic choices stay.',
+    onConfirm() {
+      if (isExercise) {
+        try {
+          for (const key of Object.keys(localStorage)) if (key.startsWith(exercisePrefix)) localStorage.removeItem(key);
+        } catch { memoryOnly = true; }
+        exercises.clear(); delete positions.exercises; store(positionKey, positions);
+      } else { progress.cards = {}; progress.questions = {}; states.clear(); answers.clear(); }
+      persist(); render(); document.querySelector('.home-reset')?.focus();
+    },
+  });
+}
+function resetButton() {
+  const control = button('Reset progress', () => confirmReset(control), 'quiet home-reset');
+  return append(node('div', 'home-footer'), control);
 }
 function resumeTarget() {
   const last = readStored(lastKey, '');
-  if (last === 'revision') return { href: '#revision?view=flashcards', label: 'Continue: Revision' };
+  if (last === 'revision') return { href: '#revision?view=flashcards', action: 'Continue', label: 'Revision' };
   const [key, view] = typeof last === 'string' ? last.split('/') : [];
   const unit = data.units.find(item => item.key === key);
-  return unit ? { href: `#${unit.key}/${views.includes(view) ? view : 'content'}`, label: `Continue: ${unit.title}` }
-    : { href: `#${data.units[0].key}/content`, label: `Start: ${data.units[0].title}` };
+  return unit ? { href: `#${unit.key}/${views.includes(view) ? view : 'content'}`, action: 'Continue', label: unit.title }
+    : { href: `#${data.units[0].key}/content`, action: 'Start', label: data.units[0].title };
 }
 function renderHome() {
   const header = node('div', 'unit-header');
   unitHeading = node('h1', '', data.course.title);
   header.append(node('p', 'eyebrow', data.course.semester), unitHeading, studyText('p', 'unit-summary', data.introduction));
   const resume = resumeTarget(), actions = node('div', 'cluster home-actions');
-  const go = node('a', 'button primary', resume.label); go.href = resume.href; actions.append(go);
-  const due = reviewCount(data.units);
-  if (due) { const review = node('a', 'button', `Review ${plural(due, 'item')}`); review.href = '#revision?view=flashcards&mode=review'; actions.append(review); }
+  // The play icon says resume or start; screen readers still hear the action word.
+  const go = node('a', 'button primary resume');
+  go.append(iconGlyph('play'), node('span', 'visually-hidden', `${resume.action}: `), studyText('span', '', resume.label)); go.href = resume.href; actions.append(go);
+  const pool = selectedUnits(), due = reviewCount(pool);
+  if (due) {
+    const review = node('a', 'button', `Review ${plural(due, 'item')}`);
+    review.href = `#revision?view=${reviewItems(pool, 'flashcards') ? 'flashcards' : 'practice'}&mode=review`; actions.append(review);
+  }
   header.append(actions);
   const topics = node('section', 'home-topics'); topics.setAttribute('aria-labelledby', 'home-topics-title');
   const title = node('h2', '', 'Topics'); title.id = 'home-topics-title'; topics.append(title);
@@ -229,8 +237,7 @@ function renderHome() {
     row.append(link, node('span', 'small topic-status', status.join(' · ') || 'Not started'));
     list.append(row);
   }
-  const reset = iconButton('Reset progress', 'reset', () => confirmReset(reset)); reset.classList.add('home-reset');
-  return [header, topics, append(node('div', 'home-footer'), reset)];
+  return [header, topics, resetButton()];
 }
 function modePicker() {
   const group = node('fieldset', 'mode-options');
@@ -245,7 +252,7 @@ function modePicker() {
     });
     option.append(input, typeof label === 'string' ? node('span', '', label) : label); group.append(option);
   }
-  syncMode = () => { review.textContent = `To review · ${reviewCount(data.units.filter(unit => selectedTopics.has(unit.key)))}`; };
+  syncMode = () => { review.textContent = `To review · ${reviewCount(selectedUnits())}`; };
   return group;
 }
 function render() {
@@ -274,10 +281,7 @@ function render() {
   if (notesPage) {
     unitHeading = notesPage.heading; document.title = `${notesPage.title} · ${data.course.title}`;
     reading.append(notesPage.root);
-    if (exercisePage && !exercisePage.current) {
-      const reset = iconButton('Reset exercise progress', 'reset', () => confirmReset(reset)); reset.classList.add('home-reset');
-      reading.append(append(node('div', 'home-footer'), reset));
-    }
+    if (exercisePage && !exercisePage.current) reading.append(resetButton());
   } else if (unavailable) {
     unitHeading = node('h1', '', 'Study');
     const first = workspaces[0];
@@ -295,7 +299,7 @@ function render() {
         states.delete('$revision');
         try { localStorage.setItem(selectionKey, JSON.stringify([...selectedTopics])); } catch { memoryOnly = true; }
         renderPanel(); persist();
-      }), modePicker());
+      }));
     } else {
       const ancestry = unit.path || [];
       const breadcrumb = [...ancestry, ...(ancestry.includes(unit.label) ? [] : [unit.label])].join(' · ');
@@ -321,11 +325,13 @@ function render() {
       element.setAttribute('aria-labelledby', `tab-${view}`); element.tabIndex = 0; panels.set(view, element);
     }
     const viewBar = node('div', 'view-bar'); viewBar.append(tabs);
+    if (revising) viewBar.append(modePicker());
     step = node('div'); reading.append(heading, viewBar, ...panels.values(), step);
   }
-  main.append(reading); shell.append(sidebar, main);
+  main.append(append(node('div', 'page-layout'), reading)); shell.append(sidebar, main);
   document.querySelector('#app').replaceChildren(shell);
   if (!notesPage && !unavailable && !home) renderPanel();
+  contentsOutline(reading);
   persist();
 }
 function route(initial = false) {

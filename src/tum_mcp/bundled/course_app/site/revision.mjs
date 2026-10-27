@@ -1,6 +1,5 @@
 import data from './data.mjs';
 import { node, button } from './dom.mjs';
-import { iconButton } from './navigation.mjs';
 
 const expandedCategories = new Set();
 
@@ -18,7 +17,7 @@ export function revisionDeck(selected, keep = () => true) {
   return { key: 'revision', title: 'Revision', flashcards: collect('flashcards'), questions: collect('questions') };
 }
 export function topicPicker(selected, change) {
-  const root = node('details', 'revision-topics'); root.open = selected.size === 0;
+  const root = node('details', 'disclosure revision-topics'); root.open = selected.size === 0;
   const summary = node('summary');
   const controls = node('div', 'cluster');
   const group = node('fieldset', 'topic-options');
@@ -32,7 +31,7 @@ export function topicPicker(selected, change) {
       input.indeterminate = count > 0 && count < keys.size;
     }
     for (const { keys, counter } of folders.values()) {
-      counter.textContent = `${[...keys].filter(key => selected.has(key)).length}/${keys.size}`;
+      counter.textContent = `${[...keys].filter(key => selected.has(key)).length} / ${keys.size}`;
     }
   }
   function changed() { sync(); change(); }
@@ -61,11 +60,10 @@ export function topicPicker(selected, change) {
         label.append(node('span', '', name));
         const children = node('div', 'topic-children');
         children.id = `revision-category-${folders.size}`;
-        const toggle = iconButton(`Expand ${path.join(' / ')}`, 'right', () => {
+        const toggle = button('', () => {
           if (children.hidden) expandedCategories.add(key); else expandedCategories.delete(key);
           update();
-        });
-        toggle.className = 'icon-button quiet topic-category-toggle';
+        }, 'icon-button quiet topic-category-toggle');
         toggle.dataset.topicToggle = 'true';
         toggle.setAttribute('aria-controls', children.id);
         const counter = node('span', 'small topic-category-count');

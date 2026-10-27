@@ -199,8 +199,10 @@ def comment_checks(page: Page, project: Path) -> None:
         source.write_bytes(original)
         build(project)
     page.get_by_label("More actions", exact=True).click()
-    page.once("dialog", lambda prompt: prompt.accept())
     page.get_by_role("button", name="Delete", exact=True).click()
+    page.get_by_role("dialog", name="Delete comment?", exact=True).get_by_role(
+        "button", name="Delete", exact=True
+    ).click()
     page.locator(".comment-marker").wait_for(state="hidden")
     assert read_comments(project)["comments"] == []
     # Deletion while editing preserves the draft and cannot silently recreate a note.

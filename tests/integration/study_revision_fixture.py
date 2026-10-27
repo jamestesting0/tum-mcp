@@ -83,8 +83,11 @@ def revision_checks(page: Page, content: dict) -> None:
     page.get_by_role("link", name="Revision", exact=True).click()
     page.get_by_role("heading", name="Revision", exact=True).wait_for()
     assert page.get_by_role("tab").count() == 2
-    assert page.get_by_text("Select topics to start revising.", exact=True).is_visible()
+    # Revision covers every topic until the student chooses; an explicit clear is kept.
+    assert page.locator('[data-selection="topic"]:checked').count() == len(content["units"])
     expand_topic_categories(page)
+    page.get_by_role("button", name="Clear", exact=True).click()
+    assert page.get_by_text("Select topics to start revising.", exact=True).is_visible()
     topic_alignment_checks(page, content)
     for unit in units:
         page.get_by_role("checkbox", name=unit["title"], exact=True).check()
@@ -227,7 +230,7 @@ def learning_flow_checks(page: Page, content: dict) -> None:
     review = page.get_by_role("dialog", name=questions[0]["prompt"], exact=True)
     assert review.is_visible()
     assert review.get_by_text("Correct answer", exact=True).is_visible()
-    assert page.locator(".practice-meta").inner_text().startswith(f"{len(questions)}/")
+    assert page.locator(".practice-meta").inner_text().startswith(f"{len(questions)} /")
     assert page.url == before_url
     page.keyboard.press("Escape")
     assert not review.count()
@@ -241,13 +244,13 @@ def learning_flow_checks(page: Page, content: dict) -> None:
     page.get_by_role("tab", name="Practice · 1", exact=True).click()
     assert page.get_by_role("button", name="Check answer", exact=True).is_disabled()
     page.get_by_text("All items", exact=True).click()
-    assert page.get_by_role("tab", name=f"Practice · {len(questions)}", exact=True).is_visible()
+    pooled = sum(len(item["questions"]) for item in content["units"])
+    assert page.get_by_role("tab", name=f"Practice · {pooled}", exact=True).is_visible()
 
 
 def identity_checks(page: Page, units: list[dict]) -> None:
     """Identical item IDs in different topics must not share ratings or checked answers."""
     page.goto("https://study.invalid/#revision?view=flashcards")
-    page.get_by_role("button", name="Select all", exact=True).click()
     page.locator(".flashcard").click()
     page.get_by_role("button", name="Got it", exact=True).click()
     for _ in units[0]["flashcards"][1:]:

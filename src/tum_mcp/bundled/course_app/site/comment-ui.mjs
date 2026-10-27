@@ -75,7 +75,7 @@ function commentRow(initial, actions) {
   const more = node('details', 'comment-more'), summary = node('summary', 'icon-button quiet');
   summary.setAttribute('aria-label', 'More actions'); summary.title = 'More'; summary.append(iconGlyph('more'));
   const menu = node('div', 'comment-menu');
-  menu.append(button('Edit', () => { more.open = false; actions.edit(item, summary); }, 'quiet'), button('Delete', () => { more.open = false; actions.remove(item); }, 'quiet'));
+  menu.append(button('Edit', () => { more.open = false; actions.edit(item, summary); }, 'quiet'), button('Delete', () => { more.open = false; actions.remove(item, summary); }, 'quiet'));
   more.append(summary, menu); controls.append(done, more); article.append(main, controls);
   more.addEventListener('toggle', () => {
     if (!more.open) return;
@@ -97,7 +97,7 @@ function commentRow(initial, actions) {
     resolution.textContent = item.status === 'resolved' ? item.resolution ? `Resolved · ${item.resolution}` : 'Resolved' : '';
     resolution.hidden = !resolution.textContent;
     const name = item.status === 'open' ? 'Resolve' : 'Reopen'; done.setAttribute('aria-label', name); done.title = name;
-    if (done.dataset.status !== item.status) { done.replaceChildren(iconGlyph(item.status === 'open' ? 'check' : 'reset')); done.dataset.status = item.status; }
+    if (done.dataset.status !== item.status) { done.replaceChildren(iconGlyph(item.status === 'open' ? 'check' : 'undo')); done.dataset.status = item.status; }
   }
   update(initial); return { element: article, update };
 }

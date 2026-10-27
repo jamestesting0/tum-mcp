@@ -1,4 +1,4 @@
-import { node, button, focusHeading } from './dom.mjs';
+import { node, button, focusHeading, confirmAction } from './dom.mjs';
 import data from './data.mjs';
 import { iconGlyph } from './navigation.mjs';
 import { selectedPassage, locatePassage, highlightPassages } from './anchors.mjs';
@@ -26,7 +26,10 @@ export function renderCommentedView(unit, view, activity, activate) {
     label: item => unit.revision ? '' : data.units.find(owner => owner.key === item.anchor.unit_key)?.title,
     edit: (item, trigger) => openComposer(item, trigger),
     status: item => mutate({ op: 'status', id: item.id, status: item.status === 'open' ? 'resolved' : 'open' }, item),
-    remove: item => { if (confirm('Delete comment?')) mutate({ op: 'delete', id: item.id }, item); },
+    remove: (item, trigger) => confirmAction({
+      title: 'Delete comment?', message: 'The note and its resolution are removed from this course.', action: 'Delete', trigger,
+      onConfirm: () => mutate({ op: 'delete', id: item.id }, item),
+    }),
   });
   const content = node('div'); content.append(message, list.element);
   const popup = commentPopover(root, content, resolved, signal, opened => { if (!opened) highlightPassages(openRanges()); schedule(); });
@@ -118,7 +121,10 @@ export function renderCommentedView(unit, view, activity, activate) {
   }
   function hostFor(item) {
     if (isLecture) return [...reading.querySelectorAll('[data-lecture-section]')].find(section => section.dataset.lectureSection === item.anchor.section_key)?.querySelector('h2');
-    if (isExercise) return reading.querySelector('h1');
+    if (isExercise) {
+      const owner = locate(item)?.section?.closest('.read-section, .exercise-step');
+      return owner?.querySelector('.section-heading h2') || reading.querySelector('h1');
+    }
     if (view !== 'content') {
       const current = reading.querySelector('[data-comment-target]');
       return current?.dataset.unitKey === item.anchor.unit_key && current.dataset.itemKey === item.anchor.item_key ? reading.querySelector('.recall-meta > div') : null;
@@ -147,12 +153,14 @@ export function renderCommentedView(unit, view, activity, activate) {
         state.marker.dataset.commentUi = ''; state.marker.setAttribute('aria-haspopup', 'dialog');
         state.marker.setAttribute('aria-controls', popup.element.id); state.marker.setAttribute('aria-expanded', 'false');
         const face = node('span', 'comment-marker-face'); face.append(iconGlyph('comment'), node('span', 'comment-count')); state.marker.append(face);
-        if (view === 'content' || isExercise || isLecture) host.append(state.marker);
+        // Markers sit beside the heading, never inside it, so headings keep their own text.
+        if (host.localName === 'h1') host.append(state.marker);
+        else if (view === 'content' || isExercise || isLecture) host.after(state.marker);
         else { host.classList.add('comment-position'); host.firstElementChild.after(state.marker); }
       }
       const count = state.items.filter(item => item.status === 'open').length;
       state.marker.dataset.openCount = String(count); state.marker.dataset.count = String(count || state.items.length);
-      const label = `${count || state.items.length} ${count ? '' : 'resolved '}${(count || state.items.length) === 1 ? 'comment' : 'comments'} on ${isLecture ? 'this section' : view === 'content' ? state.items[0].anchor.block_title : view === 'flashcards' ? 'this card' : 'this question'}`;
+      const label = `${count || state.items.length} ${count ? '' : 'resolved '}${(count || state.items.length) === 1 ? 'comment' : 'comments'} on ${isLecture ? 'this section' : isExercise ? 'this exercise' : view === 'content' ? state.items[0].anchor.block_title : view === 'flashcards' ? 'this card' : 'this question'}`;
       state.marker.setAttribute('aria-label', label); state.marker.title = label;
       const number = state.marker.querySelector('.comment-count'); if (number.textContent !== state.marker.dataset.count) number.textContent = state.marker.dataset.count;
     }

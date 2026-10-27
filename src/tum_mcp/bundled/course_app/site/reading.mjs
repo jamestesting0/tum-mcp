@@ -20,16 +20,27 @@ function table(block) {
   region.append(append(grid, body));
   return region;
 }
+// Box labels wrap at word boundaries into at most two lines of about fifteen characters.
+function labelLines(text) {
+  const lines = [];
+  for (const word of text.split(/\s+/)) {
+    const current = lines.at(-1);
+    if (current !== undefined && current.length + word.length < 15) lines[lines.length - 1] = `${current} ${word}`;
+    else lines.push(word);
+  }
+  return lines.length <= 2 && lines.every(line => line.length <= 15) ? lines : [text.slice(0, 15), text.slice(15)];
+}
+const RADIUS = 26;
 export function diagram(block) {
   const box = node('div', 'surface diagram');
   // Crop unused canvas height so the drawing, not empty space, fills narrow screens.
-  const reach = item => item.shape === 'box' ? 28 : 24;
+  const reach = item => item.shape === 'box' ? 28 : RADIUS;
   const top = Math.max(0, Math.min(...block.nodes.map(item => item.y - reach(item))) - 24);
   const bottom = Math.min(320, Math.max(...block.nodes.map(item => item.y + reach(item))) + 24);
   const graph = svgNode('svg', { viewBox: `0 ${top} 600 ${bottom - top}`, class: 'graph', role: 'img', 'aria-label': studyText('span', '', block.description).textContent });
   const nodes = new Map(block.nodes.map(item => [item.key, item]));
   function boundary(item, ux, uy) {
-    return item.shape === 'box' ? Math.min(72 / (Math.abs(ux) || 1e-9), 30 / (Math.abs(uy) || 1e-9)) : 26;
+    return item.shape === 'box' ? Math.min(72 / (Math.abs(ux) || 1e-9), 30 / (Math.abs(uy) || 1e-9)) : RADIUS;
   }
   for (const edge of block.edges) {
     const start = nodes.get(edge.start), end = nodes.get(edge.end);
@@ -48,15 +59,16 @@ export function diagram(block) {
   }
   const groups = new Map();
   for (const item of block.nodes) {
-    const group = svgNode('g', { class: item.shape === 'box' ? 'node-box' : '', 'data-node-key': item.key });
+    const group = svgNode('g', { class: item.shape === 'box' ? 'node-box' : 'node-circle', 'data-node-key': item.key });
     const label = svgNode('text', { x: item.x, y: item.y });
-    if (item.shape === 'box' && item.label.length > 15) {
+    const lines = item.shape === 'box' && item.label.length > 15 ? labelLines(item.label) : [item.label];
+    if (lines.length > 1) {
       label.setAttribute('y', item.y - 9);
-      for (let offset = 0; offset < item.label.length; offset += 15) {
-        const line = svgNode('tspan', { x: item.x, dy: offset ? 18 : 0 }); line.textContent = item.label.slice(offset, offset + 15); label.append(line);
-      }
+      lines.forEach((text, index) => {
+        const line = svgNode('tspan', { x: item.x, dy: index ? 18 : 0 }); line.textContent = text; label.append(line);
+      });
     } else label.textContent = item.label;
-    group.append(item.shape === 'box' ? svgNode('rect', { x: item.x - 70, y: item.y - 28, width: 140, height: 56, rx: 6 }) : svgNode('circle', { cx: item.x, cy: item.y, r: 24 }), label);
+    group.append(item.shape === 'box' ? svgNode('rect', { x: item.x - 70, y: item.y - 28, width: 140, height: 56, rx: 6 }) : svgNode('circle', { cx: item.x, cy: item.y, r: RADIUS }), label);
     groups.set(item.key, group); graph.append(group);
   }
   const description = studyText('p', 'small', block.description);

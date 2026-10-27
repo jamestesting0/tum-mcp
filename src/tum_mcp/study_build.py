@@ -73,16 +73,22 @@ TEMPLATE_FILES = (
     "comment-popover.mjs",
     "font-sans-latin.woff2",
     "font-sans-latin-ext.woff2",
+    "fonts-license.txt",
+)
+# Earlier templates installed these unused files. Builds remove unedited copies and
+# stop managing edited ones; publication removes them from previously managed sites.
+RETIRED_TEMPLATE_FILES = (
     "font-serif-latin.woff2",
     "font-serif-latin-ext.woff2",
     "font-serif-greek.woff2",
-    "fonts-license.txt",
 )
 
 
 class BuildRecord(Frozen):
     schema_version: int = 1
-    files: dict[str, Digest] = Field(default_factory=dict, max_length=len(TEMPLATE_FILES) + 1)
+    files: dict[str, Digest] = Field(
+        default_factory=dict, max_length=len(TEMPLATE_FILES) + len(RETIRED_TEMPLATE_FILES) + 1
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -343,7 +349,7 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             ) from None
         if upgrading and previous is None:
             raise CampusError(Code.WORKSPACE_CONFLICT, "Build ownership is missing; nothing moved.")
-        if not set(record.files) <= {*TEMPLATE_FILES, "data.mjs"}:
+        if not set(record.files) <= {*TEMPLATE_FILES, *RETIRED_TEMPLATE_FILES, "data.mjs"}:
             raise CampusError(
                 Code.WORKSPACE_CONFLICT, "Unknown generated site files were preserved."
             )
@@ -353,7 +359,15 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
         data = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
         desired["data.mjs"] = ("export default " + data + ";\n").encode()
         writes: list[Write] = []
-        owned = dict(record.files)
+        owned = {
+            name: value
+            for name, value in record.files.items()
+            if name not in RETIRED_TEMPLATE_FILES
+        }
+        for name in RETIRED_TEMPLATE_FILES:
+            before = read_bytes(confined(root, f"{folder}/{name}"))
+            if before is not None and digest(before) == record.files.get(name):
+                writes.append(Write(f"{folder}/{name}", before, None))
         preserved: list[str] = []
         for name, after in desired.items():
             before = read_bytes(confined(root, f"{folder}/{name}"))

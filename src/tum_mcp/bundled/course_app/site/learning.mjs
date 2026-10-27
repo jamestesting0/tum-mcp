@@ -12,7 +12,7 @@ export function renderPractice(unit, ui, progress, persist) {
   const last = ui.question === unit.questions.length - 1;
   const state = ui.answers.get(key) || { selected: null, checked: false };
   ui.answers.set(key, state);
-  const count = node('p', 'small', `${ui.question + 1}/${unit.questions.length} · ${question.level === 'recall' ? 'Recall' : question.level === 'apply' ? 'Application' : 'Reasoning'}`);
+  const count = node('p', 'small', `${ui.question + 1} / ${unit.questions.length} · ${question.level === 'recall' ? 'Recall' : question.level === 'apply' ? 'Application' : 'Reasoning'}`);
   const form = node('form', 'practice-question');
   const group = node('fieldset');
   group.append(annotate(studyText('legend', '', question.prompt), unit, question, 'practice', 'prompt'));
@@ -36,6 +36,8 @@ export function renderPractice(unit, ui, progress, persist) {
   const actions = append(node('div', 'card-actions'), check); actions.hidden = state.checked;
   form.append(group, actions);
   const feedback = node('div'); feedback.setAttribute('aria-live', 'polite');
+  const sources = sourcesNote(question.sources, data.sources, data.course.synthetic); sources.hidden = !state.checked;
+  const ending = node('div');
   function mark() {
     form.dataset.checked = 'true';
     for (const [optionKey, label] of labels) {
@@ -81,15 +83,16 @@ export function renderPractice(unit, ui, progress, persist) {
     const panel = node('section', `feedback${correct ? '' : ' incorrect'}`);
     const title = node('h3', '', correct ? 'Correct' : 'Not quite'); title.tabIndex = -1;
     panel.append(title, annotate(studyText('p', '', chosen.feedback), unit, question, 'practice', `feedback:${chosen.key}`));
+    // The marked option already shows the answer; screen readers also hear it with the feedback.
     if (!correct) {
-      const answer = node('p', '', 'Correct answer: '); answer.append(annotate(studyText('span', '', correctChoice.text), unit, question, 'practice', 'correct')); panel.append(answer);
+      const answer = node('p', 'visually-hidden', 'Correct answer: '); answer.append(annotate(studyText('span', '', correctChoice.text), unit, question, 'practice', 'correct')); panel.append(answer);
     }
     panel.append(annotate(studyText('p', '', question.explanation), unit, question, 'practice', 'explanation'));
-    const alternatives = node('details', 'source-note other-options'); alternatives.append(node('summary', '', 'Other options'));
+    const alternatives = node('details', 'disclosure plain other-options source-note'); alternatives.append(node('summary', '', 'Other options'));
     alternatives.append(append(node('ul'), ...question.options.filter(option => option.key !== state.selected).map(option => {
       const item = node('li'); item.append(annotate(studyText('span', '', option.text), unit, question, 'practice', `option:${option.key}`), document.createTextNode(' — '), annotate(studyText('span', '', option.feedback), unit, question, 'practice', `feedback:${option.key}`)); return item;
     })));
-    panel.append(alternatives, sourcesNote(question.sources, data.sources, data.course.synthetic));
+    panel.append(alternatives);
     const next = node('div', 'cluster feedback-actions');
     next.append(button('Try again', () => {
       state.selected = null; state.checked = false; delete progress.questions[key]; persist();
@@ -97,8 +100,9 @@ export function renderPractice(unit, ui, progress, persist) {
     }, 'secondary'));
     if (!last) next.append(button('Continue', () => go(ui.question + 1), 'primary'));
     panel.append(next);
-    if (last) panel.append(summary());
     feedback.replaceChildren(panel);
+    sources.hidden = false;
+    ending.replaceChildren(...(last ? [summary()] : []));
     return title;
   }
   form.addEventListener('submit', event => {
@@ -112,7 +116,7 @@ export function renderPractice(unit, ui, progress, persist) {
   const meta = node('div', 'recall-meta practice-meta');
   const position = node('div'); position.append(count);
   if (question.origin) position.append(node('p', 'small', question.origin.title));
-  const navigation = node('div', 'cluster practice-navigation');
+  const navigation = node('div', 'item-actions practice-navigation');
   navigation.setAttribute('role', 'group'); navigation.setAttribute('aria-label', 'Question navigation');
   const prev = iconButton('Previous question', 'left', () => go(ui.question - 1)); prev.disabled = ui.question === 0;
   const next = iconButton('Next question', 'right', () => go(ui.question + 1)); next.disabled = last;
@@ -125,7 +129,7 @@ export function renderPractice(unit, ui, progress, persist) {
     replacement.dispatchEvent(new CustomEvent('study-activity-change', { bubbles: true }));
     const legend = replacement.querySelector('legend'); focusHeading(legend); legend.scrollIntoView({ block: 'nearest' });
   }
-  navigation.append(prev, next); meta.append(position, navigation);
-  root.append(meta, form, feedback);
+  navigation.append(prev, next); meta.append(position, append(node('div', 'item-actions'), sources, navigation));
+  root.append(meta, form, feedback, ending);
   return root;
 }

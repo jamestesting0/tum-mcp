@@ -68,11 +68,29 @@ def test_notes_deep_links_figure_and_workspace_return(
         expect(page.locator(".lecture-section h2")).to_have_text(
             "Why first discovery gives a shortest path"
         )
-        assert page.locator(".lecture-times a").get_attribute("href").endswith("?t=20")
-        time_link = page.locator(".lecture-times a").first
+        # Recording times open from a passage's sources instead of repeating in the text.
+        section = page.locator(".lecture-section").first
+        assert "0:20" not in section.inner_text()
+        section.locator(".citation summary").first.click()
+        time_link = section.locator(".citation[open] .lecture-time").first
+        assert time_link.get_attribute("href").endswith("?t=20")
         assert time_link.inner_text() in time_link.get_attribute("aria-label")
+        page.keyboard.press("Escape")
+        # Contents is docked on wide screens and opens over the page elsewhere.
+        outline, title = page.locator(".page-outline"), "Why first discovery gives a shortest path"
+        contents = page.locator(".contents-toggle")
+        if width < 1200:
+            expect(outline).to_be_hidden()
+            contents.click()
+        expect(contents).to_have_attribute("aria-expanded", "true")
+        outline.get_by_role("link", name=title, exact=True).click()
+        expect(page.get_by_role("heading", name=title, exact=True)).to_be_focused()
+        expect(outline.locator("[aria-current]")).to_have_text(title)
+        if width < 1200:
+            expect(outline).to_be_hidden()
         figure = page.get_by_role("img")
         expect(figure).to_be_visible()
+        assert "0:37" not in page.locator(".lecture-figure figcaption").inner_text()
         assert page.locator(".lecture-figure .lecture-time").get_attribute("href").endswith("?t=37")
         assert page.locator(".lecture-image").get_attribute("target") == "_blank"
         page.wait_for_function(

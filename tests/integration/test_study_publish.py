@@ -10,9 +10,9 @@ from typer.testing import CliRunner
 from tum_mcp import study_github, study_preview
 from tum_mcp.cli import app
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_build import build
+from tum_mcp.study_build import RETIRED_TEMPLATE_FILES, build
 from tum_mcp.study_publish_models import load_publication
-from tum_mcp.study_publish_site import MARKER, SITE_FILES
+from tum_mcp.study_publish_site import MARKER, SITE_FILES, blob_sha
 
 
 @pytest.fixture
@@ -120,6 +120,27 @@ def test_build_updates_the_same_repository_and_unchanged_build_is_local(
     count = len(github.requests)
     repeated = build(project)
     assert repeated.publication.status == "unchanged" and len(github.requests) == count
+
+
+def test_retired_template_files_leave_an_older_publication(
+    project: Path, github: GitHubFixture
+) -> None:
+    # Given a site published while the template still shipped a now-retired file.
+    assert first_publish(project).exit_code == 0
+    repository = load_publication(project).repository
+    retired = RETIRED_TEMPLATE_FILES[0]
+    github.edit(repository, retired, b"synthetic retired font")
+    marker = json.loads(github.files(repository)[MARKER])
+    marker["files"][retired] = blob_sha(b"synthetic retired font")
+    github.edit(repository, MARKER, json.dumps(marker, indent=2).encode())
+    change_lesson(project)
+    # When the next build updates the configured site.
+    result = build(project)
+    # Then the update succeeds and removes the retired file and its marker entry.
+    assert result.publication.status == "deployed", result.publication
+    files = github.files(repository)
+    assert retired not in files
+    assert retired not in json.loads(files[MARKER])["files"]
 
 
 @pytest.mark.parametrize("pending", ["build", "old_commit", "checks", "workflow"])

@@ -1,7 +1,7 @@
 // Quote selectors use literal text and context, never HTML or guessed fuzzy matches.
 import data from './data.mjs';
 import { studyText } from './dom.mjs';
-const excluded = 'button:not(.flashcard),input,textarea,select,svg,.source-note,.lecture-times,.lecture-figure,.lecture-coverage,[data-comment-ui],[hidden],[aria-hidden="true"]';
+const excluded = 'button:not(.flashcard),input,textarea,select,svg,.source-note,.lecture-figure,.lecture-coverage,[data-comment-ui],[hidden],[aria-hidden="true"]';
 export function annotate(element, unit, item, view, field) {
   const owner = item.origin || unit;
   Object.assign(element.dataset, { commentTarget: view, unitKey: owner.key, unitRevision: owner.revision, itemKey: item.key, field });

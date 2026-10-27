@@ -29,7 +29,7 @@ export function graphResponse(check, draft, edit) {
   const controls = [], options = check.mode === 'edges' ? check.graph.edges.map(edge => ({ key: `${edge.start}--${edge.end}`, label: `${nodes.get(edge.start)} ${edge.directed ? '→' : '—'} ${nodes.get(edge.end)}` })) : check.graph.nodes;
   selected = selected.filter(key => options.some(item => item.key === key));
   const summary = node('p', 'graph-selection'); summary.setAttribute('aria-live', 'polite');
-  const undo = iconButton('Undo', 'reset', () => { selected.pop(); change(); });
+  const undo = iconButton('Undo', 'undo', () => { selected.pop(); change(); });
   const clear = button('Clear', () => { selected = []; change(); }, 'secondary');
   function choose(key) {
     if (check.mode === 'path') { if (selected.length >= 100) return; selected.push(key); }
@@ -90,6 +90,7 @@ export function plotResponse(check, draft, edit) {
       handles[i].setAttribute('aria-label', `x = ${plotNumber(x)}, ${ok ? `y = ${plotNumber(y)}` : 'not placed'}`);
       if (ok) { drawing += `${connected ? 'L' : 'M'}${plot.x(x)},${plot.y(y)} `; connected = true; } else connected = false;
     }); line.setAttribute('d', drawing);
+    clear.disabled = !values.some(Boolean);
   }
   check.x_values.forEach((x, i) => {
     const label = node('label', '', `x = ${plotNumber(x)}`), input = node('input'); input.type = 'text'; input.inputMode = 'decimal'; input.maxLength = 200; input.autocomplete = 'off';

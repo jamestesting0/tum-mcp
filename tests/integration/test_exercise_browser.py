@@ -84,10 +84,10 @@ def test_optional_guidance_and_workspace_round_trip(
             visible=True
         ).first.click()
         expect(page.get_by_role("heading", name="The problem", exact=True)).to_be_visible()
-        page.get_by_text("Guidance", exact=True).click()
+        page.locator(".reading").get_by_text("Guidance", exact=True).click()
         response = page.get_by_label("Your answer", exact=True)
         response.fill("1")
-        page.get_by_role("button", name="Check", exact=True).click()
+        page.get_by_role("button", name="Check answer", exact=True).click()
         expect(page.get_by_text("Include the cost of reaching A", exact=False)).to_be_visible()
         page.get_by_role("button", name="Hint", exact=True).click()
         expect(
@@ -97,7 +97,7 @@ def test_optional_guidance_and_workspace_round_trip(
         switch_workspace(page, "Exercises")
         assert page.get_by_label("Your answer", exact=True).input_value() == "1"
         page.get_by_label("Your answer", exact=True).fill("3")
-        page.get_by_role("button", name="Check", exact=True).click()
+        page.get_by_role("button", name="Check answer", exact=True).click()
         page.get_by_role("button", name="Continue", exact=True).click()
         prompt = page.get_by_role(
             "heading", name="Why does this replace d(B)? You can work on paper.", exact=True
@@ -113,7 +113,7 @@ def test_optional_guidance_and_workspace_round_trip(
         expect(
             page.get_by_text("Replace 5 with 3 because 3 is cheaper.", exact=False)
         ).to_be_visible()
-        page.get_by_text("Solution", exact=True).click()
+        page.locator(".reading").get_by_text("Solution", exact=True).click()
         expect(page.get_by_role("heading", name="Worked solution", exact=True)).to_be_visible()
         # Then no extra mode/form is required and the existing reading layout stays usable.
         assert errors == []
@@ -136,15 +136,15 @@ def test_changed_answers_repeat_clicks_and_reload_preserve_honest_feedback(
         answer = page.get_by_label("Your answer", exact=True)
         # When checking, editing and retrying, the previous verdict cannot remain attached.
         answer.fill("3")
-        page.get_by_role("button", name="Check", exact=True).click()
-        expect(page.get_by_text("Checked correct", exact=True)).to_be_visible()
+        page.get_by_role("button", name="Check answer", exact=True).click()
+        expect(page.get_by_text("Correct", exact=True)).to_be_visible()
         answer.fill("4")
-        expect(page.get_by_text("Checked correct", exact=True)).not_to_be_visible()
+        expect(page.get_by_text("Correct", exact=True)).not_to_be_visible()
         answer.fill("1 + 2")
-        expect(page.get_by_role("button", name="Check", exact=True)).to_be_disabled()
-        expect(page.get_by_text("Use a finite decimal number", exact=False)).to_be_visible()
+        expect(page.get_by_role("button", name="Check answer", exact=True)).to_be_disabled()
+        expect(page.get_by_text("Enter a number such as", exact=False)).to_be_visible()
         answer.fill("3")
-        page.get_by_role("button", name="Check", exact=True).dblclick()
+        page.get_by_role("button", name="Check answer", exact=True).dblclick()
         expect(
             page.get_by_role("heading", name="What is the cost through A?", exact=True)
         ).to_be_visible()
@@ -174,14 +174,14 @@ def test_paper_only_review_and_direct_solution_do_not_require_a_form(
         page.get_by_role("button", name="Expand course outline", exact=True).click()
         expect(page.get_by_role("link", name=re.compile("Exercise 2.*Reviewed"))).to_be_visible()
         page.get_by_role("button", name="Collapse course outline", exact=True).press("Escape")
-        page.get_by_text("Solution", exact=True).click()
+        page.locator(".reading").get_by_text("Solution", exact=True).click()
         expect(page.get_by_role("heading", name="Worked proof", exact=True)).to_be_visible()
-        page.get_by_text("Guidance", exact=True).click()
+        page.locator(".reading").get_by_text("Guidance", exact=True).click()
         page.get_by_role("button", name="Compare", exact=True).click()
         # Then comparison is available with no typed response or automatic correctness claim.
         expect(page.get_by_label("Your answer", exact=True)).not_to_be_visible()
         expect(page.get_by_text("The minimum-choice rule says", exact=False)).to_be_visible()
-        expect(page.get_by_text("Checked correct", exact=True)).not_to_be_visible()
+        expect(page.get_by_text("Correct", exact=True)).not_to_be_visible()
     finally:
         context.close()
 
@@ -197,13 +197,13 @@ def test_choice_feedback_revision_recovery_and_workspace_reset(
         page.locator('[data-card-action="got"]').click()
         page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/transfer-choice")
         page.get_by_label("Replace with 6", exact=True).check()
-        page.get_by_role("button", name="Check", exact=True).click()
+        page.get_by_role("button", name="Check answer", exact=True).click()
         expect(
             page.get_by_text("Include the cost of reaching the neighbor", exact=False)
         ).to_be_visible()
         page.get_by_label("Keep 8", exact=True).check()
-        expect(page.get_by_text("Check your reasoning", exact=True)).not_to_be_visible()
-        page.get_by_role("button", name="Check", exact=True).click()
+        expect(page.get_by_text("Not quite", exact=True)).not_to_be_visible()
+        page.get_by_role("button", name="Check answer", exact=True).click()
         page.get_by_role("button", name="Finish", exact=True).click()
         page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/candidate")
         page.get_by_label("Your answer", exact=True).fill("old draft")
@@ -232,7 +232,7 @@ def test_choice_feedback_revision_recovery_and_workspace_reset(
                 return saved?.steps?.candidate?.draft === 'old draft'; })""")
         page.evaluate("localStorage.setItem('study-space:other-course:progress:v1', 'keep')")
         page.locator(".course-title").click()
-        page.get_by_role("button", name="Reset exercise progress", exact=True).click()
+        page.get_by_role("button", name="Reset progress", exact=True).click()
         page.get_by_role("button", name="Reset", exact=True).click()
         assert (
             page.evaluate("localStorage.getItem('study-space:other-course:progress:v1')") == "keep"
@@ -291,8 +291,8 @@ def test_blocked_storage_keeps_the_current_session_usable(
         page = context.new_page()
         page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/candidate")
         page.get_by_label("Your answer", exact=True).fill("3")
-        page.get_by_role("button", name="Check", exact=True).click()
-        expect(page.get_by_text("Checked correct", exact=True)).to_be_visible()
+        page.get_by_role("button", name="Check answer", exact=True).click()
+        expect(page.get_by_text("Correct", exact=True)).to_be_visible()
         expect(page.get_by_text("Progress cannot be saved", exact=False)).to_be_visible()
         switch_workspace(page, "Study")
         switch_workspace(page, "Exercises")
@@ -376,8 +376,8 @@ def test_static_exercises_under_a_project_prefix(
                     f"page_errors={errors!r}, body={page.locator('body').inner_text()[:2000]!r}",
                     pytrace=False,
                 )
-            page.get_by_role("button", name="Check", exact=True).click()
-            expect(page.get_by_text("Checked correct", exact=True)).to_be_visible()
+            page.get_by_role("button", name="Check answer", exact=True).click()
+            expect(page.get_by_text("Correct", exact=True)).to_be_visible()
             page.reload()
             expect(page.get_by_label("Your answer", exact=True)).to_have_value("3")
             assert errors == []
@@ -407,31 +407,31 @@ def test_table_math_code_and_graph_work_survives_edits_reload_and_navigation(
         total = page.get_by_label("Two pairs: Sum", exact=True)
         word = page.get_by_label("Two pairs: Name", exact=True)
         total.fill("3")
-        expect(page.get_by_role("button", name="Check", exact=True)).to_be_disabled()
+        expect(page.get_by_role("button", name="Check answer", exact=True)).to_be_disabled()
         word.fill(" FOUR ")
-        page.get_by_role("button", name="Check", exact=True).click()
+        page.get_by_role("button", name="Check answer", exact=True).click()
         expect(total).to_have_attribute("aria-invalid", "true")
         expect(word).not_to_have_attribute("aria-invalid", "true")
         total.fill("4")
         expect(total).not_to_have_attribute("aria-invalid", "true")
-        page.get_by_role("button", name="Check", exact=True).click()
-        expect(page.get_by_text("Checked correct", exact=True)).to_be_visible()
+        page.get_by_role("button", name="Check answer", exact=True).click()
+        expect(page.get_by_text("Correct", exact=True)).to_be_visible()
         page.reload()
         expect(word).to_have_value(" FOUR ")
-        expect(page.get_by_text("Checked correct", exact=True)).to_be_visible()
+        expect(page.get_by_text("Correct", exact=True)).to_be_visible()
         page.get_by_role("button", name="Continue", exact=True).click()
         math = page.get_by_label("Working", exact=True)
         math.fill("For n ≥ 1, pair i with n + 1 - i.\n" * 140)
         assert len(math.input_value()) > 4000
         page.get_by_role("button", name="Compare", exact=True).click()
-        expect(page.get_by_text("Checked correct", exact=True)).not_to_be_visible()
+        expect(page.get_by_text("Correct", exact=True)).not_to_be_visible()
         page.get_by_role("button", name="Continue", exact=True).click()
-        page.get_by_text("Starter", exact=True).click()
-        page.get_by_role("button", name="Use", exact=True).click()
+        page.get_by_text("Starter code", exact=True).click()
+        page.get_by_role("button", name="Use starter code", exact=True).click()
         code = page.get_by_label("Python draft", exact=True)
         expect(code).to_have_value("def add(a, b):\n    # Return the sum.\n    pass\n")
         code.fill("def add(a, b):\n    return a + b\n")
-        expect(page.get_by_role("button", name="Use", exact=True)).to_be_disabled()
+        expect(page.get_by_role("button", name="Use starter code", exact=True)).to_be_disabled()
         expect(code).to_have_value("def add(a, b):\n    return a + b\n")
         switch_workspace(page, "Study")
         switch_workspace(page, "Exercises")
@@ -442,21 +442,21 @@ def test_table_math_code_and_graph_work_survives_edits_reload_and_navigation(
         page.get_by_role("button", name="Continue", exact=True).click()
         for name in ("A", "C"):
             page.get_by_role("button", name=name, exact=True).click()
-        page.get_by_role("button", name="Check", exact=True).click()
-        expect(page.get_by_text("Check your reasoning", exact=True)).to_be_visible()
+        page.get_by_role("button", name="Check answer", exact=True).click()
+        expect(page.get_by_text("Not quite", exact=True)).to_be_visible()
         page.get_by_role("button", name="Undo", exact=True).click()
         for name in ("B", "C"):
             page.get_by_role("button", name=name, exact=True).click()
         page.reload()
         expect(page.get_by_text("Path: A → B → C", exact=True)).to_be_visible()
-        page.get_by_role("button", name="Check", exact=True).click()
-        expect(page.get_by_text("Checked correct", exact=True)).to_be_visible()
+        page.get_by_role("button", name="Check answer", exact=True).click()
+        expect(page.get_by_text("Correct", exact=True)).to_be_visible()
         for step, labels in (("graph-nodes", ["A", "B", "C"]), ("graph-edges", ["A → B", "B → C"])):
             page.goto(route + step)
             for label in labels:
                 page.get_by_role("checkbox", name=label, exact=True).check()
-            page.get_by_role("button", name="Check", exact=True).click()
-            expect(page.get_by_text("Checked correct", exact=True)).to_be_visible()
+            page.get_by_role("button", name="Check answer", exact=True).click()
+            expect(page.get_by_text("Correct", exact=True)).to_be_visible()
         assert errors == []
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     finally:
@@ -519,27 +519,27 @@ def test_line_graph_tap_keyboard_coordinates_and_saved_verdict(
         # The actual chart maps x=0,y=1 to (324,158) in its 600x360 viewBox.
         graph.click(position={"x": box["width"] * 324 / 600, "y": box["height"] * 158 / 360})
         expect(middle).to_have_value("1")
-        page.get_by_role("button", name="Check", exact=True).click()
-        expect(page.get_by_text("Checked correct", exact=True)).to_be_visible()
+        page.get_by_role("button", name="Check answer", exact=True).click()
+        expect(page.get_by_text("Correct", exact=True)).to_be_visible()
         handle = page.get_by_role("slider", name="x = 0, y = 1", exact=True)
         handle.press("ArrowDown")
         expect(middle).to_have_value("0.5")
-        expect(page.get_by_text("Checked correct", exact=True)).not_to_be_visible()
-        page.get_by_role("button", name="Check", exact=True).click()
+        expect(page.get_by_text("Correct", exact=True)).not_to_be_visible()
+        page.get_by_role("button", name="Check answer", exact=True).click()
         expect(middle).to_have_attribute("aria-invalid", "true")
         middle.fill("1e309")
-        expect(page.get_by_role("button", name="Check", exact=True)).to_be_disabled()
+        expect(page.get_by_role("button", name="Check answer", exact=True)).to_be_disabled()
         middle.fill("1")
         page.reload()
         expect(middle).to_have_value("1")
-        page.get_by_role("button", name="Check", exact=True).click()
+        page.get_by_role("button", name="Check answer", exact=True).click()
         page.get_by_role("button", name="Finish", exact=True).click()
         expect(page.get_by_role("button", name="Reviewed", exact=True)).to_have_attribute(
             "aria-pressed", "true"
         )
         page.get_by_role("button", name="Clear", exact=True).click()
         expect(left).to_have_value("")
-        expect(page.get_by_role("button", name="Check", exact=True)).to_be_disabled()
+        expect(page.get_by_role("button", name="Check answer", exact=True)).to_be_disabled()
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         assert errors == []
     finally:
@@ -624,7 +624,7 @@ def test_ungraded_guidance_still_offers_prepared_explanation(
     try:
         page = context.new_page()
         page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/candidate")
-        page.get_by_role("button", name="Explain", exact=True).click()
+        page.get_by_role("button", name="Show reasoning", exact=True).click()
         expect(
             page.locator("#content").get_by_text(step["explanation"], exact=True)
         ).to_be_visible()

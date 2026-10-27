@@ -25,7 +25,7 @@ export function renderResponse(check, draft, edit, identity) {
     for (const option of check.options) {
       const label = node('label', 'option'), input = node('input'); input.type = 'radio'; input.name = identity;
       input.value = option.key; input.checked = value === option.key;
-      input.addEventListener('change', () => change(option.key)); label.append(input, studyText('span', '', option.text)); choices.append(label);
+      input.addEventListener('change', () => change(option.key)); label.append(input, studyText('span', 'option-body', option.text)); choices.append(label);
     }
     root.append(choices);
     validate = () => ({ valid: check.options.some(option => option.key === value), correct: value === check.correct,
@@ -34,25 +34,25 @@ export function renderResponse(check, draft, edit, identity) {
     const format = check.format || 'text';
     const { wrapper, input } = field(check.kind === 'numeric' || format === 'text' ? 'Your answer' : format === 'code' ? `${check.language || 'Code'} draft` : 'Working', check.kind === 'self_check', value, change);
     if (check.kind === 'numeric') {
-      input.inputMode = 'decimal';
+      input.inputMode = 'decimal'; input.classList.add('numeric-input');
       root.append(studyText('p', 'small', `Enter ${check.tolerance === 0 ? 'the exact value' : 'a decimal'}${check.unit ? ` in ${check.unit}` : ''}${check.tolerance ? ` (within ${check.tolerance} of the target)` : ''}.`), wrapper);
       validate = () => ({ valid: number(value), correct: number(value) && Math.abs(Number(value) - check.answer) <= check.tolerance,
         repairs: [check.feedback] });
     } else {
-      const details = node(format === 'text' ? 'details' : 'div', 'response-writing');
+      const details = node(format === 'text' ? 'details' : 'div', format === 'text' ? 'disclosure response-writing' : 'response-writing');
       if (format === 'text') { details.open = Boolean(value); details.append(node('summary', '', 'Write')); }
       details.append(wrapper);
       if (format === 'code') {
         input.classList.add('code-input'); input.spellcheck = false; input.autocapitalize = 'off';
         input.rows = 5;
         if (check.starter_code) {
-          const use = button('Use', () => {
+          const use = button('Use starter code', () => {
             if (input.value) return;
             input.value = check.starter_code; change(input.value); use.disabled = true; input.focus();
           }, 'secondary');
           use.disabled = Boolean(value);
           input.addEventListener('input', () => { use.disabled = Boolean(input.value); });
-          const starter = node('details', 'starter-code'); starter.append(node('summary', '', 'Starter'), append(node('pre'), node('code', '', check.starter_code)), use);
+          const starter = node('details', 'disclosure starter-code'); starter.append(node('summary', '', 'Starter code'), append(node('pre'), node('code', '', check.starter_code)), use);
           const listing = starter.querySelector('pre'); listing.tabIndex = 0; listing.setAttribute('role', 'region'); listing.setAttribute('aria-label', 'Starter code');
           details.append(starter);
         }
@@ -64,7 +64,7 @@ export function renderResponse(check, draft, edit, identity) {
     const cells = structured(value), inputs = [];
     const region = node('div', 'table-region answer-table'); region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', check.caption);
     const table = node('table'), header = node('tr'); table.append(studyText('caption', '', check.caption));
-    const rowTitle = node('th', '', 'Row'); rowTitle.scope = 'col'; header.append(rowTitle);
+    const rowTitle = node('th'); rowTitle.scope = 'col'; rowTitle.append(node('span', 'visually-hidden', 'Row')); header.append(rowTitle);
     for (const title of check.columns) { const th = studyText('th', '', title); th.scope = 'col'; header.append(th); }
     table.append(append(node('thead'), header)); const body = node('tbody');
     for (const row of check.rows) {

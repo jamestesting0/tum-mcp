@@ -19,13 +19,16 @@ export function renderPlot(block) {
   if (block.x_min < 0 && block.x_max > 0) graph.append(svgNode('line', { x1: x(0), y1: area.top, x2: x(0), y2: area.bottom, class: 'plot-axis' }));
   if (block.y_min < 0 && block.y_max > 0) graph.append(svgNode('line', { x1: area.left, y1: y(0), x2: area.right, y2: y(0), class: 'plot-axis' }));
   label(studyText('span', '', block.x_label).textContent, { x: (area.left + area.right) / 2, y: 352, 'text-anchor': 'middle' });
-  const ylabel = svgNode('text', { transform: 'translate(18 158) rotate(-90)', 'text-anchor': 'middle' }); ylabel.textContent = studyText('span', '', block.y_label).textContent; graph.append(ylabel);
+  // A short axis symbol sits upright above the axis; rotating it would make it read as a glyph.
+  const yText = studyText('span', '', block.y_label).textContent, rotate = yText.length > 3;
+  const ylabel = svgNode('text', rotate ? { transform: 'translate(18 158) rotate(-90)', 'text-anchor': 'middle' } : { x: area.left, y: 17, 'text-anchor': 'middle' });
+  ylabel.textContent = yText; graph.append(ylabel);
   const series = svgNode('g'); graph.append(series);
   for (const [index, line] of block.series.entries()) {
     const path = svgNode('polyline', { points: line.points.map(p => `${x(p.x)},${y(p.y)}`).join(' '), class: 'plot-line', 'stroke-dasharray': marks[index] });
     series.append(path);
   }
-  root.append(graph);
+  root.append(studyText('p', 'small', block.description), graph);
   if (block.series.length > 1) {
     const legend = node('ul', 'plot-legend');
     block.series.forEach((line, i) => {
@@ -34,9 +37,8 @@ export function renderPlot(block) {
       legend.append(append(node('li'), sample, studyText('span', '', line.label)));
     }); root.append(legend);
   }
-  root.append(studyText('p', 'small', block.description));
   if (block.series.length) {
-    const details = node('details', 'plot-data'), table = node('table'), head = node('tr');
+    const details = node('details', 'disclosure plot-data'), table = node('table'), head = node('tr');
     details.append(node('summary', '', 'Data'));
     for (const title of ['Series', block.x_label, block.y_label]) { const th = studyText('th', '', title); th.scope = 'col'; head.append(th); }
     table.append(append(node('thead'), head)); const body = node('tbody');

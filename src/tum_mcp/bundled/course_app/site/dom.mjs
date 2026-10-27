@@ -31,11 +31,21 @@ export function button(label, handler, className = '') {
   return element;
 }
 export function append(parent, ...children) { parent.append(...children); return parent; }
+// Destructive choices use one app dialog; Cancel has focus so Enter never confirms by accident.
+export function confirmAction({ title, message, action, onConfirm, trigger }) {
+  const dialog = node('dialog', 'confirm-dialog'), heading = node('h2', '', title);
+  heading.id = `confirm-${crypto.randomUUID()}`; dialog.setAttribute('aria-labelledby', heading.id);
+  const cancel = button('Cancel', () => dialog.close(), 'quiet');
+  const confirm = button(action, () => { dialog.close(); onConfirm(); }, 'danger');
+  dialog.append(heading, node('p', '', message), append(node('div', 'cluster dialog-actions'), cancel, confirm));
+  dialog.addEventListener('close', () => { dialog.remove(); if (trigger?.isConnected) trigger.focus(); });
+  document.body.append(dialog); dialog.showModal(); cancel.focus();
+}
 export function focusHeading(heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
 export function scrollReadingTo(element) {
   const main = element.closest('main');
   if (!main || matchMedia('(max-width: 799px)').matches) element.scrollIntoView({ block: 'start' });
-  else main.scrollTo({ top: main.scrollTop + element.getBoundingClientRect().top - main.getBoundingClientRect().top, behavior: 'instant' });
+  else main.scrollTo({ top: main.scrollTop + element.getBoundingClientRect().top - main.getBoundingClientRect().top - (parseFloat(getComputedStyle(element).scrollMarginTop) || 0), behavior: 'instant' });
 }
 let announcer;
 // Announces a change whose visible element is replaced, such as advancing to the next card.
@@ -46,7 +56,8 @@ export function announce(message) {
   announcer.textContent = '';
   requestAnimationFrame(() => { announcer.textContent = message; });
 }
-export function sourcesNote(ids, sources, synthetic, title = '') {
+// `locators` maps a source id to nodes, such as measured recording times, that replace its general locator.
+export function sourcesNote(ids, sources, synthetic, title = '', locators = {}) {
   const note = node('details', 'source-note citation');
   const trigger = node('summary'); trigger.setAttribute('aria-label', title ? `Sources for ${studyText('span', '', title).textContent}` : 'Sources'); trigger.title = 'Sources';
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -64,7 +75,8 @@ export function sourcesNote(ids, sources, synthetic, title = '') {
       const url = new URL(source.url); if (!['http:', 'https:'].includes(url.protocol)) continue;
       const link = node('a', '', label); link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; item.append(link);
     }
-    if (source.locator) item.append(node('span', 'citation-locator', source.locator));
+    if (locators[id]?.length) item.append(append(node('span', 'citation-locator citation-times'), ...locators[id]));
+    else if (source.locator) item.append(node('span', 'citation-locator', source.locator));
     list.append(item);
   }
   panel.append(list); note.append(trigger, panel); note.hidden = !list.children.length;

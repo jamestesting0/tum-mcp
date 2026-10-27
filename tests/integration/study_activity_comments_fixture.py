@@ -14,9 +14,8 @@ def activity_comment_checks(
 
     owner = content["units"][1]
     if pooled:
+        # A fresh browser pools every topic, in course order.
         page.goto(f"https://study.invalid/#revision?view={view}")
-        page.get_by_role("button", name="Select all", exact=True).click()
-        page.locator(".revision-topics > summary").click()
         first = content["units"][0]
         for _ in first["flashcards" if view == "flashcards" else "questions"]:
             page.get_by_role(

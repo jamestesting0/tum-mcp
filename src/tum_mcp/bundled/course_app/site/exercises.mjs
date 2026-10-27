@@ -1,13 +1,19 @@
 import data from './data.mjs';
 import { node, studyText, button, append, announce, sourcesNote, focusHeading, scrollReadingTo } from './dom.mjs';
 import { renderReading } from './reading.mjs';
-import { iconButton } from './navigation.mjs';
+import { iconButton, nextStep } from './navigation.mjs';
 import { renderResponse } from './exercise-response.mjs';
 import { annotateExercise } from './anchors.mjs';
 import { renderCommentedView } from './comments.mjs';
 
 const sets = data.exercises?.sets || [];
+const ordered = sets.flatMap(group => group.exercises.map(exercise => ({ group, exercise })));
 export const exerciseLink = (group, exercise, step = '') => `#exercises/${group.key}/${exercise.key}${step ? `/${step}` : ''}`;
+function due(group) {
+  const time = group.due_at && new Date(group.due_at);
+  return time && Number.isFinite(time.getTime())
+    ? `Due ${new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)}` : '';
+}
 
 export function exerciseOutline(state, current = '', compact = false) {
   const root = node(compact ? 'nav' : 'section', compact ? 'unit-list' : 'exercise-list');
@@ -15,12 +21,19 @@ export function exerciseOutline(state, current = '', compact = false) {
   let category;
   for (const group of sets) {
     if (group.category && group.category !== category) {
-      category = group.category; root.append(studyText(compact ? 'p' : 'h2', 'small', category));
+      category = group.category; root.append(studyText(compact ? 'p' : 'h2', compact ? 'small' : 'topic-group', category));
     }
     const sheet = node('details', 'unit-group exercise-sheet');
     sheet.open = group.exercises.some(item => item.key === current) || group === sets[0];
     sheet.append(studyText('summary', '', group.title));
     const list = node('div', compact ? 'group-children' : '');
+    const meta = [group.week, due(group)].filter(Boolean).join(' · ');
+    if (!compact && (group.summary || meta)) {
+      const about = node('div', 'sheet-meta');
+      if (group.summary) about.append(studyText('p', 'unit-summary', group.summary));
+      if (meta) about.append(node('p', 'small', meta));
+      list.append(about);
+    }
     for (const exercise of group.exercises) {
       const link = node('a', 'unit-link'); link.href = exerciseLink(group, exercise);
       if (exercise.key === current) link.setAttribute('aria-current', 'page');
@@ -34,8 +47,10 @@ export function exerciseOutline(state, current = '', compact = false) {
 }
 
 function disclosure(label, content, opened, onToggle) {
-  const details = node('details', 'exercise-disclosure'); details.open = opened;
-  details.append(node('summary', '', label), content);
+  const details = node('details', 'disclosure exercise-disclosure'); details.open = opened;
+  // Exercise sections are disclosures rather than headings; mark them so the contents outline lists them.
+  const summary = node('summary', '', label); summary.dataset.contentsEntry = '';
+  details.append(summary, content);
   details.addEventListener('toggle', () => onToggle(details.open)); return details;
 }
 function quietLink(label, href) { const link = node('a', '', label); link.href = href; return link; }
@@ -64,7 +79,7 @@ export function renderExercises(hash, state, changed) {
   const heading = studyText('h1', '', exercise.title), header = node('div', 'unit-header');
   const target = (element, field, step = '') => annotateExercise(element, group, exercise, field, step);
   const activityChanged = () => root.dispatchEvent(new Event('study-activity-change', { bubbles: true }));
-  header.append(studyText('p', 'eyebrow', `${group.title} · ${exercise.label}`), heading);
+  header.append(studyText('p', 'eyebrow', [group.title, exercise.label, due(group)].filter(Boolean).join(' · ')), heading);
   root.append(header);
   const statement = renderReading({ blocks: exercise.statement }); statement.id = 'exercise-question';
   [...statement.querySelectorAll('.reading-material')].forEach((element, index) => target(element, `statement:${index}`));
@@ -76,12 +91,12 @@ export function renderExercises(hash, state, changed) {
     if (unit) note.append(' ', quietLink(`Review ${unit.title}`, `#study/${unit.key}/content`));
     root.append(note);
   }
-  const mark = button(value.reviewed ? 'Reviewed' : 'Mark reviewed', () => {
-    value.reviewed = !value.reviewed; mark.textContent = value.reviewed ? 'Reviewed' : 'Mark reviewed';
-    mark.setAttribute('aria-pressed', String(value.reviewed)); state.save(exercise); changed();
-  }, 'secondary review-toggle'); mark.setAttribute('aria-pressed', String(value.reviewed));
-  root.append(append(node('div', 'cluster exercise-review'), mark));
   const panel = node('section', 'exercise-step');
+  if (exercise.objectives?.length) {
+    const goals = node('div', 'exercise-goals');
+    goals.append(node('p', 'small objectives-label', 'Goals'), append(node('ul'), ...exercise.objectives.map(text => studyText('li', '', text))));
+    panel.append(goals);
+  }
   const guidance = disclosure('Guidance', panel, value.helpOpen || Boolean(stepKey), opened => {
     value.helpOpen = opened; state.save(exercise); activityChanged();
   });
@@ -97,13 +112,25 @@ export function renderExercises(hash, state, changed) {
     state.save(exercise);
     location.hash = exerciseLink(group, exercise, exercise.steps[index + 1].key);
   });
-  prev.className = next.className = 'icon-button step-arrow';
   navigation.append(counter, prev, next);
   const body = node('div', 'step-body'); panel.append(navigation, body);
+  const mark = button(value.reviewed ? 'Reviewed' : 'Mark reviewed', () => setReviewed(!value.reviewed), 'secondary review-toggle');
+  mark.setAttribute('aria-pressed', String(value.reviewed));
+  function setReviewed(reviewed) {
+    value.reviewed = reviewed; mark.textContent = reviewed ? 'Reviewed' : 'Mark reviewed';
+    mark.setAttribute('aria-pressed', String(reviewed)); state.save(exercise); changed();
+  }
+  const following = ordered[ordered.findIndex(item => item.exercise === exercise) + 1];
+  const onward = following && nextStep({ href: exerciseLink(following.group, following.exercise), title: following.exercise.title, detail: following.exercise.label });
+  function verdict(correct, ...paragraphs) {
+    const section = node('section', `feedback${correct ? '' : ' incorrect'}`);
+    section.append(node('h3', '', correct ? 'Correct' : 'Not quite'), ...paragraphs);
+    return section;
+  }
   function paintStep() {
     const step = exercise.steps[index], saved = value.steps[step.key];
     value.lastStep = step.key; body.replaceChildren();
-    counter.textContent = `Step ${index + 1} of ${exercise.steps.length}`;
+    counter.textContent = `Step ${index + 1} / ${exercise.steps.length}`;
     prev.disabled = index === 0; next.disabled = index === exercise.steps.length - 1;
     const title = target(studyText('h2', '', step.prompt), 'prompt', step.key);
     const citations = step.sources?.length ? step.sources : step.check?.graph?.sources || step.check?.plot?.sources || exercise.sources.map(item => item.key);
@@ -147,16 +174,16 @@ export function renderExercises(hash, state, changed) {
       const result = response.validate(); feedback.replaceChildren(); target(feedback, 'feedback', step.key);
       response.showResult(checked);
       if (check?.kind === 'self_check' && saved.compared) {
-        feedback.append(node('p', 'eyebrow', 'Compare with your work'), studyText('p', '', check.model_answer), append(node('ul'), ...check.rubric.map(text => studyText('li', '', text))));
+        const section = node('section', 'feedback');
+        section.append(node('h3', '', 'Compare with your work'), studyText('p', '', check.model_answer), append(node('ul'), ...check.rubric.map(text => studyText('li', '', text))));
+        feedback.append(section);
       } else if (checked && result.valid) {
-        feedback.append(node('p', result.correct ? '' : 'incorrect', result.correct ? 'Checked correct' : 'Check your reasoning'));
-        if (result.correct) feedback.append(studyText('p', '', step.explanation));
-        else for (const repair of result.repairs) feedback.append(studyText('p', '', repair));
-      } else if (saved.draft && check?.kind === 'numeric' && !result.valid) feedback.append(node('p', '', 'Use a finite decimal number, such as 0.5.'));
+        feedback.append(result.correct ? verdict(true, studyText('p', '', step.explanation)) : verdict(false, ...result.repairs.map(repair => studyText('p', '', repair))));
+      } else if (saved.draft && check?.kind === 'numeric' && !result.valid) feedback.append(node('p', 'small', 'Enter a number such as 0.5 or 2e-3.'));
       const ready = !check || (check.kind === 'self_check' ? saved.compared : checked && result.correct);
-      primary.textContent = ready ? (index === exercise.steps.length - 1 ? 'Finish' : 'Continue') : check.kind === 'self_check' ? 'Compare' : 'Check';
+      primary.textContent = ready ? (index === exercise.steps.length - 1 ? 'Finish' : 'Continue') : check.kind === 'self_check' ? 'Compare' : 'Check answer';
       primary.disabled = Boolean(check && check.kind !== 'self_check' && !result.valid);
-      hint.textContent = saved.hints < step.hints.length ? (saved.hints ? 'Next hint' : 'Hint') : 'Explain';
+      hint.textContent = saved.hints < step.hints.length ? (saved.hints ? 'Next hint' : 'Hint') : 'Show reasoning';
       hint.hidden = Boolean(check && ready) || saved.revealed;
     }
     const actions = append(node('div', 'cluster exercise-actions'), primary, hint);
@@ -164,23 +191,31 @@ export function renderExercises(hash, state, changed) {
     paintHelp();
     function advance() {
       if (index === exercise.steps.length - 1) {
-        value.reviewed = true; state.save(exercise); changed(); mark.textContent = 'Reviewed'; mark.setAttribute('aria-pressed', 'true');
-        announce('Review finished. This is not an assessment result.'); return;
+        setReviewed(true); announce('Marked reviewed.');
+        const destination = onward?.querySelector('a') || mark;
+        scrollReadingTo(end); destination.focus({ preventScroll: true }); return;
       }
       location.hash = exerciseLink(group, exercise, exercise.steps[index + 1].key);
     }
     update(); state.save(exercise); return title;
   }
+  const end = append(node('div', 'cluster exercise-end'), mark);
   paintStep();
-  const solution = append(node('div'), node('p', 'small', exercise.solution.origin === 'official' ? 'Official solution' : 'Authored solution'), renderReading({ blocks: exercise.solution.blocks }));
+  const solution = append(node('div'), node('p', 'small', exercise.solution.origin === 'official' ? 'Official solution' : 'Prepared solution, not official'), renderReading({ blocks: exercise.solution.blocks }));
   [...solution.querySelectorAll('.reading-material')].forEach((element, index) => target(element, `solution:${index}`));
   root.append(disclosure('Solution', solution, value.solutionOpen, opened => {
     value.solutionOpen = opened; value.solutionViewed ||= opened; state.save(exercise); activityChanged();
   }));
-  if (exercise.transfer) root.append(disclosure('Try another', append(node('div', 'stack'),
-    target(studyText('p', '', exercise.transfer.prompt), 'transfer-prompt'), disclosure('Compare', target(studyText('p', '', exercise.transfer.answer), 'transfer-answer'), false, activityChanged)), false, activityChanged));
+  if (exercise.transfer) {
+    const answer = node('details', 'disclosure plain');
+    answer.append(node('summary', '', 'Compare'), target(studyText('p', '', exercise.transfer.answer), 'transfer-answer'));
+    answer.addEventListener('toggle', activityChanged);
+    root.append(disclosure('Try another', append(node('div', 'stack'), target(studyText('p', '', exercise.transfer.prompt), 'transfer-prompt'), answer), false, activityChanged));
+  }
+  root.append(end);
+  if (onward) root.append(onward);
   return { root: renderCommentedView({ ...exercise, setKey: group.key }, 'exercises', root).root,
-    heading: stepKey ? panel.querySelector('h2') : heading,
+    heading: stepKey ? panel.querySelector('.step-body h2') : heading,
     title: `${exercise.label} · ${exercise.title}`, current: exercise.key,
     navigateStep(key) {
       const nextIndex = exercise.steps.findIndex(item => item.key === key);
@@ -202,5 +237,4 @@ export function renderExercises(hash, state, changed) {
       announce(`Step ${index + 1} of ${exercise.steps.length}. ${exercise.steps[index].prompt}`);
       activityChanged(); return true;
     } };
-
 }

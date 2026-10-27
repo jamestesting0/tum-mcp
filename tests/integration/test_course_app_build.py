@@ -7,7 +7,8 @@ from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_build import build, read_content, unit_revision
+from tum_mcp.study_build import RETIRED_TEMPLATE_FILES, build, read_content, unit_revision
+from tum_mcp.study_store import digest
 
 
 def test_app_folder_build_preserves_the_existing_study_contract(project: Path) -> None:
@@ -28,6 +29,27 @@ def test_app_folder_build_preserves_the_existing_study_contract(project: Path) -
     inspected = CliRunner().invoke(app, ["study", "inspect", str(project)])
     assert inspected.exit_code == 0, inspected.output
     assert json.loads(inspected.output)["exercises_path"] == "app/exercises.json"
+
+
+def test_retired_template_files_are_removed_unless_edited(project: Path) -> None:
+    # Given a site built by an older template that still owns two retired files.
+    site = project / "study"
+    record_path = site / ".managed.json"
+    record = json.loads(record_path.read_bytes())
+    unedited, edited = RETIRED_TEMPLATE_FILES[:2]
+    for name in (unedited, edited):
+        (site / name).write_bytes(b"synthetic retired font")
+        record["files"][name] = digest(b"synthetic retired font")
+    (site / edited).write_bytes(b"locally edited font")
+    record_path.write_text(json.dumps(record), encoding="utf-8")
+    # When the current template builds the same project, twice.
+    build(project, publish=False)
+    build(project, publish=False)
+    # Then the unedited copy is gone, the edit stays and neither remains managed.
+    assert not (site / unedited).exists()
+    assert (site / edited).read_bytes() == b"locally edited font"
+    managed = json.loads(record_path.read_bytes())["files"]
+    assert not set(managed) & set(RETIRED_TEMPLATE_FILES)
 
 
 def test_two_authored_layouts_are_preserved_as_a_conflict(project: Path) -> None:

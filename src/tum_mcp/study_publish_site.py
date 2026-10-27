@@ -14,7 +14,7 @@ from tum_mcp.course_app_paths import app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_assets import ASSET
 from tum_mcp.settings import Frozen
-from tum_mcp.study_build import TEMPLATE_FILES
+from tum_mcp.study_build import RETIRED_TEMPLATE_FILES, TEMPLATE_FILES
 from tum_mcp.study_github import Commit, GitHub, GitObject, Head, Response, Tree
 from tum_mcp.study_models import Digest, is_studocu_link
 from tum_mcp.study_publish_models import GitSha, Publication, course_identity
@@ -23,6 +23,8 @@ from tum_mcp.study_store import digest, load_state
 
 MARKER: Final = "tum-mcp-site.json"
 SITE_FILES: Final = (*TEMPLATE_FILES, "data.mjs", ".nojekyll")
+# Markers from older exports may list retired files; the next commit removes them.
+KNOWN_SITE_FILES: Final = frozenset((*SITE_FILES, *RETIRED_TEMPLATE_FILES))
 
 
 class SiteMarker(Frozen):
@@ -86,9 +88,6 @@ def export_site(
         + b"data.hosted = true;\nexport default data;\n"
     )
     output.update(assets(root, payload))
-    output["index.html"] = output["index.html"].replace(
-        b"A private local course notebook", b"A source-backed course notebook"
-    )
     output[".nojekyll"] = b""
     preflight(output, course_identity(load_state(root).course))
     return output
@@ -200,7 +199,7 @@ def verify_marker(github: GitHub, publication: Publication, tree: Tree) -> SiteM
             Code.WORKSPACE_CONFLICT, "The remote study marker needs review."
         ) from None
     if value.course_identity != publication.course_identity or any(
-        name not in SITE_FILES and ASSET.fullmatch(name) is None for name in value.files
+        name not in KNOWN_SITE_FILES and ASSET.fullmatch(name) is None for name in value.files
     ):
         raise CampusError(
             Code.SCOPE_DENIED, "The remote repository is bound to another study site."
