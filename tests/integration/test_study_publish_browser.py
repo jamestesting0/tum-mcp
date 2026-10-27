@@ -4,7 +4,7 @@ import json
 import mimetypes
 import os
 from functools import partial
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import SimpleHTTPRequestHandler
 from pathlib import Path
 from threading import Thread
 
@@ -14,6 +14,7 @@ from playwright.sync_api import sync_playwright
 
 from tum_mcp.moodle.browser_runtime import browser_driver
 from tum_mcp.moodle.browsers import discover_browsers
+from tum_mcp.study_preview import PreviewServer
 from tum_mcp.study_publish_site import export_site
 from tum_mcp.study_store import load_state
 
@@ -57,9 +58,7 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
     evidence = Path(destination) if destination else None
     if evidence:
         evidence.mkdir(parents=True, exist_ok=True)
-    server = ThreadingHTTPServer(
-        ("127.0.0.1", 0), partial(StaticHandler, directory=str(site.parent))
-    )
+    server = PreviewServer(("127.0.0.1", 0), partial(StaticHandler, directory=str(site.parent)))
     worker = Thread(target=server.serve_forever, daemon=True)
     worker.start()
     errors: list[str] = []

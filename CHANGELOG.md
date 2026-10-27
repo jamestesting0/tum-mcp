@@ -18,6 +18,8 @@
   the runtime (no CUDA toolkit or cuDNN), checks the GPU during installation and
   otherwise stays on CPU int8. `TUM_MCP_LECTURE_ENGINE` also accepts `cuda`.
 - Document the eSpeak data path limit that breaks local Kokoro on macOS in Audio Notes.
+- Keep the local course app loading on Windows: the preview server now queues the
+  app's burst of parallel module requests instead of refusing all but five.
 
 ## 0.9.5 — 2026-10-27
 

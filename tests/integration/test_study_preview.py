@@ -1,4 +1,5 @@
 import mimetypes
+import socket
 from functools import partial
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -7,7 +8,7 @@ from threading import Thread
 import httpx2
 import pytest
 
-from tum_mcp.study_preview import Handler
+from tum_mcp.study_preview import Handler, PreviewServer
 
 
 def test_loopback_preview_confines_files_and_rejects_foreign_hosts(
@@ -69,3 +70,13 @@ def test_loopback_preview_confines_files_and_rejects_foreign_hosts(
             server.shutdown()
             thread.join(timeout=2)
             assert not thread.is_alive(), "Preview test server did not stop."
+
+
+def test_preview_queues_the_apps_parallel_module_burst(tmp_path: Path) -> None:
+    # The app opens ~30 module requests at once. A listen backlog of 5 makes Windows
+    # refuse the rest (and others stall), which shows "Course unavailable".
+    with PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(tmp_path))) as server:
+        port = server.server_address[1]
+        clients = [socket.create_connection(("127.0.0.1", port), timeout=5) for _ in range(40)]
+        for client in clients:
+            client.close()

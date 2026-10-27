@@ -28,6 +28,9 @@ class PreviewServer(ThreadingHTTPServer):
     # Windows SO_REUSEADDR permits simultaneous listeners, unlike POSIX reuse.
     allow_reuse_address = not hasattr(socket, "SO_EXCLUSIVEADDRUSE")
     allow_reuse_port = False
+    # The app requests ~30 modules at once; Windows refuses connections beyond the
+    # listen backlog (default 5) instead of queueing them, so the course fails to load.
+    request_queue_size = 128
 
     def server_bind(self) -> None:
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
