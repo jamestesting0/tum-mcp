@@ -263,6 +263,23 @@ def test_full_flow_publishes_a_checked_final_video(
     assert row["published"] == "current" and row["edited_since_publication"]
 
 
+def test_crlf_scenes_render_publish_and_stay_current(
+    course: Path, runtime: FakeRuntime, tmp_path: Path
+) -> None:
+    # Windows editors save CRLF; render, publish and inspect must fingerprint the same bytes.
+    prepare(course, tmp_path)
+    scene = course / f"videos/scenes/{STEM}/chapters.py"
+    scene.write_bytes(SCENE.replace("\n", "\r\n").encode())
+    narrate(course)
+    final = project.render(course, STEM, quality="final", jobs=1, max_minutes=None, run=None)
+    assert final["ok"], final
+    project.publish(
+        course, STEM, final["run"], teaching_review=review(tmp_path), visual_review="performed"
+    )
+    row = project.inspect(course, stem=STEM, verify=True)["units"][0]
+    assert row["published"] == "current" and not row["edited_since_publication"]
+
+
 def test_content_edits_are_classified_and_acknowledged(
     course: Path, runtime: FakeRuntime, tmp_path: Path
 ) -> None:

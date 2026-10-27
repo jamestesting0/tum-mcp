@@ -486,7 +486,9 @@ def render(
     scene_path = videos(root, f"scenes/{stem}/chapters.py")
     if not scene_path.is_file() or scene_path.stat().st_size > 512 * 1024:
         raise CampusError(Code.ACTION_REQUIRED, f"Write videos/scenes/{stem}/chapters.py first.")
-    source = scene_path.read_text(encoding="utf-8")
+    # Hash the bytes publish and inspect hash; read_text would normalize CRLF (Windows).
+    scene_bytes = scene_path.read_bytes()
+    source = scene_bytes.decode("utf-8")
     report = lint(source, storyboard)
     if not report.ok:
         return {
@@ -500,7 +502,7 @@ def render(
     runtime_profile = render_profile()
     inputs = {
         "storyboard": sha256(story_bytes),
-        "scene": sha256(source.encode()),
+        "scene": sha256(scene_bytes),
         "style": sha256(style_bytes),
         "timing": sha256(timings.model_dump_json().encode()),
         "voice": sha256(timings.voice.encode()),
