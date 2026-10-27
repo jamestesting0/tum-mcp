@@ -128,7 +128,7 @@ def _connect_campus_services(
         require_lecture()
     available = (browser,) if browser is not None else discover_browsers()
     if not available:
-        raise BrowserSetupError("Install a Chromium browser, then run tum-mcp connect.")
+        raise BrowserSetupError("Install a Chromium browser, then run tum-mcp login.")
     selected_browser = available[0]
     origins = {
         ServiceChoice.MOODLE: BASE_URL,
@@ -228,7 +228,7 @@ def _connect_campus_services(
         raise CampusError(
             Code.AUTH_REQUIRED,
             "The browser closed or could not complete sign-in. Completed connections were saved; "
-            "run tum-mcp connect to retry or choose another browser.",
+            "run tum-mcp login to retry or choose another browser.",
         ) from None
 
 

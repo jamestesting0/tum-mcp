@@ -81,7 +81,7 @@ def tum_get_preferences() -> Preferences:
 @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
 def tum_connect() -> str:
     """Return the trusted local connection command; never accept keys through chat."""
-    return "Run tum-mcp connect in your terminal, select services and complete browser sign-in."
+    return "Run tum-mcp login in your terminal, select services and complete browser sign-in."
 
 
 @server.tool(annotations=READ)

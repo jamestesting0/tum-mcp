@@ -17,7 +17,7 @@ def require_enabled() -> None:
         raise CampusError(Code.CAPABILITY_UNSUPPORTED, "Install the Studocu extension first.")
 
 
-@app.command()
+@app.command("login")
 def connect() -> None:
     """Explain the supported browser access route without collecting credentials."""
     require_enabled()
@@ -25,6 +25,9 @@ def connect() -> None:
         "Sign in to Studocu in your own browser. Save originals there, then use studocu import. "
         "No browser session is copied."
     )
+
+
+app.command("connect", hidden=True)(connect)
 
 
 @app.command()

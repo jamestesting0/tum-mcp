@@ -39,7 +39,7 @@ def run_selector(
         "  if on_connected: on_connected(result)\n"
         " return results\n"
         "connect.connect_services=connected\n"
-        "sys.argv=['tum-mcp','connect']\n"
+        "sys.argv=['tum-mcp','login']\n"
         "from tum_mcp.cli import main\nmain()\n",
         encoding="utf-8",
     )
@@ -68,7 +68,12 @@ def run_selector(
                 if b"\x1b[6n" in chunk:
                     os.write(master, b"\x1b[1;1R")
                 plain = re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", bytes(captured))
-                if not sent and b"Connect services" in plain:
+                ready = (
+                    b"Selection: " in plain
+                    if terminal == "dumb"
+                    else b"TUMonline" in plain and b"\x1b[?25l" in captured
+                )
+                if not sent and ready:
                     os.write(master, keys)
                     sent = True
                 elif sent and not browser_sent and browser_keys and b"Browser" in plain:

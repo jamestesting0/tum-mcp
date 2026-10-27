@@ -121,7 +121,7 @@ def tumonline(
                     (
                         "TUMonline",
                         State.UNCONFIGURED,
-                        "No TUMonline policy is configured. Run tum-mcp connect to sign in.",
+                        "No TUMonline policy is configured. Run tum-mcp login to sign in.",
                     )
                 ],
             )

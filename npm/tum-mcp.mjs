@@ -22,9 +22,8 @@ try {
       ['Options', [['--version', 'Show the installed version.'], ['-h, --help', 'Show this help.']]],
       ['Commands', [
         ['setup', 'Configure your coding client and managed runtime.'],
-        ['connect', 'Sign in to selected campus services.'],
-        ['status', 'Show saved connections and optional workflows.'],
-        ['doctor', 'Check installation and authentication.'],
+        ['login', 'Sign in to selected campus services.'],
+        ['doctor', 'Show connections, extensions and relevant client/runtime health.'],
         ['install', 'Choose optional Lecture, Studocu or Audio Notes workflows.'],
         ['uninstall', 'Choose extensions or All to remove TUM MCP.'],
         ['manage', 'Manage TUMonline permissions.'],
@@ -38,7 +37,7 @@ try {
         ['serve', 'Run the MCP server over stdio.'],
         ['version', 'Show the installed version.'],
       ]],
-      ['Get started', [['tum-mcp setup --client codex', 'Prepare the backend and a client.'], ['tum-mcp connect', 'Choose services and sign in.']]],
+      ['Get started', [['tum-mcp setup --client codex', 'Prepare the backend and a client.'], ['tum-mcp login', 'Choose services and sign in.']]],
     ]);
   } else if (['--version', 'version'].includes(args[0])) {
     console.log(version);

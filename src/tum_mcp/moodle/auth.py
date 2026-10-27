@@ -128,7 +128,7 @@ class SessionStore:
             if not path.exists():
                 raise MoodleError(
                     ErrorCode.AUTH_REQUIRED,
-                    "Run tum-mcp connect in a terminal and select Moodle."
+                    "Run tum-mcp login in a terminal and select Moodle."
                     if self.storage == "file"
                     else "Use moodle_login to sign in.",
                 )

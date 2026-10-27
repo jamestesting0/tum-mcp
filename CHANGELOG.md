@@ -1,5 +1,12 @@
 # Changes
 
+## Unreleased
+
+- Combine connection status, extension status and health checks in `doctor`.
+  Show only installed or configured clients, including in the setup picker.
+- Rename campus sign-in to `login`, paired with `logout`. Keep `connect` and
+  `status` as hidden compatibility aliases, including the previous status JSON.
+
 ## 0.9.1 — 2026-10-27
 
 - Make Audio Notes an optional `audio-notes` extension. Keep five base skills,

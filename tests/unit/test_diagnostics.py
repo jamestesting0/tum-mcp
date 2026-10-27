@@ -106,7 +106,7 @@ def test_connect_in_a_pipe_returns_an_actionable_error_without_opening_chrome(
     monkeypatch.setattr(
         "tum_mcp.connect.connect_services", lambda *a, **k: pytest.fail("no browser")
     )
-    result = CliRunner().invoke(app, ["connect"])
+    result = CliRunner().invoke(app, ["login"])
     assert result.exit_code != 0
     assert "interactive terminal" in str(result.exception)
 
@@ -210,7 +210,7 @@ def test_connect_rejects_all_legacy_selection_arguments_before_opening_a_browser
     monkeypatch.setattr(
         "tum_mcp.moodle.browsers.discover_browsers", lambda: pytest.fail("No browser discovery")
     )
-    result = CliRunner().invoke(app, ["connect", *arguments])
+    result = CliRunner().invoke(app, ["login", *arguments])
     assert result.exit_code == 2
 
 
@@ -226,15 +226,16 @@ def test_all_campus_authentication_tools_direct_users_to_the_same_selector(
         "tum_mcp.moodle.server.subprocess.Popen",
         lambda *args, **kwargs: pytest.fail("No background browser"),
     )
-    assert "tum-mcp connect" in tum_connect()
+    assert "tum-mcp login" in tum_connect()
     result = moodle_login()
-    assert result["command"] == "tum-mcp connect" and result["state"] == "ACTION_REQUIRED"
+    assert result["command"] == "tum-mcp login" and result["state"] == "ACTION_REQUIRED"
 
 
 def test_wsl_doctor_reports_both_client_profiles_without_creating_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from tum_mcp import diagnostics
+    from tum_mcp import client_discovery, diagnostics
+    from tum_mcp.moodle.platforms import System
 
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "moodle"))
@@ -242,6 +243,15 @@ def test_wsl_doctor_reports_both_client_profiles_without_creating_state(
     windows = tmp_path / "Windows user"
     monkeypatch.setattr(diagnostics, "client_home", lambda host: windows)
     monkeypatch.setattr(diagnostics, "discover_browsers", lambda: ())
+    monkeypatch.setattr(client_discovery, "system", lambda: System.LINUX)
+    monkeypatch.setattr(client_discovery.shutil, "which", lambda name: None)
+    monkeypatch.setattr(client_discovery, "LINUX_APPLICATIONS", ())
+    launcher = tmp_path / "Linux user/.local/share/applications/cursor.desktop"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_text("[Desktop Entry]\nName=Cursor\n", encoding="utf-8")
+    binary = windows / ".local/bin/claude.exe"
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b"synthetic installation marker")
     target = windows / ".cursor/mcp.json"
     target.parent.mkdir(parents=True)
     target.write_text('{"mcpServers":{"tum":{"command":"wsl.exe","args":[]}}}', encoding="utf-8")

@@ -4,7 +4,7 @@ description: Collect selected Studocu materials for a TUM course project when th
 ---
 
 Use this workflow only for an explicit Studocu collection request. Check the
-course project's state and `tum-mcp status --json`. If needed,
+course project's state and `tum-mcp doctor --json`. If needed,
 explain `tum-mcp install studocu` and client reload. Do not upload, purchase,
 attach a profile, or collect adjacent courses as part of this workflow.
 

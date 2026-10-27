@@ -23,7 +23,7 @@ def connection_checks(*, live: bool = False) -> tuple[Check, ...]:
             Check(
                 label="TUMonline",
                 state=State.UNCONFIGURED,
-                detail="No account configured. Run tum-mcp connect.",
+                detail="No account configured. Run tum-mcp login.",
             ),
         )
     checks = []
@@ -35,9 +35,7 @@ def connection_checks(*, live: bool = False) -> tuple[Check, ...]:
         ).is_file()
         state = State.CONFIGURED if saved else State.ACTION
         detail = (
-            "Session saved; not live verified."
-            if saved
-            else "Session missing. Run tum-mcp connect."
+            "Session saved; not live verified." if saved else "Session missing. Run tum-mcp login."
         )
         allowed = policy.allows(Scope.STUDIES_COURSES)
         if not allowed:

@@ -1,4 +1,4 @@
-"""Shared extension selection for install, uninstall and status."""
+"""Shared extension selection for install, uninstall and doctor."""
 
 import json
 import sys

@@ -14,7 +14,7 @@ Linux needs a graphical desktop for native browser sign-in; WSL can use Windows.
 ```sh
 npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp setup --client codex
-tum-mcp connect
+tum-mcp login
 tum-mcp doctor
 tum-mcp --help
 ```
@@ -27,7 +27,7 @@ client afterward. Existing MCP-only setups gain the skills through `tum-mcp upda
 or another setup run. Generic setup writes configuration for manual installation.
 
 Studocu is optional: run `tum-mcp install studocu`, then reload the client. The
-extension adds the `sync-studocu` skill and its tools. `tum-mcp status`
+extension adds the `sync-studocu` skill and its tools. `tum-mcp doctor`
 reports the local selection; `tum-mcp uninstall studocu` disables it and
 preserves course materials and customized files. Generic clients use
 `tum-mcp skills export DESTINATION` to install the active pack manually.
@@ -40,14 +40,17 @@ Existing course audio is retained when the extension is disabled.
 
 ## Terminal output
 
-`tum-mcp status` shows saved connections and optional workflows;
-`tum-mcp doctor` also checks clients and prerequisites, including TUMonline.
+`tum-mcp doctor` is the overview for saved connections, optional extensions,
+client setup and runtime health, including TUMonline. Client rows appear only
+for installed clients or existing TUM MCP registrations; unrelated config
+folders do not count as installations. Setup detects the same clients and
+also offers Generic. Use `--client NAME` for an undetected or nonstandard install.
 Green dots mean ready or enabled, blue means not verified, amber means action
 needed, red means failed, and muted dots mean inactive. Every dot has a text
 label. `NO_COLOR` disables color; narrow terminals use stacked rows.
 
 Bare `tum-mcp setup`, `tum-mcp install` and `tum-mcp uninstall` share the same
-keyboard controls as connect. Nothing is preselected; Ctrl+C cancels. Uninstall
+keyboard controls as login. Nothing is preselected; Ctrl+C cancels. Uninstall
 also offers **All — TUM MCP**, which removes the package and managed client setup.
 Personal notes, sessions and customized files are retained. Scripts can name one or both:
 `tum-mcp uninstall lecture studocu --json`.
@@ -55,13 +58,19 @@ Personal notes, sessions and customized files are retained. Scripts can name one
 Use `--json` for machine-readable status, named extension removal/installation,
 skill listing/validation, lecture runtime status or TUMonline permissions.
 The default human output changed in 0.9.1; scripts that parsed those commands
-must add `--json`. The former `extensions` group is removed; use `status` and
+must add `--json`. The former `extensions` group is removed; use `doctor` and
 `uninstall NAME`. Named client/extension arguments remain suitable for scripts.
 Data-oriented course authoring commands retain JSON output.
 
-## Connect
+`login` replaces `connect`, and `doctor` replaces the separate status screen.
+The old command names remain hidden compatibility aliases. `status --json`
+retains its previous configuration format; new integrations should use `doctor --json`.
 
-Run **`tum-mcp connect`**, with no arguments, in an interactive terminal:
+<a id="connect"></a>
+
+## Login
+
+Run **`tum-mcp login`**, with no arguments, in an interactive terminal:
 
 1. Use up/down to move and Space to select services. Installed Lecture adds TUM-Live;
    installed Studocu adds Studocu.
@@ -79,11 +88,11 @@ connections that already completed. A dumb terminal uses numbered prompts.
 Chrome, Edge, Brave, Chromium, Vivaldi and Opera are detected in their standard
 locations. Selected preview channels and Opera GX are detected where installed.
 For another Chromium build, set `TUM_MCP_BROWSER` to its executable path before
-running connect. Compatible builds must allow Playwright automation. Safari and
+running login. Compatible builds must allow Playwright automation. Safari and
 Firefox are not supported.
 
 After sign-in, Artemis and Zulip can read content available to your campus account.
-No local course/channel grants are required. Your agent uses status/discover and
+No local course/channel grants are required. Your agent uses MCP status/discovery and
 course metadata to find relevant current-semester material, then makes bounded reads.
 An account ID identifies a saved service connection; it is not your TUM login.
 TUMonline additionally has a local policy: `tum-mcp manage tumonline --show`
@@ -105,7 +114,7 @@ Both engines have dedicated CI checks on the current WSL 3.x runner image.
 ```sh
 npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp setup --client cursor --host windows
-tum-mcp connect
+tum-mcp login
 tum-mcp doctor
 ```
 
@@ -144,7 +153,7 @@ browser discovery still requires functioning interop.
   `gh auth login --hostname github.com` interactively on the agent's execution host.
   The [publishing workflow](study.md#publish-a-study-website) uses private repositories
   with public Pages websites and requires an eligible paid GitHub plan.
-- An expired session uses the same `tum-mcp connect` selector. Reconnecting the
+- An expired session uses the same `tum-mcp login` selector. Reconnecting the
   same identity preserves saved preferences.
 - If no browser appears, check its installation or `TUM_MCP_BROWSER`. A managed
   or incompatible Chromium build may prevent automation; try another browser.

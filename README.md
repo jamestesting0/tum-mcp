@@ -14,12 +14,12 @@ Requires **Node.js 22.14+**, a Chromium browser and your TUM account.
 ```sh
 npm install --global @jamestesting888/tum-mcp@latest
 tum-mcp setup
-tum-mcp connect
+tum-mcp login
 tum-mcp doctor
 ```
 
-Select `codex`, `claude`, `cursor`, `antigravity` or `generic`, or pass `--client NAME`.
-Follow the activation/restart instructions. In `connect`, select services with
+Choose a detected client or Generic, or use `--client NAME` for an explicit setup.
+Follow the activation/restart instructions. In `login`, select services with
 **Space**, then **Enter**, and complete sign-in/MFA in the browser. Never paste
 credentials into chat. Setup supplies its own Python runtime; Git, Docker and a
 native keyring are unnecessary.
@@ -62,7 +62,7 @@ Run `tum-mcp install` to choose extensions, then reload your client.
 | `studocu` | `sync-studocu` | Search and collect selected supplementary PDFs saved in your browser. Personal use only; excluded from published sites. |
 | `audio-notes` | `audio-notes` | Turn prepared Study lessons into concise audio tracks, with resumable generation and coverage tracking. Voice setup happens when used. |
 
-Use `tum-mcp status` to see installed workflows and `tum-mcp uninstall` to remove
+Use `tum-mcp doctor` to see installed workflows and `tum-mcp uninstall` to remove
 them. Named commands also work, such as `tum-mcp install audio-notes` and
 `tum-mcp uninstall lecture`. Existing notes, audio and customizations are retained.
 Audio Notes needs no additional campus sign-in. Studocu uses your own browser.

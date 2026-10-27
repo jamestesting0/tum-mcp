@@ -16,7 +16,7 @@ Install the optional extension with `tum-mcp install studocu` and reload your
 client. Ask `sync-studocu` to collect materials for a course project. It can
 initialize a Studocu-only project with a verified course and semester.
 Search is anonymous and bounded; a limited result set is not a complete inventory.
-`tum-mcp studocu connect` explains how to sign in to Studocu in your own browser.
+`tum-mcp studocu login` explains how to sign in to Studocu in your own browser.
 The extension cannot infer account entitlement or download original files through
 the public MCP. Save an original that your account permits in the browser.
 

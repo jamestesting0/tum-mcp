@@ -40,7 +40,7 @@ def test_audio_is_opt_in_and_exports_its_complete_workflow(
     assert (destination / "audio-notes/references/workflow.md").is_file()
     report = json.loads(runner.invoke(app, ["doctor", "--json"]).output)
     assert (
-        next(item["state"] for item in report["runtime"] if item["label"] == "Audio Notes")
+        next(item["state"] for item in report["extensions"] if item["label"] == "Audio Notes")
         == "Enabled"
     )
 

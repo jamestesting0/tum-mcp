@@ -96,15 +96,15 @@ browser onboarding. See [setup](setup.md) for browser choices and WSL.
 ## Connections and read access
 
 ```sh
-tum-mcp connect
-tum-mcp status
+tum-mcp login
+tum-mcp doctor
 tum-mcp discover artemis ACCOUNT_ID
 tum-mcp discover zulip ACCOUNT_ID
 tum-mcp --help
 tum-mcp study build --help
 ```
 
-`connect` takes no arguments or connection options. Move with up/down, toggle
+`login` takes no arguments or connection options. Move with up/down, toggle
 services with Space, and press Enter. Choose a browser when more than one is
 installed. Only selected tabs open in one temporary browser context. Moodle,
 Artemis, Zulip and TUMonline all follow this flow.
@@ -152,7 +152,7 @@ the command offers a numbered text prompt instead.
 When multiple accounts exist, add `--account ACCOUNT_ID`. Reconnecting preserves
 the policy. `tum-mcp manage tumonline --disconnect` removes the local TUMonline
 credential and retains the policy; it does not revoke remote sessions. An expired
-session requires `tum-mcp connect` again. If the policy is missing or corrupt, use
+session requires `tum-mcp login` again. If the policy is missing or corrupt, use
 `tum-mcp manage tumonline --account ACCOUNT_ID --disconnect` to remove that saved
 session without resetting permissions or affecting other providers.
 
@@ -320,4 +320,4 @@ course material, local agent notes and screenshots stay under ignored local path
 Maintainer checks include a reviewed tarball inventory, integrity checks and an
 isolated consumer install. Never publish or stage npm packages as a test. Registry
 publication is an explicit maintainer action.
-`tum-mcp status` reports registry state as `not_checked`; it reads local configuration.
+`tum-mcp doctor` reads local configuration and does not check the npm registry.

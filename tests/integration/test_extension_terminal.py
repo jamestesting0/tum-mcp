@@ -70,6 +70,14 @@ def run_removal(
         env.pop("NO_COLOR", None)
     if launcher:
         env["TUM_MCP_NPM_LAUNCHER"] = "1"
+    if mode == "setup":
+        executables = tmp_path / "bin"
+        executables.mkdir()
+        for name in ("codex", "claude"):
+            marker = executables / name
+            marker.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            marker.chmod(0o700)
+        env["PATH"] = str(executables) + os.pathsep + env.get("PATH", "")
     process = subprocess.Popen(  # noqa: S603
         [sys.executable, str(driver), mode, *(["--no-asr"] if mode == "install" else [])],
         stdin=slave,
@@ -232,3 +240,10 @@ def test_cancelled_setup_does_not_create_client_registrations(tmp_path: Path) ->
     code, output, _ = run_removal(tmp_path, b"\x03", mode="setup")
     assert code == 130, output
     assert not (tmp_path / "profile").exists()
+
+
+def test_login_picker_cancels_without_opening_a_browser(tmp_path: Path) -> None:
+    code, output, state = run_removal(tmp_path, b"\x03", mode="login")
+    assert code == 130, output
+    assert state == {"lecture": True, "studocu": True}
+    assert "\x1b[?25h" in output

@@ -220,7 +220,7 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
             service.label if console.width < 70 else f"{service.label:<10} {descriptions[service]}"
         )
         choices.append((service, label, state, True))
-    return select_many("Connect services", tuple(choices))
+    return select_many("Choose services", tuple(choices))
 
 
 def select_browser(browsers: tuple[BrowserChoice, ...]) -> BrowserChoice:

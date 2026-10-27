@@ -35,8 +35,7 @@ def command_help(command: TyperCommand | TyperGroup, context: click.Context) -> 
         if context.parent is None:
             order = (
                 "setup",
-                "connect",
-                "status",
+                "login",
                 "doctor",
                 "install",
                 "uninstall",

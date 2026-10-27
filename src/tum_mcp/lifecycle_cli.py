@@ -74,7 +74,7 @@ def install(
         typer.echo(json.dumps(reports[0] if len(reports) == 1 else reports, indent=2))
     else:
         if any(name != ExtensionName.AUDIO_NOTES for name in selected):
-            console.print("Use tum-mcp connect to sign in to the selected services.")
+            console.print("Use tum-mcp login to sign in to the selected services.")
         else:
             console.print(
                 "Audio Notes uses your prepared Study content; no campus connection is needed."
@@ -99,8 +99,8 @@ def setup(
 ) -> None:
     """Prepare the runtime and choose coding clients to configure."""
     from tum_mcp.client_hosts import client_home
-    from tum_mcp.clients import CLIENTS, install_client
-    from tum_mcp.diagnostics import client_check
+    from tum_mcp.clients import install_client
+    from tum_mcp.diagnostics import available_client_checks
     from tum_mcp.ui import State, heading, select_many, status_rows, terminal_console
 
     prepare_only = runtime_only or (
@@ -117,7 +117,7 @@ def setup(
     if not selected:
         if not sys.stdin.isatty():
             raise CampusError(Code.ACTION_REQUIRED, "Run setup interactively or use --client NAME.")
-        checks = [(name, client_check(name, home=client_home(host), host=host)) for name in CLIENTS]
+        checks = available_client_checks(home=client_home(host), host=host, include_generic=True)
         if all(check.state == State.FAILED for _, check in checks):
             status_rows(console, [(check.label, check.state, check.detail) for _, check in checks])
             raise CampusError(
@@ -151,7 +151,7 @@ def setup(
                 )
             ],
         )
-    typer.echo("Runtime ready. Run tum-mcp connect to sign in to the services you select.")
+    typer.echo("Runtime ready. Run tum-mcp login to sign in to the services you select.")
     from tum_mcp.moodle.browsers import is_wsl
 
     if is_wsl() and host == ClientHost.LOCAL:

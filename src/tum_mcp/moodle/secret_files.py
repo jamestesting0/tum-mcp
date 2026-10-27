@@ -73,7 +73,7 @@ def secure_directory(path: Path) -> None:
 def local_cipher(root: Path, *, create: bool = False) -> Fernet:
     """Never reads native stores. A missing/corrupt key never silently replaces a saved key."""
     if not root.exists() and not create:
-        raise MoodleError(ErrorCode.AUTH_REQUIRED, "Reconnect with tum-mcp connect.")
+        raise MoodleError(ErrorCode.AUTH_REQUIRED, "Reconnect with tum-mcp login.")
     secure_directory(root)
     path = root / "session.key"
     with FileLock(str(root / "key.lock")):
@@ -81,7 +81,7 @@ def local_cipher(root: Path, *, create: bool = False) -> Fernet:
             raise MoodleError(ErrorCode.SETUP_REQUIRED, "Credential key cannot be a symlink.")
         if not path.exists():
             if not create:
-                raise MoodleError(ErrorCode.AUTH_REQUIRED, "Reconnect with tum-mcp connect.")
+                raise MoodleError(ErrorCode.AUTH_REQUIRED, "Reconnect with tum-mcp login.")
             if any(root.glob("*.enc")):
                 raise MoodleError(
                     ErrorCode.SETUP_REQUIRED, "Credential key is missing; preserve backups."

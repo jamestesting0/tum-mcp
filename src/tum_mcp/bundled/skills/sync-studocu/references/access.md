@@ -1,6 +1,6 @@
 # Studocu access
 
-`tum-mcp studocu connect` explains the browser route. Sign in using the user's
+`tum-mcp studocu login` explains the browser route. Sign in using the user's
 own browser; no browser profile, cookie or password is copied. A premium badge,
 account expiry, document permission, successful browser download and unattended
 transport are separate observations. The current public MCP does not advertise an

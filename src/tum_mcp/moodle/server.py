@@ -46,8 +46,8 @@ def moodle_login() -> dict[str, str]:
     if os.environ.get("TUM_MOODLE_SESSION_STORAGE") == "file":
         return {
             "state": "ACTION_REQUIRED",
-            "command": "tum-mcp connect",
-            "message": "Run tum-mcp connect in your terminal and select Moodle. "
+            "command": "tum-mcp login",
+            "message": "Run tum-mcp login in your terminal and select Moodle. "
             "Moodle, Artemis and Zulip use the same browser sign-in flow.",
         }
     store = SessionStore(Paths.default())

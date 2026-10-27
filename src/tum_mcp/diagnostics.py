@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from tum_mcp import __version__
 from tum_mcp.client_hosts import ClientHost, client_home
+from tum_mcp.client_installs import ClientName
 from tum_mcp.clients import CLIENTS, client_config_path, read_client_config
 from tum_mcp.connect import ServiceChoice
 from tum_mcp.errors import CampusError
@@ -34,6 +35,7 @@ class DoctorReport(Frozen):
     platform: str
     services: tuple[Check, ...]
     clients: tuple[Check, ...]
+    extensions: tuple[Check, ...]
     runtime: tuple[Check, ...]
     next_steps: tuple[str, ...]
     data_directory: str
@@ -149,7 +151,7 @@ def collect_services(*, live: bool = False) -> ServiceReport:
                 Check(
                     label=ServiceChoice(provider.value).label,
                     state=State.UNCONFIGURED,
-                    detail="No account configured. Run tum-mcp connect.",
+                    detail="No account configured. Run tum-mcp login.",
                 )
             )
         for index, account in enumerate(accounts):
@@ -267,6 +269,24 @@ def client_check(name: str, *, home: Path, host: ClientHost = ClientHost.LOCAL) 
     )
 
 
+def available_client_checks(
+    *, home: Path, host: ClientHost = ClientHost.LOCAL, include_generic: bool = False
+) -> tuple[tuple[ClientName, Check], ...]:
+    """Show installed clients and existing registrations; setup also offers Generic."""
+    from tum_mcp.client_discovery import client_installed
+
+    checks = []
+    for name in CLIENTS:
+        check = client_check(name, home=home, host=host)
+        if (
+            check.state != State.UNCONFIGURED
+            or (include_generic and name == "generic")
+            or client_installed(name, home, host)
+        ):
+            checks.append((name, check))
+    return tuple(checks)
+
+
 def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> DoctorReport:
     base = home or Path.home()
     data = data_path()
@@ -276,7 +296,7 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
     runtime = list(connections.issues)
     next_steps = []
     if connections.needs_connection:
-        next_steps.append("tum-mcp connect — sign in only to the services you select")
+        next_steps.append("tum-mcp login — sign in only to the services you select")
 
     clients: list[Check] = []
     profiles = [(ClientHost.LOCAL, base)]
@@ -286,10 +306,9 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
         except BrowserSetupError as error:
             runtime.append(Check(label="Windows clients", state=State.ACTION, detail=error.message))
     for host, profile in profiles:
-        for name in CLIENTS:
-            clients.append(client_check(name, home=profile, host=host))
+        clients.extend(check for _, check in available_client_checks(home=profile, host=host))
     if not any(item.state == State.CONFIGURED for item in clients):
-        next_steps.append("tum-mcp setup --client codex — or claude, cursor, antigravity, generic")
+        next_steps.append("tum-mcp setup — choose a detected client or generic configuration")
 
     runtime.append(
         Check(
@@ -361,17 +380,6 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             "Optional website publishing: install GitHub CLI if needed, then "
             "gh auth login --hostname github.com and tum-mcp doctor --live."
         )
-    from tum_mcp.extensions import audio_notes_enabled
-
-    if audio_notes_enabled():
-        runtime.append(
-            Check(
-                label="Audio Notes",
-                state=State.ENABLED,
-                detail="Workflow installed. Use prepared Study content; "
-                "voice synthesis is checked when requested.",
-            )
-        )
     try:
         skills = inspect_skills()
         runtime.append(
@@ -398,10 +406,16 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             detail="Encrypted files, owner-restricted key; less protection than a native keychain.",
         )
     )
+    from tum_mcp.extension_management import extension_rows
+
     return DoctorReport(
         platform=f"{platform.system()} {platform.machine()}",
         services=tuple(services),
         clients=tuple(clients),
+        extensions=tuple(
+            Check(label=label, state=state, detail=detail)
+            for label, state, detail in extension_rows()
+        ),
         runtime=tuple(runtime),
         next_steps=tuple(dict.fromkeys(next_steps)),
         data_directory=str(data),

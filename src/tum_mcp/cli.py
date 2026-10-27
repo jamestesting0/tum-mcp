@@ -72,36 +72,19 @@ def serve() -> None:
         server.run()
 
 
-@app.command()
+@app.command(hidden=True)
 def status(
     json_output: Annotated[
         bool, typer.Option("--json", help="Print machine-readable configuration.")
     ] = False,
 ) -> None:
-    """Show saved connections and installed optional workflows."""
+    """Compatibility alias for doctor; --json retains the previous configuration format."""
     from tum_mcp.diagnostics import collect_services
-    from tum_mcp.extension_management import extension_rows
-    from tum_mcp.ui import heading, section, status_rows, terminal_console
 
-    report = collect_services()
     if not json_output:
-        console = terminal_console()
-        heading(
-            console,
-            "Status",
-            "Saved connections and optional workflows. Sessions are not live verified.",
-        )
-        section(console, "Services")
-        status_rows(console, [(item.label, item.state, item.detail) for item in report.services])
-        section(console, "Extensions")
-        status_rows(console, extension_rows())
-        if report.issues:
-            section(console, "Needs review")
-            status_rows(console, [(item.label, item.state, item.detail) for item in report.issues])
-        console.print("Verify sessions: tum-mcp doctor --live", markup=False)
-        console.print("TUMonline permissions: tum-mcp manage tumonline", markup=False)
-        console.print("Campus websites are read-only. Use --json for automation.", style="muted")
+        doctor()
         return
+    report = collect_services()
     typer.echo(
         json.dumps(
             {
@@ -127,7 +110,7 @@ def status(
     )
 
 
-@app.command()
+@app.command("login")
 def connect() -> None:
     """Choose services and complete sign-in."""
     from rich.text import Text
@@ -138,8 +121,8 @@ def connect() -> None:
 
     console = terminal_console()
     if not sys.stdin.isatty():
-        raise CampusError(Code.ACTION_REQUIRED, "Run tum-mcp connect in your interactive terminal.")
-    heading(console, "Connect", "Choose services to connect. Only selected providers will open.")
+        raise CampusError(Code.ACTION_REQUIRED, "Run tum-mcp login in your interactive terminal.")
+    heading(console, "Login", "Choose services to sign in to. Only selected providers will open.")
     try:
         selected = select_services()
         if not selected:
@@ -210,6 +193,9 @@ def connect() -> None:
     console.print("Your agent can discover courses and channels, then read the relevant material.")
 
 
+app.command("connect", hidden=True)(connect)
+
+
 @app.command()
 def discover(provider: Provider, account_id: str) -> None:
     """Discover accessible channel/course metadata for focused reads."""
@@ -252,7 +238,7 @@ def doctor(
         ),
     ] = False,
 ) -> None:
-    """Check services, client registrations and prerequisites."""
+    """Show connections, extensions and relevant client/runtime health."""
     from rich.text import Text
 
     from tum_mcp.diagnostics import collect_diagnostics
@@ -271,11 +257,13 @@ def doctor(
     )
     for title, items in (
         ("Services", report.services),
+        ("Extensions", report.extensions),
         ("Clients", report.clients),
         ("Runtime", report.runtime),
     ):
-        section(console, title)
-        status_rows(console, [(item.label, item.state, item.detail) for item in items])
+        if items:
+            section(console, title)
+            status_rows(console, [(item.label, item.state, item.detail) for item in items])
     if report.next_steps:
         section(console, "Next steps")
         for index, action in enumerate(report.next_steps, 1):
