@@ -19,7 +19,9 @@ STEM = "01_reusable-components"
 def demo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     config = tmp_path / "config"
     config.mkdir()
-    (config / "extensions.json").write_text('{"schema_version":1,"video_notes":true}')
+    (config / "extensions.json").write_text(
+        '{"schema_version":1,"video_notes":true}', encoding="utf-8"
+    )
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(config))
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     root = tmp_path / "demo course"
@@ -91,7 +93,7 @@ def test_index_omits_missing_or_changed_files_and_survives_bad_manifests(
         poster = demo / f"videos/posters/{STEM}.jpg"
         poster.write_bytes(poster.read_bytes() + b"x")
         assert client.get(server + "/videos/index.json").json() == {"videos": {}}
-        (demo / "videos/manifest.json").write_text("{not json")
+        (demo / "videos/manifest.json").write_text("{not json", encoding="utf-8")
         response = client.get(server + "/videos/index.json")
         assert response.status_code == 200 and response.json() == {"videos": {}}
         (demo / "videos/manifest.json").unlink()
@@ -173,9 +175,9 @@ def test_stale_videos_warn_and_hosted_sites_never_ask(
     browsers: dict, demo: Path, server: str
 ) -> None:
     course_browser = browsers["chromium"]
-    manifest = json.loads((demo / "videos/manifest.json").read_text())
+    manifest = json.loads((demo / "videos/manifest.json").read_text(encoding="utf-8"))
     manifest["videos"][STEM]["made_for_revision"] = "0" * 64
-    (demo / "videos/manifest.json").write_text(json.dumps(manifest))
+    (demo / "videos/manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     context = course_browser.new_context(viewport={"width": 1440, "height": 900})
     page = context.new_page()
     page.goto(server + "/#components")

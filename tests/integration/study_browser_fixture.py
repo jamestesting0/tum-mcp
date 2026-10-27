@@ -71,6 +71,10 @@ def study_website(browser: Browser) -> dict[str, object]:
                         body=json.dumps({"error": error.message}),
                     )
                 return
+            if url.netloc == "study.invalid" and url.path == "/videos/index.json":
+                # The local preview answers this for every app; this course has no videos.
+                route.fulfill(status=200, content_type="application/json", body='{"videos": {}}')
+                return
             name = url.path.removeprefix("/") or "index.html"
             assert url.netloc == "study.invalid" and name in {*TEMPLATE_FILES, "data.mjs"}
             mime = {".html": "text/html", ".css": "text/css", ".woff2": "font/woff2"}.get(

@@ -83,7 +83,8 @@ def course(tmp_path: Path, scene: str) -> Path:
     shutil.copyfile(FIXTURES / "course_app/content.json", root / "app/content.json")
     selection = tmp_path / "selection.json"
     selection.write_text(
-        json.dumps({"units": [{"unit": "bfs", "decision": "video", "reason": "Trace."}]})
+        json.dumps({"units": [{"unit": "bfs", "decision": "video", "reason": "Trace."}]}),
+        encoding="utf-8",
     )
     project.plan(root, selection)
     info = project.unit_locators(root, "bfs")
@@ -93,7 +94,9 @@ def course(tmp_path: Path, scene: str) -> Path:
     def locator(ref: str) -> dict:
         return {key: refs[ref][key] for key in ("kind", "ref", "fingerprint")}
 
-    objective = json.loads((root / "app/content.json").read_text())["units"][1]["objectives"][0]
+    objective = json.loads((root / "app/content.json").read_text(encoding="utf-8"))["units"][1][
+        "objectives"
+    ][0]
     board = {
         "video": STEM,
         "unit": "bfs",
@@ -151,14 +154,14 @@ def course(tmp_path: Path, scene: str) -> Path:
         ],
     }
     (root / "videos/storyboards").mkdir()
-    (root / f"videos/storyboards/{STEM}.json").write_text(json.dumps(board))
+    (root / f"videos/storyboards/{STEM}.json").write_text(json.dumps(board), encoding="utf-8")
     (root / f"videos/scenes/{STEM}").mkdir(parents=True)
-    (root / f"videos/scenes/{STEM}/chapters.py").write_text(scene)
-    voice = json.loads((root / "videos/voice.json").read_text())
+    (root / f"videos/scenes/{STEM}/chapters.py").write_text(scene, encoding="utf-8")
+    voice = json.loads((root / "videos/voice.json").read_text(encoding="utf-8"))
     voice["profiles"] = {
         "tone": {"provider": "synthetic", "route": "test", "voice": "tone", "language": "en"}
     }
-    (root / "videos/voice.json").write_text(json.dumps(voice))
+    (root / "videos/voice.json").write_text(json.dumps(voice), encoding="utf-8")
     for item in project.narration(root, STEM, "tone"):
         target = root / item["file"]
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -173,14 +176,16 @@ def test_real_render_mixes_checks_and_publishes(installed: Path, tmp_path: Path)
     assert draft["ok"], draft
     final = project.render(root, STEM, quality="final", jobs=2, max_minutes=None, run=None)
     assert final["ok"], final
-    probe = json.loads((root / f"videos/.build/{STEM}/runs/{final['run']}/probe.json").read_text())
+    probe = json.loads(
+        (root / f"videos/.build/{STEM}/runs/{final['run']}/probe.json").read_text(encoding="utf-8")
+    )
     assert probe["width"] == 1920 and abs(probe["loudness_lufs"] + 16) <= 1
     assert abs(probe["audio_duration"] - probe["video_duration"]) <= 0.1
     # Beat padding and per-chapter frame counts must add up to the timing, frame for frame.
-    timing = json.loads((root / f"videos/.build/{STEM}/timing.json").read_text())
+    timing = json.loads((root / f"videos/.build/{STEM}/timing.json").read_text(encoding="utf-8"))
     assert probe["video_duration"] == pytest.approx(round(timing["total"] * 30) / 30, abs=1e-3)
     review = tmp_path / "review.md"
-    review.write_text("Synthetic narration; every beat traced.\n")
+    review.write_text("Synthetic narration; every beat traced.\n", encoding="utf-8")
     receipt = project.publish(
         root, STEM, final["run"], teaching_review=review, visual_review="not_performed"
     )

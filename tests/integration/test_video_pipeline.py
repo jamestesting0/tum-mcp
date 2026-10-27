@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import stat
 from pathlib import Path
@@ -40,7 +41,7 @@ class FakeRuntime:
             return {"ok": True, "durations": {name: 1.6 for name in request["files"]}}
         if action == "render":
             run = Path(request["run"])
-            timing = json.loads((run / "timing.json").read_text())
+            timing = json.loads((run / "timing.json").read_text(encoding="utf-8"))
             beats = [b for b in timing["beats"] if b["chapter"] == request["chapter"]]
             fps = 15 if request["quality"] == "draft" else 30
             frames = round((beats[-1]["start"] + beats[-1]["duration"]) * fps) - round(
@@ -50,7 +51,7 @@ class FakeRuntime:
             target.parent.mkdir(exist_ok=True)
             shutil.copyfile(CLIP, target)
             self.renders += 1
-            board = json.loads((run / "storyboard.json").read_text())
+            board = json.loads((run / "storyboard.json").read_text(encoding="utf-8"))
             waived = {
                 beat["key"]
                 for chapter in board["chapters"]
@@ -147,7 +148,8 @@ def prepare(root: Path, tmp_path: Path) -> None:
                     },
                 ]
             }
-        )
+        ),
+        encoding="utf-8",
     )
     plan = project.plan(root, selection)
     assert [item.stem for item in plan.videos] == [STEM, None]
@@ -191,14 +193,14 @@ def prepare(root: Path, tmp_path: Path) -> None:
         ],
     }
     (root / "videos/storyboards").mkdir(parents=True)
-    (root / f"videos/storyboards/{STEM}.json").write_text(json.dumps(board))
+    (root / f"videos/storyboards/{STEM}.json").write_text(json.dumps(board), encoding="utf-8")
     (root / f"videos/scenes/{STEM}").mkdir(parents=True)
-    (root / f"videos/scenes/{STEM}/chapters.py").write_text(SCENE)
-    voice = json.loads((root / "videos/voice.json").read_text())
+    (root / f"videos/scenes/{STEM}/chapters.py").write_text(SCENE, encoding="utf-8")
+    voice = json.loads((root / "videos/voice.json").read_text(encoding="utf-8"))
     voice["profiles"] = {
         "narrator": {"provider": "kokoro", "route": "local", "voice": "af_heart", "language": "en"}
     }
-    (root / "videos/voice.json").write_text(json.dumps(voice))
+    (root / "videos/voice.json").write_text(json.dumps(voice), encoding="utf-8")
 
 
 def narrate(root: Path) -> None:
@@ -211,7 +213,7 @@ def narrate(root: Path) -> None:
 
 def review(tmp_path: Path) -> Path:
     path = tmp_path / "review.md"
-    path.write_text("Every beat traced to its locator; no added claims.\n")
+    path.write_text("Every beat traced to its locator; no added claims.\n", encoding="utf-8")
     return path
 
 
@@ -221,7 +223,7 @@ def test_full_flow_publishes_a_checked_final_video(
     prepare(course, tmp_path)
     assert project.check(course, STEM).errors == ()
     working = course / f"videos/.build/{STEM}/transcript.txt"
-    assert working.read_text().startswith("Breadth-first search")
+    assert working.read_text(encoding="utf-8").startswith("Breadth-first search")
     assert not (course / f"videos/narration/{STEM}.txt").exists()
     narrate(course)
     draft = project.render(course, STEM, quality="draft", jobs=2, max_minutes=None, run=None)
@@ -237,22 +239,25 @@ def test_full_flow_publishes_a_checked_final_video(
     )
     track = course / f"videos/tracks/{STEM}.mp4"
     assert track.read_bytes() == CLIP.read_bytes()
-    assert stat.S_IMODE(track.stat().st_mode) == 0o600
+    if os.name != "nt":
+        assert stat.S_IMODE(track.stat().st_mode) == 0o600
     assert receipt.narrated and receipt.files["captions"].path == f"captions/{STEM}.vtt"
     state = project.inspect(course, verify=True)
     rows = {row["unit"]: row for row in state["units"]}
     assert rows["bfs"]["published"] == "current" and rows["dfs"]["decision"] == "text-first"
-    assert f"tracks/{STEM}.mp4" in (course / "videos/playlist.m3u").read_text()
-    assert "text-first (Mostly a comparison table.)" in (course / "videos/COVERAGE.md").read_text()
+    assert f"tracks/{STEM}.mp4" in (course / "videos/playlist.m3u").read_text(encoding="utf-8")
+    assert "text-first (Mostly a comparison table.)" in (course / "videos/COVERAGE.md").read_text(
+        encoding="utf-8"
+    )
     before = runtime.renders
     again = project.render(course, STEM, quality="final", jobs=1, max_minutes=None, run=None)
     assert again["ok"] and runtime.renders == before
     assert all(item["cached"] for item in again["chapters"].values())
     # Revising and checking the storyboard never touches the published transcript.
     board_path = course / f"videos/storyboards/{STEM}.json"
-    board = json.loads(board_path.read_text())
+    board = json.loads(board_path.read_text(encoding="utf-8"))
     board["title"] = "Breadth-first search, revised"
-    board_path.write_text(json.dumps(board))
+    board_path.write_text(json.dumps(board), encoding="utf-8")
     assert project.check(course, STEM).errors == ()
     row = project.inspect(course, stem=STEM, verify=True)["units"][0]
     assert row["published"] == "current" and row["edited_since_publication"]
@@ -301,14 +306,14 @@ def test_publication_refuses_stale_silent_or_failing_runs(
     overlapping = project.render(course, STEM, quality="final", jobs=1, max_minutes=None, run=None)
     assert not overlapping["ok"] and any("layout" in f for f in overlapping["check"]["failed"])
     board_path = course / f"videos/storyboards/{STEM}.json"
-    board = json.loads(board_path.read_text())
+    board = json.loads(board_path.read_text(encoding="utf-8"))
     board["chapters"][0]["beats"][0]["layout_waiver"] = "The label deliberately sits on its node."
-    board_path.write_text(json.dumps(board))
+    board_path.write_text(json.dumps(board), encoding="utf-8")
     project.timing(course, STEM, profile="narrator", silent=False)
     waived = project.render(course, STEM, quality="final", jobs=1, max_minutes=None, run=None)
     assert waived["ok"]
     scene = course / f"videos/scenes/{STEM}/chapters.py"
-    scene.write_text(scene.read_text() + "\n")
+    scene.write_text(scene.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     with pytest.raises(CampusError, match="Inputs changed"):
         project.publish(
             course, STEM, waived["run"], teaching_review=review(tmp_path), visual_review="performed"
@@ -351,7 +356,8 @@ def test_foreign_folders_locks_and_lint_failures_stop_work(
     (course / "videos/holiday.mp4").write_bytes(b"personal")
     selection = tmp_path / "selection.json"
     selection.write_text(
-        json.dumps({"units": [{"unit": "bfs", "decision": "video", "reason": "Trace."}]})
+        json.dumps({"units": [{"unit": "bfs", "decision": "video", "reason": "Trace."}]}),
+        encoding="utf-8",
     )
     with pytest.raises(CampusError, match="did not create"):
         project.plan(course, selection)
@@ -362,7 +368,7 @@ def test_foreign_folders_locks_and_lint_failures_stop_work(
         with pytest.raises(CampusError, match="Another Video Notes command"):
             project.render(course, STEM, quality="draft", jobs=1, max_minutes=None, run=None)
     scene = course / f"videos/scenes/{STEM}/chapters.py"
-    scene.write_text(SCENE.replace('self.label("start")', 'Text("start")'))
+    scene.write_text(SCENE.replace('self.label("start")', 'Text("start")'), encoding="utf-8")
     blocked = project.render(course, STEM, quality="draft", jobs=1, max_minutes=None, run=None)
     assert not blocked["ok"] and blocked["lint"]
     assert runtime.renders == 0
@@ -377,10 +383,12 @@ def test_prune_keeps_rendering_runs_and_removes_abandoned_ones(
     runs_dir = course / f"videos/.build/{STEM}/runs"
     for name in ("r-00000000", "r-11111111"):
         (runs_dir / name).mkdir()
-        (runs_dir / name / "pending.json").write_text(json.dumps({"stage": "render"}))
+        (runs_dir / name / "pending.json").write_text(
+            json.dumps({"stage": "render"}), encoding="utf-8"
+        )
     second = project.render(course, STEM, quality="draft", jobs=1, max_minutes=None, run=None)
     review = tmp_path / "review.md"
-    review.write_text("Teaching review.")
+    review.write_text("Teaching review.", encoding="utf-8")
     rendering = FileLock(str(runs_dir / "r-11111111/run.lock"), timeout=0)
     with rendering:
         with pytest.raises(CampusError, match="still rendering"):
