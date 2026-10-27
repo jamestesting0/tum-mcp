@@ -65,7 +65,12 @@ policy applies; keep engine dependencies outside the course's project environmen
 
 Use the pronunciation data/library from the actual runtime. If a packaged eSpeak
 loader cannot locate its data, resolve its library/data paths explicitly or repair
-that host's shared pronunciation cache before continuing. Avoid hard-coded CI,
+that host's shared pronunciation cache before continuing. eSpeak NG ignores a data
+path longer than about 160 characters and falls back to a build path (`Error
+processing file '/Users/runner/.../phontab'`); the macOS runtime path above exceeds
+that, so copy `espeak-ng-data` once into the shared cache (for example
+`~/Library/Caches/tum-mcp/tts/espeak-ng-data`) and pass it as kokoro-onnx's
+`EspeakConfig(data_path=...)`. Avoid hard-coded CI,
 Homebrew or system-library paths. Keep such reusable data out of each course.
 
 All course text, speech chunks, final audio, scripts, chapters, provider state and
