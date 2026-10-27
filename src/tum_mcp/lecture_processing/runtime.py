@@ -46,7 +46,11 @@ def recognition_profile() -> str:
 
 
 def runtime_root() -> Path:
-    return data_dir() / "lecture-runtime" / profile()
+    identity = profile()
+    if platform.system() == "Windows":
+        # Native DLL dependencies still hit MAX_PATH in otherwise long-path-aware Python.
+        identity = "r-" + hashlib.sha256(identity.encode()).hexdigest()[:24]
+    return data_dir() / "lecture-runtime" / identity
 
 
 def python_path() -> Path:

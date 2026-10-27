@@ -199,3 +199,19 @@ def test_invalid_model_receipt_is_preserved_without_network(tmp_path, monkeypatc
     with pytest.raises(CampusError, match="receipt is invalid"):
         runtime.model("base")
     assert receipt.read_text() == "invalid edited receipt"
+
+
+def test_windows_native_libraries_fit_nested_data_directory(monkeypatch):
+    from pathlib import PureWindowsPath
+
+    root = PureWindowsPath(
+        "C:/Users/runneradmin/AppData/Local/Temp/pytest-of-runneradmin/pytest-0/"
+        "test_real_pinned_recognition_a0/runtime-data"
+    )
+    monkeypatch.setattr(runtime, "data_dir", lambda: root)
+    monkeypatch.setattr(runtime.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(runtime.platform, "machine", lambda: "AMD64")
+    library = runtime.runtime_root() / (
+        "Lib/site-packages/av.libs/libopencore-amrnb-0-19c543506f45e59e9cc363b967322e5e.dll"
+    )
+    assert len(str(library)) < 260
