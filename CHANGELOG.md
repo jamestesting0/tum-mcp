@@ -1,11 +1,30 @@
 # Changes
 
-## Unreleased
+## 0.9.2 — 2026-10-27
 
 - Combine connection status, extension status and health checks in `doctor`.
   Show only installed or configured clients, including in the setup picker.
 - Rename campus sign-in to `login`, paired with `logout`. Keep `connect` and
   `status` as hidden compatibility aliases, including the previous status JSON.
+- Make the course app consistent across Study and Exercises: one choice style,
+  feedback panel, counter format, arrow controls and disclosure chevron. Revision
+  covers all topics until you choose, and review links open the view with items.
+- Show exercise goals in Guidance, sheet summaries and due dates in the list, Mark
+  reviewed at the end with a visible finish, and a link to the next exercise.
+- Improve detail: readable graph edges, fitted phone diagram labels, word-wrapped
+  boxes, no dark-mode flash, steady flashcard layout, labelled reset and in-app
+  confirmation for deleting comments, and neutral page copy on published sites.
+- Lecture Notes: recording times open from the sources of each passage and figure
+  instead of appearing in the text, and the sidebar lists lectures only.
+- Add a Contents button to Study, Exercises and Lecture Notes. It lists the page's
+  headings and follows your reading; wide screens can keep it docked beside the
+  text. The home resume button shows a play icon with the topic name.
+- Keep queued Contents updates from a previous view from hiding the current
+  page's outline after navigation.
+- Remove unused serif font files. Builds delete unedited copies and publication
+  removes them from managed sites; edited copies are kept.
+- Base the study skills on the app: they describe content and checks and point to
+  the bundled app instead of restating its styling.
 
 ## 0.9.1 — 2026-10-27
 

@@ -1,6 +1,6 @@
 {
   "name": "@jamestesting888/tum-mcp",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Read-only TUM campus tools and source-backed study, exercise and lecture workflows",
   "license": "MIT",
   "type": "module",
