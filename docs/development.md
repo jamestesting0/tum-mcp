@@ -70,6 +70,9 @@ Desktop jobs additionally install the optional hash-locked CPU recognizer and
 transcribe the synthetic speech fixture; supported Apple Silicon runners also
 exercise MLX. This explicit test downloads public pinned model files, never campus
 recordings. Ordinary test runs skip it unless `TUM_MCP_LECTURE_ASR_INTEGRATION=1`.
+Linux and Windows jobs also install the hash-locked CUDA runtime and load its pinned
+cuBLAS the way CTranslate2 does, without a GPU (`TUM_MCP_LECTURE_CUDA_LIBRARIES=1`);
+GPU inference itself runs in the native test only on a host with an NVIDIA GPU.
 Recognition runs before package lifecycle checks to expose native dependency
 failures early. Windows also runs the affected browser/UTF-8 fixture checks first.
 Its complete job budget is 35 minutes for native ACL and subprocess coverage;

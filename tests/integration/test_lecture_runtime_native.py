@@ -12,12 +12,14 @@ from tum_mcp.errors import CampusError
 from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing import runtime
 from tum_mcp.lecture_processing.runtime_process import worker_path
-from tum_mcp.lecture_processing.runtime_spec import mac_major
+from tum_mcp.lecture_processing.runtime_spec import cuda_host, mac_major, nvidia_devices
 from tum_mcp.lecture_processing.transcription import analyze, passages, recognize
 
 ENGINES = ["cpu"]
 if platform.system() == "Darwin" and platform.machine() == "arm64" and mac_major() >= 15:
     ENGINES.append("mlx")
+if cuda_host() and nvidia_devices() > 0:
+    ENGINES.append("cuda")
 
 
 @pytest.mark.skipif(
@@ -59,7 +61,7 @@ def test_real_pinned_recognition_and_original_clock(
                 "LC_ALL",
                 "HF_HUB_CACHE",
             }
-        }
+        } | runtime.worker_environment(runtime.runtime_root())
         payload = {
             "action": "transcribe",
             "backend": engine,

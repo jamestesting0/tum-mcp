@@ -52,6 +52,11 @@ jobs:
         env:
           TUM_MCP_LECTURE_ASR_INTEGRATION: '1'
         run: uv run pytest -v tests/integration/test_lecture_runtime_native.py --tb=short
+      - name: Verify optional CUDA recognizer libraries
+        if: runner.os != 'macOS'
+        env:
+          TUM_MCP_LECTURE_CUDA_LIBRARIES: '1'
+        run: uv run pytest -v tests/integration/test_lecture_cuda_libraries.py --tb=short
       - name: Verify optional native video rendering
         env:
           TUM_MCP_VIDEO_RENDER_INTEGRATION: '1'

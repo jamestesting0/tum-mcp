@@ -27,7 +27,7 @@ def read_asset(receipt: Path) -> ModelAsset | None:
         asset = ModelAsset.model_validate_json(receipt.read_bytes())
     except (ValidationError, OSError):
         return None
-    required = {"tokenizer.json", "vocabulary.txt"} if selected().backend == "cpu" else set()
+    required = {"tokenizer.json", "vocabulary.txt"} if selected().weights == "model.bin" else set()
     if not required.issubset(asset.supporting_sha256):
         return None
     if all(

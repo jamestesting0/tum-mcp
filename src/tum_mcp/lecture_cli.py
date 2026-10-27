@@ -43,7 +43,11 @@ def runtime_status(
 
     console = terminal_console()
     heading(console, "Lecture runtime", "Local speech recognition and recording prerequisites.")
-    engine = "MLX acceleration" if report.engine == "mlx" else "CPU recognition"
+    engine = {"mlx": "MLX acceleration", "cuda": "NVIDIA CUDA acceleration"}.get(
+        report.engine, "CPU recognition"
+    )
+    if report.engine == "cpu" and report.cuda_declined:
+        engine += " (NVIDIA GPU failed its CUDA check)"
     status_rows(
         console,
         [

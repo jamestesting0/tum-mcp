@@ -1,4 +1,7 @@
+import json
+import os
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -110,19 +113,25 @@ def test_decoding_settings_invalidate_inference_without_reinstalling_dependencie
 
 
 @pytest.mark.parametrize(
-    "system,machine,mac,libc,engine",
+    "system,machine,mac,libc,gpus,engine",
     [
-        ("Windows", "AMD64", "", ("", ""), "cpu"),
-        ("Linux", "x86_64", "", ("glibc", "2.28"), "cpu"),
-        ("Linux", "aarch64", "", ("glibc", "2.39"), "cpu"),
-        ("Darwin", "x86_64", "13.0", ("", ""), "cpu"),
-        ("Darwin", "arm64", "14.0", ("", ""), "cpu"),
-        ("Darwin", "arm64", "15.0", ("", ""), "mlx"),
+        ("Windows", "AMD64", "", ("", ""), 0, "cpu"),
+        ("Windows", "AMD64", "", ("", ""), 1, "cuda"),
+        ("Linux", "x86_64", "", ("glibc", "2.28"), 0, "cpu"),
+        ("Linux", "x86_64", "", ("glibc", "2.28"), 2, "cuda"),
+        # CTranslate2's Linux ARM64 and macOS wheels have no CUDA build.
+        ("Linux", "aarch64", "", ("glibc", "2.39"), 1, "cpu"),
+        ("Darwin", "x86_64", "13.0", ("", ""), 1, "cpu"),
+        ("Darwin", "arm64", "14.0", ("", ""), 0, "cpu"),
+        ("Darwin", "arm64", "15.0", ("", ""), 0, "mlx"),
     ],
 )
-def test_native_backend_selection(system, machine, mac, libc, engine, monkeypatch):
+def test_native_backend_selection(system, machine, mac, libc, gpus, engine, tmp_path, monkeypatch):
+    from tum_mcp.lecture_processing import runtime_spec
     from tum_mcp.lecture_processing.runtime_spec import selected
 
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(runtime_spec, "nvidia_devices", lambda: gpus)
     monkeypatch.delenv("TUM_MCP_LECTURE_ENGINE", raising=False)
     monkeypatch.setattr(runtime.platform, "system", lambda: system)
     monkeypatch.setattr(runtime.platform, "machine", lambda: machine)
@@ -215,3 +224,215 @@ def test_windows_native_libraries_fit_nested_data_directory(monkeypatch):
         "Lib/site-packages/av.libs/libopencore-amrnb-0-19c543506f45e59e9cc363b967322e5e.dll"
     )
     assert len(str(library)) < 260
+
+
+def gpu_linux_host(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, gpus: int = 1) -> None:
+    from tum_mcp.lecture_processing import runtime_spec
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(runtime.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(runtime.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(runtime.platform, "libc_ver", lambda: ("glibc", "2.35"))
+    monkeypatch.setattr(runtime_spec, "nvidia_devices", lambda: gpus)
+
+
+class FakeInstaller:
+    """Stands in for uv and the worker; records locks synced and health environments."""
+
+    def __init__(self, fail_health: set[str] = frozenset(), fail_sync: set[str] = frozenset()):
+        self.fail_health, self.fail_sync = fail_health, fail_sync
+        self.synced: list[str] = []
+        self.health: list[tuple[str, dict]] = []
+
+    def __call__(self, argv, payload=b"", timeout=1200, extra=None):
+        if "venv" in argv:
+            executable = runtime.executable_at(Path(argv[-1]))
+            executable.parent.mkdir(parents=True)
+            executable.write_text("synthetic")
+            return b""
+        if "sync" in argv:
+            self.synced.append(Path(argv[-1]).name)
+            if Path(argv[-1]).name in self.fail_sync:
+                raise CampusError(runtime.Code.OFFLINE, "Synthetic offline")
+            return b""
+        if "-c" in argv:
+            return json.dumps(runtime.expected_versions()).encode()
+        backend = json.loads(payload)["backend"]
+        self.health.append((backend, extra or {}))
+        if backend in self.fail_health:
+            raise CampusError(runtime.Code.CAPABILITY_UNSUPPORTED, "Synthetic GPU failure")
+        return b'{"ready": true}'
+
+
+def test_failed_gpu_keeps_automatic_selection_on_cpu_until_cuda_is_explicit(tmp_path, monkeypatch):
+    from tum_mcp.lecture_processing.runtime_spec import cuda_declined_path, selected
+
+    gpu_linux_host(monkeypatch, tmp_path)
+    monkeypatch.delenv("TUM_MCP_LECTURE_ENGINE", raising=False)
+    assert selected().backend == "cuda" and runtime.supported()
+    cuda_declined_path().parent.mkdir(parents=True)
+    cuda_declined_path().write_text("{}")
+    assert selected().backend == "cpu"
+    monkeypatch.setenv("TUM_MCP_LECTURE_ENGINE", "cuda")
+    assert selected().backend == "cuda" and runtime.supported()
+    monkeypatch.setattr(runtime.platform, "machine", lambda: "aarch64")
+    assert not runtime.supported()
+
+
+def test_unusable_gpu_installs_cpu_once_and_remembers_it(tmp_path, monkeypatch):
+    from tum_mcp.lecture_processing.runtime_spec import cuda_declined_path
+
+    gpu_linux_host(monkeypatch, tmp_path)
+    monkeypatch.delenv("TUM_MCP_LECTURE_ENGINE", raising=False)
+    monkeypatch.setattr(runtime, "installer_uv", lambda: "uv")
+    fake = FakeInstaller(fail_health={"cuda"})
+    monkeypatch.setattr(runtime, "isolated_run", fake)
+    result = runtime.install()
+    assert result.installed and result.engine == "cpu" and result.cuda_declined
+    assert fake.synced == ["requirements-cuda.lock", "requirements-cpu.lock"]
+    backend, environment = fake.health[0]
+    assert backend == "cuda"
+    assert Path(environment["LD_LIBRARY_PATH"]).parts[-6:] == (
+        "lib",
+        "python3.13",
+        "site-packages",
+        "nvidia",
+        "cublas",
+        "lib",
+    )
+    assert fake.health[1] == ("cpu", {})
+    assert cuda_declined_path().is_file()
+    fake.synced.clear()
+    assert runtime.install().engine == "cpu" and fake.synced == []
+
+
+def test_explicit_cuda_reports_failure_and_offline_installs_are_not_a_gpu_verdict(
+    tmp_path, monkeypatch
+):
+    from tum_mcp.lecture_processing.runtime_spec import cuda_declined_path
+
+    gpu_linux_host(monkeypatch, tmp_path)
+    monkeypatch.setattr(runtime, "installer_uv", lambda: "uv")
+    monkeypatch.setenv("TUM_MCP_LECTURE_ENGINE", "cuda")
+    monkeypatch.setattr(runtime, "isolated_run", FakeInstaller(fail_health={"cuda"}))
+    with pytest.raises(CampusError, match="TUM_MCP_LECTURE_ENGINE=cpu"):
+        runtime.install()
+    assert not cuda_declined_path().exists() and not runtime.runtime_root().exists()
+    monkeypatch.delenv("TUM_MCP_LECTURE_ENGINE")
+    monkeypatch.setattr(
+        runtime, "isolated_run", FakeInstaller(fail_sync={"requirements-cuda.lock"})
+    )
+    with pytest.raises(CampusError, match="Synthetic offline"):
+        runtime.install()
+    assert not cuda_declined_path().exists()
+    cuda_declined_path().parent.mkdir(parents=True, exist_ok=True)
+    cuda_declined_path().write_text("{}")
+    monkeypatch.setenv("TUM_MCP_LECTURE_ENGINE", "cuda")
+    monkeypatch.setattr(runtime, "isolated_run", FakeInstaller())
+    assert runtime.install().engine == "cuda"
+    assert not cuda_declined_path().exists()
+
+
+@pytest.mark.parametrize(
+    "system,variable,tail",
+    [
+        ("Windows", "CUDA_PATH", ("Lib", "site-packages", "nvidia", "cublas")),
+        (
+            "Linux",
+            "LD_LIBRARY_PATH",
+            ("lib", "python3.13", "site-packages", "nvidia", "cublas", "lib"),
+        ),
+    ],
+)
+def test_cuda_worker_finds_the_runtime_cublas(system, variable, tail, tmp_path, monkeypatch):
+    # nvidia-cublas-cu12 wheels hold nvidia/cublas/bin/cublas64_12.dll (CTranslate2 loads
+    # it from %CUDA_PATH%\\bin) and nvidia/cublas/lib/libcublas.so.12 (dlopen by name).
+    monkeypatch.setattr(runtime.platform, "system", lambda: system)
+    monkeypatch.setenv("TUM_MCP_LECTURE_ENGINE", "cuda")
+    environment = runtime.worker_environment(tmp_path)
+    assert list(environment) == [variable]
+    assert Path(environment[variable]).parts[-len(tail) :] == tail
+    monkeypatch.setenv("TUM_MCP_LECTURE_ENGINE", "cpu")
+    assert runtime.worker_environment(tmp_path) == {}
+
+
+def test_worker_library_paths_are_explicit_and_user_values_do_not_leak(monkeypatch):
+    monkeypatch.setenv("LD_LIBRARY_PATH", "user-library-path")
+    code = "import os;print(os.environ.get('LD_LIBRARY_PATH','absent'))"
+    assert isolated_run((sys.executable, "-I", "-c", code)).strip() == b"absent"
+    extra = {"LD_LIBRARY_PATH": "runtime-cublas"}
+    assert (
+        isolated_run((sys.executable, "-I", "-c", code), extra=extra).strip() == b"runtime-cublas"
+    )
+
+
+def test_cuda_lock_is_the_cpu_lock_plus_pinned_cublas(monkeypatch):
+    monkeypatch.setenv("TUM_MCP_LECTURE_ENGINE", "cpu")
+    cpu = runtime.expected_versions()
+    cpu_identity = (runtime.profile(), runtime.recognition_profile())
+    monkeypatch.setenv("TUM_MCP_LECTURE_ENGINE", "cuda")
+    cuda = runtime.expected_versions()
+    added = {name: version for name, version in cuda.items() if cpu.get(name) != version}
+    host_has_wheel = sys.platform in {"linux", "win32"}
+    assert added == ({"nvidia-cublas-cu12": "12.8.4.1"} if host_has_wheel else {})
+    assert set(cpu) <= set(cuda)
+    # Separate runtime and chunk caches, so GPU and CPU transcripts are never mixed.
+    assert runtime.profile() != cpu_identity[0]
+    assert runtime.recognition_profile() != cpu_identity[1]
+
+
+def test_ctranslate2_backends_share_decoding_and_cpu_settings_are_unchanged(monkeypatch):
+    from tum_mcp.bundled.lecture_runtime import worker
+
+    created: list[dict] = []
+
+    class Model:
+        def __init__(self, path: str, **settings) -> None:
+            created.append(settings)
+
+        def transcribe(self, audio, **options):
+            created.append(options)
+            return iter(()), types.SimpleNamespace(language="en")
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=Model))
+    for backend in ("cpu", "cuda"):
+        result = worker.recognize_ctranslate2(Path("model"), [], {}, backend)
+        assert result == {"language": "en", "segments": []}
+    cpu, cpu_options, cuda, cuda_options = created
+    assert cpu == {
+        "local_files_only": True,
+        "num_workers": 1,
+        "device": "cpu",
+        "compute_type": "int8",
+        "cpu_threads": min(4, os.cpu_count() or 1),
+    }
+    assert cuda == {
+        "local_files_only": True,
+        "num_workers": 1,
+        "device": "cuda",
+        "device_index": 0,
+        "compute_type": "float16",
+    }
+    assert cpu_options == cuda_options == worker.decoding_options("cpu")
+
+
+def test_cuda_health_rejects_hosts_ctranslate2_cannot_use(monkeypatch):
+    from tum_mcp.bundled.lecture_runtime import worker
+
+    fake = types.SimpleNamespace(get_cuda_device_count=lambda: 0)
+    monkeypatch.setitem(sys.modules, "ctranslate2", fake)
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "webrtcvad", types.SimpleNamespace(Vad=lambda level: None))
+    with pytest.raises(ValueError, match="No CUDA 12 capable GPU"):
+        worker.health("cuda")
+    fake.get_cuda_device_count = lambda: 1
+    fake.get_supported_compute_types = lambda device: {"float32", "int8"}
+    with pytest.raises(ValueError, match="float16"):
+        worker.health("cuda")
+
+
+def test_driver_probe_runs_and_reports_a_count_without_a_cuda_toolkit():
+    from tum_mcp.lecture_processing import runtime_spec
+
+    output = isolated_run((sys.executable, "-I", "-c", runtime_spec._DRIVER_PROBE), timeout=30)
+    assert output.strip().isdigit()

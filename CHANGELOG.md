@@ -13,6 +13,10 @@
   Hosted study sites never request or include videos.
 - Keep extension selections forward compatible: unknown on/off settings from newer
   releases are preserved, and the video setting is only written when enabled.
+- Use NVIDIA GPUs for Prepare Lecture recognition on Windows x64 and Linux/WSL x86_64.
+  `auto` selects CUDA for a CUDA 12 GPU of compute capability 7.0+, adds a pinned cuBLAS to
+  the runtime (no CUDA toolkit or cuDNN), checks the GPU during installation and
+  otherwise stays on CPU int8. `TUM_MCP_LECTURE_ENGINE` also accepts `cuda`.
 - Document the eSpeak data path limit that breaks local Kokoro on macOS in Audio Notes.
 
 ## 0.9.5 — 2026-10-27

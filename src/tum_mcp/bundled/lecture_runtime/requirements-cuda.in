@@ -1,0 +1,8 @@
+# NVIDIA GPU recognition: the CPU set plus cuBLAS for CTranslate2's CUDA 12.8 build.
+faster-whisper==1.2.1
+ctranslate2==4.8.4
+av==16.1.0
+onnxruntime==1.23.2
+webrtcvad-wheels==2.0.14.post1
+packaging==26.3
+nvidia-cublas-cu12==12.8.4.1 ; sys_platform == 'linux' or sys_platform == 'win32'

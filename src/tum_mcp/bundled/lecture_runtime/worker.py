@@ -9,10 +9,13 @@ import wave
 from contextlib import redirect_stdout
 from pathlib import Path
 
+# Backends that run faster-whisper (CTranslate2) models: same files, different device.
+CTRANSLATE2 = frozenset({"cpu", "cuda"})
+
 
 def decoding_options(backend: str = "mlx") -> dict[str, float | bool]:
     """Shared inference identity; importing this module loads no model libraries."""
-    return ({"beam_size": 1, "vad_filter": False} if backend == "cpu" else {}) | {
+    return ({"beam_size": 1, "vad_filter": False} if backend in CTRANSLATE2 else {}) | {
         "word_timestamps": True,
         "temperature": 0.0,
         "condition_on_previous_text": False,
@@ -83,8 +86,8 @@ def analyze(path: Path) -> dict:
 def pinned_model(repo: str, revision: str, backend: str) -> dict:
     from huggingface_hub import snapshot_download
 
-    weights = "model.bin" if backend == "cpu" else "weights.npz"
-    supporting = ("tokenizer.json", "vocabulary.txt") if backend == "cpu" else ()
+    weights = "model.bin" if backend in CTRANSLATE2 else "weights.npz"
+    supporting = ("tokenizer.json", "vocabulary.txt") if backend in CTRANSLATE2 else ()
     path = Path(
         snapshot_download(
             repo_id=repo,
@@ -109,9 +112,9 @@ def recognize(request: dict) -> dict:
 
     model = Path(request["model"])
     backend = request.get("backend", "mlx")
-    weights = "model.bin" if backend == "cpu" else "weights.npz"
+    weights = "model.bin" if backend in CTRANSLATE2 else "weights.npz"
     supporting = json.loads(request.get("supporting_sha256", "{}"))
-    required = {"tokenizer.json", "vocabulary.txt"} if backend == "cpu" else set()
+    required = {"tokenizer.json", "vocabulary.txt"} if backend in CTRANSLATE2 else set()
     if set(supporting) != required:
         raise ValueError("Missing or unexpected pinned supporting assets")
     if (
@@ -126,8 +129,8 @@ def recognize(request: dict) -> dict:
         raise ValueError("Audio channel outside input")
     audio = pcm[:, channel].astype(np.float32) / 32768
     options = {"language": request["language"]} if request.get("language") else {}
-    if backend == "cpu":
-        return recognize_cpu(model, audio, options)
+    if backend in CTRANSLATE2:
+        return recognize_ctranslate2(model, audio, options, backend)
     import mlx_whisper
 
     result = mlx_whisper.transcribe(
@@ -157,18 +160,16 @@ def recognize(request: dict) -> dict:
     }
 
 
-def recognize_cpu(model: Path, audio, options: dict) -> dict:
+def recognize_ctranslate2(model: Path, audio, options: dict, backend: str) -> dict:
     from faster_whisper import WhisperModel
 
-    decoder = WhisperModel(
-        str(model),
-        device="cpu",
-        compute_type="int8",
-        local_files_only=True,
-        cpu_threads=min(4, os.cpu_count() or 1),
-        num_workers=1,
+    device = (
+        {"device": "cuda", "device_index": 0, "compute_type": "float16"}
+        if backend == "cuda"
+        else {"device": "cpu", "compute_type": "int8", "cpu_threads": min(4, os.cpu_count() or 1)}
     )
-    segments, info = decoder.transcribe(audio, **decoding_options("cpu"), **options)
+    decoder = WhisperModel(str(model), local_files_only=True, num_workers=1, **device)
+    segments, info = decoder.transcribe(audio, **decoding_options(backend), **options)
     return {
         "language": info.language,
         "segments": [
@@ -199,6 +200,15 @@ def health(backend: str) -> dict:
         importlib.import_module("faster_whisper")
         if "int8" not in ctranslate2.get_supported_compute_types("cpu"):
             raise ValueError("CPU int8 inference unavailable")
+    elif backend == "cuda":
+        import ctranslate2
+
+        importlib.import_module("faster_whisper")
+        if ctranslate2.get_cuda_device_count() < 1:
+            raise ValueError("No CUDA 12 capable GPU visible to CTranslate2")
+        if "float16" not in ctranslate2.get_supported_compute_types("cuda"):
+            raise ValueError("GPU lacks float16 inference")
+        cublas_ready()
     else:
         import mlx.core as mx
 
@@ -206,6 +216,34 @@ def health(backend: str) -> dict:
         if not mx.metal.is_available():
             raise ValueError("Metal unavailable")
     return {"ready": True}
+
+
+def load_cublas():
+    """Load cuBLAS exactly as CTranslate2 4.8 does; needs no GPU."""
+    import ctypes
+
+    if sys.platform == "win32":
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.SetDllDirectoryW.argtypes = (ctypes.c_wchar_p,)
+        kernel32.LoadLibraryW.argtypes = (ctypes.c_wchar_p,)
+        kernel32.LoadLibraryW.restype = ctypes.c_void_p
+        kernel32.SetDllDirectoryW(os.path.join(os.environ["CUDA_PATH"], "bin"))
+        handle = kernel32.LoadLibraryW("cublas64_12.dll")
+        if not handle:
+            raise ValueError("cublas64_12.dll could not be loaded")
+        return ctypes.WinDLL("cublas64_12.dll", handle=handle)
+    return ctypes.CDLL("libcublas.so.12")
+
+
+def cublas_ready() -> None:
+    """Create and release a cuBLAS handle, which needs a working GPU and driver."""
+    import ctypes
+
+    library = load_cublas()
+    blas = ctypes.c_void_p()
+    if library.cublasCreate_v2(ctypes.byref(blas)) != 0:
+        raise ValueError("cuBLAS could not initialize on the GPU")
+    library.cublasDestroy_v2(blas)
 
 
 def main() -> None:

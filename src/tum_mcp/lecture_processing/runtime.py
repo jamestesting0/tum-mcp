@@ -2,9 +2,11 @@
 
 import hashlib
 import json
+import os
 import platform
 import shutil
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 from filelock import FileLock, Timeout
@@ -16,8 +18,19 @@ from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_processing.installer_uv import installer_uv
 from tum_mcp.lecture_processing.runtime_assets import ModelAsset, model  # noqa: F401
 from tum_mcp.lecture_processing.runtime_process import isolated_run, worker_path
-from tum_mcp.lecture_processing.runtime_spec import lock_path, selected, supported  # noqa: F401
+from tum_mcp.lecture_processing.runtime_spec import (  # noqa: F401
+    CUDA,
+    cuda_declined_path,
+    lock_path,
+    selected,
+    supported,
+)
+from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen, data_dir
+
+
+class CudaUnusable(Exception):
+    """The installed CUDA runtime could not use the GPU; the candidate was discarded."""
 
 
 class RuntimeStatus(Frozen):
@@ -28,6 +41,7 @@ class RuntimeStatus(Frozen):
     reason: str
     models: tuple[str, ...] = ()
     engine: str = ""
+    cuda_declined: bool = False
 
 
 def profile() -> str:
@@ -55,6 +69,17 @@ def runtime_root() -> Path:
 
 def python_path() -> Path:
     return executable_at(runtime_root())
+
+
+def worker_environment(root: Path) -> dict[str, str]:
+    """Point CTranslate2 at the runtime's pinned cuBLAS; other engines need nothing extra."""
+    if selected() != CUDA:
+        return {}
+    if platform.system() == "Windows":
+        # CTranslate2 calls SetDllDirectory(%CUDA_PATH%\bin) before loading cublas64_12.dll.
+        return {"CUDA_PATH": str(root / "Lib/site-packages/nvidia/cublas")}
+    # dlopen("libcublas.so.12") reads LD_LIBRARY_PATH, which must be set before start.
+    return {"LD_LIBRARY_PATH": str(root / "lib/python3.13/site-packages/nvidia/cublas/lib")}
 
 
 def executable_at(root: Path) -> Path:
@@ -116,10 +141,31 @@ def status() -> RuntimeStatus:
         else "automatic_asr_host_or_engine_unsupported",
         models=tuple(models),
         engine=selected().backend,
+        cuda_declined=cuda_declined_path().exists(),
     )
 
 
 def install() -> RuntimeStatus:
+    try:
+        status_ = _install()
+    except CudaUnusable:
+        if os.environ.get("TUM_MCP_LECTURE_ENGINE", "auto") != "auto":
+            raise CampusError(
+                Code.CAPABILITY_UNSUPPORTED,
+                "The CUDA runtime installed but could not use the NVIDIA GPU (driver, GPU "
+                "generation or memory). Use TUM_MCP_LECTURE_ENGINE=cpu instead.",
+            ) from None
+        # Remember the failed GPU once so automatic selection stays on CPU from now on.
+        declined = cuda_declined_path()
+        declined.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        private_write(declined, json.dumps({"declined_at": datetime.now(UTC).isoformat()}).encode())
+        return _install()
+    if selected() == CUDA:
+        cuda_declined_path().unlink(missing_ok=True)
+    return status_
+
+
+def _install() -> RuntimeStatus:
     if not supported():
         raise CampusError(
             Code.CAPABILITY_UNSUPPORTED,
@@ -184,11 +230,17 @@ def install() -> RuntimeStatus:
                         Code.INVALID_RESPONSE,
                         "Installed lecture dependency versions differ from their lock.",
                     )
-                isolated_run(
-                    (str(executable), "-I", str(worker_path())),
-                    json.dumps({"action": "health", "backend": selected().backend}).encode(),
-                    timeout=60,
-                )
+                try:
+                    isolated_run(
+                        (str(executable), "-I", str(worker_path())),
+                        json.dumps({"action": "health", "backend": selected().backend}).encode(),
+                        timeout=60,
+                        extra=worker_environment(candidate),
+                    )
+                except CampusError:
+                    if selected() == CUDA:
+                        raise CudaUnusable from None
+                    raise
                 candidate.rename(destination)
     except Timeout:
         raise CampusError(
@@ -203,4 +255,17 @@ def call_worker(action: str, **arguments: str | int) -> bytes:
             Code.ACTION_REQUIRED, "Run tum-mcp lecture runtime install, or supply timed captions."
         )
     payload = json.dumps({"action": action, "backend": selected().backend, **arguments}).encode()
-    return isolated_run((str(python_path()), "-I", str(worker_path())), payload)
+    try:
+        return isolated_run(
+            (str(python_path()), "-I", str(worker_path())),
+            payload,
+            extra=worker_environment(runtime_root()),
+        )
+    except CampusError as error:
+        if selected() != CUDA or action != "transcribe":
+            raise
+        raise CampusError(
+            error.code,
+            f"{error.message} A busy or unsupported NVIDIA GPU can cause this; "
+            "TUM_MCP_LECTURE_ENGINE=cpu uses the CPU instead.",
+        ) from None

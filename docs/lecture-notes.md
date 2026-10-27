@@ -64,8 +64,9 @@ revision-pinned public model weights; neither is part of the base runtime.
 | Apple Silicon macOS 15+ | MLX acceleration by default |
 | Apple Silicon macOS 14 | CPU int8 |
 | Intel macOS 13+ | CPU int8 |
-| Windows x64 | CPU int8; Microsoft Visual C++ runtime required |
-| Linux/WSL x86_64 or ARM64, glibc 2.28+ | CPU int8 |
+| Windows x64 | NVIDIA CUDA when a GPU is detected, otherwise CPU int8; Microsoft Visual C++ runtime required |
+| Linux/WSL x86_64, glibc 2.28+ | NVIDIA CUDA when a GPU is detected, otherwise CPU int8 |
+| Linux ARM64, glibc 2.28+ | CPU int8 |
 
 Native Windows ARM64, 32-bit systems and musl Linux have no supported locked
 runtime. Use captions/imported WebVTT there. CPU inference requires compatible
@@ -80,8 +81,19 @@ video frames. They are unnecessary for imported captions and cached text.
 `lecture runtime status` reports the selected engine and missing prerequisites.
 Use `lecture runtime install` to retry after fixing a prerequisite. Advanced users
 can set `TUM_MCP_LECTURE_ENGINE=cpu` consistently for installation and preparation
-to bypass Metal; the default `auto` retains existing MLX runtimes and model caches.
+to bypass Metal or CUDA; the default `auto` retains existing MLX runtimes and model caches.
 An engine switch uses separate caches. No cloud transcription API is configured.
+
+On Windows x64 and Linux/WSL x86_64, `auto` uses an NVIDIA GPU of compute capability
+7.0 or newer (GTX 16, RTX 20 series and later) when its driver supports CUDA 12
+(driver 525 or newer); older GPUs stay on CPU. Only the driver is needed: the runtime
+adds a pinned cuBLAS (about 600 MB) and decodes in float16, without a CUDA toolkit
+or cuDNN. Installation first creates a cuBLAS handle on the GPU. If that fails,
+automatic selection records it (`lecture-runtime/cuda-unusable.json` in the data
+directory) and installs the CPU runtime instead, so `tum-mcp update` keeps working.
+After a driver fix, `TUM_MCP_LECTURE_ENGINE=cuda tum-mcp lecture runtime install`
+retries and, on success, clears that record. `cuda` never falls back silently;
+`lecture runtime status` shows when a GPU was declined.
 
 CPU decoding uses int8, one worker and at most four threads. It consumes the full
 retained audio, with word timestamps and no VAD retiming. ASR remains fallible,

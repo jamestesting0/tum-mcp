@@ -7,7 +7,12 @@ from pathlib import Path
 from tum_mcp.errors import CampusError, Code
 
 
-def isolated_run(argv: tuple[str, ...], payload: bytes = b"", timeout: int = 1200) -> bytes:
+def isolated_run(
+    argv: tuple[str, ...],
+    payload: bytes = b"",
+    timeout: int = 1200,
+    extra: dict[str, str] | None = None,
+) -> bytes:
     environment = {
         key: value
         for key, value in os.environ.items()
@@ -30,6 +35,7 @@ def isolated_run(argv: tuple[str, ...], payload: bytes = b"", timeout: int = 120
         }
     }
     environment.update(HF_HUB_DISABLE_TELEMETRY="1", TOKENIZERS_PARALLELISM="false")
+    environment.update(extra or {})
     try:
         # Fixed executable/worker paths and validated local data, with no shell or campus state.
         with subprocess.Popen(  # noqa: S603
