@@ -15,6 +15,7 @@ from tum_mcp.client_config import Marketplace, client_config_path, read_client_c
 from tum_mcp.client_hosts import ClientHost, StdioLaunch, client_launch, storage_environment
 from tum_mcp.client_installs import MANAGED_ROOTS
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.moodle.config import private_write
 from tum_mcp.skills import export_pack, implicit_invocation
 
@@ -26,7 +27,11 @@ def same_tree(left: Path, right: Path) -> bool:
 
 
 def rendered_client(
-    name: str, launch: StdioLaunch, host: ClientHost, *, include_studocu: bool | None = None
+    name: str,
+    launch: StdioLaunch,
+    host: ClientHost,
+    *,
+    extensions: ExtensionSelection | None = None,
 ) -> tuple[dict[str, bytes], dict[str, JsonValue], dict[str, JsonValue] | None, str]:
     """Reuse the existing adapters in a disposable profile before touching real files."""
     if name not in MANAGED_ROOTS:
@@ -36,7 +41,7 @@ def rendered_client(
         staged = root / "staged"
         staged.mkdir()
         skills = staged / "skills"
-        export_pack(skills, include_studocu=include_studocu)
+        export_pack(skills, extensions=extensions)
         if name in {"cursor", "antigravity"}:
             content = {
                 f"{MANAGED_ROOTS[name]}/{path.relative_to(skills).as_posix()}": path.read_bytes()

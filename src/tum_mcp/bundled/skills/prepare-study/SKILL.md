@@ -77,7 +77,8 @@ Read only what the change needs.
 Keep the site credential-free. First publication needs the user's request and
 publish-course; saved publication settings authorize later build updates. When
 category audio is also requested, finish the affected course content first, then
-continue with audio-notes and pass the current content, changed unit IDs and source
+use the optional audio-notes workflow (`tum-mcp install audio-notes` if missing)
+and pass the current content, changed unit IDs and source
 review gaps. Audio outputs belong under audio/. A website-only request never triggers
 narration or external speech generation.
 

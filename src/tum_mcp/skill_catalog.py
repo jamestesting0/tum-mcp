@@ -2,26 +2,35 @@
 
 from typing import Final
 
+from tum_mcp.errors import CampusError
+from tum_mcp.extension_selection import ExtensionSelection, selection
+
 CURRENT_SKILLS: Final = (
     "read-content",
     "sync-course",
     "prepare-study",
     "prepare-exercises",
-    "audio-notes",
     "publish-course",
 )
-OPTIONAL_SKILLS: Final = ("prepare-lecture", "sync-studocu")
+OPTIONAL_SKILLS: Final = ("prepare-lecture", "sync-studocu", "audio-notes")
 BUNDLED_SKILLS: Final = (*CURRENT_SKILLS, *OPTIONAL_SKILLS)
 
 
-def active_skills(*, include_studocu: bool | None = None) -> tuple[str, ...]:
-    from tum_mcp.extensions import lecture_enabled, studocu_enabled
+def active_skills(*, extensions: ExtensionSelection | None = None) -> tuple[str, ...]:
+    from tum_mcp.extensions import lecture_enabled
+
+    try:
+        chosen = selection() if extensions is None else extensions
+    except CampusError:
+        chosen = ExtensionSelection()
 
     active = list(CURRENT_SKILLS)
     if lecture_enabled():
         active.append("prepare-lecture")
-    if studocu_enabled() if include_studocu is None else include_studocu:
+    if chosen.studocu:
         active.append("sync-studocu")
+    if chosen.audio_notes:
+        active.append("audio-notes")
     return tuple(active)
 
 

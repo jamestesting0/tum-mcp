@@ -19,30 +19,59 @@ tum-mcp doctor
 tum-mcp --help
 ```
 
-Use `--client claude`, `cursor`, `antigravity`, or `generic` for another client.
+Run `tum-mcp setup` to choose clients interactively, or pass `--client claude`,
+`cursor`, `antigravity`, or `generic` directly. Existing registrations have status dots.
 Codex needs the plugin enabled and a restart when prompted. Cursor and
-Antigravity setup installs all six base skills and MCP configuration; restart each
+Antigravity setup installs all five base skills and MCP configuration; restart each
 client afterward. Existing MCP-only setups gain the skills through `tum-mcp update`
 or another setup run. Generic setup writes configuration for manual installation.
 
 Studocu is optional: run `tum-mcp install studocu`, then reload the client. The
-extension adds the `sync-studocu` skill and its tools. `tum-mcp extensions status`
-reports the local selection; `tum-mcp extensions remove studocu` disables it and
+extension adds the `sync-studocu` skill and its tools. `tum-mcp status`
+reports the local selection; `tum-mcp uninstall studocu` disables it and
 preserves course materials and customized files. Generic clients use
 `tum-mcp skills export DESTINATION` to install the active pack manually.
 Setup preserves unrelated settings and refuses to
 replace customized entries. It does not authenticate or fetch courses.
 
+Audio Notes is optional: use `tum-mcp install audio-notes`. It adds the
+`audio-notes` skill for prepared Study content; synthesis is set up when used.
+Existing course audio is retained when the extension is disabled.
+
+## Terminal output
+
+`tum-mcp status` shows saved connections and optional workflows;
+`tum-mcp doctor` also checks clients and prerequisites, including TUMonline.
+Green dots mean ready or enabled, blue means not verified, amber means action
+needed, red means failed, and muted dots mean inactive. Every dot has a text
+label. `NO_COLOR` disables color; narrow terminals use stacked rows.
+
+Bare `tum-mcp setup`, `tum-mcp install` and `tum-mcp uninstall` share the same
+keyboard controls as connect. Nothing is preselected; Ctrl+C cancels. Uninstall
+also offers **All — TUM MCP**, which removes the package and managed client setup.
+Personal notes, sessions and customized files are retained. Scripts can name one or both:
+`tum-mcp uninstall lecture studocu --json`.
+
+Use `--json` for machine-readable status, named extension removal/installation,
+skill listing/validation, lecture runtime status or TUMonline permissions.
+The default human output changed in 0.9.1; scripts that parsed those commands
+must add `--json`. The former `extensions` group is removed; use `status` and
+`uninstall NAME`. Named client/extension arguments remain suitable for scripts.
+Data-oriented course authoring commands retain JSON output.
+
 ## Connect
 
 Run **`tum-mcp connect`**, with no arguments, in an interactive terminal:
 
-1. Use up/down to move and Space to select Moodle, Artemis, Zulip and/or TUMonline.
+1. Use up/down to move and Space to select services. Installed Lecture adds TUM-Live;
+   installed Studocu adds Studocu.
 2. Press Enter. If several browsers are installed, choose one and press Enter.
 3. Complete TUM sign-in/MFA in the opened window. Only selected service tabs open.
 4. Return to the terminal for the saved-connection result.
 
-The services use the same temporary-browser sign-in and encrypted session storage flow.
+Campus services use temporary-browser sign-in and encrypted session storage.
+Studocu opens your own default browser (the Windows browser from WSL); sign in
+there. Its browser session is neither copied nor claimed as verified.
 No API key or native credential-store prompt is needed. A temporary browser
 profile keeps the connection separate from your everyday browser. Ctrl+C closes it and preserves
 connections that already completed. A dumb terminal uses numbered prompts.
@@ -167,6 +196,7 @@ the npm package and all managed registrations:
 
 ```sh
 tum-mcp uninstall
+# Choose All to remove TUM MCP and its managed client setup.
 ```
 
 Custom edits and user-added files are preserved. Codex's local source/catalog

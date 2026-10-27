@@ -57,7 +57,12 @@ def run_manager(
                 if b"\x1b[6n" in chunk:
                     os.write(master, b"\x1b[1;1R")
                 plain = re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", bytes(captured))
-                if not sent and b"TUMonline permissions" in plain:
+                ready = (
+                    b"Permissions: " in plain
+                    if terminal == "dumb"
+                    else (b"Miscellaneous" in plain and b"\x1b[?25l" in captured)
+                )
+                if not sent and ready:
                     if destination := os.environ.get("TUM_MCP_TERMINAL_QA"):
                         Path(destination).mkdir(parents=True, exist_ok=True)
                         (

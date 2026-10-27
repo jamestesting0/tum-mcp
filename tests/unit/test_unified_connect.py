@@ -27,7 +27,7 @@ from tum_mcp.transport import API
         (ServiceChoice.TUMONLINE,),
         (ServiceChoice.TUM_LIVE,),
         (ServiceChoice.MOODLE, ServiceChoice.ZULIP),
-        tuple(ServiceChoice),
+        tuple(service for service in ServiceChoice if service != ServiceChoice.STUDOCU),
     ],
 )
 def test_only_selected_tabs_open_and_all_sessions_use_local_files(

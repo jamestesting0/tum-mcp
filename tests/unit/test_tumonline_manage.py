@@ -17,9 +17,9 @@ def test_manager_displays_default_permissions_and_unavailable_readers(
     PolicyStore().create(ACCOUNT)
     result = CliRunner().invoke(app, ["manage", "tumonline", "--account", ACCOUNT, "--show"])
     assert result.exit_code == 0, result.output
-    assert "studies_courses" in result.output
-    assert "academic_progress" in result.output
-    assert "unavailable" in result.output
+    assert "Studies and courses" in result.output
+    assert "Grades and progress" in result.output
+    assert "Unavailable" in result.output
     assert "other providers" in result.output.lower()
 
 

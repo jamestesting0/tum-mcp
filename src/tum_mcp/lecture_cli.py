@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.extensions import require_lecture
 from tum_mcp.lecture_processing.prepare_visuals import FrameInventory
 from tum_mcp.lecture_processing.progress import read_progress
 from tum_mcp.lecture_processing.receipts import (
@@ -24,24 +25,61 @@ runtime_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=Fa
 app.add_typer(runtime_app, name="runtime")
 
 
-@app.callback()
-def optional_lecture() -> None:
-    from tum_mcp.extensions import require_lecture
-
-    require_lecture()
-
-
 @runtime_app.command(name="status")
-def runtime_status() -> None:
+def runtime_status(
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Print machine-readable runtime status.")
+    ] = False,
+) -> None:
     """Check host, decoder and optional engine without installing anything."""
+    require_lecture()
     from tum_mcp.lecture_processing.runtime import status
 
-    typer.echo(status().model_dump_json(indent=2))
+    report = status()
+    if json_output:
+        typer.echo(report.model_dump_json(indent=2))
+        return
+    from tum_mcp.ui import State, heading, status_rows, terminal_console
+
+    console = terminal_console()
+    heading(console, "Lecture runtime", "Local speech recognition and recording prerequisites.")
+    engine = "MLX acceleration" if report.engine == "mlx" else "CPU recognition"
+    status_rows(
+        console,
+        [
+            (
+                engine,
+                State.READY
+                if report.installed
+                else State.MISSING
+                if report.supported
+                else State.UNAVAILABLE,
+                "Runtime installed."
+                if report.installed
+                else "Run tum-mcp lecture runtime install."
+                if report.supported
+                else "Use captions or imported transcripts on this host.",
+            ),
+            (
+                "Recording tools",
+                State.READY if report.ffmpeg else State.MISSING,
+                "FFmpeg and ffprobe available."
+                if report.ffmpeg
+                else "Install FFmpeg to extract audio or selected frames.",
+            ),
+            (
+                "Cached models",
+                State.READY if report.models else State.INFO,
+                f"{len(report.models)} model(s) cached. Models load when needed.",
+            ),
+        ],
+    )
 
 
 @runtime_app.command(name="install")
 def runtime_install() -> None:
     """Explicitly install the private pinned wheel-only runtime; models load on demand."""
+    require_lecture()
     from tum_mcp.lecture_processing.runtime import install
 
     typer.echo(install().model_dump_json(indent=2))
@@ -74,6 +112,7 @@ def prepare(
     ] = False,
 ) -> None:
     """Prepare selected evidence in the bound course; authored notes remain a separate review."""
+    require_lecture()
     from tum_mcp.lecture_processing.preparation import prepare as run
 
     if len(recording) > 1 and (transcript is not None or frame_at):
@@ -97,6 +136,7 @@ def prepare(
 @app.command()
 def inspect(project: Path) -> None:
     """Show cached receipts with their as-of date; does not fetch or start recognition."""
+    require_lecture()
     root = project.expanduser().resolve()
     state = load_state(root)
     directory = private_path(root, "lectures")
@@ -137,6 +177,7 @@ def read_transcript(
     ] = False,
 ) -> None:
     """Read bounded cached passages on the original recording clock."""
+    require_lecture()
     root = project.expanduser().resolve()
     receipt = usable_receipt(root, recording)
     if start >= end:
@@ -181,6 +222,7 @@ def read_frames(
     offset: Annotated[int, typer.Option(min=0, max=100000)] = 0,
 ) -> None:
     """Read cached preview candidates and measured frames; never acquires video."""
+    require_lecture()
     root = project.expanduser().resolve()
     receipt = usable_receipt(root, recording)
     if start >= end:
@@ -224,6 +266,7 @@ def read_frames(
 @app.command(name="export-snapshot")
 def export(project: Path, output: Annotated[Path, typer.Option()]) -> None:
     """Export safe source records for ordinary study sync; excludes private evidence."""
+    require_lecture()
     snapshot = export_snapshot(project.expanduser().resolve(), output.expanduser().resolve())
     typer.echo(
         json.dumps(

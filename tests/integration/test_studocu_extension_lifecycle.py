@@ -32,7 +32,7 @@ def test_install_update_remove(home: Path, tmp_path: Path, client: str) -> None:
     export_pack(tmp_path / "enabled")
     assert (tmp_path / "enabled/sync-studocu/SKILL.md").is_file()
     install_client(client, home, announce=False)
-    result = runner.invoke(app, ["extensions", "remove", "studocu"])
+    result = runner.invoke(app, ["uninstall", "studocu"])
     assert result.exit_code == 0, result.output
     assert not studocu_enabled()
     export_pack(tmp_path / "removed")
@@ -45,9 +45,9 @@ def test_customized_skill_is_preserved_and_disabled(home: Path) -> None:
     assert runner.invoke(app, ["install", "studocu"]).exit_code == 0
     path = home / ".cursor/skills/sync-studocu/SKILL.md"
     path.write_text(path.read_text(encoding="utf-8") + "\nMy changes.\n", encoding="utf-8")
-    result = runner.invoke(app, ["extensions", "remove", "studocu"])
-    assert result.exit_code == 0
-    assert "disabled_needs_review" in result.output
+    result = runner.invoke(app, ["uninstall", "studocu"])
+    assert result.exit_code == 2
+    assert "needs" in result.output.lower() or "review" in result.output.lower()
     assert "My changes" in path.read_text(encoding="utf-8")
     assert not studocu_enabled()
 
@@ -88,7 +88,7 @@ def test_lecture_and_studocu_install_and_remove_independently(
     assert (skills / "sync-studocu/SKILL.md").is_file()
     commands = {
         "lecture": ["uninstall", "lecture"],
-        "studocu": ["extensions", "remove", "studocu"],
+        "studocu": ["uninstall", "studocu"],
     }
     second_removed = "studocu" if first_removed == "lecture" else "lecture"
     result = runner.invoke(app, commands[first_removed])

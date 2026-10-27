@@ -90,6 +90,30 @@ def test_denied_study_scope_prevents_refresh(
         service.list(account.id)
 
 
+def test_diagnostic_identity_check_never_fetches_studies_or_grades(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    account, _, _ = setup(tmp_path, monkeypatch)
+    paths = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        paths.append(request.url.path)
+        if request.method == "POST":
+            return httpx2.Response(201, json={"accessToken": "synthetic-token"})
+        assert request.url.path.endswith("/desktop/profile")
+        return httpx2.Response(
+            200,
+            json={
+                "resource": [
+                    {"content": {"desktopProfileLibDto": {"obfuscatedId": "synthetic-student"}}}
+                ]
+            },
+        )
+
+    StudyService(httpx2.MockTransport(handler)).verify(account.id)
+    assert len(paths) == 2
+
+
 def test_rotation_survives_failed_profile_request(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -72,7 +72,7 @@ async function operate(job) {
     const staging = join(job.temporary, 'prepared');
     runNpm(job.npm, ['install', '--prefix', staging, '--global=false', archive], true);
     const prepared = join(staging, 'node_modules', packageName);
-    runLauncher(prepared, ['setup'], true);
+    runLauncher(prepared, ['setup', '--runtime-only'], true);
     // Only a healthy prepared release may replace the user's npm installation.
     runNpm(job.npm, ['install', ...scope, job.target.global ? archive : `${packageName}@${latest}`]);
     if (JSON.parse(readFileSync(join(job.root, 'package.json'), 'utf8')).version !== latest) throw new Error('npm did not install the selected version; client activation was stopped.');

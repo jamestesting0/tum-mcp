@@ -80,7 +80,7 @@ def test_doctor_is_local_only_and_does_not_create_state_or_access_keychain(
     )
     report = collect_diagnostics(home=tmp_path / "profile")
     assert report.live_authentication == "not_checked"
-    assert {item.label for item in report.services} == {"Moodle", "Artemis", "Zulip"}
+    assert {item.label for item in report.services} == {"Moodle", "Artemis", "Zulip", "TUMonline"}
     assert not any(item.state == State.READY for item in report.services)
     assert not data.exists()
     assert not (tmp_path / "moodle").exists()
@@ -173,7 +173,7 @@ def test_windows_cli_uses_utf8_even_when_redirected_from_a_legacy_code_page(
         context.setattr(sys, "platform", "win32")
         context.setattr(sys, "stdout", output)
         context.setattr(sys, "stderr", errors)
-        context.setattr("tum_mcp.cli.app", lambda: print("München 漢字"))
+        context.setattr("tum_mcp.cli.app", lambda **kwargs: print("München 漢字"))
         main()
         output.flush()
         assert buffer.getvalue().decode("utf-8").strip() == "München 漢字"

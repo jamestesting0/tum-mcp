@@ -22,7 +22,6 @@ def test_pack_contains_reading_and_study_workflows_with_valid_references(
         "sync-course",
         "prepare-study",
         "prepare-exercises",
-        "audio-notes",
         "publish-course",
     }
     assert report.errors == () and report.reference_characters > 0
@@ -96,6 +95,10 @@ def test_audio_workflow_installs_with_its_complete_reference_bundle(
     # Given a fresh client profile and the canonical audio skill bundle.
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     home = tmp_path / "profile"
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    from tum_mcp.extensions import set_audio_notes
+
+    set_audio_notes(True)
     source = bundled() / "audio-notes"
     # When the host installs its managed study skills.
     install_client(name, home)

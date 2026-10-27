@@ -41,11 +41,11 @@ def test_cli_opt_in_repeat_update_and_removal_preserve_base_and_personal_files(
         installed = runner.invoke(app, ["install", "lecture", "--no-asr"])
         assert installed.exit_code == 0, installed.output or repr(installed.exception)
     assert lecture_enabled() and (skills / "prepare-lecture/SKILL.md").is_file()
-    assert len(list(skills.iterdir())) == 7
+    assert len(list(skills.iterdir())) == 6
     refreshed = runner.invoke(app, ["update"])
     assert refreshed.exit_code == 0, refreshed.output
     assert (skills / "prepare-lecture/SKILL.md").is_file()
-    result = runner.invoke(app, ["uninstall", "lecture"])
+    result = runner.invoke(app, ["uninstall", "lecture", "--json"])
     assert result.exit_code == 0, result.output or repr(result.exception)
     assert not lecture_enabled() and {path.name for path in skills.iterdir()} == set(CURRENT_SKILLS)
     assert notes.read_text() == "Personal lecture notes"
@@ -60,7 +60,7 @@ def test_extension_removal_preserves_customized_optional_skill(extension_home: P
     skill = extension_home / ".cursor/skills/prepare-lecture/SKILL.md"
     skill.write_text(skill.read_text() + "\nMy personal lecture workflow.\n")
     before = skill.read_bytes()
-    result = runner.invoke(app, ["uninstall", "lecture"])
+    result = runner.invoke(app, ["uninstall", "lecture", "--json"])
     assert result.exit_code == 2 and "preserved" in result.output
     assert not lecture_enabled() and skill.read_bytes() == before
     assert (extension_home / ".cursor/skills/prepare-study/SKILL.md").is_file()
@@ -86,10 +86,10 @@ def test_disabled_lecture_command_returns_install_handoff_without_creating_cours
 
 def test_base_and_optional_catalog_validation_do_not_claim_activation(extension_home: Path) -> None:
     runner = CliRunner()
-    base = runner.invoke(app, ["skills", "validate"])
-    optional = runner.invoke(app, ["skills", "validate", "--all"])
+    base = runner.invoke(app, ["skills", "validate", "--json"])
+    optional = runner.invoke(app, ["skills", "validate", "--all", "--json"])
     assert base.exit_code == optional.exit_code == 0
-    assert len(json.loads(base.output)["checked_skills"]) == 6
+    assert len(json.loads(base.output)["checked_skills"]) == 5
     report = json.loads(optional.output)
     assert len(report["checked_skills"]) == 8 and not report["activation_evaluated"]
 

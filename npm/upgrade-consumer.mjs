@@ -13,7 +13,7 @@ assert.ok(process.env.npm_execpath, 'Run with npm run test:upgrade.');
 const allowed = new Set(['PATH', 'SYSTEMROOT', 'COMSPEC', 'TMPDIR', 'TMP', 'TEMP', 'LOCALAPPDATA', 'APPDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'WSL_INTEROP', 'WSL_DISTRO_NAME', 'WSLENV']);
 const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) => allowed.has(name.toUpperCase())));
 const records = [];
-for (const previousVersion of ['0.8.0', '0.8.1']) {
+for (const previousVersion of ['0.8.0', '0.8.1', '0.9.0']) {
   const root = mkdtempSync(join(tmpdir(), 'tum-mcp upgrade Ω-'));
   const home = join(root, 'profile'); mkdirSync(home);
   const env = { ...inherited, HOME: home, USERPROFILE: home,
@@ -37,6 +37,11 @@ for (const previousVersion of ['0.8.0', '0.8.1']) {
     npm(['install', '--prefix', oldPrefix, '--ignore-scripts', '--no-audit', '--no-fund', `@jamestesting888/tum-mcp@${previousVersion}`]);
     const clients = ['codex', 'claude', 'generic', 'cursor', 'antigravity'];
     call(oldPrefix, ['setup', ...clients.flatMap(name => ['--client', name])]);
+    const hadExtensions = previousVersion === '0.9.0';
+    if (hadExtensions) {
+      call(oldPrefix, ['install', 'lecture', '--no-asr']);
+      call(oldPrefix, ['install', 'studocu']);
+    }
     const previous = JSON.parse(readFileSync(join(root, 'data/runtime.json')));
     const source = join(home, '.codex/plugins/local/tum-mcp');
     const note = join(source, 'personal-note.txt'); writeFileSync(note, 'retain this user note');
@@ -54,15 +59,22 @@ for (const previousVersion of ['0.8.0', '0.8.1']) {
     assert.notEqual(current.python, previous.python);
     assert.ok(existsSync(previous.python), 'Previous runtime must remain for pinned clients.');
     assert.equal(run(previous.python, ['-I', '-m', 'tum_mcp', 'version']).trim(), previousVersion);
-    assert.deepEqual(readdirSync(join(source, 'skills')).filter(name => existsSync(join(source, 'skills', name, 'SKILL.md'))).sort(), ['audio-notes', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course']);
+    const expectedSkills = ['prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course', ...(hadExtensions ? ['prepare-lecture', 'sync-studocu'] : [])].sort();
+    assert.deepEqual(readdirSync(join(source, 'skills')).filter(name => existsSync(join(source, 'skills', name, 'SKILL.md'))).sort(), expectedSkills);
     assert.equal(JSON.parse(readFileSync(join(home, '.claude.json'))).mcpServers.tum.command, current.python);
     assert.equal(readFileSync(note, 'utf8'), 'retain this user note');
     assert.equal(readFileSync(credential, 'utf8'), 'synthetic-private-record');
     const first = readFileSync(join(root, 'data/runtime.json'), 'utf8');
     call(currentPrefix, ['update', '--local']);
     assert.equal(readFileSync(join(root, 'data/runtime.json'), 'utf8'), first, 'Update must be idempotent.');
+    if (hadExtensions) {
+      const extensions = JSON.parse(call(currentPrefix, ['status', '--json'])).extensions;
+      assert.equal(extensions.lecture, true);
+      assert.equal(extensions.studocu, true);
+      call(currentPrefix, ['uninstall', 'lecture', 'studocu', '--json']);
+    }
     const lectureEvidence = lectureLifecycle(root, args => call(currentPrefix, args));
-    assert.equal(lectureEvidence.installed_skills, 7);
+    assert.equal(lectureEvidence.installed_skills, 6);
     // An invalid prepared package must not replace the existing selected runtime.
     const backend = join(currentPrefix, 'node_modules/@jamestesting888/tum-mcp/npm/backend');
     const manifestPath = join(backend, 'manifest.json'); const manifestBytes = readFileSync(manifestPath);
@@ -85,7 +97,7 @@ for (const previousVersion of ['0.8.0', '0.8.1']) {
     assert.ok(!existsSync(join(root, 'data/runtimes')));
     assert.ok(!existsSync(join(source, 'plugin.json')) && existsSync(note));
     assert.ok(existsSync(credential) && existsSync(work) && existsSync(download));
-    records.push({ from: previousVersion, to: version, clients: clients.length, skills: 6, idempotent: true, failedPreparationRetainedRuntime: true, damagedRuntimeRepaired: true, oldRuntimeRetainedUntilExplicitRemoval: true, removalKeptWorkAndCredentials: true, realAccountsUsed: false });
+    records.push({ from: previousVersion, to: version, clients: clients.length, skills: 5, optionalExtensionsPreserved: hadExtensions, idempotent: true, failedPreparationRetainedRuntime: true, damagedRuntimeRepaired: true, oldRuntimeRetainedUntilExplicitRemoval: true, removalKeptWorkAndCredentials: true, realAccountsUsed: false });
     console.log(JSON.stringify(records.at(-1)));
   } finally { releaseWindowsProfile(); rmSync(root, { recursive: true, force: true }); }
 }

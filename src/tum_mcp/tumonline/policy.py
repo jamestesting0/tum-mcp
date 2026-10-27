@@ -10,7 +10,7 @@ from pydantic import Field, ValidationError
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
-from tum_mcp.settings import Frozen, config_dir
+from tum_mcp.settings import Frozen, config_dir, config_path
 
 ACCOUNT_PATTERN: Final = re.compile(r"[a-f0-9]{64}")
 MAX_POLICY_BYTES: Final = 16 * 1024
@@ -64,7 +64,8 @@ class PolicyStore:
             raise CampusError(Code.SCOPE_DENIED, "Invalid TUMonline account identifier.")
         return self.root / f"{account_id}.json"
 
-    def _read(self, path: Path, account_id: str) -> Policy:
+    @staticmethod
+    def _read(path: Path, account_id: str) -> Policy:
         if path.is_symlink() or path.is_junction() or not path.is_file():
             raise CampusError(Code.SCOPE_DENIED, "TUMonline policy must be a regular local file.")
         try:
@@ -80,6 +81,18 @@ class PolicyStore:
         if policy.account_id != account_id:
             raise CampusError(Code.SCOPE_DENIED, "TUMonline policy account mismatch.")
         return policy
+
+    @classmethod
+    def snapshot(cls, root: Path | None = None) -> tuple[Policy, ...]:
+        """Read atomically saved policies without creating directories or lock files."""
+        directory = root if root is not None else config_path() / "tumonline"
+        if directory.is_symlink() or directory.is_junction():
+            raise CampusError(Code.SCOPE_DENIED, "TUMonline policy directory cannot be a symlink.")
+        return tuple(
+            cls._read(path, path.stem)
+            for path in sorted(directory.glob("*.json"))
+            if ACCOUNT_PATTERN.fullmatch(path.stem)
+        )
 
     def read(self, account_id: str) -> Policy:
         path = self._path(account_id)

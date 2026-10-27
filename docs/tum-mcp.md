@@ -226,7 +226,7 @@ writing files with activation.
 The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
 The shipped pack contains six skills: `read-content`, `sync-course`,
-`prepare-study`, `prepare-exercises`, `audio-notes` and `publish-course`. Website-specific retrieval
+`prepare-study`, `prepare-exercises` and `publish-course`. Audio Notes is an optional extension installed with `tum-mcp install audio-notes`. Website-specific retrieval
 guidance is loaded from references within read-content. Teaching, schema and design contracts live
 with prepare-study; the renderer and synthetic example ship as reusable assets.
 Audio Notes converts prepared content into category tracks and maintains coverage,

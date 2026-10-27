@@ -312,6 +312,7 @@ is a no-op. Do not create `app/` alongside an existing `study/` by hand.
 
 ## Create and maintain audio notes
 
+Install the optional workflow with `tum-mcp install audio-notes`.
 Use `prepare-study` to author the interactive course, then ask `audio-notes` to
 convert that prepared content into spoken lessons. For example:
 

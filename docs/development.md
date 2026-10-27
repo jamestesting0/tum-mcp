@@ -143,7 +143,7 @@ check keyboard navigation, reduced motion, source links and retained progress.
 
 ## Optional Lecture extension
 
-Base setup exposes six workflows and no `tum_live_*` tools. `install lecture`
+Base setup exposes five workflows and no `tum_live_*` tools. `install lecture`
 records explicit selection, refreshes managed clients and provisions the optional
 recognizer only when requested/supported. `--no-asr` keeps captions/imported WebVTT.
 Heavy recognition dependencies and model weights stay outside the base environment
@@ -152,7 +152,7 @@ and package artifacts. `lecture_processing/` owns bounded media/ASR evidence;
 and figures used by the static app. See [the workflow guide](lecture-notes.md).
 
 Use `skills validate --all` to check the packaged optional workflow without installing
-it; default validation checks the selected six/seven. Activation statistics remain
+it; default validation checks the selected workflows. Activation statistics remain
 unmeasured until genuine fresh-session trial records exist. Default tests use
 synthetic media and course data. `test:consumer` and `test:upgrade` exercise optional
 install/update/export/removal from an actual local npm artifact. Never publish or

@@ -1,5 +1,22 @@
 # Changes
 
+## 0.9.1 — 2026-10-27
+
+- Make Audio Notes an optional `audio-notes` extension. Keep five base skills,
+  preserve existing audio files, and describe all extensions in a compact README table.
+
+- Use one compact terminal layout for help, connection status, extensions,
+  skills and permissions. Keep automation output available through `--json`.
+- Give setup, install and uninstall matching status-aware pickers. Uninstall
+  offers full package removal through All. Keep named commands for scripts and
+  show optional workflow state through status, connect and doctor; remove the
+  separate extensions command group. Studocu browser sign-in stays unverified.
+- Include TUMonline connection and permission status in doctor. Default checks
+  do not read credentials or create policy files; live checks verify identity
+  without fetching studies or grades.
+- Make unverified status dots blue, ready/enabled green, action needed amber,
+  failures red and inactive states muted. Preserve labels with color disabled.
+
 ## 0.9.0 — 2026-10-26
 
 - Add read-only TUMonline study, public catalog and partial curriculum-position

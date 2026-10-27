@@ -27,6 +27,7 @@ from tum_mcp.client_installs import (
 from tum_mcp.client_rendering import rendered_client
 from tum_mcp.client_rendering import same_tree as same_tree
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.settings import config_dir, data_path
 from tum_mcp.skills import LEGACY_SKILLS, inspect_skills
 
@@ -48,7 +49,7 @@ def install_client(
         )
     base = client_home(host, home).resolve()
     with FileLock(str(config_dir() / "client-install.lock")):
-        writes, removed, messages = prepare_client(selected, base, host=host, include_studocu=None)
+        writes, removed, messages = prepare_client(selected, base, host=host, extensions=None)
         commit_writes(writes)
         prune_removed_folders(base, removed)
         if announce:
@@ -61,7 +62,7 @@ def prepare_client(
     base: Path,
     *,
     host: ClientHost,
-    include_studocu: bool | None,
+    extensions: ExtensionSelection | None,
 ) -> tuple[tuple[Write, ...], tuple[str, ...], str]:
     """Plan client changes without locking or mutating the target profile."""
     base = base.resolve()
@@ -69,13 +70,13 @@ def prepare_client(
     if selected == "codex" and any(
         (base / ".agents/skills" / item["name"]).exists()
         for item in [
-            *inspect_skills(include_studocu=include_studocu),
+            *inspect_skills(extensions=extensions),
             *({"name": name} for name in LEGACY_SKILLS),
         ]
     ):
         raise CampusError(Code.WORKSPACE_CONFLICT, "Duplicate global campus skill; review it.")
     desired, server, catalog, messages = rendered_client(
-        selected, launch, host, include_studocu=include_studocu
+        selected, launch, host, extensions=extensions
     )
     target = client_config_path(selected, base, host=host)
     target_root = base if target.is_relative_to(base) else config_dir().resolve()

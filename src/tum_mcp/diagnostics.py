@@ -73,13 +73,18 @@ def github_check(*, live: bool) -> Check:
         return Check(label="GitHub publishing", state=State.ACTION, detail=error.message)
 
 
-def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> DoctorReport:
-    base = home or Path.home()
+class ServiceReport(Frozen):
+    services: tuple[Check, ...]
+    issues: tuple[Check, ...]
+    needs_connection: bool
+
+
+def collect_services(*, live: bool = False) -> ServiceReport:
+    """Inspect connections without runtime scans or local writes by default."""
     data = data_path()
     config = config_path()
     settings = config / "preferences.json"
-    next_steps: list[str] = []
-    runtime: list[Check] = []
+    issues: list[Check] = []
     try:
         prefs = (
             Preferences.model_validate_json(settings.read_bytes())
@@ -88,7 +93,7 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
         )
     except (ValidationError, OSError):
         prefs = Preferences()
-        runtime.append(
+        issues.append(
             Check(
                 label="Preferences",
                 state=State.FAILED,
@@ -127,9 +132,11 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             if legacy
             else "No local session. Connect to enable Moodle reads."
         )
-        check = Check(label="Moodle", state=State.ACTION, detail=detail)
+        check = Check(
+            label="Moodle", state=State.ACTION if legacy else State.UNCONFIGURED, detail=detail
+        )
     services.append(check)
-    needs_connection = check.state == State.ACTION
+    needs_connection = check.state in {State.ACTION, State.UNCONFIGURED}
     for provider in Provider:
         from tum_mcp.extensions import lecture_enabled
 
@@ -141,7 +148,7 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             services.append(
                 Check(
                     label=ServiceChoice(provider.value).label,
-                    state=State.ACTION,
+                    state=State.UNCONFIGURED,
                     detail="No account configured. Run tum-mcp connect.",
                 )
             )
@@ -181,9 +188,6 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
                     state, detail = State.ACTION, error.message
                     needs_connection = True
             services.append(Check(label=label, state=state, detail=detail))
-    if needs_connection:
-        next_steps.append("tum-mcp connect — sign in only to the services you select")
-
     from tum_mcp.extensions import selection
 
     try:
@@ -207,13 +211,72 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
                     detail, state = error.message, State.ACTION
             services.append(Check(label="Studocu", state=state, detail=detail))
     except CampusError:
-        runtime.append(
+        issues.append(
             Check(
                 label="Studocu extension",
                 state=State.FAILED,
                 detail="Invalid optional selection; Studocu is disabled until reviewed.",
             )
         )
+
+    from tum_mcp.tumonline.diagnostics import connection_checks
+
+    online = connection_checks(live=live)
+    services.extend(online)
+    order = {service.label: index for index, service in enumerate(ServiceChoice)}
+    services.sort(key=lambda item: order.get(item.label.split(" ")[0], len(order)))
+    needs_connection |= any(item.state in {State.ACTION, State.UNCONFIGURED} for item in online)
+    return ServiceReport(
+        services=tuple(services), issues=tuple(issues), needs_connection=needs_connection
+    )
+
+
+def client_check(name: str, *, home: Path, host: ClientHost = ClientHost.LOCAL) -> Check:
+    """Inspect one registration without creating config directories or loading secrets."""
+    path = (
+        config_path() / "mcp.json"
+        if name == "generic" and host == ClientHost.LOCAL
+        else client_config_path(name, home, host=host)
+    )
+    try:
+        entry = read_client_config(path).mcpServers.get("tum")
+        registered = isinstance(entry, dict) and (
+            isinstance(entry.get("command"), str)
+            and bool(entry.get("command"))
+            or isinstance(entry.get("url"), str)
+            and bool(entry.get("url"))
+        )
+        detail = (
+            "MCP registration saved; host activation not checked."
+            if registered
+            else (
+                f"Register with tum-mcp setup --client {name}"
+                + (" --host windows." if host == ClientHost.WINDOWS else ".")
+            )
+        )
+        state = State.CONFIGURED if registered else State.UNCONFIGURED
+        if entry is not None and not registered:
+            state, detail = State.FAILED, "Invalid tum server entry; review client configuration."
+    except CampusError as error:
+        detail, state = error.message, State.FAILED
+    return Check(
+        label=name.title() + (" (Windows)" if host == ClientHost.WINDOWS else ""),
+        state=state,
+        detail=detail,
+        location=str(path),
+    )
+
+
+def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> DoctorReport:
+    base = home or Path.home()
+    data = data_path()
+    config = config_path()
+    connections = collect_services(live=live)
+    services = connections.services
+    runtime = list(connections.issues)
+    next_steps = []
+    if connections.needs_connection:
+        next_steps.append("tum-mcp connect — sign in only to the services you select")
 
     clients: list[Check] = []
     profiles = [(ClientHost.LOCAL, base)]
@@ -224,41 +287,7 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             runtime.append(Check(label="Windows clients", state=State.ACTION, detail=error.message))
     for host, profile in profiles:
         for name in CLIENTS:
-            path = (
-                config / "mcp.json"
-                if name == "generic" and host == ClientHost.LOCAL
-                else client_config_path(name, profile, host=host)
-            )
-            try:
-                entry = read_client_config(path).mcpServers.get("tum")
-                registered = isinstance(entry, dict) and (
-                    isinstance(entry.get("command"), str)
-                    and bool(entry.get("command"))
-                    or isinstance(entry.get("url"), str)
-                    and bool(entry.get("url"))
-                )
-                detail = (
-                    "MCP registration saved; host activation not checked."
-                    if registered
-                    else f"Register with tum-mcp setup --client {name}"
-                    + (" --host windows." if host == ClientHost.WINDOWS else ".")
-                )
-                state = State.CONFIGURED if registered else State.UNCONFIGURED
-                if entry is not None and not registered:
-                    state, detail = (
-                        State.FAILED,
-                        "Invalid tum server entry; review client configuration.",
-                    )
-            except CampusError as error:
-                detail, state = error.message, State.FAILED
-            clients.append(
-                Check(
-                    label=name.title() + (" (Windows)" if host == ClientHost.WINDOWS else ""),
-                    state=state,
-                    detail=detail,
-                    location=str(path),
-                )
-            )
+            clients.append(client_check(name, home=profile, host=host))
     if not any(item.state == State.CONFIGURED for item in clients):
         next_steps.append("tum-mcp setup --client codex — or claude, cursor, antigravity, generic")
 
@@ -331,6 +360,17 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
         next_steps.append(
             "Optional website publishing: install GitHub CLI if needed, then "
             "gh auth login --hostname github.com and tum-mcp doctor --live."
+        )
+    from tum_mcp.extensions import audio_notes_enabled
+
+    if audio_notes_enabled():
+        runtime.append(
+            Check(
+                label="Audio Notes",
+                state=State.ENABLED,
+                detail="Workflow installed. Use prepared Study content; "
+                "voice synthesis is checked when requested.",
+            )
         )
     try:
         skills = inspect_skills()

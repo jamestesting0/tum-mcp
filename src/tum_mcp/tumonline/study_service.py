@@ -18,6 +18,13 @@ class StudyService:
         self.transport = transport
 
     def list(self, account_id: str) -> tuple[Study, ...]:
+        return project_studies(self._session(account_id, read_studies=True).studies)
+
+    def verify(self, account_id: str) -> None:
+        """Verify identity without retrieving studies, grades or course content."""
+        self._session(account_id, read_studies=False)
+
+    def _session(self, account_id: str, *, read_studies: bool) -> ResumedSession:
         policies = PolicyStore()
         policy = policies.read(account_id)
         if not policy.allows(Scope.STUDIES_COURSES):
@@ -37,6 +44,7 @@ class StudyService:
                     credential.cookies,
                     self.transport,
                     expected=account,
+                    read_studies=read_studies,
                     authorize=authorize,
                     checkpoint_cookies=checkpoint,
                 )
@@ -47,8 +55,7 @@ class StudyService:
 
         authorize()
         credential, session = vault.refresh_browser_session(account, refresh)
-        studies = project_studies(session.studies)
         authorize()
         if vault.load(account).generation != credential.generation:
             raise CampusError(Code.STALE_RESULT, "TUMonline session changed; retry.")
-        return studies
+        return session

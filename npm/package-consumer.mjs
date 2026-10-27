@@ -85,7 +85,7 @@ try {
   const dataDirectory = env.TUM_MCP_DATA_DIR;
   env.TUM_MCP_DATA_DIR = join(source, 'personal-data');
   mkdirSync(env.TUM_MCP_DATA_DIR); writeFileSync(join(env.TUM_MCP_DATA_DIR, 'note.txt'), 'Preserve overlapping data');
-  await call(['uninstall'], 2);
+  await call(['uninstall', '--all'], 2);
   assert.equal(readFileSync(join(env.TUM_MCP_DATA_DIR, 'note.txt'), 'utf8'), 'Preserve overlapping data');
   const relocated = join(root, 'relocated personal-data'); renameSync(env.TUM_MCP_DATA_DIR, relocated);
   saved.push([join(relocated, 'note.txt'), 'Preserve overlapping data']);
@@ -148,14 +148,14 @@ try {
   const edited = join(home, '.claude/skills/read-content/SKILL.md');
   const before = readFileSync(edited, 'utf8'); writeFileSync(edited, before + '\nPersonal guidance.\n');
   await call(['update'], 2);
-  await call(['uninstall'], 2);
+  await call(['uninstall', '--all'], 2);
   assert.ok(existsSync(launcher));
   assert.equal(readFileSync(edited, 'utf8'), before + '\nPersonal guidance.\n'); retained();
   writeFileSync(edited, before);
   records.push('concurrent operations, client-only removal and customization conflicts are safe');
   console.log('Package lifecycle: remove npm and runtimes, then check a fresh installation');
 
-  await call(['uninstall', '--purge-runtime']);
+  await call(['uninstall', '--all', '--purge-runtime']);
   assert.ok(!existsSync(source));
   assert.ok(!existsSync(join(root, 'data/runtimes')));
   assert.equal(claude().mcpServers.tum, undefined); retained();
@@ -163,7 +163,7 @@ try {
   await npm(['install', '--global', '--prefix', prefix, '--ignore-scripts', artifact]);
   env.TUM_MCP_DATA_DIR = join(root, 'never configured');
   env.TUM_MCP_CONFIG_DIR = join(root, 'never configured config');
-  await call(['uninstall']);
+  await call(['uninstall', '--all']);
   assert.ok(!existsSync(source)); retained();
   assert.ok(!existsSync(join(env.TUM_MCP_DATA_DIR, 'runtimes')));
   records.push('reinstalled package can be removed without registered clients');
@@ -178,7 +178,7 @@ try {
   assert.equal(JSON.parse(readFileSync(join(localSource, 'package.json'), 'utf8')).version, nextVersion);
   const declared = JSON.parse(readFileSync(join(local, 'package.json'), 'utf8')).dependencies['@jamestesting888/tum-mcp'];
   assert.ok(declared.includes(nextVersion) && !declared.startsWith('file:'), 'Local manifests must not reference a deleted temporary archive');
-  await localCall(['uninstall']);
+  await localCall(['uninstall', '--all']);
   assert.ok(!existsSync(localSource));
   assert.equal(readFileSync(personal, 'utf8'), 'Local project notes'); retained();
   records.push('local npm updates maintain project metadata and removal preserves project files');

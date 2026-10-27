@@ -1,17 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const launcher = fileURLToPath(new URL('../tum-mcp.mjs', import.meta.url));
 
-function invoke(args) {
+function invoke(args, environment = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'tum-mcp-node-'));
   try {
-    return spawnSync(process.execPath, [launcher, ...args], { encoding: 'utf8', env: { ...process.env, TUM_MCP_DATA_DIR: directory } });
+    const result = spawnSync(process.execPath, [launcher, ...args], { encoding: 'utf8', env: { ...process.env, TUM_MCP_DATA_DIR: directory, ...environment } });
+    result.files = readdirSync(directory);
+    return result;
   } finally { rmSync(directory, { recursive: true, force: true }); }
 }
 
@@ -19,6 +21,18 @@ test('version works without provisioning Python or modifying user configuration'
   const result = invoke(['--version']);
   assert.equal(result.status, 0);
   assert.equal(result.stdout.trim(), JSON.parse(readFileSync(new URL('../../package.json', import.meta.url))).version);
+});
+
+test('bootstrap help is consistent, bounded and side-effect-free without Python', () => {
+  for (const args of [['--help'], ['-h'], ['install', '--help'], ['setup', '--help'], ['update', '--help'], ['uninstall', '--help']]) {
+    const result = invoke(args, { COLUMNS: '40', NO_COLOR: '' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /^TUM MCP  Help/);
+    assert.doesNotMatch(result.stdout, /\x1b\[/);
+    assert.ok(result.stdout.split('\n').every(line => line.length <= 40));
+    assert.deepEqual(result.files, []);
+  }
+  assert.match(invoke(['--help']).stdout, /manage/);
 });
 
 test('serve fails closed before explicit setup', () => {

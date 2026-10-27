@@ -10,6 +10,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.settings import Frozen, config_path
 from tum_mcp.skill_catalog import LEGACY_SKILLS as LEGACY_SKILLS
 from tum_mcp.skill_catalog import OPTIONAL_SKILLS, active_skills
@@ -95,14 +96,14 @@ def metadata(path: Path) -> SkillMetadata:
     return parsed
 
 
-def active_skill(name: str, include_studocu: bool | None = None) -> bool:
-    return name not in OPTIONAL_SKILLS or name in active_skills(include_studocu=include_studocu)
+def active_skill(name: str, extensions: ExtensionSelection | None = None) -> bool:
+    return name not in OPTIONAL_SKILLS or name in active_skills(extensions=extensions)
 
 
-def inspect_skills(*, include_studocu: bool | None = None) -> list[SkillInfo]:
+def inspect_skills(*, extensions: ExtensionSelection | None = None) -> list[SkillInfo]:
     result: list[SkillInfo] = []
     for source in sorted(bundled().iterdir()):
-        if source.is_dir() and active_skill(source.name, include_studocu):
+        if source.is_dir() and active_skill(source.name, extensions):
             path = selected(source.name)
             info = metadata(path)
             result.append(
@@ -125,7 +126,7 @@ def customize_skill(name: str) -> Path:
     return destination
 
 
-def export_pack(destination: Path, *, include_studocu: bool | None = None) -> None:
+def export_pack(destination: Path, *, extensions: ExtensionSelection | None = None) -> None:
     if destination.exists():
         raise CampusError(Code.WORKSPACE_CONFLICT, "Export destination already exists.")
     previous = legacy_overrides()
@@ -138,7 +139,7 @@ def export_pack(destination: Path, *, include_studocu: bool | None = None) -> No
         )
     chosen_sources: list[Path] = []
     for source in sorted(bundled().iterdir()):
-        if source.is_dir() and active_skill(source.name, include_studocu):
+        if source.is_dir() and active_skill(source.name, extensions):
             chosen = selected(source.name)
             metadata(chosen)
             chosen_sources.append(chosen)

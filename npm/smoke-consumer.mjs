@@ -42,8 +42,8 @@ try {
   const first = JSON.parse(readFileSync(join(root, 'data/runtime.json'), 'utf8'));
   run(process.execPath, [launcher, 'setup', '--client', 'generic']);
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'data/runtime.json'), 'utf8')), first);
-  const skills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate']));
-  assert.deepEqual(skills.checked_skills.toSorted(), ['audio-notes', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course']);
+  const skills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate', '--json']));
+  assert.deepEqual(skills.checked_skills.toSorted(), ['prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course']);
   assert.deepEqual(skills.errors, []);
   const diagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--json']));
   assert.equal(diagnostics.live_authentication, 'not_checked');
@@ -101,7 +101,7 @@ for name in ('cursor','antigravity'):
   assert.equal(boundStatus.mode, 'sync');
   assert.equal(boundStatus.course.synthetic, true);
   const lectureEvidence = lectureLifecycle(root, args => run(process.execPath, [launcher, ...args]));
-  assert.equal(lectureEvidence.installed_skills, 7);
+  assert.equal(lectureEvidence.installed_skills, 6);
   const studyState = join(studyProject, '.tum-mcp/state.json');
   writeFileSync(studyState, 'synthetic damaged study state');
   assert.equal(status().mode, 'recover');
@@ -166,7 +166,7 @@ anyio.run(check)
   run(first.python, ['-I', '-c', protocol], 60000);
   // Exercise the optional extension from the installed wheel, with synthetic local PDFs.
   run(process.execPath, [launcher, 'install', 'studocu']);
-  const optionalSkills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate']));
+  const optionalSkills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate', '--json']));
   assert.ok(optionalSkills.checked_skills.includes('sync-studocu'));
   assert.deepEqual(optionalSkills.errors, []);
   const supplementary = join(root, 'supplementary course');
@@ -306,7 +306,7 @@ anyio.run(check)
   const collectionStatus = JSON.parse(run(process.execPath, [launcher, 'studocu', 'status', supplementary, '--json']));
   assert.equal(collectionStatus.counts.imported, 3);
   assert.equal(collectionStatus.counts.duplicate, 1);
-  run(process.execPath, [launcher, 'extensions', 'remove', 'studocu']);
+  run(process.execPath, [launcher, 'uninstall', 'studocu']);
   assert.ok(existsSync(join(supplementary, 'materials/studocu/exams/material-studocu-42.pdf')));
   const demoProject = join(root, 'Synthetic course');
   run(process.execPath, [launcher, 'study', 'demo', demoProject]);

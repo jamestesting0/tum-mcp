@@ -119,13 +119,14 @@ def test_optional_extensions_have_coherent_status_and_symmetric_removal(isolated
     runner = CliRunner()
     assert runner.invoke(app, ["install", "lecture", "--no-asr"]).exit_code == 0
     assert runner.invoke(app, ["install", "studocu"]).exit_code == 0
-    state = runner.invoke(app, ["extensions", "status"])
+    state = runner.invoke(app, ["status", "--json"])
     assert state.exit_code == 0
-    assert json.loads(state.stdout)["lecture"] is True
-    assert json.loads(state.stdout)["studocu"] is True
-    assert json.loads(runner.invoke(app, ["status"]).stdout)["extensions"] == {
+    assert json.loads(state.stdout)["extensions"]["lecture"] is True
+    assert json.loads(state.stdout)["extensions"]["studocu"] is True
+    assert json.loads(runner.invoke(app, ["status", "--json"]).stdout)["extensions"] == {
         "lecture": True,
         "studocu": True,
+        "audio-notes": False,
     }
     removed = runner.invoke(app, ["uninstall", "studocu"])
     assert removed.exit_code == 0, removed.output

@@ -3,6 +3,10 @@ name: audio-notes
 description: Create or update concise, easy-to-follow audio lessons, one file per category, from an existing prepared study website. Track missing and changed coverage; use prepare-study for course authoring. Excludes recording transcription and voice cloning.
 ---
 
+This optional workflow is enabled with `tum-mcp install audio-notes`. Voice
+setup happens only when generation is requested; installation does not sign in
+or synthesize audio.
+
 For a bound local course, read `.tum-mcp/course.md` and the relevant source records
 first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is the
 discovery pointer and user's rules. Legacy `.study/` remains readable until explicit

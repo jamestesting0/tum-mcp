@@ -13,12 +13,12 @@ Requires **Node.js 22.14+**, a Chromium browser and your TUM account.
 
 ```sh
 npm install --global @jamestesting888/tum-mcp@latest
-tum-mcp setup --client codex
+tum-mcp setup
 tum-mcp connect
 tum-mcp doctor
 ```
 
-Choose `codex`, `claude`, `cursor`, `antigravity` or `generic` as the client.
+Select `codex`, `claude`, `cursor`, `antigravity` or `generic`, or pass `--client NAME`.
 Follow the activation/restart instructions. In `connect`, select services with
 **Space**, then **Enter**, and complete sign-in/MFA in the browser. Never paste
 credentials into chat. Setup supplies its own Python runtime; Git, Docker and a
@@ -40,7 +40,6 @@ submissions, posting and exercise execution are unavailable.
 | `sync-course` | “Set up a project for this course and collect its materials.” |
 | `prepare-study` | “Build lessons, flashcards and practice in a study website.” |
 | `prepare-exercises` | “Add guided exercises from this week's released sheet.” |
-| `audio-notes` | “Turn the prepared lessons into audio notes.” |
 | `publish-course` | “Publish my reviewed study site for phone access.” |
 
 Each project holds one course. Run `tum-mcp study` in its folder to open the app.
@@ -55,28 +54,21 @@ account policy with `tum-mcp manage tumonline`.
 
 ## Optional extensions
 
-Install only the workflows you need, then reload your client:
+Run `tum-mcp install` to choose extensions, then reload your client.
 
-```sh
-tum-mcp install lecture          # Prepare Lecture + TUM-Live tools and local ASR
-tum-mcp install lecture --no-asr # Use captions/imported WebVTT instead
-tum-mcp install studocu         # Supplementary Studocu collection workflow
-tum-mcp extensions status
-```
+| Extension | Skill added | What it offers |
+| --- | --- | --- |
+| `lecture` | `prepare-lecture` | Lecture Notes with the professor's extra explanations, timestamps and selected critical visuals. Prefers transcripts and slides; local recognition is optional. |
+| `studocu` | `sync-studocu` | Search and collect selected supplementary PDFs saved in your browser. Personal use only; excluded from published sites. |
+| `audio-notes` | `audio-notes` | Turn prepared Study lessons into concise audio tracks, with resumable generation and coverage tracking. Voice setup happens when used. |
 
-**Lecture Notes** captures the professor's extra explanations, examples and
-caveats, with timestamp links. It starts with transcripts and lecture materials;
-only critical visuals need recording frames. Local recognition uses Apple Silicon
-acceleration or a separate CPU runtime on supported hosts.
-[Lecture Notes and recognizer requirements](docs/lecture-notes.md).
+Use `tum-mcp status` to see installed workflows and `tum-mcp uninstall` to remove
+them. Named commands also work, such as `tum-mcp install audio-notes` and
+`tum-mcp uninstall lecture`. Existing notes, audio and customizations are retained.
+Audio Notes needs no additional campus sign-in. Studocu uses your own browser.
 
-**Studocu** adds public search and reviewed import of permitted original PDFs you
-save in your browser. Search coverage is incomplete; browser credentials stay out
-of the integration. These supplementary materials remain for personal use and
-cannot be included in published sites. [Studocu workflow](docs/study.md#studocu-materials).
-
-Remove either extension with `tum-mcp uninstall lecture` or
-`tum-mcp uninstall studocu`. Notes, evidence and customizations are preserved.
+[Lecture and recognition](docs/lecture-notes.md) ·
+[Studocu collection](docs/study.md#studocu-materials) · [Setup details](docs/setup.md)
 
 ## Privacy, updates and removal
 

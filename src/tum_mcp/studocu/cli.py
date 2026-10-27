@@ -70,6 +70,38 @@ def status_command(
             "outcome_unknown",
         )
     }
+    if not json_output:
+        from tum_mcp.ui import State, heading, status_rows, terminal_console
+
+        console = terminal_console()
+        heading(console, "Studocu collection", "Selected supplementary materials for this course.")
+        status_rows(
+            console,
+            [
+                (
+                    "Selected",
+                    State.INFO,
+                    f"{sum(item.decision == 'include' for item in queue.documents)} document(s).",
+                ),
+                (
+                    "Imported",
+                    State.READY if counts["imported"] else State.INFO,
+                    f"{counts['imported']} document(s) imported.",
+                ),
+                (
+                    "Needs action",
+                    State.ACTION if counts["action_required"] else State.INFO,
+                    f"{counts['action_required']} browser action(s) pending.",
+                ),
+                (
+                    "Failed",
+                    State.FAILED if counts["failed"] else State.INFO,
+                    f"{counts['failed']} document(s).",
+                ),
+            ],
+        )
+        console.print("Discovery is partial. Use --json for document and recovery details.")
+        return
     typer.echo(
         json.dumps(
             {

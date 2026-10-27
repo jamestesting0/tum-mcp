@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 from tum_mcp.cli import app
 from tum_mcp.client_config import client_config_path
 from tum_mcp.clients import install_client
-from tum_mcp.errors import CampusError
+from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle import auth
 from tum_mcp.removal import remove_clients
 from tum_mcp.runtime_leases import require_idle_runtimes, runtime_lease
@@ -125,4 +125,6 @@ def test_destructive_cleanup_options_require_explicit_all_selection(profile: Pat
     # When a credential cleanup option accompanies one client only.
     result = CliRunner().invoke(app, ["uninstall", "--client", "cursor", "--forget-credentials"])
     # Then the request is rejected before any credentials are changed.
-    assert result.exit_code != 0 and "requires --all" in str(result.exception)
+    assert result.exit_code != 0
+    assert isinstance(result.exception, CampusError)
+    assert result.exception.code == Code.ACTION_REQUIRED
