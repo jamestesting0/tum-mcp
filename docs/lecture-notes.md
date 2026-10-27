@@ -9,7 +9,7 @@ tum-mcp install lecture --no-asr
 ```
 
 Restart the coding client to load Prepare Lecture and the three TUM-Live metadata
-tools. Base setup keeps its six skills and existing services. Removing the option
+tools. Base setup keeps its five skills and existing services. Removing the option
 with `tum-mcp uninstall lecture` preserves course notes, evidence, sessions,
 model caches and customizations. Reinstalling can reuse them.
 

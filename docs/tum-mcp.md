@@ -2,7 +2,7 @@
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
 The package combines read-only course retrieval, managed client installation and
-six local course workflows.
+five base course workflows and three optional extensions.
 
 ## Current capabilities
 
@@ -225,9 +225,11 @@ writing files with activation.
 
 The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
-The shipped pack contains six skills: `read-content`, `sync-course`,
-`prepare-study`, `prepare-exercises` and `publish-course`. Audio Notes is an optional extension installed with `tum-mcp install audio-notes`. Website-specific retrieval
-guidance is loaded from references within read-content. Teaching, schema and design contracts live
+The base pack contains five skills: `read-content`, `sync-course`,
+`prepare-study`, `prepare-exercises` and `publish-course`. Optional extensions add
+`prepare-lecture`, `sync-studocu` and `audio-notes`; choose them with `tum-mcp install`.
+Website-specific retrieval guidance is loaded from references within read-content.
+Teaching, schema and design contracts live
 with prepare-study; the renderer and synthetic example ship as reusable assets.
 Audio Notes converts prepared content into category tracks and maintains coverage,
 scripts, voice settings, candidates and archives under the course's `audio/` root.
@@ -246,7 +248,7 @@ routing quality is a separate evaluation from structural and discovery checks.
 Claude's invocation metadata follows each workflow's selected policy; automatic
 selection is enabled by default and never grants permission for a mutation.
 
-`setup --client cursor` writes `~/.cursor/mcp.json` and installs all six skills
+`setup --client cursor` writes `~/.cursor/mcp.json` and installs the active skills
 under `~/.cursor/skills/`.
 `setup --client antigravity` installs the same skills under `~/.gemini/config/skills/`
 and writes `~/.gemini/config/mcp_config.json`; an existing

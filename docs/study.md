@@ -1,9 +1,14 @@
 # Course study projects
 
-Six base skills cover source reading, course sync, Study preparation, Exercises preparation, audio and publishing.
+Five base skills cover source reading, course sync, Study preparation, Exercises
+preparation and publishing. They run in your local agent, using the connected
+MCP tools to read course sources. The CLI validates and stores the resulting local
+files; it does not run an AI model.
 The optional `prepare-lecture` skill adds a Lecture Notes workspace; install it with
 `tum-mcp install lecture`. See [Lecture Notes](lecture-notes.md).
 The optional `sync-studocu` skill collects selected student-uploaded material separately.
+The optional `audio-notes` skill turns prepared lessons into spoken tracks; install
+it with `tum-mcp install audio-notes`.
 
 ## Studocu materials
 
@@ -32,13 +37,10 @@ consolidated. Edited or missing files are preserved for review.
 Local study material can cite student uploads. Publishing rejects included
 Studocu-backed sources; this source check cannot identify uncited copied text or
 replace a review of the published content.
-They run in your local agent, using the connected
-MCP tools to read course sources. The CLI validates and stores the resulting local
-files; it does not run an AI model.
 
 ## Publish a study website
 
-The optional `publish-course` skill makes a prepared site accessible from a phone
+The `publish-course` skill makes a prepared site accessible from a phone
 or another computer. Its GitHub repository is private; the Pages website is
 public. An eligible paid GitHub plan is required for Pages from private repositories.
 This workflow does not provide private website access. Review lesson text,
