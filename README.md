@@ -18,16 +18,6 @@ tum-mcp login
 tum-mcp doctor
 ```
 
-Choose a detected client or Generic, or use `--client NAME` for an explicit setup.
-Follow the activation/restart instructions. In `login`, select services with
-**Space**, then **Enter**, and complete sign-in/MFA in the browser. Never paste
-credentials into chat. Setup supplies its own Python runtime; Git, Docker and a
-native keyring are unnecessary.
-
-Works on macOS, Windows, glibc Linux x86_64/ARM64 and WSL. For a Windows client
-using a WSL backend, add `--host windows` to setup.
-[Browser and platform details](docs/setup.md).
-
 ## Read and study
 
 Ask your agent to explain course material, find announcements or catch up on a
@@ -63,9 +53,7 @@ Run `tum-mcp install` to choose extensions, then reload your client.
 | `audio-notes` | `audio-notes` | Turn prepared Study lessons into concise audio tracks, with resumable generation and coverage tracking. Voice setup happens when used. |
 
 Use `tum-mcp doctor` to see installed workflows and `tum-mcp uninstall` to remove
-them. Named commands also work, such as `tum-mcp install audio-notes` and
-`tum-mcp uninstall lecture`. Existing notes, audio and customizations are retained.
-Audio Notes needs no additional campus sign-in. Studocu uses your own browser.
+them.
 
 [Lecture and recognition](docs/lecture-notes.md) ·
 [Studocu collection](docs/study.md#studocu-materials) · [Setup details](docs/setup.md)
