@@ -12,9 +12,9 @@ from tum_mcp.moodle.browser_runtime import browser_driver
 from tum_mcp.moodle.browsers import discover_browsers
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def course_browser() -> Iterator[Browser]:
-    """Share the owned process; each browser test still creates an isolated context."""
+    """Keep Playwright's event loop out of later async MCP tests; isolate each context."""
     choices = discover_browsers()
     assert choices, "The requested browser QA requires an existing Chromium browser."
     with browser_driver(choices[0]), sync_playwright() as playwright:
