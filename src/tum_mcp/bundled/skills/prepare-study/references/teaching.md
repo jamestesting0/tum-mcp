@@ -19,7 +19,8 @@ independent reading possible without obligatory forms or prerequisite quizzes.
 
 ## Lesson shape
 
-Each unit reads as one short lesson, built from the existing block types:
+Each unit reads as one short lesson, built from ordinary blocks (the app does not
+label these roles; the writing makes them clear):
 
 1. Summary: the problem the unit solves, in one or two sentences.
 2. Objectives: observable outcomes such as trace, explain, choose or compute.
@@ -55,10 +56,11 @@ that link is provenance, not required research. No certified dictionary claim.
 ## Retrieval and assessment
 
 Cards test one recall item or discriminating comparison before reveal; avoid
-essay backs and clues. Multiple-choice questions have exactly four options: one
-defensible answer under stated assumptions and three plausible distractors based
-on realistic misconceptions. Give specific feedback for all four options; revise
-the question if a third useful distractor is missing instead of adding filler.
+essay backs and clues. A multiple-choice question has one defensible answer under
+stated assumptions and plausible distractors based on realistic misconceptions,
+four options by default. Give specific feedback for every option; revise the
+question if a useful distractor is missing instead of adding filler. Feedback
+explains; it does not restate the verdict, which the app already shows.
 Prefer application/transfer where the
 objective requires it; avoid tricks, double negatives, all/none shortcuts and
 answer-position/length clues. Check EVERY new/changed option independently. If two

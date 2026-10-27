@@ -1,80 +1,75 @@
 # Content and build contract
 
-Edit app/content.json (legacy study/content.json). Preserve unaffected unit objects and stable IDs. Build
-copies the renderer; ordinary content edits need no HTML/CSS/JS asset inspection.
-The backend packages the shared renderer in bundled/course_app/site and the minimal
-component preview in bundled/course_app/example. `tum-mcp study template` reports its file list and
-revision without dumping code. `study build` safely installs/updates it; do not
-hand-copy a second shell. Template revision identifies the packaged base, not
-preserved custom files. Inspect those files only when a needed extension touches them.
-For unfamiliar fields or validation failures, redirect `tum-mcp study schema content`
-to a private file and inspect needed definitions. The bundled example is a format
-reference, not necessarily a good example of teaching or question design. Inspect
-only the relevant object; author actual lessons using reviewed course sources.
-`tum-mcp study demo PROJECT` is only for an explicitly requested synthetic demo.
+`tum-mcp study schema content` is the authoritative input schema. Redirect it to a
+private file and read only the definitions you need. The synthetic demo
+(`tum-mcp study demo PROJECT`) shows each block type in use; inspect only the
+relevant object, and author real lessons from reviewed course sources.
 
-Top level: schema_version=1, course_key, organization=lectures/weeks/topics,
-introduction, units. The introduction opens the course home: one or two sentences on
-what the course covers and where to start. Summary and objectives show on Content;
-minutes show in the header, on the home and in the next-step link. Sources render as
-one inline line, so keep source titles short and locators precise. Units carry key/label/title/summary/minutes, objectives,
-sources, blocks, flashcards and questions. For a single course, use no path or one
-category label (for example ["W00"]), followed by the topics. Do not add a course-name
-folder inside its own site. The schema accepts up to four folder labels for legacy
-sites and multi-area showcases; that ceiling is not the authoring target. Flatten
-needless nested labels when revising the organization. Preserve existing unit labels and keys
-when grouping; the renderer omits a repeated label from the breadcrumb. Moving folders does
-not change progress revisions. Sources pair a resource key with its
-exact current SHA-256 from state; citations use those declared keys.
+Edit `app/content.json` (legacy `study/content.json`). Preserve unaffected unit
+objects and stable keys. Build installs the app and generates `data.mjs`; ordinary
+content edits need no HTML, CSS or JavaScript inspection.
 
-Use `\(v_i\)` for variables and short mathematical expressions inside teaching text,
-including paragraphs, objectives, table cells, formula glossaries, card faces,
-question options and feedback. JSON escapes the backslashes: `"Use \\(v_i\\)."`.
-Build validates and compiles these expressions locally; no browser LaTeX dependency.
-Use the same notation in the equation and its explanation. Convert complete
-mathematical tokens, never letters inside ordinary words; read the surrounding
-prose after notation edits. Long equations belong
-in formula blocks, which retain auto-fit and local scrolling. Keep source titles,
-navigation category labels and SVG node/edge labels plain; describe their notation
-in the adjacent teaching text. Dollar signs remain literal currency. Code blocks,
-source excerpts in comments and student notes never interpret inline markup.
+## Course and units
 
-| Block | Specific requirements |
+Top level: `schema_version`, `course_key`, `organization` (lectures, weeks or topics),
+`introduction` and `units`. The introduction opens the course home: one or two
+sentences on what the course covers and where to start.
+
+Units carry key, label, title, summary, minutes, objectives, sources, blocks,
+flashcards and questions. Sources pair an inventory resource key with its exact
+current SHA-256 from state, and every citation uses a declared key. Keep source
+titles short and locators precise; students see them in a compact sources list.
+For a single course, use no `path` or one category label (for example `["W00"]`)
+followed by the topics. Do not add a course-name folder inside its own site. The
+schema accepts deeper paths for legacy sites; flatten needless nesting when
+revising, and keep existing unit labels and keys so progress survives. Moving
+folders never changes progress.
+
+## Notation
+
+Use `\( ... \)` for variables and short expressions in teaching text: paragraphs,
+objectives, table cells, symbol definitions, card faces, question options and
+feedback. JSON escapes the backslashes: `"Use \\(v_i\\)."`. Build validates and
+compiles them locally to MathML. Convert complete mathematical tokens, never letters
+inside ordinary words, and reread the prose after notation edits. Long equations
+belong in formula blocks. Keep source titles, outline labels and diagram labels
+plain. Dollar signs stay literal; code blocks and comments never interpret markup.
+
+## Blocks
+
+Every block has a title and sources.
+
+| Block | Provide |
 | --- | --- |
-| text | paragraphs and/or points, never an empty explanation. |
-| formula | latex string without dollar delimiters, plus plain equivalent, symbol definitions and conditions. JSON escapes backslashes, e.g. "\\frac{a}{b}". Build compiles bounded mathematical LaTeX locally; unsupported syntax, macros, links and unsafe XML fail validation. Keep mathml only for legacy input; never supply both. |
+| text | Paragraphs and/or points; never an empty explanation. |
+| formula | LaTeX without dollar delimiters (JSON-escaped, e.g. `"\\frac{a}{b}"`), a plain-language reading, symbol definitions and conditions. Unsupported macros, links and unsafe markup fail validation. Keep `mathml` only for legacy input; never supply both. |
 | table | Column labels, rectangular rows and a meaningful caption. |
-| code | Language, literal code and explanation; label authored examples. Do not execute downloaded code. |
-| diagram | Positioned nodes/edges/frames in 600×320. Long labels need shape=box, centers x=70–530. Optional directed edges/labels. state_labels=caption omits traversal bookkeeping for concept diagrams. Self-loops require an extension. |
+| code | Language, literal code and an explanation. Label authored examples; never execute downloaded code. |
+| diagram | Positioned nodes, optional directed or labelled edges and frames on the schema's canvas. Circles hold up to four characters; use boxes for longer labels. Frames name active, frontier and visited nodes; `state_labels: caption` omits traversal bookkeeping for concept maps. |
+| plot | A description, short axis labels, increasing finite bounds and series of ordered points inside the axes. The app adds a data table. Use source-backed quantities, units and sensible scales. |
 
-Every block has a title and sources. Frames name active/frontier/visited node
-keys; visited is shown as seen, not necessarily finished. Flashcards use one
-objective plus front/back/sources. Questions use an objective, prompt, level,
-exactly four distinct options with individual feedback, one correct key, explanation and
-sources. Every objective needs a question; counts follow learning needs, not quotas.
+Flashcards use one objective plus front, back and sources. Questions use an
+objective, prompt, level, options with individual feedback, one correct key,
+an explanation and sources. Write four plausible options by default; the schema
+sets the accepted range. Every objective needs a question; counts follow learning
+needs, not quotas.
+
+## Build
 
 Run `tum-mcp study build PROJECT` after a coherent batch. It blocks stale or
-conflicted sources and edited generated data.mjs. Review source meaning/locators
-before rebinding hashes; byte changes alone need not require rewriting valid teaching.
-A modified unit gets a new revision/progress namespace. Unchanged units retain theirs.
+conflicted sources and edited generated data. Review source meaning and locators
+before rebinding hashes; byte changes alone need not require rewriting valid
+teaching. A modified unit gets a new revision and a fresh progress namespace;
+unchanged units keep theirs.
 
-Build preserves edited templates and reports them. Verify their compatibility;
-unknown files remain untouched. Add block types only with schema, safe rendering
-and accessible fallback. Do not change renderer code to bypass invalid content.
+Build preserves and reports customized app files and leaves unknown files untouched.
+Do not change renderer code to bypass invalid content.
 
-Launch: `tum-mcp study` inside the project opens the browser at 127.0.0.1:8765.
-Keep the same address/port to retain browser progress; `--port PORT` selects another.
-For unattended checks, `tum-mcp study serve PROJECT --port 0` prints a URL without opening a browser.
-It serves only app/ (or legacy study/); the app needs no campus credentials or external services.
+Launch with `tum-mcp study` inside the project; it opens `127.0.0.1:8765`. Keep the
+same address and port so browser progress remains available, or pass `--port PORT`.
+For unattended checks, `tum-mcp study serve PROJECT --port 0` prints a URL without
+opening a browser. The app needs no campus credentials or external services.
 
-The shared renderer is packaged separately from skill instructions and installed by
-`study build`; do not copy assets from another skill. Study and Exercises share
-one app and source inventory. Preserve the other workspace when authoring. Use
-app/ for new projects and the existing study/ for legacy ones; an explicit
-`study build PROJECT --upgrade-layout` keeps the original as a checked backup.
-
-Line graphs use kind plot with description, short x_label/y_label, increasing finite
-x_min/x_max/y_min/y_max, and series (key, label, ordered x/y points). Each series
-stays inside the axes. The renderer includes a data table; multiple series have
-matching dash styles and labels. Use source-backed quantities/units and sensible
-scales; a well-rendered graph does not establish the interpretation is correct.
+Study and Exercises share one app and source inventory; preserve the other workspace
+when authoring. New projects use `app/`; existing `study/` projects keep working, and
+`study build PROJECT --upgrade-layout` moves them explicitly with a checked backup.

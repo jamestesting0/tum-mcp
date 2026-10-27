@@ -32,51 +32,15 @@ preserve notes, unrelated teaching, unit IDs and customized templates.
 
 Resolution preserves the original note/quote. Do not delete notes, put comment
 markup into teaching JSON, or mark an issue resolved before verifying it. Report
-addressed IDs/units, relevant checks and notes still open. The browser automatically syncs note/status changes while visible and on focus;
-reload the rebuilt site to inspect changed teaching. Do not add Refresh controls.
-An open editor retains its draft when feedback changes elsewhere and asks the
-student to choose Use latest or Keep mine. A deleted note cannot be overwritten. No AI process runs inside the website.
+addressed IDs/units, relevant checks and notes still open. The open preview picks
+up note and status changes automatically; reload it after a rebuild to see changed
+teaching. An open editor keeps its draft when the note changes elsewhere and asks
+the student to choose Use latest or Keep mine. No AI process runs inside the website.
 
-Passage markers and highlighted text open notes beside the quote; no global
-comment button or bottom list. Cards/questions show notes for their current
-original item, including hidden answer fields. Missing quotes remain recorded and
-use the original section/item marker with a clear status.
-
-## Browser behavior
-
-Use this section when the comment renderer changes.
-
-- Marker: a 16px bubble and 12px count share one quiet 28px surface inside a 44px
-  target, inline beside the section heading or current card/question position. Keep
-  markers outside flip buttons and option labels. Current-item markers include hidden
-  answer notes, also in pooled revision, without grading practice.
-- Popup: modeless, max 360px wide and 440px high, 12px viewport clearance. Prefer a
-  free side, otherwise flip above or below the quote and clamp to the visual viewport.
-  Follow scroll/resize; close when the source leaves view or its activity changes.
-  Show the note without repeating its highlighted quote; show the original quote only
-  when the passage is unavailable. Keep resolve/reopen and More → Edit/Delete;
-  resolved history stays accessible. Close/Escape restores marker focus; an outside
-  click dismisses without a scroll jump. Popup keys never invoke flashcard shortcuts.
-  Use unique popup/control IDs across visited panels.
-- Editor: Save/Cancel in the protected modal (max 560px, 24px padding, 16px viewport
-  clearance, neutral border, `--scrim: rgb(7 33 64 / .4)` backdrop). Failures keep
-  the draft.
-- Anchoring: unit, revision and section plus the exact quote and short context.
-  Reattach only one unambiguous match; otherwise keep the note and show Passage
-  unavailable, never guessed replacement text. Cards and questions also keep the
-  original unit, item key and field, including in pooled revision. Selecting card text
-  must not flip it; selecting option text must not choose an answer. Notes on
-  unchecked feedback stay accessible without revealing answers or changing scores.
-- Sync: conditional reads every second while comments or the editor are open, every
-  four seconds otherwise; pause while hidden and resume on focus. Unchanged responses
-  must not repaint; reuse keyed rows and markers to keep selection, focus, open
-  actions and scroll. No Refresh control or persistent Saved message. A concurrent
-  change to the edited note keeps the draft and requires Use latest or Keep mine; a
-  removed note cannot be recreated silently. An unrelated change may rebase once only
-  if the target record is unchanged. Agent CLI operations keep file-wide optimistic
-  revisions. Reset never deletes comments.
-- Essential comment access works without the optional browser Highlight API; reuse
-  native popover and existing tokens, with no positioning or motion dependency.
+Students select text and choose Comment; the app shows numbered markers beside the
+commented section or item and keeps notes on hidden answer fields reachable. Notes
+whose passage changed stay recorded with an unavailable status instead of moving to
+guessed text.
 
 The preview saves `.tum-mcp/comments.json` privately in the course project. It is
 separate from progress and survives builds/reset. Concurrent writes are checked

@@ -75,7 +75,7 @@ def test_update_prunes_retired_skill_assets(client: SkillClient) -> None:
 
 
 @pytest.mark.parametrize(
-    "relative", ["read-content/SKILL.md", "prepare-study/references/design.md"]
+    "relative", ["read-content/SKILL.md", "prepare-study/references/teaching.md"]
 )
 def test_edited_managed_files_block_update_and_uninstall(
     client: SkillClient, relative: str

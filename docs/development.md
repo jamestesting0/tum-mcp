@@ -127,10 +127,15 @@ native MathML; legacy MathML remains accepted. Unit `path` labels group the outl
 without changing learning-progress revisions. Shared modules render all units;
 content changes do not require a framework or per-unit HTML.
 
-Shared renderer assets live in `src/tum_mcp/bundled/course_app/site/`. The shipped
-component preview is deliberately minimal; richer learning pilots live in
-`tests/fixtures/course_app/`. The distributed design/teaching/verification contracts live under
-`src/tum_mcp/bundled/skills/prepare-study/references/`. Local agent notes and
+Shared renderer assets live in `src/tum_mcp/bundled/course_app/site/`; they are the
+source of truth for layout, styling and interaction. Design tokens sit at the top of
+`styles.css`, and the owned-browser fixtures in `tests/integration/` hold the UI
+regressions. The preparation skills describe content and point to the app instead
+of restating its styling, so app changes need no skill edits unless an authored field
+or its meaning changes. Remove a template file by moving it to
+`RETIRED_TEMPLATE_FILES`: builds then delete unedited copies and publication removes
+them from managed sites. The shipped component preview is deliberately minimal;
+richer learning pilots live in `tests/fixtures/course_app/`. Local agent notes and
 screenshots belong in ignored `docs/local/` or `.omo/`. Keep real course projects,
 session files, databases, downloads and environment files out of artifacts.
 

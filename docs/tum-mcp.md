@@ -229,8 +229,8 @@ The base pack contains five skills: `read-content`, `sync-course`,
 `prepare-study`, `prepare-exercises` and `publish-course`. Optional extensions add
 `prepare-lecture`, `sync-studocu` and `audio-notes`; choose them with `tum-mcp install`.
 Website-specific retrieval guidance is loaded from references within read-content.
-Teaching, schema and design contracts live
-with prepare-study; the renderer and synthetic example ship as reusable assets.
+Teaching and content guidance lives with prepare-study; the course app and its
+synthetic example ship as reusable assets and define the site's design.
 Audio Notes converts prepared content into category tracks and maintains coverage,
 scripts, voice settings, candidates and archives under the course's `audio/` root.
 Publish Course uses host GitHub CLI authentication to create a private repository

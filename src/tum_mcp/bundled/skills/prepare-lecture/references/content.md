@@ -35,6 +35,8 @@ Documents have an actual locator instead of a recording interval. Each teaching
 section needs timed primary evidence in the processed retained span; supporting
 material cannot replace it. Review flags reflect actual review, not inference
 completion. Remove orphan evidence. State genuine recognition uncertainty.
+The app turns timed evidence into recording links in the sources of each passage
+and figure. Do not repeat timestamps or time ranges in headings, prose or captions.
 
 Coverage partitions the actual recording into eligible/excluded time, and the
 eligible time into processed/missing spans. Keep uncertainty within processed

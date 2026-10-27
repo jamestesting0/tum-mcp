@@ -11,8 +11,10 @@ exercises. Preserve set/exercise/step keys across edits. Sources use inventory k
 and reviewed SHA256 values. Statements and solutions reuse the safe Study block
 types (text, code, table, formula, diagram and line graph); no embedded HTML or executed code.
 Declare every used source. Use optional parts for original subparts and objectives
-for observable reasoning goals. Prerequisites pair a Study unit key with an inline
-explanation so Exercises can be prepared first; later Study builds validate links.
+for observable reasoning goals; the app lists objectives as goals when a student
+opens Guidance, so phrase them without giving away the method. A step's purpose is
+a private review note and is not shown. Prerequisites pair a Study unit key with an
+inline explanation so Exercises can be prepared first; later Study builds validate links.
 
 Steps contain purpose, prompt, optional rich blocks, sources/check, requested hints
 and reviewed explanation. Use the original task's response form:
@@ -32,8 +34,8 @@ solution blocks, with assumptions and alternative valid methods; do not bury the
 in a multiple-choice answer. A step may omit a check. Work on paper/in an editor is
 always valid; don't force typing, and keep the direct solution available. Solutions
 state authored or official; official requires a declared official_source. Optional
-transfer contains a fresh prompt and comparison answer. Category/week/due_at are
-optional; date values include a timezone.
+transfer contains a fresh prompt and comparison answer. Set category, summary, week
+and due_at are optional and appear in the exercise list; date values include a timezone.
 
 Semantic exercise changes start fresh progress while retaining old browser records;
 reviewing source hashes or changing group labels alone preserves learning revision.

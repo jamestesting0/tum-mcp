@@ -19,14 +19,10 @@ Build the actual app. Exercise one representative changed response branch only
 when it changes: wrong → repair/hint → edit → check/compare → continue, and direct
 solution/paper-only review without typing. A hint should help beyond the bare
 statement while an independent learner incurs no compulsory step. Check new long
-notation at phone width. Shared renderer changes use the relevant
-[Study verification](../../prepare-study/references/verification.md) matrix.
-
-For state/routing changes, save a draft, visit a prerequisite in Study, return,
-switch/reload and resume. Cover edited answers, repeated activation, previous/skip,
-blocked storage, semantic updates and workspace reset without multiplying every
-exercise by every theme/viewport. Comment changes need literal selected-text save,
-reload, unavailable/closed passages, stale revision and same-origin/CAS checks.
+notation, tables and diagrams at a phone width. Drafts, navigation, storage and
+comments are app behavior covered by the package's tests; report a suspected app
+defect instead of changing installed files (see
+[the course app](../../prepare-study/references/app.md)).
 
 For a targeted authoring update, compare before/after IDs and unrelated objects;
 Study and template assets should not change. Reuse passing evidence while inputs

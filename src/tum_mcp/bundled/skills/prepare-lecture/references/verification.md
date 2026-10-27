@@ -21,10 +21,11 @@ Lecture Notes list, a lecture and a section deep link. Check:
   selected destination and confirm the expected point. Do not infer seek behavior
   solely from the URL. A missing/unavailable player is a verification limitation.
 - Every chosen image loads, enlarges by keyboard and retains legible symbols,
-  caption, alt text and actual capture-time link. No need for a frame quota.
-- Phone/desktop, light/dark, sidebar/theme, back/forward/reload and workspace return
-  are usable. No page overflow, phantom assessment/reset controls or UI provenance
-  labels. Source/attribution review stays private.
+  caption, alt text and a sources link to its actual capture time. No need for a
+  frame quota.
+- The changed notes read well at phone and desktop widths, with no overflowing
+  figures, formulas or tables and no visible provenance labels. Source/attribution
+  review stays private; app behavior itself is covered by the package's tests.
 - Selection comments save and locate the exact passage. Test a stale/ambiguous
   quote as unavailable; never attach it to a guessed substitute. Filter feedback
   with `study comments list PROJECT --view lectures --lecture KEY`.

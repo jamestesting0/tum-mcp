@@ -16,8 +16,10 @@ model caches and customizations. Reinstalling can reuse them.
 Ask: “Prepare Lecture Notes from this recording and these slides, focusing on
 what the professor explains beyond the material.” It adds Lecture Notes to the
 same course app, alongside Study and Exercises. Notes have coherent explanations,
-examples, important qualifications, formulas, selective source images and direct
-timestamp access. Attribution review stays private, so the reading flow is clean.
+examples, important qualifications, formulas and selective source images. The
+sources of each passage and figure open the recording at the measured time, so the
+text carries no timestamps, and the Contents button lists the lecture's sections. Attribution
+review stays private, so the reading flow is clean.
 Lecture Notes has no quizzes or flashcards; broader teaching/practice stays in Study.
 
 ## Processing order and cost

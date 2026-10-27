@@ -8,8 +8,8 @@ Keep the original problem first and useful on its own. Each step's purpose names
 the reasoning difficulty it addresses: choosing a premise, interpreting a symbol,
 constructing an invariant or combining two results. Omit ceremonial instructions
 such as “read the problem”; do not turn each algebraic manipulation into a screen.
-One conceptual step is active, with compact Previous/Next arrow controls and the statement
-still reachable. Full solution reveal is always available without passing steps.
+The app shows one step at a time with the statement still reachable, and the full
+solution is always available without passing steps.
 
 An early hint points to a relevant relation or asks a smaller question. A later
 hint can narrow the operation; explanation and solution may complete it. Add only
@@ -28,5 +28,5 @@ without typing. Do not require confidence forms, timers or self-ratings.
 Review by attempting the task without looking at its solution. Then simulate one
 plausible miss and request only the next hint. It should help the student do the
 next inference. Check an altered case where a condition fails; merely renaming
-the original task is not a transfer check. Keep list status to Not started,
-In progress and Reviewed; assistance and retries are not mastery estimates.
+the original task is not a transfer check. Assistance and retries are not mastery
+estimates; the Reviewed status records a review, not a score.

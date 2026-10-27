@@ -23,11 +23,12 @@ Include graph edges/weights, observations, notation, units and assumptions in th
 prompt, or a complete textual equivalent. A reference to “the graph above” breaks
 when the item is pooled. Do not require a new question-block schema just for context.
 
-Use exactly four distinct options for new multiple-choice authoring. Map each
-distractor to a plausible reasoning error, and verify all four under the stated
-assumptions. Revise ambiguous premises; never force a key. Vary answer positions
-without detectable cycles. Match option length/style; avoid joke options and
-all/none shortcuts. If a fourth meaningful option cannot be found, change the task.
+Write four distinct options by default; the schema sets the accepted range. Map
+each distractor to a plausible reasoning error, and verify every option under the
+stated assumptions. Revise ambiguous premises; never force a key. Vary answer
+positions without detectable cycles. Match option length/style; avoid joke options
+and all/none shortcuts. If no further meaningful option exists, change the task
+rather than adding filler.
 
 Wrong-answer feedback identifies the earliest likely reasoning break and gives a
 small repair or recheck. Do not repeat the full solution for every distractor.

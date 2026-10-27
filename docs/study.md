@@ -10,98 +10,6 @@ The optional `sync-studocu` skill collects selected student-uploaded material se
 The optional `audio-notes` skill turns prepared lessons into spoken tracks; install
 it with `tum-mcp install audio-notes`.
 
-## Studocu materials
-
-Install the optional extension with `tum-mcp install studocu` and reload your
-client. Ask `sync-studocu` to collect materials for a course project. It can
-initialize a Studocu-only project with a verified course and semester.
-Search is anonymous and bounded; a limited result set is not a complete inventory.
-`tum-mcp studocu login` explains how to sign in to Studocu in your own browser.
-The extension cannot infer account entitlement or download original files through
-the public MCP. Save an original that your account permits in the browser.
-
-The skill records a reviewed selection with `tum-mcp studocu plan PROJECT
---selection FILE` and tracks it with `tum-mcp studocu status PROJECT --json`.
-Import a selected original with `tum-mcp studocu import PROJECT --document-id ID
---file FILE`. The document-to-file association is user-selected. Originals go to
-`materials/studocu/summaries`, `materials/studocu/exams` (including mocks and
-solutions), or `materials/studocu/other`. Files remain local and retain their
-original bytes. Consult the skill's collection reference for the selection schema.
-Exact matches in the same group, type and known year share one original through
-a private alias. Each selected document retains its own source identity and URL.
-Changing a document's classification or refreshing its original separates aliases
-when they no longer match; previous versions remain in private history.
-When an existing selection is planned again, unchanged duplicate originals are
-consolidated. Edited or missing files are preserved for review.
-
-Local study material can cite student uploads. Publishing rejects included
-Studocu-backed sources; this source check cannot identify uncited copied text or
-replace a review of the published content.
-
-## Publish a study website
-
-The `publish-course` skill makes a prepared site accessible from a phone
-or another computer. Its GitHub repository is private; the Pages website is
-public. An eligible paid GitHub plan is required for Pages from private repositories.
-This workflow does not provide private website access. Review lesson text,
-quotations and source links for the intended public audience before publishing.
-
-Install GitHub CLI on the execution host and run `gh auth login --hostname github.com`.
-`tum-mcp doctor` checks CLI availability without network access; `doctor --live`
-also verifies GitHub authentication. It does not publish anything, open sign-in
-automatically, extract tokens, or change Git credential settings.
-
-```sh
-# Preview the chosen name and hosting requirements without GitHub mutations.
-tum-mcp study publish --project PROJECT
-# After choosing public website content; the repository stays private.
-tum-mcp study publish --project PROJECT --public-site
-# Optional account/name override on first setup:
-tum-mcp study publish --project PROJECT --public-site --repository OWNER/NAME
-```
-
-Names use `study-<course>-<semester>` in lowercase with hyphens. A collision gets
-a stable course suffix; existing repositories are never made public. Settings in
-`.tum-mcp/github.json` bind updates to that course, semester and repository. A
-failed setup retries the same saved repository rather than creating duplicates.
-
-Study is the default hosted workspace, including for old settings. Exercise
-statements, hints and full solutions need explicit `--include-exercises` on the
-publish command after reviewing their public exposure. `--exclude-exercises`
-removes Exercises from subsequent eligible exports, using the same repository and URL. An
-Exercises-only site also requires explicit inclusion. Lecture Notes separately requires
-`--include-lectures`; old settings default to exclusion. `--exclude-lectures` also removes
-previously managed lecture images. A notes-only export with notes excluded is refused.
-
-Only the selected generated website renderer and data are uploaded. Downloaded
-originals, credentials, AGENTS.md, study inventory, passage comments, progress,
-audio and arbitrary files stay local. Git itself is not required: the publisher
-uses authenticated GitHub API calls through `gh`. Local publication settings do
-not contain credentials.
-
-After setup, successful `tum-mcp study build PROJECT` commands update that same
-repository automatically. Unchanged verified exports require no network calls
-or commits. The study skills finish related edits in one build. Remote edits
-are preserved for review; the publisher never force-pushes.
-
-```sh
-tum-mcp study publish status PROJECT
-tum-mcp study publish sync PROJECT       # retry pending/failed deployment
-tum-mcp study publish pause PROJECT      # pause future automatic uploads
-tum-mcp study publish resume PROJECT
-tum-mcp study build PROJECT --local-only # skip uploading this build
-```
-
-Uploads are verified against the Pages build and GitHub checks for the exact
-commit. Pending deployment exits with code 2 and is resumable; a successful
-repository update alone is not a deployed site. Authentication, plan or network
-failures preserve the local build. Polling has a budget of at most 60 seconds,
-in addition to bounded API requests.
-The `tum-mcp study` launcher prints local, hosted and repository URLs, plus pending
-or paused status. Study progress remains per browser; passage comments require
-the local preview and are disabled in the hosted export. Device synchronization
-and offline support are not included.
-
 ## Start with one course
 
 Use `sync-course` for both initial setup and later source updates. For a new project,
@@ -192,63 +100,31 @@ restores files when possible and reports any remaining conflict.
 
 ## Prepare the website
 
-Ask `prepare-study` to create or extend the Study workspace in `app/`. Units follow the course's
-lecture/week sequence when useful, or use consistent topics. For a single course, use a flat list or one category level followed by topics,
-including several topics in one week. Every unit has:
+Ask `prepare-study` to create or extend the Study workspace in `app/`. The agent
+writes `app/content.json` from your stored course material, and `tum-mcp study build`
+installs the shared course app and checks every cited source. Units follow the
+course's lecture or week sequence when useful, or consistent topics, with at most
+one category level. Every unit has:
 
-- A concise explanation with source links, assumptions and worked examples.
-- Editable LaTeX formulas and inline variables, diagrams, code or comparison tables where they explain the concept.
-- Flip cards with arrow navigation, Space to flip and 1/2 for Again/Got it.
-- Practice questions with exactly four options, one justified answer and feedback for every option.
+- Content: a short lesson with objectives, source links, assumptions and worked
+  examples, using formulas, tables, code, diagrams or line graphs where they help.
+- Flashcards for recall. On a keyboard, arrows move, Space flips and 1/2 rate a card.
+- Practice questions with plausible options and feedback for every option.
 
 The agent uses stored material first, so local content edits work offline. Ask for
 an upstream refresh when you want new course content; an existing check is reused
-within the same request. Unchanged units and reviewed material are retained.
+within the same request. Unchanged units and reviewed material are retained. The
+skill audits objective coverage, technical accuracy and distractors, and writes in
+short, direct sentences that keep necessary terms and conditions.
 
-The skill audits objective coverage, technical accuracy and distractors. Its
-STE-inspired English uses short, direct sentences while retaining necessary terms
-and conditions. The design contract uses TUM blue/navy with quiet reading surfaces,
-local fonts, light/dark themes, keyboard navigation and a phone layout. The outline
-collapses using a midpoint boundary arrow revealed on hover or keyboard focus;
-touch screens keep a visible control. On phones it opens a viewport overlay from
-any reading position, with its own scroll and Escape to close. Theme stays in the
-outline; the reset icon is on the course home. A Next link follows the active
-activity at the end of each view.
-
-Revision combines flashcards and practice from topics you select. Open Revision in
-the outline, choose topics and collapse the checklist when ready. It reuses the
-course's categories; selecting a category includes all its topics, and a mixed
-checkbox shows a partly selected category. Revision reuses the
-original items, sources and progress; selecting or removing topics never clears
-your results. The topic selection is remembered locally for this course.
-
-The topic picker and its nested categories collapse independently. You can select a
-whole category while it is closed; its count and mixed state reflect the selection.
-At End of set, outlined question rows include a Review action and chevron. Click
-one to review it in a popup. Closing the popup returns
-you to the same results row without changing progress.
-
-The website uses Atkinson Hyperlegible Next for headings, explanations and controls.
-Code and mathematical notation retain their specialist fonts. Equations adapt to
-their container and keep local horizontal scrolling for indivisible wide expressions.
-Use `\(v_i\)` in teaching text for inline variables and short expressions (JSON:
-`"Use \\(v_i\\)."`). They compile locally to native MathML, including in tables,
-glossaries, cards, questions and feedback. Code and dollar signs stay literal.
-
-Select text in Content, Flashcards or Practice, then click **Comment** to record what is unclear.
-You can also use Ctrl/Command+Alt+M after selecting text. The local preview saves
-notes in `.tum-mcp/comments.json`, separately from learning progress. Click a
-numbered passage marker or highlighted text to open its notes beside the quote.
-Markers sit beside section headings or the current card/question position.
-Notes can be edited, resolved or reopened; changed passages retain their original quotes.
-Revision notes retain their original topic and card/question identity.
-
-Tell your agent: **“Address the open comments in this study project.”** The skill
-reads the notes, checks the cited material, improves the affected explanation and
-verifies the result before recording a resolution. Notes and status changes sync
-automatically while the preview is open. Your draft is kept if a note changes
-elsewhere; choose Use latest or Keep mine before saving. Reload after the agent
-rebuilds the teaching content.
+The course home introduces the course, resumes where you left off and lists topics
+with progress. Each view ends with a Next link through cards and practice to the
+next unit. Revision pools cards and questions from the topics you choose (all topics
+until you choose) and can focus on cards marked Again and questions you missed. It
+reuses the original items and progress, so changing the topic selection never clears
+results, and it remembers your selection for this course. Formulas and inline
+notation such as `\(v_i\)` compile locally to native MathML; code and dollar signs
+stay literal. The app has light and dark themes and a phone layout.
 
 Content lives in `app/content.json`; shared renderer modules and CSS keep the
 site extensible. Source hashes identify affected units. A stale source stops a
@@ -260,6 +136,8 @@ and reported, so the agent must review compatibility when extending them.
 tum-mcp study inspect ./pse-ws26
 tum-mcp study build ./pse-ws26
 ```
+
+## Preview the app
 
 From the course project folder, launch the prepared app with:
 
@@ -279,25 +157,39 @@ same-origin endpoint. It makes no campus requests.
 No course credentials are copied into the website. Browser storage holds progress
 locally. Nothing is published by these commands.
 
+## Passage comments
+
+Select text in Content, Flashcards, Practice, Exercises or Lecture Notes, then click
+**Comment** to record what is unclear. You can also use Ctrl/Command+Alt+M after
+selecting text. The local preview saves notes in `.tum-mcp/comments.json`, separately
+from learning progress. Click a numbered marker or highlighted text to open its notes
+beside the quote. Notes can be edited, resolved or reopened; changed passages retain
+their original quotes, and Revision notes keep their original topic and item.
+
+Tell your agent: **“Address the open comments in this study project.”** The skill
+reads the notes, checks the cited material, improves the affected explanation and
+verifies the result before recording a resolution. Notes and status changes sync
+automatically while the preview is open. Your draft is kept if a note changes
+elsewhere; choose Use latest or Keep mine before saving. Reload after the agent
+rebuilds the teaching content.
+
 ## Prepare weekly exercises
 
 Ask `prepare-exercises` to prepare released weekly sheets in the same app. Study
-and Exercises can be prepared in either order. When both exist, a selector at the bottom of the sidebar
-switches workspaces and remembers the current place. On phones it lives inside the
-open course outline; there is no second switch in the reading area. Exercises are
-listed directly under sheets, optionally grouped by category.
+and Exercises can be prepared in either order. When both exist, the workspace selector
+at the bottom of the outline switches between them and remembers your place; on phones
+it sits inside the open outline. The exercise list groups exercises by sheet and shows
+each sheet's summary and due date when the sources provide them.
 
-The original statement and subparts come first. Students can solve on paper, mark
-an exercise Reviewed, reveal a worked solution directly, or open **Guidance**.
-Prepared guidance offers one conceptual step, requested hints and specific repair
-feedback. Numeric checks state units/tolerance; choice checks have four options.
-Fillable tables check numeric cells and explicit text variants individually. Graph
-questions support node/edge selections and ordered paths with a visible diagram.
-Line graphs allow sample-point placement, coordinate edits and keyboard adjustment.
-Long math and programming work use saved writing areas and prepared rubrics; code
-is never executed, and symbolic work, proofs and programs are not automatically
-graded. Arbitrary graph drawing can use paper and rubric comparison. Typing, hints and step-by-step guidance are optional. Reviewed records an
-action, not mastery or an assessment result.
+Each exercise shows the original statement and subparts first. Work on paper or in
+the app, open the worked solution directly, or open **Guidance** for the exercise's
+goals and one step at a time with optional hints and specific feedback. Checks cover
+numbers with units and tolerance, multiple choice, fillable tables, graph selections
+and paths, and plotted sample points. Long math and programming work use saved drafts
+and prepared rubrics; code is never executed, and symbolic work, proofs and programs
+are not graded automatically. Mark an exercise reviewed when you are done; Reviewed
+records an action, not mastery or an assessment result. A Next link leads to the
+following exercise.
 
 Drafts and assistance stay in this browser. Editing a checked answer clears its
 verdict. Semantic changes start fresh progress for only that exercise, while retaining older
@@ -311,6 +203,70 @@ It keeps the original tree at `.tum-mcp/layout-backup/`, preserves the course id
 learning revisions, comments, settings and personal files, and stops on customized
 generated files, an occupied backup or two layouts. Repeating a completed upgrade
 is a no-op. Do not create `app/` alongside an existing `study/` by hand.
+
+## Publish a study website
+
+The `publish-course` skill makes a prepared site accessible from a phone
+or another computer. Its GitHub repository is private; the Pages website is
+public. An eligible paid GitHub plan is required for Pages from private repositories.
+This workflow does not provide private website access. Review lesson text,
+quotations and source links for the intended public audience before publishing.
+
+Install GitHub CLI on the execution host and run `gh auth login --hostname github.com`.
+`tum-mcp doctor` checks CLI availability without network access; `doctor --live`
+also verifies GitHub authentication. It does not publish anything, open sign-in
+automatically, extract tokens, or change Git credential settings.
+
+```sh
+# Preview the chosen name and hosting requirements without GitHub mutations.
+tum-mcp study publish --project PROJECT
+# After choosing public website content; the repository stays private.
+tum-mcp study publish --project PROJECT --public-site
+# Optional account/name override on first setup:
+tum-mcp study publish --project PROJECT --public-site --repository OWNER/NAME
+```
+
+Names use `study-<course>-<semester>` in lowercase with hyphens. A collision gets
+a stable course suffix; existing repositories are never made public. Settings in
+`.tum-mcp/github.json` bind updates to that course, semester and repository. A
+failed setup retries the same saved repository rather than creating duplicates.
+
+Study is the default hosted workspace, including for old settings. Exercise
+statements, hints and full solutions need explicit `--include-exercises` on the
+publish command after reviewing their public exposure. `--exclude-exercises`
+removes Exercises from subsequent eligible exports, using the same repository and URL. An
+Exercises-only site also requires explicit inclusion. Lecture Notes separately requires
+`--include-lectures`; old settings default to exclusion. `--exclude-lectures` also removes
+previously managed lecture images. A notes-only export with notes excluded is refused.
+
+Only the selected generated website renderer and data are uploaded. Downloaded
+originals, credentials, AGENTS.md, study inventory, passage comments, progress,
+audio and arbitrary files stay local. Git itself is not required: the publisher
+uses authenticated GitHub API calls through `gh`. Local publication settings do
+not contain credentials.
+
+After setup, successful `tum-mcp study build PROJECT` commands update that same
+repository automatically. Unchanged verified exports require no network calls
+or commits. The study skills finish related edits in one build. Remote edits
+are preserved for review; the publisher never force-pushes.
+
+```sh
+tum-mcp study publish status PROJECT
+tum-mcp study publish sync PROJECT       # retry pending/failed deployment
+tum-mcp study publish pause PROJECT      # pause future automatic uploads
+tum-mcp study publish resume PROJECT
+tum-mcp study build PROJECT --local-only # skip uploading this build
+```
+
+Uploads are verified against the Pages build and GitHub checks for the exact
+commit. Pending deployment exits with code 2 and is resumable; a successful
+repository update alone is not a deployed site. Authentication, plan or network
+failures preserve the local build. Polling has a budget of at most 60 seconds,
+in addition to bounded API requests.
+The `tum-mcp study` launcher prints local, hosted and repository URLs, plus pending
+or paused status. Study progress remains per browser; passage comments require
+the local preview and are disabled in the hosted export. Device synchronization
+and offline support are not included.
 
 ## Create and maintain audio notes
 
@@ -383,30 +339,56 @@ for the updated study website”** to reconcile added, changed, removed or moved
 material with the previous verified coverage. This is an agent skill, not a new
 `tum-mcp study` CLI subcommand or a built-in speech service.
 
-## Packaged app template
+## Studocu materials
 
-The shared web-app template is packaged in `bundled/course_app/site/`, separately from skill instructions.
-It includes the shell, navigation, flip cards, practice, diagrams and styling.
-Agents author course content in `app/content.json`; `study build` installs the
-shared template, preserves customized files and checks sources. This keeps new
-course sites consistent without rebuilding the interface. `tum-mcp study template`
-shows the bundled files and their combined revision for reproducible development.
+Install the optional extension with `tum-mcp install studocu` and reload your
+client. Ask `sync-studocu` to collect materials for a course project. It can
+initialize a Studocu-only project with a verified course and semester.
+Search is anonymous and bounded; a limited result set is not a complete inventory.
+`tum-mcp studocu login` explains how to sign in to Studocu in your own browser.
+The extension cannot infer account entitlement or download original files through
+the public MCP. Save an original that your account permits in the browser.
 
-## Try the component template
+The skill records a reviewed selection with `tum-mcp studocu plan PROJECT
+--selection FILE` and tracks it with `tum-mcp studocu status PROJECT --json`.
+Import a selected original with `tum-mcp studocu import PROJECT --document-id ID
+--file FILE`. The document-to-file association is user-selected. Originals go to
+`materials/studocu/summaries`, `materials/studocu/exams` (including mocks and
+solutions), or `materials/studocu/other`. Files remain local and retain their
+original bytes. Consult the skill's collection reference for the selection schema.
+Exact matches in the same group, type and known year share one original through
+a private alias. Each selected document retains its own source identity and URL.
+Changing a document's classification or refreshing its original separates aliases
+when they no longer match; previous versions remain in private history.
+When an existing selection is planned again, unchanged duplicate originals are
+consolidated. Edited or missing files are preserved for review.
 
-After installing a locally built development artifact:
+Local study material can cite student uploads. Publishing rejects included
+Studocu-backed sources; this source check cannot identify uncited copied text or
+replace a review of the published content.
+
+## The course app
+
+The shared course app is packaged in `bundled/course_app/site/`, separately from the
+skill instructions. It owns layout, styling and interaction for Study, Exercises and
+Lecture Notes. Agents author only course content; `study build` installs the app,
+preserves customized files and checks sources, so courses gain app improvements
+without rewriting content. `tum-mcp study template` shows the bundled files and
+their combined revision for reproducible development.
+
+To see every component with synthetic data:
 
 ```sh
 tum-mcp study demo ./component-preview
 tum-mcp study serve ./component-preview
 ```
 
-This creates one small Study unit and one exercise covering prose, code, tables,
-formulas, graph/process diagrams, cards and response controls. It is a reusable
-component template, not necessarily a good teaching or question-authoring example.
-Actual course authoring follows reviewed sources and the preparation skills. Rich
-learning pilots stay in private test fixtures.
-It uses no campus account. An existing edited demo is preserved.
+The demo creates one small Study unit and one exercise covering prose, code, tables,
+formulas, graph/process diagrams, cards and response controls. It is a format
+reference, not necessarily a good teaching or question-authoring example; actual
+course authoring follows reviewed sources and the preparation skills. Rich learning
+pilots stay in private test fixtures. It uses no campus account, and an existing
+edited demo is preserved.
 
 ## Local helper inputs
 
