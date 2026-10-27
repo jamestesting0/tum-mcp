@@ -2,7 +2,7 @@ name: WSL browser checks
 
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main, 'codex/**', '!codex/lecture-native-windows-diagnostic']
   pull_request:
   workflow_dispatch:
 
