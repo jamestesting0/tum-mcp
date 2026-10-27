@@ -1,11 +1,28 @@
 import json
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from playwright.sync_api import Browser, sync_playwright
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.moodle.browser_runtime import browser_driver
+from tum_mcp.moodle.browsers import discover_browsers
+
+
+@pytest.fixture(scope="session")
+def course_browser() -> Iterator[Browser]:
+    """Share the owned process; each browser test still creates an isolated context."""
+    choices = discover_browsers()
+    assert choices, "The requested browser QA requires an existing Chromium browser."
+    with browser_driver(choices[0]), sync_playwright() as playwright:
+        browser = playwright.chromium.launch(executable_path=choices[0].executable, headless=True)
+        try:
+            yield browser
+        finally:
+            browser.close()
 
 
 @pytest.fixture

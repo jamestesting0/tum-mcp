@@ -12,22 +12,8 @@ from tum_mcp.credentials import Credential
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Account, Provider
 from tum_mcp.study_content import FormulaBlock, Objective, StudyContent
-from tum_mcp.study_math import compile_latex
 from tum_mcp.study_models import Resource
 from tum_mcp.transport import API
-
-
-@pytest.mark.parametrize(
-    "expression",
-    [r"\binom{n}{k}p^k(1-p)^{n-k}", r"\begin{bmatrix}1&0\\0&1\end{bmatrix}", r"\frac{a}{b}"],
-)
-def test_common_formula_forms_compile_to_safe_native_math(expression: str) -> None:
-    # Given editable mathematical notation used in the component examples.
-    # When the local compiler validates it for the renderer.
-    result = compile_latex(expression)
-    # Then binomial fences, matrices and fractions are renderable MathML.
-    assert result.startswith('<math xmlns="http://www.w3.org/1998/Math/MathML"')
-    assert "<mfrac" in result or "<mtable" in result
 
 
 @pytest.mark.parametrize("text", [r"Use \(x", r"Use x\)", r"Use \(\href{https://x}{x}\)"])

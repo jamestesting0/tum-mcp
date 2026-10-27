@@ -6,7 +6,6 @@ import pytest
 import test_exercise_browser as fixtures
 from playwright.sync_api import Browser, expect
 
-course_browser = fixtures.course_browser
 exercise_url = fixtures.exercise_url
 
 pytestmark = pytest.mark.skipif(

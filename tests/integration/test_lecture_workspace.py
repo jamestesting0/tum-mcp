@@ -8,7 +8,6 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
-import test_exercise_browser as browser_fixtures
 import test_lecture_build as lecture_fixtures
 from playwright.sync_api import Browser, expect
 from test_exercise_browser import switch_workspace
@@ -16,7 +15,6 @@ from test_exercise_browser import switch_workspace
 from tum_mcp.study_build import build
 from tum_mcp.study_preview import Handler, PreviewServer
 
-course_browser = browser_fixtures.course_browser
 lecture_project = lecture_fixtures.lecture_project
 
 pytestmark = pytest.mark.skipif(

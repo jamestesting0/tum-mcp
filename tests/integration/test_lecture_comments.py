@@ -16,7 +16,6 @@ from tum_mcp.study_comments import change_comment, read_comments
 
 lecture_project = fixtures.lecture_project
 lecture_url = fixtures.lecture_url
-course_browser = fixtures.course_browser
 
 
 def create(root: Path, **changes) -> Create:

@@ -6,20 +6,22 @@ from tum_mcp.study_math import compile_latex, safe_mathml
 
 
 @pytest.mark.parametrize(
-    "latex",
+    "latex,element",
     [
-        r"\sum_{v\in V}\deg(v)=2|E|",
-        r"d(v)=d(u)+1",
-        r"\frac{-b\pm\sqrt{b^2-4ac}}{2a}",
-        r"\begin{pmatrix}a&b\\c&d\end{pmatrix}",
-        r"\int_0^1 x^2\,dx=\frac{1}{3}",
+        (r"\sum_{v\in V}\deg(v)=2|E|", "munder"),
+        (r"d(v)=d(u)+1", "mi"),
+        (r"\frac{-b\pm\sqrt{b^2-4ac}}{2a}", "mfrac"),
+        (r"\begin{pmatrix}a&b\\c&d\end{pmatrix}", "mtable"),
+        (r"\int_0^1 x^2\,dx=\frac{1}{3}", "msubsup"),
+        (r"\binom{n}{k}p^k(1-p)^{n-k}", "mfrac"),
+        (r"\begin{bmatrix}1&0\\0&1\end{bmatrix}", "mtable"),
     ],
 )
-def test_latex_compiles_locally_to_inert_math(latex: str) -> None:
+def test_latex_compiles_locally_to_inert_math(latex: str, element: str) -> None:
     markup = compile_latex(latex)
     assert 'display="block"' in markup
     assert safe_mathml(markup) == markup
-    assert "<script" not in markup
+    assert f"<{element}" in markup
 
 
 @pytest.mark.parametrize(

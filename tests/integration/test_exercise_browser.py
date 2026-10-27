@@ -9,11 +9,9 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
-from playwright.sync_api import Browser, Page, expect, sync_playwright
+from playwright.sync_api import Browser, Page, expect
 from playwright.sync_api import TimeoutError as BrowserTimeout
 
-from tum_mcp.moodle.browser_runtime import browser_driver
-from tum_mcp.moodle.browsers import discover_browsers
 from tum_mcp.study_build import build
 from tum_mcp.study_preview import Handler, PreviewServer
 from tum_mcp.study_publish_site import export_site
@@ -35,18 +33,6 @@ def switch_workspace(page: Page, name: str) -> None:
     expect(page.locator(".workspace-trigger")).to_have_attribute(
         "aria-label", "Switch workspace, " + name
     )
-
-
-@pytest.fixture(scope="module")
-def course_browser() -> Iterator[Browser]:
-    choices = discover_browsers()
-    assert choices, "The requested browser QA requires an existing Chromium browser."
-    with browser_driver(choices[0]), sync_playwright() as playwright:
-        browser = playwright.chromium.launch(executable_path=choices[0].executable, headless=True)
-        try:
-            yield browser
-        finally:
-            browser.close()
 
 
 @pytest.fixture
