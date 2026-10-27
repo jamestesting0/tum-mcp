@@ -1,7 +1,9 @@
 """Explicit, public-model smoke test of the real isolated recognizer on each OS."""
 
+import json
 import os
 import platform
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -9,6 +11,7 @@ import pytest
 from tum_mcp.errors import CampusError
 from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing import runtime
+from tum_mcp.lecture_processing.runtime_process import worker_path
 from tum_mcp.lecture_processing.runtime_spec import mac_major
 from tum_mcp.lecture_processing.transcription import analyze, passages, recognize
 
@@ -31,7 +34,55 @@ def test_real_pinned_recognition_and_original_clock(
     audio = Path(__file__).parents[1] / "fixtures/lecture/search.wav"
     quality = analyze(audio.resolve())
     assert quality.selected.channel == 0 and not quality.uncertain
-    result = recognize(audio.resolve(), 0, language="en")
+    try:
+        result = recognize(audio.resolve(), 0, language="en")
+    except CampusError:
+        # Only this authored synthetic fixture may expose bounded worker diagnostics.
+        asset = runtime.model("base")
+        environment = {
+            key: value
+            for key, value in os.environ.items()
+            if key.upper()
+            in {
+                "HOME",
+                "PATH",
+                "SYSTEMROOT",
+                "USERPROFILE",
+                "LOCALAPPDATA",
+                "APPDATA",
+                "HOMEDRIVE",
+                "HOMEPATH",
+                "TMPDIR",
+                "TEMP",
+                "TMP",
+                "LANG",
+                "LC_ALL",
+                "HF_HUB_CACHE",
+            }
+        }
+        payload = {
+            "action": "transcribe",
+            "backend": engine,
+            "audio": str(audio.resolve()),
+            "channel": 0,
+            "language": "en",
+            "model": str(asset.path),
+            "config_sha256": asset.config_sha256,
+            "weights_sha256": asset.weights_sha256,
+            "supporting_sha256": json.dumps(asset.supporting_sha256),
+        }
+        diagnostic = subprocess.run(  # noqa: S603 - fixed worker and synthetic/public model inputs
+            [str(runtime.python_path()), "-I", "-X", "faulthandler", str(worker_path())],
+            input=json.dumps(payload).encode(),
+            capture_output=True,
+            timeout=60,
+            env=environment,
+        )
+        pytest.fail(
+            f"Synthetic worker failed: code={diagnostic.returncode}, "
+            f"stderr={diagnostic.stderr.decode('utf-8', errors='replace')[-4000:]}",
+            pytrace=False,
+        )
     text = " ".join(s.text.casefold() for s in result.segments)
     assert all(word in text for word in ("search", "graph", "vertices"))
     assert result.language == "en" and all(s.words for s in result.segments)
@@ -49,4 +100,5 @@ def test_real_pinned_recognition_and_original_clock(
             model=str(asset.path),
             config_sha256="0" * 64,
             weights_sha256=asset.weights_sha256,
+            supporting_sha256=json.dumps(asset.supporting_sha256),
         )
