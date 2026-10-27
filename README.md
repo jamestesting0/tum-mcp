@@ -58,6 +58,26 @@ them.
 [Lecture and recognition](docs/lecture-notes.md) ·
 [Studocu collection](docs/study.md#studocu-materials) · [Setup details](docs/setup.md)
 
+## Course project
+
+Each course has its own folder. Optional extension files appear when used:
+
+```text
+course/
+  AGENTS.md                 Course instructions and inventory
+  materials/                Course content, exams, exercises and other sources
+    studocu/                Optional: summaries/, exams/ and other/ PDFs
+  app/                      Study, Exercises and optional Lecture Notes website
+    content.json            Study lessons, flashcards and practice
+    exercises.json          Guided exercise content
+    lectures.json           Optional: Lecture Notes
+    lecture-assets/         Optional: selected lecture figures
+  .tum-mcp/                 Private course state, comments and lecture evidence
+  audio/                    Optional: scripts, tracks and chapters for Audio Notes
+```
+
+Existing projects may use `study/` instead of `app/`.
+
 ## Privacy, updates and removal
 
 Sessions are encrypted locally. Your agent uses your configured AI provider to

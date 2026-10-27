@@ -1,5 +1,9 @@
 # Changes
 
+## 0.9.4 — 2026-10-27
+
+- Document the course project folders, including optional extension outputs.
+
 ## 0.9.3 — 2026-10-27
 
 - Simplify the README setup and extension guidance.
