@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.10.0 — 2026-10-27
 
 - Add the optional `video-notes` extension (`tum-mcp install video-notes`): short
   narrated, animated explainers from prepared Study topics, one per selected topic,
