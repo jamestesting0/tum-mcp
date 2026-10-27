@@ -1,5 +1,9 @@
 # Changes
 
+## 0.9.3 — 2026-10-27
+
+- Simplify the README setup and extension guidance.
+
 ## 0.9.2 — 2026-10-27
 
 - Combine connection status, extension status and health checks in `doctor`.
