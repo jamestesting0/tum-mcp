@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.11.0 — 2026-10-28
 
 - Add the base `prepare-exams` workflow and the local **Exam Prep** workspace: a
   cheatsheet with a semester map, exam patterns with solving workflows, guided past
