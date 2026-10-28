@@ -75,12 +75,113 @@ class TableBlock(Sourced):
         return self
 
 
+LineRange = Annotated[str, Field(pattern=r"^[1-9][0-9]{0,4}(-[1-9][0-9]{0,4})?$")]
+FilePath = Annotated[
+    str,
+    Field(
+        min_length=1,
+        max_length=200,
+        pattern=r"^[A-Za-z0-9_][A-Za-z0-9_.\-]*(/[A-Za-z0-9_][A-Za-z0-9_.\-]*)*$",
+    ),
+]
+
+
+def line_span(value: str) -> tuple[int, int]:
+    first, _, last = value.partition("-")
+    return int(first), int(last or first)
+
+
+def check_lines(value: str, code: str, where: str) -> None:
+    first, last = line_span(value)
+    if first > last or last > code.count("\n") + 1:
+        raise ValueError(f"Lines {value} are outside {where}.")
+
+
+class CodeStep(Frozen):
+    """One stop of a walkthrough: the lines to look at and what they do."""
+
+    lines: LineRange
+    note: Text
+
+
 class CodeBlock(Sourced):
     kind: Literal["code"]
     language: Annotated[str, Field(min_length=1, max_length=30)]
     code: Annotated[str, Field(min_length=1, max_length=20000)]
     explanation: Text
     line_numbers: bool = False
+    walkthrough: tuple[CodeStep, ...] = Field(default=(), max_length=20)
+
+    @model_validator(mode="after")
+    def steps_fit(self) -> "CodeBlock":
+        for step in self.walkthrough:
+            check_lines(step.lines, self.code, "the code")
+        return self
+
+
+class ProjectFile(Frozen):
+    path: FilePath
+    code: Annotated[str, Field(max_length=50000)]
+    editable: bool = False
+    language: Annotated[str, Field(min_length=1, max_length=30)] | None = None
+
+
+class FilesBlock(Sourced):
+    """A small project, such as an Artemis exercise's files, opened in a light code workspace."""
+
+    kind: Literal["files"]
+    key: Key
+    description: Text
+    files: tuple[ProjectFile, ...] = Field(min_length=1, max_length=60)
+    open: FilePath | None = None
+
+    @model_validator(mode="after")
+    def tree(self) -> "FilesBlock":
+        paths = [item.path for item in self.files]
+        if len(set(paths)) != len(paths):
+            raise ValueError("Workspace file paths must be distinct.")
+        if any(other.startswith(f"{path}/") for path in paths for other in paths):
+            raise ValueError("A workspace path cannot be both a file and a folder.")
+        if self.open is not None and self.open not in paths:
+            raise ValueError("The workspace opens a file it does not contain.")
+        if sum(len(item.code) for item in self.files) > 400_000:
+            raise ValueError("Keep a workspace below 400,000 characters of code.")
+        return self
+
+
+class CodeRef(Frozen):
+    """A step's pointer into the question's workspace: a file and optionally its lines."""
+
+    path: FilePath
+    lines: LineRange | None = None
+
+
+def project_files(blocks: "tuple[Block, ...]") -> dict[str, ProjectFile]:
+    files: dict[str, ProjectFile] = {}
+    for block in blocks:
+        if isinstance(block, FilesBlock):
+            for item in block.files:
+                if item.path in files:
+                    raise ValueError(f"{item.path} appears in two workspaces of one question.")
+                files[item.path] = item
+    return files
+
+
+def check_code_refs(files: dict[str, ProjectFile], refs: "tuple[CodeRef, ...]") -> None:
+    for ref in refs:
+        item = files.get(ref.path)
+        if item is None:
+            raise ValueError(f"The step refers to {ref.path}, which the question does not show.")
+        if ref.lines:
+            check_lines(ref.lines, item.code, ref.path)
+
+
+def check_target_file(files: dict[str, ProjectFile], path: str) -> None:
+    item = files.get(path)
+    if item is None or not item.editable:
+        raise ValueError(
+            f"A code step writes into {path}, which must be an editable workspace file."
+        )
 
 
 class Node(Frozen):
@@ -235,20 +336,43 @@ class UmlFragment(Frozen):
     last: int = Field(ge=0)
 
 
+class UmlState(Frozen):
+    """A state; `initial` and `final` are the UML pseudostates and need no name."""
+
+    key: Key
+    name: Annotated[str, Field(max_length=40)] = ""
+    kind: Literal["state", "initial", "final"] = "state"
+    activity: Annotated[str, Field(max_length=60)] = ""
+
+
+class UmlTransition(Frozen):
+    """A transition, labelled `event [guard] / action` in UML notation; it may loop."""
+
+    start: Key
+    end: Key
+    label: Annotated[str, Field(max_length=60)] = ""
+
+
 class UmlBlock(Sourced):
-    """A UML class or sequence diagram, laid out by the app from its structure."""
+    """A UML class, sequence or state diagram, laid out by the app from its structure."""
 
     kind: Literal["uml"]
-    diagram: Literal["class", "sequence"]
+    diagram: Literal["class", "sequence", "state"]
     description: Text
     classes: tuple[UmlClass, ...] = Field(default=(), max_length=20)
     relations: tuple[UmlRelation, ...] = Field(default=(), max_length=40)
     participants: tuple[UmlParticipant, ...] = Field(default=(), max_length=10)
     messages: tuple[UmlMessage, ...] = Field(default=(), max_length=40)
     fragments: tuple[UmlFragment, ...] = Field(default=(), max_length=10)
+    states: tuple[UmlState, ...] = Field(default=(), max_length=20)
+    transitions: tuple[UmlTransition, ...] = Field(default=(), max_length=40)
 
     @model_validator(mode="after")
     def consistent(self) -> "UmlBlock":
+        if self.diagram != "state" and (self.states or self.transitions):
+            raise ValueError("Only a UML state diagram has states and transitions.")
+        if self.diagram == "state":
+            return self._state_machine()
         if self.diagram == "class":
             if not self.classes or self.participants or self.messages or self.fragments:
                 raise ValueError("A UML class diagram has classes and relations only.")
@@ -277,16 +401,40 @@ class UmlBlock(Sourced):
             raise ValueError("A UML fragment must cover existing messages in order.")
         return self
 
+    def _state_machine(self) -> "UmlBlock":
+        if not self.states or self.classes or self.relations or self.participants or self.messages:
+            raise ValueError("A UML state diagram has states and transitions only.")
+        kinds = {item.key: item.kind for item in self.states}
+        if len(kinds) != len(self.states):
+            raise ValueError("UML state keys must be distinct.")
+        if any(item.kind == "state" and not item.name for item in self.states):
+            raise ValueError("Every UML state needs a name.")
+        if sum(kind == "initial" for kind in kinds.values()) > 1:
+            raise ValueError("A UML state diagram has at most one initial state.")
+        for item in self.transitions:
+            if item.start not in kinds or item.end not in kinds:
+                raise ValueError("A UML transition names an unknown state.")
+            if kinds[item.end] == "initial" or kinds[item.start] == "final":
+                raise ValueError("Transitions leave the initial state and enter the final state.")
+        return self
+
 
 Block = Annotated[
-    TextBlock | FormulaBlock | TableBlock | DiagramBlock | CodeBlock | PlotBlock | UmlBlock,
+    TextBlock
+    | FormulaBlock
+    | TableBlock
+    | DiagramBlock
+    | CodeBlock
+    | PlotBlock
+    | UmlBlock
+    | FilesBlock,
     Field(discriminator="kind"),
 ]
 
 
 # Authored questions pair their text with at least one of these, because prose alone
 # makes code, structures and calculations hard to picture.
-VISUAL_KINDS = frozenset({"formula", "table", "diagram", "code", "plot", "uml"})
+VISUAL_KINDS = frozenset({"formula", "table", "diagram", "code", "plot", "uml", "files"})
 VISUAL_RULE = "a code snippet, diagram, UML diagram, formula, table or plot beside its text"
 
 
@@ -303,7 +451,13 @@ def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
             case FormulaBlock():
                 value["mathml"] = block.mathml or compile_latex(block.latex or "")
             case (
-                TextBlock() | TableBlock() | CodeBlock() | DiagramBlock() | PlotBlock() | UmlBlock()
+                TextBlock()
+                | TableBlock()
+                | CodeBlock()
+                | DiagramBlock()
+                | PlotBlock()
+                | UmlBlock()
+                | FilesBlock()
             ):
                 pass
             case unreachable:

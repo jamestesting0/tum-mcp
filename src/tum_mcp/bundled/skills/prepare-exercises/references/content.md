@@ -29,12 +29,33 @@ check by what the student should compare with:
 | graph | A safe diagram, a mode (`nodes`, `edges` or `path`), the answer and feedback. The student can select on the diagram; Compare shows the first answer by node label. Use a neutral frame that does not reveal the solution. |
 | plot | A line graph with labelled axes and optional given series, increasing `x_values`, one target `y` each, a snap step and feedback. The student can place points; Compare shows the targets as a table. |
 | text | One short `answer`, such as a name, a value with words or one line of code (`format: code` with a language), and feedback. Not for prose with many valid phrasings; use `self_check` for those. |
-| self_check | A `model_answer` and a rubric of the essential points, with format `text` or `code`. For code, `starter_code` is the signature or skeleton the student completes; it opens in the code editor and the model answer is shown as code. Code is never run, and nothing is graded by keywords. |
+| self_check | A `model_answer` and a rubric of the essential points, with format `text` or `code`. For code, either `file` names an editable file of the question's `files` block, which the student edits there, or `starter_code` is a skeleton that opens in the step's own editor. The model answer is shown as highlighted code. Code is never run, and nothing is graded by keywords. |
 
 For every check except `choice` the student presses Compare and sees the answer, the
 step's explanation and the check's `feedback` under "If yours differs". Give exactly
 one answer: the clearest form, not a list of variants. Write the feedback as the repair
 for the likeliest mistake.
+
+## Say the task first
+
+The first sentence of every question you write names what the student produces and
+where: "Implement `Directory.size()` so that ...", "Explain why ...", "Draw the
+sequence of calls for ...". Context follows only as far as the task needs it. A
+title such as "The task" or a description of the situation alone is not a task. Do
+not repeat the task in every step; each step prompt names its own move in one
+sentence. Released statements stay as released; when one does not say what to hand
+in, the first step does.
+
+## Point at the code
+
+For programming exercises, put the files in a `files` block: the files the student
+changes (`editable: true`, with the template's `TODO` markers) and the read-only files
+they need to read, under their real package paths. Keep it to the files that matter.
+A step that needs code points at it with `code: [{"path": ..., "lines": "8-9"}]`
+instead of quoting it; the app shows those lines with an "Open in files" jump. A
+writing step names the file in its prompt and sets the self-check's `file` to it; the
+model answer shows only the part that changes. Line ranges are checked against the
+files, so re-check them whenever a file changes.
 
 ## Give the student everything the answer uses
 
@@ -79,7 +100,8 @@ blocks accept `line_numbers: true` when a step refers to lines. Distilled practi
 `kind: distilled`, `distilled_from` (original exercise keys) and `concepts`. All
 block/graph sources must be declared. Put full model proofs/code in safe worked
 solution blocks, with assumptions and alternative valid methods; do not bury them
-in a multiple-choice answer. A step may omit a check. The direct solution is always
+in a multiple-choice answer. The app already labels the solution, so title its blocks
+by what they show ("Composite roles"), never "Solution". A step may omit a check. The direct solution is always
 available. Record whether a solution is authored or official (official requires a
 declared official_source) for provenance; the app shows every solution simply as the
 solution. Optional

@@ -30,6 +30,16 @@ For each task, note in `.tum-mcp/work/` a short table:
 Essential kernels are language features, APIs, design ideas, algorithms, invariants and
 contracts the tests check. Domain names, boilerplate, I/O and build setup are scaffolding.
 
+## Show the real files
+
+When the exercise comes with template files (Artemis repositories, provided classes),
+show them in a `files` block so students work in the same structure as the real task:
+editable files keep their `TODO` markers, read-only files are the ones to read.
+Steps point at the relevant lines with `code` references and write into a file with
+the self-check's `file`, so a step reads "In `Supervisor.java`, replace ..." beside
+the exact lines it means. A distilled exercise uses a small new workspace of two or
+three files in a fresh domain.
+
 ## Build practice per essential kernel
 
 Use a fresh, minimal domain so students recognise the idea rather than the task.

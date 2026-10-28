@@ -1,6 +1,6 @@
 import { node, svgNode, studyText } from './dom.mjs';
 
-// UML class and sequence diagrams, laid out from their structure so authors never place
+// UML class, sequence and state diagrams, laid out from their structure so authors never place
 // coordinates. Shapes follow UML 2 notation; colours come from the theme.
 const FONT = 13, LINE = 18, PAD = 12;
 let measurer;
@@ -100,6 +100,7 @@ function classDiagram(block) {
   const left = Math.min(...all.map(box => box.x)) - 40, right = Math.max(...all.map(box => box.x + box.w)) + 40;
   const bottom = Math.max(...all.map(box => box.y + box.h)) + 24;
   const svg = svgNode('svg', { viewBox: `${left} 0 ${right - left} ${bottom}`, width: right - left, height: bottom, class: 'uml', role: 'img' });
+  const notes = [];
   const pairKey = relation => [relation.start, relation.end].sort().join('|');
   const pairs = new Map();
   for (const relation of block.relations) pairs.set(pairKey(relation), [...(pairs.get(pairKey(relation)) || []), relation]);
@@ -117,8 +118,24 @@ function classDiagram(block) {
     if (style.end) head(svg, style.end, x2, y2, ux, uy);
     if (style.start) head(svg, style.start, x1, y1, -ux, -uy);
     // Labels go on the side away from parallel relations, so they never sit on a neighbour.
-    const side = shift ? Math.sign(-uy * sx + ux * sy) || 1 : 1, px = -uy * side, py = ux * side;
-    const note = (x, y, text) => svg.append(label(x + px * 14 + (Math.abs(px) > 0.5 ? Math.sign(px) * width(text) / 2 : 0), y + py * 14 + 4, text, { className: 'uml-note' }));
+    // Each note tries its preferred side first, then the other side, then slides along the line,
+    // and takes the first spot that touches no class and no earlier note.
+    const side = shift ? Math.sign(-uy * sx + ux * sy) || 1 : 1;
+    const note = (x, y, text) => {
+      const w = width(text);
+      let chosen = null;
+      for (const s of [side, -side]) for (const d of [0, 12, -12, 24, -24]) {
+        const px = -uy * s, py = ux * s;
+        const cx = x + ux * d + px * 14 + (Math.abs(px) > 0.5 ? Math.sign(px) * w / 2 : 0), cy = y + uy * d + py * 14 + 4;
+        const rect = { l: cx - w / 2 - 3, r: cx + w / 2 + 3, t: cy - 12, b: cy + 4 };
+        const clear = [...notes, ...all.map(box => ({ l: box.x, r: box.x + box.w, t: box.y, b: box.y + box.h }))]
+          .every(other => rect.r <= other.l || rect.l >= other.r || rect.b <= other.t || rect.t >= other.b);
+        chosen ||= { cx, cy, rect };
+        if (clear) { chosen = { cx, cy, rect }; break; }
+      }
+      notes.push(chosen.rect);
+      svg.append(label(chosen.cx, chosen.cy, text, { className: 'uml-note' }));
+    };
     if (relation.label) note((x1 + x2) / 2, (y1 + y2) / 2, relation.label);
     if (relation.start_multiplicity) note(x1 + ux * 28, y1 + uy * 28, relation.start_multiplicity);
     if (relation.end_multiplicity) note(x2 - ux * 28, y2 - uy * 28, relation.end_multiplicity);
@@ -207,11 +224,89 @@ function sequenceDiagram(block) {
   return svg;
 }
 
+function stateDiagram(block) {
+  const H = 40, ACT = 18, R = 9, ROW_GAP = 44;
+  const shapes = new Map();
+  for (const item of block.states) {
+    if (item.kind !== 'state') { const size = item.kind === 'initial' ? 2 * R : 2 * R + 6; shapes.set(item.key, { item, w: size, h: size, x: 0, y: 0 }); continue; }
+    const w = Math.max(96, width(item.name, true) + 2 * PAD + 8, item.activity ? width(item.activity) + 2 * PAD : 0);
+    shapes.set(item.key, { item, w, h: H + (item.activity ? ACT + 4 : 0), x: 0, y: 0 });
+  }
+  // Columns by distance from the initial state, so the machine reads left to right.
+  const first = block.states.find(item => item.kind === 'initial') || block.states[0];
+  const column = new Map([[first.key, 0]]), queue = [first.key];
+  while (queue.length) {
+    const key = queue.shift();
+    for (const item of block.transitions) if (item.start === key && !column.has(item.end)) { column.set(item.end, column.get(key) + 1); queue.push(item.end); }
+  }
+  const deepest = Math.max(...column.values());
+  for (const item of block.states) if (!column.has(item.key)) column.set(item.key, item.kind === 'final' ? deepest + 1 : deepest);
+  const columns = [];
+  for (const item of block.states) (columns[column.get(item.key)] ||= []).push(item.key);
+  const labels = block.transitions.map(item => item.label ? width(item.label) : 0);
+  const gap = Math.min(220, Math.max(110, Math.max(0, ...labels) + 48));
+  const loops = new Set(block.transitions.filter(item => item.start === item.end).map(item => item.start));
+  let x = 24;
+  const heights = columns.filter(Boolean).map(keys => keys.reduce((sum, key) => sum + shapes.get(key).h + (loops.has(key) ? 40 : 0), 0) + ROW_GAP * (keys.length - 1));
+  const tallest = Math.max(...heights);
+  for (const keys of columns.filter(Boolean)) {
+    const w = Math.max(...keys.map(key => shapes.get(key).w));
+    let y = 40 + (tallest - keys.reduce((sum, key) => sum + shapes.get(key).h + (loops.has(key) ? 40 : 0), 0) - ROW_GAP * (keys.length - 1)) / 2;
+    for (const key of keys) {
+      const shape = shapes.get(key); y += loops.has(key) ? 40 : 0;
+      shape.x = x + (w - shape.w) / 2; shape.y = y; y += shape.h + ROW_GAP;
+    }
+    x += w + gap;
+  }
+  const right = x - gap + 24, bottom = 40 + tallest + 32;
+  const svg = svgNode('svg', { viewBox: `0 0 ${right} ${bottom}`, width: right, height: bottom, class: 'uml', role: 'img' });
+  const pair = new Set(block.transitions.map(item => `${item.start}|${item.end}`));
+  block.transitions.forEach((item, index) => {
+    const a = shapes.get(item.start), b = shapes.get(item.end), group = svgNode('g', { class: 'uml-transition' });
+    if (a === b) {
+      const cx = a.x + a.w / 2, top = a.y;
+      group.append(svgNode('path', { d: `M${cx - 14},${top} C${cx - 30},${top - 44} ${cx + 30},${top - 44} ${cx + 14},${top}`, class: 'uml-line', fill: 'none' }));
+      head(group, 'open', cx + 14, top, -0.35, 0.94);
+      if (item.label) group.append(label(cx, top - 38, item.label, { className: 'uml-note uml-halo' }));
+      svg.append(group); return;
+    }
+    const ax = a.x + a.w / 2, ay = a.y + a.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2;
+    const bend = pair.has(`${item.end}|${item.start}`) ? 18 : 0;
+    const length = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / length, ny = (bx - ax) / length;
+    const mx = (ax + bx) / 2 + nx * bend * 2, my = (ay + by) / 2 + ny * bend * 2;
+    const [x1, y1] = exit(a, mx, my), [x2, y2] = exit(b, mx, my);
+    const tip = Math.hypot(x2 - mx, y2 - my) || 1;
+    group.append(svgNode('path', { d: `M${x1},${y1} Q${mx},${my} ${x2},${y2}`, class: 'uml-line', fill: 'none', 'data-transition': String(index) }));
+    head(group, 'open', x2, y2, (x2 - mx) / tip, (y2 - my) / tip);
+    if (item.label) {
+      const lx = (x1 + 2 * mx + x2) / 4 + nx * 12, ly = (y1 + 2 * my + y2) / 4 + ny * 12 + 4;
+      group.append(label(lx, ly, item.label, { className: 'uml-note uml-halo' }));
+    }
+    svg.append(group);
+  });
+  for (const shape of shapes.values()) {
+    const { item } = shape, group = svgNode('g', { class: `uml-state ${item.kind}`, 'data-state': item.key });
+    const cx = shape.x + shape.w / 2, cy = shape.y + shape.h / 2;
+    if (item.kind === 'initial') group.append(svgNode('circle', { cx, cy, r: R, class: 'uml-filled' }));
+    else if (item.kind === 'final') group.append(svgNode('circle', { cx, cy, r: R + 3, class: 'uml-hollow' }), svgNode('circle', { cx, cy, r: R - 3, class: 'uml-filled' }));
+    else {
+      group.append(svgNode('rect', { x: shape.x, y: shape.y, width: shape.w, height: shape.h, rx: 12 }));
+      group.append(label(cx, shape.y + H / 2 + 5, item.name, { bold: true }));
+      if (item.activity) {
+        group.append(svgNode('line', { x1: shape.x, y1: shape.y + H, x2: shape.x + shape.w, y2: shape.y + H, class: 'uml-divider' }));
+        group.append(label(cx, shape.y + H + ACT - 2, item.activity, { className: 'uml-note' }));
+      }
+    }
+    svg.append(group);
+  }
+  return svg;
+}
+
 export function renderUml(block) {
   const region = node('div', 'uml-region'); region.tabIndex = 0;
   region.setAttribute('role', 'region');
-  region.setAttribute('aria-label', block.diagram === 'class' ? 'UML class diagram' : 'UML sequence diagram');
-  const svg = block.diagram === 'class' ? classDiagram(block) : sequenceDiagram(block);
+  region.setAttribute('aria-label', `UML ${block.diagram} diagram`);
+  const svg = block.diagram === 'class' ? classDiagram(block) : block.diagram === 'state' ? stateDiagram(block) : sequenceDiagram(block);
   svg.setAttribute('aria-label', studyText('span', '', block.description).textContent);
   region.append(svg);
   return region;

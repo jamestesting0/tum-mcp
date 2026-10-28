@@ -42,8 +42,9 @@ new question; create a new one only when the first steps differ.
   answer, filling in the template where there is one. The student answers on paper;
   a choice is checked, anything else is compared. For code patterns, the steps that
   matter write code from a starter signature and compare with a model answer.
-  The question shows everything the answers use: the current classes as UML or code,
-  the data as a table. A step that expects a new name gives it ("call it `Unit`").
+  The question states its task in the first sentence and shows everything the answers
+  use: the current classes as UML or code, the data as a table, a programming task's
+  files as a `files` block that steps point into with `code` references. A step that expects a new name gives it ("call it `Unit`").
   Solve it yourself; record an official solution only when it is one.
 - **Drill**: up to a few short items that practise the decision the workflow makes, each
   self-contained like the worked practice.

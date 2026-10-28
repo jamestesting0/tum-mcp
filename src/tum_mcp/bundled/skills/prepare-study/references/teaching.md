@@ -35,8 +35,13 @@ reuses Again ratings and wrong answers, so every objective needs at least one ca
 or question that a student can genuinely get wrong.
 
 For each new/changed objective, cover the mechanism, assumptions and a useful
-example. Choose prose, a worked formula, table, code or visual by what explains it;
-no diagram quotas or equal word/card/question counts. Split independent goals,
+example. Show the example; do not only tell it. Pair it with the picture of the thing
+itself: a UML class diagram for a design, a sequence diagram for an interaction, a
+state diagram for behaviour over events, a code walkthrough for code, a stepping
+diagram for an algorithm, a table for a trace, a plot for a relation. Prose then says
+only what the picture cannot: why it works and when it fails. Name the elements the
+reader should look at, in the order they should look. No diagram quotas or equal
+word/card/question counts. Split independent goals,
 remove duplication and keep essential conditions/counterexamples visible. Optional
 proof detail may use disclosure; essential meaning must not be hidden there.
 

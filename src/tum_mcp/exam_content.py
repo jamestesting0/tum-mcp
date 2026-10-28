@@ -12,9 +12,26 @@ from typing import Annotated, Literal
 from pydantic import Field, FiniteFloat, model_validator
 
 from tum_mcp.exercise_checks import Check
-from tum_mcp.exercise_content import GuidanceStep, Prerequisite, TransferTask, WorkedSolution
+from tum_mcp.exercise_content import (
+    GuidanceStep,
+    Prerequisite,
+    TransferTask,
+    WorkedSolution,
+    check_steps_against_files,
+)
 from tum_mcp.settings import Frozen
-from tum_mcp.study_content import VISUAL_RULE, Block, SourceVersion, Symbol, Text, has_visual
+from tum_mcp.study_content import (
+    VISUAL_RULE,
+    Block,
+    CodeRef,
+    SourceVersion,
+    Symbol,
+    Text,
+    check_code_refs,
+    check_target_file,
+    has_visual,
+    project_files,
+)
 from tum_mcp.study_math import compile_latex
 from tum_mcp.study_models import Digest, Key
 from tum_mcp.study_store import digest
@@ -268,6 +285,7 @@ class GuidedStep(Frozen):
     step: int = Field(ge=1, le=40)
     prompt: Text
     hint: Text | None = None
+    code: tuple[CodeRef, ...] = Field(default=(), max_length=3)
     check: Check | None = None
     answer: tuple[Block, ...] = Field(min_length=1, max_length=10)
 
@@ -419,8 +437,12 @@ def block_text(blocks: tuple[Block, ...]) -> str:
                 parts.append(block.description)
             case "uml":
                 parts.append(block.description)
-                parts.extend(item.name for item in (*block.classes, *block.participants))
+                parts.extend(
+                    item.name for item in (*block.classes, *block.participants, *block.states)
+                )
                 parts.extend(item.text for item in block.messages)
+            case "files":
+                parts.extend(item.code for item in block.files)
     return " ".join(parts)
 
 
@@ -513,9 +535,22 @@ class ExamContent(Frozen):
                 raise ValueError(
                     f"Past question {question.key} references an unknown pattern or concept."
                 )
+        for _, _, question in past.values():
+            if question.guidance:
+                check_steps_against_files(question.statement, question.guidance.steps)
         for pattern in self.patterns:
             if not set(pattern.concepts) <= concepts:
                 raise ValueError(f"Pattern {pattern.key} references an unknown concept.")
+            shown = (
+                past[pattern.example.question][2].statement
+                if pattern.example.question in past
+                else pattern.example.blocks
+            )
+            files = project_files(shown)
+            for step in pattern.example.steps:
+                check_code_refs(files, step.code)
+                if step.check and step.check.kind == "self_check" and step.check.file:
+                    check_target_file(files, step.check.file)
             if pattern.example.question:
                 found = past.get(pattern.example.question)
                 if found is None or not (found[2].statement and found[2].solution):

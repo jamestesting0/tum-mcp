@@ -84,11 +84,34 @@ export function sourcesNote(ids, sources, synthetic, title = '', locators = {}) 
     list.append(item);
   }
   panel.append(list); note.append(trigger, panel); note.hidden = !list.children.length;
+  // Notes with time locators are specific to their place and never merge into a page citation.
+  note.dataset.sources = Object.keys(locators).length ? '' : ids.filter(id => sources[id]).sort().join(' ');
   note.addEventListener('keydown', event => {
     if (event.key === 'Escape' && note.open) { event.preventDefault(); event.stopPropagation(); note.open = false; trigger.focus(); }
   });
   note.addEventListener('focusout', event => { if (!note.contains(event.relatedTarget)) note.open = false; });
   return note;
+}
+// When every citation on a page names the same sources, the page cites them once, beside its
+// eyebrow, and the repeated section citations are hidden. Later renders (another exercise step)
+// call this again to hide their repeats too.
+export function shareCitations(root, eyebrow) {
+  const notes = () => [...root.querySelectorAll('.source-note:not(.page-citation)')].filter(note => !note.hidden);
+  if (root.dataset.citations === undefined) {
+    const found = notes(), keys = new Set(found.map(note => note.dataset.sources));
+    root.dataset.citations = found.length > 1 && keys.size === 1 && !keys.has('') ? [...keys][0] : '';
+    if (root.dataset.citations) pageCitation(found[0], eyebrow);
+  }
+  if (!root.dataset.citations) return;
+  for (const note of notes()) if (note.dataset.sources === root.dataset.citations) note.hidden = true;
+}
+export function pageCitation(note, eyebrow) {
+  let row = eyebrow.parentElement;
+  if (!row?.classList.contains('page-eyebrow')) { row = node('div', 'page-eyebrow'); eyebrow.replaceWith(row); row.append(eyebrow); }
+  row.querySelector('.page-citation')?.remove();
+  note.classList.add('page-citation'); note.hidden = false;
+  note.querySelector('summary').setAttribute('aria-label', 'Sources for this page');
+  row.append(note);
 }
 document.addEventListener('pointerdown', event => {
   for (const note of document.querySelectorAll('.citation[open]')) if (!note.contains(event.target)) note.open = false;

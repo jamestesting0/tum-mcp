@@ -1,10 +1,11 @@
 import data from './data.mjs';
-import { node, studyText, button, append, announce, sourcesNote, focusHeading, scrollReadingTo } from './dom.mjs';
+import { node, studyText, button, append, announce, sourcesNote, shareCitations, focusHeading, scrollReadingTo } from './dom.mjs';
 import { renderReading, renderBlockBody } from './reading.mjs';
 import { iconButton, nextStep } from './navigation.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExercise } from './anchors.mjs';
 import { markCompleted } from './completion.mjs';
+import { codeReferences, filesIn } from './files.mjs';
 import { renderCommentedView } from './comments.mjs';
 
 const sets = data.exercises?.sets || [];
@@ -90,10 +91,12 @@ export function exercisePage(exercise, options) {
   const { state, stepKey } = options;
   const root = node('div', 'exercise-workspace');
   const value = state.get(exercise);
+  const workspaceFiles = filesIn(exercise.statement);
   const heading = studyText('h1', '', exercise.title), header = node('div', 'unit-header');
   const target = (element, field, step = '') => options.annotate(element, field, step);
   const activityChanged = () => root.dispatchEvent(new Event('study-activity-change', { bubbles: true }));
-  header.append(studyText('p', 'eyebrow', options.eyebrow), heading);
+  const eyebrow = studyText('p', 'eyebrow', options.eyebrow);
+  header.append(eyebrow, heading);
   if (exercise.kind === 'distilled') {
     const practice = node('p', 'small practice-for', 'Practice for ');
     exercise.distilled_from.forEach((key, index) => {
@@ -160,6 +163,7 @@ export function exercisePage(exercise, options) {
       [...rich.querySelectorAll('.reading-material')].forEach((element, i) => target(element, `block:${i}`, step.key));
       body.append(rich);
     }
+    if (step.code?.length) body.append(codeReferences(step.code, workspaceFiles));
     const feedback = node('div', 'exercise-feedback');
     feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
     let checked = saved.checked === saved.draft && saved.checked !== null;
@@ -210,7 +214,7 @@ export function exercisePage(exercise, options) {
       const ready = !check || (compares ? saved.compared : checked && result.correct);
       primary.textContent = ready ? (index === exercise.steps.length - 1 ? 'Finish' : 'Continue') : compares ? 'Compare' : 'Check answer';
       primary.disabled = Boolean(check && !compares && !result.valid);
-      hint.textContent = saved.hints < step.hints.length ? (saved.hints ? 'Next hint' : 'Hint') : 'Show reasoning';
+      hint.textContent = saved.hints < step.hints.length ? (saved.hints ? 'Next hint' : 'Hint') : 'Show explanation';
       hint.hidden = Boolean(check && ready) || saved.revealed;
     }
     const actions = append(node('div', 'cluster exercise-actions'), primary, hint);
@@ -226,7 +230,7 @@ export function exercisePage(exercise, options) {
       }
       location.hash = options.link(exercise.steps[index + 1].key);
     }
-    update(); state.save(exercise); return title;
+    update(); state.save(exercise); if (root.dataset.citations !== undefined) shareCitations(root, eyebrow); return title;
   }
   paintStep();
   const solution = renderReading({ blocks: exercise.solution.blocks });
@@ -241,6 +245,7 @@ export function exercisePage(exercise, options) {
     root.append(disclosure('Try another', append(node('div', 'stack'), target(studyText('p', '', exercise.transfer.prompt), 'transfer-prompt'), answer), false, activityChanged));
   }
   if (onward) root.append(onward);
+  shareCitations(root, eyebrow);
   return { root: options.comment(root),
     heading: stepKey ? panel.querySelector('.step-body h2') : heading,
     title: `${exercise.label} · ${exercise.title}`, current: exercise.key,

@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import Field, FiniteFloat, model_validator
 
 from tum_mcp.settings import Frozen
-from tum_mcp.study_content import DiagramBlock, Option, PlotBlock, Text
+from tum_mcp.study_content import DiagramBlock, FilePath, Option, PlotBlock, Text
 from tum_mcp.study_models import Key
 
 
@@ -37,13 +37,18 @@ class SelfCheck(Frozen):
     format: Literal["text", "code"] = "text"
     language: str | None = Field(default=None, min_length=1, max_length=30)
     starter_code: str | None = Field(default=None, min_length=1, max_length=20000)
+    file: FilePath | None = None
     rubric: tuple[Text, ...] = Field(min_length=1, max_length=12)
     model_answer: Text
 
     @model_validator(mode="after")
     def code_only(self) -> "SelfCheck":
-        if self.format != "code" and (self.language or self.starter_code):
-            raise ValueError("Language and starter code belong to code responses only.")
+        if self.format != "code" and (self.language or self.starter_code or self.file):
+            raise ValueError("Language, starter code and file belong to code responses only.")
+        if self.file and self.starter_code:
+            raise ValueError(
+                "A code step writes either into a workspace file or from starter code."
+            )
         return self
 
 

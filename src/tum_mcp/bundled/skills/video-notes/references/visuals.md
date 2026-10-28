@@ -51,9 +51,10 @@ deliberate overlap is right (a label on its node is not text-on-text), add a
 | --- | --- |
 | diagram | Rebuild nodes from the block's x and y, scaled into `main`; animate frames as state changes with a non-color cue. |
 | formula | Build term by term after the concrete instance; symbol glossary as labels; conditions as a side note. |
-| uml | Redraw the class or sequence diagram in the same notation; reveal classes or messages in order, keeping UML arrowheads and dashes exact. |
+| uml | Redraw the class or sequence diagram in the same notation; reveal classes or messages in order, keeping UML arrowheads and dashes exact. A state diagram enters state by state along its transitions. |
 | plot | Axes with the source labels and units; draw series in order; sweep a parameter only when the formula defines the function exactly. |
-| code | `self.code(key)` lines with a moving highlight and a small variable table driven by storyboard numbers. |
+| code | `self.code(key)` lines with a moving highlight and a small variable table driven by storyboard numbers. A prepared walkthrough gives the order of highlights. |
+| files | Show only the file and lines the beat explains, as code; never scroll through a whole project. |
 | table | Reveal rows against the comparison criterion; highlight contrasting cells. |
 | text points | Narration plus objects, not bullet slides. |
 | cards and questions | Question beats and pitfalls; distractor feedback names misconceptions. |

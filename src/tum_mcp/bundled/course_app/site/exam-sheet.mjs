@@ -25,7 +25,7 @@ function entry(concept) {
   details.append(summary);
   const body = node('div', 'exam-entry-body');
   // Recognition cue and pitfall read as two labelled rows; the label sits in a side column.
-  const cues = node('dl', 'exam-cues');
+  const cues = node('dl', 'exam-entry-cues');
   for (const [field, label, tone] of [['trigger', 'When you see', 'cue'], ['pitfall', 'Watch out', 'pitfall']]) {
     if (!concept[field]) continue;
     const icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });

@@ -167,7 +167,7 @@ def test_guided_past_paper_uses_exercise_steps(
     expect(page.locator(".exercise-feedback .expected-value")).to_have_text("station")
     page.get_by_role("button", name="Continue").click()
     page.get_by_role("heading", name="Write notifyObservers().").wait_for()
-    editor = page.get_by_label("Your code (java)")
+    editor = page.get_by_label("Your code (Java)")
     expect(editor).to_have_value("public void notifyObservers() {\n    // your code\n}")
     page.get_by_role("button", name="Compare").click()
     expect(page.locator(".model-code")).to_contain_text("o.update(temperature);")

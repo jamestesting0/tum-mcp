@@ -506,10 +506,12 @@ def test_section_references_are_compact_reachable_and_dismissible(
     try:
         page = context.new_page()
         page.goto(exercise_url + "#weighted/content")
-        note = page.locator(".read-section .citation").first
+        # Every section cites the same source, so the page cites it once beside its eyebrow.
+        expect(page.locator(".read-section .citation:visible")).to_have_count(0)
+        note = page.locator(".page-citation")
         summary = note.locator("summary")
         expect(note.locator(".citation-panel")).not_to_be_visible()
-        assert summary.get_attribute("aria-label").startswith("Sources for ")
+        assert summary.get_attribute("aria-label") == "Sources for this page"
         summary.click()
         panel = note.locator(".citation-panel")
         expect(panel).to_be_visible()
@@ -520,7 +522,8 @@ def test_section_references_are_compact_reachable_and_dismissible(
         expect(panel).not_to_be_visible()
         expect(summary).to_be_focused()
         summary.click()
-        page.locator("h1").click()
+        # Any click outside the note closes it; the open panel itself covers the title.
+        page.mouse.click(160, 548)
         expect(panel).not_to_be_visible()
         assert not page.get_by_role("link", name="Back to exercises", exact=True).count()
         assert not page.get_by_role("link", name="Back to question", exact=True).count()
@@ -577,7 +580,7 @@ def test_ungraded_guidance_still_offers_prepared_explanation(
     try:
         page = context.new_page()
         page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/candidate")
-        page.get_by_role("button", name="Show reasoning", exact=True).click()
+        page.get_by_role("button", name="Show explanation", exact=True).click()
         expect(
             page.locator("#content").get_by_text(step["explanation"], exact=True)
         ).to_be_visible()
@@ -661,9 +664,9 @@ def test_distilled_code_practice_writes_code_and_checks_literal_code(
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(exercise_url + "#exercises/sheet-1/copy-drill")
         expect(page.locator(".practice-for")).to_contain_text(original["title"])
-        expect(page.locator(".code-line")).to_have_count(3)
+        expect(page.locator(".code-region .code-line")).to_have_count(3)
         page.locator(".reading").get_by_text("Guidance", exact=True).click()
-        editor = page.get_by_label("Your code (java)", exact=True)
+        editor = page.get_by_label("Your code (Java)", exact=True)
         expect(editor).to_have_value(starter)
         editor.evaluate(
             "e => e.setSelectionRange(e.value.indexOf('{') + 1, e.value.indexOf('{') + 1)"
@@ -692,3 +695,83 @@ def test_distilled_code_practice_writes_code_and_checks_literal_code(
         assert errors == []
     finally:
         context.close()
+
+
+@pytest.mark.parametrize("exercise_project", ["responses"], indirect=True)
+def test_project_files_open_referenced_lines_and_keep_edits(
+    course_browser: Browser, exercise_url: str
+) -> None:
+    context = course_browser.new_context(viewport={"width": 1280, "height": 900})
+    try:
+        page = context.new_page()
+        errors: list[str] = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(exercise_url + "#exercises/responses/project-files/read")
+        project = page.locator(".project")
+        expect(project.locator(".project-tab-item.active")).to_have_text("Counter.java")
+        expect(project.locator(".tok-keyword").first).to_be_visible()
+        expect(page.locator(".page-citation")).to_have_count(1)
+        expect(page.locator("main .source-note:visible")).to_have_count(1)
+        project.get_by_role("button", name="Hide files").click()
+        expect(project.locator(".project-tree")).to_be_hidden()
+        project.get_by_role("button", name="Show files").click()
+        expect(project.locator(".project-tree")).to_be_visible()
+        reference = page.locator(".code-ref")
+        expect(reference.locator(".code-ref-path")).to_have_text("src/Main.java")
+        expect(reference.locator(".code-line")).to_have_count(3)
+        reference.get_by_role("button", name="Open in files").click()
+        expect(project.locator(".project-tab-item.active")).to_have_text("Main.java")
+        expect(project.locator(".code-line.marked")).to_have_count(3)
+        page.goto(exercise_url + "#exercises/responses/project-files/write")
+        page.get_by_role("button", name="Open Counter.java", exact=True).click()
+        editor = page.get_by_label("Edit src/Counter.java", exact=True)
+        expect(editor).to_have_value(re.compile(r"// TODO: add one"))
+        editor.evaluate(
+            "e => e.setSelectionRange(e.value.indexOf('// TODO'), e.value.indexOf('// TODO') + 15)"
+        )
+        editor.press_sequentially("count++;")
+        page.reload()
+        page.get_by_role("button", name="Open Counter.java", exact=True).click()
+        expect(editor).to_have_value(re.compile(r"count\+\+;"))
+        expect(project.locator(".project-tab.changed")).to_have_count(1)
+        page.get_by_role("button", name="Compare", exact=True).click()
+        expect(page.locator(".model-code")).to_contain_text("count++;")
+        project.get_by_role("button", name="Reset file", exact=True).click()
+        expect(editor).to_have_value(re.compile(r"// TODO: add one"))
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_demo_walkthrough_and_state_diagram(course_browser: Browser, tmp_path: Path) -> None:
+    from typer.testing import CliRunner
+
+    from tum_mcp.cli import app
+
+    root = tmp_path / "demo"
+    result = CliRunner().invoke(app, ["study", "demo", str(root)])
+    assert result.exit_code == 0, result.output
+    with PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(root / "app"))) as server:
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        context = course_browser.new_context()
+        try:
+            page = context.new_page()
+            errors: list[str] = []
+            page.on("pageerror", lambda error: errors.append(str(error)))
+            page.goto(f"http://127.0.0.1:{server.server_port}/#components/content")
+            walk = page.locator(".code-walkthrough")
+            expect(walk.locator(".code-walk-note")).to_contain_text("takes one input")
+            expect(walk.locator(".code-line.marked")).to_have_count(1)
+            walk.get_by_role("button", name="Next stop").click()
+            expect(walk.locator(".code-walk-note")).to_contain_text("twice")
+            expect(walk.get_by_role("button", name="Next stop")).to_be_disabled()
+            state = page.locator('.uml-region[aria-label="UML state diagram"]')
+            expect(state.locator(".uml-state")).to_have_count(5)
+            expect(state.locator(".uml-transition")).to_have_count(6)
+            expect(page.locator(".project")).to_have_count(1)
+            assert errors == []
+        finally:
+            context.close()
+            server.shutdown()
+            thread.join(timeout=3)

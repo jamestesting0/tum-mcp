@@ -13,14 +13,34 @@ function lines(text, width = 20) {
 }
 const plainTitle = key => studyText('span', '', concepts.get(key)?.title || key).textContent;
 
+const ICONS = {
+  out: 'M3.5 8h9', in: 'M8 3.5v9M3.5 8h9',
+  fit: 'M5.5 2H2v3.5M10.5 2H14v3.5M14 10.5V14h-3.5M2 10.5V14h3.5M6 6h4v4H6z',
+  enter: 'M2 6V2h4M2 2l4 4M14 6V2h-4M14 2l-4 4M2 10v4h4M2 14l4-4M14 10v4h-4M14 14l-4-4',
+  exit: 'M6 2v4H2M6 6 2 2M10 2v4h4M10 6l4-4M6 14v-4H2M6 10l-4 4M10 14v-4h4M10 10l4 4',
+};
+function tool(name, d, action, extra = '') {
+  const control = button('', action, `quiet exam-map-tool ${extra}`.trim());
+  const icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
+  icon.append(svgNode('path', { d })); control.append(icon);
+  control.setAttribute('aria-label', name); control.title = name;
+  return control;
+}
+function legendItem(dashed, text) {
+  const sample = svgNode('svg', { viewBox: '0 0 28 10', 'aria-hidden': 'true', focusable: 'false' });
+  sample.append(svgNode('path', { d: dashed ? 'M2 5h24' : 'M2 5h20', class: dashed ? 'dashed' : '' }));
+  if (!dashed) sample.append(svgNode('path', { d: 'M20 1.5 26 5l-6 3.5z', class: 'head' }));
+  return append(node('span', 'exam-map-legend-item'), sample, node('span', '', text));
+}
+
 // The semester map: build-time positions, focusable nodes and a compact card for the selection.
 export function renderMap(onOpen) {
   const map = exam.map;
   const root = node('section', 'exam-map'); root.setAttribute('aria-labelledby', 'exam-map-title');
   const title = node('h2', '', 'Semester map'); title.id = 'exam-map-title';
-  root.append(append(node('div', 'section-heading'), title));
+  const heading = append(node('div', 'section-heading exam-map-heading'), title);
+  root.append(heading);
   if (!map?.nodes?.length) { root.hidden = true; return root; }
-  root.append(node('p', 'small', 'Arrows run from a foundation to what builds on it; dashed lines join ideas that are easy to confuse. Drag to move; pinch or Ctrl/⌘ + scroll to zoom.'));
   const links = new Map(map.nodes.map(item => [item.key, []]));
   for (const edge of map.edges) { links.get(edge.start).push({ ...edge, other: edge.end, out: true }); links.get(edge.end).push({ ...edge, other: edge.start, out: false }); }
   const card = node('div', 'exam-map-card'); card.setAttribute('role', 'status'); card.hidden = true;
@@ -51,7 +71,10 @@ export function renderMap(onOpen) {
     if (focus) elements.get(key).focus();
   }
   const scroller = node('div', 'exam-map-scroll'); scroller.tabIndex = 0;
+  // The collapsed frame takes the map's shape, so a wide, short map leaves no empty band.
+  scroller.style.aspectRatio = `${map.width + 64} / ${map.height + 160}`;
   scroller.setAttribute('aria-label', 'Semester map canvas. Arrow keys move it, plus and minus zoom, 0 fits it.');
+  scroller.title = 'Drag to move · pinch or Ctrl/⌘ + scroll to zoom';
   const svg = svgNode('svg', { viewBox: `0 0 ${map.width} ${map.height}`, class: 'exam-map-svg', role: 'group', 'aria-label': 'Semester map of exam-relevant ideas' });
   const defs = svgNode('defs'), marker = svgNode('marker', { id: 'exam-arrow', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' });
   marker.append(svgNode('path', { d: 'M0 0L10 5L0 10z', class: 'exam-arrow-head' })); defs.append(marker); svg.append(defs);
@@ -170,14 +193,16 @@ export function renderMap(onOpen) {
     else return;
     event.preventDefault();
   });
-  const full = button('Full screen', () => toggleFull(), 'quiet exam-map-full');
+  const full = tool('Full screen', ICONS.enter, () => toggleFull(), 'exam-map-full');
   function toggleFull() {
     if (document.fullscreenElement === root) { document.exitFullscreen(); return; }
     if (root.classList.contains('expanded')) { setExpanded(false); return; }
     if (root.requestFullscreen) root.requestFullscreen().catch(() => setExpanded(true)); else setExpanded(true);
   }
   function setExpanded(on) {
-    root.classList.toggle('expanded', on); full.textContent = on ? 'Exit full screen' : 'Full screen';
+    root.classList.toggle('expanded', on);
+    const name = on ? 'Exit full screen' : 'Full screen';
+    full.setAttribute('aria-label', name); full.title = name; full.querySelector('path').setAttribute('d', on ? ICONS.exit : ICONS.enter);
     requestAnimationFrame(fit);
   }
   const onFullscreen = () => {
@@ -188,8 +213,9 @@ export function renderMap(onOpen) {
   root.addEventListener('keydown', event => {
     if (event.key === 'Escape' && root.classList.contains('expanded') && !document.fullscreenElement) { setExpanded(false); full.focus(); }
   });
-  const named = (label, name, action) => { const control = button(label, action, 'quiet exam-map-zoom'); control.setAttribute('aria-label', name); control.title = name; return control; };
-  const controls = append(node('div', 'cluster exam-map-controls'), named('−', 'Zoom out', () => zoomAt(0.8)), named('+', 'Zoom in', () => zoomAt(1.25)), button('Fit', fit, 'quiet'), full);
+  heading.append(full);
+  const tools = append(node('div', 'exam-map-tools'), tool('Zoom out', ICONS.out, () => zoomAt(0.8)), tool('Zoom in', ICONS.in, () => zoomAt(1.25)), tool('Fit', ICONS.fit, fit));
+  const legend = append(node('div', 'exam-map-legend'), legendItem(false, 'builds on'), legendItem(true, 'easy to confuse'));
   new ResizeObserver((entries, observer) => {
     if (!scroller.isConnected) { observer.disconnect(); return; }
     if (fitted) apply(); else fit();
@@ -212,6 +238,6 @@ export function renderMap(onOpen) {
     }
     group.append(items); overview.append(group);
   }
-  root.append(controls, scroller, overview, card);
+  root.append(append(node('div', 'exam-map-frame'), scroller, tools, legend), overview, card);
   return root;
 }

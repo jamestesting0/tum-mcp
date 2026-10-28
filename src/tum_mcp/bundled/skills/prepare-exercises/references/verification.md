@@ -6,6 +6,7 @@ valid approaches. Check original statement/subparts for missing information. A
 schema pass does not verify subject matter. Use the component template only for
 rendering coverage; its snippets are not a teaching-quality example.
 
+Read each question's first sentence: a student must know what to produce from it.
 Read every answer, hint, explanation and rubric next to only what the student has
 seen at that step; anything it names must already be shown or introduced by the
 prompt. For tables, independently verify every target cell. For graphs, verify

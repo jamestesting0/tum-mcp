@@ -44,10 +44,9 @@ function home() {
     root.append(append(node('section', 'exam-section'), node('h2', '', 'The exam'), facts));
   }
   const stats = exam.statistics;
-  const evidence = stats.sittings_considered
-    ? `${stats.sittings_considered} past exam${stats.sittings_considered === 1 ? '' : 's'}${stats.years?.length ? ` (${stats.years[0]}–${stats.years[1]})` : ''}${stats.sittings_outdated ? `; ${stats.sittings_outdated} older one${stats.sittings_outdated === 1 ? '' : 's'} not counted` : ''}`
-    : 'No past exams were available; patterns rely on course material.';
-  root.append(node('p', 'small exam-evidence', evidence));
+  // The evidence line only appears when past exams exist; without them there is nothing to report.
+  if (stats.sittings_considered) root.append(node('p', 'small exam-evidence',
+    `${stats.sittings_considered} past exam${stats.sittings_considered === 1 ? '' : 's'}${stats.years?.length ? ` (${stats.years[0]}–${stats.years[1]})` : ''}${stats.sittings_outdated ? `; ${stats.sittings_outdated} older one${stats.sittings_outdated === 1 ? '' : 's'} not counted` : ''}`));
   const cards = node('ul', 'exam-cards');
   if (exam.concepts.length) cards.append(card('#exam/sheet', 'Cheatsheet', `${exam.concepts.length} entries${exam.map?.nodes?.length ? ' and a semester map' : ''}`));
   if (exam.patterns.length) cards.append(card(`#exam/patterns/${orderedPatterns()[0].key}`, 'Exam patterns', `${exam.patterns.length} recurring question types`, sample(stats.patterns[stats.pattern_order[0]])));

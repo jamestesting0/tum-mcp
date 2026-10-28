@@ -11,14 +11,13 @@ export const variants = exam.sittings.flatMap(sitting => sitting.variants.map(va
 export const pastQuestions = new Map(variants.flatMap(({ sitting, variant }) => variant.questions.map(question => [question.key, { sitting, variant, question }])));
 
 export function seen(statistics) {
-  if (!statistics?.sittings_considered) return 'No current past exams';
   const base = `Seen in ${statistics.sittings_seen} of ${statistics.sittings_considered} exams`;
   return statistics.last_label ? `${base} · last ${statistics.last_label}` : base;
 }
 // Small samples are stated plainly; a frequency is history, never a prediction.
 export function sample(statistics) {
   const count = statistics?.sittings_considered || 0;
-  return count === 0 ? 'No past exam evidence' : count < 4 ? `Based on ${count} past exam${count === 1 ? '' : 's'} only` : '';
+  return count > 0 && count < 4 ? `Based on ${count} past exam${count === 1 ? '' : 's'} only` : '';
 }
 export function conceptBadge(concept) {
   const stats = exam.statistics.concepts[concept.key], total = exam.statistics.sittings_considered;

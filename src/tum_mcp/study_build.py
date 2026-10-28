@@ -71,6 +71,8 @@ TEMPLATE_FILES = (
     "graph-response.mjs",
     "plot.mjs",
     "uml.mjs",
+    "code.mjs",
+    "files.mjs",
     "dom.mjs",
     "mathml.mjs",
     "reading.mjs",

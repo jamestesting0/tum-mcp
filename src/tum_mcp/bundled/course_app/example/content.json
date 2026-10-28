@@ -67,7 +67,17 @@
           ],
           "language": "python",
           "code": "def double(value):\n    return value * 2",
-          "explanation": "Literal code is displayed, never executed."
+          "explanation": "Literal code is displayed, never executed.",
+          "walkthrough": [
+            {
+              "lines": "1",
+              "note": "`double` takes one input, `value`."
+            },
+            {
+              "lines": "2",
+              "note": "It returns twice that input."
+            }
+          ]
         },
         {
           "kind": "formula",
@@ -242,6 +252,89 @@
                   "y": 2
                 }
               ]
+            }
+          ]
+        },
+        {
+          "kind": "uml",
+          "title": "State diagram",
+          "sources": [
+            "components"
+          ],
+          "diagram": "state",
+          "description": "A request moves from Pending to Running and then to Done or back to Pending after a failure.",
+          "states": [
+            {
+              "key": "start",
+              "kind": "initial"
+            },
+            {
+              "key": "pending",
+              "name": "Pending"
+            },
+            {
+              "key": "running",
+              "name": "Running",
+              "activity": "entry / start timer"
+            },
+            {
+              "key": "done",
+              "name": "Done"
+            },
+            {
+              "key": "end",
+              "kind": "final"
+            }
+          ],
+          "transitions": [
+            {
+              "start": "start",
+              "end": "pending"
+            },
+            {
+              "start": "pending",
+              "end": "running",
+              "label": "schedule"
+            },
+            {
+              "start": "running",
+              "end": "pending",
+              "label": "fail [retries left]"
+            },
+            {
+              "start": "running",
+              "end": "done",
+              "label": "finish"
+            },
+            {
+              "start": "running",
+              "end": "running",
+              "label": "tick"
+            },
+            {
+              "start": "done",
+              "end": "end"
+            }
+          ]
+        },
+        {
+          "kind": "files",
+          "title": "Project files",
+          "sources": [
+            "components"
+          ],
+          "key": "demo-project",
+          "description": "A two-file project: one file to read and one to edit.",
+          "open": "src/Counter.java",
+          "files": [
+            {
+              "path": "src/Counter.java",
+              "code": "public class Counter {\n    private int count;\n\n    public void increment() {\n        // TODO: add one\n    }\n\n    public int value() {\n        return count;\n    }\n}\n",
+              "editable": true
+            },
+            {
+              "path": "src/Main.java",
+              "code": "public class Main {\n    public static void main(String[] args) {\n        Counter counter = new Counter();\n        counter.increment();\n        System.out.println(counter.value()); // 1\n    }\n}\n"
             }
           ]
         }

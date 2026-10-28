@@ -10,7 +10,17 @@ from tum_mcp.exercise_checks import ChoiceCheck as ChoiceCheck
 from tum_mcp.exercise_checks import NumericCheck as NumericCheck
 from tum_mcp.exercise_checks import SelfCheck as SelfCheck
 from tum_mcp.settings import Frozen
-from tum_mcp.study_content import VISUAL_RULE, Block, SourceVersion, Text, has_visual
+from tum_mcp.study_content import (
+    VISUAL_RULE,
+    Block,
+    CodeRef,
+    SourceVersion,
+    Text,
+    check_code_refs,
+    check_target_file,
+    has_visual,
+    project_files,
+)
 from tum_mcp.study_models import Key
 from tum_mcp.study_store import digest
 
@@ -21,6 +31,7 @@ class GuidanceStep(Frozen):
     prompt: Text
     sources: tuple[Key, ...] = Field(default=(), max_length=30)
     blocks: tuple[Block, ...] = Field(default=(), max_length=20)
+    code: tuple[CodeRef, ...] = Field(default=(), max_length=3)
     check: Check | None = None
     hints: tuple[Text, ...] = Field(default=(), max_length=6)
     explanation: Text
@@ -91,7 +102,19 @@ class Exercise(Frozen):
                     raise ValueError("Graph check cites an undeclared source.")
         if self.solution.official_source and self.solution.official_source not in source_keys:
             raise ValueError("The official solution source must be declared.")
+        check_steps_against_files(self.statement, self.steps)
         return self
+
+
+def check_steps_against_files(
+    statement: tuple[Block, ...], steps: tuple[GuidanceStep, ...]
+) -> None:
+    """Steps point into the statement's workspace and write only into its editable files."""
+    files = project_files(statement)
+    for step in steps:
+        check_code_refs(files, step.code)
+        if step.check and step.check.kind == "self_check" and step.check.file:
+            check_target_file(files, step.check.file)
 
 
 class ExerciseSet(Frozen):

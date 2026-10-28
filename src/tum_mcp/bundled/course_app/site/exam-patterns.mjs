@@ -1,8 +1,9 @@
 import data from './data.mjs';
-import { node, studyText, button, append, sourcesNote } from './dom.mjs';
+import { node, studyText, button, append, sourcesNote, pageCitation, shareCitations } from './dom.mjs';
 import { renderBlockBody } from './reading.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExam } from './anchors.mjs';
+import { codeReferences, filesIn } from './files.mjs';
 import { exam, patterns, concepts, pastQuestions, seen, sample, list, quietLink } from './exam-state.mjs';
 
 const plain = text => studyText('span', '', text || '').textContent;
@@ -51,11 +52,12 @@ function workedPractice(pattern) {
   const example = pattern.example, past = example.question && pastQuestions.get(example.question);
   const blocks = past ? past.question.statement : example.blocks, solution = past ? past.question.solution : example.solution;
   const origin = past ? `From ${plain(past.sitting.label)}, question ${past.question.number}` : 'Practice question written for this pattern';
-  const steps = node('ol', 'exam-guided');
+  const steps = node('ol', 'exam-guided'), shownFiles = filesIn(blocks);
   example.steps.forEach((step, index) => {
     const card = node('li', 'exam-guided-step');
     card.append(append(node('p', 'exam-guided-label'), node('span', 'exam-guided-number', `Step ${step.step}`), studyText('span', '', pattern.workflow[step.step - 1].do)));
     card.append(annotateExam(studyText('p', 'exam-guided-prompt', step.prompt), `pattern:${pattern.key}`, pattern.revision, `practice:${index}`));
+    if (step.code?.length) card.append(codeReferences(step.code, shownFiles));
     if (step.hint) { const hint = node('details', 'disclosure plain'); hint.append(node('summary', '', 'Hint'), studyText('p', '', step.hint)); card.append(hint); }
     card.append(...answerControls(step.check, `practice-${pattern.key}-${index}`, blocksWithoutTitles(step.answer), step.check?.kind !== 'self_check'));
     steps.append(card);
@@ -72,10 +74,13 @@ export function renderPattern(key) {
   const stats = exam.statistics.patterns[pattern.key];
   const root = node('div', 'exam-pattern');
   const heading = studyText('h1', '', pattern.title);
-  const evidence = append(node('p', 'small exam-badge'), seen(stats), stats.sittings_considered && sample(stats) ? ` · ${sample(stats)}` : '');
-  const header = append(node('div', 'unit-header'), node('p', 'eyebrow', 'Exam pattern'), heading, mark(studyText('p', 'unit-summary', pattern.summary), 'summary'),
-    append(node('div', 'section-heading'), evidence, sourcesNote(pattern.sources.map(source => source.key), data.sources, data.course.synthetic, pattern.title)));
+  const eyebrow = node('p', 'eyebrow', 'Exam pattern');
+  const header = append(node('div', 'unit-header'), eyebrow, heading, mark(studyText('p', 'unit-summary', pattern.summary), 'summary'));
+  // Past-exam evidence appears only when there is some; the citation says where the pattern comes from.
+  if (stats.sittings_considered) header.append(append(node('p', 'small exam-badge'), seen(stats), sample(stats) ? ` · ${sample(stats)}` : ''));
   root.append(header);
+  const cited = sourcesNote(pattern.sources.map(source => source.key), data.sources, data.course.synthetic, pattern.title);
+  pageCitation(cited, eyebrow); root.dataset.citations = cited.dataset.sources;
   root.append(section('Recognise it', mark(list('exam-cues', pattern.cues), 'cues')));
   const steps = node('ol', 'exam-workflow');
   pattern.workflow.forEach((step, index) => {
@@ -111,5 +116,6 @@ export function renderPattern(key) {
     const region = append(node('div', 'table-region'), table); region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', 'Past questions of this pattern');
     root.append(section('In past exams', region));
   }
+  shareCitations(root, eyebrow);
   return { root, heading, title: plain(pattern.title), items: [item] };
 }

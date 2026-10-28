@@ -1,5 +1,5 @@
 import data from './data.mjs';
-import { node, studyText, button, append, focusHeading, scrollReadingTo, confirmAction } from './dom.mjs';
+import { node, studyText, button, append, focusHeading, scrollReadingTo, confirmAction, shareCitations } from './dom.mjs';
 import { renderCommentedView, stopComments } from './comments.mjs';
 import { renderReading } from './reading.mjs';
 import { renderPractice } from './learning.mjs';
@@ -45,7 +45,7 @@ const selectedTopics = new Set(Array.isArray(storedSelection)
 const narrow = matchMedia('(max-width: 799px)');
 const navigationState = { collapsed: narrow.matches };
 let currentIndex = 0, currentView = 'content', revising = false, home = false, reviewing = false;
-let main, unitHeading, step, headerDetails = [], syncMode = () => {};
+let main, unitHeading, unitEyebrow = null, step, headerDetails = [], syncMode = () => {};
 const tabButtons = new Map(), panels = new Map();
 const persistenceNote = node('p', 'notice'); persistenceNote.setAttribute('role', 'status');
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -168,6 +168,9 @@ function renderPanel() {
       return activity();
     });
     panel.replaceChildren(comments.root);
+    // Only the reading view shares one page citation; cards and questions cite their own.
+    unitEyebrow?.parentElement?.querySelector('.page-citation')?.remove();
+    if (view === 'content' && unitEyebrow) shareCitations(comments.root, unitEyebrow);
   }
   const target = revising && !selectedTopics.size ? null : stepTarget(unit);
   const replacement = target ? nextStep(target) : node('div');
@@ -283,7 +286,7 @@ function render() {
   const sidebar = renderSidebar(navigationState);
   main = node('main', 'main'); main.id = 'content'; main.tabIndex = -1;
   const reading = node('div', 'reading'); reading.append(persistenceNote);
-  tabButtons.clear(); panels.clear(); headerDetails = [];
+  tabButtons.clear(); panels.clear(); headerDetails = []; unitEyebrow = null;
   if (notesPage) {
     unitHeading = notesPage.heading; document.title = `${notesPage.title} · ${data.course.title}`;
     reading.append(notesPage.root);
@@ -311,7 +314,8 @@ function render() {
       const breadcrumb = [...ancestry, ...(ancestry.includes(unit.label) ? [] : [unit.label])].join(' · ');
       const summary = studyText('p', 'unit-summary', unit.summary), objectives = node('div', 'objectives');
       objectives.append(node('p', 'small objectives-label', 'Objectives'), append(node('ul'), ...unit.objectives.map(item => studyText('li', '', item.text))));
-      heading.append(node('p', 'eyebrow', `${breadcrumb} · ${unit.minutes} min`), unitHeading, summary, objectives);
+      unitEyebrow = node('p', 'eyebrow', `${breadcrumb} · ${unit.minutes} min`);
+      heading.append(unitEyebrow, unitHeading, summary, objectives);
       headerDetails = [summary, objectives];
     }
     const tabs = node('div', 'tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Study view');

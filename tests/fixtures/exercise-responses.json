@@ -447,6 +447,108 @@
               }
             ]
           }
+        },
+        {
+          "key": "project-files",
+          "label": "Project",
+          "title": "Project files",
+          "sources": [
+            {
+              "key": "weighted",
+              "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+            }
+          ],
+          "statement": [
+            {
+              "kind": "text",
+              "title": "The task",
+              "sources": [
+                "weighted"
+              ],
+              "paragraphs": [
+                "Implement `increment()` in `Counter.java` so that `Main` prints 1."
+              ]
+            },
+            {
+              "kind": "files",
+              "title": "Exercise files",
+              "sources": [
+                "weighted"
+              ],
+              "key": "counter",
+              "description": "A Counter class to complete and the Main class that uses it.",
+              "open": "src/Counter.java",
+              "files": [
+                {
+                  "path": "src/Counter.java",
+                  "code": "public class Counter {\n    private int count;\n\n    public void increment() {\n        // TODO: add one\n    }\n\n    public int value() {\n        return count;\n    }\n}\n",
+                  "editable": true
+                },
+                {
+                  "path": "src/Main.java",
+                  "code": "public class Main {\n    public static void main(String[] args) {\n        Counter counter = new Counter();\n        counter.increment();\n        System.out.println(counter.value()); // 1\n    }\n}\n"
+                }
+              ]
+            }
+          ],
+          "objectives": [
+            "Change a field through a method."
+          ],
+          "steps": [
+            {
+              "key": "read",
+              "purpose": "Read the caller first.",
+              "prompt": "How often does `Main` call `increment()`?",
+              "code": [
+                {
+                  "path": "src/Main.java",
+                  "lines": "3-5"
+                }
+              ],
+              "check": {
+                "kind": "numeric",
+                "answer": 1,
+                "feedback": "Count the calls on line 4."
+              },
+              "explanation": "Once, on line 4."
+            },
+            {
+              "key": "write",
+              "purpose": "Write the method.",
+              "prompt": "In `Counter.java`, implement `increment()`.",
+              "code": [
+                {
+                  "path": "src/Counter.java",
+                  "lines": "4-6"
+                }
+              ],
+              "check": {
+                "kind": "self_check",
+                "format": "code",
+                "language": "java",
+                "file": "src/Counter.java",
+                "model_answer": "public void increment() {\n    count++;\n}",
+                "rubric": [
+                  "Adds one to `count`"
+                ]
+              },
+              "explanation": "The method changes the field; `value()` reads it."
+            }
+          ],
+          "solution": {
+            "blocks": [
+              {
+                "kind": "code",
+                "title": "increment()",
+                "sources": [
+                  "weighted"
+                ],
+                "language": "java",
+                "code": "public void increment() {\n    count++;\n}",
+                "explanation": "Increment the field."
+              }
+            ]
+          }
         }
       ]
     }

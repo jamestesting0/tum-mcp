@@ -1,5 +1,5 @@
 import data from './data.mjs';
-import { node, studyText, append, sourcesNote } from './dom.mjs';
+import { node, studyText, append, sourcesNote, shareCitations } from './dom.mjs';
 import { renderBlockBody } from './reading.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam } from './exam-state.mjs';
@@ -32,7 +32,8 @@ function statementBody(blocks, mark = () => {}) {
 // The whole paper on one page; each solution opens when the student wants to check.
 export function renderPaper(paper) {
   const root = node('div', 'exam-mode'), heading = node('h1', '', paper.title);
-  const header = append(node('div', 'unit-header'), node('p', 'eyebrow', paper.forecast ? 'Practice exam' : 'Past exam'), heading);
+  const eyebrow = node('p', 'eyebrow', paper.forecast ? 'Practice exam' : 'Past exam');
+  const header = append(node('div', 'unit-header'), eyebrow, heading);
   root.append(header);
   const total = paper.questions.reduce((sum, question) => sum + (question.points || 0), 0);
   const facts = [paper.minutes && `${paper.minutes} minutes`, total && `${total} points`, exam.profile?.allowed_aids].filter(Boolean);
@@ -57,5 +58,6 @@ export function renderPaper(paper) {
     section.append(solution);
     root.append(section);
   }
+  shareCitations(root, eyebrow);
   return { root, heading, title: paper.title, items: paper.kind === 'mock' ? [paper.item] : paper.questions.map(question => `question:${question.key}`) };
 }

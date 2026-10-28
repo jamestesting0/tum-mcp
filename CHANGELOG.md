@@ -21,10 +21,19 @@
   exercises. Text and numeric checks hold a single answer, and authors are told to give
   every question the context its answers use.
 - Authored questions must show code, a diagram, a formula, a table or a plot beside
-  their text. A new `uml` block draws UML class and sequence diagrams in every
-  workspace, and `` `code` `` in text renders as inline code.
+  their text, and their first sentence says what the student produces. A new `uml`
+  block draws UML class, sequence and state diagrams in every workspace, and
+  `` `code` `` in text renders as inline code.
+- Code is syntax-highlighted in blocks, editors and model answers. A new `files` block
+  shows a small project with a file tree, tabs and editable files kept in the browser;
+  steps point at file lines with an "Open in files" jump, code-writing steps can edit
+  a project file, and the file tree folds away. Code blocks can carry a step-by-step walkthrough, and
+  prepare-study asks for examples shown as a diagram or walkthrough, not only told.
 - Right-click (or Shift+F10) any sidebar entry to mark it completed.
-- Cheatsheet entries show their recognition cue and pitfall as labelled rows with icons.
+- A page whose sections all cite the same sources shows one citation beside its title
+  line; exam pages mention past exams only when there are some.
+- Cheatsheet entries show their recognition cue and pitfall as labelled rows with icons;
+  the semester map has an icon toolbar and an in-canvas legend.
 - Give every skill a Codex display name, so Codex no longer shows "Tum MCP:" prefixes.
 
 ## 0.10.0 — 2026-10-27

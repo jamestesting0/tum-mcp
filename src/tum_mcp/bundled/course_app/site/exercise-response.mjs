@@ -1,35 +1,17 @@
-import { node, studyText, button, append } from './dom.mjs';
+import { node, svgNode, studyText, button, append } from './dom.mjs';
 import { graphResponse, plotResponse } from './graph-response.mjs';
+import { renderCode, codeEditor, languageName } from './code.mjs';
+import { openInWorkspace } from './files.mjs';
 
-// A textarea that behaves like a small code editor: Tab indents, Enter keeps the
-// indentation, and Esc then Tab leaves it, so keyboard users are never trapped.
-function codeEditor(input) {
-  let leaving = false;
-  const fit = () => { input.rows = Math.max(8, input.value.split('\n').length + 1); };
-  const insert = text => {
-    if (document.execCommand('insertText', false, text)) return;
-    input.setRangeText(text, input.selectionStart, input.selectionEnd, 'end'); input.dispatchEvent(new Event('input'));
-  };
-  input.addEventListener('keydown', event => {
-    const plain = !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey;
-    if (event.key === 'Tab' && plain && !leaving) { event.preventDefault(); insert('    '); }
-    else if (event.key === 'Enter' && plain && !event.isComposing) {
-      const before = input.value.slice(0, input.selectionStart), line = before.slice(before.lastIndexOf('\n') + 1);
-      event.preventDefault(); insert(`\n${line.match(/^[ \t]*/)[0]}${/[{:([]\s*$/.test(line) ? '    ' : ''}`);
-    }
-    leaving = event.key === 'Escape';
-  });
-  input.addEventListener('blur', () => { leaving = false; });
-  input.addEventListener('input', fit); fit();
-}
-// A code model answer stays code: monospaced, literal and labelled with its language.
+// A code model answer stays code: highlighted, literal and labelled with its language.
 function modelAnswer(check) {
   if (check.format !== 'code') return studyText('p', '', check.model_answer);
   const region = node('div', 'code-region model-code'); region.tabIndex = 0;
   region.setAttribute('role', 'region'); region.setAttribute('aria-label', 'Model answer');
-  region.append(node('span', 'small', check.language || 'code'), append(node('pre'), node('code', '', check.model_answer)));
+  region.append(node('span', 'small code-language', languageName(check.language, check.file || '') || 'Code'), renderCode(check.model_answer, check.language || (check.file || '').split('.').pop()));
   return region;
 }
+
 // What a learner compares their own work with, for every check except a choice.
 export function expectedAnswer(check) {
   const box = node('div', 'expected-answer');
@@ -72,11 +54,14 @@ export function expectedAnswer(check) {
 // After a choice is checked: why every option is right or wrong, collapsed by default.
 export function optionExplanations(check) {
   const box = node('details', 'disclosure option-explanations');
-  box.append(node('summary', '', 'Why each option is right or wrong'));
+  box.append(node('summary', '', 'Show reasoning'));
   const list = node('ul', 'option-explanation-list');
   for (const option of check.options) {
     const right = option.key === check.correct, item = node('li', right ? 'right' : 'wrong');
-    item.append(append(node('p', 'option-explanation-title'), node('span', 'option-verdict', right ? 'Correct' : 'Incorrect'), studyText('span', '', option.text)), studyText('p', '', option.feedback));
+    const mark = node('span', 'option-mark'), icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
+    icon.append(svgNode('path', { d: right ? 'M3.5 8.5 6.5 11.5 12.5 4.5' : 'M4.5 4.5l7 7M11.5 4.5l-7 7' }));
+    mark.append(icon, node('span', 'visually-hidden', right ? 'Correct: ' : 'Incorrect: '));
+    item.append(mark, append(node('div', 'option-explanation-body'), studyText('p', 'option-explanation-title', option.text), studyText('p', '', option.feedback)));
     list.append(item);
   }
   box.append(list);
@@ -104,13 +89,20 @@ export function renderResponse(check, draft, edit, identity) {
   }
   if (check.kind === 'graph') return graphResponse(check, draft, edit);
   if (check.kind === 'plot') return plotResponse(check, draft, edit);
+  if (check.kind === 'self_check' && check.format === 'code' && check.file) {
+    // The code is written where it lives: in the project file, as in the real exercise.
+    root.append(button(`Open ${check.file.split('/').pop()}`, () => openInWorkspace(check.file), 'secondary project-target'));
+    return result;
+  }
   if (check.kind === 'self_check' && check.format === 'code') {
-    const wrapper = node('label', 'stack', `Your code${check.language ? ` (${check.language})` : ''}`), input = node('textarea');
+    // A linked label, not a wrapping one, so the editor's highlighted copy stays out of its name.
+    const input = node('textarea'), label = node('label', '', `Your code${check.language ? ` (${languageName(check.language)})` : ''}`);
+    input.id = `code-${identity}`; label.htmlFor = input.id;
+    const wrapper = append(node('div', 'stack'), label);
     input.value = draft || check.starter_code || ''; input.maxLength = 20000;
-    input.classList.add('code-input'); input.spellcheck = false; input.autocapitalize = 'off'; input.setAttribute('autocorrect', 'off');
-    input.addEventListener('input', () => edit(input.value)); wrapper.append(input);
-    codeEditor(input);
-    root.append(node('p', 'small', 'Write the code here or in your own editor, then compare it with the model answer. Code is not run. Tab indents; Esc then Tab leaves the editor.'), wrapper);
+    input.addEventListener('input', () => edit(input.value));
+    wrapper.append(codeEditor(input, check.language));
+    root.append(wrapper, node('p', 'small code-editor-hint', 'Code is not run. Tab indents; Esc, then Tab, leaves the editor.'));
     if (check.starter_code) root.append(append(node('div', 'cluster code-tools'), button('Reset to starter code', () => { input.value = check.starter_code; input.dispatchEvent(new Event('input')); input.focus(); }, 'quiet')));
     return result;
   }

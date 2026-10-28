@@ -2,6 +2,8 @@ import data from './data.mjs';
 import { node, studyText, append, sourcesNote, svgNode } from './dom.mjs';
 import { iconButton } from './navigation.mjs';
 import { renderPlot } from './plot.mjs';
+import { renderCode, languageName, lineSet, markLines } from './code.mjs';
+import { renderFiles } from './files.mjs';
 import { renderFormula } from './formulas.mjs';
 import { renderUml } from './uml.mjs';
 import { videoPanel } from './video.mjs';
@@ -97,6 +99,32 @@ export function diagram(block) {
   update(); controls.hidden = block.frames.length < 2; box.append(description, region, state, controls);
   return box;
 }
+// A listing, optionally walked through: each stop marks its lines and says what they do.
+function codeBlock(block) {
+  const steps = block.walkthrough || [];
+  const region = node('div', 'code-region'); region.tabIndex = 0;
+  region.setAttribute('role', 'region'); region.setAttribute('aria-label', `${languageName(block.language) || 'Code'} listing`);
+  const pre = renderCode(block.code, block.language, { numbers: block.line_numbers || steps.length > 0 });
+  // A one-word label is a language name such as "java"; a longer one is kept as written.
+  region.append(node('span', 'small code-language', /\s/.test(block.language) ? block.language : languageName(block.language)), pre);
+  if (!steps.length) return region;
+  let at = 0;
+  const counter = node('span', 'small code-walk-count'), note = node('p', 'code-walk-note'); note.setAttribute('aria-live', 'polite');
+  const prev = iconButton('Previous stop', 'left', () => show(at - 1)), next = iconButton('Next stop', 'right', () => show(at + 1));
+  function show(index) {
+    at = index; const step = steps[at];
+    markLines(pre, lineSet(step.lines));
+    const [first, last = first] = step.lines.split('-');
+    counter.textContent = `${at + 1} / ${steps.length} · ${first === last ? `line ${first}` : `lines ${first}–${last}`}`;
+    note.replaceChildren(studyText('span', '', step.note));
+    prev.disabled = at === 0; next.disabled = at === steps.length - 1;
+    const marked = pre.querySelector('.code-line.marked');
+    if (marked && region.scrollHeight > region.clientHeight) region.scrollTop = Math.max(0, marked.offsetTop - region.clientHeight / 3);
+  }
+  show(0);
+  return append(node('div', 'code-walkthrough'), region, append(node('div', 'code-walk'), append(node('div', 'code-walk-controls'), prev, counter, next), note));
+}
+
 export function renderReading(unit) {
   const root = node('div');
   const video = videoPanel(unit);
@@ -122,17 +150,8 @@ export function renderBlockBody(block) {
       case 'diagram': root.append(diagram(block)); break;
       case 'uml': root.append(renderUml(block)); break;
       case 'plot': root.append(renderPlot(block).root); break;
-      case 'code': {
-        const region = node('div', 'code-region'); region.tabIndex = 0;
-        region.setAttribute('role', 'region'); region.setAttribute('aria-label', `${block.language} code`);
-        const listing = node('code');
-        if (block.line_numbers) {
-          listing.classList.add('numbered');
-          for (const line of block.code.split('\n')) listing.append(node('span', 'code-line', line), '\n');
-        } else listing.textContent = block.code;
-        region.append(node('span', 'small', block.language), append(node('pre'), listing));
-        root.append(region, studyText('p', '', block.explanation)); break;
-      }
+      case 'code': root.append(codeBlock(block), studyText('p', '', block.explanation)); break;
+      case 'files': root.append(renderFiles(block)); break;
       default: throw new Error('Unsupported study block. Rebuild the site with a compatible renderer.');
     }
   return root;
