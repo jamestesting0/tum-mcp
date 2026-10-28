@@ -1,5 +1,6 @@
 interface:
   display_name: "Prepare Lecture"
   short_description: "Capture extra teaching as timestamped lecture notes"
+  default_prompt: "Use $prepare-lecture to turn my selected lecture recordings into notes on what the professor explained beyond the slides."
 policy:
   allow_implicit_invocation: true

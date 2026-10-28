@@ -1,3 +1,7 @@
+interface:
+  display_name: "Read Content"
+  short_description: "Find and explain TUM course content with citations"
+  default_prompt: "Use $read-content to find and explain what my TUM courses say about this, with citations."
 dependencies:
   tools:
     - type: "mcp"

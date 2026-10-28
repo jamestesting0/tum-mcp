@@ -7,3 +7,5 @@ dependencies:
     - type: "mcp"
       value: "tum"
       description: "Find and import selected Studocu course materials."
+policy:
+  allow_implicit_invocation: true
