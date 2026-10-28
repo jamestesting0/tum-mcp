@@ -14,7 +14,9 @@ small, self-contained setting.
   source files only. Never open `.git/`, build scripts, IDE settings or anything that
   may hold credentials or remote URLs; never build, run, commit or push.
 
-Without a clone, work from the statement and say so in the report.
+Without a clone, work from the statement and say so in the report. Rebuild class
+diagrams from the statement (often PlantUML) as `uml` class diagrams with the members
+the task needs, never as an image or a generic box diagram.
 
 ## Find the concept kernels
 
@@ -28,20 +30,27 @@ For each task, note in `.tum-mcp/work/` a short table:
 Essential kernels are language features, APIs, design ideas, algorithms, invariants and
 contracts the tests check. Domain names, boilerplate, I/O and build setup are scaffolding.
 
-## Build a ladder per essential kernel
+## Build practice per essential kernel
 
 Use a fresh, minimal domain so students recognise the idea rather than the task.
+The core step is writing code. Give the method signature or a small class skeleton as
+`starter_code`, show the types it works with as a code or UML block, and ask for the
+body. The app opens the skeleton in a code editor; the student then compares their
+code with the model answer and rubric.
 
-| Rung | Check | Purpose |
+| Step | Check | Purpose |
 | --- | --- | --- |
-| Trace | `numeric`, `table` or `choice` | Predict output or state after given code. |
-| Locate and fix | `numeric` line number on a code block with `line_numbers: true`, then `choice` | Find the faulty line, pick the correct repair. |
-| Order | `order` (code lines with `language`; distractors are lines left out of every answer) | Assemble a correct method. |
-| Complete | `text` with `format: code` for short gaps (case-sensitive by default), `self_check` with a rubric for longer ones | Fill the gaps in a simplified skeleton of the real task. |
-| Write | `self_check` with `format: code`, `starter_code`, model answer and rubric; add example cases as a table | Write a short method or class from scratch. |
+| Write | `self_check` with `format: code`, `starter_code` (the signature or skeleton with a comment where the code goes), a complete model answer and a rubric of the essential points; add example inputs and outputs as a table | Implement the method or class that uses the kernel. One per essential kernel. |
+| Trace | `numeric`, `table` or `choice` | Predict output or state after given code, when a misconception about behaviour is likely. |
+| Fix | `numeric` line number on a code block with `line_numbers: true`, then the corrected line as `text` with `format: code` | Find and repair a typical bug. |
 | Map back | text step | Name the class or method in the original task where the idea applies. |
 
-Use as many rungs as the kernel needs. Distilled exercises set `kind: distilled`,
+Do not replace writing with recognition. Arranging given lines or choosing where a
+field belongs lets a student pass without producing code. Use `choice` only for a
+genuine design decision with plausible alternatives, and make every step a real piece
+of the work rather than a question about the statement.
+
+Use only the steps the kernel needs. Distilled exercises set `kind: distilled`,
 `distilled_from` with the original exercise keys and `concepts` naming the kernels;
 the app shows "Practice for" links back to the originals.
 
@@ -58,4 +67,4 @@ the app shows "Practice for" links back to the originals.
 Programming exams reuse these kernels under time pressure. Their exam patterns usually
 read: read the task list and constraints, locate the TODOs, satisfy contracts in test
 order, then check edge cases mentally. Size forecast coding questions to the exam's
-time, and prefer completion and writing rungs over full projects.
+time, and prefer writing single methods or small classes over full projects.

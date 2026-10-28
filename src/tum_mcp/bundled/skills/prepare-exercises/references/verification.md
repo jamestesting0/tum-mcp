@@ -16,7 +16,7 @@ For code/math, inspect long work, indentation, notation, starter code and rubric
 compare one alternative valid response and a flawed one without a false auto-grade.
 
 Build the actual app. Exercise one representative changed response branch only
-when it changes: wrong → repair/hint → edit → check/compare → continue, and direct
+when it changes: work → compare → continue (a choice: wrong → repair → change → check), and direct
 solution/paper-only review without typing. A hint should help beyond the bare
 statement while an independent learner incurs no compulsory step. Check new long
 notation, tables and diagrams at a phone width. Drafts, navigation, storage and

@@ -24,7 +24,7 @@ opaque course slug; they are not interchangeable. Synthetic recordings belong
 only to a synthetic course.
 
 Each section has a stable key/title, shared safe `blocks`, referenced `evidence`
-keys and optional `figures`. Reuse text, formula, table, diagram, plot and code
+keys and optional `figures`. Reuse text, formula, table, diagram, UML, plot and code
 blocks. Do not invent custom HTML, a new page system or assessment fields. Inline
 math uses `\( ... \)`; formula blocks retain validated LaTeX and explain symbols
 and conditions. The builder uses the existing safe math renderer.

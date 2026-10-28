@@ -3,16 +3,24 @@
 ## 0.11.0 — 2026-10-28
 
 - Add the base `prepare-exams` workflow and the local **Exam Prep** workspace: a
-  cheatsheet with a semester map, exam patterns with solving workflows, guided past
-  papers, and forecast practice exams with an exam mode. Statistics, map layout,
+  cheatsheet with a semester map you can pan, zoom and open full screen, exam patterns
+  with solving workflows and a worked practice question each, guided past papers, and
+  practice exams with a solution under every question. Statistics, map layout,
   blueprint and novelty checks are derived by code. Exam Prep is never published.
 - Add `tum-mcp study exam-report`, `study text` (page text extracted once per file),
   `study import` (private local files such as past exams you hold) and
   `study duplicates` (identical and near-duplicate copies across Moodle, Artemis,
   Studocu and local files); `study inspect` lists identical copies.
-- Exercises gain short typed answers, line-ordering checks, numbered code blocks and
-  distilled practice for large programming tasks; prepare-exercises documents how to
-  distil Artemis programming exercises.
+- Only multiple-choice answers are checked; every other step offers Compare, which shows
+  the expected answer, its explanation and a hint for the likeliest mistake.
+- Exercises gain short typed answers, code-writing steps that open the function skeleton
+  in an editor and show the model answer as code, numbered code blocks and distilled
+  practice for large programming tasks; prepare-exercises documents how to distil
+  Artemis programming exercises.
+- Authored questions must show code, a diagram, a formula, a table or a plot beside
+  their text. A new `uml` block draws UML class and sequence diagrams in every
+  workspace, and `` `code` `` in text renders as inline code.
+- Right-click (or Shift+F10) any sidebar entry to mark it completed.
 - Give every skill a Codex display name, so Codex no longer shows "Tum MCP:" prefixes.
 
 ## 0.10.0 — 2026-10-27

@@ -20,7 +20,7 @@ export function renderMap(onOpen) {
   const title = node('h2', '', 'Semester map'); title.id = 'exam-map-title';
   root.append(append(node('div', 'section-heading'), title));
   if (!map?.nodes?.length) { root.hidden = true; return root; }
-  root.append(node('p', 'small', 'Arrows run from a foundation to what builds on it; dashed lines join ideas that are easy to confuse.'));
+  root.append(node('p', 'small', 'Arrows run from a foundation to what builds on it; dashed lines join ideas that are easy to confuse. Drag to move; pinch or Ctrl/⌘ + scroll to zoom.'));
   const links = new Map(map.nodes.map(item => [item.key, []]));
   for (const edge of map.edges) { links.get(edge.start).push({ ...edge, other: edge.end, out: true }); links.get(edge.end).push({ ...edge, other: edge.start, out: false }); }
   const card = node('div', 'exam-map-card'); card.setAttribute('role', 'status'); card.hidden = true;
@@ -50,8 +50,9 @@ export function renderMap(onOpen) {
     card.hidden = false;
     if (focus) elements.get(key).focus();
   }
-  const scroller = node('div', 'exam-map-scroll'); scroller.tabIndex = -1;
-  const svg = svgNode('svg', { viewBox: `0 0 ${map.width} ${map.height}`, width: map.width, height: map.height, class: 'exam-map-svg', role: 'group', 'aria-label': 'Semester map of exam-relevant ideas' });
+  const scroller = node('div', 'exam-map-scroll'); scroller.tabIndex = 0;
+  scroller.setAttribute('aria-label', 'Semester map canvas. Arrow keys move it, plus and minus zoom, 0 fits it.');
+  const svg = svgNode('svg', { viewBox: `0 0 ${map.width} ${map.height}`, class: 'exam-map-svg', role: 'group', 'aria-label': 'Semester map of exam-relevant ideas' });
   const defs = svgNode('defs'), marker = svgNode('marker', { id: 'exam-arrow', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' });
   marker.append(svgNode('path', { d: 'M0 0L10 5L0 10z', class: 'exam-arrow-head' })); defs.append(marker); svg.append(defs);
   for (const column of map.columns) {
@@ -85,6 +86,7 @@ export function renderMap(onOpen) {
     rows.forEach((row, index) => { const span = svgNode('tspan', { x: width / 2, dy: index === 0 ? `${(1 - rows.length) * 0.6 + 0.35}em` : '1.2em' }); span.textContent = row; text.append(span); });
     group.append(text);
     group.addEventListener('click', () => select(item.key));
+    group.addEventListener('focus', () => reveal(item));
     group.addEventListener('keydown', event => {
       const index = ordered.findIndex(entry => entry.key === item.key);
       const next = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
@@ -93,12 +95,105 @@ export function renderMap(onOpen) {
     });
     elements.set(item.key, group); svg.append(group);
   }
-  let scale = 1;
-  const zoom = factor => () => {
-    scale = factor === 0 ? 1 : Math.min(2, Math.max(0.5, scale * factor));
-    svg.setAttribute('width', String(Math.round(map.width * scale))); svg.setAttribute('height', String(Math.round(map.height * scale)));
+  // The canvas: a viewBox over the build-time layout that the student moves and zooms.
+  const view = { x: 0, y: 0, scale: 1 };
+  const clamp = value => Math.min(3, Math.max(0.2, value));
+  let fitted = false;
+  function apply() {
+    const width = scroller.clientWidth, height = scroller.clientHeight;
+    if (width && height) svg.setAttribute('viewBox', `${view.x} ${view.y} ${width / view.scale} ${height / view.scale}`);
+  }
+  function fit() {
+    const width = scroller.clientWidth, height = scroller.clientHeight;
+    if (!width || !height) return;
+    view.scale = clamp(Math.min((width - 32) / map.width, (height - 32) / map.height, 1.25));
+    view.x = (map.width - width / view.scale) / 2; view.y = (map.height - height / view.scale) / 2;
+    fitted = true; apply();
+  }
+  function zoomAt(factor, cx = scroller.clientWidth / 2, cy = scroller.clientHeight / 2) {
+    const wx = view.x + cx / view.scale, wy = view.y + cy / view.scale;
+    view.scale = clamp(view.scale * factor); view.x = wx - cx / view.scale; view.y = wy - cy / view.scale; apply();
+  }
+  function pan(dx, dy) { view.x -= dx / view.scale; view.y -= dy / view.scale; apply(); }
+  function reveal(item) {
+    const width = scroller.clientWidth / view.scale, height = scroller.clientHeight / view.scale;
+    const inside = item.x >= view.x && item.y >= view.y && item.x + map.node_width <= view.x + width && item.y + map.node_height <= view.y + height;
+    if (!inside) { view.x = item.x + map.node_width / 2 - width / 2; view.y = item.y + map.node_height / 2 - height / 2; apply(); }
+  }
+  const pointers = new Map();
+  let travelled = 0, spread = 0, suppressClick = false;
+  const local = event => { const box = scroller.getBoundingClientRect(); return [event.clientX - box.left, event.clientY - box.top]; };
+  scroller.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    pointers.set(event.pointerId, [event.clientX, event.clientY]); travelled = 0;
+    if (pointers.size === 2) { const [[ax, ay], [bx, by]] = pointers.values(); spread = Math.hypot(ax - bx, ay - by); }
+  });
+  scroller.addEventListener('pointermove', event => {
+    const last = pointers.get(event.pointerId);
+    if (!last) return;
+    pointers.set(event.pointerId, [event.clientX, event.clientY]);
+    if (pointers.size === 2) {
+      const [[ax, ay], [bx, by]] = pointers.values(), distance = Math.hypot(ax - bx, ay - by);
+      const box = scroller.getBoundingClientRect();
+      if (spread) zoomAt(distance / spread, (ax + bx) / 2 - box.left, (ay + by) / 2 - box.top);
+      spread = distance; travelled = Infinity; return;
+    }
+    const dx = event.clientX - last[0], dy = event.clientY - last[1];
+    travelled += Math.abs(dx) + Math.abs(dy);
+    if (travelled > 4) {
+      if (!scroller.hasPointerCapture(event.pointerId)) { scroller.setPointerCapture(event.pointerId); scroller.classList.add('panning'); }
+      pan(dx, dy);
+    }
+  });
+  const release = event => {
+    if (!pointers.delete(event.pointerId)) return;
+    if (travelled > 4) suppressClick = true;
+    if (!pointers.size) scroller.classList.remove('panning');
+    spread = 0;
   };
-  const controls = append(node('div', 'cluster exam-map-controls'), button('Zoom out', zoom(0.8), 'quiet'), button('Reset zoom', zoom(0), 'quiet'), button('Zoom in', zoom(1.25), 'quiet'));
+  scroller.addEventListener('pointerup', release); scroller.addEventListener('pointercancel', release);
+  // A drag ends with a click on whatever is under the pointer; it must not select a node.
+  scroller.addEventListener('click', event => { if (suppressClick) { suppressClick = false; event.stopPropagation(); event.preventDefault(); } }, true);
+  scroller.addEventListener('wheel', event => {
+    const full = root.classList.contains('expanded');
+    if (!(event.ctrlKey || event.metaKey) && !full) return;
+    event.preventDefault();
+    if (event.ctrlKey || event.metaKey) zoomAt(Math.exp(-event.deltaY * 0.0025), ...local(event)); else pan(-event.deltaX, -event.deltaY);
+  }, { passive: false });
+  scroller.addEventListener('keydown', event => {
+    if (event.target !== scroller) return;
+    const step = 48, moves = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+    if (moves[event.key]) pan(...moves[event.key]);
+    else if (event.key === '+' || event.key === '=') zoomAt(1.25);
+    else if (event.key === '-') zoomAt(0.8);
+    else if (event.key === '0') fit();
+    else return;
+    event.preventDefault();
+  });
+  const full = button('Full screen', () => toggleFull(), 'quiet exam-map-full');
+  function toggleFull() {
+    if (document.fullscreenElement === root) { document.exitFullscreen(); return; }
+    if (root.classList.contains('expanded')) { setExpanded(false); return; }
+    if (root.requestFullscreen) root.requestFullscreen().catch(() => setExpanded(true)); else setExpanded(true);
+  }
+  function setExpanded(on) {
+    root.classList.toggle('expanded', on); full.textContent = on ? 'Exit full screen' : 'Full screen';
+    requestAnimationFrame(fit);
+  }
+  const onFullscreen = () => {
+    if (!root.isConnected) { document.removeEventListener('fullscreenchange', onFullscreen); return; }
+    setExpanded(document.fullscreenElement === root);
+  };
+  document.addEventListener('fullscreenchange', onFullscreen);
+  root.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && root.classList.contains('expanded') && !document.fullscreenElement) { setExpanded(false); full.focus(); }
+  });
+  const named = (label, name, action) => { const control = button(label, action, 'quiet exam-map-zoom'); control.setAttribute('aria-label', name); control.title = name; return control; };
+  const controls = append(node('div', 'cluster exam-map-controls'), named('−', 'Zoom out', () => zoomAt(0.8)), named('+', 'Zoom in', () => zoomAt(1.25)), button('Fit', fit, 'quiet'), full);
+  new ResizeObserver((entries, observer) => {
+    if (!scroller.isConnected) { observer.disconnect(); return; }
+    if (fitted) apply(); else fit();
+  }).observe(scroller);
   scroller.append(svg);
   // Phones show topics first; a topic opens its concepts as a list.
   const overview = node('div', 'exam-map-overview');
@@ -118,10 +213,5 @@ export function renderMap(onOpen) {
     group.append(items); overview.append(group);
   }
   root.append(controls, scroller, overview, card);
-  // Start fitted to the frame when the map is wider than the reading column.
-  requestAnimationFrame(() => {
-    const available = scroller.clientWidth - 2;
-    if (available > 0 && map.width > available) { scale = Math.max(0.8, available / map.width); zoom(1)(); }
-  });
   return root;
 }

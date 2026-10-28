@@ -15,11 +15,15 @@ export function svgNode(tag, attributes = {}) {
 export function studyText(tag, className = '', text = '') {
   const element = node(tag, className);
   let start = 0;
-  for (const match of text.matchAll(/\\\((.*?)\\\)/gs)) {
+  // Inline math \( ... \) and inline code `...`; text inside backticks stays literal.
+  for (const match of text.matchAll(/`([^`\n]+)`|\\\((.*?)\\\)/gs)) {
     element.append(text.slice(start, match.index));
-    const markup = Object.hasOwn(data.inlineMath || {}, match[1]) && data.inlineMath[match[1]], math = markup && parseMath(markup);
-    if (math) { math.setAttribute('display', 'inline'); math.classList.add('inline-math'); element.append(math); }
-    else element.append(match[0]);
+    if (match[1] !== undefined) element.append(node('code', 'inline-code', match[1]));
+    else {
+      const markup = Object.hasOwn(data.inlineMath || {}, match[2]) && data.inlineMath[match[2]], math = markup && parseMath(markup);
+      if (math) { math.setAttribute('display', 'inline'); math.classList.add('inline-math'); element.append(math); }
+      else element.append(match[0]);
+    }
     start = match.index + match[0].length;
   }
   element.append(text.slice(start)); return element;

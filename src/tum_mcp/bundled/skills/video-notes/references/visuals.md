@@ -51,6 +51,7 @@ deliberate overlap is right (a label on its node is not text-on-text), add a
 | --- | --- |
 | diagram | Rebuild nodes from the block's x and y, scaled into `main`; animate frames as state changes with a non-color cue. |
 | formula | Build term by term after the concrete instance; symbol glossary as labels; conditions as a side note. |
+| uml | Redraw the class or sequence diagram in the same notation; reveal classes or messages in order, keeping UML arrowheads and dashes exact. |
 | plot | Axes with the source labels and units; draw series in order; sweep a parameter only when the formula defines the function exactly. |
 | code | `self.code(key)` lines with a moving highlight and a small variable table driven by storyboard numbers. |
 | table | Reveal rows against the comparison criterion; highlight contrasting cells. |

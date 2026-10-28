@@ -30,7 +30,7 @@ from tum_mcp.study_content import (
     Unit,
     render_blocks,
 )
-from tum_mcp.study_math import INLINE_MATH, compile_latex
+from tum_mcp.study_math import compile_latex, inline_math
 from tum_mcp.study_models import (
     Digest,
     StudyState,
@@ -70,6 +70,7 @@ TEMPLATE_FILES = (
     "exercise-response.mjs",
     "graph-response.mjs",
     "plot.mjs",
+    "uml.mjs",
     "dom.mjs",
     "mathml.mjs",
     "reading.mjs",
@@ -77,6 +78,7 @@ TEMPLATE_FILES = (
     "learning.mjs",
     "question-review.mjs",
     "navigation.mjs",
+    "completion.mjs",
     "flashcards.mjs",
     "revision.mjs",
     "anchors.mjs",
@@ -263,7 +265,7 @@ def _inline_math(value: JsonValue) -> dict[str, str]:
     """Compile each distinct inline expression once, excluding literal payloads."""
     match value:
         case str():
-            return {item[1]: compile_latex(item[1]) for item in INLINE_MATH.finditer(value)}
+            return {expression: compile_latex(expression) for expression in inline_math(value)}
         case list():
             return {key: math for item in value for key, math in _inline_math(item).items()}
         case dict():

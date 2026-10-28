@@ -1,4 +1,5 @@
 import data from './data.mjs';
+import { enableCompletion } from './completion.mjs';
 import { node, studyText, button, append, focusHeading, scrollReadingTo } from './dom.mjs';
 
 const paths = {
@@ -232,6 +233,7 @@ export function renderSidebar(context) {
   sections.append(revision);
   sections.hidden = context.showRevision === false;
   body.append(context.outline ? context.outline() : outline(typeof context.location === 'number' ? context.location : -1), sections);
+  enableCompletion(body);
   const boundary = node('div', 'outline-boundary'); boundary.setAttribute('aria-hidden', 'true');
   sidebar.append(boundary, top, body, footer);
   sidebar.addEventListener('keydown', event => {

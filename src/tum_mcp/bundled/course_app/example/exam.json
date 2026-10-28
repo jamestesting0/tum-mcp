@@ -132,7 +132,7 @@
               "key": "demo-q2",
               "number": "2",
               "points": 8,
-              "format": "short",
+              "format": "code",
               "patterns": [
                 "order-search"
               ],
@@ -148,7 +148,7 @@
                     "demo-past-paper"
                   ],
                   "paragraphs": [
-                    "Order the steps of breadth-first search from a start node."
+                    "Write `bfs(graph, start)`, which returns the nodes reachable from a start node in breadth-first order."
                   ]
                 }
               ],
@@ -163,43 +163,43 @@
                     "paragraphs": [
                       "Enqueue the start, then repeatedly dequeue and enqueue unvisited neighbours."
                     ]
+                  },
+                  {
+                    "kind": "code",
+                    "title": "Code",
+                    "sources": [
+                      "demo-past-paper"
+                    ],
+                    "language": "python",
+                    "code": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    seen = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbour in graph[node]:\n            if neighbour not in seen:\n                seen.add(neighbour)\n                queue.append(neighbour)\n    return order\n",
+                    "explanation": "A queue gives breadth-first order."
                   }
                 ]
               },
               "check": {
-                "kind": "order",
-                "items": [
-                  {
-                    "key": "a",
-                    "text": "Mark the start visited and enqueue it."
-                  },
-                  {
-                    "key": "b",
-                    "text": "Dequeue the next node."
-                  },
-                  {
-                    "key": "c",
-                    "text": "Enqueue each unvisited neighbour and mark it."
-                  },
-                  {
-                    "key": "d",
-                    "text": "Push the start on a stack."
-                  }
-                ],
-                "answers": [
-                  [
-                    "a",
-                    "b",
-                    "c"
-                  ]
-                ],
-                "feedback": "BFS uses a queue, so the oldest discovered node is expanded first."
+                "kind": "self_check",
+                "format": "code",
+                "language": "python",
+                "starter_code": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    # your code\n",
+                "model_answer": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    seen = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbour in graph[node]:\n            if neighbour not in seen:\n                seen.add(neighbour)\n                queue.append(neighbour)\n    return order\n",
+                "rubric": [
+                  "Keeps the frontier in a queue and takes the oldest node with `popleft()`",
+                  "Marks a neighbour seen when it is enqueued, so no node is added twice",
+                  "Records each node once, in the order it is taken"
+                ]
               },
               "marking": [
                 {
-                  "text": "Correct order",
-                  "points": 8,
-                  "auto": true
+                  "text": "Queue as the frontier",
+                  "points": 3
+                },
+                {
+                  "text": "Neighbours marked when enqueued",
+                  "points": 3
+                },
+                {
+                  "text": "Each node recorded once, in order",
+                  "points": 2
                 }
               ],
               "marking_basis": "authored"
@@ -355,7 +355,109 @@
         }
       ],
       "example": {
-        "question": "demo-q1"
+        "question": "demo-q1",
+        "steps": [
+          {
+            "step": 1,
+            "prompt": "In the question, which waiting item is served next?",
+            "hint": "Look for words like \"first\", \"oldest\" or \"newest\".",
+            "check": {
+              "kind": "choice",
+              "options": [
+                {
+                  "key": "old",
+                  "text": "The one that has waited longest",
+                  "feedback": "Yes: first in, first out."
+                },
+                {
+                  "key": "new",
+                  "text": "The newest one",
+                  "feedback": "Newest first is a stack."
+                },
+                {
+                  "key": "small",
+                  "text": "The one with the smallest key",
+                  "feedback": "Smallest first is a priority queue."
+                },
+                {
+                  "key": "any",
+                  "text": "Any item, in no fixed order",
+                  "feedback": "The question fixes an order."
+                }
+              ],
+              "correct": "old"
+            },
+            "answer": [
+              {
+                "kind": "text",
+                "title": "Removal rule",
+                "sources": [
+                  "components"
+                ],
+                "paragraphs": [
+                  "The oldest request is served first: first in, first out."
+                ]
+              }
+            ]
+          },
+          {
+            "step": 2,
+            "prompt": "Which structure has exactly this rule?",
+            "check": {
+              "kind": "text",
+              "accepted": [
+                "queue",
+                "a queue",
+                "fifo queue"
+              ],
+              "case_sensitive": false,
+              "feedback": "First in, first out names one structure."
+            },
+            "answer": [
+              {
+                "kind": "text",
+                "title": "Structure",
+                "sources": [
+                  "components"
+                ],
+                "paragraphs": [
+                  "A queue."
+                ]
+              }
+            ]
+          },
+          {
+            "step": 3,
+            "prompt": "Give the cost of adding and removing, and an implementation that achieves it.",
+            "answer": [
+              {
+                "kind": "table",
+                "title": "Costs",
+                "sources": [
+                  "components"
+                ],
+                "columns": [
+                  "Operation",
+                  "Linked list",
+                  "Circular array"
+                ],
+                "rows": [
+                  [
+                    "Enqueue",
+                    "O(1)",
+                    "O(1) amortized"
+                  ],
+                  [
+                    "Dequeue",
+                    "O(1)",
+                    "O(1)"
+                  ]
+                ],
+                "caption": "Both implementations serve the oldest item in constant time."
+              }
+            ]
+          }
+        ]
       },
       "drill": [
         {
@@ -370,17 +472,45 @@
             "case_sensitive": false,
             "feedback": "The newest item leaves first."
           },
-          "explanation": "Last in, first out: a stack."
+          "explanation": "Last in, first out: a stack.",
+          "blocks": [
+            {
+              "kind": "table",
+              "title": "Undo history",
+              "sources": [
+                "components"
+              ],
+              "columns": [
+                "Action",
+                "History after it"
+              ],
+              "rows": [
+                [
+                  "Type \"a\"",
+                  "a"
+                ],
+                [
+                  "Type \"b\"",
+                  "a, b"
+                ],
+                [
+                  "Undo",
+                  "a"
+                ]
+              ],
+              "caption": "Undo removes \"b\", the newest action."
+            }
+          ]
         }
       ]
     },
     {
       "key": "order-search",
       "topic": "graphs",
-      "title": "Order a search procedure",
-      "summary": "Arrange the steps of a traversal and justify the data structure.",
+      "title": "Write a search procedure",
+      "summary": "Write a traversal and justify the data structure that holds its frontier.",
       "cues": [
-        "Steps of a traversal are listed out of order"
+        "A traversal must be written or completed for a graph"
       ],
       "workflow": [
         {
@@ -398,7 +528,144 @@
           "key": "components",
           "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
         }
-      ]
+      ],
+      "example": {
+        "blocks": [
+          {
+            "kind": "text",
+            "title": "Task",
+            "sources": [
+              "components"
+            ],
+            "paragraphs": [
+              "Breadth-first search from S: say which structure holds the frontier, then write the search."
+            ]
+          },
+          {
+            "kind": "diagram",
+            "title": "Graph",
+            "sources": [
+              "components"
+            ],
+            "description": "An undirected graph: S links to A and B, and A links to C.",
+            "nodes": [
+              {
+                "key": "s",
+                "label": "S",
+                "x": 80,
+                "y": 160
+              },
+              {
+                "key": "a",
+                "label": "A",
+                "x": 260,
+                "y": 80
+              },
+              {
+                "key": "b",
+                "label": "B",
+                "x": 260,
+                "y": 240
+              },
+              {
+                "key": "c",
+                "label": "C",
+                "x": 450,
+                "y": 80
+              }
+            ],
+            "edges": [
+              {
+                "start": "s",
+                "end": "a"
+              },
+              {
+                "start": "s",
+                "end": "b"
+              },
+              {
+                "start": "a",
+                "end": "c"
+              }
+            ],
+            "frames": [
+              {
+                "caption": "Search starts at S."
+              }
+            ],
+            "state_labels": "caption"
+          }
+        ],
+        "solution": {
+          "blocks": [
+            {
+              "kind": "text",
+              "title": "Solution",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "A queue holds the frontier. Put S in; then repeatedly take the oldest node, visit its unseen neighbours and add them."
+              ]
+            }
+          ]
+        },
+        "steps": [
+          {
+            "step": 1,
+            "prompt": "Breadth-first search explores the oldest discovered node first. Which structure is the frontier?",
+            "check": {
+              "kind": "text",
+              "accepted": [
+                "queue",
+                "a queue"
+              ],
+              "case_sensitive": false,
+              "feedback": "Oldest first is first in, first out."
+            },
+            "answer": [
+              {
+                "kind": "text",
+                "title": "Frontier",
+                "sources": [
+                  "components"
+                ],
+                "paragraphs": [
+                  "A queue."
+                ]
+              }
+            ]
+          },
+          {
+            "step": 2,
+            "prompt": "Write `bfs(graph, start)`.",
+            "check": {
+              "kind": "self_check",
+              "format": "code",
+              "language": "python",
+              "starter_code": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    # your code\n",
+              "model_answer": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    seen = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbour in graph[node]:\n            if neighbour not in seen:\n                seen.add(neighbour)\n                queue.append(neighbour)\n    return order\n",
+              "rubric": [
+                "Keeps the frontier in a queue and takes the oldest node with `popleft()`",
+                "Marks a neighbour seen when it is enqueued, so no node is added twice",
+                "Records each node once, in the order it is taken"
+              ]
+            },
+            "answer": [
+              {
+                "kind": "code",
+                "title": "Search",
+                "sources": [
+                  "components"
+                ],
+                "language": "python",
+                "code": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    seen = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbour in graph[node]:\n            if neighbour not in seen:\n                seen.add(neighbour)\n                queue.append(neighbour)\n    return order\n",
+                "explanation": "Take the oldest node, then add its unseen neighbours."
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "mocks": [
@@ -441,6 +708,36 @@
               "paragraphs": [
                 "A browser returns to the most recently visited page first. Name the structure and its costs."
               ]
+            },
+            {
+              "kind": "table",
+              "title": "Visits",
+              "sources": [
+                "components"
+              ],
+              "columns": [
+                "Step",
+                "Page shown"
+              ],
+              "rows": [
+                [
+                  "Open",
+                  "home"
+                ],
+                [
+                  "Click",
+                  "news"
+                ],
+                [
+                  "Click",
+                  "sport"
+                ],
+                [
+                  "Back",
+                  "news"
+                ]
+              ],
+              "caption": "Back returns to the page visited most recently."
             }
           ],
           "check": {
@@ -516,6 +813,16 @@
               "paragraphs": [
                 "Explain why depth-first search can use a stack instead of recursion."
               ]
+            },
+            {
+              "kind": "code",
+              "title": "Recursive search",
+              "sources": [
+                "components"
+              ],
+              "language": "python",
+              "code": "def dfs(node, seen):\n    seen.add(node)\n    for nxt in node.neighbours:\n        if nxt not in seen:\n            dfs(nxt, seen)",
+              "explanation": "Rewrite this without recursion."
             }
           ],
           "marking": [

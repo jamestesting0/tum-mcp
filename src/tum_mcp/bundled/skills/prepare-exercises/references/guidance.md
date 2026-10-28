@@ -13,14 +13,17 @@ solution is always available without passing steps.
 
 An early hint points to a relevant relation or asks a smaller question. A later
 hint can narrow the operation; explanation and solution may complete it. Add only
-useful hint levels, without quotas. Wrong-answer feedback repairs the earliest
-likely error; avoid revealing the key immediately. An optional prerequisite link
+useful hint levels, without quotas. A check's feedback repairs the earliest likely
+error; the app shows it beside the expected answer when the student compares. An optional prerequisite link
 and inline reminder can repair a gap without a separate prerequisite wizard.
 
 For deterministic answers, use the actual response form: numeric values with
 explicit tolerance/units, table cells, node/edge/path selection, plotted sample
 coordinates or four-option selection when recognition is the learning goal. Use a rubric/model derivation for proofs,
-code/design and other open work. A rubric compares assumptions, essential reasoning
+code/design and other open work. For programming, a step asks the student to
+write the method or class from a starter skeleton and compare with a model answer,
+not to arrange or recognise given code. Every step does a real piece of the work; do
+not add questions that only restate the statement. A rubric compares assumptions, essential reasoning
 and conclusion, and admits equivalent approaches. Never use keyword matching or
 pretend prose is automatically graded. Students may work on paper and compare
 without typing. Do not require confidence forms, timers or self-ratings.

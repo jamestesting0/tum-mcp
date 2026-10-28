@@ -75,10 +75,8 @@ def auto_marked_self_check(value: dict) -> None:
             "marked untested but past exams",
         ),
         (
-            lambda v: mock_question(v).update(
-                statement=copy.deepcopy(
-                    sitting(v, "ws23")["variants"][0]["questions"][0]["statement"]
-                )
+            lambda v: mock_question(v)["statement"].__setitem__(
+                0, copy.deepcopy(sitting(v, "ws23")["variants"][0]["questions"][0]["statement"][0])
             ),
             "cites only the exam's sources",
         ),
@@ -93,11 +91,27 @@ def auto_marked_self_check(value: dict) -> None:
         ),
         (lambda v: sitting(v, "ss19").pop("relevance_note"), "Explain partial or outdated"),
         (
-            lambda v: v["patterns"][0].update(example={"question": "ws23-b-1"}),
+            lambda v: v["patterns"][0]["example"].update(question="ws23-b-1"),
             "without a stored statement",
+        ),
+        (
+            lambda v: v["patterns"][0]["example"]["steps"].pop(1),
+            "applies every workflow step, in order",
         ),
         (lambda v: v["concepts"][0].update(topic="missing"), "declared topic"),
         (lambda v: v.update(count=3), "Extra inputs are not permitted"),
+        (lambda v: mock_question(v)["statement"].pop(), "needs a code snippet, diagram"),
+        (lambda v: v["patterns"][0]["drill"][0].pop("blocks"), "Drill d1 needs a code snippet"),
+        (
+            lambda v: v["patterns"][1]["example"]["blocks"].pop(),
+            "worked practice question needs a code snippet",
+        ),
+        (
+            lambda v: v["patterns"][0]["example"]["steps"][1].update(
+                answer=[{"kind": "text", "title": "I", "sources": ["slides"], "paragraphs": ["x"]}]
+            ),
+            "the past question is text only",
+        ),
     ],
 )
 def test_hard_rules_reject_wrong_data(document: dict, mutate: Callable, message: str) -> None:
@@ -127,7 +141,7 @@ def test_a_near_verbatim_forecast_is_rejected_but_a_variant_is_not(document: dic
 
     def copied(value: dict) -> None:
         block = copy.deepcopy(past) | {"sources": ["slides"]}
-        mock_question(value)["statement"] = [block]
+        mock_question(value)["statement"][0] = block
 
     with pytest.raises(ValidationError, match="nearly copies past question ws23-a-1"):
         ExamContent.model_validate(change(document, copied))

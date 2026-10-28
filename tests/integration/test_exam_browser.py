@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from collections.abc import Iterator
 from functools import partial
 from threading import Thread
@@ -58,19 +59,14 @@ def test_cheatsheet_scans_filters_flags_and_maps(
     page.get_by_role("heading", name="Cheatsheet", exact=True).wait_for()
     entries = page.locator(".exam-entry")
     expect(entries).to_have_count(6)
-    page.get_by_role("searchbox", name="Search the cheatsheet").fill("interchangeable")
-    expect(page.locator(".exam-entry:visible")).to_have_count(1)
-    expect(page.locator(".exam-filter-status")).to_have_text("1 of 6 entries shown")
-    page.get_by_role("searchbox", name="Search the cheatsheet").fill("")
-    page.get_by_role("button", name="Mark for review: Observer").click()
-    page.get_by_role("button", name="Review only").click()
-    expect(page.locator(".exam-entry:visible")).to_have_count(1)
-    page.reload()
-    page.get_by_role("button", name="Review only").click()
-    expect(page.locator(".exam-entry:visible")).to_have_count(1)
-    page.get_by_role("button", name="Review only").click()
-    page.get_by_role("button", name="Expand all").click()
-    expect(page.locator(".exam-entry-details[open]")).to_have_count(6)
+    expect(page.locator(".exam-sheet .unit-summary, .exam-toolbar")).to_have_count(0)
+    page.locator("#concept-observer .exam-entry-row").click()
+    # One citation per entry, however many detail blocks it has.
+    citations = (
+        "[...document.querySelectorAll('.exam-entry')]"
+        ".map(e => e.querySelectorAll('.citation').length)"
+    )
+    assert set(page.evaluate(citations)) == {1}
     expect(page.locator("#concept-observer")).to_contain_text("When you see:")
     if width >= 720:
         node = page.locator('.exam-node[data-concept="loose-coupling"]')
@@ -82,37 +78,78 @@ def test_cheatsheet_scans_filters_flags_and_maps(
         node.focus()
         page.keyboard.press("ArrowRight")
         assert page.evaluate("document.activeElement.dataset.concept") != "loose-coupling"
+        canvas = page.locator(".exam-map-scroll")
+        canvas.scroll_into_view_if_needed()
+        box = canvas.bounding_box()
+        assert box is not None
+        before = page.locator(".exam-map-svg").get_attribute("viewBox")
+        page.mouse.move(box["x"] + 40, box["y"] + 40)
+        page.mouse.down()
+        page.mouse.move(box["x"] + 140, box["y"] + 90, steps=6)
+        page.mouse.up()
+        moved = page.locator(".exam-map-svg").get_attribute("viewBox")
+        assert moved != before
+        page.keyboard.down("Control")
+        page.mouse.wheel(0, -300)
+        page.keyboard.up("Control")
+        zoomed = page.locator(".exam-map-svg").get_attribute("viewBox")
+        assert zoomed and moved and float(zoomed.split()[2]) < float(moved.split()[2])
+        page.get_by_role("button", name="Full screen").click()
+        expect(page.locator(".exam-map")).to_have_class(re.compile("expanded"))
+        page.get_by_role("button", name="Exit full screen").click()
+        expect(page.locator(".exam-map")).not_to_have_class(re.compile("expanded"))
     else:
         expect(page.locator(".exam-map-scroll")).to_be_hidden()
         page.locator(".exam-map-topic summary", has_text="Structural patterns").click()
         page.locator(".exam-map-item", has_text="Decorator").click()
-        expect(page.locator(".exam-map-card")).to_contain_text("Not yet tested")
+        expect(page.locator(".exam-map-card")).to_contain_text("Untested")
     no_overflow(page)
     assert errors == []
 
 
 @pytest.mark.parametrize("width", [390, 1440])
-def test_patterns_drills_and_recognition(
+def test_patterns_drills_and_worked_practice(
     course_browser: Browser, exam_url: str, width: int
 ) -> None:
     errors: list[str] = []
     page = open_page(course_browser, exam_url, width, errors)
     page.goto(exam_url + "#exam/patterns")
-    links = page.locator(".exam-pattern-list .unit-title")
+    page.get_by_role("heading", name="Design an Observer", exact=True).wait_for()
+    links = page.locator(".sidebar .unit-group", has_text="Exam patterns").locator(".unit-title")
     expect(links).to_have_text(
         ["Design an Observer", "Build a part-whole tree", "Swap an algorithm"]
     )
-    recognition = page.locator(".exam-recognition")
-    recognition.get_by_label("Design an Observer").check()
-    expect(recognition.locator(".feedback")).to_contain_text("Correct")
-    page.goto(exam_url + "#exam/patterns/observer-design")
-    page.get_by_role("heading", name="Design an Observer", exact=True).wait_for()
     expect(page.locator(".exam-instances tbody tr")).to_have_count(3)
     drill = page.locator(".exam-drill-item")
+    expect(drill.locator("code.inline-code")).to_have_text("List<Display>")
     drill.get_by_label("Your answer").fill("Subject")
-    drill.get_by_role("button", name="Check answer").click()
-    expect(drill.locator(".feedback")).to_contain_text("The subject owns registrations")
+    expect(drill.get_by_role("button", name="Check answer")).to_have_count(0)
+    drill.locator("summary", has_text="Compare").click()
+    expect(drill.locator(".expected-value")).to_have_text("Subject")
+    expect(drill.locator(".exam-answer")).to_contain_text("The subject owns registrations")
+    practice = page.locator(".exam-guided-step")
+    expect(practice).to_have_count(3)
+    practice.nth(2).locator("summary", has_text="Compare").click()
+    expect(practice.nth(2)).to_contain_text("Loop over displays.")
     no_overflow(page)
+    assert errors == []
+
+
+def test_sidebar_entries_can_be_marked_completed(course_browser: Browser, exam_url: str) -> None:
+    errors: list[str] = []
+    page = open_page(course_browser, exam_url, 1440, errors)
+    sheet = page.locator(".sidebar a.unit-link", has_text="Cheatsheet")
+    sheet.click(button="right")
+    page.get_by_role("menuitem", name="Mark as completed").click()
+    expect(sheet.locator(".done-mark")).to_be_visible()
+    expect(page.get_by_role("menu")).to_have_count(0)
+    page.reload()
+    expect(sheet.locator(".done-mark")).to_be_visible()
+    sheet.focus()
+    page.keyboard.press("Shift+F10")
+    page.get_by_role("menuitem", name="Mark as not completed").press("Enter")
+    expect(sheet.locator(".done-mark")).to_have_count(0)
+    expect(sheet).to_be_focused()
     assert errors == []
 
 
@@ -127,52 +164,39 @@ def test_guided_past_paper_uses_exercise_steps(
     page.get_by_role("heading", name="Question 1", exact=True).first.wait_for()
     page.locator("summary", has_text="Guidance").click()
     page.get_by_label("Your answer").fill("Weather station")
-    page.get_by_role("button", name="Check answer").click()
-    expect(page.locator(".exercise-feedback")).to_contain_text("Correct")
+    page.get_by_role("button", name="Compare").click()
+    expect(page.locator(".exercise-feedback .expected-value")).to_have_text("station")
     page.get_by_role("button", name="Continue").click()
-    page.get_by_role("heading", name="Order the lines of notify().").wait_for()
-    order = page.locator(".order-list")
-
-    def arrange() -> list[str]:
-        return order.locator(".order-item code").all_inner_texts()
-
-    for line in ("for (Observer o : observers) {", "  o.update(temperature);", "}"):
-        while arrange().index(line) > [
-            "for (Observer o : observers) {",
-            "  o.update(temperature);",
-            "}",
-        ].index(line):
-            page.get_by_role("button", name=f'Move "{line.strip()}" up').click()
-    page.get_by_role("checkbox").nth(arrange().index("observers.clear();")).check()
-    page.get_by_role("button", name="Check answer").click()
-    expect(page.locator(".exercise-feedback")).to_contain_text("Correct")
+    page.get_by_role("heading", name="Write notifyObservers().").wait_for()
+    editor = page.get_by_label("Your code (java)")
+    expect(editor).to_have_value("public void notifyObservers() {\n    // your code\n}")
+    page.get_by_role("button", name="Compare").click()
+    expect(page.locator(".model-code")).to_contain_text("o.update(temperature);")
     no_overflow(page)
     assert errors == []
 
 
 @pytest.mark.parametrize("width", [390, 1440])
-def test_practice_exam_mode_scores_and_retakes(
+def test_practice_exam_shows_each_solution_on_demand(
     course_browser: Browser, exam_url: str, width: int
 ) -> None:
     errors: list[str] = []
     page = open_page(course_browser, exam_url, width, errors)
     page.goto(exam_url + "#exam/mock/forecast-1")
     expect(page.locator(".exam-mode .notice")).to_contain_text("not a past or leaked exam")
-    page.get_by_label("Use a 90-minute timer").uncheck()
-    page.get_by_role("button", name="Start").click()
-    page.locator('.exam-question[data-question="f1-2"]').get_by_label("Wraps at runtime").check()
-    page.get_by_role("button", name="Finish and see results").click()
-    page.get_by_role("dialog").get_by_role("button", name="Finish").click()
-    expect(page.locator(".exam-score")).to_have_text("4 of 18 points")
-    manual = page.get_by_label("Same interface (4)")
-    manual.check()
-    expect(page.locator(".exam-score")).to_have_text("8 of 18 points")
-    assert page.evaluate("document.activeElement.type") == "checkbox"
-    expect(page.locator(".exam-summary")).to_contain_text("Design an Observer")
-    page.reload()
-    expect(page.locator(".exam-score")).to_have_text("8 of 18 points")
-    page.get_by_role("button", name="Retake").click()
-    page.get_by_role("dialog").get_by_role("button", name="Retake").click()
-    page.get_by_role("button", name="Start").wait_for()
+    expect(page.locator(".exam-question")).to_have_count(2)
+    sequence = page.locator('.exam-question[data-question="f1-1"] svg.uml')
+    expect(sequence.locator(".uml-participant")).to_have_count(3)
+    expect(sequence.locator('[data-fragment="loop"]')).to_contain_text("for each member")
+    expect(sequence.locator('[data-message="return"] .uml-line.dashed')).to_have_count(1)
+    expect(sequence.locator(".uml-participant circle")).to_have_count(1)
+    expect(page.get_by_role("heading", name="Question 1", exact=True)).to_have_count(0)
+    expect(page.get_by_role("heading", name="Question 1 \u00b7 10 points")).to_have_count(1)
+    first = page.locator('.exam-question[data-question="f1-1"]')
+    expect(first.locator(".exam-solution")).not_to_have_attribute("open", "")
+    first.locator(".exam-solution > summary").click()
+    expect(first.locator(".exam-solution")).to_contain_text("Loop over members.")
+    expect(first.locator(".exam-marking")).to_contain_text("Notification implemented (10)")
+    expect(page.get_by_role("button", name="Start")).to_have_count(0)
     no_overflow(page)
     assert errors == []

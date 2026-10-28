@@ -26,6 +26,8 @@ template, not necessarily a good model for teaching or question design.
 3. Solve independently, then prepare only useful conceptual steps, requested hints,
    specific feedback and a direct worked solution. Read [guidance](references/guidance.md).
    For large programming tasks, add distilled practice per [coding](references/coding.md).
+   Questions you write show their code, diagram, UML diagram, formula, table or plot beside the
+   text; where a released statement is text only, add the picture in a step.
    Paper work and independent solving remain valid; do not impose typing or ratings.
 4. Write the affected objects in exercises.json using `tum-mcp study schema exercises`;
    read [content](references/content.md) for identities, checks and source links.

@@ -218,14 +218,17 @@ Imported files stay private and survive campus syncs. Copies of the same exam fr
 different places count once.
 
 - **Cheatsheet**: a semester map of the exam-relevant ideas and one-line entries with
-  formulas, triggers and pitfalls; open an entry for details. Search, filter to core
-  ideas or ideas you marked for review, and print it.
+  formulas, triggers and pitfalls; open an entry for details. The map can be dragged,
+  zoomed and opened full screen.
 - **Exam patterns**: recurring question types with recognition cues, a solving workflow,
-  answer template, marking points, a worked past question and drills. A recognition
-  drill shows real past questions and asks which pattern applies.
+  answer template, marking points, a worked practice that applies each workflow step,
+  and drills whose answers you can open at any time.
 - **Practice exams**: work through real past papers question by question with
-  guidance, or take them under exam conditions with a timer; forecast practice exams
-  follow the real exam's length and weighting with new variants and untested topics.
+  guidance, or read a whole paper and open each question's solution to check yourself;
+  forecast practice exams follow the real exam's length and weighting with new
+  variants and untested topics.
+
+Right-click any entry in the sidebar, in any workspace, to mark it as completed.
 
 Statistics such as "seen in 4 of 6 exams" are history, never a prediction. Exam Prep
 always stays local: it is never published.

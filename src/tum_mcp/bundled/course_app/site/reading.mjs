@@ -3,6 +3,7 @@ import { node, studyText, append, sourcesNote, svgNode } from './dom.mjs';
 import { iconButton } from './navigation.mjs';
 import { renderPlot } from './plot.mjs';
 import { renderFormula } from './formulas.mjs';
+import { renderUml } from './uml.mjs';
 import { videoPanel } from './video.mjs';
 
 function table(block) {
@@ -119,6 +120,7 @@ export function renderBlockBody(block) {
       case 'formula': root.append(renderFormula(block)); break;
       case 'table': root.append(table(block)); break;
       case 'diagram': root.append(diagram(block)); break;
+      case 'uml': root.append(renderUml(block)); break;
       case 'plot': root.append(renderPlot(block).root); break;
       case 'code': {
         const region = node('div', 'code-region'); region.tabIndex = 0;

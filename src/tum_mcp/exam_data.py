@@ -20,7 +20,7 @@ from tum_mcp.exam_content import (
     similarity,
     variant_revision,
 )
-from tum_mcp.study_content import StudyContent
+from tum_mcp.study_content import StudyContent, has_visual
 from tum_mcp.study_math import compile_latex
 from tum_mcp.study_models import StudyState, resolved_material_path
 from tum_mcp.study_store import confined, digest
@@ -374,6 +374,12 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
                 "similar_statements": similar,
             }
         )
+    # Printed past questions stay as printed; guided ones should add a picture in a step.
+    for key, (_, _, question) in content.past_questions().items():
+        guidance = question.guidance.steps if question.guidance else ()
+        shown = (*question.statement, *(block for step in guidance for block in step.blocks))
+        if question.guidance and not has_visual(shown):
+            flag(f"question:{key}", "visual blocks in statement and guidance", 0, 1)
     review = [
         {
             "question": key,

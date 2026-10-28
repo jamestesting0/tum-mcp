@@ -10,7 +10,7 @@ from tum_mcp.exercise_checks import ChoiceCheck as ChoiceCheck
 from tum_mcp.exercise_checks import NumericCheck as NumericCheck
 from tum_mcp.exercise_checks import SelfCheck as SelfCheck
 from tum_mcp.settings import Frozen
-from tum_mcp.study_content import Block, SourceVersion, Text
+from tum_mcp.study_content import VISUAL_RULE, Block, SourceVersion, Text, has_visual
 from tum_mcp.study_models import Key
 from tum_mcp.study_store import digest
 
@@ -69,6 +69,8 @@ class Exercise(Frozen):
         distilled = self.kind == "distilled"
         if distilled != bool(self.distilled_from) or self.key in self.distilled_from:
             raise ValueError("Distilled practice names the original exercises it trains.")
+        if distilled and not has_visual(self.statement):
+            raise ValueError(f"Distilled practice needs {VISUAL_RULE}.")
         source_keys = {item.key for item in self.sources}
         if len(source_keys) != len(self.sources):
             raise ValueError("Exercise source keys must be distinct.")

@@ -10,7 +10,6 @@ from latex2mathml import exceptions
 from latex2mathml.converter import convert
 
 MATH_NS = "http://www.w3.org/1998/Math/MathML"
-INLINE_MATH = re.compile(r"\\\((.*?)\\\)", re.DOTALL)
 MATH_TAGS = set(
     "math mrow mi mn mo mtext mfrac msqrt mroot msub msup msubsup mtable mtr mtd "
     "munder mover munderover mmultiscripts mprescripts none mspace mstyle menclose".split()
@@ -113,11 +112,21 @@ def compile_latex(value: str) -> str:
     return safe_mathml(result)
 
 
+# Inline code `...` and inline math \( ... \), scanned left to right as the app does, so
+# text inside backticks stays literal code even when it contains \( or \).
+INLINE_SPANS = re.compile(r"`[^`\n]+`|\\\((.*?)\\\)", re.DOTALL)
+
+
+def inline_math(value: str) -> list[str]:
+    """The inline LaTeX expressions of a text, outside inline code."""
+    return [match[1] for match in INLINE_SPANS.finditer(value) if match[1] is not None]
+
+
 def validate_inline(value: str) -> str:
     """Inline delimiters are explicit, so currency and literal code stay untouched."""
-    for match in INLINE_MATH.finditer(value):
-        compile_latex(match[1])
-    remaining = INLINE_MATH.sub("", value)
+    for expression in inline_math(value):
+        compile_latex(expression)
+    remaining = INLINE_SPANS.sub("", value)
     if r"\(" in remaining or r"\)" in remaining:
         raise ValueError("Inline LaTeX needs matching \\( and \\) delimiters.")
     return value

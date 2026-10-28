@@ -1,11 +1,10 @@
 import data from './data.mjs';
 import { node, studyText, button, append, sourcesNote } from './dom.mjs';
 import { renderReading, renderBlockBody } from './reading.mjs';
-import { renderResponse } from './exercise-response.mjs';
+import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam, patterns, concepts, pastQuestions, seen, sample, list, quietLink } from './exam-state.mjs';
 
-const ordered = (exam.statistics.pattern_order || []).map(key => patterns.get(key)).filter(Boolean);
 const plain = text => studyText('span', '', text || '').textContent;
 
 function section(title, ...children) {
@@ -18,76 +17,52 @@ function blocksWithoutTitles(blocks) {
   for (const block of blocks) root.append(renderBlockBody(block));
   return root;
 }
-// One deterministic answer check with feedback; paper work is always fine.
+// An optional check, and the answer whenever the student wants it.
+// A choice is checked; every other item is compared with its answer at will.
+function answerControls(check, identity, answer, expected = true) {
+  const feedback = node('div', 'exercise-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
+  const response = renderResponse(check, '', () => feedback.replaceChildren(), identity);
+  if (check?.kind === 'choice') {
+    const actions = append(node('div', 'cluster exercise-actions'), button('Check answer', () => {
+      const result = response.validate();
+      if (!result.valid) { feedback.replaceChildren(node('p', 'small', 'Choose an answer first.')); return; }
+      response.showResult(true);
+      feedback.replaceChildren(append(node('section', `feedback${result.correct ? '' : ' incorrect'}`), node('h3', '', result.correct ? 'Correct' : 'Not quite'),
+        ...(result.correct ? [] : result.repairs.map(text => studyText('p', '', text))), answer), optionExplanations(check));
+    }, 'primary'));
+    return [response.root, actions, feedback];
+  }
+  const compare = node('details', 'disclosure exam-answer'); compare.append(node('summary', '', 'Compare'));
+  if (check && expected) compare.append(expectedAnswer(check));
+  compare.append(answer);
+  return [response.root, compare];
+}
+
 function drillItem(item, pattern) {
   const root = node('div', 'exam-drill-item');
   root.append(annotateExam(studyText('p', 'exam-drill-prompt', item.prompt), `pattern:${pattern.key}`, pattern.revision, `drill:${item.key}`));
-  if (item.blocks?.length) root.append(renderReading({ blocks: item.blocks }));
-  const feedback = node('div', 'exercise-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
-  let draft = '';
-  const response = renderResponse(item.check, draft, value => { draft = value; feedback.replaceChildren(); }, `drill-${pattern.key}-${item.key}`);
-  const reveal = () => feedback.replaceChildren(append(node('section', 'feedback'), node('h3', '', 'Explanation'), studyText('p', '', item.explanation)));
-  const action = button(item.check ? (item.check.kind === 'self_check' ? 'Compare' : 'Check answer') : 'Show explanation', () => {
-    if (!item.check || item.check.kind === 'self_check') { reveal(); return; }
-    const result = response.validate();
-    if (!result.valid) { feedback.replaceChildren(node('p', 'small', 'Answer first, then check.')); return; }
-    response.showResult(true);
-    feedback.replaceChildren(append(node('section', `feedback${result.correct ? '' : ' incorrect'}`), node('h3', '', result.correct ? 'Correct' : 'Not quite'),
-      ...(result.correct ? [studyText('p', '', item.explanation)] : result.repairs.map(text => studyText('p', '', text)))));
-  }, 'primary');
-  root.append(response.root, append(node('div', 'cluster exercise-actions'), action), feedback);
+  if (item.blocks?.length) root.append(blocksWithoutTitles(item.blocks));
+  root.append(...answerControls(item.check, `drill-${pattern.key}-${item.key}`, studyText('p', '', item.explanation)));
   return root;
 }
 
-function recognitionDrill() {
-  const pool = [...pastQuestions.values()].filter(({ question }) => (question.status ?? 'classified') === 'classified' && question.statement?.length && patterns.has(question.patterns?.[0]));
-  if (!pool.length || ordered.length < 2) return null;
-  const root = node('section', 'exam-section exam-recognition'); root.append(node('h2', '', 'Which pattern is this?'));
-  root.append(node('p', 'small', 'Real past questions, without their titles. Name the pattern before solving.'));
-  const body = node('div'); root.append(body);
-  let index = 0;
-  function show() {
-    const { sitting, question } = pool[index % pool.length], answer = patterns.get(question.patterns[0]);
-    const others = ordered.filter(item => item !== answer).sort((a, b) => (b.topic === answer.topic) - (a.topic === answer.topic) || a.key.localeCompare(b.key)).slice(0, 3);
-    const options = [answer, ...others].sort((a, b) => plain(a.title).localeCompare(plain(b.title)));
-    const choices = node('fieldset', 'exercise-choices'); choices.append(node('legend', 'small', `${sitting.label}, question ${question.number}`));
-    const feedback = node('div', 'exercise-feedback'); feedback.setAttribute('role', 'status');
-    for (const option of options) {
-      const label = node('label', 'option'), input = node('input'); input.type = 'radio'; input.name = 'recognition'; input.value = option.key;
-      input.addEventListener('change', () => {
-        const right = option === answer;
-        feedback.replaceChildren(append(node('section', `feedback${right ? '' : ' incorrect'}`), node('h3', '', right ? 'Correct' : 'Not quite'),
-          append(node('p'), document.createTextNode(right ? 'Cues: ' : `This is “${plain(answer.title)}”. Cues: `), studyText('span', '', answer.cues.join('; '))),
-          quietLink('Open the pattern', `#exam/patterns/${answer.key}`)));
-      });
-      label.append(input, studyText('span', 'option-body', option.title)); choices.append(label);
-    }
-    const next = button('Next question', () => { index++; show(); next.focus(); }, 'secondary');
-    next.hidden = pool.length < 2;
-    body.replaceChildren(blocksWithoutTitles(question.statement), choices, feedback, next);
-  }
-  show();
-  return root;
-}
-
-export function renderPatternList() {
-  const root = node('div', 'exam-patterns');
-  const heading = node('h1', '', 'Exam patterns');
-  root.append(append(node('div', 'unit-header'), node('p', 'eyebrow', 'Exam Prep'), heading,
-    node('p', 'unit-summary', 'Recurring question types from past exams, each with a workflow that solves them. Ordered by how often and how recently they appeared.')));
-  if (!ordered.length) { root.append(node('p', '', 'Exam patterns have not been prepared yet.')); return { root, heading, title: 'Exam patterns', items: [] }; }
-  const note = sample(exam.statistics.patterns[ordered[0].key]);
-  if (note) root.append(node('p', 'notice', `${note}: treat the order as a rough guide and study every core topic.`));
-  const listing = node('ol', 'exam-pattern-list');
-  for (const pattern of ordered) {
-    const stats = exam.statistics.patterns[pattern.key];
-    const link = node('a', 'unit-link'); link.href = `#exam/patterns/${pattern.key}`;
-    link.append(studyText('span', 'unit-title', pattern.title), studyText('span', 'small', pattern.summary), node('span', 'small exam-badge', seen(stats)));
-    listing.append(append(node('li'), link));
-  }
-  root.append(listing);
-  const drill = recognitionDrill(); if (drill) root.append(drill);
-  return { root, heading, title: 'Exam patterns', items: [] };
+// The pattern's workflow applied to one question, one labelled step per move.
+function workedPractice(pattern) {
+  const example = pattern.example, past = example.question && pastQuestions.get(example.question);
+  const blocks = past ? past.question.statement : example.blocks, solution = past ? past.question.solution : example.solution;
+  const origin = past ? `From ${plain(past.sitting.label)}, question ${past.question.number}` : 'Practice question written for this pattern';
+  const steps = node('ol', 'exam-guided');
+  example.steps.forEach((step, index) => {
+    const card = node('li', 'exam-guided-step');
+    card.append(append(node('p', 'exam-guided-label'), node('span', 'exam-guided-number', `Step ${step.step}`), studyText('span', '', pattern.workflow[step.step - 1].do)));
+    card.append(annotateExam(studyText('p', 'exam-guided-prompt', step.prompt), `pattern:${pattern.key}`, pattern.revision, `practice:${index}`));
+    if (step.hint) { const hint = node('details', 'disclosure plain'); hint.append(node('summary', '', 'Hint'), studyText('p', '', step.hint)); card.append(hint); }
+    card.append(...answerControls(step.check, `practice-${pattern.key}-${index}`, blocksWithoutTitles(step.answer), step.check?.kind !== 'self_check'));
+    steps.append(card);
+  });
+  const full = node('details', 'disclosure');
+  full.append(node('summary', '', solution.origin === 'official' ? 'Full official solution' : 'Full solution (prepared, not official)'), blocksWithoutTitles(solution.blocks));
+  return section('Worked practice', node('p', 'small', `${origin}. Work through it with the workflow above.`), blocksWithoutTitles(blocks), steps, full);
 }
 
 export function renderPattern(key) {
@@ -112,13 +87,7 @@ export function renderPattern(key) {
   if (pattern.template?.length) root.append(section('Answer template', mark(blocksWithoutTitles(pattern.template), 'template')));
   if (pattern.marking?.length) root.append(section('Where the marks are', node('p', 'small', pattern.marking_basis === 'official' ? 'From official marking' : 'Inferred from solutions, not official'), mark(list('', pattern.marking), 'marking')));
   if (pattern.pitfalls?.length) root.append(section('Pitfalls', mark(list('', pattern.pitfalls), 'pitfalls')));
-  if (pattern.example) {
-    const past = pattern.example.question && pastQuestions.get(pattern.example.question);
-    const blocks = past ? past.question.statement : pattern.example.blocks, solution = past ? past.question.solution : pattern.example.solution;
-    const origin = past ? `${past.sitting.label}, question ${past.question.number}` : 'Authored example';
-    const answer = node('details', 'disclosure'); answer.append(node('summary', '', solution.origin === 'official' ? 'Official solution' : 'Prepared solution, not official'), renderReading({ blocks: solution.blocks }));
-    root.append(section('Worked example', node('p', 'small', origin), renderReading({ blocks }), answer));
-  }
+  root.append(workedPractice(pattern));
   if (pattern.variations?.length) root.append(section('How it varied', mark(list('', pattern.variations), 'variations')));
   if (pattern.drill?.length) root.append(section('Practise', ...pattern.drill.map(drill => drillItem(drill, pattern))));
   const related = pattern.concepts.map(key => concepts.get(key)).filter(Boolean);

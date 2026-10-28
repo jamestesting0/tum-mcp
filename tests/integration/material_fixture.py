@@ -131,6 +131,17 @@ def text(title: str, source: str, *paragraphs: str) -> dict:
     return {"kind": "text", "title": title, "sources": [source], "paragraphs": list(paragraphs)}
 
 
+def code(title: str, source: str, snippet: str) -> dict:
+    return {
+        "kind": "code",
+        "title": title,
+        "sources": [source],
+        "language": "java",
+        "code": snippet,
+        "explanation": title,
+    }
+
+
 def exam_project(tmp_path: Path) -> Path:
     return material_project(
         tmp_path, {key: (kind, pdf_bytes(pages)) for key, (kind, pages) in EXAM_FILES.items()}
@@ -381,11 +392,43 @@ def exam_document(root: Path) -> dict:
                 "marking_basis": "official",
                 "concepts": ["observer", "loose-coupling"],
                 "sources": [ref("slides")],
-                "example": {"question": "ws23-a-1"},
+                "example": {
+                    "question": "ws23-a-1",
+                    "steps": [
+                        {
+                            "step": 1,
+                            "prompt": "Which object changes, and which objects react?",
+                            "check": {
+                                "kind": "text",
+                                "accepted": ["station", "the station", "weather station"],
+                                "case_sensitive": False,
+                                "feedback": "The object whose state changes is the subject.",
+                            },
+                            "answer": [text("Roles", "slides", "The station is the subject.")],
+                        },
+                        {
+                            "step": 2,
+                            "prompt": "Write the observer interface.",
+                            "hint": "One method the station calls on every display.",
+                            "answer": [
+                                code(
+                                    "Interface",
+                                    "slides",
+                                    "interface Display { void update(double t); }",
+                                )
+                            ],
+                        },
+                        {
+                            "step": 3,
+                            "prompt": "How does a new measurement reach every display?",
+                            "answer": [text("Notify", "slides", "Loop over displays.")],
+                        },
+                    ],
+                },
                 "drill": [
                     {
                         "key": "d1",
-                        "prompt": "Which class holds the observer list?",
+                        "prompt": "Which class holds the `List<Display>` of observers?",
                         "check": {
                             "kind": "text",
                             "accepted": ["Subject", "the subject"],
@@ -393,6 +436,9 @@ def exam_document(root: Path) -> dict:
                             "feedback": "The object that changes owns the list.",
                         },
                         "explanation": "The subject owns registrations.",
+                        "blocks": [
+                            code("Classes", "slides", "class Station { List<Display> displays; }")
+                        ],
                     }
                 ],
             },
@@ -405,6 +451,20 @@ def exam_document(root: Path) -> dict:
                 "workflow": [{"do": "Extract a strategy interface"}],
                 "concepts": ["strategy"],
                 "sources": [ref("slides")],
+                "example": {
+                    "blocks": [
+                        text("Task", "slides", "Export switches on a format flag."),
+                        code("Export", "slides", 'if (format.equals("csv")) csv(); else pdf();'),
+                    ],
+                    "solution": {"blocks": [text("Solution", "slides", "One Exporter each.")]},
+                    "steps": [
+                        {
+                            "step": 1,
+                            "prompt": "Name the interface the formats share.",
+                            "answer": [text("Interface", "slides", "Exporter.export().")],
+                        }
+                    ],
+                },
             },
             {
                 "key": "composite-tree",
@@ -415,6 +475,24 @@ def exam_document(root: Path) -> dict:
                 "workflow": [{"do": "Give leaves and composites one component interface"}],
                 "concepts": ["composite"],
                 "sources": [ref("slides")],
+                "example": {
+                    "blocks": [
+                        text("Task", "slides", "Folders hold files and folders."),
+                        code(
+                            "Types",
+                            "slides",
+                            "class File { long size; }\nclass Folder { List<?> items; }",
+                        ),
+                    ],
+                    "solution": {"blocks": [text("Solution", "slides", "Node: File, Folder.")]},
+                    "steps": [
+                        {
+                            "step": 1,
+                            "prompt": "What do files and folders share?",
+                            "answer": [text("Component", "slides", "A Node with size().")],
+                        }
+                    ],
+                },
             },
         ],
         "mocks": [
@@ -441,7 +519,33 @@ def exam_document(root: Path) -> dict:
                                 "Question 1",
                                 "slides",
                                 "Implement the chat room notification from its sequence diagram.",
-                            )
+                            ),
+                            {
+                                "kind": "uml",
+                                "title": "Chat room",
+                                "sources": ["slides"],
+                                "diagram": "sequence",
+                                "description": "Alice posts; the room notifies every member.",
+                                "participants": [
+                                    {"key": "alice", "name": "alice: Member", "kind": "actor"},
+                                    {"key": "room", "name": "room: Room"},
+                                    {"key": "m", "name": "m: Member"},
+                                ],
+                                "messages": [
+                                    {"start": "alice", "end": "room", "text": "post(text)"},
+                                    {"start": "room", "end": "room", "text": "store(text)"},
+                                    {"start": "room", "end": "m", "text": "update(text)"},
+                                    {"start": "m", "end": "room", "text": "ok", "kind": "return"},
+                                ],
+                                "fragments": [
+                                    {
+                                        "kind": "loop",
+                                        "condition": "for each member",
+                                        "first": 2,
+                                        "last": 3,
+                                    }
+                                ],
+                            },
                         ],
                         "marking": [{"text": "Notification implemented", "points": 10}],
                         "minutes": 20,
@@ -460,7 +564,10 @@ def exam_document(root: Path) -> dict:
                                 "Question 2",
                                 "slides",
                                 "Contrast a logging decorator with a logging subclass.",
-                            )
+                            ),
+                            code(
+                                "Logger", "slides", "class Logged implements Store { Store inner; }"
+                            ),
                         ],
                         "check": {
                             "kind": "choice",
@@ -516,20 +623,19 @@ def with_guided_paper(document: dict) -> dict:
                 "explanation": "The station is the subject; displays observe it.",
             },
             {
-                "key": "order",
-                "purpose": "Order the notification",
-                "prompt": "Order the lines of notify().",
+                "key": "notify",
+                "purpose": "Write the notification",
+                "prompt": "Write notifyObservers().",
                 "check": {
-                    "kind": "order",
+                    "kind": "self_check",
+                    "format": "code",
                     "language": "java",
-                    "items": [
-                        {"key": "a", "code": "for (Observer o : observers) {"},
-                        {"key": "b", "code": "  o.update(temperature);"},
-                        {"key": "c", "code": "}"},
-                        {"key": "d", "code": "observers.clear();"},
-                    ],
-                    "answers": [["a", "b", "c"]],
-                    "feedback": "Loop over observers and update each one.",
+                    "starter_code": "public void notifyObservers() {\n    // your code\n}",
+                    "model_answer": (
+                        "public void notifyObservers() {\n    for (Observer o : observers) {\n"
+                        "        o.update(temperature);\n    }\n}"
+                    ),
+                    "rubric": ["Updates every registered observer", "Keeps the registrations"],
                 },
                 "explanation": "Iterate and update; never clear registrations.",
             },

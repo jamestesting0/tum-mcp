@@ -7,31 +7,10 @@ from tum_mcp.exercise_content import ExerciseContent
 CHECK = TypeAdapter(Check)
 
 
-def order(**overrides: object) -> dict:
-    value = {
-        "kind": "order",
-        "language": "java",
-        "items": [
-            {"key": "a", "code": "List<Integer> copy = new ArrayList<>(items);"},
-            {"key": "b", "code": "copy.sort(Comparator.reverseOrder());"},
-            {"key": "c", "code": "return copy;"},
-            {"key": "d", "code": "items.sort(null);"},
-        ],
-        "answers": [["a", "b", "c"]],
-        "feedback": "Copy before sorting so the caller's list stays unchanged.",
-    }
-    return value | overrides
-
-
-def test_order_checks_accept_distractors_and_reject_inconsistent_answers() -> None:
-    assert CHECK.validate_python(order()).kind == "order"
-    with pytest.raises(ValidationError, match="same items"):
-        CHECK.validate_python(order(answers=[["a", "b", "c"], ["a", "b", "d"]]))
-    with pytest.raises(ValidationError, match="language"):
-        CHECK.validate_python(order(language=None))
-    with pytest.raises(ValidationError, match="either text or one line"):
+def test_line_ordering_is_not_a_check_kind() -> None:
+    with pytest.raises(ValidationError):
         CHECK.validate_python(
-            order(items=[{"key": "a", "text": "x", "code": "y"}, {"key": "b", "text": "z"}])
+            {"kind": "order", "items": [], "answers": [], "feedback": "Write the code instead."}
         )
 
 
@@ -72,6 +51,16 @@ def exercise(key: str, **overrides: object) -> dict:
     return value | overrides
 
 
+STATEMENT_CODE = {
+    "kind": "code",
+    "title": "Account",
+    "sources": ["sheet"],
+    "language": "java",
+    "code": "class Account<T> { T id; }",
+    "explanation": "Make the id type generic.",
+}
+
+
 def content(*exercises: dict) -> dict:
     return {
         "course_key": "c",
@@ -84,14 +73,29 @@ def test_distilled_practice_names_existing_originals() -> None:
         content(
             exercise("bank"),
             exercise(
-                "bank-drill", kind="distilled", distilled_from=["bank"], concepts=["Generics"]
+                "bank-drill",
+                kind="distilled",
+                distilled_from=["bank"],
+                concepts=["Generics"],
+                statement=[STATEMENT_CODE],
             ),
         )
     )
     assert valid.sets[0].exercises[1].kind == "distilled"
+    with pytest.raises(ValidationError, match="needs a code snippet, diagram"):
+        ExerciseContent.model_validate(
+            content(exercise("bank"), exercise("drill", kind="distilled", distilled_from=["bank"]))
+        )
     with pytest.raises(ValidationError, match="names the original"):
         ExerciseContent.model_validate(content(exercise("drill", kind="distilled")))
     with pytest.raises(ValidationError, match="original exercises in this file"):
         ExerciseContent.model_validate(
-            content(exercise("drill", kind="distilled", distilled_from=["missing"]))
+            content(
+                exercise(
+                    "drill",
+                    kind="distilled",
+                    distilled_from=["missing"],
+                    statement=[STATEMENT_CODE],
+                )
+            )
         )

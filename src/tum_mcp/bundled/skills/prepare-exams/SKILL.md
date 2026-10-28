@@ -32,12 +32,14 @@ Exam Prep stays local: it is never published and publish-course never includes i
    exam points; write the one line first, put the rest behind Expand, and link the
    ideas that genuinely depend on or contrast with each other.
 5. **Patterns.** A short workflow that solves every member, recognition cues from the
-   question text, an answer template, marking points, pitfalls, one worked instance
-   and a drill. Programming tasks follow
+   question text, an answer template, marking points, pitfalls, a worked practice
+   that applies every workflow step in turn, and a drill. Programming tasks follow
    [coding](../prepare-exercises/references/coding.md).
 6. **Practice** ([forecast](references/forecast.md)). Make chosen past papers
    replayable with guidance; write forecast exams to the real exam's blueprint from
    `exam-report --section blueprint`, as genuine variants or untested core ideas.
+   Every question you write shows its code, diagram, UML diagram, formula, table or plot beside
+   the text.
 7. **Build and verify** ([verification](references/verification.md)). Edit
    `exam.json` programmatically by key and preserve unrelated items. Build once per
    coherent batch, review `exam-report --section targets`, then check the app.

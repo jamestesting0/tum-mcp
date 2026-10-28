@@ -174,10 +174,124 @@ class PlotBlock(Sourced):
         return self
 
 
+UmlLine = Annotated[str, Field(min_length=1, max_length=120)]
+UmlShort = Annotated[str, Field(max_length=20)]
+
+
+class UmlMember(Frozen):
+    """One attribute or operation in UML notation, such as `+ update(t: double): void`."""
+
+    text: UmlLine
+    static: bool = False
+    abstract: bool = False
+
+
+class UmlClass(Frozen):
+    key: Key
+    name: Annotated[str, Field(min_length=1, max_length=60)]
+    stereotype: Literal["interface", "abstract", "enumeration"] | None = None
+    attributes: tuple[UmlMember, ...] = Field(default=(), max_length=20)
+    operations: tuple[UmlMember, ...] = Field(default=(), max_length=20)
+
+
+class UmlRelation(Frozen):
+    """`start` is the child, the whole (diamond) or the client; `end` the other side."""
+
+    start: Key
+    end: Key
+    kind: Literal[
+        "inheritance",
+        "realization",
+        "association",
+        "directed_association",
+        "aggregation",
+        "composition",
+        "dependency",
+    ]
+    label: Annotated[str, Field(max_length=40)] = ""
+    start_multiplicity: UmlShort = ""
+    end_multiplicity: UmlShort = ""
+
+
+class UmlParticipant(Frozen):
+    key: Key
+    name: Annotated[str, Field(min_length=1, max_length=40)]
+    kind: Literal["object", "actor"] = "object"
+
+
+class UmlMessage(Frozen):
+    start: Key
+    end: Key
+    text: Annotated[str, Field(min_length=1, max_length=80)]
+    kind: Literal["call", "return", "async", "create"] = "call"
+
+
+class UmlFragment(Frozen):
+    """A combined fragment over messages `first`..`last` (0-based, inclusive)."""
+
+    kind: Literal["loop", "alt", "opt", "par"]
+    condition: Annotated[str, Field(max_length=60)] = ""
+    first: int = Field(ge=0)
+    last: int = Field(ge=0)
+
+
+class UmlBlock(Sourced):
+    """A UML class or sequence diagram, laid out by the app from its structure."""
+
+    kind: Literal["uml"]
+    diagram: Literal["class", "sequence"]
+    description: Text
+    classes: tuple[UmlClass, ...] = Field(default=(), max_length=20)
+    relations: tuple[UmlRelation, ...] = Field(default=(), max_length=40)
+    participants: tuple[UmlParticipant, ...] = Field(default=(), max_length=10)
+    messages: tuple[UmlMessage, ...] = Field(default=(), max_length=40)
+    fragments: tuple[UmlFragment, ...] = Field(default=(), max_length=10)
+
+    @model_validator(mode="after")
+    def consistent(self) -> "UmlBlock":
+        if self.diagram == "class":
+            if not self.classes or self.participants or self.messages or self.fragments:
+                raise ValueError("A UML class diagram has classes and relations only.")
+            keys = [item.key for item in self.classes]
+            if len(set(keys)) != len(keys):
+                raise ValueError("UML class keys must be distinct.")
+            for relation in self.relations:
+                if relation.start not in keys or relation.end not in keys:
+                    raise ValueError("A UML relation names an unknown class.")
+                if relation.start == relation.end and relation.kind in (
+                    "inheritance",
+                    "realization",
+                ):
+                    raise ValueError("A class cannot inherit from itself.")
+            return self
+        if not self.participants or not self.messages or self.classes or self.relations:
+            raise ValueError("A UML sequence diagram has participants and messages only.")
+        keys = [item.key for item in self.participants]
+        if len(set(keys)) != len(keys):
+            raise ValueError("UML participant keys must be distinct.")
+        if any(item.start not in keys or item.end not in keys for item in self.messages):
+            raise ValueError("A UML message names an unknown participant.")
+        if any(
+            item.first > item.last or item.last >= len(self.messages) for item in self.fragments
+        ):
+            raise ValueError("A UML fragment must cover existing messages in order.")
+        return self
+
+
 Block = Annotated[
-    TextBlock | FormulaBlock | TableBlock | DiagramBlock | CodeBlock | PlotBlock,
+    TextBlock | FormulaBlock | TableBlock | DiagramBlock | CodeBlock | PlotBlock | UmlBlock,
     Field(discriminator="kind"),
 ]
+
+
+# Authored questions pair their text with at least one of these, because prose alone
+# makes code, structures and calculations hard to picture.
+VISUAL_KINDS = frozenset({"formula", "table", "diagram", "code", "plot", "uml"})
+VISUAL_RULE = "a code snippet, diagram, UML diagram, formula, table or plot beside its text"
+
+
+def has_visual(blocks: tuple[Block, ...]) -> bool:
+    return any(block.kind in VISUAL_KINDS for block in blocks)
 
 
 def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
@@ -188,7 +302,9 @@ def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
         match block:
             case FormulaBlock():
                 value["mathml"] = block.mathml or compile_latex(block.latex or "")
-            case TextBlock() | TableBlock() | CodeBlock() | DiagramBlock() | PlotBlock():
+            case (
+                TextBlock() | TableBlock() | CodeBlock() | DiagramBlock() | PlotBlock() | UmlBlock()
+            ):
                 pass
             case unreachable:
                 assert_never(unreachable)

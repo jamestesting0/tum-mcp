@@ -35,6 +35,11 @@ inside ordinary words, and reread the prose after notation edits. Long equations
 belong in formula blocks. Keep source titles, outline labels and diagram labels
 plain. Dollar signs stay literal; code blocks and comments never interpret markup.
 
+Wrap identifiers, method names, short expressions in code and file names in single
+backticks in the same teaching text: `` `getChildren()` `` renders as inline code in
+every workspace. Text inside backticks stays literal, including `\(`. Use a code
+block for anything longer than one line.
+
 ## Blocks
 
 Every block has a title and sources.
@@ -46,6 +51,7 @@ Every block has a title and sources.
 | table | Column labels, rectangular rows and a meaningful caption. |
 | code | Language, literal code and an explanation. Label authored examples; never execute downloaded code. |
 | diagram | Positioned nodes, optional directed or labelled edges and frames on the schema's canvas. Circles hold up to four characters; use boxes for longer labels. Frames name active, frontier and visited nodes; `state_labels: caption` omits traversal bookkeeping for concept maps. |
+| uml | `diagram: class` (classes with optional `interface`, `abstract` or `enumeration` stereotype, attributes and operations in UML notation such as `+ update(t: double): void`, `static`/`abstract` flags; relations with kind, label and multiplicities) or `diagram: sequence` (participants as objects `name: Type` or actors; ordered call, return, async or create messages, self-calls allowed; loop, alt, opt or par fragments over a message range). The app lays it out. `start` is the child for inheritance and realization, the whole for aggregation and composition, and the client for directed association and dependency. Use for object-oriented designs, design patterns and interactions instead of a generic diagram. |
 | plot | A description, short axis labels, increasing finite bounds and series of ordered points inside the axes. The app adds a data table. Use source-backed quantities, units and sensible scales. |
 
 Flashcards use one objective plus front, back and sources. Questions use an

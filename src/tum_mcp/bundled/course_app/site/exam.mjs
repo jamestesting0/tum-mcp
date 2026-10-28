@@ -4,13 +4,13 @@ import { renderCommentedView } from './comments.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exerciseState } from './exercise-state.mjs';
 import { exercisePage } from './exercises.mjs';
-import { exam, examPrefix, examStore, variants, sample, quietLink } from './exam-state.mjs';
+import { exam, examPrefix, variants, sample, quietLink } from './exam-state.mjs';
 import { renderSheet } from './exam-sheet.mjs';
-import { renderPatternList, renderPattern } from './exam-patterns.mjs';
-import { renderExamMode, paperFor, paperSummary } from './exam-mock.mjs';
+import { renderPattern } from './exam-patterns.mjs';
+import { renderPaper, paperFor } from './exam-mock.mjs';
 
 const decode = value => { try { return decodeURIComponent(value || ''); } catch { return ''; } };
-let store, guided;
+let guided;
 
 function header(title, eyebrow, summary) {
   const heading = studyText('h1', '', title);
@@ -25,6 +25,9 @@ function card(href, title, detail, status) {
   return append(node('li'), link);
 }
 const replayable = () => variants.filter(({ variant }) => variant.replayable);
+const orderedPatterns = () => (exam.statistics.pattern_order || []).map(key => exam.patterns.find(item => item.key === key)).filter(Boolean);
+// The first practice paper: past papers before forecasts.
+const firstPaper = () => { const past = replayable()[0]; return past ? `#exam/paper/${past.variant.key}` : exam.mocks[0] ? `#exam/mock/${exam.mocks[0].key}` : ''; };
 
 function home() {
   const { box, heading } = header('Exam Prep', data.course.title, 'Condensed knowledge, recurring question patterns and practice exams for this course.');
@@ -46,38 +49,12 @@ function home() {
     : 'No past exams were available; patterns rely on course material.';
   root.append(node('p', 'small exam-evidence', evidence));
   const cards = node('ul', 'exam-cards');
-  const flagged = store.flaggedCount();
-  if (exam.concepts.length) cards.append(card('#exam/sheet', 'Cheatsheet', `${exam.concepts.length} entries${exam.map?.nodes?.length ? ' and a semester map' : ''}`, flagged ? `${flagged} marked for review` : ''));
-  if (exam.patterns.length) cards.append(card('#exam/patterns', 'Exam patterns', `${exam.patterns.length} recurring question types`, sample(stats.patterns[stats.pattern_order[0]])));
+  if (exam.concepts.length) cards.append(card('#exam/sheet', 'Cheatsheet', `${exam.concepts.length} entries${exam.map?.nodes?.length ? ' and a semester map' : ''}`));
+  if (exam.patterns.length) cards.append(card(`#exam/patterns/${orderedPatterns()[0].key}`, 'Exam patterns', `${exam.patterns.length} recurring question types`, sample(stats.patterns[stats.pattern_order[0]])));
   const papers = replayable().length, mocks = exam.mocks.length;
-  if (papers || mocks) cards.append(card('#exam/practice', 'Practice exams', [papers && `${papers} past paper${papers === 1 ? '' : 's'}`, mocks && `${mocks} practice exam${mocks === 1 ? '' : 's'}`].filter(Boolean).join(' · ')));
+  if (papers || mocks) cards.append(card(firstPaper(), 'Practice exams', [papers && `${papers} past paper${papers === 1 ? '' : 's'}`, mocks && `${mocks} practice exam${mocks === 1 ? '' : 's'}`].filter(Boolean).join(' · ')));
   root.append(cards);
   return { root, heading, title: 'Exam Prep', items: [] };
-}
-
-function practice() {
-  const { box, heading } = header('Practice exams', 'Exam Prep', 'Work through real past papers question by question with guidance, or take a paper under exam conditions.');
-  const root = node('div', 'exam-practice'); root.append(box);
-  const papers = replayable();
-  if (papers.length) {
-    const list = node('ul', 'exam-cards');
-    for (const { variant } of papers) {
-      const paper = paperFor('paper', variant.key);
-      list.append(card(`#exam/paper/${variant.key}`, paper.title, `${variant.questions.length} question${variant.questions.length === 1 ? '' : 's'}`, paperSummary(paper, store)));
-    }
-    root.append(append(node('section', 'exam-section'), node('h2', '', 'Past papers'), list));
-  }
-  if (exam.mocks.length) {
-    const list = node('ul', 'exam-cards');
-    for (const mock of exam.mocks) {
-      const paper = paperFor('mock', mock.key);
-      list.append(card(`#exam/mock/${mock.key}`, paper.title, `${mock.duration_minutes} min · ${mock.points} points`, paperSummary(paper, store)));
-    }
-    root.append(append(node('section', 'exam-section'), node('h2', '', 'Forecast practice exams'),
-      node('p', 'small', 'Written for this course from its past patterns and material, with new variants and topics past papers left out. Not past or leaked exams.'), list));
-  }
-  if (!papers.length && !exam.mocks.length) root.append(node('p', '', 'Practice exams have not been prepared yet.'));
-  return { root, heading, title: 'Practice exams', items: [] };
 }
 
 function paperOverview(variantKey) {
@@ -87,7 +64,7 @@ function paperOverview(variantKey) {
   const root = node('div', 'exam-paper'); root.append(box);
   const modes = node('ul', 'exam-cards');
   modes.append(card(`#exam/paper/${variantKey}/${paper.questions[0].key}`, 'Guided', 'One question at a time, with hints, checks and solutions'));
-  modes.append(card(`#exam/paper/${variantKey}/exam`, 'Exam conditions', paper.minutes ? `${paper.minutes} minutes, no hints` : 'No hints until you finish', paperSummary(paper, store)));
+  modes.append(card(`#exam/paper/${variantKey}/exam`, 'Whole paper', 'Every question on one page, each with its solution'));
   root.append(modes);
   const list = node('ol', 'exam-paper-questions');
   for (const question of paper.questions) {
@@ -118,30 +95,28 @@ function guidedQuestion(variantKey, questionKey, stepKey, changed) {
   const question = paper.questions[index], following = paper.questions[index + 1];
   const exercise = guidedExercise(paper, question);
   const page = exercisePage(exercise, {
-    state: guided, changed, stepKey,
+    state: guided, changed, stepKey, untitledStatement: true,
     eyebrow: `${paper.title} · Question ${question.number}${question.points ? ` · ${question.points} points` : ''}`,
     link: step => `#exam/paper/${variantKey}/${question.key}/${step}`,
     annotate: (element, field, step) => annotateExam(element, `question:${question.key}`, paper.revision, step ? `${step}:${field}` : field),
     comment: root => renderCommentedView({ key: question.key, revision: paper.revision, title: exercise.title, items: [`question:${question.key}`] }, 'exam', root).root,
     onward: following ? { href: `#exam/paper/${variantKey}/${following.key}`, title: `Question ${following.number}`, detail: paper.title }
-      : { href: `#exam/paper/${variantKey}/exam`, title: 'Take this paper under exam conditions', detail: paper.title },
+      : { href: `#exam/paper/${variantKey}/exam`, title: 'See the whole paper', detail: paper.title },
   });
   return { ...page, items: [`question:${question.key}`] };
 }
 
 export function renderExam(hash, read, write, changed) {
-  store ||= examStore(read, write);
   guided ||= exerciseState(read, write, `${examPrefix}guided:`);
   const [, section, key, part, step] = hash.split('/').map(decode);
   let page = null;
   if (!section) page = home();
-  else if (section === 'sheet') page = renderSheet(key, store);
-  else if (section === 'patterns') page = key ? renderPattern(key) : renderPatternList();
-  else if (section === 'practice') page = practice();
-  else if (section === 'mock') { const paper = paperFor('mock', key); page = paper && renderExamMode(paper, store); }
+  else if (section === 'sheet') page = renderSheet(key);
+  else if (section === 'patterns') page = renderPattern(key || orderedPatterns()[0]?.key);
+  else if (section === 'mock') { const paper = paperFor('mock', key); page = paper && renderPaper(paper); }
   else if (section === 'paper') {
     if (!part) page = paperOverview(key);
-    else if (part === 'exam') { const paper = paperFor('paper', key); page = paper && renderExamMode(paper, store); }
+    else if (part === 'exam') { const paper = paperFor('paper', key); page = paper && renderPaper(paper); }
     else page = guidedQuestion(key, part, step, changed);
   }
   if (!page) {
@@ -149,17 +124,36 @@ export function renderExam(hash, read, write, changed) {
     page.root.prepend(node('p', 'notice', 'That page is no longer here. Choose a section below.'));
   }
   const root = page.navigateStep ? page.root : renderCommentedView({ key: section || 'home', title: page.title, items: page.items || [] }, 'exam', page.root).root;
-  return { ...page, root, current: section || '' };
+  return { ...page, root, current: section || '', currentKey: key || '' };
 }
 
-export function examOutline(current = '') {
+// The course title already opens the overview, so the outline lists only the sections;
+// sections with pages of their own collapse into groups.
+export function examOutline(current = '', currentKey = '') {
   const nav = node('nav', 'unit-list'); nav.setAttribute('aria-label', 'Exam Prep');
-  const entries = [['', 'Overview', '#exam'], ['sheet', 'Cheatsheet', '#exam/sheet'], ['patterns', 'Exam patterns', '#exam/patterns'], ['practice', 'Practice exams', '#exam/practice']];
-  for (const [key, label, href] of entries) {
-    if ((key === 'sheet' && !exam.concepts.length) || (key === 'patterns' && !exam.patterns.length) || (key === 'practice' && !replayable().length && !exam.mocks.length)) continue;
-    const link = quietLink('', href, 'unit-link'); link.append(node('span', 'unit-title', label));
-    if (key === current || (key === 'practice' && ['paper', 'mock'].includes(current))) link.setAttribute('aria-current', 'page');
-    nav.append(link);
+  const link = (label, href, active, detail = '') => {
+    const item = quietLink('', href, 'unit-link'); item.append(studyText('span', 'unit-title', label));
+    if (detail) item.append(node('span', 'small', detail));
+    if (active) item.setAttribute('aria-current', 'page');
+    return item;
+  };
+  const group = (title, open, children) => {
+    const box = node('details', 'unit-group'); box.open = open;
+    box.append(node('summary', '', title), append(node('div', 'group-children'), ...children));
+    return box;
+  };
+  if (exam.concepts.length) nav.append(link('Cheatsheet', '#exam/sheet', current === 'sheet'));
+  if (exam.patterns.length) {
+    nav.append(group('Exam patterns', current === 'patterns', [
+      ...orderedPatterns().map(pattern => link(pattern.title, `#exam/patterns/${pattern.key}`, current === 'patterns' && (currentKey || orderedPatterns()[0].key) === pattern.key)),
+    ]));
+  }
+  const papers = replayable();
+  if (papers.length || exam.mocks.length) {
+    nav.append(group('Practice exams', ['paper', 'mock'].includes(current), [
+      ...papers.map(({ variant }) => link(paperFor('paper', variant.key).title, `#exam/paper/${variant.key}`, current === 'paper' && currentKey === variant.key, 'Past paper')),
+      ...exam.mocks.map(mock => link(paperFor('mock', mock.key).title, `#exam/mock/${mock.key}`, current === 'mock' && currentKey === mock.key, 'Forecast')),
+    ]));
   }
   return nav;
 }

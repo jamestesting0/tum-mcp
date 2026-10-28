@@ -4,7 +4,7 @@
 
 For each variant, list every subquestion with its number, points as printed (never
 inferred), format and locator. Store the statement when it will be shown: worked
-instances, guided past papers, the recognition drill and the near-copy check need it.
+practices, guided past papers and the near-copy check need it.
 Statement block titles stay neutral ("Question 3") so they never name the method.
 
 Give each question a status:
@@ -35,9 +35,21 @@ new question; create a new one only when the first steps differ.
 - **Pitfalls**: where students actually lose points; **variations**: how the pattern
   changed across sittings (a new constraint, another representation, a reversed
   question).
-- **Example**: a past question with its stored statement and solution, or an
-  authored one. Solve it yourself; label an official solution only when it is one.
+- **Worked practice** (required): one question, a past one with its stored statement
+  and solution or an authored one, solved through the workflow. Its `steps` apply
+  every workflow step in order (several steps may apply one workflow step). Each
+  step asks for exactly that move, may give a hint, takes an answer in a short form when one
+  fits (a choice is checked; any other answer is compared), and always shows the worked answer, filling in the
+  template where there is one. For code patterns, the steps that matter write code from a
+  starter signature and compare with a model answer. Solve it yourself; label an official solution only
+  when it is one.
 - **Drill**: up to a few checked items that practise the decision the workflow makes.
+
+Every question you write here, worked practice and drills included, shows its
+situation with code, a diagram, a UML diagram, a formula, a table or a plot beside the text; the
+build rejects text-only ones. A worked practice on a text-only past question adds the
+picture in a worked step. Choose the representation as in prepare-exercises'
+[content](../../prepare-exercises/references/content.md#show-the-question-not-only-tell-it).
 
 The order of patterns comes from `exam-report --section stats`: sitting occurrence,
 points share when every mark is known, and recent appearance. It is a study guide,

@@ -15,57 +15,88 @@ function field(label, multiline, value, edit) {
   return { wrapper, input };
 }
 
-function seeded(identity) {
-  let state = [...identity].reduce((hash, character) => Math.imul(hash ^ character.charCodeAt(0), 16777619), 2166136261) >>> 0;
-  return () => { state = Math.imul(state ^ (state >>> 15), 2246822507) >>> 0; return state / 4294967296; };
-}
-function orderResponse(check, draft, edit, identity) {
-  const root = node('div', 'exercise-response order-response'), keys = check.items.map(item => item.key);
-  const target = check.answers[0], distractors = keys.length > target.length;
-  const saved = structured(draft);
-  let order = Array.isArray(saved.order) && saved.order.length === keys.length && keys.every(key => saved.order.includes(key)) ? saved.order : null;
-  if (!order) {
-    // A stable shuffle per exercise step; the authored order is often the solution.
-    const random = seeded(identity); order = [...keys];
-    for (let attempt = 0; attempt < 5 && check.answers.some(answer => answer.join() === order.filter(key => answer.includes(key)).join()); attempt++)
-      for (let index = order.length - 1; index > 0; index--) { const swap = Math.floor(random() * (index + 1)); [order[index], order[swap]] = [order[swap], order[index]]; }
-  }
-  const left = new Set(Array.isArray(saved.left_out) ? saved.left_out.filter(key => keys.includes(key)) : []);
-  const save = () => edit(JSON.stringify({ order, left_out: [...left] }));
-  const list = node('ol', 'order-list');
-  root.append(node('p', 'small', distractors ? 'Arrange the lines in order and leave out the ones that do not belong.' : 'Arrange the items in order.'), list);
-  const content = item => item.code ? append(node('pre', 'order-code'), node('code', '', item.code)) : studyText('span', '', item.text);
-  function render(focus) {
-    list.replaceChildren();
-    order.forEach((key, index) => {
-      const item = check.items.find(entry => entry.key === key), row = node('li', `order-item${left.has(key) ? ' left-out' : ''}`);
-      const label = (item.code || studyText('span', '', item.text).textContent).trim();
-      const move = (offset, name) => {
-        const control = button(name === 'up' ? '↑' : '↓', () => {
-          [order[index], order[index + offset]] = [order[index + offset], order[index]]; save(); render(`${key}:${name}`);
-        }, 'secondary order-move');
-        control.setAttribute('aria-label', `Move "${label}" ${name}`); control.dataset.focus = `${key}:${name}`;
-        control.disabled = index + offset < 0 || index + offset >= order.length; return control;
-      };
-      const controls = append(node('span', 'order-controls'), move(-1, 'up'), move(1, 'down'));
-      if (distractors) {
-        const toggle = node('label', 'order-leave'), box = node('input'); box.type = 'checkbox'; box.checked = left.has(key);
-        box.dataset.focus = `${key}:leave`;
-        box.addEventListener('change', () => { if (box.checked) left.add(key); else left.delete(key); save(); render(`${key}:leave`); });
-        toggle.append(box, node('span', '', 'Leave out')); controls.append(toggle);
-      }
-      row.append(content(item), controls); list.append(row);
-    });
-    if (focus) list.querySelector(`[data-focus="${CSS.escape(focus)}"]`)?.focus();
-  }
-  render();
-  const validate = () => {
-    const used = order.filter(key => !left.has(key));
-    const correct = check.answers.some(answer => answer.length === used.length && answer.every((key, index) => used[index] === key));
-    const placed = target.filter((key, index) => used[index] === key).length;
-    return { valid: used.length > 1, correct, repairs: [check.feedback, `${placed} of ${target.length} positions match an accepted order.`] };
+// A textarea that behaves like a small code editor: Tab indents, Enter keeps the
+// indentation, and Esc then Tab leaves it, so keyboard users are never trapped.
+function codeEditor(input) {
+  let leaving = false;
+  const fit = () => { input.rows = Math.max(8, input.value.split('\n').length + 1); };
+  const insert = text => {
+    if (document.execCommand('insertText', false, text)) return;
+    input.setRangeText(text, input.selectionStart, input.selectionEnd, 'end'); input.dispatchEvent(new Event('input'));
   };
-  return { root, validate, showResult: () => {} };
+  input.addEventListener('keydown', event => {
+    const plain = !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey;
+    if (event.key === 'Tab' && plain && !leaving) { event.preventDefault(); insert('    '); }
+    else if (event.key === 'Enter' && plain && !event.isComposing) {
+      const before = input.value.slice(0, input.selectionStart), line = before.slice(before.lastIndexOf('\n') + 1);
+      event.preventDefault(); insert(`\n${line.match(/^[ \t]*/)[0]}${/[{:([]\s*$/.test(line) ? '    ' : ''}`);
+    }
+    leaving = event.key === 'Escape';
+  });
+  input.addEventListener('blur', () => { leaving = false; });
+  input.addEventListener('input', fit); fit();
+}
+// A code model answer stays code: monospaced, literal and labelled with its language.
+export function modelAnswer(check) {
+  if (check.format !== 'code') return studyText('p', '', check.model_answer);
+  const region = node('div', 'code-region model-code'); region.tabIndex = 0;
+  region.setAttribute('role', 'region'); region.setAttribute('aria-label', 'Model answer');
+  region.append(node('span', 'small', check.language || 'code'), append(node('pre'), node('code', '', check.model_answer)));
+  return region;
+}
+// What a learner compares their own work with, for every check except a choice.
+export function expectedAnswer(check) {
+  const box = node('div', 'expected-answer');
+  const others = values => values.length && box.append(studyText('p', 'small', `Also accepted: ${values.join('; ')}`));
+  const grid = (head, rows) => {
+    const table = node('table'), header = node('tr');
+    for (const title of head) { const th = studyText('th', '', title); th.scope = 'col'; header.append(th); }
+    table.append(append(node('thead'), header));
+    const body = node('tbody');
+    for (const row of rows) body.append(append(node('tr'), ...row.map(text => studyText('td', '', text))));
+    table.append(body);
+    const region = append(node('div', 'table-region'), table); region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', 'Expected answer');
+    return region;
+  };
+  const numeric = item => `${item.answer}${item.unit ? ` ${item.unit}` : ''}${item.tolerance ? ` (within ${item.tolerance})` : ''}`;
+  switch (check.kind) {
+    case 'self_check':
+      box.append(modelAnswer(check), append(node('ul'), ...check.rubric.map(text => studyText('li', '', text))));
+      break;
+    case 'text':
+      box.append(check.format === 'code' ? modelAnswer({ format: 'code', language: check.language, model_answer: check.accepted[0] }) : studyText('p', 'expected-value', check.accepted[0]));
+      others(check.accepted.slice(1));
+      break;
+    case 'numeric': box.append(studyText('p', 'expected-value', numeric(check))); break;
+    case 'table':
+      box.append(grid(['', ...check.columns], check.rows.map(row => [row.label, ...row.cells.map(cell =>
+        cell.kind === 'given' ? cell.text : cell.kind === 'numeric' ? numeric(cell) : cell.accepted[0])])));
+      break;
+    case 'graph': {
+      const label = new Map(check.graph.nodes.map(item => [item.key, item.label]));
+      const name = key => key.split('--').map(part => label.get(part) || part).join('–');
+      const show = answer => answer.map(name).join(check.mode === 'path' ? ' → ' : ', ');
+      box.append(studyText('p', 'expected-value', `${{ nodes: 'Nodes', edges: 'Edges', path: 'Path' }[check.mode]}: ${show(check.answers[0])}`));
+      others(check.answers.slice(1).map(show));
+      break;
+    }
+    case 'plot': box.append(grid([check.plot.x_label, check.plot.y_label], check.x_values.map((x, i) => [String(x), String(check.answer[i])]))); break;
+  }
+  return box;
+}
+
+// After a choice is checked: why every option is right or wrong, collapsed by default.
+export function optionExplanations(check) {
+  const box = node('details', 'disclosure option-explanations');
+  box.append(node('summary', '', 'Why each option is right or wrong'));
+  const list = node('ul', 'option-explanation-list');
+  for (const option of check.options) {
+    const right = option.key === check.correct, item = node('li', right ? 'right' : 'wrong');
+    item.append(append(node('p', 'option-explanation-title'), node('span', 'option-verdict', right ? 'Correct' : 'Incorrect'), studyText('span', '', option.text)), studyText('p', '', option.feedback));
+    list.append(item);
+  }
+  box.append(list);
+  return box;
 }
 
 export function renderResponse(check, draft, edit, identity) {
@@ -85,7 +116,7 @@ export function renderResponse(check, draft, edit, identity) {
       repairs: [check.options.find(option => option.key === value)?.feedback || 'Choose an answer.'] });
   } else if (check.kind === 'numeric' || check.kind === 'self_check') {
     const format = check.format || 'text';
-    const { wrapper, input } = field(check.kind === 'numeric' || format === 'text' ? 'Your answer' : format === 'code' ? `${check.language || 'Code'} draft` : 'Working', check.kind === 'self_check', value, change);
+    const { wrapper, input } = field(check.kind === 'numeric' || format === 'text' ? 'Your answer' : format === 'code' ? `Your code${check.language ? ` (${check.language})` : ''}` : 'Working', check.kind === 'self_check', value, change);
     if (check.kind === 'numeric') {
       input.inputMode = 'decimal'; input.classList.add('numeric-input');
       root.append(studyText('p', 'small', `Enter ${check.tolerance === 0 ? 'the exact value' : 'a decimal'}${check.unit ? ` in ${check.unit}` : ''}${check.tolerance ? ` (within ${check.tolerance} of the target)` : ''}.`), wrapper);
@@ -96,21 +127,16 @@ export function renderResponse(check, draft, edit, identity) {
       if (format === 'text') { details.open = Boolean(value); details.append(node('summary', '', 'Write')); }
       details.append(wrapper);
       if (format === 'code') {
-        input.classList.add('code-input'); input.spellcheck = false; input.autocapitalize = 'off';
-        input.rows = 5;
+        input.classList.add('code-input'); input.spellcheck = false; input.autocapitalize = 'off'; input.setAttribute('autocorrect', 'off');
+        // The skeleton is where the student starts writing, so it opens in the editor.
+        if (!value && check.starter_code) input.value = check.starter_code;
+        codeEditor(input);
         if (check.starter_code) {
-          const use = button('Use starter code', () => {
-            if (input.value) return;
-            input.value = check.starter_code; change(input.value); use.disabled = true; input.focus();
-          }, 'secondary');
-          use.disabled = Boolean(value);
-          input.addEventListener('input', () => { use.disabled = Boolean(input.value); });
-          const starter = node('details', 'disclosure starter-code'); starter.append(node('summary', '', 'Starter code'), append(node('pre'), node('code', '', check.starter_code)), use);
-          const listing = starter.querySelector('pre'); listing.tabIndex = 0; listing.setAttribute('role', 'region'); listing.setAttribute('aria-label', 'Starter code');
-          details.append(starter);
+          const reset = button('Reset to starter code', () => { input.value = check.starter_code; input.dispatchEvent(new Event('input')); input.focus(); }, 'quiet');
+          details.append(append(node('div', 'cluster code-tools'), reset));
         }
       } else if (format === 'math') { input.classList.add('math-input'); input.rows = 5; }
-      root.append(node('p', 'small', format === 'code' ? 'Optional draft. Code is not run or graded.'
+      root.append(node('p', 'small', format === 'code' ? 'Write the code here or in your editor, then compare it with the model answer. Code is not run. Tab indents; Esc then Tab leaves the editor.'
         : format === 'math' ? 'Work on paper or draft in plain text / LaTeX.' : 'Work on paper or draft here.'), details);
     }
   } else if (check.kind === 'table') {
@@ -152,8 +178,7 @@ export function renderResponse(check, draft, edit, identity) {
       return check.case_sensitive ? spaced : spaced.toLowerCase();
     };
     validate = () => ({ valid: Boolean(value.trim()), correct: check.accepted.some(answer => shape(answer) === shape(value)), repairs: [check.feedback] });
-  } else if (check.kind === 'order') return orderResponse(check, draft, edit, identity);
-  else if (check.kind === 'graph') return graphResponse(check, draft, edit);
+  } else if (check.kind === 'graph') return graphResponse(check, draft, edit);
   else if (check.kind === 'plot') return plotResponse(check, draft, edit);
   return { root, validate: () => validate(), showResult: checked => showResult(checked) };
 }

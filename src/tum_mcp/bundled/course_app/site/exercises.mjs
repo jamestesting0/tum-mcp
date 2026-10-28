@@ -1,8 +1,8 @@
 import data from './data.mjs';
 import { node, studyText, button, append, announce, sourcesNote, focusHeading, scrollReadingTo } from './dom.mjs';
-import { renderReading } from './reading.mjs';
+import { renderReading, renderBlockBody } from './reading.mjs';
 import { iconButton, nextStep } from './navigation.mjs';
-import { renderResponse } from './exercise-response.mjs';
+import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExercise } from './anchors.mjs';
 import { renderCommentedView } from './comments.mjs';
 
@@ -107,8 +107,10 @@ export function exercisePage(exercise, options) {
     header.append(practice);
   }
   root.append(header);
-  const statement = renderReading({ blocks: exercise.statement }); statement.id = 'exercise-question';
-  [...statement.querySelectorAll('.reading-material')].forEach((element, index) => target(element, `statement:${index}`));
+  // Under a "Question N" heading the statement's own block titles would only repeat it.
+  const statement = options.untitledStatement ? append(node('div', 'exam-stem'), ...exercise.statement.map(renderBlockBody)) : renderReading({ blocks: exercise.statement });
+  statement.id = 'exercise-question';
+  [...statement.querySelectorAll(options.untitledStatement ? '.block-body' : '.reading-material')].forEach((element, index) => target(element, `statement:${index}`));
   root.append(statement);
   if (exercise.parts?.length) root.append(append(node('ul'), ...exercise.parts.map((part, index) => target(studyText('li', '', part), `part:${index}`))));
   for (const prerequisite of exercise.prerequisites) {
@@ -175,11 +177,13 @@ export function exercisePage(exercise, options) {
     }, `exercise-${exercise.key}-${step.key}`);
     if (response.root.matches('.reading-material')) target(response.root, 'graph', step.key);
     for (const element of response.root.querySelectorAll('.reading-material')) target(element, 'graph', step.key);
+    // Only a choice is checked; every other answer is compared with the expected one.
+    const compares = Boolean(check) && check.kind !== 'choice';
     const primary = button('', event => {
       if (event.detail > 1) return;
       const result = response.validate();
-      if (!check || (checked && result.correct) || (check.kind === 'self_check' && saved.compared)) { advance(); return; }
-      if (check.kind === 'self_check') { saved.compared = true; state.attempt(exercise, step); }
+      if (!check || (checked && result.correct) || (compares && saved.compared)) { advance(); return; }
+      if (compares) { saved.compared = true; state.attempt(exercise, step); }
       else if (result.valid) { saved.checked = saved.draft; checked = true; state.attempt(exercise, step, result.correct); }
       state.save(exercise); update(); activityChanged();
     }, 'primary');
@@ -197,17 +201,22 @@ export function exercisePage(exercise, options) {
     }, 'secondary');
     function update() {
       const result = response.validate(); feedback.replaceChildren(); target(feedback, 'feedback', step.key);
-      response.showResult(checked);
-      if (check?.kind === 'self_check' && saved.compared) {
-        const section = node('section', 'feedback');
-        section.append(node('h3', '', 'Compare with your work'), studyText('p', '', check.model_answer), append(node('ul'), ...check.rubric.map(text => studyText('li', '', text))));
+      response.showResult(!compares && checked);
+      if (compares && saved.compared) {
+        const section = node('section', 'feedback compare');
+        section.append(node('h3', '', 'Compare with your work'), expectedAnswer(check));
+        if (check.kind !== 'self_check') {
+          section.append(studyText('p', '', step.explanation));
+          if (check.feedback) section.append(append(node('p', 'small'), node('strong', '', 'If yours differs: '), studyText('span', '', check.feedback)));
+        }
         feedback.append(section);
       } else if (checked && result.valid) {
         feedback.append(result.correct ? verdict(true, studyText('p', '', step.explanation)) : verdict(false, ...result.repairs.map(repair => studyText('p', '', repair))));
+        if (check.kind === 'choice') feedback.append(optionExplanations(check));
       } else if (saved.draft && check?.kind === 'numeric' && !result.valid) feedback.append(node('p', 'small', 'Enter a number such as 0.5 or 2e-3.'));
-      const ready = !check || (check.kind === 'self_check' ? saved.compared : checked && result.correct);
-      primary.textContent = ready ? (index === exercise.steps.length - 1 ? 'Finish' : 'Continue') : check.kind === 'self_check' ? 'Compare' : 'Check answer';
-      primary.disabled = Boolean(check && check.kind !== 'self_check' && !result.valid);
+      const ready = !check || (compares ? saved.compared : checked && result.correct);
+      primary.textContent = ready ? (index === exercise.steps.length - 1 ? 'Finish' : 'Continue') : compares ? 'Compare' : 'Check answer';
+      primary.disabled = Boolean(check && !compares && !result.valid);
       hint.textContent = saved.hints < step.hints.length ? (saved.hints ? 'Next hint' : 'Hint') : 'Show reasoning';
       hint.hidden = Boolean(check && ready) || saved.revealed;
     }

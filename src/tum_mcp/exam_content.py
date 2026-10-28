@@ -14,7 +14,7 @@ from pydantic import Field, FiniteFloat, model_validator
 from tum_mcp.exercise_checks import Check
 from tum_mcp.exercise_content import GuidanceStep, Prerequisite, TransferTask, WorkedSolution
 from tum_mcp.settings import Frozen
-from tum_mcp.study_content import Block, SourceVersion, Symbol, Text
+from tum_mcp.study_content import VISUAL_RULE, Block, SourceVersion, Symbol, Text, has_visual
 from tum_mcp.study_math import compile_latex
 from tum_mcp.study_models import Digest, Key
 from tum_mcp.study_store import digest
@@ -258,11 +258,28 @@ class DrillItem(Frozen):
     check: Check | None = None
     explanation: Text
 
+    @model_validator(mode="after")
+    def shown(self) -> "DrillItem":
+        if not has_visual(self.blocks):
+            raise ValueError(f"Drill {self.key} needs {VISUAL_RULE}.")
+        return self
+
+
+class GuidedStep(Frozen):
+    """One move of the worked practice: applies workflow step `step` (1-based)."""
+
+    step: int = Field(ge=1, le=40)
+    prompt: Text
+    hint: Text | None = None
+    check: Check | None = None
+    answer: tuple[Block, ...] = Field(min_length=1, max_length=10)
+
 
 class PatternExample(Frozen):
     question: Key | None = None
     blocks: tuple[Block, ...] = Field(default=(), max_length=20)
     solution: WorkedSolution | None = None
+    steps: tuple[GuidedStep, ...] = Field(min_length=1, max_length=40)
 
     @model_validator(mode="after")
     def one_form(self) -> "PatternExample":
@@ -273,7 +290,16 @@ class PatternExample(Frozen):
             raise ValueError(
                 "An example is a past question key or authored blocks with a solution."
             )
+        if self.blocks and not has_visual(self.blocks):
+            raise ValueError(f"A worked practice question needs {VISUAL_RULE}.")
         return self
+
+    def blocks_cited(self) -> tuple[Block, ...]:
+        return (
+            *self.blocks,
+            *(self.solution.blocks if self.solution else ()),
+            *(block for step in self.steps for block in step.answer),
+        )
 
 
 class Pattern(Frozen):
@@ -290,7 +316,7 @@ class Pattern(Frozen):
     variations: tuple[Text, ...] = Field(default=(), max_length=20)
     concepts: tuple[Key, ...] = Field(min_length=1, max_length=30)
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=30)
-    example: PatternExample | None = None
+    example: PatternExample
     drill: tuple[DrillItem, ...] = Field(default=(), max_length=10)
 
     @model_validator(mode="after")
@@ -298,12 +324,17 @@ class Pattern(Frozen):
         keys = {item.key for item in self.sources}
         blocks = (
             *self.template,
-            *(self.example.blocks if self.example else ()),
-            *(self.example.solution.blocks if self.example and self.example.solution else ()),
+            *self.example.blocks_cited(),
             *(block for item in self.drill for block in item.blocks),
         )
         if any(not set(block.sources) <= keys for block in blocks):
             raise ValueError("Pattern content cites only the pattern's sources.")
+        applied = [item.step for item in self.example.steps]
+        if applied != sorted(applied) or set(applied) != set(range(1, len(self.workflow) + 1)):
+            raise ValueError(
+                "The worked practice applies every workflow step, in order "
+                f"(steps 1-{len(self.workflow)})."
+            )
         if bool(self.marking) != (self.marking_basis is not None):
             raise ValueError("Marking points declare whether they are official or inferred.")
         if len({item.key for item in self.drill}) != len(self.drill):
@@ -343,6 +374,8 @@ class MockQuestion(Frozen):
             )
         if variant and not self.patterns:
             raise ValueError("A variant shares a pattern with the past questions it varies.")
+        if not has_visual(self.statement):
+            raise ValueError(f"Practice question {self.key} needs {VISUAL_RULE}.")
         _check_marking(self.marking, self.points, self.check)
         return self
 
@@ -388,6 +421,10 @@ def block_text(blocks: tuple[Block, ...]) -> str:
                 parts.append(block.code)
             case "diagram" | "plot":
                 parts.append(block.description)
+            case "uml":
+                parts.append(block.description)
+                parts.extend(item.name for item in (*block.classes, *block.participants))
+                parts.extend(item.text for item in block.messages)
     return " ".join(parts)
 
 
@@ -400,10 +437,15 @@ def shingles(text: str, size: int = 5) -> frozenset[str]:
     )
 
 
-def similarity(left: frozenset[str], right: frozenset[str]) -> float:
-    if not left or not right:
+def similarity(own: frozenset[str], past: frozenset[str]) -> float:
+    """Share of a past statement's word sequences that reappear in a new one.
+
+    Measured against the past statement alone, so text, code or tables added around a
+    copied question cannot dilute it.
+    """
+    if not own or not past:
         return 0.0
-    return len(left & right) / len(left | right)
+    return len(own & past) / len(past)
 
 
 class ExamContent(Frozen):
@@ -478,7 +520,7 @@ class ExamContent(Frozen):
         for pattern in self.patterns:
             if not set(pattern.concepts) <= concepts:
                 raise ValueError(f"Pattern {pattern.key} references an unknown concept.")
-            if pattern.example and pattern.example.question:
+            if pattern.example.question:
                 found = past.get(pattern.example.question)
                 if found is None or not (found[2].statement and found[2].solution):
                     raise ValueError(
@@ -487,6 +529,13 @@ class ExamContent(Frozen):
                     )
                 if pattern.key not in found[2].patterns:
                     raise ValueError(f"Pattern {pattern.key} shows a question of another pattern.")
+                # A printed question stays as printed; the worked steps add the picture.
+                answers = tuple(block for step in pattern.example.steps for block in step.answer)
+                if not has_visual(found[2].statement) and not has_visual(answers):
+                    raise ValueError(
+                        f"Pattern {pattern.key}: a worked step needs {VISUAL_RULE}, because "
+                        "the past question is text only."
+                    )
         for mock in self.mocks:
             for question in mock.questions:
                 if not set(question.patterns) <= patterns or not set(question.concepts) <= concepts:
