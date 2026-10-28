@@ -8,7 +8,7 @@ from filelock import FileLock
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.study_github import Account, GitHub, Head, Pages, Repository
-from tum_mcp.study_models import is_studocu_link
+from tum_mcp.study_models import PRIVATE_PROVIDERS, is_studocu_link
 from tum_mcp.study_publish_checks import create_pages, deployed, verify_pages
 from tum_mcp.study_publish_models import (
     SETUP,
@@ -258,7 +258,7 @@ def build_for_publication(
         with FileLock(str(private_path(root, "update.lock"))):
             state = load_state(root)
             if not any(
-                binding.provider == "studocu" for binding in state.course.bindings
+                binding.provider in PRIVATE_PROVIDERS for binding in state.course.bindings
             ) and not any(is_studocu_link(item.resource.url) for item in state.resources):
                 raise
             # This validates the retained Study payload and never reads excluded exercises.

@@ -117,6 +117,7 @@ def inspect(project: Path) -> None:
     from tum_mcp.exercise_data import read_exercises, stale_exercises
     from tum_mcp.lecture_data import lecture_health, read_lectures, stale_lectures
     from tum_mcp.study_build import read_content, stale_units
+    from tum_mcp.study_duplicates import exact_groups
     from tum_mcp.study_store import load_state, private_folder
 
     root = project.expanduser().resolve()
@@ -128,6 +129,9 @@ def inspect(project: Path) -> None:
     )
     exercises = read_exercises(root)
     lectures = read_lectures(root)
+    from tum_mcp.exam_data import read_exam, stale_exam
+
+    exam = read_exam(root)
     typer.echo(
         json.dumps(
             {
@@ -137,6 +141,9 @@ def inspect(project: Path) -> None:
                 "course_context": context_review(root, state).model_dump(mode="json"),
                 "coverage": [item.model_dump(mode="json") for item in state.coverage],
                 "resources": len(state.resources),
+                "duplicate_sources": [
+                    group.model_dump(mode="json") for group in exact_groups(state)
+                ],
                 "content_path": f"{app_folder(root)}/content.json",
                 "exercises_path": f"{app_folder(root)}/exercises.json",
                 "lectures_path": f"{app_folder(root)}/lectures.json",
@@ -145,10 +152,102 @@ def inspect(project: Path) -> None:
                 "lecture_evidence": lecture_health(root, lectures) if lectures else (),
                 "stale_units": stale,
                 "stale_exercises": stale_exercises(root, state, exercises) if exercises else (),
+                "exam_path": f"{app_folder(root)}/exam.json",
+                "stale_exam": stale_exam(root, state, exam) if exam else (),
             },
             indent=2,
         )
     )
+
+
+@app.command(name="exam-report")
+def exam_report_command(
+    project: Path,
+    section: Annotated[
+        Literal["stats", "blueprint", "review", "targets", "stale", "duplicates"] | None,
+        typer.Option(help="Only this part; duplicates also compares exam and exercise text."),
+    ] = None,
+) -> None:
+    """Report Exam Prep statistics, blueprint, review items, targets and stale items as JSON."""
+    from tum_mcp.exam_data import exam_report, read_exam, stale_exam
+    from tum_mcp.study_duplicates import exact_groups, near_candidates
+    from tum_mcp.study_store import load_state
+
+    root = project.expanduser().resolve()
+    state = load_state(root)
+    exam = read_exam(root)
+    materials: dict[str, list[str]] = {}
+    for item in state.resources:
+        if item.status == "current":
+            group = (
+                f"studocu/{item.resource.studocu.storage_group}"
+                if item.resource.studocu
+                else item.resource.kind
+            )
+            materials.setdefault(group, []).append(item.resource.key)
+    result: dict = {"exam_path": f"{app_folder(root)}/exam.json", "prepared": exam is not None}
+    if section is None:
+        result["materials"] = {key: sorted(value) for key, value in sorted(materials.items())}
+        result["duplicates"] = {"exact": [g.model_dump() for g in exact_groups(state)]}
+    if section == "duplicates":
+        result["duplicates"] = near_candidates(root, state).model_dump()
+    if exam is not None:
+        report = exam_report(exam)
+        parts = {
+            "stats": report["statistics"],
+            "blueprint": report["blueprint"],
+            "review": report["review"],
+            "targets": {"flags": report["targets"], "uncovered_core": report["uncovered_core"]},
+            "stale": list(stale_exam(root, state, exam)),
+        }
+        result.update(
+            parts if section is None else {k: v for k, v in parts.items() if k == section}
+        )
+    typer.echo(json.dumps(result, indent=2))
+
+
+@app.command()
+def duplicates(
+    project: Path,
+    near: Annotated[
+        bool, typer.Option(help="Also compare exam and exercise text for near-duplicate copies.")
+    ] = False,
+) -> None:
+    """Report identical and likely duplicate materials across providers; nothing is merged."""
+    from tum_mcp.study_duplicates import DuplicateReport, exact_groups, near_candidates
+    from tum_mcp.study_store import load_state
+
+    root = project.expanduser().resolve()
+    state = load_state(root)
+    report = near_candidates(root, state) if near else DuplicateReport(exact=exact_groups(state))
+    typer.echo(report.model_dump_json(indent=2))
+
+
+@app.command(name="import")
+def import_material(
+    project: Path,
+    file: Annotated[Path, typer.Option(help="A file you already hold (PDF, text or image).")],
+    kind: Annotated[
+        Literal["exam", "content", "exercise", "other"], typer.Option(help="Material folder.")
+    ],
+    title: Annotated[str, typer.Option(help="Short descriptive title.")],
+) -> None:
+    """Add a file you hold as a private local source; it is never published."""
+    from tum_mcp.study_import import import_file
+
+    typer.echo(import_file(project, file, kind, title).model_dump_json(indent=2))
+
+
+@app.command()
+def text(
+    project: Path,
+    key: Annotated[str, typer.Option(help="Inventory resource key.")],
+    pages: Annotated[str | None, typer.Option(help="Page N or FIRST-LAST.")] = None,
+) -> None:
+    """Print a stored material's page text, extracted once per content hash."""
+    from tum_mcp.study_text import document_text, text_view
+
+    typer.echo(json.dumps(text_view(document_text(project, key), key, pages), indent=2))
 
 
 @app.command()
@@ -172,7 +271,7 @@ def build(
 
 
 @app.command()
-def schema(kind: Literal["snapshot", "content", "exercises", "lectures"]) -> None:
+def schema(kind: Literal["snapshot", "content", "exercises", "lectures", "exam"]) -> None:
     """Print the machine-readable input schema for the calling agent."""
     from tum_mcp.study_content import StudyContent
     from tum_mcp.study_models import Snapshot
@@ -186,6 +285,10 @@ def schema(kind: Literal["snapshot", "content", "exercises", "lectures"]) -> Non
             from tum_mcp.exercise_content import ExerciseContent
 
             result = ExerciseContent.model_json_schema()
+        case "exam":
+            from tum_mcp.exam_content import ExamContent
+
+            result = ExamContent.model_json_schema()
         case "lectures":
             from tum_mcp.extensions import require_lecture
             from tum_mcp.lecture_content import LectureContent
@@ -233,7 +336,12 @@ def demo(
     root = project.expanduser().resolve()
     example = Path(str(files("tum_mcp") / "bundled/course_app/example"))
     writes = []
-    for name in ("content.json", "exercises.json", *(("lectures.json",) if lectures else ())):
+    for name in (
+        "content.json",
+        "exercises.json",
+        "exam.json",
+        *(("lectures.json",) if lectures else ()),
+    ):
         desired = (example / name).read_bytes()
         before = read_bytes(app_path(root, name))
         if before is not None and before != desired:

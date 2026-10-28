@@ -3,7 +3,7 @@
 import json
 import shutil
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
 
@@ -12,6 +12,7 @@ from pydantic import Field, JsonValue, ValidationError
 
 from tum_mcp.course_app_paths import app_folder, app_path
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.exam_content import ExamContent
 from tum_mcp.exercise_content import ExerciseContent
 from tum_mcp.exercise_data import (
     check_prerequisites,
@@ -30,7 +31,12 @@ from tum_mcp.study_content import (
     render_blocks,
 )
 from tum_mcp.study_math import INLINE_MATH, compile_latex
-from tum_mcp.study_models import Digest, StudyState, is_studocu_link, resolved_material_path
+from tum_mcp.study_models import (
+    Digest,
+    StudyState,
+    is_studocu_link,
+    resolved_material_path,
+)
 from tum_mcp.study_publish_models import PublishReport
 from tum_mcp.study_store import (
     END,
@@ -54,6 +60,12 @@ TEMPLATE_FILES = (
     "exercises.mjs",
     "lectures.mjs",
     "video.mjs",
+    "exam.mjs",
+    "exam-state.mjs",
+    "exam-sheet.mjs",
+    "exam-map.mjs",
+    "exam-patterns.mjs",
+    "exam-mock.mjs",
     "exercise-state.mjs",
     "exercise-response.mjs",
     "graph-response.mjs",
@@ -101,6 +113,7 @@ class BuildReport:
     exercises: int = 0
     lectures: int = 0
     lecture_coverage: tuple[dict[str, JsonValue], ...] = ()
+    exam: dict[str, int] = field(default_factory=dict)
 
 
 def read_content(root: Path) -> StudyContent:
@@ -146,6 +159,7 @@ def _app_data(
     exercises: ExerciseContent | None = None,
     lectures: LectureContent | None = None,
     root: Path | None = None,
+    exam: ExamContent | None = None,
 ) -> dict[str, JsonValue]:
     units: list[JsonValue] = []
     for unit in content.units if content else ():
@@ -165,8 +179,13 @@ def _app_data(
         )
     if lectures:
         referenced.update(source.key for lecture in lectures.lectures for source in lecture.sources)
+    if exam:
+        referenced.update(exam_source_keys(exam))
     studocu_bindings = {
         binding.key for binding in state.course.bindings if binding.provider == "studocu"
+    }
+    local_bindings = {
+        binding.key for binding in state.course.bindings if binding.provider == "local"
     }
     sources: dict[str, JsonValue] = {
         item.resource.key: {
@@ -174,6 +193,8 @@ def _app_data(
             + (
                 " (Studocu student upload)"
                 if item.resource.binding in studocu_bindings or is_studocu_link(item.resource.url)
+                else " (local file)"
+                if item.resource.binding in local_bindings
                 else ""
             ),
             "url": item.resource.url,
@@ -195,7 +216,9 @@ def _app_data(
         if content
         else "Course exercises with prepared guidance."
         if exercises
-        else "Lecture notes from course recordings.",
+        else "Lecture notes from course recordings."
+        if lectures
+        else "Exam preparation from past exams and course materials.",
         "organization": content.organization if content else "topics",
         "units": units,
         "sources": sources,
@@ -210,6 +233,13 @@ def _app_data(
         payload["lectures"] = value
         payload["workspaces"].append("lectures")
         payload["inlineMath"] = {**payload["inlineMath"], **_inline_math(value)}
+    if exam:
+        from tum_mcp.exam_data import render_exam
+
+        value = render_exam(exam)
+        payload["exam"] = value
+        payload["workspaces"].append("exam")
+        payload["inlineMath"] = {**payload["inlineMath"], **_inline_math(value)}
     if exercises:
         value = render_exercises(exercises)
         payload["exercises"] = value
@@ -218,6 +248,15 @@ def _app_data(
             **_inline_math(value),
         }
     return payload
+
+
+def exam_source_keys(exam: ExamContent) -> set[str]:
+    items = (*exam.concepts, *exam.patterns, *exam.mocks)
+    return {
+        *(source.key for item in items for source in item.sources),
+        *(source.key for source in (exam.profile.sources if exam.profile else ())),
+        *(source.key for s in exam.sittings for v in s.variants for source in v.sources),
+    }
 
 
 def _inline_math(value: JsonValue) -> dict[str, str]:
@@ -231,7 +270,7 @@ def _inline_math(value: JsonValue) -> dict[str, str]:
             return {
                 key: math
                 for field, item in value.items()
-                if field not in {"code", "starter_code", "latex", "mathml"}
+                if field not in {"code", "starter_code", "latex", "mathml", "accepted"}
                 for key, math in _inline_math(item).items()
             }
         case _:
@@ -323,10 +362,13 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
         if app_path(root, "lectures.json").exists():
             require_lecture()
         lectures = read_lectures(root)
-        if content is None and exercises is None and lectures is None:
+        from tum_mcp.exam_data import check_unit_links, read_exam, stale_exam
+
+        exam = read_exam(root)
+        if content is None and exercises is None and lectures is None and exam is None:
             raise CampusError(
                 Code.ACTION_REQUIRED,
-                "Prepare app/content.json, app/exercises.json or app/lectures.json.",
+                "Prepare app/content.json, app/exercises.json, app/lectures.json or app/exam.json.",
             )
         stale = stale_units(root, state, content) if content else ()
         if exercises:
@@ -334,6 +376,9 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             check_prerequisites(exercises, content)
         if lectures:
             stale += stale_lectures(root, state, lectures)
+        if exam:
+            stale += stale_exam(root, state, exam)
+            check_unit_links(exam, content)
         if stale:
             raise CampusError(
                 Code.STALE_RESULT, "Refresh content for changed source units: " + ", ".join(stale)
@@ -356,7 +401,7 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             )
         source = files("tum_mcp") / "bundled/course_app/site"
         desired = {name: (source / name).read_bytes() for name in TEMPLATE_FILES}
-        payload = _app_data(state, content, exercises, lectures, root)
+        payload = _app_data(state, content, exercises, lectures, root, exam)
         data = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
         desired["data.mjs"] = ("export default " + data + ";\n").encode()
         writes: list[Write] = []
@@ -383,7 +428,7 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             writes.append(Write(f"{folder}/{name}", before, after))
             owned[name] = digest(after)
         updated = BuildRecord(files=owned).model_dump_json(indent=2).encode()
-        if (exercises or lectures or upgrading) and preserved:
+        if (exercises or lectures or exam or upgrading) and preserved:
             raise CampusError(
                 Code.WORKSPACE_CONFLICT,
                 "Customized templates were preserved; review workspace support before building.",
@@ -411,6 +456,14 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             )
             if lectures
             else (),
+            exam={
+                "concepts": len(exam.concepts),
+                "patterns": len(exam.patterns),
+                "past_papers": sum(len(sitting.variants) for sitting in exam.sittings),
+                "practice_exams": len(exam.mocks),
+            }
+            if exam
+            else {},
         )
     if publish:
         from tum_mcp.study_publish import after_build
@@ -423,5 +476,6 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             exercises=report.exercises,
             lectures=report.lectures,
             lecture_coverage=report.lecture_coverage,
+            exam=report.exam,
         )
     return report

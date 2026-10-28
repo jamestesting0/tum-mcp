@@ -15,6 +15,59 @@ function field(label, multiline, value, edit) {
   return { wrapper, input };
 }
 
+function seeded(identity) {
+  let state = [...identity].reduce((hash, character) => Math.imul(hash ^ character.charCodeAt(0), 16777619), 2166136261) >>> 0;
+  return () => { state = Math.imul(state ^ (state >>> 15), 2246822507) >>> 0; return state / 4294967296; };
+}
+function orderResponse(check, draft, edit, identity) {
+  const root = node('div', 'exercise-response order-response'), keys = check.items.map(item => item.key);
+  const target = check.answers[0], distractors = keys.length > target.length;
+  const saved = structured(draft);
+  let order = Array.isArray(saved.order) && saved.order.length === keys.length && keys.every(key => saved.order.includes(key)) ? saved.order : null;
+  if (!order) {
+    // A stable shuffle per exercise step; the authored order is often the solution.
+    const random = seeded(identity); order = [...keys];
+    for (let attempt = 0; attempt < 5 && check.answers.some(answer => answer.join() === order.filter(key => answer.includes(key)).join()); attempt++)
+      for (let index = order.length - 1; index > 0; index--) { const swap = Math.floor(random() * (index + 1)); [order[index], order[swap]] = [order[swap], order[index]]; }
+  }
+  const left = new Set(Array.isArray(saved.left_out) ? saved.left_out.filter(key => keys.includes(key)) : []);
+  const save = () => edit(JSON.stringify({ order, left_out: [...left] }));
+  const list = node('ol', 'order-list');
+  root.append(node('p', 'small', distractors ? 'Arrange the lines in order and leave out the ones that do not belong.' : 'Arrange the items in order.'), list);
+  const content = item => item.code ? append(node('pre', 'order-code'), node('code', '', item.code)) : studyText('span', '', item.text);
+  function render(focus) {
+    list.replaceChildren();
+    order.forEach((key, index) => {
+      const item = check.items.find(entry => entry.key === key), row = node('li', `order-item${left.has(key) ? ' left-out' : ''}`);
+      const label = (item.code || studyText('span', '', item.text).textContent).trim();
+      const move = (offset, name) => {
+        const control = button(name === 'up' ? '↑' : '↓', () => {
+          [order[index], order[index + offset]] = [order[index + offset], order[index]]; save(); render(`${key}:${name}`);
+        }, 'secondary order-move');
+        control.setAttribute('aria-label', `Move "${label}" ${name}`); control.dataset.focus = `${key}:${name}`;
+        control.disabled = index + offset < 0 || index + offset >= order.length; return control;
+      };
+      const controls = append(node('span', 'order-controls'), move(-1, 'up'), move(1, 'down'));
+      if (distractors) {
+        const toggle = node('label', 'order-leave'), box = node('input'); box.type = 'checkbox'; box.checked = left.has(key);
+        box.dataset.focus = `${key}:leave`;
+        box.addEventListener('change', () => { if (box.checked) left.add(key); else left.delete(key); save(); render(`${key}:leave`); });
+        toggle.append(box, node('span', '', 'Leave out')); controls.append(toggle);
+      }
+      row.append(content(item), controls); list.append(row);
+    });
+    if (focus) list.querySelector(`[data-focus="${CSS.escape(focus)}"]`)?.focus();
+  }
+  render();
+  const validate = () => {
+    const used = order.filter(key => !left.has(key));
+    const correct = check.answers.some(answer => answer.length === used.length && answer.every((key, index) => used[index] === key));
+    const placed = target.filter((key, index) => used[index] === key).length;
+    return { valid: used.length > 1, correct, repairs: [check.feedback, `${placed} of ${target.length} positions match an accepted order.`] };
+  };
+  return { root, validate, showResult: () => {} };
+}
+
 export function renderResponse(check, draft, edit, identity) {
   const root = node('div', 'exercise-response');
   let value = draft, validate = () => ({ valid: true, correct: false, repairs: [] }), showResult = () => {};
@@ -89,7 +142,18 @@ export function renderResponse(check, draft, edit, identity) {
     validate = () => ({ valid: inputs.every(({ cell, input }) => cell.kind === 'numeric' ? number(input.value) : Boolean(input.value.trim())),
       correct: inputs.every(matches), repairs: inputs.filter(item => !matches(item)).map(item => `${item.label}: ${item.cell.feedback}`) });
     showResult = checked => { for (const item of inputs) { if (checked && !matches(item)) item.input.setAttribute('aria-invalid', 'true'); else item.input.removeAttribute('aria-invalid'); } };
-  } else if (check.kind === 'graph') return graphResponse(check, draft, edit);
+  } else if (check.kind === 'text') {
+    const code = check.format === 'code';
+    const { wrapper, input } = field(code ? `${check.language || 'Code'} answer` : 'Your answer', false, value, change);
+    if (code) { input.classList.add('code-input'); input.spellcheck = false; input.autocapitalize = 'off'; }
+    root.append(wrapper);
+    const shape = text => {
+      const spaced = check.whitespace === 'exact' ? text : check.whitespace === 'ignore' ? text.replace(/\s+/g, '') : text.trim().replace(/\s+/g, ' ');
+      return check.case_sensitive ? spaced : spaced.toLowerCase();
+    };
+    validate = () => ({ valid: Boolean(value.trim()), correct: check.accepted.some(answer => shape(answer) === shape(value)), repairs: [check.feedback] });
+  } else if (check.kind === 'order') return orderResponse(check, draft, edit, identity);
+  else if (check.kind === 'graph') return graphResponse(check, draft, edit);
   else if (check.kind === 'plot') return plotResponse(check, draft, edit);
   return { root, validate: () => validate(), showResult: checked => showResult(checked) };
 }

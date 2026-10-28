@@ -9,6 +9,10 @@ selection file, then run `tum-mcp studocu plan PROJECT --selection FILE`:
 ]}
 ```
 
+Before including an exam, compare it with the local exams (`tum-mcp study
+exam-report PROJECT`): if an official copy of that sitting is already stored, include
+the Studocu document only for its solutions or annotations.
+
 Use an empty `documents` list initially to establish the search scope, then call
 `studocu_search_materials` to record course-scoped discovery evidence. Add reviewed
 documents with `summaries`, `exams` or `other` group; `document_type` is `exam`,

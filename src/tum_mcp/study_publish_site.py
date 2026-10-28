@@ -16,7 +16,7 @@ from tum_mcp.lecture_assets import ASSET
 from tum_mcp.settings import Frozen
 from tum_mcp.study_build import RETIRED_TEMPLATE_FILES, TEMPLATE_FILES
 from tum_mcp.study_github import Commit, GitHub, GitObject, Head, Response, Tree
-from tum_mcp.study_models import Digest, is_studocu_link
+from tum_mcp.study_models import PRIVATE_PROVIDERS, Digest, is_studocu_link
 from tum_mcp.study_publish_models import GitSha, Publication, course_identity
 from tum_mcp.study_publish_projection import assets, project
 from tum_mcp.study_store import digest, load_state
@@ -80,6 +80,8 @@ def export_site(
         if checked is not None
         else project(data, include_exercises=include_exercises, include_lectures=include_lectures)
     )
+    if "exam" in payload or "exam" in payload.get("workspaces", ()):
+        raise CampusError(Code.SCOPE_DENIED, "Exam Prep stays local and is never published.")
     original = json.loads(data.removeprefix(b"export default ").removesuffix(b";\n"))
     if payload != original:
         data = b"export default " + json.dumps(payload, ensure_ascii=True).encode() + b";\n"
@@ -98,7 +100,9 @@ def _check_supplementary_sources(
 ) -> dict | None:
     """Refuse exports that reference personal student uploads, from live source bindings."""
     state = load_state(root)
-    private_bindings = {item.key for item in state.course.bindings if item.provider == "studocu"}
+    private_bindings = {
+        item.key for item in state.course.bindings if item.provider in PRIVATE_PROVIDERS
+    }
     private_keys = {
         item.resource.key
         for item in state.resources
@@ -126,8 +130,10 @@ def _check_supplementary_sources(
     ):
         raise CampusError(Code.STALE_RESULT, "Rebuild after refreshing changed source material.")
     expected = _app_data(state, content, exercises, lectures, root)
-    excluded = (not include_exercises and "exercises" in generated) or (
-        not include_lectures and "lectures" in generated
+    excluded = (
+        (not include_exercises and "exercises" in generated)
+        or (not include_lectures and "lectures" in generated)
+        or "exam" in generated
     )
     if not excluded and generated.get("inlineMath") != expected.get("inlineMath"):
         raise CampusError(Code.STALE_RESULT, "Rebuild generated study data before publication.")

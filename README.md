@@ -30,6 +30,7 @@ submissions, posting and exercise execution are unavailable.
 | `sync-course` | “Set up a project for this course and collect its materials.” |
 | `prepare-study` | “Build lessons, flashcards and practice in a study website.” |
 | `prepare-exercises` | “Add guided exercises from this week's released sheet.” |
+| `prepare-exams` | “Make a cheatsheet and practice exams from the past papers.” |
 | `publish-course` | “Publish my reviewed study site for phone access.” |
 
 Each project holds one course. Run `tum-mcp study` in its folder to open the app.
@@ -69,9 +70,10 @@ course/
   AGENTS.md                 Course instructions and inventory
   materials/                Course content, exams, exercises and other sources
     studocu/                Optional: summaries/, exams/ and other/ PDFs
-  app/                      Study, Exercises and optional Lecture Notes website
+  app/                      Study, Exercises, Exam Prep and optional Lecture Notes website
     content.json            Study lessons, flashcards and practice
     exercises.json          Guided exercise content
+    exam.json               Exam Prep: cheatsheet, exam patterns, practice exams (local only)
     lectures.json           Optional: Lecture Notes
     lecture-assets/         Optional: selected lecture figures
   .tum-mcp/                 Private course state, comments and lecture evidence

@@ -18,7 +18,8 @@ def list_comments(
     status: Annotated[Literal["open", "resolved", "all"], typer.Option()] = "open",
     unit: Annotated[str | None, typer.Option()] = None,
     view: Annotated[
-        Literal["content", "flashcards", "practice", "exercises", "lectures"] | None, typer.Option()
+        Literal["content", "flashcards", "practice", "exercises", "lectures", "exam"] | None,
+        typer.Option(),
     ] = None,
     exercise: Annotated[str | None, typer.Option()] = None,
     lecture: Annotated[str | None, typer.Option()] = None,
@@ -45,6 +46,10 @@ def list_comments(
         {item.key: item for group in content.sets for item in group.exercises} if content else {}
     )
     notes = read_lectures(root)
+    from tum_mcp.exam_data import exam_revisions, read_exam
+
+    exam = read_exam(root)
+    exam_items = exam_revisions(exam) if exam else {}
     lectures = {item.key: item for item in notes.lectures} if notes else {}
     chosen = []
     for item in result["comments"]:
@@ -64,6 +69,10 @@ def list_comments(
             revision = current.semantic_revision if current else None
             previous = anchor["semantic_revision"]
             exists = current and any(s.key == anchor["section_key"] for s in current.sections)
+        elif anchor["view"] == "exam":
+            revision = exam_items.get(anchor["item_key"])
+            previous = anchor["item_revision"]
+            exists = revision is not None
         elif anchor["view"] == "exercises":
             current = exercises.get(anchor["exercise_key"])
             revision = exercise_revision(current) if current else None

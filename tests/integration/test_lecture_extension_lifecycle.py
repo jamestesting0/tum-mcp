@@ -41,7 +41,7 @@ def test_cli_opt_in_repeat_update_and_removal_preserve_base_and_personal_files(
         installed = runner.invoke(app, ["install", "lecture", "--no-asr"])
         assert installed.exit_code == 0, installed.output or repr(installed.exception)
     assert lecture_enabled() and (skills / "prepare-lecture/SKILL.md").is_file()
-    assert len(list(skills.iterdir())) == 6
+    assert len(list(skills.iterdir())) == 7
     refreshed = runner.invoke(app, ["update"])
     assert refreshed.exit_code == 0, refreshed.output
     assert (skills / "prepare-lecture/SKILL.md").is_file()
@@ -89,9 +89,9 @@ def test_base_and_optional_catalog_validation_do_not_claim_activation(extension_
     base = runner.invoke(app, ["skills", "validate", "--json"])
     optional = runner.invoke(app, ["skills", "validate", "--all", "--json"])
     assert base.exit_code == optional.exit_code == 0
-    assert len(json.loads(base.output)["checked_skills"]) == 5
+    assert len(json.loads(base.output)["checked_skills"]) == 6
     report = json.loads(optional.output)
-    assert len(report["checked_skills"]) == 9 and not report["activation_evaluated"]
+    assert len(report["checked_skills"]) == 10 and not report["activation_evaluated"]
 
 
 def test_real_mcp_process_exposes_live_tools_only_after_opt_in(extension_home: Path) -> None:

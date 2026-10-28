@@ -4,10 +4,10 @@ export const exercisePrefix = `course-exercises:${data.course.identity}:`;
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const text = value => typeof value === 'string' ? value.slice(0, 64000) : '';
 
-export function exerciseState(read, write) {
+export function exerciseState(read, write, prefix = exercisePrefix) {
   const cache = new Map();
   function get(exercise) {
-    const key = `${exercisePrefix}${exercise.key}:${exercise.revision}`;
+    const key = `${prefix}${exercise.key}:${exercise.revision}`;
     if (!cache.has(key)) {
       const saved = object(read(key, {})), steps = {};
       for (const step of exercise.steps) {
@@ -27,11 +27,11 @@ export function exerciseState(read, write) {
   }
   function save(exercise) {
     const value = get(exercise);
-    const latest = read(`${exercisePrefix}${exercise.key}:latest`, null);
+    const latest = read(`${prefix}${exercise.key}:latest`, null);
     if (typeof latest === 'string' && latest !== exercise.revision && /^[a-f0-9]{64}$/.test(latest))
-      write(`${exercisePrefix}${exercise.key}:previous`, latest);
+      write(`${prefix}${exercise.key}:previous`, latest);
     write(value.key, value);
-    write(`${exercisePrefix}${exercise.key}:latest`, exercise.revision);
+    write(`${prefix}${exercise.key}:latest`, exercise.revision);
   }
   function attempt(exercise, step, correct = null) {
     const value = get(exercise), state = value.steps[step.key];

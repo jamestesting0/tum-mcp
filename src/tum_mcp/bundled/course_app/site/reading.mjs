@@ -123,7 +123,12 @@ export function renderBlockBody(block) {
       case 'code': {
         const region = node('div', 'code-region'); region.tabIndex = 0;
         region.setAttribute('role', 'region'); region.setAttribute('aria-label', `${block.language} code`);
-        region.append(node('span', 'small', block.language), append(node('pre'), node('code', '', block.code)));
+        const listing = node('code');
+        if (block.line_numbers) {
+          listing.classList.add('numbered');
+          for (const line of block.code.split('\n')) listing.append(node('span', 'code-line', line), '\n');
+        } else listing.textContent = block.code;
+        region.append(node('span', 'small', block.language), append(node('pre'), listing));
         root.append(region, studyText('p', '', block.explanation)); break;
       }
       default: throw new Error('Unsupported study block. Rebuild the site with a compatible renderer.');

@@ -12,6 +12,10 @@ export function annotateExercise(element, group, exercise, field, step = '') {
     exerciseKey: exercise.key, exerciseRevision: exercise.revision, stepKey: step, field });
   return element;
 }
+export function annotateExam(element, item, revision, field) {
+  Object.assign(element.dataset, { commentTarget: 'exam', examItem: item, examRevision: revision, field });
+  return element;
+}
 function before(text, at) {
   let start = Math.max(0, at - 80);
   if (text.charCodeAt(start) >= 0xDC00 && text.charCodeAt(start) <= 0xDFFF) start++;
@@ -65,6 +69,9 @@ export function selectedPassage(root, unit) {
     exercise_revision: material.dataset.exerciseRevision, step_key: material.dataset.stepKey || null,
     field: material.dataset.field, block_title: unit.title, quote,
     prefix: before(index.text, first), suffix: after(index.text, last) }, rect: range.getBoundingClientRect() };
+  if (view === 'exam') return { anchor: { workspace: 'exam', view, item_key: material.dataset.examItem,
+    item_revision: material.dataset.examRevision, field: material.dataset.field, block_title: unit.title, quote,
+    prefix: before(index.text, first), suffix: after(index.text, last) }, rect: range.getBoundingClientRect() };
   if (view === 'lectures') return { anchor: { view, lecture_key: unit.key, section_key: material.dataset.lectureSection, semantic_revision: unit.revision, quote, prefix: before(index.text, first), suffix: after(index.text, last) }, rect: range.getBoundingClientRect() };
   const anchor = { view, unit_key: material.dataset.unitKey || unit.key,
     unit_revision: material.dataset.unitRevision || unit.revision, block_index: 0,
@@ -103,6 +110,12 @@ export function locatePassage(root, unit, anchor, indexes = new Map()) {
     section = [...root.querySelectorAll('[data-lecture-section]')].find(item => item.dataset.lectureSection === anchor.section_key);
     if (!section) return null;
     material = section;
+  } else if (view === 'exam') {
+    material = [...root.querySelectorAll('[data-comment-target="exam"]')].find(item =>
+      item.dataset.examItem === anchor.item_key && item.dataset.field === anchor.field &&
+      !item.closest('[hidden],[aria-hidden="true"],details:not([open])'));
+    if (!material) return null;
+    section = material;
   } else if (view === 'exercises') {
     material = [...root.querySelectorAll('[data-comment-target="exercises"]')].find(item =>
       item.dataset.exerciseKey === anchor.exercise_key && item.dataset.setKey === anchor.set_key &&
@@ -133,7 +146,7 @@ export function locatePassage(root, unit, anchor, indexes = new Map()) {
   const b = index.segments.find(item => item.start < end && end <= item.end);
   if (!a || !b) return null;
   const range = document.createRange(); range.setStart(a.node, start - a.start); range.setEnd(b.node, end - b.start);
-  const focus = view === 'lectures' ? section.querySelector('h2') : view === 'exercises' ? root.querySelector('h1') : view === 'content' ? section.querySelector('h2') : material.closest('.flashcard') || root.querySelector('.practice-question legend');
+  const focus = view === 'lectures' ? section.querySelector('h2') : view === 'exercises' || view === 'exam' ? root.querySelector('h1') : view === 'content' ? section.querySelector('h2') : material.closest('.flashcard') || root.querySelector('.practice-question legend');
   return { range, section, focus };
 }
 export function highlightPassages(ranges, focused = []) {

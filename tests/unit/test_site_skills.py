@@ -22,6 +22,7 @@ def test_pack_contains_reading_and_study_workflows_with_valid_references(
         "sync-course",
         "prepare-study",
         "prepare-exercises",
+        "prepare-exams",
         "publish-course",
     }
     assert report.errors == () and report.reference_characters > 0
@@ -69,6 +70,20 @@ def test_local_study_workflow_does_not_require_a_campus_server(name: str) -> Non
     policy = yaml.safe_load((skill / "agents/openai.yaml").read_text(encoding="utf-8"))
     assert implicit_invocation(skill)
     assert not policy.get("dependencies", {}).get("tools", [])
+
+
+def test_every_bundled_skill_has_complete_host_display_metadata() -> None:
+    # Codex prefixes "<Plugin>: " to skills without a display name, so every skill needs one.
+    from tum_mcp.skill_catalog import BUNDLED_SKILLS
+    from tum_mcp.skills import bundled
+
+    for name in BUNDLED_SKILLS:
+        metadata = yaml.safe_load((bundled() / name / "agents/openai.yaml").read_text("utf-8"))
+        interface = metadata.get("interface", {})
+        assert interface.get("display_name") == name.replace("-", " ").title(), name
+        assert interface.get("short_description", "").strip(), name
+        assert f"${name}" in interface.get("default_prompt", ""), name
+        assert metadata["policy"]["allow_implicit_invocation"] is True, name
 
 
 def test_activation_cases_have_unique_ids_and_current_workflow_labels() -> None:

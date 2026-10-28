@@ -32,6 +32,10 @@ other. Keep source URL, locator and revision separate from payload text. Do not
 embed fetch timestamps in unchanged material or invent upstream revisions from
 labels/summaries. Use a trustworthy source version or verified content hash.
 
+When Moodle and Artemis host the same file, stage it once and reference the same
+`source_file` from both resources; `study inspect` then lists them as one duplicate
+group. Read and cite one copy (`study duplicates PROJECT`).
+
 Payload is text OR source_file, never both. Files are staged relative to the
 snapshot directory; traversal/symlinks and unsupported formats are rejected.
 Exclude credentials, credential-bearing URLs and unrelated personal records.
@@ -52,8 +56,9 @@ rather than rereading them. An unavailable source is a gap, not an empty course.
 | Failed source access | Mark unavailable; preserve previous bindings/material. An auth error is not evidence of deletion. |
 
 Every binding being checked needs coverage and an actual check time. Include
-existing Studocu bindings in the course identity and list their keys in
-`retained_bindings`; omit their coverage and resources from the campus snapshot.
+existing Studocu and local (`study import`) bindings in the course identity and list
+their keys in `retained_bindings`; omit their coverage and resources from the campus
+snapshot. A forgotten binding makes the snapshot invalid; it never withdraws files.
 This copies their latest state unchanged without spending Studocu quota.
 State what scope/window was
 checked in note. Complete inventory does not mean all payloads were downloaded or

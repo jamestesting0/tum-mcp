@@ -10,7 +10,9 @@ from tum_mcp.settings import Frozen
 
 Key = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.-]{0,99}$")]
 Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
-ProviderName = Literal["moodle", "artemis", "zulip", "sample", "tum_live", "studocu"]
+ProviderName = Literal["moodle", "artemis", "zulip", "sample", "tum_live", "studocu", "local"]
+# Material only the user holds; never published and kept across campus syncs.
+PRIVATE_PROVIDERS = frozenset({"studocu", "local"})
 Kind = Literal["exam", "content", "exercise", "other"]
 FOLDERS = {"exam": "exams", "content": "content", "exercise": "exercises", "other": "other"}
 
@@ -84,7 +86,7 @@ class Resource(Frozen):
     binding: Key
     kind: Kind
     title: Annotated[str, Field(min_length=1, max_length=300)]
-    url: Annotated[str, Field(max_length=4000)]
+    url: Annotated[str, Field(max_length=4000)] = ""
     locator: str = Field(default="", max_length=500)
     revision: str | None = Field(default=None, max_length=200)
     text: str | None = Field(default=None, max_length=2_000_000)
@@ -94,6 +96,8 @@ class Resource(Frozen):
     @field_validator("url")
     @classmethod
     def public_link(cls, value: str) -> str:
+        if not value:
+            return value
         parsed = urlsplit(value)
         if (
             parsed.scheme not in {"https", "http"}
@@ -169,6 +173,8 @@ def validate_provenance(course: Course, resources: tuple[Resource, ...]) -> None
         if binding is None:
             raise ValueError("Resource is not bound to this course.")
         source = resource.studocu
+        if binding.provider != "local" and not resource.url:
+            raise ValueError("Campus and Studocu resources need their source link.")
         if binding.provider != "studocu":
             if source is not None:
                 raise ValueError("Studocu sources require a Studocu binding and provenance.")

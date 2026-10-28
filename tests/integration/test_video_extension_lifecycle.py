@@ -27,13 +27,13 @@ def test_video_notes_is_opt_in_and_exports_its_complete_workflow(
 ) -> None:
     install_client(client, profile, announce=False)
     assert not video_notes_enabled()
-    assert len(inspect_skills()) == 5
+    assert len(inspect_skills()) == 6
     runner = CliRunner()
     blocked = runner.invoke(app, ["video-notes", "plan", str(tmp_path), "--selection", "x"])
     assert blocked.exit_code != 0 and "install video-notes" in str(blocked.exception)
     result = runner.invoke(app, ["install", "video-notes"])
     assert result.exit_code == 0, result.output or repr(result.exception)
-    assert video_notes_enabled() and len(inspect_skills()) == 6
+    assert video_notes_enabled() and len(inspect_skills()) == 7
     destination = tmp_path / "export"
     export_pack(destination)
     for name in ("SKILL.md", "references/manim.md", "references/narration.md"):

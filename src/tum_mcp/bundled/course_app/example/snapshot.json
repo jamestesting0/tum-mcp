@@ -38,9 +38,18 @@
       "kind": "content",
       "title": "Synthetic lecture transcript and board",
       "url": "https://example.invalid/lectures/synthetic",
-      "locator": "Synthetic0:00\u20131:00 transcript; board0:37.5",
+      "locator": "Synthetic0:00–1:00 transcript; board0:37.5",
       "revision": "1",
-      "text": "Synthetic recording transcript. 0:00\u20130:20: BFS explores an unweighted graph with a queue. 0:20\u20131:00: When a vertex at distance d is removed, undiscovered neighbors get distance d+1. FIFO preserves the layer order, so first discovery gives minimum edge count. Mark at enqueue time. A\u2013B\u2013C has distances0,1,2. Equal edge costs are essential; this is not a guarantee of minimum arbitrary weighted cost. Synthetic source board at0:37.5 shows the path. End at1:00."
+      "text": "Synthetic recording transcript. 0:00–0:20: BFS explores an unweighted graph with a queue. 0:20–1:00: When a vertex at distance d is removed, undiscovered neighbors get distance d+1. FIFO preserves the layer order, so first discovery gives minimum edge count. Mark at enqueue time. A–B–C has distances0,1,2. Equal edge costs are essential; this is not a guarantee of minimum arbitrary weighted cost. Synthetic source board at0:37.5 shows the path. End at1:00."
+    },
+    {
+      "key": "demo-past-paper",
+      "binding": "demo",
+      "kind": "exam",
+      "title": "Synthetic past paper",
+      "url": "https://example.invalid/components",
+      "revision": "1",
+      "text": "# Synthetic past paper\n\nQuestion 1 (10 points). A queue serves requests in arrival order. Name the data structure and give the cost of enqueue and dequeue.\n\nQuestion 2 (8 points). Order the steps of breadth-first search from a start node.\n"
     }
   ]
 }

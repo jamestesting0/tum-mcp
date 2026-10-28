@@ -1,5 +1,20 @@
 # Changes
 
+## Unreleased
+
+- Add the base `prepare-exams` workflow and the local **Exam Prep** workspace: a
+  cheatsheet with a semester map, exam patterns with solving workflows, guided past
+  papers, and forecast practice exams with an exam mode. Statistics, map layout,
+  blueprint and novelty checks are derived by code. Exam Prep is never published.
+- Add `tum-mcp study exam-report`, `study text` (page text extracted once per file),
+  `study import` (private local files such as past exams you hold) and
+  `study duplicates` (identical and near-duplicate copies across Moodle, Artemis,
+  Studocu and local files); `study inspect` lists identical copies.
+- Exercises gain short typed answers, line-ordering checks, numbered code blocks and
+  distilled practice for large programming tasks; prepare-exercises documents how to
+  distil Artemis programming exercises.
+- Give every skill a Codex display name, so Codex no longer shows "Tum MCP:" prefixes.
+
 ## 0.10.0 — 2026-10-27
 
 - Add the optional `video-notes` extension (`tum-mcp install video-notes`): short

@@ -70,7 +70,7 @@ export function sourcesNote(ids, sources, synthetic, title = '', locators = {}) 
   for (const id of ids) {
     const source = sources[id]; if (!source) continue;
     const item = node('li'), label = source.title;
-    if (synthetic) item.append(node('span', '', label));
+    if (synthetic || !source.url) item.append(node('span', '', label));
     else {
       const url = new URL(source.url); if (!['http:', 'https:'].includes(url.protocol)) continue;
       const link = node('a', '', label); link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; item.append(link);

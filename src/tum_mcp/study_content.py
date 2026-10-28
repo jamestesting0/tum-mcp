@@ -80,6 +80,7 @@ class CodeBlock(Sourced):
     language: Annotated[str, Field(min_length=1, max_length=30)]
     code: Annotated[str, Field(min_length=1, max_length=20000)]
     explanation: Text
+    line_numbers: bool = False
 
 
 class Node(Frozen):

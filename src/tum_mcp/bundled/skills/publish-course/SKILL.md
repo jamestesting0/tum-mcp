@@ -25,7 +25,8 @@ including for old saved publications; explain that the notes and images become
 public. `--exclude-lectures` removes them and their previously managed images from
 subsequent eligible exports. Omitted flags preserve existing choices. An excluded
 notes-only app cannot produce an empty site; keep it local. Publication scope is an
-authoring decision, never a control in the student app.
+authoring decision, never a control in the student app. Exam Prep always stays local:
+it is never published, and no option includes it.
 
 ## First publication
 

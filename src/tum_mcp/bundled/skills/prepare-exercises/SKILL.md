@@ -1,6 +1,6 @@
 ---
 name: prepare-exercises
-description: Prepare or update guided weekly exercises in a local TUM course app, or address exercise passage comments, using released source statements and prepared hints, checks and solutions. Course lessons use prepare-study.
+description: Prepare or update guided weekly exercises in a local TUM course app, or address exercise passage comments, using released source statements and prepared hints, checks and solutions. Course lessons use prepare-study; exam preparation uses prepare-exams.
 ---
 
 For a bound local course, read `.tum-mcp/course.md` and the relevant source records
@@ -25,6 +25,7 @@ template, not necessarily a good model for teaching or question design.
    directly selectable; do not create category landing-page chains.
 3. Solve independently, then prepare only useful conceptual steps, requested hints,
    specific feedback and a direct worked solution. Read [guidance](references/guidance.md).
+   For large programming tasks, add distilled practice per [coding](references/coding.md).
    Paper work and independent solving remain valid; do not impose typing or ratings.
 4. Write the affected objects in exercises.json using `tum-mcp study schema exercises`;
    read [content](references/content.md) for identities, checks and source links.

@@ -26,7 +26,7 @@ def test_optional_demo_and_edited_asset_preservation(
     payload = json.loads(
         (root / "app/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
     )
-    assert payload["workspaces"] == ["study", "exercises", "lectures"]
+    assert payload["workspaces"] == ["study", "exercises", "lectures", "exam"]
     assert len(payload["lectures"]["lectures"]) == 1
     figure = next((root / ".tum-mcp/lecture-assets").iterdir())
     figure.write_bytes(b"Personal altered image")

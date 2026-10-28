@@ -74,12 +74,38 @@ export function renderExercises(hash, state, changed) {
     }
     return { root, heading, title: 'Exercises' };
   }
+  const following = ordered[ordered.findIndex(item => item.exercise === exercise) + 1];
+  return exercisePage(exercise, {
+    state, changed, stepKey,
+    eyebrow: [group.title, exercise.label, due(group)].filter(Boolean).join(' · '),
+    link: step => exerciseLink(group, exercise, step),
+    annotate: (element, field, step) => annotateExercise(element, group, exercise, field, step),
+    comment: root => renderCommentedView({ ...exercise, setKey: group.key }, 'exercises', root).root,
+    onward: following && { href: exerciseLink(following.group, following.exercise), title: following.exercise.title, detail: following.exercise.label },
+  });
+}
+
+// One exercise with optional guided steps and a solution; Exam Prep reuses it for past papers.
+export function exercisePage(exercise, options) {
+  const { state, changed, stepKey } = options;
+  const root = node('div', 'exercise-workspace');
   const value = state.get(exercise);
   value.started = true; state.save(exercise);
   const heading = studyText('h1', '', exercise.title), header = node('div', 'unit-header');
-  const target = (element, field, step = '') => annotateExercise(element, group, exercise, field, step);
+  const target = (element, field, step = '') => options.annotate(element, field, step);
   const activityChanged = () => root.dispatchEvent(new Event('study-activity-change', { bubbles: true }));
-  header.append(studyText('p', 'eyebrow', [group.title, exercise.label, due(group)].filter(Boolean).join(' · ')), heading);
+  header.append(studyText('p', 'eyebrow', options.eyebrow), heading);
+  if (exercise.kind === 'distilled') {
+    const practice = node('p', 'small practice-for', 'Practice for ');
+    exercise.distilled_from.forEach((key, index) => {
+      const original = ordered.find(entry => entry.exercise.key === key);
+      if (!original) return;
+      if (index) practice.append(', ');
+      practice.append(quietLink(`${original.exercise.label} · ${original.exercise.title}`, exerciseLink(original.group, original.exercise)));
+    });
+    if (exercise.concepts?.length) practice.append(append(node('span', 'practice-concepts'), ...exercise.concepts.map(text => studyText('span', 'chip', text))));
+    header.append(practice);
+  }
   root.append(header);
   const statement = renderReading({ blocks: exercise.statement }); statement.id = 'exercise-question';
   [...statement.querySelectorAll('.reading-material')].forEach((element, index) => target(element, `statement:${index}`));
@@ -104,13 +130,13 @@ export function renderExercises(hash, state, changed) {
   let index = exercise.steps.findIndex(item => item.key === (stepKey || value.lastStep));
   if (index < 0) index = 0;
   const navigation = node('div', 'step-navigation'), counter = node('p', 'small');
-  const prev = iconButton('Previous step', 'left', event => { event.currentTarget.focus({ preventScroll: true }); location.hash = exerciseLink(group, exercise, exercise.steps[index - 1].key); });
+  const prev = iconButton('Previous step', 'left', event => { event.currentTarget.focus({ preventScroll: true }); location.hash = options.link(exercise.steps[index - 1].key); });
   const next = iconButton('Next step', 'right', event => {
     event.currentTarget.focus({ preventScroll: true });
     const savedStep = value.steps[exercise.steps[index].key];
     if (savedStep.checked === null && !savedStep.compared) savedStep.skipped = true;
     state.save(exercise);
-    location.hash = exerciseLink(group, exercise, exercise.steps[index + 1].key);
+    location.hash = options.link(exercise.steps[index + 1].key);
   });
   navigation.append(counter, prev, next);
   const body = node('div', 'step-body'); panel.append(navigation, body);
@@ -120,8 +146,7 @@ export function renderExercises(hash, state, changed) {
     value.reviewed = reviewed; mark.textContent = reviewed ? 'Reviewed' : 'Mark reviewed';
     mark.setAttribute('aria-pressed', String(reviewed)); state.save(exercise); changed();
   }
-  const following = ordered[ordered.findIndex(item => item.exercise === exercise) + 1];
-  const onward = following && nextStep({ href: exerciseLink(following.group, following.exercise), title: following.exercise.title, detail: following.exercise.label });
+  const onward = options.onward && nextStep(options.onward);
   function verdict(correct, ...paragraphs) {
     const section = node('section', `feedback${correct ? '' : ' incorrect'}`);
     section.append(node('h3', '', correct ? 'Correct' : 'Not quite'), ...paragraphs);
@@ -195,7 +220,7 @@ export function renderExercises(hash, state, changed) {
         const destination = onward?.querySelector('a') || mark;
         scrollReadingTo(end); destination.focus({ preventScroll: true }); return;
       }
-      location.hash = exerciseLink(group, exercise, exercise.steps[index + 1].key);
+      location.hash = options.link(exercise.steps[index + 1].key);
     }
     update(); state.save(exercise); return title;
   }
@@ -214,7 +239,7 @@ export function renderExercises(hash, state, changed) {
   }
   root.append(end);
   if (onward) root.append(onward);
-  return { root: renderCommentedView({ ...exercise, setKey: group.key }, 'exercises', root).root,
+  return { root: options.comment(root),
     heading: stepKey ? panel.querySelector('.step-body h2') : heading,
     title: `${exercise.label} · ${exercise.title}`, current: exercise.key,
     navigateStep(key) {

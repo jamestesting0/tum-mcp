@@ -15,7 +15,8 @@ Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. You aut
 installs the shared course app, which owns layout, styling and interaction; read
 [the course app](references/app.md) to see how your content appears. For an explicitly
 requested synthetic preview, run `tum-mcp study demo PROJECT` in a separate directory.
-Weekly sheets and guided solutions use prepare-exercises in the same app.
+Weekly sheets and guided solutions use prepare-exercises in the same app; exam
+preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
 
 ## Workflow
 

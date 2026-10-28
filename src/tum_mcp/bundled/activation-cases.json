@@ -1126,5 +1126,53 @@
     "context": "no_course_project",
     "partition": "held_out",
     "expected_skill": null
+  },
+  {
+    "id": "prepare-exams-boundary-1",
+    "target_skill": "prepare-exams",
+    "prompt": "Make a cheatsheet with the formulas I need for the exam.",
+    "context": "bound_local_course",
+    "partition": "development",
+    "expected_skill": "prepare-exams"
+  },
+  {
+    "id": "prepare-exams-boundary-2",
+    "target_skill": "prepare-exams",
+    "prompt": "Analyse the past exams and show me the recurring question types with a way to solve each.",
+    "context": "combined_app",
+    "partition": "development",
+    "expected_skill": "prepare-exams"
+  },
+  {
+    "id": "prepare-exams-boundary-3",
+    "target_skill": "prepare-exams",
+    "prompt": "Write a practice exam like the real one, but with new variants.",
+    "context": "bound_local_course",
+    "partition": "held_out",
+    "expected_skill": "prepare-exams"
+  },
+  {
+    "id": "prepare-exams-boundary-4",
+    "target_skill": "prepare-exams",
+    "prompt": "Use $prepare-exams to let me work through the 2023 exam step by step.",
+    "context": "combined_app",
+    "partition": "held_out",
+    "expected_skill": "prepare-exams"
+  },
+  {
+    "id": "prepare-exams-boundary-5",
+    "target_skill": "prepare-exams",
+    "prompt": "When is the exam and are calculators allowed?",
+    "context": "bound_local_course",
+    "partition": "development",
+    "expected_skill": "read-content"
+  },
+  {
+    "id": "prepare-exams-boundary-6",
+    "target_skill": "prepare-exams",
+    "prompt": "Turn this week's lecture into lessons and flashcards.",
+    "context": "bound_local_course",
+    "partition": "held_out",
+    "expected_skill": "prepare-study"
   }
 ]

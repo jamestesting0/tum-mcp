@@ -43,7 +43,7 @@ try {
   run(process.execPath, [launcher, 'setup', '--client', 'generic']);
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'data/runtime.json'), 'utf8')), first);
   const skills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate', '--json']));
-  assert.deepEqual(skills.checked_skills.toSorted(), ['prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course']);
+  assert.deepEqual(skills.checked_skills.toSorted(), ['prepare-exams', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course']);
   assert.deepEqual(skills.errors, []);
   const diagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--json']));
   assert.equal(diagnostics.live_authentication, 'not_checked');
@@ -101,7 +101,7 @@ for name in ('cursor','antigravity'):
   assert.equal(boundStatus.mode, 'sync');
   assert.equal(boundStatus.course.synthetic, true);
   const lectureEvidence = lectureLifecycle(root, args => run(process.execPath, [launcher, ...args]));
-  assert.equal(lectureEvidence.installed_skills, 6);
+  assert.equal(lectureEvidence.installed_skills, 7);
   const studyState = join(studyProject, '.tum-mcp/state.json');
   writeFileSync(studyState, 'synthetic damaged study state');
   assert.equal(status().mode, 'recover');

@@ -23,6 +23,8 @@ def project(data: bytes, *, include_exercises: bool, include_lectures: bool) -> 
             payload.pop("exercises", None)
         if not include_lectures:
             payload.pop("lectures", None)
+        # Exam Prep reproduces past exams and private uploads: it is never published.
+        payload.pop("exam", None)
         payload["workspaces"] = (
             (["study"] if payload["units"] else [])
             + (["exercises"] if payload.get("exercises") else [])

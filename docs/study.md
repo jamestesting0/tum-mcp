@@ -1,7 +1,7 @@
 # Course study projects
 
-Five base skills cover source reading, course sync, Study preparation, Exercises
-preparation and publishing. They run in your local agent, using the connected
+Six base skills cover source reading, course sync, Study preparation, Exercises
+preparation, exam preparation and publishing. They run in your local agent, using the connected
 MCP tools to read course sources. The CLI validates and stores the resulting local
 files; it does not run an AI model.
 The optional `prepare-lecture` skill adds a Lecture Notes workspace; install it with
@@ -40,9 +40,10 @@ pse-ws26/
     course.md               Cited course structure, logistics, rules and unknowns
     state.json              Course binding, source versions and coverage
     notes/                  Detailed course/agent notes when needed
-  app/                      Shared Study, Exercises and optional Lecture Notes website
+  app/                      Shared Study, Exercises, Exam Prep and optional Lecture Notes website
     content.json            Optional source-backed Study content
     exercises.json          Optional prepared exercise guidance
+    exam.json               Optional Exam Prep content (local only)
   audio/                    Optional category audio derived from the prepared website
   videos/                   Optional explainer videos derived from the prepared website
 ```
@@ -187,17 +188,47 @@ Each exercise shows the original statement and subparts first. Work on paper or 
 the app, open the worked solution directly, or open **Guidance** for the exercise's
 goals and one step at a time with optional hints and specific feedback. Checks cover
 numbers with units and tolerance, multiple choice, fillable tables, graph selections
-and paths, and plotted sample points. Long math and programming work use saved drafts
+and paths, plotted sample points, short typed answers such as a missing expression,
+and putting lines or steps in order. Long math and programming work use saved drafts
 and prepared rubrics; code is never executed, and symbolic work, proofs and programs
 are not graded automatically. Mark an exercise reviewed when you are done; Reviewed
 records an action, not mastery or an assessment result. A Next link leads to the
-following exercise.
+following exercise. Large programming exercises can come with small distilled practice
+exercises that train one idea each and link back to the original.
 
 Drafts and assistance stay in this browser. Editing a checked answer clears its
 verdict. Semantic changes start fresh progress for only that exercise, while retaining older
 browser records; source-hash review alone preserves progress.
 Reset on each workspace home affects only that workspace. Exercise passage comments
 use the existing private comment service; hosted exports do not expose it.
+
+## Prepare for exams
+
+Ask `prepare-exams` to build the **Exam Prep** workspace from the course's past exams,
+exercises and materials. Past exams come from `materials/exams` (Moodle),
+`materials/studocu/exams` (Studocu) or files you hold yourself:
+
+```bash
+tum-mcp study import ./pse-ws26 --file "Klausur WS23.pdf" --kind exam --title "Endterm WS23/24"
+tum-mcp study duplicates ./pse-ws26 --near   # identical and likely duplicate copies
+tum-mcp study exam-report ./pse-ws26         # what the agent reads before authoring
+```
+
+Imported files stay private and survive campus syncs. Copies of the same exam from
+different places count once.
+
+- **Cheatsheet**: a semester map of the exam-relevant ideas and one-line entries with
+  formulas, triggers and pitfalls; open an entry for details. Search, filter to core
+  ideas or ideas you marked for review, and print it.
+- **Exam patterns**: recurring question types with recognition cues, a solving workflow,
+  answer template, marking points, a worked past question and drills. A recognition
+  drill shows real past questions and asks which pattern applies.
+- **Practice exams**: work through real past papers question by question with
+  guidance, or take them under exam conditions with a timer; forecast practice exams
+  follow the real exam's length and weighting with new variants and untested topics.
+
+Statistics such as "seen in 4 of 6 exams" are history, never a prediction. Exam Prep
+always stays local: it is never published.
 
 Existing `study/` projects continue to work. New projects use `app/`. To upgrade a
 verified legacy layout explicitly, run `tum-mcp study build PROJECT --upgrade-layout`.

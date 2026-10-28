@@ -617,3 +617,102 @@ def test_ungraded_guidance_still_offers_prepared_explanation(
         expect(page.get_by_role("button", name="Continue", exact=True)).to_be_enabled()
     finally:
         context.close()
+
+
+def test_distilled_code_practice_orders_lines_and_checks_literal_code(
+    course_browser: Browser, exercise_url: str, exercise_project: Path
+) -> None:
+    path = exercise_project / "study/exercises.json"
+    payload = json.loads(path.read_bytes())
+    original = payload["sets"][0]["exercises"][0]
+    source = original["sources"][0]["key"]
+    lines = {"a": "List<Integer> copy = new ArrayList<>(items);", "b": "copy.sort(null);"}
+    lines |= {"c": "return copy;", "d": "items.sort(null);"}
+    payload["sets"][0]["exercises"].append(
+        {
+            "key": "copy-drill",
+            "label": "Drill",
+            "title": "Sort a copy",
+            "kind": "distilled",
+            "distilled_from": [original["key"]],
+            "concepts": ["Defensive copies"],
+            "sources": original["sources"],
+            "statement": [
+                {
+                    "kind": "code",
+                    "title": "Starting point",
+                    "sources": [source],
+                    "language": "java",
+                    "code": "List<Integer> sorted(List<Integer> items) {\n  // sort a copy\n}",
+                    "explanation": "The caller keeps its list unchanged.",
+                    "line_numbers": True,
+                }
+            ],
+            "objectives": ["Sort without changing the input."],
+            "steps": [
+                {
+                    "key": "arrange",
+                    "purpose": "Order the body",
+                    "prompt": "Arrange the method body.",
+                    "explanation": "Copy, sort the copy, return it.",
+                    "check": {
+                        "kind": "order",
+                        "language": "java",
+                        "items": [{"key": key, "code": code} for key, code in lines.items()],
+                        "answers": [["a", "b", "c"]],
+                        "feedback": "Copy before sorting so the caller's list stays unchanged.",
+                    },
+                },
+                {
+                    "key": "finish",
+                    "purpose": "Return it",
+                    "prompt": "Write the final statement.",
+                    "explanation": "Return the sorted copy.",
+                    "check": {
+                        "kind": "text",
+                        "format": "code",
+                        "language": "java",
+                        "accepted": ["return copy;"],
+                        "feedback": "Return the copy, not the input.",
+                    },
+                },
+            ],
+            "solution": original["solution"],
+        }
+    )
+    path.write_text(json.dumps(payload))
+    build(exercise_project, publish=False)
+    context = course_browser.new_context()
+    try:
+        page = context.new_page()
+        errors: list[str] = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(exercise_url + "#exercises/sheet-1/copy-drill")
+        expect(page.locator(".practice-for")).to_contain_text(original["title"])
+        expect(page.locator(".code-line")).to_have_count(3)
+        page.locator(".reading").get_by_text("Guidance", exact=True).click()
+        rows = page.locator(".order-item pre")
+        expect(rows).to_have_count(4)
+        for index, key in enumerate("abc"):
+            while (current := rows.all_inner_texts().index(lines[key])) > index:
+                page.get_by_role("button", name=f'Move "{lines[key]}" up').click()
+            assert current == index
+        page.locator(".order-item", has_text=lines["d"]).get_by_label("Leave out").check()
+        page.reload()
+        expect(rows).to_have_text([lines[key] for key in "abcd"])
+        expect(page.locator(".order-item.left-out pre")).to_have_text(lines["d"])
+        page.get_by_role("button", name="Check answer", exact=True).click()
+        expect(page.get_by_text("Correct", exact=True)).to_be_visible()
+        page.get_by_role("button", name="Continue", exact=True).click()
+        answer = page.get_by_label("java answer", exact=True)
+        answer.fill("return items;")
+        page.get_by_role("button", name="Check answer", exact=True).click()
+        expect(page.get_by_text("Return the copy, not the input.", exact=False)).to_be_visible()
+        answer.fill("  return   copy; ")
+        page.get_by_role("button", name="Check answer", exact=True).click()
+        expect(page.get_by_text("Correct", exact=True)).to_be_visible()
+        page.locator(".practice-for a").click()
+        expect(page.get_by_role("heading", name=original["title"], exact=True)).to_be_visible()
+        assert errors == []
+    finally:
+        context.close()

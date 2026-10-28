@@ -56,7 +56,7 @@ for (const previousVersion of ['0.9.0']) {
     assert.notEqual(current.python, previous.python);
     assert.ok(existsSync(previous.python), 'Previous runtime must remain for pinned clients.');
     assert.equal(run(previous.python, ['-I', '-m', 'tum_mcp', 'version']).trim(), previousVersion);
-    const expectedSkills = ['prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course', 'prepare-lecture', 'sync-studocu'].sort();
+    const expectedSkills = ['prepare-exams', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course', 'prepare-lecture', 'sync-studocu'].sort();
     assert.deepEqual(readdirSync(join(source, 'skills')).filter(name => existsSync(join(source, 'skills', name, 'SKILL.md'))).sort(), expectedSkills);
     assert.equal(JSON.parse(readFileSync(join(home, '.claude.json'))).mcpServers.tum.command, current.python);
     assert.equal(readFileSync(note, 'utf8'), 'retain this user note');
@@ -69,7 +69,7 @@ for (const previousVersion of ['0.9.0']) {
     assert.equal(extensions.studocu, true);
     call(currentPrefix, ['uninstall', 'lecture', 'studocu', '--json']);
     const lectureEvidence = lectureLifecycle(root, args => call(currentPrefix, args));
-    assert.equal(lectureEvidence.installed_skills, 6);
+    assert.equal(lectureEvidence.installed_skills, 7);
     // An invalid prepared package must not replace the existing selected runtime.
     const backend = join(currentPrefix, 'node_modules/@jamestesting888/tum-mcp/npm/backend');
     const manifestPath = join(backend, 'manifest.json'); const manifestBytes = readFileSync(manifestPath);
@@ -92,7 +92,7 @@ for (const previousVersion of ['0.9.0']) {
     assert.ok(!existsSync(join(root, 'data/runtimes')));
     assert.ok(!existsSync(join(source, 'plugin.json')) && existsSync(note));
     assert.ok(existsSync(credential) && existsSync(work) && existsSync(download));
-    records.push({ from: previousVersion, to: version, clients: clients.length, skills: 5, optionalExtensionsPreserved: true, idempotent: true, failedPreparationRetainedRuntime: true, damagedRuntimeRepaired: true, oldRuntimeRetainedUntilExplicitRemoval: true, removalKeptWorkAndCredentials: true, realAccountsUsed: false });
+    records.push({ from: previousVersion, to: version, clients: clients.length, skills: 6, optionalExtensionsPreserved: true, idempotent: true, failedPreparationRetainedRuntime: true, damagedRuntimeRepaired: true, oldRuntimeRetainedUntilExplicitRemoval: true, removalKeptWorkAndCredentials: true, realAccountsUsed: false });
     console.log(JSON.stringify(records.at(-1)));
   } finally { releaseWindowsProfile(); rmSync(root, { recursive: true, force: true }); }
 }

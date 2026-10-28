@@ -1,0 +1,6 @@
+interface:
+  display_name: "Prepare Exams"
+  short_description: "Build a cheatsheet, exam patterns and practice exams in the course app"
+  default_prompt: "Use $prepare-exams to prepare Exam Prep for my course from its past exams and materials: a cheatsheet, exam patterns and practice exams."
+policy:
+  allow_implicit_invocation: true

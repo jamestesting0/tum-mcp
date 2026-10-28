@@ -1,0 +1,547 @@
+{
+  "schema_version": 1,
+  "course_key": "component-preview",
+  "profile": {
+    "format": "written",
+    "duration_minutes": 60,
+    "total_points": 18,
+    "allowed_aids": "No aids (template value).",
+    "languages": [
+      "English"
+    ],
+    "question_formats": [
+      "short",
+      "code"
+    ],
+    "sources": [
+      {
+        "key": "components",
+        "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+      }
+    ]
+  },
+  "topics": [
+    {
+      "key": "structures",
+      "title": "Data structures",
+      "order": 1
+    },
+    {
+      "key": "graphs",
+      "title": "Graph search",
+      "order": 2
+    }
+  ],
+  "sittings": [
+    {
+      "key": "demo-final",
+      "label": "Synthetic final",
+      "held": "2026-02",
+      "kind": "final",
+      "variants": [
+        {
+          "key": "demo-final-a",
+          "label": "Exam",
+          "sources": [
+            {
+              "key": "demo-past-paper",
+              "sha256": "e70b2d64114d5bfcdbdd201634f6aeb19d8e9331af944eb75169003b8c877cba",
+              "role": "paper"
+            }
+          ],
+          "total_points": 18,
+          "questions": [
+            {
+              "key": "demo-q1",
+              "number": "1",
+              "points": 10,
+              "format": "short",
+              "patterns": [
+                "name-structure"
+              ],
+              "concepts": [
+                "queue",
+                "fifo"
+              ],
+              "locator": "Question 1",
+              "statement": [
+                {
+                  "kind": "text",
+                  "title": "Question 1",
+                  "sources": [
+                    "demo-past-paper"
+                  ],
+                  "paragraphs": [
+                    "A queue serves requests in arrival order. Name the data structure and give the cost of enqueue and dequeue."
+                  ]
+                }
+              ],
+              "solution": {
+                "blocks": [
+                  {
+                    "kind": "text",
+                    "title": "Solution",
+                    "sources": [
+                      "demo-past-paper"
+                    ],
+                    "paragraphs": [
+                      "A queue (FIFO); both operations take O(1) with a linked list or ring buffer."
+                    ]
+                  }
+                ]
+              },
+              "guidance": {
+                "objectives": [
+                  "Match an access rule to a structure."
+                ],
+                "steps": [
+                  {
+                    "key": "rule",
+                    "purpose": "Name the rule",
+                    "prompt": "Which removal rule does the scenario describe?",
+                    "hints": [
+                      "Who is served first?"
+                    ],
+                    "check": {
+                      "kind": "text",
+                      "accepted": [
+                        "FIFO",
+                        "first in first out",
+                        "first-in first-out"
+                      ],
+                      "case_sensitive": false,
+                      "feedback": "Arrival order means the oldest item leaves first."
+                    },
+                    "explanation": "First in, first out: a queue."
+                  }
+                ]
+              },
+              "marking": [
+                {
+                  "text": "Names a queue",
+                  "points": 4
+                },
+                {
+                  "text": "Both costs O(1)",
+                  "points": 6
+                }
+              ],
+              "marking_basis": "authored"
+            },
+            {
+              "key": "demo-q2",
+              "number": "2",
+              "points": 8,
+              "format": "short",
+              "patterns": [
+                "order-search"
+              ],
+              "concepts": [
+                "bfs"
+              ],
+              "locator": "Question 2",
+              "statement": [
+                {
+                  "kind": "text",
+                  "title": "Question 2",
+                  "sources": [
+                    "demo-past-paper"
+                  ],
+                  "paragraphs": [
+                    "Order the steps of breadth-first search from a start node."
+                  ]
+                }
+              ],
+              "solution": {
+                "blocks": [
+                  {
+                    "kind": "text",
+                    "title": "Solution",
+                    "sources": [
+                      "demo-past-paper"
+                    ],
+                    "paragraphs": [
+                      "Enqueue the start, then repeatedly dequeue and enqueue unvisited neighbours."
+                    ]
+                  }
+                ]
+              },
+              "check": {
+                "kind": "order",
+                "items": [
+                  {
+                    "key": "a",
+                    "text": "Mark the start visited and enqueue it."
+                  },
+                  {
+                    "key": "b",
+                    "text": "Dequeue the next node."
+                  },
+                  {
+                    "key": "c",
+                    "text": "Enqueue each unvisited neighbour and mark it."
+                  },
+                  {
+                    "key": "d",
+                    "text": "Push the start on a stack."
+                  }
+                ],
+                "answers": [
+                  [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                ],
+                "feedback": "BFS uses a queue, so the oldest discovered node is expanded first."
+              },
+              "marking": [
+                {
+                  "text": "Correct order",
+                  "points": 8,
+                  "auto": true
+                }
+              ],
+              "marking_basis": "authored"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "concepts": [
+    {
+      "key": "fifo",
+      "topic": "structures",
+      "title": "FIFO",
+      "kind": "definition",
+      "line": "First in, first out: the oldest item leaves first.",
+      "basis": "prerequisite",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ]
+    },
+    {
+      "key": "queue",
+      "topic": "structures",
+      "title": "Queue",
+      "kind": "definition",
+      "line": "Enqueue at the back, dequeue at the front, both in \\(O(1)\\).",
+      "trigger": "Requests are served in arrival order.",
+      "pitfall": "An array that shifts on dequeue costs O(n).",
+      "basis": "tested",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "details": [
+        {
+          "kind": "text",
+          "title": "Implementations",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "A ring buffer or a linked list keeps both ends constant time."
+          ]
+        }
+      ]
+    },
+    {
+      "key": "stack",
+      "topic": "structures",
+      "title": "Stack",
+      "kind": "definition",
+      "line": "Last in, first out: push and pop at the top.",
+      "basis": "untested_core",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ]
+    },
+    {
+      "key": "bfs",
+      "topic": "graphs",
+      "title": "Breadth-first search",
+      "kind": "algorithm",
+      "line": "Expand nodes in order of discovery using a queue.",
+      "formula": {
+        "latex": "T = O(V + E)",
+        "plain": "T equals O of V plus E",
+        "symbols": [
+          {
+            "symbol": "V",
+            "meaning": "nodes"
+          },
+          {
+            "symbol": "E",
+            "meaning": "edges"
+          }
+        ],
+        "conditions": "Adjacency lists."
+      },
+      "basis": "tested",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "start": "fifo",
+      "end": "queue",
+      "kind": "requires"
+    },
+    {
+      "start": "queue",
+      "end": "bfs",
+      "kind": "requires"
+    },
+    {
+      "start": "queue",
+      "end": "stack",
+      "kind": "contrasts",
+      "note": "Opposite removal order."
+    }
+  ],
+  "patterns": [
+    {
+      "key": "name-structure",
+      "topic": "structures",
+      "title": "Name the structure from its access rule",
+      "summary": "Read the access rule, then name the structure and its costs.",
+      "cues": [
+        "The order of service is described",
+        "Costs of insert and remove are asked"
+      ],
+      "workflow": [
+        {
+          "do": "State the removal rule in one phrase",
+          "why": "The rule identifies the structure."
+        },
+        {
+          "do": "Name the structure"
+        },
+        {
+          "do": "Give each operation's cost and its implementation"
+        }
+      ],
+      "marking": [
+        "Structure named",
+        "Costs with implementation"
+      ],
+      "marking_basis": "inferred",
+      "pitfalls": [
+        "Quoting amortized cost without saying so"
+      ],
+      "concepts": [
+        "queue",
+        "fifo"
+      ],
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "example": {
+        "question": "demo-q1"
+      },
+      "drill": [
+        {
+          "key": "d1",
+          "prompt": "Undo history removes the newest action first. Which rule is this?",
+          "check": {
+            "kind": "text",
+            "accepted": [
+              "LIFO",
+              "last in first out"
+            ],
+            "case_sensitive": false,
+            "feedback": "The newest item leaves first."
+          },
+          "explanation": "Last in, first out: a stack."
+        }
+      ]
+    },
+    {
+      "key": "order-search",
+      "topic": "graphs",
+      "title": "Order a search procedure",
+      "summary": "Arrange the steps of a traversal and justify the data structure.",
+      "cues": [
+        "Steps of a traversal are listed out of order"
+      ],
+      "workflow": [
+        {
+          "do": "Identify the frontier structure"
+        },
+        {
+          "do": "Start, then loop: take, expand, record"
+        }
+      ],
+      "concepts": [
+        "bfs"
+      ],
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ]
+    }
+  ],
+  "mocks": [
+    {
+      "key": "demo-forecast",
+      "title": "Practice exam (template)",
+      "duration_minutes": 60,
+      "instructions": "Answer both questions.",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "questions": [
+        {
+          "key": "demo-f1",
+          "number": "1",
+          "points": 10,
+          "format": "short",
+          "patterns": [
+            "name-structure"
+          ],
+          "concepts": [
+            "stack"
+          ],
+          "novelty": "variant",
+          "varies_from": [
+            "demo-q1"
+          ],
+          "change": "reversal",
+          "change_note": "The newest item is removed first, so the answer flips to a stack.",
+          "statement": [
+            {
+              "kind": "text",
+              "title": "Question 1",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "A browser returns to the most recently visited page first. Name the structure and its costs."
+              ]
+            }
+          ],
+          "check": {
+            "kind": "choice",
+            "options": [
+              {
+                "key": "a",
+                "text": "Stack",
+                "feedback": "Yes: last in, first out."
+              },
+              {
+                "key": "b",
+                "text": "Queue",
+                "feedback": "A queue serves the oldest page first."
+              },
+              {
+                "key": "c",
+                "text": "Heap",
+                "feedback": "A heap orders by priority, not by recency."
+              },
+              {
+                "key": "d",
+                "text": "Set",
+                "feedback": "A set has no order."
+              }
+            ],
+            "correct": "a"
+          },
+          "marking": [
+            {
+              "text": "Stack",
+              "points": 4,
+              "auto": true
+            },
+            {
+              "text": "Both costs O(1)",
+              "points": 6
+            }
+          ],
+          "minutes": 25,
+          "difficulty": 1,
+          "solution": {
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Solution",
+                "sources": [
+                  "components"
+                ],
+                "paragraphs": [
+                  "A stack: push and pop at the top in O(1)."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "key": "demo-f2",
+          "number": "2",
+          "points": 8,
+          "format": "short",
+          "concepts": [
+            "stack"
+          ],
+          "novelty": "untested",
+          "statement": [
+            {
+              "kind": "text",
+              "title": "Question 2",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "Explain why depth-first search can use a stack instead of recursion."
+              ]
+            }
+          ],
+          "marking": [
+            {
+              "text": "Stack replaces the call stack",
+              "points": 8
+            }
+          ],
+          "minutes": 30,
+          "difficulty": 2,
+          "solution": {
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Solution",
+                "sources": [
+                  "components"
+                ],
+                "paragraphs": [
+                  "Recursion keeps pending nodes on the call stack; an explicit stack stores the same frontier."
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

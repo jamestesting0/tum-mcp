@@ -2,7 +2,7 @@
 
 Package: `@jamestesting888/tum-mcp`, CLI: `tum-mcp`, backend: Python 3.13.
 The package combines read-only course retrieval, managed client installation and
-five base course workflows and three optional extensions.
+six base course workflows and four optional extensions.
 
 ## Current capabilities
 
@@ -208,7 +208,7 @@ in JSON for troubleshooting. Default diagnostics do not create state folders.
 uses read-only local status to initialize an explicitly chosen available course or
 reconcile an existing project. Incomplete state is preserved for recovery.
 `prepare-study` authors lessons; `prepare-exercises` authors guided released sheets
-in the same local app. See the
+and `prepare-exams` builds a local Exam Prep workspace in the same app. See the
 [study guide](study.md) for examples, state structure and helper commands.
 
 One project holds one course. Source revisions, coverage and course knowledge
@@ -225,8 +225,8 @@ writing files with activation.
 
 The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
-The base pack contains five skills: `read-content`, `sync-course`,
-`prepare-study`, `prepare-exercises` and `publish-course`. Optional extensions add
+The base pack contains six skills: `read-content`, `sync-course`,
+`prepare-study`, `prepare-exercises`, `prepare-exams` and `publish-course`. Optional extensions add
 `prepare-lecture`, `sync-studocu`, `audio-notes` and `video-notes`; choose them with
 `tum-mcp install`.
 Website-specific retrieval guidance is loaded from references within read-content.

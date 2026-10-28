@@ -71,6 +71,19 @@ def read_pdf_pages(body: bytes, start: int, limit: int, *, images: bool = False)
         raise MoodleError(ErrorCode.EXTRACTION_FAILED, "PDF pages could not be read.") from None
 
 
+def read_pdf_text(body: bytes) -> dict:
+    """Read every page's text layer in one bounded worker pass, without OCR."""
+    if len(body) > 50 * 1024 * 1024 or not body.startswith(b"%PDF-"):
+        raise MoodleError(ErrorCode.RESOURCE_UNSUPPORTED, "A PDF under 50 MiB is required.")
+    try:
+        result = json.loads(_run_worker(body, "application/x-tum-pdf-text"))
+        if not isinstance(result, dict) or not isinstance(result.get("pages"), list):
+            raise ValueError
+        return result
+    except (ValueError, TypeError):
+        raise MoodleError(ErrorCode.EXTRACTION_FAILED, "PDF text could not be read.") from None
+
+
 def _run_worker(body: bytes, content_type: str) -> bytes:
     with tempfile.TemporaryDirectory(prefix="tum-moodle-extract-") as directory:
         path = Path(directory) / "document"
@@ -121,6 +134,23 @@ if __name__ == "__main__":
                 _ = page.mediabox
                 _ = page.get_contents()
             sys.stdout.write(json.dumps({"pages": len(reader.pages)}))
+        elif sys.argv[2] == "application/x-tum-pdf-text":
+            pages, total, truncated = [], 0, False
+            for index, page in enumerate(reader.pages):
+                extracted = (page.extract_text() or "")[:200_000] if not truncated else ""
+                total += len(extracted)
+                if total > 2_000_000:
+                    extracted, truncated = "", True
+                pages.append(
+                    {
+                        "number": index + 1,
+                        "text": extracted,
+                        "text_available": bool(extracted.strip()),
+                    }
+                )
+            sys.stdout.write(
+                json.dumps({"pages": pages, "total_pages": len(pages), "truncated": truncated})
+            )
         else:
             import base64
 

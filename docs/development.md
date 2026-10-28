@@ -109,6 +109,8 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/client_*.py` | Host-specific configuration and managed skill installation |
 | `src/tum_mcp/study_*.py` | Course snapshots, teaching, build, preview and project-local passage comments |
 | `src/tum_mcp/bundled/skills/` | Canonical versioned source of reading, study, audio and video skills and their references/assets |
+| `src/tum_mcp/exam_*.py` | Exam Prep contracts, derived statistics, report and map layout; never published |
+| `src/tum_mcp/study_text.py`, `study_import.py`, `study_duplicates.py` | Page-text cache, private local imports and cross-provider duplicate reports |
 | `src/tum_mcp/video_*.py`, `bundled/video_runtime/` | Video Notes contracts, lint, media checks, orchestration and the isolated render worker |
 | `npm/` | Private-runtime installation, updates, integrity and cleanup |
 | `tests/` | Synthetic backend, package and owned-browser checks |
@@ -168,7 +170,7 @@ playback tests also run WebKit when Playwright's WebKit is installed.
 
 ## Optional Lecture extension
 
-Base setup exposes five workflows and no `tum_live_*` tools. `install lecture`
+Base setup exposes six workflows and no `tum_live_*` tools. `install lecture`
 records explicit selection, refreshes managed clients and provisions the optional
 recognizer only when requested/supported. `--no-asr` keeps captions/imported WebVTT.
 Heavy recognition dependencies and model weights stay outside the base environment

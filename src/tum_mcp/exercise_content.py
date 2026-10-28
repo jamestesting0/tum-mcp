@@ -52,6 +52,9 @@ class Exercise(Frozen):
     key: Key
     label: Text
     title: Text
+    kind: Literal["original", "distilled"] = "original"
+    distilled_from: tuple[Key, ...] = Field(default=(), max_length=10)
+    concepts: tuple[Text, ...] = Field(default=(), max_length=12)
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=30)
     statement: tuple[Block, ...] = Field(min_length=1, max_length=40)
     parts: tuple[Text, ...] = Field(default=(), max_length=50)
@@ -63,6 +66,9 @@ class Exercise(Frozen):
 
     @model_validator(mode="after")
     def references(self) -> "Exercise":
+        distilled = self.kind == "distilled"
+        if distilled != bool(self.distilled_from) or self.key in self.distilled_from:
+            raise ValueError("Distilled practice names the original exercises it trains.")
         source_keys = {item.key for item in self.sources}
         if len(source_keys) != len(self.sources):
             raise ValueError("Exercise source keys must be distinct.")
@@ -108,6 +114,9 @@ class ExerciseContent(Frozen):
         exercises = [exercise for item in self.sets for exercise in item.exercises]
         if len({item.key for item in exercises}) != len(exercises):
             raise ValueError("Exercise identities must be unique across sets.")
+        originals = {item.key for item in exercises if item.kind == "original"}
+        if any(not set(item.distilled_from) <= originals for item in exercises):
+            raise ValueError("Distilled practice must point to original exercises in this file.")
         versions: dict[str, str] = {}
         for exercise in exercises:
             for source in exercise.sources:

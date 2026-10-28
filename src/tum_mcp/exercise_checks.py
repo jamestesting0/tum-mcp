@@ -140,7 +140,71 @@ class PlotCheck(Frozen):
         return self
 
 
+class TextCheck(Frozen):
+    """A short typed answer such as a missing expression, compared against accepted variants."""
+
+    kind: Literal["text"]
+    format: Literal["text", "code"] = "text"
+    language: str | None = Field(default=None, min_length=1, max_length=30)
+    accepted: tuple[Annotated[str, Field(min_length=1, max_length=500)], ...] = Field(
+        min_length=1, max_length=20
+    )
+    case_sensitive: bool = True
+    whitespace: Literal["exact", "collapse", "ignore"] = "collapse"
+    feedback: Text
+
+    @model_validator(mode="after")
+    def code_language(self) -> "TextCheck":
+        if self.format != "code" and self.language:
+            raise ValueError("Language belongs to code answers only.")
+        return self
+
+
+class OrderItem(Frozen):
+    key: Key
+    text: Text | None = None
+    code: Annotated[str, Field(min_length=1, max_length=500)] | None = None
+
+    @model_validator(mode="after")
+    def one_form(self) -> "OrderItem":
+        if (self.text is None) == (self.code is None):
+            raise ValueError("An order item is either text or one line of code.")
+        return self
+
+
+class OrderCheck(Frozen):
+    """Arrange lines or steps; items outside every accepted order are distractors to leave out."""
+
+    kind: Literal["order"]
+    language: str | None = Field(default=None, min_length=1, max_length=30)
+    items: tuple[OrderItem, ...] = Field(min_length=2, max_length=30)
+    answers: tuple[tuple[Key, ...], ...] = Field(min_length=1, max_length=3)
+    feedback: Text
+
+    @model_validator(mode="after")
+    def arrangements(self) -> "OrderCheck":
+        keys = [item.key for item in self.items]
+        if len(set(keys)) != len(keys):
+            raise ValueError("Order items need distinct keys.")
+        chosen = {frozenset(answer) for answer in self.answers}
+        for answer in self.answers:
+            if len(answer) < 2 or len(set(answer)) != len(answer) or not set(answer) <= set(keys):
+                raise ValueError("Each accepted order lists at least two distinct item keys.")
+        if len(chosen) != 1 or len(set(self.answers)) != len(self.answers):
+            raise ValueError("Accepted orders must use the same items in different sequences.")
+        if any(item.code for item in self.items) != (self.language is not None):
+            raise ValueError("Code lines need a language; text steps do not.")
+        return self
+
+
 Check = Annotated[
-    ChoiceCheck | NumericCheck | SelfCheck | TableCheck | GraphCheck | PlotCheck,
+    ChoiceCheck
+    | NumericCheck
+    | SelfCheck
+    | TableCheck
+    | GraphCheck
+    | PlotCheck
+    | TextCheck
+    | OrderCheck,
     Field(discriminator="kind"),
 ]

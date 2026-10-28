@@ -40,7 +40,7 @@ before recording its review receipt. No automatic “understanding” claim.
 
 Report the course, imported/indexed/changed material, handbook review, coverage and conflicts.
 Inspect stale Study units and Exercises once when relevant. Continue with the
-requested prepare-study or prepare-exercises workspace. For configured automatic
+requested prepare-study, prepare-exercises or prepare-exams workspace. For configured automatic
 publication, review only affected existing included content; do not invent a new
 workspace or new guidance as a side effect of syncing. Carry source paths, hashes,
 locators, gaps and changed IDs without repeating source checks. Review dependencies

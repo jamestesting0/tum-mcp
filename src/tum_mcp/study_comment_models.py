@@ -54,6 +54,20 @@ class ExerciseAnchor(Frozen):
     suffix: str = Field(default="", max_length=80)
 
 
+class ExamAnchor(Frozen):
+    workspace: Literal["exam"] = "exam"
+    view: Literal["exam"] = "exam"
+    item_key: Annotated[
+        str, Field(pattern=r"^(concept|pattern|question|mock):[a-z0-9][a-z0-9_.-]{0,99}$")
+    ]
+    item_revision: Digest
+    field: str = Field(min_length=1, max_length=100)
+    block_title: str = Field(min_length=1, max_length=10000)
+    quote: str = Field(min_length=1, max_length=2000)
+    prefix: str = Field(default="", max_length=80)
+    suffix: str = Field(default="", max_length=80)
+
+
 class LectureAnchor(Frozen):
     view: Literal["lectures"] = "lectures"
     lecture_key: Key
@@ -66,7 +80,7 @@ class LectureAnchor(Frozen):
 
 class Comment(Frozen):
     id: UUID
-    anchor: Anchor | ExerciseAnchor | LectureAnchor
+    anchor: Anchor | ExerciseAnchor | ExamAnchor | LectureAnchor
     text: NoteText
     status: Literal["open", "resolved"] = "open"
     resolution: str = Field(default="", max_length=2000)
@@ -94,7 +108,7 @@ class Change(Frozen):
 class Create(Change):
     op: Literal["create"]
     id: UUID
-    anchor: Anchor | ExerciseAnchor | LectureAnchor
+    anchor: Anchor | ExerciseAnchor | ExamAnchor | LectureAnchor
     text: NoteText
 
 
