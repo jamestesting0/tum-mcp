@@ -17,23 +17,38 @@ a private review note and is not shown. Prerequisites pair a Study unit key with
 inline explanation so Exercises can be prepared first; later Study builds validate links.
 
 Steps contain purpose, prompt, optional rich blocks, sources/check, requested hints
-and reviewed explanation. Use the original task's response form:
+and reviewed explanation. Students answer on paper; the app shows no answer boxes
+except the choice options, the code editor, and the graph and plot controls. Pick the
+check by what the student should compare with:
 
 | Check | Use and boundaries |
 | --- | --- |
-| choice | Four distinct options with specific misconception feedback. Do not convert a proof or calculation table into recognition just for convenience. |
-| numeric | Finite answer, nonnegative absolute tolerance, optional unit and repair. Plain decimals/scientific notation only; not a symbolic algebra grader. |
-| table | caption, columns and labelled rows. Each cell is given text, numeric (key, answer, tolerance, feedback), or text (key, accepted variants, feedback). Text comparison trims/collapses whitespace and ignores case; use only when that is valid for the subject. |
-| graph | A safe diagram plus mode nodes, edges or path and reviewed answer variants. Node keys identify nodes; edge keys are start--end. Use a neutral question frame that does not reveal the solution. Paths are ordered node lists respecting direction; node/edge selections are sets. Use for traversal, reachability, cuts or selected edges. Use plot for line graphs; use paper + rubric for arbitrary drawings. |
-| plot | A line graph block with labelled axes and optional given series; increasing x_values, one answer y for each, absolute tolerance, positive snap step and repair feedback. Learners tap the graph or edit coordinates; keyboard arrows adjust points. This checks finite sample coordinates, not an entire continuous curve. Give enough sample positions for the actual learning goal; use paper + rubric for open sketches or derivations. |
-| text | A short typed answer: accepted variants, `case_sensitive` (default true), `whitespace` exact, collapse or ignore. Use format `code` with a language for code gaps. Not for prose that has many valid phrasings. |
-| self_check | Rubric and model_answer with format text, math or code. Math accepts long plain text/LaTeX work; code accepts an optional language and literal starter_code: the signature or skeleton the student completes, opened in the code editor; the model answer is shown as code. Code is never executed. Proofs, symbolic equivalence and programs are compared by the learner, never graded by keywords. |
+| choice | The only check the app grades. Four distinct options, each with feedback that names the misconception; the student can open why every option is right or wrong. Use it for genuine decisions, not to turn a calculation or proof into recognition. |
+| numeric | One finite `answer` with an optional `unit`, and `feedback` that repairs the likeliest wrong value. |
+| table | Caption, columns and labelled rows. Each cell is `given` text, `numeric` (key, answer, optional unit) or `text` (key, answer). The student sees the table with empty answer cells, fills them in on paper and compares. |
+| graph | A safe diagram, a mode (`nodes`, `edges` or `path`), the answer and feedback. The student can select on the diagram; Compare shows the first answer by node label. Use a neutral frame that does not reveal the solution. |
+| plot | A line graph with labelled axes and optional given series, increasing `x_values`, one target `y` each, a snap step and feedback. The student can place points; Compare shows the targets as a table. |
+| text | One short `answer`, such as a name, a value with words or one line of code (`format: code` with a language), and feedback. Not for prose with many valid phrasings; use `self_check` for those. |
+| self_check | A `model_answer` and a rubric of the essential points, with format `text` or `code`. For code, `starter_code` is the signature or skeleton the student completes; it opens in the code editor and the model answer is shown as code. Code is never run, and nothing is graded by keywords. |
 
-Only `choice` is checked by the app. For every other kind the student presses Compare
-and sees the expected answer (the first accepted variant, the numeric answer with its
-unit and tolerance, the filled table, the graph answer by node label or the plot
-targets), the step's explanation, and the check's `feedback` under "If yours differs".
-Write that feedback as the repair for the likeliest mistake.
+For every check except `choice` the student presses Compare and sees the answer, the
+step's explanation and the check's `feedback` under "If yours differs". Give exactly
+one answer: the clearest form, not a list of variants. Write the feedback as the repair
+for the likeliest mistake.
+
+## Give the student everything the answer uses
+
+A student sees only the statement, its blocks, the step prompts up to the current one
+and any starter code. Every class, method, field, value and constraint that an answer,
+hint, explanation, rubric or later step relies on must appear there first, or the step
+must ask the student to introduce it and name it ("call it `Unit`"). Introduce a name
+once and use it consistently afterwards. When an answer needs the current design,
+show it: a UML class diagram with the members, the code being changed, or the data in
+a table. Starter code declares the fields and types the model answer uses.
+
+Check every step by reading its answer next to only what the student has seen so far.
+If the answer mentions something that is not there, add it to the question, the
+prompt or the starter, never only to the answer.
 
 ## Show the question, not only tell it
 
@@ -64,9 +79,10 @@ blocks accept `line_numbers: true` when a step refers to lines. Distilled practi
 `kind: distilled`, `distilled_from` (original exercise keys) and `concepts`. All
 block/graph sources must be declared. Put full model proofs/code in safe worked
 solution blocks, with assumptions and alternative valid methods; do not bury them
-in a multiple-choice answer. A step may omit a check. Work on paper/in an editor is
-always valid; don't force typing, and keep the direct solution available. Solutions
-state authored or official; official requires a declared official_source. Optional
+in a multiple-choice answer. A step may omit a check. The direct solution is always
+available. Record whether a solution is authored or official (official requires a
+declared official_source) for provenance; the app shows every solution simply as the
+solution. Optional
 transfer contains a fresh prompt and comparison answer. Set category, summary, week
 and due_at are optional and appear in the exercise list; date values include a timezone.
 

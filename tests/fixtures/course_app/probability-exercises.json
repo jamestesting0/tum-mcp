@@ -49,7 +49,6 @@
               "check": {
                 "kind": "numeric",
                 "answer": 240,
-                "tolerance": 0,
                 "unit": "messages",
                 "feedback": "Count flagged urgent and flagged nonurgent messages; both belong in this population."
               },

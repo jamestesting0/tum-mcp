@@ -80,10 +80,6 @@ function persist() {
     label.hidden = !result.answered;
     label.textContent = practiceLabel(result);
   }
-  for (const label of document.querySelectorAll('[data-exercise-status]')) {
-    const exercise = data.exercises?.sets.flatMap(group => group.exercises).find(item => item.key === label.dataset.exerciseStatus);
-    if (exercise) label.textContent = exercises.status(exercise);
-  }
   syncMode();
 }
 function stateFor(unit) {
@@ -267,14 +263,14 @@ function modePicker() {
 function render() {
   stopComments(); syncMode = () => {};
   const shell = node('div', 'shell');
-  const exercisePage = workspace === 'exercises' ? renderExercises(location.hash.slice(1) || 'exercises', exercises, persist) : null;
+  const exercisePage = workspace === 'exercises' ? renderExercises(location.hash.slice(1) || 'exercises', exercises) : null;
   const lecturePage = workspace === 'lectures' ? renderLectures(location.hash.slice(1) || 'lectures') : null;
-  const examPage = workspace === 'exam' ? renderExam(location.hash.slice(1) || 'exam', readStored, store, persist) : null;
+  const examPage = workspace === 'exam' ? renderExam(location.hash.slice(1) || 'exam', readStored, store) : null;
   const notesPage = exercisePage || lecturePage || examPage;
   exercisePageView = exercisePage || (examPage?.navigateStep ? examPage : null);
   navigationState.location = notesPage ? workspace : home ? 'home' : revising ? 'revision' : currentIndex;
   navigationState.context = notesPage ? notesPage.title : unavailable ? 'Course' : home ? data.course.title : revising ? 'Revision' : data.units[currentIndex].title;
-  navigationState.outline = examPage ? () => examOutline(examPage.current, examPage.currentKey) : lecturePage ? () => lectureOutline(lecturePage.current) : exercisePage ? () => exerciseOutline(exercises, exercisePage.current, true) : unavailable ? () => node('div') : null;
+  navigationState.outline = examPage ? () => examOutline(examPage.current, examPage.currentKey) : lecturePage ? () => lectureOutline(lecturePage.current) : exercisePage ? () => exerciseOutline(exercisePage.current, true) : unavailable ? () => node('div') : null;
   navigationState.homeHref = workspace === 'study' ? '#home' : `#${workspace}`;
   navigationState.showRevision = workspace === 'study' && !unavailable;
   navigationState.workspace = workspace;

@@ -23,7 +23,8 @@ historical topic shares and question formats. Design to that blueprint, then che
 3. **Length and difficulty**: per-question minutes add up to the duration; the points
    match the real exam; the difficulty mix resembles past papers.
 4. **Answers**: solve every question yourself; marking criteria add up to its points.
-   Mark a criterion `auto` only when a deterministic check decides it.
+   The solution uses only what the question shows; if it needs a class, method or
+   value, put it in the question.
 5. **Shown, not only told**: every question pairs its text with the code, diagram, UML
    diagram, formula, table or plot it is about, chosen as in prepare-exercises'
    [content](../../prepare-exercises/references/content.md#show-the-question-not-only-tell-it).

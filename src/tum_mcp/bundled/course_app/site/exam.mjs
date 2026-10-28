@@ -68,9 +68,7 @@ function paperOverview(variantKey) {
   root.append(modes);
   const list = node('ol', 'exam-paper-questions');
   for (const question of paper.questions) {
-    const state = guided.get(guidedExercise(paper, question)).steps;
-    const done = Object.values(state).some(step => step.checked !== null || step.compared);
-    list.append(append(node('li'), quietLink(`Question ${question.number}${question.points ? ` · ${question.points} points` : ''}`, `#exam/paper/${variantKey}/${question.key}`), node('span', 'small', done ? ' · started' : '')));
+    list.append(append(node('li'), quietLink(`Question ${question.number}${question.points ? ` · ${question.points} points` : ''}`, `#exam/paper/${variantKey}/${question.key}`)));
   }
   root.append(append(node('section', 'exam-section'), node('h2', '', 'Questions'), list));
   return { root, heading, title: paper.title, items: [] };
@@ -88,14 +86,14 @@ function guidedExercise(paper, question) {
   };
 }
 
-function guidedQuestion(variantKey, questionKey, stepKey, changed) {
+function guidedQuestion(variantKey, questionKey, stepKey) {
   const paper = paperFor('paper', variantKey);
   const index = paper?.questions.findIndex(question => question.key === questionKey) ?? -1;
   if (index < 0) return null;
   const question = paper.questions[index], following = paper.questions[index + 1];
   const exercise = guidedExercise(paper, question);
   const page = exercisePage(exercise, {
-    state: guided, changed, stepKey, untitledStatement: true,
+    state: guided, stepKey, untitledStatement: true,
     eyebrow: `${paper.title} · Question ${question.number}${question.points ? ` · ${question.points} points` : ''}`,
     link: step => `#exam/paper/${variantKey}/${question.key}/${step}`,
     annotate: (element, field, step) => annotateExam(element, `question:${question.key}`, paper.revision, step ? `${step}:${field}` : field),
@@ -106,7 +104,7 @@ function guidedQuestion(variantKey, questionKey, stepKey, changed) {
   return { ...page, items: [`question:${question.key}`] };
 }
 
-export function renderExam(hash, read, write, changed) {
+export function renderExam(hash, read, write) {
   guided ||= exerciseState(read, write, `${examPrefix}guided:`);
   const [, section, key, part, step] = hash.split('/').map(decode);
   let page = null;
@@ -117,7 +115,7 @@ export function renderExam(hash, read, write, changed) {
   else if (section === 'paper') {
     if (!part) page = paperOverview(key);
     else if (part === 'exam') { const paper = paperFor('paper', key); page = paper && renderPaper(paper); }
-    else page = guidedQuestion(key, part, step, changed);
+    else page = guidedQuestion(key, part, step);
   }
   if (!page) {
     page = home();

@@ -34,7 +34,8 @@ contracts the tests check. Domain names, boilerplate, I/O and build setup are sc
 
 Use a fresh, minimal domain so students recognise the idea rather than the task.
 The core step is writing code. Give the method signature or a small class skeleton as
-`starter_code`, show the types it works with as a code or UML block, and ask for the
+`starter_code` that declares every field and type the model answer uses, show the types
+it works with as a code or UML block, and ask for the
 body. The app opens the skeleton in a code editor; the student then compares their
 code with the model answer and rubric.
 

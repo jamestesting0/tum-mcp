@@ -400,8 +400,7 @@ def exam_document(root: Path) -> dict:
                             "prompt": "Which object changes, and which objects react?",
                             "check": {
                                 "kind": "text",
-                                "accepted": ["station", "the station", "weather station"],
-                                "case_sensitive": False,
+                                "answer": "station",
                                 "feedback": "The object whose state changes is the subject.",
                             },
                             "answer": [text("Roles", "slides", "The station is the subject.")],
@@ -431,8 +430,7 @@ def exam_document(root: Path) -> dict:
                         "prompt": "Which class holds the `List<Display>` of observers?",
                         "check": {
                             "kind": "text",
-                            "accepted": ["Subject", "the subject"],
-                            "case_sensitive": False,
+                            "answer": "Subject",
                             "feedback": "The object that changes owns the list.",
                         },
                         "explanation": "The subject owns registrations.",
@@ -569,18 +567,8 @@ def exam_document(root: Path) -> dict:
                                 "Logger", "slides", "class Logged implements Store { Store inner; }"
                             ),
                         ],
-                        "check": {
-                            "kind": "choice",
-                            "options": [
-                                {"key": "a", "text": "Wraps at runtime", "feedback": "Yes."},
-                                {"key": "b", "text": "Copies the class", "feedback": "No."},
-                                {"key": "c", "text": "Needs reflection", "feedback": "No."},
-                                {"key": "d", "text": "Changes the interface", "feedback": "No."},
-                            ],
-                            "correct": "a",
-                        },
                         "marking": [
-                            {"text": "Runtime wrapping", "points": 4, "auto": True},
+                            {"text": "Runtime wrapping", "points": 4},
                             {"text": "Same interface", "points": 4},
                         ],
                         "minutes": 10,
@@ -616,8 +604,7 @@ def with_guided_paper(document: dict) -> dict:
                 "hints": ["Look for whenever."],
                 "check": {
                     "kind": "text",
-                    "accepted": ["station", "the station", "weather station"],
-                    "case_sensitive": False,
+                    "answer": "station",
                     "feedback": "The object whose state changes is the subject.",
                 },
                 "explanation": "The station is the subject; displays observe it.",

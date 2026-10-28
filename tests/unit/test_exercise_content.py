@@ -31,17 +31,11 @@ def test_reviewed_provenance_and_navigation_preserve_learning_revision() -> None
     )
 
 
-@pytest.mark.parametrize(
-    "answer,tolerance",
-    [(float("inf"), 0), (float("nan"), 0), (3, -1), (3, float("inf")), (True, 0)],
-)
-def test_numeric_checks_reject_nonfinite_or_ambiguous_values(
-    answer: float, tolerance: float
-) -> None:
-    # Given untrusted deterministic check data.
-    # When it cannot represent a finite numeric answer with explicit absolute tolerance.
+@pytest.mark.parametrize("answer", [float("inf"), float("nan"), True])
+def test_numeric_checks_reject_nonfinite_or_ambiguous_values(answer: float) -> None:
+    # A shown answer must be a finite number, never a boolean or infinity.
     with pytest.raises(ValidationError):
-        NumericCheck(kind="numeric", answer=answer, tolerance=tolerance, feedback="Compare costs.")
+        NumericCheck(kind="numeric", answer=answer, feedback="Compare costs.")
 
 
 @pytest.mark.parametrize("fault", ["duplicate-step", "duplicate-exercise", "source", "execution"])

@@ -104,13 +104,8 @@
                     ],
                     "check": {
                       "kind": "text",
-                      "accepted": [
-                        "FIFO",
-                        "first in first out",
-                        "first-in first-out"
-                      ],
-                      "case_sensitive": false,
-                      "feedback": "Arrival order means the oldest item leaves first."
+                      "feedback": "Arrival order means the oldest item leaves first.",
+                      "answer": "FIFO"
                     },
                     "explanation": "First in, first out: a queue."
                   }
@@ -148,7 +143,7 @@
                     "demo-past-paper"
                   ],
                   "paragraphs": [
-                    "Write `bfs(graph, start)`, which returns the nodes reachable from a start node in breadth-first order."
+                    "Write `bfs(graph, start)`, which returns the nodes reachable from a start node in breadth-first order. `graph` maps each node to a list of its neighbours."
                   ]
                 }
               ],
@@ -405,13 +400,8 @@
             "prompt": "Which structure has exactly this rule?",
             "check": {
               "kind": "text",
-              "accepted": [
-                "queue",
-                "a queue",
-                "fifo queue"
-              ],
-              "case_sensitive": false,
-              "feedback": "First in, first out names one structure."
+              "feedback": "First in, first out names one structure.",
+              "answer": "queue"
             },
             "answer": [
               {
@@ -465,12 +455,8 @@
           "prompt": "Undo history removes the newest action first. Which rule is this?",
           "check": {
             "kind": "text",
-            "accepted": [
-              "LIFO",
-              "last in first out"
-            ],
-            "case_sensitive": false,
-            "feedback": "The newest item leaves first."
+            "feedback": "The newest item leaves first.",
+            "answer": "LIFO"
           },
           "explanation": "Last in, first out: a stack.",
           "blocks": [
@@ -616,12 +602,8 @@
             "prompt": "Breadth-first search explores the oldest discovered node first. Which structure is the frontier?",
             "check": {
               "kind": "text",
-              "accepted": [
-                "queue",
-                "a queue"
-              ],
-              "case_sensitive": false,
-              "feedback": "Oldest first is first in, first out."
+              "feedback": "Oldest first is first in, first out.",
+              "answer": "queue"
             },
             "answer": [
               {
@@ -638,7 +620,7 @@
           },
           {
             "step": 2,
-            "prompt": "Write `bfs(graph, start)`.",
+            "prompt": "Write `bfs(graph, start)`. `graph` maps each node to a list of its neighbours.",
             "check": {
               "kind": "self_check",
               "format": "code",
@@ -740,37 +722,10 @@
               "caption": "Back returns to the page visited most recently."
             }
           ],
-          "check": {
-            "kind": "choice",
-            "options": [
-              {
-                "key": "a",
-                "text": "Stack",
-                "feedback": "Yes: last in, first out."
-              },
-              {
-                "key": "b",
-                "text": "Queue",
-                "feedback": "A queue serves the oldest page first."
-              },
-              {
-                "key": "c",
-                "text": "Heap",
-                "feedback": "A heap orders by priority, not by recency."
-              },
-              {
-                "key": "d",
-                "text": "Set",
-                "feedback": "A set has no order."
-              }
-            ],
-            "correct": "a"
-          },
           "marking": [
             {
               "text": "Stack",
-              "points": 4,
-              "auto": true
+              "points": 4
             },
             {
               "text": "Both costs O(1)",

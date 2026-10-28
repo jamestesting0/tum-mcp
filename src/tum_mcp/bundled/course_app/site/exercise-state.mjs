@@ -19,7 +19,6 @@ export function exerciseState(read, write, prefix = exercisePrefix) {
           first: object(previous.first), latest: object(previous.latest) };
       }
       cache.set(key, { key, revision: exercise.revision, steps,
-        started: saved.started === true, reviewed: saved.reviewed === true,
         helpOpen: saved.helpOpen === true, solutionOpen: saved.solutionOpen === true,
         solutionViewed: saved.solutionViewed === true, lastStep: saved.lastStep || exercise.steps[0].key });
     }
@@ -39,9 +38,5 @@ export function exerciseState(read, write, prefix = exercisePrefix) {
     if (!Object.keys(state.first).length) state.first = summary;
     state.latest = summary; save(exercise);
   }
-  function status(exercise) {
-    const value = get(exercise);
-    return value.reviewed ? 'Reviewed' : value.started ? 'In progress' : 'Not started';
-  }
-  return { get, save, attempt, status, clear: () => cache.clear() };
+  return { get, save, attempt, clear: () => cache.clear() };
 }

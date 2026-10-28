@@ -14,21 +14,21 @@ def test_line_ordering_is_not_a_check_kind() -> None:
         )
 
 
-def test_text_checks_keep_code_answers_literal() -> None:
+def test_text_checks_show_one_literal_answer() -> None:
     check = CHECK.validate_python(
         {
             "kind": "text",
             "format": "code",
             "language": "java",
-            "accepted": ["map.get($key)", "map.get( $key )"],
+            "answer": "map.get($key)",
             "feedback": "Look the value up by its key.",
         }
     )
-    assert check.case_sensitive and check.whitespace == "collapse"
+    assert check.answer == "map.get($key)"
     with pytest.raises(ValidationError, match="code answers only"):
-        CHECK.validate_python(
-            {"kind": "text", "language": "java", "accepted": ["x"], "feedback": "f"}
-        )
+        CHECK.validate_python({"kind": "text", "language": "java", "answer": "x", "feedback": "f"})
+    with pytest.raises(ValidationError):
+        CHECK.validate_python({"kind": "text", "accepted": ["x"], "feedback": "f"})
 
 
 def exercise(key: str, **overrides: object) -> dict:

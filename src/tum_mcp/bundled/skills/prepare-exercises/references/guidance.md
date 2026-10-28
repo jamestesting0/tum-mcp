@@ -17,19 +17,20 @@ useful hint levels, without quotas. A check's feedback repairs the earliest like
 error; the app shows it beside the expected answer when the student compares. An optional prerequisite link
 and inline reminder can repair a gap without a separate prerequisite wizard.
 
-For deterministic answers, use the actual response form: numeric values with
-explicit tolerance/units, table cells, node/edge/path selection, plotted sample
-coordinates or four-option selection when recognition is the learning goal. Use a rubric/model derivation for proofs,
-code/design and other open work. For programming, a step asks the student to
+Students work on paper and compare. Give a short answer where one exists: a number
+with its unit, a filled table, a node/edge/path selection, plotted sample points, or
+four options when choosing is the learning goal. Use a rubric and model derivation for
+proofs, code, design and other open work. For programming, a step asks the student to
 write the method or class from a starter skeleton and compare with a model answer,
 not to arrange or recognise given code. Every step does a real piece of the work; do
 not add questions that only restate the statement. A rubric compares assumptions, essential reasoning
 and conclusion, and admits equivalent approaches. Never use keyword matching or
-pretend prose is automatically graded. Students may work on paper and compare
-without typing. Do not require confidence forms, timers or self-ratings.
+pretend prose is automatically graded. Do not require typing, confidence forms, timers
+or self-ratings. Every step stands on what the student has seen; see
+[content](content.md#give-the-student-everything-the-answer-uses).
 
 Review by attempting the task without looking at its solution. Then simulate one
 plausible miss and request only the next hint. It should help the student do the
 next inference. Check an altered case where a condition fails; merely renaming
 the original task is not a transfer check. Assistance and retries are not mastery
-estimates; the Reviewed status records a review, not a score.
+estimates. Finishing an exercise only marks it completed in the outline.

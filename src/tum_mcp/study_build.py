@@ -272,7 +272,7 @@ def _inline_math(value: JsonValue) -> dict[str, str]:
             return {
                 key: math
                 for field, item in value.items()
-                if field not in {"code", "starter_code", "latex", "mathml", "accepted"}
+                if field not in {"code", "starter_code", "latex", "mathml"}
                 for key, math in _inline_math(item).items()
             }
         case _:

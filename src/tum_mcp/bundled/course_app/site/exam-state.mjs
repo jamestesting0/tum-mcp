@@ -34,7 +34,7 @@ const statusIcons = {
   emphasized: 'M8 1.25c.3 0 .55.2.64.48l1.12 3.51 3.51 1.12a.67.67 0 0 1 0 1.28l-3.51 1.12-1.12 3.51a.67.67 0 0 1-1.28 0L6.24 8.76 2.73 7.64a.67.67 0 0 1 0-1.28l3.51-1.12 1.12-3.51A.67.67 0 0 1 8 1.25Z',
   foundation: 'M7.66 1.58a.75.75 0 0 1 .68 0l6 3a.75.75 0 0 1 0 1.34l-6 3a.75.75 0 0 1-.68 0l-6-3a.75.75 0 0 1 0-1.34l6-3ZM1.33 9.08a.75.75 0 0 1 1-.34L8 11.58l5.66-2.84a.75.75 0 1 1 .68 1.34l-6 3a.75.75 0 0 1-.68 0l-6-3a.75.75 0 0 1-.33-1Z',
 };
-export function conceptStatus(concept) {
+function conceptStatus(concept) {
   const stats = exam.statistics.concepts[concept.key], total = exam.statistics.sittings_considered;
   if (concept.basis === 'untested_core') return { tone: 'untested', label: 'Untested' };
   if (concept.basis === 'emphasized') return { tone: 'emphasized', label: 'Emphasized', detail: 'Emphasized in the course' };

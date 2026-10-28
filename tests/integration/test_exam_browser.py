@@ -67,7 +67,7 @@ def test_cheatsheet_scans_filters_flags_and_maps(
         ".map(e => e.querySelectorAll('.citation').length)"
     )
     assert set(page.evaluate(citations)) == {1}
-    expect(page.locator("#concept-observer")).to_contain_text("When you see:")
+    expect(page.locator("#concept-observer .exam-cue.cue")).to_have_text("When you see")
     if width >= 720:
         node = page.locator('.exam-node[data-concept="loose-coupling"]')
         node.click()
@@ -122,7 +122,7 @@ def test_patterns_drills_and_worked_practice(
     expect(page.locator(".exam-instances tbody tr")).to_have_count(3)
     drill = page.locator(".exam-drill-item")
     expect(drill.locator("code.inline-code")).to_have_text("List<Display>")
-    drill.get_by_label("Your answer").fill("Subject")
+    expect(drill.get_by_label("Your answer")).to_have_count(0)
     expect(drill.get_by_role("button", name="Check answer")).to_have_count(0)
     drill.locator("summary", has_text="Compare").click()
     expect(drill.locator(".expected-value")).to_have_text("Subject")
@@ -163,7 +163,6 @@ def test_guided_past_paper_uses_exercise_steps(
     page.locator(".exam-card", has_text="Guided").click()
     page.get_by_role("heading", name="Question 1", exact=True).first.wait_for()
     page.locator("summary", has_text="Guidance").click()
-    page.get_by_label("Your answer").fill("Weather station")
     page.get_by_role("button", name="Compare").click()
     expect(page.locator(".exercise-feedback .expected-value")).to_have_text("station")
     page.get_by_role("button", name="Continue").click()

@@ -35,16 +35,6 @@ def mock_question(value: dict, index: int = 0) -> dict:
     return value["mocks"][0]["questions"][index]
 
 
-def auto_marked_self_check(value: dict) -> None:
-    question = mock_question(value)
-    question["check"] = {
-        "kind": "self_check",
-        "rubric": ["Names the subject"],
-        "model_answer": "A subject.",
-    }
-    question["marking"][0]["auto"] = True
-
-
 @pytest.mark.parametrize(
     ("mutate", "message"),
     [
@@ -81,8 +71,6 @@ def auto_marked_self_check(value: dict) -> None:
             "cites only the exam's sources",
         ),
         (lambda v: mock_question(v)["marking"][0].update(points=7), "add up"),
-        (lambda v: mock_question(v)["marking"][0].update(auto=True), "deterministic check"),
-        (auto_marked_self_check, "deterministic check"),
         (
             lambda v: sitting(v, "ws23")["variants"][0]["questions"][0]["solution"].update(
                 official_source="exam-ws23"

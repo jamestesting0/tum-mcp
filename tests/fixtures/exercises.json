@@ -46,7 +46,6 @@
               "check": {
                 "kind": "numeric",
                 "answer": 3,
-                "tolerance": 0,
                 "feedback": "Include the cost of reaching A before using the edge to B."
               },
               "hints": [
@@ -187,7 +186,7 @@
                   "weighted"
                 ],
                 "paragraphs": [
-                  "Take the first unsettled vertex Y on a hypothetical cheaper path to X. Its predecessor is settled, so its outgoing edge has been relaxed and d(Y) is no greater than that path prefix. Since all suffix weights are nonnegative, the prefix costs no more than the whole path. Choosing minimum tentative X gives d(X) \u2264 d(Y) \u2264 prefix cost \u2264 whole path cost, contradicting a path cheaper than d(X)."
+                  "Take the first unsettled vertex Y on a hypothetical cheaper path to X. Its predecessor is settled, so its outgoing edge has been relaxed and d(Y) is no greater than that path prefix. Since all suffix weights are nonnegative, the prefix costs no more than the whole path. Choosing minimum tentative X gives d(X) ≤ d(Y) ≤ prefix cost ≤ whole path cost, contradicting a path cheaper than d(X)."
                 ]
               }
             ]

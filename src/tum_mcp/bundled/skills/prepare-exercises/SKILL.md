@@ -27,8 +27,9 @@ template, not necessarily a good model for teaching or question design.
    specific feedback and a direct worked solution. Read [guidance](references/guidance.md).
    For large programming tasks, add distilled practice per [coding](references/coding.md).
    Questions you write show their code, diagram, UML diagram, formula, table or plot beside the
-   text; where a released statement is text only, add the picture in a step.
-   Paper work and independent solving remain valid; do not impose typing or ratings.
+   text; where a released statement is text only, add the picture in a step. Every
+   answer uses only what the student has been shown or asked to introduce. Students
+   answer on paper and compare; do not impose typing or ratings.
 4. Write the affected objects in exercises.json using `tum-mcp study schema exercises`;
    read [content](references/content.md) for identities, checks and source links.
    Preserve unrelated Study/Exercise objects and template assets. Use the existing
@@ -46,4 +47,4 @@ template, not necessarily a good model for teaching or question design.
 
 Never start or submit exercises/quizzes, run downloaded course code, or infer an
 official solution. No live model, API key or automatic free-form grader belongs
-in the app. Reviewed records a student's action, not mastery or an assessment result.
+in the app. A completed mark records a student's action, not mastery or an assessment result.

@@ -1,20 +1,6 @@
 import { node, studyText, button, append } from './dom.mjs';
 import { graphResponse, plotResponse } from './graph-response.mjs';
 
-const number = value => /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value.trim()) && Number.isFinite(Number(value));
-const normalize = value => value.trim().replace(/\s+/g, ' ').toLowerCase();
-function structured(text, array = false) {
-  try { const value = JSON.parse(text); return value && typeof value === 'object' && Array.isArray(value) === array ? value : array ? [] : {}; }
-  catch { return array ? [] : {}; }
-}
-function field(label, multiline, value, edit) {
-  const wrapper = node('label', 'stack', label), input = node(multiline ? 'textarea' : 'input');
-  if (!multiline) { input.type = 'text'; input.autocomplete = 'off'; }
-  input.value = value; input.maxLength = 20000;
-  input.addEventListener('input', () => edit(input.value)); wrapper.append(input);
-  return { wrapper, input };
-}
-
 // A textarea that behaves like a small code editor: Tab indents, Enter keeps the
 // indentation, and Esc then Tab leaves it, so keyboard users are never trapped.
 function codeEditor(input) {
@@ -37,7 +23,7 @@ function codeEditor(input) {
   input.addEventListener('input', fit); fit();
 }
 // A code model answer stays code: monospaced, literal and labelled with its language.
-export function modelAnswer(check) {
+function modelAnswer(check) {
   if (check.format !== 'code') return studyText('p', '', check.model_answer);
   const region = node('div', 'code-region model-code'); region.tabIndex = 0;
   region.setAttribute('role', 'region'); region.setAttribute('aria-label', 'Model answer');
@@ -47,40 +33,38 @@ export function modelAnswer(check) {
 // What a learner compares their own work with, for every check except a choice.
 export function expectedAnswer(check) {
   const box = node('div', 'expected-answer');
-  const others = values => values.length && box.append(studyText('p', 'small', `Also accepted: ${values.join('; ')}`));
-  const grid = (head, rows) => {
-    const table = node('table'), header = node('tr');
-    for (const title of head) { const th = studyText('th', '', title); th.scope = 'col'; header.append(th); }
-    table.append(append(node('thead'), header));
-    const body = node('tbody');
-    for (const row of rows) body.append(append(node('tr'), ...row.map(text => studyText('td', '', text))));
-    table.append(body);
-    const region = append(node('div', 'table-region'), table); region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', 'Expected answer');
-    return region;
-  };
-  const numeric = item => `${item.answer}${item.unit ? ` ${item.unit}` : ''}${item.tolerance ? ` (within ${item.tolerance})` : ''}`;
+  const value = text => studyText('p', 'expected-value', text);
+  const number = item => `${item.answer}${item.unit ? ` ${item.unit}` : ''}`;
   switch (check.kind) {
     case 'self_check':
       box.append(modelAnswer(check), append(node('ul'), ...check.rubric.map(text => studyText('li', '', text))));
       break;
-    case 'text':
-      box.append(check.format === 'code' ? modelAnswer({ format: 'code', language: check.language, model_answer: check.accepted[0] }) : studyText('p', 'expected-value', check.accepted[0]));
-      others(check.accepted.slice(1));
-      break;
-    case 'numeric': box.append(studyText('p', 'expected-value', numeric(check))); break;
-    case 'table':
-      box.append(grid(['', ...check.columns], check.rows.map(row => [row.label, ...row.cells.map(cell =>
-        cell.kind === 'given' ? cell.text : cell.kind === 'numeric' ? numeric(cell) : cell.accepted[0])])));
-      break;
-    case 'graph': {
-      const label = new Map(check.graph.nodes.map(item => [item.key, item.label]));
-      const name = key => key.split('--').map(part => label.get(part) || part).join('–');
-      const show = answer => answer.map(name).join(check.mode === 'path' ? ' → ' : ', ');
-      box.append(studyText('p', 'expected-value', `${{ nodes: 'Nodes', edges: 'Edges', path: 'Path' }[check.mode]}: ${show(check.answers[0])}`));
-      others(check.answers.slice(1).map(show));
+    case 'text': box.append(check.format === 'code' ? modelAnswer({ format: 'code', language: check.language, model_answer: check.answer }) : value(check.answer)); break;
+    case 'numeric': box.append(value(number(check))); break;
+    case 'table': {
+      const table = node('table'), header = node('tr');
+      for (const title of ['', ...check.columns]) { const th = studyText('th', '', title); th.scope = 'col'; header.append(th); }
+      const body = node('tbody');
+      for (const row of check.rows) body.append(append(node('tr'), studyText('th', '', row.label),
+        ...row.cells.map(cell => studyText('td', '', cell.kind === 'given' ? cell.text : cell.kind === 'numeric' ? number(cell) : cell.answer))));
+      table.append(append(node('thead'), header), body);
+      const region = append(node('div', 'table-region'), table); region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', 'Expected answer');
+      box.append(region);
       break;
     }
-    case 'plot': box.append(grid([check.plot.x_label, check.plot.y_label], check.x_values.map((x, i) => [String(x), String(check.answer[i])]))); break;
+    case 'graph': {
+      const label = new Map(check.graph.nodes.map(item => [item.key, item.label]));
+      const name = key => key.split('--').map(part => label.get(part) || part).join('\u2013');
+      box.append(value(`${{ nodes: 'Nodes', edges: 'Edges', path: 'Path' }[check.mode]}: ${check.answers[0].map(name).join(check.mode === 'path' ? ' \u2192 ' : ', ')}`));
+      break;
+    }
+    case 'plot': {
+      const table = node('table');
+      table.append(append(node('thead'), append(node('tr'), studyText('th', '', check.plot.x_label), studyText('th', '', check.plot.y_label))));
+      table.append(append(node('tbody'), ...check.x_values.map((x, i) => append(node('tr'), node('td', '', String(x)), node('td', '', String(check.answer[i]))))));
+      box.append(append(node('div', 'table-region'), table));
+      break;
+    }
   }
   return box;
 }
@@ -99,48 +83,38 @@ export function optionExplanations(check) {
   return box;
 }
 
+// Only a choice is answered on screen. Code opens its skeleton in an editor and diagrams
+// and plots stay interactive; every other answer is worked on paper, then compared.
 export function renderResponse(check, draft, edit, identity) {
   const root = node('div', 'exercise-response');
-  let value = draft, validate = () => ({ valid: true, correct: false, repairs: [] }), showResult = () => {};
-  const change = next => { value = next; edit(next); };
-  if (!check) return { root, validate, showResult };
+  const result = { root, validate: () => ({ valid: true, correct: false, repairs: [] }), showResult: () => {} };
+  if (!check) return result;
   if (check.kind === 'choice') {
+    let value = draft;
     const choices = node('fieldset', 'exercise-choices'); choices.append(node('legend', 'visually-hidden', 'Your answer'));
     for (const option of check.options) {
       const label = node('label', 'option'), input = node('input'); input.type = 'radio'; input.name = identity;
       input.value = option.key; input.checked = value === option.key;
-      input.addEventListener('change', () => change(option.key)); label.append(input, studyText('span', 'option-body', option.text)); choices.append(label);
+      input.addEventListener('change', () => { value = option.key; edit(option.key); }); label.append(input, studyText('span', 'option-body', option.text)); choices.append(label);
     }
     root.append(choices);
-    validate = () => ({ valid: check.options.some(option => option.key === value), correct: value === check.correct,
+    result.validate = () => ({ valid: check.options.some(option => option.key === value), correct: value === check.correct,
       repairs: [check.options.find(option => option.key === value)?.feedback || 'Choose an answer.'] });
-  } else if (check.kind === 'numeric' || check.kind === 'self_check') {
-    const format = check.format || 'text';
-    const { wrapper, input } = field(check.kind === 'numeric' || format === 'text' ? 'Your answer' : format === 'code' ? `Your code${check.language ? ` (${check.language})` : ''}` : 'Working', check.kind === 'self_check', value, change);
-    if (check.kind === 'numeric') {
-      input.inputMode = 'decimal'; input.classList.add('numeric-input');
-      root.append(studyText('p', 'small', `Enter ${check.tolerance === 0 ? 'the exact value' : 'a decimal'}${check.unit ? ` in ${check.unit}` : ''}${check.tolerance ? ` (within ${check.tolerance} of the target)` : ''}.`), wrapper);
-      validate = () => ({ valid: number(value), correct: number(value) && Math.abs(Number(value) - check.answer) <= check.tolerance,
-        repairs: [check.feedback] });
-    } else {
-      const details = node(format === 'text' ? 'details' : 'div', format === 'text' ? 'disclosure response-writing' : 'response-writing');
-      if (format === 'text') { details.open = Boolean(value); details.append(node('summary', '', 'Write')); }
-      details.append(wrapper);
-      if (format === 'code') {
-        input.classList.add('code-input'); input.spellcheck = false; input.autocapitalize = 'off'; input.setAttribute('autocorrect', 'off');
-        // The skeleton is where the student starts writing, so it opens in the editor.
-        if (!value && check.starter_code) input.value = check.starter_code;
-        codeEditor(input);
-        if (check.starter_code) {
-          const reset = button('Reset to starter code', () => { input.value = check.starter_code; input.dispatchEvent(new Event('input')); input.focus(); }, 'quiet');
-          details.append(append(node('div', 'cluster code-tools'), reset));
-        }
-      } else if (format === 'math') { input.classList.add('math-input'); input.rows = 5; }
-      root.append(node('p', 'small', format === 'code' ? 'Write the code here or in your editor, then compare it with the model answer. Code is not run. Tab indents; Esc then Tab leaves the editor.'
-        : format === 'math' ? 'Work on paper or draft in plain text / LaTeX.' : 'Work on paper or draft here.'), details);
-    }
-  } else if (check.kind === 'table') {
-    const cells = structured(value), inputs = [];
+    return result;
+  }
+  if (check.kind === 'graph') return graphResponse(check, draft, edit);
+  if (check.kind === 'plot') return plotResponse(check, draft, edit);
+  if (check.kind === 'self_check' && check.format === 'code') {
+    const wrapper = node('label', 'stack', `Your code${check.language ? ` (${check.language})` : ''}`), input = node('textarea');
+    input.value = draft || check.starter_code || ''; input.maxLength = 20000;
+    input.classList.add('code-input'); input.spellcheck = false; input.autocapitalize = 'off'; input.setAttribute('autocorrect', 'off');
+    input.addEventListener('input', () => edit(input.value)); wrapper.append(input);
+    codeEditor(input);
+    root.append(node('p', 'small', 'Write the code here or in your own editor, then compare it with the model answer. Code is not run. Tab indents; Esc then Tab leaves the editor.'), wrapper);
+    if (check.starter_code) root.append(append(node('div', 'cluster code-tools'), button('Reset to starter code', () => { input.value = check.starter_code; input.dispatchEvent(new Event('input')); input.focus(); }, 'quiet')));
+    return result;
+  }
+  if (check.kind === 'table') {
     const region = node('div', 'table-region answer-table'); region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', check.caption);
     const table = node('table'), header = node('tr'); table.append(studyText('caption', '', check.caption));
     const rowTitle = node('th'); rowTitle.scope = 'col'; rowTitle.append(node('span', 'visually-hidden', 'Row')); header.append(rowTitle);
@@ -148,37 +122,11 @@ export function renderResponse(check, draft, edit, identity) {
     table.append(append(node('thead'), header)); const body = node('tbody');
     for (const row of check.rows) {
       const tr = node('tr'), th = studyText('th', '', row.label); th.scope = 'row'; tr.append(th);
-      row.cells.forEach((cell, index) => {
-        const td = node('td');
-        if (cell.kind === 'given') td.append(studyText('span', '', cell.text));
-        else {
-          const input = node('input'); input.type = 'text'; input.maxLength = 200; input.autocomplete = 'off';
-          input.value = typeof cells[cell.key] === 'string' ? cells[cell.key].slice(0, 200) : '';
-          input.setAttribute('aria-label', `${row.label}: ${check.columns[index]}`);
-          if (cell.kind === 'numeric') input.inputMode = 'decimal';
-          input.addEventListener('input', () => { cells[cell.key] = input.value; change(JSON.stringify(cells)); });
-          inputs.push({ cell, input, label: `${row.label}, ${check.columns[index]}` }); td.append(input);
-        }
-        tr.append(td);
-      }); body.append(tr);
+      for (const cell of row.cells) tr.append(cell.kind === 'given' ? studyText('td', '', cell.text) : append(node('td', 'blank-cell'), node('span', 'visually-hidden', 'to fill in')));
+      body.append(tr);
     }
-    table.append(body); region.append(table); root.append(node('p', 'small', 'Complete each answer cell before checking.'), region);
-    const matches = ({ cell, input }) => cell.kind === 'numeric' ? number(input.value) && Math.abs(Number(input.value) - cell.answer) <= cell.tolerance
-      : cell.accepted.some(answer => normalize(input.value) === normalize(answer));
-    validate = () => ({ valid: inputs.every(({ cell, input }) => cell.kind === 'numeric' ? number(input.value) : Boolean(input.value.trim())),
-      correct: inputs.every(matches), repairs: inputs.filter(item => !matches(item)).map(item => `${item.label}: ${item.cell.feedback}`) });
-    showResult = checked => { for (const item of inputs) { if (checked && !matches(item)) item.input.setAttribute('aria-invalid', 'true'); else item.input.removeAttribute('aria-invalid'); } };
-  } else if (check.kind === 'text') {
-    const code = check.format === 'code';
-    const { wrapper, input } = field(code ? `${check.language || 'Code'} answer` : 'Your answer', false, value, change);
-    if (code) { input.classList.add('code-input'); input.spellcheck = false; input.autocapitalize = 'off'; }
-    root.append(wrapper);
-    const shape = text => {
-      const spaced = check.whitespace === 'exact' ? text : check.whitespace === 'ignore' ? text.replace(/\s+/g, '') : text.trim().replace(/\s+/g, ' ');
-      return check.case_sensitive ? spaced : spaced.toLowerCase();
-    };
-    validate = () => ({ valid: Boolean(value.trim()), correct: check.accepted.some(answer => shape(answer) === shape(value)), repairs: [check.feedback] });
-  } else if (check.kind === 'graph') return graphResponse(check, draft, edit);
-  else if (check.kind === 'plot') return plotResponse(check, draft, edit);
-  return { root, validate: () => validate(), showResult: checked => showResult(checked) };
+    table.append(body); region.append(table);
+    root.append(node('p', 'small', 'Fill in the empty cells on paper, then compare.'), region);
+  }
+  return result;
 }

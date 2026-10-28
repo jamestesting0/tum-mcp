@@ -4,6 +4,7 @@ import { renderReading, renderBlockBody } from './reading.mjs';
 import { iconButton, nextStep } from './navigation.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExercise } from './anchors.mjs';
+import { markCompleted } from './completion.mjs';
 import { renderCommentedView } from './comments.mjs';
 
 const sets = data.exercises?.sets || [];
@@ -15,7 +16,7 @@ function due(group) {
     ? `Due ${new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)}` : '';
 }
 
-export function exerciseOutline(state, current = '', compact = false) {
+export function exerciseOutline(current = '', compact = false) {
   const root = node(compact ? 'nav' : 'section', compact ? 'unit-list' : 'exercise-list');
   root.setAttribute('aria-label', 'Course exercises');
   let category;
@@ -37,8 +38,7 @@ export function exerciseOutline(state, current = '', compact = false) {
     for (const exercise of group.exercises) {
       const link = node('a', 'unit-link'); link.href = exerciseLink(group, exercise);
       if (exercise.key === current) link.setAttribute('aria-current', 'page');
-      const status = node('span', 'small', state.status(exercise)); status.dataset.exerciseStatus = exercise.key;
-      link.append(studyText('span', 'unit-title', `${exercise.label} · ${exercise.title}`), status);
+      link.append(studyText('span', 'unit-title', `${exercise.label} · ${exercise.title}`));
       list.append(link);
     }
     sheet.append(list); root.append(sheet);
@@ -55,7 +55,7 @@ function disclosure(label, content, opened, onToggle) {
 }
 function quietLink(label, href) { const link = node('a', '', label); link.href = href; return link; }
 
-export function renderExercises(hash, state, changed) {
+export function renderExercises(hash, state) {
   const root = node('div', 'exercise-workspace'), [, setKey, exerciseKey, stepKey] = hash.split('/');
   let group = sets.find(item => item.key === setKey);
   let exercise = group?.exercises.find(item => item.key === exerciseKey);
@@ -67,7 +67,7 @@ export function renderExercises(hash, state, changed) {
     const heading = node('h1', '', 'Exercises');
     root.append(append(node('div', 'unit-header'), node('p', 'eyebrow', data.course.title), heading));
     if (exerciseKey) root.append(node('p', 'notice', 'That exercise is no longer here. Choose a prepared exercise below.'));
-    if (sets.length) root.append(exerciseOutline(state));
+    if (sets.length) root.append(exerciseOutline());
     else {
       root.append(node('p', '', 'Exercises have not been prepared for this course.'));
       if (data.units.length) root.append(quietLink('Open Study', '#home'));
@@ -76,7 +76,7 @@ export function renderExercises(hash, state, changed) {
   }
   const following = ordered[ordered.findIndex(item => item.exercise === exercise) + 1];
   return exercisePage(exercise, {
-    state, changed, stepKey,
+    state, stepKey, completes: exerciseLink(group, exercise),
     eyebrow: [group.title, exercise.label, due(group)].filter(Boolean).join(' · '),
     link: step => exerciseLink(group, exercise, step),
     annotate: (element, field, step) => annotateExercise(element, group, exercise, field, step),
@@ -87,10 +87,9 @@ export function renderExercises(hash, state, changed) {
 
 // One exercise with optional guided steps and a solution; Exam Prep reuses it for past papers.
 export function exercisePage(exercise, options) {
-  const { state, changed, stepKey } = options;
+  const { state, stepKey } = options;
   const root = node('div', 'exercise-workspace');
   const value = state.get(exercise);
-  value.started = true; state.save(exercise);
   const heading = studyText('h1', '', exercise.title), header = node('div', 'unit-header');
   const target = (element, field, step = '') => options.annotate(element, field, step);
   const activityChanged = () => root.dispatchEvent(new Event('study-activity-change', { bubbles: true }));
@@ -142,12 +141,6 @@ export function exercisePage(exercise, options) {
   });
   navigation.append(counter, prev, next);
   const body = node('div', 'step-body'); panel.append(navigation, body);
-  const mark = button(value.reviewed ? 'Reviewed' : 'Mark reviewed', () => setReviewed(!value.reviewed), 'secondary review-toggle');
-  mark.setAttribute('aria-pressed', String(value.reviewed));
-  function setReviewed(reviewed) {
-    value.reviewed = reviewed; mark.textContent = reviewed ? 'Reviewed' : 'Mark reviewed';
-    mark.setAttribute('aria-pressed', String(reviewed)); state.save(exercise); changed();
-  }
   const onward = options.onward && nextStep(options.onward);
   function verdict(correct, ...paragraphs) {
     const section = node('section', `feedback${correct ? '' : ' incorrect'}`);
@@ -213,7 +206,7 @@ export function exercisePage(exercise, options) {
       } else if (checked && result.valid) {
         feedback.append(result.correct ? verdict(true, studyText('p', '', step.explanation)) : verdict(false, ...result.repairs.map(repair => studyText('p', '', repair))));
         if (check.kind === 'choice') feedback.append(optionExplanations(check));
-      } else if (saved.draft && check?.kind === 'numeric' && !result.valid) feedback.append(node('p', 'small', 'Enter a number such as 0.5 or 2e-3.'));
+      }
       const ready = !check || (compares ? saved.compared : checked && result.correct);
       primary.textContent = ready ? (index === exercise.steps.length - 1 ? 'Finish' : 'Continue') : compares ? 'Compare' : 'Check answer';
       primary.disabled = Boolean(check && !compares && !result.valid);
@@ -225,17 +218,18 @@ export function exercisePage(exercise, options) {
     paintHelp();
     function advance() {
       if (index === exercise.steps.length - 1) {
-        setReviewed(true); announce('Marked reviewed.');
-        const destination = onward?.querySelector('a') || mark;
-        scrollReadingTo(end); destination.focus({ preventScroll: true }); return;
+        // Finishing the last step marks the exercise completed, as right-clicking its entry does.
+        if (options.completes) { markCompleted(options.completes); announce('Marked completed.'); }
+        const destination = onward?.querySelector('a');
+        if (destination) { scrollReadingTo(onward); destination.focus({ preventScroll: true }); }
+        return;
       }
       location.hash = options.link(exercise.steps[index + 1].key);
     }
     update(); state.save(exercise); return title;
   }
-  const end = append(node('div', 'cluster exercise-end'), mark);
   paintStep();
-  const solution = append(node('div'), node('p', 'small', exercise.solution.origin === 'official' ? 'Official solution' : 'Prepared solution, not official'), renderReading({ blocks: exercise.solution.blocks }));
+  const solution = renderReading({ blocks: exercise.solution.blocks });
   [...solution.querySelectorAll('.reading-material')].forEach((element, index) => target(element, `solution:${index}`));
   root.append(disclosure('Solution', solution, value.solutionOpen, opened => {
     value.solutionOpen = opened; value.solutionViewed ||= opened; state.save(exercise); activityChanged();
@@ -246,7 +240,6 @@ export function exercisePage(exercise, options) {
     answer.addEventListener('toggle', activityChanged);
     root.append(disclosure('Try another', append(node('div', 'stack'), target(studyText('p', '', exercise.transfer.prompt), 'transfer-prompt'), answer), false, activityChanged));
   }
-  root.append(end);
   if (onward) root.append(onward);
   return { root: options.comment(root),
     heading: stepKey ? panel.querySelector('.step-body h2') : heading,

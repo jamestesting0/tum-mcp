@@ -11,16 +11,20 @@
   `study import` (private local files such as past exams you hold) and
   `study duplicates` (identical and near-duplicate copies across Moodle, Artemis,
   Studocu and local files); `study inspect` lists identical copies.
-- Only multiple-choice answers are checked; every other step offers Compare, which shows
-  the expected answer, its explanation and a hint for the likeliest mistake.
-- Exercises gain short typed answers, code-writing steps that open the function skeleton
-  in an editor and show the model answer as code, numbered code blocks and distilled
-  practice for large programming tasks; prepare-exercises documents how to distil
-  Artemis programming exercises.
+- Students answer on paper. Only multiple-choice answers are checked; every other step
+  offers Compare, which shows one answer, its explanation and a hint for the likeliest
+  mistake. Exercises no longer show answer boxes, review buttons or status lines;
+  finishing an exercise marks it completed in the outline.
+- Exercises gain code-writing steps that open the function skeleton in an editor and
+  show the model answer as code, numbered code blocks and distilled practice for large
+  programming tasks; prepare-exercises documents how to distil Artemis programming
+  exercises. Text and numeric checks hold a single answer, and authors are told to give
+  every question the context its answers use.
 - Authored questions must show code, a diagram, a formula, a table or a plot beside
   their text. A new `uml` block draws UML class and sequence diagrams in every
   workspace, and `` `code` `` in text renders as inline code.
 - Right-click (or Shift+F10) any sidebar entry to mark it completed.
+- Cheatsheet entries show their recognition cue and pitfall as labelled rows with icons.
 - Give every skill a Codex display name, so Codex no longer shows "Tum MCP:" prefixes.
 
 ## 0.10.0 — 2026-10-27

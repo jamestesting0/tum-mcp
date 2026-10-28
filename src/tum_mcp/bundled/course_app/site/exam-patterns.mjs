@@ -1,6 +1,6 @@
 import data from './data.mjs';
 import { node, studyText, button, append, sourcesNote } from './dom.mjs';
-import { renderReading, renderBlockBody } from './reading.mjs';
+import { renderBlockBody } from './reading.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam, patterns, concepts, pastQuestions, seen, sample, list, quietLink } from './exam-state.mjs';
@@ -61,7 +61,7 @@ function workedPractice(pattern) {
     steps.append(card);
   });
   const full = node('details', 'disclosure');
-  full.append(node('summary', '', solution.origin === 'official' ? 'Full official solution' : 'Full solution (prepared, not official)'), blocksWithoutTitles(solution.blocks));
+  full.append(node('summary', '', 'Full solution'), blocksWithoutTitles(solution.blocks));
   return section('Worked practice', node('p', 'small', `${origin}. Work through it with the workflow above.`), blocksWithoutTitles(blocks), steps, full);
 }
 
@@ -85,7 +85,7 @@ export function renderPattern(key) {
   });
   root.append(section('Workflow', steps));
   if (pattern.template?.length) root.append(section('Answer template', mark(blocksWithoutTitles(pattern.template), 'template')));
-  if (pattern.marking?.length) root.append(section('Where the marks are', node('p', 'small', pattern.marking_basis === 'official' ? 'From official marking' : 'Inferred from solutions, not official'), mark(list('', pattern.marking), 'marking')));
+  if (pattern.marking?.length) root.append(section('Where the marks are', mark(list('', pattern.marking), 'marking')));
   if (pattern.pitfalls?.length) root.append(section('Pitfalls', mark(list('', pattern.pitfalls), 'pitfalls')));
   root.append(workedPractice(pattern));
   if (pattern.variations?.length) root.append(section('How it varied', mark(list('', pattern.variations), 'variations')));

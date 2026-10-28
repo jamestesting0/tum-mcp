@@ -23,7 +23,7 @@ export function paperFor(kind, key) {
 const questionItem = (paper, question) => paper.kind === 'mock' ? paper.item : `question:${question.key}`;
 
 // The question heading already names it, so statement block titles are not repeated.
-export function statementBody(blocks, mark = () => {}) {
+function statementBody(blocks, mark = () => {}) {
   const root = node('div', 'exam-stem');
   blocks.forEach((block, index) => { const body = renderBlockBody(block); mark(body, index); root.append(body); });
   return root;
@@ -49,7 +49,7 @@ export function renderPaper(paper) {
     section.append(statementBody(question.statement, (element, index) => annotateExam(element, questionItem(paper, question), paper.revision, `${question.key}:statement:${index}`)));
     if (question.parts?.length) section.append(append(node('ol', 'exam-parts'), ...question.parts.map(text => studyText('li', '', text))));
     const solution = node('details', 'disclosure exam-solution');
-    solution.append(node('summary', '', question.solution.origin === 'official' ? 'Official solution' : 'Solution (prepared, not official)'), statementBody(question.solution.blocks));
+    solution.append(node('summary', '', 'Solution'), statementBody(question.solution.blocks));
     if (question.marking?.length) {
       solution.append(node('p', 'small', question.marking_basis === 'official' ? 'Official marking' : 'Where the marks are'),
         append(node('ul', 'exam-marking'), ...question.marking.map(item => studyText('li', '', `${item.text} (${item.points})`))));

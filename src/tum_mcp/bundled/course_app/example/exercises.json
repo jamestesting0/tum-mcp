@@ -37,11 +37,10 @@
             {
               "key": "number",
               "purpose": "Demonstrate finite decimal input.",
-              "prompt": "Enter 2 + 2.",
+              "prompt": "Work out 2 + 2.",
               "check": {
                 "kind": "numeric",
                 "answer": 4,
-                "tolerance": 0,
                 "feedback": "Add both supplied values."
               },
               "hints": [
@@ -85,7 +84,7 @@
             {
               "key": "paper",
               "purpose": "Demonstrate optional open-response comparison.",
-              "prompt": "Explain the sum on paper or in the optional response box.",
+              "prompt": "Explain the sum on paper.",
               "check": {
                 "kind": "self_check",
                 "rubric": [
@@ -115,18 +114,12 @@
                       {
                         "kind": "numeric",
                         "key": "sum",
-                        "answer": 4,
-                        "tolerance": 0,
-                        "feedback": "Add the two pairs."
+                        "answer": 4
                       },
                       {
                         "kind": "text",
                         "key": "name",
-                        "accepted": [
-                          "four",
-                          "4"
-                        ],
-                        "feedback": "Use the number name or digit."
+                        "answer": "four"
                       }
                     ]
                   }
@@ -138,7 +131,7 @@
             {
               "key": "math",
               "purpose": "Show long mathematical working without automatic grading.",
-              "prompt": "Write a short derivation, here or on paper.",
+              "prompt": "Write a short derivation on paper.",
               "blocks": [
                 {
                   "kind": "formula",
@@ -159,7 +152,7 @@
               ],
               "check": {
                 "kind": "self_check",
-                "format": "math",
+                "format": "text",
                 "rubric": [
                   "States the positive-integer assumption.",
                   "Explains a pairing or induction argument."
@@ -182,7 +175,7 @@
                   "Returns the sum rather than printing it.",
                   "Works for zero and negative inputs."
                 ],
-                "model_answer": "Return a + b. Test a positive pair, zero and a negative input in your own editor."
+                "model_answer": "def add(a, b):\n    return a + b\n"
               },
               "explanation": "The rubric is for comparison; the app does not execute code.",
               "hints": []
@@ -252,7 +245,7 @@
                 ],
                 "feedback": "Follow the arrows from A through B to C."
               },
-              "explanation": "The path is A \u2192 B \u2192 C.",
+              "explanation": "The path is A → B → C.",
               "hints": []
             },
             {
@@ -291,7 +284,7 @@
                 "feedback": "For each x, add 1 to get the height y."
               },
               "hints": [],
-              "explanation": "The points are (\u22121, 0), (0, 1), (1, 2)."
+              "explanation": "The points are (−1, 0), (0, 1), (1, 2)."
             }
           ],
           "solution": {

@@ -38,12 +38,15 @@ new question; create a new one only when the first steps differ.
 - **Worked practice** (required): one question, a past one with its stored statement
   and solution or an authored one, solved through the workflow. Its `steps` apply
   every workflow step in order (several steps may apply one workflow step). Each
-  step asks for exactly that move, may give a hint, takes an answer in a short form when one
-  fits (a choice is checked; any other answer is compared), and always shows the worked answer, filling in the
-  template where there is one. For code patterns, the steps that matter write code from a
-  starter signature and compare with a model answer. Solve it yourself; label an official solution only
-  when it is one.
-- **Drill**: up to a few checked items that practise the decision the workflow makes.
+  step asks for exactly that move, may give a hint, and always shows the worked
+  answer, filling in the template where there is one. The student answers on paper;
+  a choice is checked, anything else is compared. For code patterns, the steps that
+  matter write code from a starter signature and compare with a model answer.
+  The question shows everything the answers use: the current classes as UML or code,
+  the data as a table. A step that expects a new name gives it ("call it `Unit`").
+  Solve it yourself; record an official solution only when it is one.
+- **Drill**: up to a few short items that practise the decision the workflow makes, each
+  self-contained like the worked practice.
 
 Every question you write here, worked practice and drills included, shows its
 situation with code, a diagram, a UML diagram, a formula, a table or a plot beside the text; the

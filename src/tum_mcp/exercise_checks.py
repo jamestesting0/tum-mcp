@@ -24,16 +24,17 @@ class ChoiceCheck(Frozen):
 
 
 class NumericCheck(Frozen):
+    """A number worked out on paper, then compared with the shown answer."""
+
     kind: Literal["numeric"]
     answer: FiniteFloat = Field(strict=True)
-    tolerance: FiniteFloat = Field(ge=0, strict=True)
     unit: Text | None = None
     feedback: Text
 
 
 class SelfCheck(Frozen):
     kind: Literal["self_check"]
-    format: Literal["text", "math", "code"] = "text"
+    format: Literal["text", "code"] = "text"
     language: str | None = Field(default=None, min_length=1, max_length=30)
     starter_code: str | None = Field(default=None, min_length=1, max_length=20000)
     rubric: tuple[Text, ...] = Field(min_length=1, max_length=12)
@@ -51,15 +52,17 @@ class GivenCell(Frozen):
     text: Text
 
 
-class NumericCell(NumericCheck):
+class NumericCell(Frozen):
+    kind: Literal["numeric"]
     key: Key
+    answer: FiniteFloat = Field(strict=True)
+    unit: Text | None = None
 
 
 class TextCell(Frozen):
     kind: Literal["text"]
     key: Key
-    accepted: tuple[Text, ...] = Field(min_length=1, max_length=20)
-    feedback: Text
+    answer: Text
 
 
 Cell = Annotated[GivenCell | NumericCell | TextCell, Field(discriminator="kind")]
@@ -141,16 +144,12 @@ class PlotCheck(Frozen):
 
 
 class TextCheck(Frozen):
-    """A short typed answer such as a missing expression, compared against accepted variants."""
+    """A short answer, such as a name or one line of code, compared with the shown answer."""
 
     kind: Literal["text"]
     format: Literal["text", "code"] = "text"
     language: str | None = Field(default=None, min_length=1, max_length=30)
-    accepted: tuple[Annotated[str, Field(min_length=1, max_length=500)], ...] = Field(
-        min_length=1, max_length=20
-    )
-    case_sensitive: bool = True
-    whitespace: Literal["exact", "collapse", "ignore"] = "collapse"
+    answer: Annotated[str, Field(min_length=1, max_length=500)]
     feedback: Text
 
     @model_validator(mode="after")

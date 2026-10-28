@@ -26,6 +26,12 @@ function paint(link) {
   (link.querySelector('.unit-title') || link).append(mark);
 }
 
+// Mark an entry completed from elsewhere, such as finishing an exercise's last step.
+export function markCompleted(href) {
+  completed[href] = true; save();
+  document.querySelectorAll('a.unit-link:not(.revision-link)').forEach(link => { if (target(link) === href) paint(link); });
+}
+
 function close(restore = null) {
   menu?.remove(); menu = null;
   restore?.focus({ preventScroll: true });

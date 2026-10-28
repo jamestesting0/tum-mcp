@@ -1,10 +1,15 @@
 import data from './data.mjs';
-import { node, studyText, append, sourcesNote } from './dom.mjs';
+import { node, svgNode, studyText, append, sourcesNote } from './dom.mjs';
 import { renderBlockBody } from './reading.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam, topics, formula, statusMarker, quietLink } from './exam-state.mjs';
 import { renderMap } from './exam-map.mjs';
 
+
+const cueIcons = {
+  cue: 'M8 3C4.4 3 1.7 5.3.6 8c1.1 2.7 3.8 5 7.4 5s6.3-2.3 7.4-5C14.3 5.3 11.6 3 8 3Zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4Zm0-1.7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
+  pitfall: 'M8.9 1.6a1 1 0 0 0-1.8 0L.4 13.5A1 1 0 0 0 1.3 15h13.4a1 1 0 0 0 .9-1.5L8.9 1.6ZM7.25 6h1.5v4h-1.5V6Zm0 5.5h1.5V13h-1.5v-1.5Z',
+};
 
 function entry(concept) {
   const article = node('article', `exam-entry ${concept.tier}`); article.id = `concept-${concept.key}`;
@@ -19,8 +24,16 @@ function entry(concept) {
   summary.append(head, line);
   details.append(summary);
   const body = node('div', 'exam-entry-body');
-  if (concept.trigger) body.append(annotateExam(append(node('p'), node('span', 'exam-label', 'When you see: '), studyText('span', '', concept.trigger)), `concept:${concept.key}`, concept.revision, 'trigger'));
-  if (concept.pitfall) body.append(annotateExam(append(node('p'), node('span', 'exam-label', 'Watch out: '), studyText('span', '', concept.pitfall)), `concept:${concept.key}`, concept.revision, 'pitfall'));
+  // Recognition cue and pitfall read as two labelled rows; the label sits in a side column.
+  const cues = node('dl', 'exam-cues');
+  for (const [field, label, tone] of [['trigger', 'When you see', 'cue'], ['pitfall', 'Watch out', 'pitfall']]) {
+    if (!concept[field]) continue;
+    const icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
+    icon.append(svgNode('path', { d: cueIcons[tone], 'fill-rule': 'evenodd' }));
+    cues.append(append(node('dt', `exam-cue ${tone}`), icon, node('span', '', label)),
+      annotateExam(studyText('dd', '', concept[field]), `concept:${concept.key}`, concept.revision, field));
+  }
+  if (cues.childNodes.length) body.append(cues);
   if (concept.formula) {
     if (concept.formula.symbols?.length) {
       const symbols = node('dl', 'symbols');

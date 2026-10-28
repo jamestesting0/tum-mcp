@@ -184,20 +184,19 @@ at the bottom of the outline switches between them and remembers your place; on 
 it sits inside the open outline. The exercise list groups exercises by sheet and shows
 each sheet's summary and due date when the sources provide them.
 
-Each exercise shows the original statement and subparts first. Work on paper or in
-the app, open the worked solution directly, or open **Guidance** for the exercise's
-goals and one step at a time with optional hints and specific feedback. Checks cover
-numbers with units and tolerance, multiple choice, fillable tables, graph selections
-and paths, plotted sample points, short typed answers such as a missing expression,
-and putting lines or steps in order. Long math and programming work use saved drafts
-and prepared rubrics; code is never executed, and symbolic work, proofs and programs
-are not graded automatically. Mark an exercise reviewed when you are done; Reviewed
-records an action, not mastery or an assessment result. A Next link leads to the
-following exercise. Large programming exercises can come with small distilled practice
-exercises that train one idea each and link back to the original.
+Each exercise shows the original statement and subparts first. Work on paper, open the
+worked solution directly, or open **Guidance** for the exercise's goals and one step at
+a time with optional hints. Multiple-choice steps are checked; for every other step you
+work on paper and press **Compare** to see the answer, its explanation and a hint for
+the likeliest mistake. Code steps open the function skeleton in a small editor and
+show the model answer as code; code is never run, and nothing is graded by keywords.
+Finishing the last step marks the exercise completed in the outline; you can also
+right-click any entry to mark it. A Next link leads to the following exercise. Large
+programming exercises can come with small distilled practice exercises that train one
+idea each and link back to the original.
 
-Drafts and assistance stay in this browser. Editing a checked answer clears its
-verdict. Semantic changes start fresh progress for only that exercise, while retaining older
+Choices, code drafts, hints and completion marks stay in this browser. Changing a
+checked choice clears its verdict. Semantic changes start fresh progress for only that exercise, while retaining older
 browser records; source-hash review alone preserves progress.
 Reset on each workspace home affects only that workspace. Exercise passage comments
 use the existing private comment service; hosted exports do not expose it.

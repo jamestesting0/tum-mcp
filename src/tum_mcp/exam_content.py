@@ -76,7 +76,6 @@ class SourceRole(Frozen):
 class Criterion(Frozen):
     text: Text
     points: Points
-    auto: bool = False
 
 
 class PastGuidance(Frozen):
@@ -86,13 +85,11 @@ class PastGuidance(Frozen):
     transfer: TransferTask | None = None
 
 
-def _check_marking(marking: tuple[Criterion, ...], points: float | None, check: object) -> None:
+def _check_marking(marking: tuple[Criterion, ...], points: float | None) -> None:
     if not marking:
         return
     if points is None or abs(sum(item.points for item in marking) - points) > 1e-6:
         raise ValueError("Marking criteria must add up to the question's points.")
-    if any(item.auto for item in marking) and (check is None or check.kind == "self_check"):
-        raise ValueError("Automatic marking needs a deterministic check.")
 
 
 class PastQuestion(Frozen):
@@ -129,7 +126,7 @@ class PastQuestion(Frozen):
             raise ValueError("Guided practice needs the stored statement and a solution.")
         if bool(self.marking) != (self.marking_basis is not None):
             raise ValueError("Marking criteria declare whether they are official or authored.")
-        _check_marking(self.marking, self.points, self.check)
+        _check_marking(self.marking, self.points)
         return self
 
 
@@ -357,7 +354,6 @@ class MockQuestion(Frozen):
     change_note: Text | None = None
     statement: tuple[Block, ...] = Field(min_length=1, max_length=40)
     parts: tuple[Text, ...] = Field(default=(), max_length=30)
-    check: Check | None = None
     marking: tuple[Criterion, ...] = Field(min_length=1, max_length=20)
     minutes: Minutes
     difficulty: int = Field(ge=1, le=3)
@@ -376,7 +372,7 @@ class MockQuestion(Frozen):
             raise ValueError("A variant shares a pattern with the past questions it varies.")
         if not has_visual(self.statement):
             raise ValueError(f"Practice question {self.key} needs {VISUAL_RULE}.")
-        _check_marking(self.marking, self.points, self.check)
+        _check_marking(self.marking, self.points)
         return self
 
 
