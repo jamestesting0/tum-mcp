@@ -23,6 +23,7 @@ def test_pack_contains_reading_and_study_workflows_with_valid_references(
         "prepare-study",
         "prepare-exercises",
         "prepare-exams",
+        "review-course",
         "publish-course",
     }
     assert report.errors == () and report.reference_characters > 0

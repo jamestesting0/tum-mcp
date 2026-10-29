@@ -17,6 +17,8 @@ with this gate.
 5. Show each idea in the shape it has (table below); prose says only what the picture cannot.
 6. Review the last batch to the same depth as the first, against the source's own outcomes.
 7. Resolve or justify every flag from `study report`.
+8. Score the batch with [review-course](../../review-course/SKILL.md); its scorecard turns
+   stale when an item changes, so the review follows the content.
 
 ## Choose the representation
 

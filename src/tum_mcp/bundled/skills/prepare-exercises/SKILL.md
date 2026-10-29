@@ -39,7 +39,9 @@ template, not necessarily a good model for teaching or question design.
    batch with `tum-mcp study build PROJECT`, then read `tum-mcp study report PROJECT`.
    Record every problem of each sheet in the
    [coverage ledger](../prepare-study/references/coverage.md) as prepared, pending or
-   not inspected. Resolve stale dependencies; never rebind a hash without reading its
+   not inspected. Score the changed exercises with
+   [review-course](../review-course/SKILL.md) and fix what it finds until the report's
+   review passes. Resolve stale dependencies; never rebind a hash without reading its
    changed source.
 6. Verify the generated student journey using [verification](references/verification.md).
    For passage feedback, list `study comments list PROJECT --view exercises`, review

@@ -57,7 +57,7 @@ for (const previousVersion of ['0.9.0']) {
     assert.notEqual(current.python, previous.python);
     assert.ok(existsSync(previous.python), 'Previous runtime must remain for pinned clients.');
     assert.equal(run(previous.python, ['-I', '-m', 'tum_mcp', 'version']).trim(), previousVersion);
-    const expectedSkills = ['prepare-exams', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course', 'prepare-lecture'].sort();
+    const expectedSkills = ['prepare-exams', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'review-course', 'sync-course', 'prepare-lecture'].sort();
     assert.deepEqual(readdirSync(join(source, 'skills')).filter(name => existsSync(join(source, 'skills', name, 'SKILL.md'))).sort(), expectedSkills);
     assert.equal(JSON.parse(readFileSync(join(home, '.claude.json'))).mcpServers.tum.command, current.python);
     assert.equal(readFileSync(note, 'utf8'), 'retain this user note');
@@ -70,7 +70,7 @@ for (const previousVersion of ['0.9.0']) {
     assert.equal(extensions.studocu, undefined);
     call(currentPrefix, ['uninstall', 'lecture', '--json']);
     const lectureEvidence = lectureLifecycle(root, args => call(currentPrefix, args));
-    assert.equal(lectureEvidence.installed_skills, 7);
+    assert.equal(lectureEvidence.installed_skills, 8);
     // An invalid prepared package must not replace the existing selected runtime.
     const backend = join(currentPrefix, 'node_modules/@jamestesting888/tum-mcp/npm/backend');
     const manifestPath = join(backend, 'manifest.json'); const manifestBytes = readFileSync(manifestPath);

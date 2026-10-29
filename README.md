@@ -31,6 +31,7 @@ submissions, posting and exercise execution are unavailable.
 | `prepare-study` | “Build lessons, flashcards and practice in a study website.” |
 | `prepare-exercises` | “Add guided exercises from this week's released sheet.” |
 | `prepare-exams` | “Make a cheatsheet and practice exams from the past papers.” |
+| `review-course` | “Score my lessons and exercises and fix what is hard to learn from.” |
 | `publish-course` | “Publish my reviewed study site for phone access.” |
 
 Each project holds one course. Run `tum-mcp study` in its folder to open the app.

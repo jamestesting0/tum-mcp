@@ -225,8 +225,8 @@ writing files with activation.
 
 The Codex adapter uses a contained Node launcher to pin the managed Python in
 isolated mode; portable stdio manifests require a bare or contained executable.
-The base pack contains six skills: `read-content`, `sync-course`,
-`prepare-study`, `prepare-exercises`, `prepare-exams` and `publish-course`. Optional extensions add
+The base pack contains seven skills: `read-content`, `sync-course`,
+`prepare-study`, `prepare-exercises`, `prepare-exams`, `review-course` and `publish-course`. Optional extensions add
 `prepare-lecture`, `audio-notes` and `video-notes`; choose them with
 `tum-mcp install`.
 Website-specific retrieval guidance is loaded from references within read-content.

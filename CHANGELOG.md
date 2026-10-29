@@ -18,7 +18,13 @@
   losing your place; a unit links its Lecture Notes, the exercises that build on it and
   the Exam Prep patterns that cite it, and Lecture Notes link back. In the local
   preview, a citation opens the stored course file at the cited page.
+- A new `review-course` skill scores each Study unit and exercise from 1 to 3 on
+  correctness, clarity, cognitive load, representation, practice and coverage, saves the
+  scores with their findings in `.tum-mcp/review.json` (`study schema review`) and fixes
+  what falls below the bar; `study report` lists unreviewed, stale and low items.
+  prepare-study and prepare-exercises finish with it.
 - `tum-mcp study report` flags dense paragraphs, thin lessons, untraced procedures,
+  questions too long for a phone screen, slide numbers left in titles instead of `pages`,
   answer tables Compare never answers, wrong arithmetic, large steps with one hint and
   feedback that names no mistake. A coverage ledger (`.tum-mcp/coverage.json`,
   `study schema coverage`) records each source's stated outcomes, sheet problems and

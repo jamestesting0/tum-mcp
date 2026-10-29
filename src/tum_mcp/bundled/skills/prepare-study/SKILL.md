@@ -34,8 +34,9 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
    in batches. Never fill gaps with invented course facts.
 4. **Review.** Check every changed explanation, answer and assumption against its
    source, run `tum-mcp study report PROJECT` and pass the [review gate](references/review.md)
-   for each batch, the last as carefully as the first. Schema and browser checks do not
-   replace this review. Rebind source hashes only after you read the changed content.
+   for each batch, the last as carefully as the first. Then score the changed units with
+   [review-course](../review-course/SKILL.md) and fix what it finds until the report's
+   review passes. Schema and browser checks do not replace this review. Rebind source hashes only after you read the changed content.
 5. **Build.** Run `tum-mcp study build PROJECT`. Do not author duplicate decks,
    hand-copy the app, add a framework or edit generated `data.mjs`. Investigate stale
    sources and preserved custom templates.

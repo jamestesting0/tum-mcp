@@ -29,7 +29,7 @@ def test_audio_is_opt_in_and_exports_its_complete_workflow(
 ) -> None:
     install_client(client, profile, announce=False)
     assert not audio_notes_enabled()
-    assert len(inspect_skills()) == 6
+    assert len(inspect_skills()) == 7
     runner = CliRunner()
     result = runner.invoke(app, ["install", "audio-notes"])
     assert result.exit_code == 0, result.output or repr(result.exception)
@@ -55,7 +55,7 @@ def test_all_three_extensions_preserve_each_others_selection(profile: Path, firs
         result = runner.invoke(app, command)
         assert result.exit_code == 0, result.output or repr(result.exception)
     assert audio_notes_enabled() and lecture_enabled() and video_notes_enabled()
-    assert len(inspect_skills()) == 9
+    assert len(inspect_skills()) == 10
     result = runner.invoke(app, ["uninstall", "video-notes"])
     assert result.exit_code == 0, result.output
     assert audio_notes_enabled() and lecture_enabled() and not video_notes_enabled()

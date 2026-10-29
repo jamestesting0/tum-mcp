@@ -155,6 +155,13 @@ problems are prepared, in `.tum-mcp/coverage.json`. `study report` lists outcome
 that are not yet taught, sources not yet read and problems still pending, so a request
 to cover a whole course is judged against the course's own outcomes.
 
+Ask `review-course` to score the lessons and exercises the way a student meets them.
+It gives each unit and exercise 1 to 3 points for correctness, clarity, cognitive load,
+representation, practice and coverage, names what costs each point and saves the
+scores in `.tum-mcp/review.json`. The agent then fixes the findings and scores again.
+Editing a unit or exercise makes its score stale, so `study report` lists what needs a
+new review and what is still below the bar. The scores are not shown in the app.
+
 ## Preview the app
 
 From the course project folder, launch the prepared app with:

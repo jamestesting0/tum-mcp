@@ -1150,5 +1150,53 @@
     "context": "bound_local_course",
     "partition": "held_out",
     "expected_skill": "prepare-study"
+  },
+  {
+    "id": "review-course-boundary-1",
+    "target_skill": "review-course",
+    "prompt": "Score my course app's lessons for how easy they are to learn from and fix the weak ones.",
+    "context": "bound_local_course",
+    "partition": "development",
+    "expected_skill": "review-course"
+  },
+  {
+    "id": "review-course-boundary-2",
+    "target_skill": "review-course",
+    "prompt": "Review the exercises I just prepared and tell me which are hard to follow.",
+    "context": "combined_app",
+    "partition": "development",
+    "expected_skill": "review-course"
+  },
+  {
+    "id": "review-course-boundary-3",
+    "target_skill": "review-course",
+    "prompt": "Which lecture explains value iteration, and on which slide?",
+    "context": "bound_local_course",
+    "partition": "development",
+    "expected_skill": "read-content"
+  },
+  {
+    "id": "review-course-boundary-4",
+    "target_skill": "review-course",
+    "prompt": "Use $review-course to re-check the units I edited yesterday.",
+    "context": "combined_app",
+    "partition": "held_out",
+    "expected_skill": "review-course"
+  },
+  {
+    "id": "review-course-boundary-5",
+    "target_skill": "review-course",
+    "prompt": "Rate how good the Study content is and improve anything below the bar.",
+    "context": "bound_local_course",
+    "partition": "held_out",
+    "expected_skill": "review-course"
+  },
+  {
+    "id": "review-course-boundary-6",
+    "target_skill": "review-course",
+    "prompt": "Add flashcards for the new lecture.",
+    "context": "bound_local_course",
+    "partition": "held_out",
+    "expected_skill": "prepare-study"
   }
 ]

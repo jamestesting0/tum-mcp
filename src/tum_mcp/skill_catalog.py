@@ -11,6 +11,7 @@ CURRENT_SKILLS: Final = (
     "prepare-study",
     "prepare-exercises",
     "prepare-exams",
+    "review-course",
     "publish-course",
 )
 OPTIONAL_SKILLS: Final = ("prepare-lecture", "audio-notes", "video-notes")
