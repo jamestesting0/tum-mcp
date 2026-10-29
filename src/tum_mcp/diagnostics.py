@@ -226,6 +226,11 @@ def client_check(name: str, *, home: Path, host: ClientHost = ClientHost.LOCAL) 
             )
         )
         state = State.CONFIGURED if registered else State.UNCONFIGURED
+        if registered and name == "codex":
+            from tum_mcp.client_rendering import codex_cache_note
+
+            if note := codex_cache_note(home):
+                state, detail = State.ACTION, note
         if entry is not None and not registered:
             state, detail = State.FAILED, "Invalid tum server entry; review client configuration."
     except CampusError as error:

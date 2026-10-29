@@ -1,5 +1,6 @@
 import io
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -91,6 +92,20 @@ def test_personal_skill_override_survives_package_export(
     manifest = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
     assert manifest["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
     assert len(manifest["extensions"]["com.openai"]["interface"]["shortDescription"]) <= 30
+    # Codex keeps its plugin cache while the version is unchanged; the version follows the skills.
+    from tum_mcp.client_rendering import codex_cache_note, plugin_version
+
+    assert manifest["version"] == plugin_version(root / "skills")
+    changed = tmp_path / "changed-skills"
+    shutil.copytree(root / "skills", changed)
+    (changed / "read-content/SKILL.md").write_text("changed", encoding="utf-8")
+    assert plugin_version(changed) != manifest["version"]
+    cache = home / ".codex/plugins/cache/personal-local/tum-mcp"
+    (cache / manifest["version"]).mkdir(parents=True)
+    assert codex_cache_note(home) is None
+    (cache / manifest["version"]).rmdir()
+    (cache / "0.0.0+stale").mkdir()
+    assert "codex plugin remove tum-mcp@personal-local" in (codex_cache_note(home) or "")
     mcp = json.loads((root / "mcp.json").read_text(encoding="utf-8"))
     assert mcp["$schema"] == "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
     assert mcp["mcpServers"]["tum"]["command"] == "node"

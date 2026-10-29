@@ -1,5 +1,6 @@
 """Render the established host adapters into disposable profiles before activation."""
 
+import hashlib
 import io
 import json
 import shutil
@@ -24,6 +25,35 @@ def same_tree(left: Path, right: Path) -> bool:
     expected = {p.relative_to(left): p.read_bytes() for p in left.rglob("*") if p.is_file()}
     actual = {p.relative_to(right): p.read_bytes() for p in right.rglob("*") if p.is_file()}
     return expected == actual
+
+
+def plugin_version(skills: Path) -> str:
+    """Codex reuses its plugin cache while the version is unchanged; name the skills in it."""
+    digest = hashlib.sha256()
+    for path in sorted(item for item in skills.rglob("*") if item.is_file()):
+        digest.update(path.relative_to(skills).as_posix().encode() + b"\0")
+        digest.update(path.read_bytes() + b"\0")
+    return f"{__version__}+{digest.hexdigest()[:12]}"
+
+
+def codex_cache_note(home: Path) -> str | None:
+    """Name the refresh step when Codex still loads an older copy of the installed plugin."""
+    try:
+        local = json.loads(
+            (home / ".codex/plugins/local/tum-mcp/plugin.json").read_text(encoding="utf-8")
+        )["version"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    cached = {
+        path.name for path in (home / ".codex/plugins/cache").glob("*/tum-mcp/*") if path.is_dir()
+    }
+    if not cached or local in cached:
+        return None
+    return (
+        "Codex still loads an older TUM MCP plugin. Restart Codex; if skills stay missing, "
+        "run codex plugin remove tum-mcp@personal-local, then codex plugin add "
+        "tum-mcp@personal-local."
+    )
 
 
 def rendered_client(
@@ -92,7 +122,7 @@ def install_codex(staged: Path, home: Path, *, launch: StdioLaunch | None = None
     manifest = {
         "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
         "name": "tum-mcp",
-        "version": __version__,
+        "version": plugin_version(staged / "skills"),
         "description": "Local TUM campus tools and workflows.",
         "extensions": {
             "com.openai": {
