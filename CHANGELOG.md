@@ -41,6 +41,8 @@
 - Cheatsheet entries show their recognition cue and pitfall as labelled rows with icons;
   the semester map has an icon toolbar and an in-canvas legend.
 - Give every skill a Codex display name, so Codex no longer shows "Tum MCP:" prefixes.
+- Pages no longer wait for the local video index; the video panel appears once it loads,
+  so a slow preview server cannot drop it.
 
 ## 0.10.0 — 2026-10-27
 

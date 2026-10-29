@@ -1,20 +1,14 @@
 import data from './data.mjs';
 import { node, append, button } from './dom.mjs';
 
-// Videos are a local-preview feature: hosted sites never request the index.
-async function loadIndex() {
-  if (data.hosted) return {};
-  try {
-    const response = await fetch('videos/index.json', { cache: 'no-store', signal: AbortSignal.timeout(2000) });
-    if (!response.ok) return {};
-    const value = await response.json();
-    return value && typeof value.videos === 'object' && value.videos ? value.videos : {};
-  } catch {
-    return {};
-  }
-}
-
-const videos = await loadIndex();
+// Videos are a local-preview feature: hosted sites never request the index. The index loads
+// beside the app rather than holding it back, so a busy server only delays the video panel.
+let videos = null;
+const index = (data.hosted ? Promise.resolve({}) : fetch('videos/index.json', { cache: 'no-store', signal: AbortSignal.timeout(30000) })
+  .then(response => (response.ok ? response.json() : {}))
+  .then(value => (value && typeof value.videos === 'object' && value.videos ? value.videos : {}))
+  .catch(() => ({})))
+  .then(value => { videos = value; return value; });
 
 function clock(seconds) {
   // Floor like media players and the generated README, so the same time reads the same.
@@ -22,7 +16,15 @@ function clock(seconds) {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
 }
 
+// The panel when the index is known; until then a placeholder that becomes the panel, or goes.
 export function videoPanel(unit) {
+  if (videos) return panel(unit);
+  const slot = node('div', 'video-slot');
+  index.then(() => { const made = panel(unit); if (made) slot.replaceWith(made); else slot.remove(); });
+  return slot;
+}
+
+function panel(unit) {
   const entry = videos[unit.key];
   if (!entry) return null;
   const section = node('section', 'video-note');

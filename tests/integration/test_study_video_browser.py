@@ -171,6 +171,21 @@ def test_webkit_plays_through_range_requests(browsers: dict, demo: Path, server:
 
 
 @browser_only
+def test_a_slow_video_index_never_holds_back_the_page(browsers: dict, server: str) -> None:
+    context = browsers["chromium"].new_context(viewport={"width": 1440, "height": 900})
+    page = context.new_page()
+    held: list = []
+    page.route("**/videos/index.json", lambda route: held.append(route))
+    page.goto(server + "/#components")
+    page.get_by_role("heading", name="Reusable components").wait_for()
+    # The page is readable while the index is still pending; the panel follows it.
+    assert held and page.locator("section.video-note").count() == 0
+    held[0].continue_()
+    page.locator("section.video-note").wait_for()
+    context.close()
+
+
+@browser_only
 def test_stale_videos_warn_and_hosted_sites_never_ask(
     browsers: dict, demo: Path, server: str
 ) -> None:
