@@ -69,7 +69,7 @@ export function sourcesNote(ids, sources, synthetic, title = '', locators = {}) 
   const path = document.createElementNS(svg.namespaceURI, 'path');
   path.setAttribute('d', 'M12 5C8 3 5 3 3 4v15c3-1 6-1 9 1m0-15c4-2 7-2 9-1v15c-3-1-6-1-9 1V5'); svg.append(path); trigger.append(svg);
   const panel = node('div', 'citation-panel');
-  panel.append(node('div', 'eyebrow', synthetic ? 'Template sources' : 'Sources'));
+  panel.append(node('div', 'citation-eyebrow', synthetic ? 'Template sources' : 'Sources'));
   const list = node('ul');
   for (const id of ids) {
     const source = sources[id]; if (!source) continue;

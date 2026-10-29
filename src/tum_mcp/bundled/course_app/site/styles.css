@@ -58,8 +58,8 @@ h3 { font-size: var(--text-body); line-height: 1.5; }
 h1, h2, h3, p, li, td, th, dt, dd, legend { overflow-wrap: anywhere; }
 ul, ol { margin-block: var(--s3) 0; padding-inline-start: var(--s6); }
 li + li { margin-top: var(--s2); }
-.small, .eyebrow { font-size: var(--text-small); color: var(--muted); }
-.eyebrow { font-weight: 500; }
+.small, .eyebrow, .citation-eyebrow { font-size: var(--text-small); color: var(--muted); }
+.eyebrow, .citation-eyebrow { font-weight: 500; }
 .inline-math { font-size: 1em; white-space: nowrap; }
 .stack { display: flex; flex-direction: column; gap: var(--s4); }
 .cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
