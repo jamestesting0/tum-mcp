@@ -109,15 +109,16 @@ course's lecture or week sequence when useful, or consistent topics, with at mos
 one category level. Every unit has:
 
 - Content: a short lesson with objectives, source links, assumptions and worked
-  examples, using formulas, tables, code, diagrams or line graphs where they help.
-  Terms to learn appear in labelled **Definition** boxes; a dotted term anywhere in
-  the app opens its definition in place. Algorithm traces step through one operation
-  at a time and show the algorithm's state (a queue, the domains) beside the drawing,
-  marking what changed.
+  examples, using formulas, tables, code, diagrams, drawn figures or line graphs where
+  they help. A hard idea comes as short numbered steps instead of a long paragraph. A
+  term to learn appears in bold beside its meaning, inside the section that introduces
+  it; a dotted term anywhere in the app opens its definition in place. Algorithm traces
+  step through one operation at a time and show the algorithm's state (a queue, the
+  domains) beside the drawing, marking what changed.
 - Flashcards for recall. On a keyboard, arrows move, Space flips and 1/2 rate a card.
-- Practice questions that show their situation (a graph, a table, a formula) beside
-  the question, with options in a stable shuffled order, an optional hint and feedback
-  for every option.
+- Practice questions with options in a stable shuffled order, an optional hint and
+  feedback for every option. A question about a situation shows it (a graph, a
+  drawing, a table, a formula) beside the question and states each fact once.
 
 The agent uses stored material first, so local content edits work offline. Ask for
 an upstream refresh when you want new course content; an existing check is reused

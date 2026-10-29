@@ -2,12 +2,22 @@
 
 ## 0.13.0 — 2026-10-29
 
-- Study lessons gain labelled **Definition** blocks; a `{{term}}` mention anywhere in the
-  app opens the definition in place, and blocks can carry a `key` that links lead to.
+- Study lessons gain definitions that sit inside the section introducing them, as the
+  term in bold beside its meaning; a `{{term}}` mention anywhere in the app opens the
+  definition in place, and blocks can carry a `key` that links lead to.
+- Text sections can give a hard idea as numbered `steps`, and a new `figure` block shows
+  a drawing (checked SVG that follows the light and dark theme, cropped to what is drawn)
+  or an image from the app's `figures/` folder, in lessons, questions, exercises and
+  published sites.
+- Diagram labels never hide behind nodes: a label wider than its edge moves above the
+  shapes, and a single picture shows its caption once instead of a description and a
+  caption. The exercise outline drops its separators, and the completed mark stays on
+  the entry's line.
 - Algorithm traces show the algorithm's state beside the drawing (a queue, the domains),
   mark what changed at each step and highlight the edge being worked on.
-- Practice questions show their situation (a graph, table, formula or code) beside the
-  question, list options in a stable shuffled order and can offer one optional hint. A
+- Practice questions that are about a situation show it (a graph, drawing, table,
+  formula or code) beside the question, and a question about a concept may stand alone;
+  options appear in a stable shuffled order and a question can offer one optional hint. A
   question missed at the first attempt stays in To review after **Try again** until it
   is answered correctly from a fresh start.
 - Exercise solutions give one short, labelled answer per part, in the form the part asks
@@ -23,13 +33,19 @@
   scores with their findings in `.tum-mcp/review.json` (`study schema review`) and fixes
   what falls below the bar; `study report` lists unreviewed, stale and low items.
   prepare-study and prepare-exercises finish with it.
-- `tum-mcp study report` flags dense paragraphs, thin lessons, untraced procedures,
-  questions too long for a phone screen, slide numbers left in titles instead of `pages`,
+- `tum-mcp study report` flags dense paragraphs, sections of more than about 90 words of
+  prose, sentences about the material instead of the subject ("the lecture groups…"),
+  question pictures that repeat the prompt, exercise statements pasted as one block,
+  thin lessons, untraced procedures, questions too long for a phone screen, slide
+  numbers left in titles instead of `pages`,
   answer tables Compare never answers, wrong arithmetic, large steps with one hint and
   feedback that names no mistake. A coverage ledger (`.tum-mcp/coverage.json`,
   `study schema coverage`) records each source's stated outcomes, sheet problems and
   course state, so the report lists what is not yet taught, read or prepared; learners
-  see which problems are not prepared yet. The study skills share one review gate.
+  see which problems are not prepared yet. The study skills share one review gate and
+  one writing guide (plain, direct sentences after ASD-STE100, without AI phrasing), and
+  they show two-input rules as decision matrices and released exercise statements split
+  by part with their givens and setting drawn.
 - The exercise outline names a category only when it adds to the set titles, and the
   outline keeps its scroll position when you open a lesson.
 - Codex picks up changed or newly enabled skills: the plugin version follows the

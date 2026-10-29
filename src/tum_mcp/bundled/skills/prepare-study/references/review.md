@@ -16,7 +16,9 @@ with this gate.
 4. Every wrong option's feedback names the mistake that leads to it.
 5. Show each idea in the shape it has (table below); prose says only what the picture cannot.
 6. Review the last batch to the same depth as the first, against the source's own outcomes.
-7. Resolve or justify every flag from `study report`.
+7. Resolve or justify every flag from `study report`; `long_section`, `meta_reference`,
+   `restated_context` and `dense_statement` mean the student meets a wall of text, a
+   sentence about the material or a fact said twice. Write as in [writing](writing.md).
 8. Score the batch with [review-course](../../review-course/SKILL.md); its scorecard turns
    stale when an item changes, so the review follows the content.
 
@@ -27,6 +29,9 @@ with this gate.
 | A term students must learn | A `definition` block; mark later mentions `{{term}}` |
 | An algorithm or process over time | A diagram whose frames carry `state` rows (queue, domains, values) and a reason in each caption, or a trace table with one row per step |
 | Parallel cases (games, environments, designs) | A table with one row per case, or a list |
+| A rule or value that depends on two inputs | A decision matrix: one input down the side, the other across the top, the result in each cell |
+| Something with a physical or spatial shape (an arm and its angles, rooms, a map, a mechanism) | A `figure`: a drawing with labelled parts, or an image |
+| A hard argument or a multi-part explanation | Numbered `steps`, one claim each |
 | A calculation or definition with symbols | A formula block with every symbol explained |
 | Classes, relations, interactions, behaviour over events | A UML class, sequence or state diagram |
 | A hierarchy (files, objects, recursion) | A tree |

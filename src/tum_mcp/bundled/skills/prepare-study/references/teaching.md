@@ -27,9 +27,11 @@ label these roles; the writing makes them clear):
    the source's own outcomes in the coverage ledger.
 3. Bridge: the first section names the prerequisite and notation it builds on.
 4. Intuition: a concrete case or picture before the formal statement.
-5. Definitions: a `definition` block for each term students must learn, one new idea per
-   section; later mentions anywhere in the course are marked `{{term}}`.
-6. Mechanism, then one worked example or trace the student can follow step by step.
+5. Definitions: a `definition` block right after the passage that introduces each term
+   students must learn. It appears inside that passage as the term beside its meaning, so
+   the prose does not restate it. Later mentions anywhere in the course are `{{term}}`.
+6. Mechanism as short numbered `steps`, one claim each, then one worked example or trace
+   the student can follow step by step.
 7. Pitfall: the common misconception or limiting condition, where it applies.
 8. Recap: for units with more than three sections, a final text block with two to
    four points a student should recall without the page.
@@ -41,7 +43,10 @@ or question that a student can genuinely get wrong.
 For each new/changed objective, cover the mechanism, assumptions and a useful
 example. Show the example in the shape it has ([representations](review.md#choose-the-representation));
 an algorithm is a trace whose frames carry its state ([traces](review.md#algorithm-traces)).
-Prose then says only what the picture cannot: why it works and when it fails. Name the
+Never leave a wall of explanation. A section carries one idea in about 110 words at
+most; give a hard argument or procedure as numbered steps, cases as points or a table, a
+rule with two inputs as a decision matrix, and anything with a physical or spatial shape
+as a drawn figure. Prose then says only what the picture cannot: why it works and when it fails. Name the
 elements the reader should look at, in the order they should look. Parallel cases go in a
 list or table, not one paragraph. No diagram quotas or equal
 word/card/question counts. Split independent goals,
@@ -52,13 +57,13 @@ proof detail may use disclosure; essential meaning must not be hidden there.
 
 Define symbols and units, verify signs/indexing/edge cases, and check equations
 against the original when OCR is uncertain. Keep prose, formulas, tables, cards
-and feedback consistent about the same assumption. Label authored examples;
-distinguish instructor facts, derived explanation and inference.
+and feedback consistent about the same assumption. Keep instructor facts apart from
+derived explanation, but do not label examples or narrate the source.
 
 Every sentence must teach. Cut lines that only restate a title, describe the page or
 tell the student to read, work or compare; the app already shows how to use itself.
-Use short active sentences, one idea at a time, consistent technical terms and the
-lecturer's notation. Aim around 20–25 words; do not spend iterations counting words
+Follow [writing](writing.md): short active sentences, one idea at a time, consistent
+technical terms and the lecturer's notation, and no sentences about the material itself. Aim around 20–25 words; do not spend iterations counting words
 or sacrifice qualifications to meet a limit. Respect the user's language. These
 local rules adapt [STE structural guidance](https://github.com/danyuchn/asd-ste100-skill/tree/c7b11cd9258708909d8574c8176d4c70969c8b29);
 that link is provenance, not required research. No certified dictionary claim.

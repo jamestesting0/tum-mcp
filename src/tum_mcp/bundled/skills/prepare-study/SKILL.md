@@ -64,6 +64,7 @@ Read only what the change needs.
 | Feedback left on the study site | [Passage comments](references/comments.md) |
 | Choosing checks | [Verification](references/verification.md) |
 | Reviewing a batch, choosing a representation, tracing an algorithm | [Review gate](references/review.md) |
+| Wording of any explanation, card, question or feedback | [Writing](references/writing.md) |
 | Source outcomes, course state and completion | [Coverage ledger](references/coverage.md) |
 
 ## Boundaries

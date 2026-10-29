@@ -48,7 +48,7 @@ where: "Implement `Directory.size()` so that ...", "Explain why ...", "Draw the
 sequence of calls for ...". Context follows only as far as the task needs it. A
 title such as "The task" or a description of the situation alone is not a task. Do
 not repeat the task in every step; each step prompt names its own move in one
-sentence. Released statements stay as released; when one does not say what to hand
+sentence. A released statement keeps its wording; when it does not say what to hand
 in, the first step does. Write no filler such as "Work through the steps" or "Compare
 with the solution": the app already offers those controls.
 
@@ -82,12 +82,16 @@ prompt or the starter, never only to the answer.
 A question students must picture from prose alone is harder than the subject. Every
 question you write (distilled practice, Exam Prep practice exams, worked practices
 and drills) pairs its text with at least one block that shows the situation; the
-build rejects text-only ones. Original statements stay as released: add the picture
-in a step or the worked answer instead. When a statement relies on a slide or figure,
+build rejects text-only ones. A released statement keeps its wording but not its wall
+of text: give each part its own block titled with its number, enumerations as points,
+givens (numbers, costs, scoring rules) as a table and the setting as a figure or diagram
+beside it. Do not repeat a given in the steps. When a statement relies on a slide or figure,
 redraw what it needs beside the statement and cite it with `pages`. Choose the shape as
 in [representations](../../prepare-study/references/review.md#choose-the-representation):
 code or signatures for code, UML for designs and interactions, a diagram or state table
-for structures, a formula for symbols, a table for cases and traces, a plot for growth.
+for structures, a figure for physical setups, a formula for symbols, a table for cases
+and traces, a matrix for two-input rules, a plot for growth. Write prompts, hints and
+feedback as in [writing](../../prepare-study/references/writing.md).
 
 In prompts, hints and feedback, put identifiers and short code in backticks
 (`` `notify()` ``) so they render as inline code, as in prepare-study.

@@ -18,8 +18,9 @@ Facts, notation, numbers and conventions match the cited source and edition.
 
 The student can read each passage once and know what it says.
 
-- 3: short, direct sentences; each term is defined before it is used; one idea per
-  paragraph; no line that only describes the page or tells the student to work.
+- 3: short, direct sentences; each term is defined where it is introduced; one idea per
+  paragraph; no line about the material itself ("the lecture groups…", "Authored
+  example:") or that tells the student to work ([writing](../../prepare-study/references/writing.md)).
 - 2: a dense paragraph, an undefined term or an ambiguous instruction.
 - 1: the main idea cannot be understood from the text and its pictures.
 
@@ -27,8 +28,9 @@ The student can read each passage once and know what it says.
 
 What the student has to hold in mind at once.
 
-- 3: one new idea per section or step; the state of a procedure is shown, not tracked
-  mentally; text and the picture it refers to sit together; a question fits one phone
+- 3: one new idea per section or step, and no section of continuous prose longer than
+  about 110 words: a hard idea comes as numbered steps; the state of a procedure is shown,
+  not tracked mentally; text and the picture it refers to sit together; a question fits one phone
   screen; large steps have a middle hint.
 - 2: two new ideas in one step, a long question, or a trace the student has to follow
   without its state.
@@ -38,9 +40,10 @@ What the student has to hold in mind at once.
 
 Each idea is shown in the shape it has ([representations](../../prepare-study/references/review.md#choose-the-representation)).
 
-- 3: procedures are traces with their state, parallel cases are tables or lists, symbols
-  are formulas with each symbol explained, structures are diagrams or trees; prose says
-  only what the picture cannot.
+- 3: procedures are traces with their state, parallel cases are tables or lists, two-input
+  rules are matrices, physical or spatial ideas are drawn figures, symbols are formulas
+  with each symbol explained, structures are diagrams or trees; a question's picture
+  carries its data instead of repeating the prompt; prose says only what the picture cannot.
 - 2: an idea that has a shape is given as prose, or a picture needs prose to be read.
 - 1: the central idea of the item has no fitting picture, table, formula or code.
 

@@ -18,10 +18,11 @@ Changing names or numbers while naming the same method does not establish transf
 A useful progression might pair a trace with a choice of method and a changed
 assumption. Keep only the members that teach or test different decisions.
 
-Every question must stand alone in both topic Practice and pooled Revision. Put the
-situation it is about in the question's `blocks` (the graph with its weights, the table,
-the formula, the code); the build rejects a question without one. Include notation, units
-and assumptions the answer depends on. A reference to “the graph above” breaks when the
+Every question must stand alone in both topic Practice and pooled Revision. When it is
+about a situation, show that situation in the question's `blocks` (the graph with its
+weights, the drawn setup, the table, the formula, the code) and let the prompt ask only
+the question; say each fact once. A question about a concept needs no picture. Include
+notation, units and assumptions the answer depends on. A reference to “the graph above” breaks when the
 item is pooled. An optional `hint` recalls the idea without naming the option.
 
 Write four distinct options by default; the schema sets the accepted range. Map

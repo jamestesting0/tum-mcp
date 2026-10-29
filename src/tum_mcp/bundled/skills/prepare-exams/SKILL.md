@@ -38,8 +38,8 @@ Exam Prep stays local: it is never published and publish-course never includes i
 6. **Practice** ([forecast](references/forecast.md)). Make chosen past papers
    replayable with guidance; write forecast exams to the real exam's blueprint from
    `exam-report --section blueprint`, as genuine variants or untested core ideas.
-   Every question you write shows its code, diagram, UML diagram, formula, table or plot beside
-   the text.
+   Every question you write shows its figure, code, diagram, UML diagram, formula, table or
+   plot beside the text, and reads as in [writing](../prepare-study/references/writing.md).
 7. **Build and verify** ([verification](references/verification.md)). Edit
    `exam.json` programmatically by key and preserve unrelated items. Build once per
    coherent batch, review `exam-report --section targets`, pass the

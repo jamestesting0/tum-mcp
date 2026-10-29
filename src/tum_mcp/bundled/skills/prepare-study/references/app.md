@@ -44,7 +44,9 @@ formats; it is not a model of good teaching or question design.
 | block `title`, `sources` | A section heading with a sources icon |
 | flashcard `front`, `back` | One card that flips; its sources appear after reveal |
 | question `prompt`, `blocks`, `options`, `explanation`, `hint` | Practice and Revision; the blocks sit between prompt and options, options appear in a stable shuffled order, the hint is one optional button before checking; after a check the app marks the chosen and correct options, shows the chosen option's feedback and the explanation, and keeps the other options' feedback on request |
-| `definition` block | A box labelled Definition; `{{term}}` mentions open it in place |
+| `definition` block | The term in bold beside its meaning, inside the section before it; consecutive terms form one list; `{{term}}` mentions open it in place |
+| text `steps` | A numbered sequence after the paragraphs, one claim per step |
+| `figure` block | The drawing or image at full width with its caption; the `alt` text names it for screen readers |
 
 Keep titles and labels short enough to scan in an outline. Long text wraps, but it
 crowds navigation. Questions must stand alone because Revision pools them; see
