@@ -61,12 +61,9 @@ def test_cheatsheet_scans_filters_flags_and_maps(
     expect(entries).to_have_count(6)
     expect(page.locator(".exam-sheet .unit-summary, .exam-toolbar")).to_have_count(0)
     page.locator("#concept-observer .exam-entry-row").click()
-    # One citation per entry, however many detail blocks it has.
-    citations = (
-        "[...document.querySelectorAll('.exam-entry')]"
-        ".map(e => e.querySelectorAll('.citation').length)"
-    )
-    assert set(page.evaluate(citations)) == {1}
+    # Every entry cites the same slides, so the page cites them once and no entry repeats it.
+    expect(page.locator(".page-citation")).to_have_count(1)
+    expect(page.locator(".exam-entry .citation")).to_have_count(0)
     expect(page.locator("#concept-observer .exam-cue.cue")).to_have_text("When you see")
     if width >= 720:
         node = page.locator('.exam-node[data-concept="loose-coupling"]')

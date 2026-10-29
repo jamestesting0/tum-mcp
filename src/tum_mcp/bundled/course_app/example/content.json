@@ -337,6 +337,41 @@
               "code": "public class Main {\n    public static void main(String[] args) {\n        Counter counter = new Counter();\n        counter.increment();\n        System.out.println(counter.value()); // 1\n    }\n}\n"
             }
           ]
+        },
+        {
+          "kind": "tree",
+          "title": "Tree",
+          "sources": [
+            "components"
+          ],
+          "description": "A folder with a file and a subfolder; notes show sizes.",
+          "root": {
+            "label": "project",
+            "kind": "folder",
+            "children": [
+              {
+                "label": "README.md",
+                "kind": "file",
+                "note": "2 KB"
+              },
+              {
+                "label": "src",
+                "kind": "folder",
+                "children": [
+                  {
+                    "label": "Main.java",
+                    "kind": "file",
+                    "note": "1 KB"
+                  },
+                  {
+                    "label": "Counter.java",
+                    "kind": "file",
+                    "note": "1 KB"
+                  }
+                ]
+              }
+            ]
+          }
         }
       ],
       "flashcards": [

@@ -27,15 +27,12 @@ export function exerciseOutline(current = '', compact = false) {
     }
     const sheet = node('details', 'unit-group exercise-sheet');
     sheet.open = group.exercises.some(item => item.key === current) || group === sets[0];
-    sheet.append(studyText('summary', '', group.title));
+    // The week and due date sit quietly at the end of the set's own row; the summary lines up under its title.
+    const summary = studyText('summary', '', group.title), meta = [group.week, due(group)].filter(Boolean).join(' · ');
+    if (!compact && meta) summary.append(node('span', 'sheet-week', meta));
+    sheet.append(summary);
     const list = node('div', compact ? 'group-children' : '');
-    const meta = [group.week, due(group)].filter(Boolean).join(' · ');
-    if (!compact && (group.summary || meta)) {
-      const about = node('div', 'sheet-meta');
-      if (group.summary) about.append(studyText('p', 'unit-summary', group.summary));
-      if (meta) about.append(node('p', 'small', meta));
-      list.append(about);
-    }
+    if (!compact && group.summary) list.append(studyText('p', 'sheet-summary', group.summary));
     for (const exercise of group.exercises) {
       const link = node('a', 'unit-link'); link.href = exerciseLink(group, exercise);
       if (exercise.key === current) link.setAttribute('aria-current', 'page');
@@ -105,7 +102,6 @@ export function exercisePage(exercise, options) {
       if (index) practice.append(', ');
       practice.append(quietLink(`${original.exercise.label} · ${original.exercise.title}`, exerciseLink(original.group, original.exercise)));
     });
-    if (exercise.concepts?.length) practice.append(append(node('span', 'practice-concepts'), ...exercise.concepts.map(text => studyText('span', 'chip', text))));
     header.append(practice);
   }
   root.append(header);
@@ -171,7 +167,7 @@ export function exercisePage(exercise, options) {
     const response = renderResponse(check, saved.draft, text => {
       saved.draft = text.slice(0, 64000); saved.checked = null; checked = false; saved.compared = false;
       state.save(exercise); update(); activityChanged();
-    }, `exercise-${exercise.key}-${step.key}`);
+    }, `exercise-${exercise.key}-${step.key}`, (step.code || []).map(ref => ref.path));
     if (response.root.matches('.reading-material')) target(response.root, 'graph', step.key);
     for (const element of response.root.querySelectorAll('.reading-material')) target(element, 'graph', step.key);
     // Only a choice is checked; every other answer is compared with the expected one.

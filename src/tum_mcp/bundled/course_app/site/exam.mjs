@@ -30,7 +30,7 @@ const orderedPatterns = () => (exam.statistics.pattern_order || []).map(key => e
 const firstPaper = () => { const past = replayable()[0]; return past ? `#exam/paper/${past.variant.key}` : exam.mocks[0] ? `#exam/mock/${exam.mocks[0].key}` : ''; };
 
 function home() {
-  const { box, heading } = header('Exam Prep', data.course.title, 'Condensed knowledge, recurring question patterns and practice exams for this course.');
+  const { box, heading } = header('Exam Prep', data.course.title);
   const root = node('div', 'exam-home'); root.append(box);
   const profile = exam.profile;
   if (profile) {
@@ -76,7 +76,7 @@ function paperOverview(variantKey) {
 // A past question becomes an exercise: its guidance, or its solution as a single step.
 function guidedExercise(paper, question) {
   const steps = question.guidance?.steps?.length ? question.guidance.steps
-    : [{ key: 'solve', purpose: 'Solve', prompt: 'Solve the question, then compare with the solution.', hints: [], explanation: 'Compare your answer with the solution below.', check: question.check || null, blocks: [] }];
+    : [{ key: 'solve', purpose: 'Solve', prompt: 'Solve the question.', hints: [], explanation: 'Compare your answer with the solution below.', check: question.check || null, blocks: [] }];
   return {
     key: question.key, label: `Question ${question.number}`, title: `Question ${question.number}`,
     revision: paper.revision, statement: question.statement, parts: [], objectives: question.guidance?.objectives || [],

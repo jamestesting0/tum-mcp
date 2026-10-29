@@ -609,7 +609,6 @@ def test_distilled_code_practice_writes_code_and_checks_literal_code(
             "title": "Sort a copy",
             "kind": "distilled",
             "distilled_from": [original["key"]],
-            "concepts": ["Defensive copies"],
             "sources": original["sources"],
             "statement": [
                 {
@@ -723,7 +722,9 @@ def test_project_files_open_referenced_lines_and_keep_edits(
         expect(project.locator(".project-tab-item.active")).to_have_text("Main.java")
         expect(project.locator(".code-line.marked")).to_have_count(3)
         page.goto(exercise_url + "#exercises/responses/project-files/write")
-        page.get_by_role("button", name="Open Counter.java", exact=True).click()
+        # The step already shows Counter.java's lines, so it opens from that excerpt only.
+        expect(page.get_by_role("button", name="Open Counter.java")).to_have_count(0)
+        page.locator(".code-ref").get_by_role("button", name="Open in files").click()
         editor = page.get_by_label("Edit src/Counter.java", exact=True)
         expect(editor).to_have_value(re.compile(r"// TODO: add one"))
         editor.evaluate(
@@ -731,7 +732,7 @@ def test_project_files_open_referenced_lines_and_keep_edits(
         )
         editor.press_sequentially("count++;")
         page.reload()
-        page.get_by_role("button", name="Open Counter.java", exact=True).click()
+        page.locator(".code-ref").get_by_role("button", name="Open in files").click()
         expect(editor).to_have_value(re.compile(r"count\+\+;"))
         expect(project.locator(".project-tab.changed")).to_have_count(1)
         page.get_by_role("button", name="Compare", exact=True).click()
@@ -770,6 +771,9 @@ def test_demo_walkthrough_and_state_diagram(course_browser: Browser, tmp_path: P
             expect(state.locator(".uml-state")).to_have_count(5)
             expect(state.locator(".uml-transition")).to_have_count(6)
             expect(page.locator(".project")).to_have_count(1)
+            tree = page.locator(".tree")
+            expect(tree.locator(".tree-row")).to_have_count(5)
+            expect(tree.locator(".tree-note")).to_have_count(3)
             assert errors == []
         finally:
             context.close()

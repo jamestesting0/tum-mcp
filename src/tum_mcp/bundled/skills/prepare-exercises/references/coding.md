@@ -61,9 +61,8 @@ field belongs lets a student pass without producing code. Use `choice` only for 
 genuine design decision with plausible alternatives, and make every step a real piece
 of the work rather than a question about the statement.
 
-Use only the steps the kernel needs. Distilled exercises set `kind: distilled`,
-`distilled_from` with the original exercise keys and `concepts` naming the kernels;
-the app shows "Practice for" links back to the originals.
+Use only the steps the kernel needs. Distilled exercises set `kind: distilled`
+and `distilled_from` with the original exercise keys; the app shows "Practice for" links back to the originals.
 
 ## Keep it faithful
 

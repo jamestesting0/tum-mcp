@@ -38,7 +38,9 @@ For each new/changed objective, cover the mechanism, assumptions and a useful
 example. Show the example; do not only tell it. Pair it with the picture of the thing
 itself: a UML class diagram for a design, a sequence diagram for an interaction, a
 state diagram for behaviour over events, a code walkthrough for code, a stepping
-diagram for an algorithm, a table for a trace, a plot for a relation. Prose then says
+diagram for an algorithm, a tree for a hierarchy, a table for a trace, a plot for a
+relation. Pick the visual with the shape of the thing: a hierarchy as a table of
+parents makes the reader rebuild the tree in their head. Prose then says
 only what the picture cannot: why it works and when it fails. Name the elements the
 reader should look at, in the order they should look. No diagram quotas or equal
 word/card/question counts. Split independent goals,
@@ -52,6 +54,8 @@ against the original when OCR is uncertain. Keep prose, formulas, tables, cards
 and feedback consistent about the same assumption. Label authored examples;
 distinguish instructor facts, derived explanation and inference.
 
+Every sentence must teach. Cut lines that only restate a title, describe the page or
+tell the student to read, work or compare; the app already shows how to use itself.
 Use short active sentences, one idea at a time, consistent technical terms and the
 lecturer's notation. Aim around 20–25 words; do not spend iterations counting words
 or sacrifice qualifications to meet a limit. Respect the user's language. These

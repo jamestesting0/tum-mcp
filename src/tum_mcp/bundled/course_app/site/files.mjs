@@ -17,6 +17,7 @@ const ICON = {
   tree: 'M2 3h12v10H2zM6 3v10',
   edit: 'M10.5 2.5l3 3-7.5 7.5H3v-3z',
 };
+export const fileIcon = kind => icon(ICON[kind]);
 const storage = key => `course-app:${data.course.identity}:files:v1:${key}`;
 function readDrafts(key) {
   try { const value = JSON.parse(localStorage.getItem(storage(key)) || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }

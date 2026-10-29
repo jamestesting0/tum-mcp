@@ -70,7 +70,8 @@ export function optionExplanations(check) {
 
 // Only a choice is answered on screen. Code opens its skeleton in an editor and diagrams
 // and plots stay interactive; every other answer is worked on paper, then compared.
-export function renderResponse(check, draft, edit, identity) {
+// `shown` lists the files whose lines the step already shows; those open from the excerpt.
+export function renderResponse(check, draft, edit, identity, shown = []) {
   const root = node('div', 'exercise-response');
   const result = { root, validate: () => ({ valid: true, correct: false, repairs: [] }), showResult: () => {} };
   if (!check) return result;
@@ -91,7 +92,7 @@ export function renderResponse(check, draft, edit, identity) {
   if (check.kind === 'plot') return plotResponse(check, draft, edit);
   if (check.kind === 'self_check' && check.format === 'code' && check.file) {
     // The code is written where it lives: in the project file, as in the real exercise.
-    root.append(button(`Open ${check.file.split('/').pop()}`, () => openInWorkspace(check.file), 'secondary project-target'));
+    if (!shown.includes(check.file)) root.append(button(`Open ${check.file.split('/').pop()}`, () => openInWorkspace(check.file), 'secondary project-target'));
     return result;
   }
   if (check.kind === 'self_check' && check.format === 'code') {
@@ -118,7 +119,7 @@ export function renderResponse(check, draft, edit, identity) {
       body.append(tr);
     }
     table.append(body); region.append(table);
-    root.append(node('p', 'small', 'Fill in the empty cells on paper, then compare.'), region);
+    root.append(region);
   }
   return result;
 }

@@ -73,6 +73,21 @@ def test_state_diagrams_check_their_transitions() -> None:
         BLOCK.validate_python(state | {"states": [{"key": "a"}], "transitions": []})
 
 
+def test_trees_bound_their_size_and_keep_files_as_leaves() -> None:
+    tree = {"kind": "tree", "title": "T", "sources": ["s"], "description": "d"}
+    leaf = {"label": "a.txt", "kind": "file", "note": "4 KB"}
+    assert BLOCK.validate_python(
+        tree | {"root": {"label": "root", "kind": "folder", "children": [leaf]}}
+    )
+    with pytest.raises(ValidationError, match="file entry"):
+        BLOCK.validate_python(tree | {"root": leaf | {"children": [{"label": "b"}]}})
+    deep: dict = {"label": "leaf"}
+    for _ in range(9):
+        deep = {"label": "level", "children": [deep]}
+    with pytest.raises(ValidationError, match="8 levels"):
+        BLOCK.validate_python(tree | {"root": deep})
+
+
 def exercise(step: dict) -> dict:
     return {
         "course_key": "c",

@@ -20,9 +20,9 @@ function blocksWithoutTitles(blocks) {
 }
 // An optional check, and the answer whenever the student wants it.
 // A choice is checked; every other item is compared with its answer at will.
-function answerControls(check, identity, answer, expected = true) {
+function answerControls(check, identity, answer, expected = true, shown = []) {
   const feedback = node('div', 'exercise-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
-  const response = renderResponse(check, '', () => feedback.replaceChildren(), identity);
+  const response = renderResponse(check, '', () => feedback.replaceChildren(), identity, shown);
   if (check?.kind === 'choice') {
     const actions = append(node('div', 'cluster exercise-actions'), button('Check answer', () => {
       const result = response.validate();
@@ -51,7 +51,6 @@ function drillItem(item, pattern) {
 function workedPractice(pattern) {
   const example = pattern.example, past = example.question && pastQuestions.get(example.question);
   const blocks = past ? past.question.statement : example.blocks, solution = past ? past.question.solution : example.solution;
-  const origin = past ? `From ${plain(past.sitting.label)}, question ${past.question.number}` : 'Practice question written for this pattern';
   const steps = node('ol', 'exam-guided'), shownFiles = filesIn(blocks);
   example.steps.forEach((step, index) => {
     const card = node('li', 'exam-guided-step');
@@ -59,12 +58,12 @@ function workedPractice(pattern) {
     card.append(annotateExam(studyText('p', 'exam-guided-prompt', step.prompt), `pattern:${pattern.key}`, pattern.revision, `practice:${index}`));
     if (step.code?.length) card.append(codeReferences(step.code, shownFiles));
     if (step.hint) { const hint = node('details', 'disclosure plain'); hint.append(node('summary', '', 'Hint'), studyText('p', '', step.hint)); card.append(hint); }
-    card.append(...answerControls(step.check, `practice-${pattern.key}-${index}`, blocksWithoutTitles(step.answer), step.check?.kind !== 'self_check'));
+    card.append(...answerControls(step.check, `practice-${pattern.key}-${index}`, blocksWithoutTitles(step.answer), step.check?.kind !== 'self_check', (step.code || []).map(ref => ref.path)));
     steps.append(card);
   });
   const full = node('details', 'disclosure');
   full.append(node('summary', '', 'Full solution'), blocksWithoutTitles(solution.blocks));
-  return section('Worked practice', node('p', 'small', `${origin}. Work through it with the workflow above.`), blocksWithoutTitles(blocks), steps, full);
+  return section('Worked practice', ...(past ? [node('p', 'small', `From ${plain(past.sitting.label)}, question ${past.question.number}`)] : []), blocksWithoutTitles(blocks), steps, full);
 }
 
 export function renderPattern(key) {

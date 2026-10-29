@@ -31,6 +31,7 @@ from tum_mcp.study_content import (
     check_target_file,
     has_visual,
     project_files,
+    tree_nodes,
 )
 from tum_mcp.study_math import compile_latex
 from tum_mcp.study_models import Digest, Key
@@ -443,6 +444,9 @@ def block_text(blocks: tuple[Block, ...]) -> str:
                 parts.extend(item.text for item in block.messages)
             case "files":
                 parts.extend(item.code for item in block.files)
+            case "tree":
+                parts.append(block.description or "")
+                parts.extend(f"{item.label} {item.note}" for item, _ in tree_nodes(block.root))
     return " ".join(parts)
 
 

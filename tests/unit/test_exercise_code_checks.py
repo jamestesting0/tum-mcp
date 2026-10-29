@@ -76,7 +76,6 @@ def test_distilled_practice_names_existing_originals() -> None:
                 "bank-drill",
                 kind="distilled",
                 distilled_from=["bank"],
-                concepts=["Generics"],
                 statement=[STATEMENT_CODE],
             ),
         )

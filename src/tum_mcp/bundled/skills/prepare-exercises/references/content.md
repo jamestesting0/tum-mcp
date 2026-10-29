@@ -44,7 +44,8 @@ sequence of calls for ...". Context follows only as far as the task needs it. A
 title such as "The task" or a description of the situation alone is not a task. Do
 not repeat the task in every step; each step prompt names its own move in one
 sentence. Released statements stay as released; when one does not say what to hand
-in, the first step does.
+in, the first step does. Write no filler such as "Work through the steps" or "Compare
+with the solution": the app already offers those controls.
 
 ## Point at the code
 
@@ -53,8 +54,8 @@ changes (`editable: true`, with the template's `TODO` markers) and the read-only
 they need to read, under their real package paths. Keep it to the files that matter.
 A step that needs code points at it with `code: [{"path": ..., "lines": "8-9"}]`
 instead of quoting it; the app shows those lines with an "Open in files" jump. A
-writing step names the file in its prompt and sets the self-check's `file` to it; the
-model answer shows only the part that changes. Line ranges are checked against the
+writing step names the file in its prompt, sets the self-check's `file` to it and points
+at the lines to change, so the student opens the file from that excerpt; the model answer shows only the part that changes. Line ranges are checked against the
 files, so re-check them whenever a file changes.
 
 ## Give the student everything the answer uses
@@ -97,7 +98,7 @@ short enough to read on a phone, and do not let the visual reveal the answer.
 
 Use rich step blocks for long mathematical givens, diagrams, code and tables. Code
 blocks accept `line_numbers: true` when a step refers to lines. Distilled practice sets
-`kind: distilled`, `distilled_from` (original exercise keys) and `concepts`. All
+`kind: distilled` and `distilled_from` (original exercise keys). All
 block/graph sources must be declared. Put full model proofs/code in safe worked
 solution blocks, with assumptions and alternative valid methods; do not bury them
 in a multiple-choice answer. The app already labels the solution, so title its blocks

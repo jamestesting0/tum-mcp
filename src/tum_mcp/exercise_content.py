@@ -65,7 +65,6 @@ class Exercise(Frozen):
     title: Text
     kind: Literal["original", "distilled"] = "original"
     distilled_from: tuple[Key, ...] = Field(default=(), max_length=10)
-    concepts: tuple[Text, ...] = Field(default=(), max_length=12)
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=30)
     statement: tuple[Block, ...] = Field(min_length=1, max_length=40)
     parts: tuple[Text, ...] = Field(default=(), max_length=50)

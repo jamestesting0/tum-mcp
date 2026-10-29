@@ -55,6 +55,7 @@ deliberate overlap is right (a label on its node is not text-on-text), add a
 | plot | Axes with the source labels and units; draw series in order; sweep a parameter only when the formula defines the function exactly. |
 | code | `self.code(key)` lines with a moving highlight and a small variable table driven by storyboard numbers. A prepared walkthrough gives the order of highlights. |
 | files | Show only the file and lines the beat explains, as code; never scroll through a whole project. |
+| tree | Grow the tree level by level from the root, keeping indentation and connector lines; reveal notes such as sizes as the beat reaches them. |
 | table | Reveal rows against the comparison criterion; highlight contrasting cells. |
 | text points | Narration plus objects, not bullet slides. |
 | cards and questions | Question beats and pitfalls; distractor feedback names misconceptions. |

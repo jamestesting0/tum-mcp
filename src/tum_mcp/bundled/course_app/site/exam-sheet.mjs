@@ -1,5 +1,5 @@
 import data from './data.mjs';
-import { node, svgNode, studyText, append, sourcesNote } from './dom.mjs';
+import { node, svgNode, studyText, append, sourcesNote, pageCitation } from './dom.mjs';
 import { renderBlockBody } from './reading.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam, topics, formula, statusMarker, quietLink } from './exam-state.mjs';
@@ -11,7 +11,10 @@ const cueIcons = {
   pitfall: 'M8.9 1.6a1 1 0 0 0-1.8 0L.4 13.5A1 1 0 0 0 1.3 15h13.4a1 1 0 0 0 .9-1.5L8.9 1.6ZM7.25 6h1.5v4h-1.5V6Zm0 5.5h1.5V13h-1.5v-1.5Z',
 };
 
-function entry(concept) {
+// The sources an entry cites, its details included.
+const citedBy = concept => [...new Set([...concept.sources.map(item => item.key), ...(concept.details || []).flatMap(block => block.sources)])].sort();
+
+function entry(concept, cite) {
   const article = node('article', `exam-entry ${concept.tier}`); article.id = `concept-${concept.key}`;
   article.dataset.concept = concept.key;
   const details = node('details', 'exam-entry-details');
@@ -55,9 +58,11 @@ function entry(concept) {
     const unit = data.units.find(item => item.key === key);
     if (unit) { if (links.childNodes.length) links.append(' · '); links.append(quietLink(`Study: ${unit.title}`, `#study/${unit.key}/content`)); }
   }
-  // One citation per entry, covering its details too.
-  const cited = [...new Set([...concept.sources.map(item => item.key), ...(concept.details || []).flatMap(block => block.sources)])];
-  body.append(append(node('div', 'exam-entry-footer'), links, sourcesNote(cited, data.sources, data.course.synthetic, concept.title)));
+  // An entry cites its sources itself only when its section or the page does not already.
+  const footer = node('div', 'exam-entry-footer');
+  if (links.childNodes.length) footer.append(links);
+  if (cite) footer.append(sourcesNote(citedBy(concept), data.sources, data.course.synthetic, concept.title));
+  if (footer.childNodes.length) body.append(footer);
   details.append(body);
   article.append(details);
   return { article, details };
@@ -66,18 +71,23 @@ function entry(concept) {
 export function renderSheet(focusKey) {
   const root = node('div', 'exam-sheet');
   const heading = node('h1', '', 'Cheatsheet');
-  root.append(append(node('div', 'unit-header'), node('p', 'eyebrow', 'Exam Prep'), heading));
+  const eyebrow = node('p', 'eyebrow', 'Exam Prep');
+  root.append(append(node('div', 'unit-header'), eyebrow, heading));
   if (!exam.concepts.length) {
     root.append(node('p', '', 'The cheatsheet has not been prepared yet.'));
     return { root, heading, title: 'Cheatsheet', items: [] };
   }
   root.append(renderMap(key => { location.hash = `#exam/sheet/${key}`; }));
-  const entries = [];
+  const entries = [], same = list => new Set(list.map(concept => citedBy(concept).join(' '))).size === 1;
+  // Shared sources are cited once: for the page when every entry shares them, else per section.
+  const pageWide = same(exam.concepts);
+  if (pageWide) pageCitation(sourcesNote(citedBy(exam.concepts[0]), data.sources, data.course.synthetic), eyebrow);
   for (const topic of topics) {
     const members = exam.concepts.filter(concept => concept.topic === topic.key);
     if (!members.length) continue;
-    const section = append(node('section', 'exam-topic'), studyText('h2', '', topic.title));
-    for (const concept of members) { const made = entry(concept); entries.push({ ...made, concept }); section.append(made.article); }
+    const shared = !pageWide && same(members), title = studyText('h2', '', topic.title);
+    const section = append(node('section', 'exam-topic'), shared ? append(node('div', 'section-heading'), title, sourcesNote(citedBy(members[0]), data.sources, data.course.synthetic, topic.title)) : title);
+    for (const concept of members) { const made = entry(concept, !pageWide && !shared); entries.push({ ...made, concept }); section.append(made.article); }
     root.append(section);
   }
   if (focusKey) {

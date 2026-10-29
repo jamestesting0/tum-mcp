@@ -3,7 +3,7 @@ import { node, studyText, append, sourcesNote, svgNode } from './dom.mjs';
 import { iconButton } from './navigation.mjs';
 import { renderPlot } from './plot.mjs';
 import { renderCode, languageName, lineSet, markLines } from './code.mjs';
-import { renderFiles } from './files.mjs';
+import { renderFiles, fileIcon } from './files.mjs';
 import { renderFormula } from './formulas.mjs';
 import { renderUml } from './uml.mjs';
 import { videoPanel } from './video.mjs';
@@ -138,6 +138,22 @@ export function renderReading(unit) {
   return root;
 }
 
+// A hierarchy as an indented tree with connector lines; a note, such as a size, ends its row.
+function treeBlock(block) {
+  const figure = node('figure', 'tree-view');
+  const branch = item => {
+    const row = append(node('span', 'tree-row'), ...(item.kind === 'item' ? [] : [fileIcon(item.kind)]), studyText('span', 'tree-label', item.label));
+    if (item.note) row.append(studyText('span', 'tree-note', item.note));
+    const entry = append(node('li'), row);
+    if (item.children.length) entry.append(append(node('ul'), ...item.children.map(branch)));
+    return entry;
+  };
+  const tree = append(node('ul', 'tree'), branch(block.root)); tree.setAttribute('aria-label', studyText('span', '', block.title).textContent);
+  if (block.description) figure.append(studyText('figcaption', 'small', block.description));
+  figure.append(tree);
+  return figure;
+}
+
 export function renderBlockBody(block) {
   const root = node('div', 'block-body');
     switch (block.kind) {
@@ -152,6 +168,7 @@ export function renderBlockBody(block) {
       case 'plot': root.append(renderPlot(block).root); break;
       case 'code': root.append(codeBlock(block), studyText('p', '', block.explanation)); break;
       case 'files': root.append(renderFiles(block)); break;
+      case 'tree': root.append(treeBlock(block)); break;
       default: throw new Error('Unsupported study block. Rebuild the site with a compatible renderer.');
     }
   return root;

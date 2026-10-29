@@ -26,12 +26,18 @@
   `` `code` `` in text renders as inline code.
 - Code is syntax-highlighted in blocks, editors and model answers. A new `files` block
   shows a small project with a file tree, tabs and editable files kept in the browser;
-  steps point at file lines with an "Open in files" jump, code-writing steps can edit
-  a project file, and the file tree folds away. Code blocks can carry a step-by-step walkthrough, and
+  steps point at file lines with an "Open in files" jump, code-writing steps edit
+  the project file they point at, and the file tree folds away. Distilled exercises no
+  longer carry concept tags. Code blocks can carry a step-by-step walkthrough, and
   prepare-study asks for examples shown as a diagram or walkthrough, not only told.
 - Right-click (or Shift+F10) any sidebar entry to mark it completed.
 - A page whose sections all cite the same sources shows one citation beside its title
-  line; exam pages mention past exams only when there are some.
+  line, and a cheatsheet section whose entries share sources cites them once; exam
+  pages mention past exams only when there are some. Lines that only described a page
+  or told students to compare (such as the Exam Prep summary) are gone, and the skills
+  ask for text that teaches.
+- A new `tree` block draws hierarchies such as file structures, object trees and call
+  trees with icons, connector lines and optional notes.
 - Cheatsheet entries show their recognition cue and pitfall as labelled rows with icons;
   the semester map has an icon toolbar and an in-canvas legend.
 - Give every skill a Codex display name, so Codex no longer shows "Tum MCP:" prefixes.

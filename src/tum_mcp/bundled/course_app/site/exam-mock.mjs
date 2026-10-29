@@ -40,7 +40,6 @@ export function renderPaper(paper) {
   if (facts.length) header.append(studyText('p', 'small', facts.join(' · ')));
   if (paper.forecast) header.append(node('p', 'notice', 'AI-written practice exam built from past patterns and course material. It is not a past or leaked exam, and topics can differ in the real exam.'));
   if (paper.instructions) header.append(studyText('p', '', paper.instructions));
-  header.append(node('p', 'small', 'Work on paper first, then open each solution to check yourself.'));
   for (const question of paper.questions) {
     const section = node('section', 'exam-section exam-question'); section.dataset.question = question.key;
     const title = `Question ${question.number}${question.points ? ` · ${question.points} points` : ''}`;

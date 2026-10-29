@@ -1,5 +1,6 @@
 """Source-linked study content with editable LaTeX and legacy MathML inputs."""
 
+from collections.abc import Iterator
 from typing import Annotated, Literal, assert_never
 
 from pydantic import AfterValidator, Field, FiniteFloat, JsonValue, field_validator, model_validator
@@ -146,6 +147,39 @@ class FilesBlock(Sourced):
             raise ValueError("The workspace opens a file it does not contain.")
         if sum(len(item.code) for item in self.files) > 400_000:
             raise ValueError("Keep a workspace below 400,000 characters of code.")
+        return self
+
+
+class TreeNode(Frozen):
+    """One entry of a hierarchy; `folder` and `file` entries show file-system icons."""
+
+    label: Annotated[str, Field(min_length=1, max_length=80), AfterValidator(validate_inline)]
+    note: Annotated[str, Field(max_length=40), AfterValidator(validate_inline)] = ""
+    kind: Literal["item", "folder", "file"] = "item"
+    children: "tuple[TreeNode, ...]" = Field(default=(), max_length=30)
+
+
+def tree_nodes(item: TreeNode, depth: int = 0) -> Iterator[tuple[TreeNode, int]]:
+    yield item, depth
+    for child in item.children:
+        yield from tree_nodes(child, depth + 1)
+
+
+class TreeBlock(Sourced):
+    """A hierarchy drawn as an indented tree: a file structure, an object tree or a call tree."""
+
+    kind: Literal["tree"]
+    # Optional: the tree is readable text itself, so a caption only says what to notice.
+    description: Text | None = None
+    root: TreeNode
+
+    @model_validator(mode="after")
+    def bounded(self) -> "TreeBlock":
+        found = list(tree_nodes(self.root))
+        if len(found) > 120 or max(depth for _, depth in found) > 8:
+            raise ValueError("Keep a tree to at most 120 entries and 8 levels.")
+        if any(item.kind == "file" and item.children for item, _ in found):
+            raise ValueError("A file entry of a tree cannot contain other entries.")
         return self
 
 
@@ -427,15 +461,16 @@ Block = Annotated[
     | CodeBlock
     | PlotBlock
     | UmlBlock
-    | FilesBlock,
+    | FilesBlock
+    | TreeBlock,
     Field(discriminator="kind"),
 ]
 
 
 # Authored questions pair their text with at least one of these, because prose alone
 # makes code, structures and calculations hard to picture.
-VISUAL_KINDS = frozenset({"formula", "table", "diagram", "code", "plot", "uml", "files"})
-VISUAL_RULE = "a code snippet, diagram, UML diagram, formula, table or plot beside its text"
+VISUAL_KINDS = frozenset({"formula", "table", "diagram", "code", "plot", "uml", "files", "tree"})
+VISUAL_RULE = "a code snippet, diagram, UML diagram, tree, formula, table or plot beside its text"
 
 
 def has_visual(blocks: tuple[Block, ...]) -> bool:
@@ -458,6 +493,7 @@ def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
                 | PlotBlock()
                 | UmlBlock()
                 | FilesBlock()
+                | TreeBlock()
             ):
                 pass
             case unreachable:
