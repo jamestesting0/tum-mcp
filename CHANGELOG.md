@@ -2,6 +2,7 @@
 
 ## 0.13.0 — 2026-10-29
 
+- Figures are checked for readable labels at build time: a label that touches a line, sits on a filled shape, overlaps another label or leaves the canvas is rejected with its text named, and the app draws labels on a page-coloured halo at the drawn size. prepare-study's figure guide adopts label and spacing rules from open-source diagram skills.
 - Study lessons gain definitions that sit inside the section introducing them, as the
   term in bold beside its meaning; a `{{term}}` mention anywhere in the app opens the
   definition in place, and blocks can carry a `key` that links lead to.

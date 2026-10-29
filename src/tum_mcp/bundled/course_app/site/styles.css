@@ -261,7 +261,8 @@ thead th { background: var(--surface); }
 .figure { margin: var(--s4) 0 0; }
 .figure svg, .figure img { display: block; width: 100%; max-width: 640px; height: auto; max-height: 460px; margin-inline: auto; }
 .figure svg { color: var(--ink); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; font-family: inherit; font-size: 16px; }
-.figure svg text, .figure svg tspan { fill: currentColor; stroke: none !important; font-weight: 500; }
+/* An opaque halo in the page colour keeps every label off the strokes behind it. */
+.figure svg text, .figure svg tspan { fill: currentColor; stroke: var(--canvas) !important; stroke-width: 6px; paint-order: stroke; font-weight: 500; }
 .figure svg .muted { stroke: var(--muted); color: var(--muted); }
 .figure svg .accent { stroke: var(--accent); color: var(--accent); }
 .figure svg text.muted { fill: var(--muted); }

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pytest
@@ -50,3 +51,45 @@ def test_images_are_confined_typed_and_found_wherever_a_figure_sits(tmp_path: Pa
         "exercises": [{"statement": [{"kind": "figure", "svg": ARM}]}],
     }
     assert list(figure_images(payload)) == ["figures/arm.png"]
+
+
+WEDGE = (
+    '<svg viewBox="0 0 440 240"><line x1="130" y1="146" x2="290" y2="94" class="dashed"/>'
+    '<line x1="130" y1="148" x2="295" y2="110"/>'
+    '<text x="170" y="112" class="small">intended path</text></svg>'
+)
+ON_ARC = (
+    '<svg viewBox="0 0 440 300"><path d="M30 250 A120 120 0 0 1 270 250"/>'
+    '<text x="160" y="126">(0, 2)</text></svg>'
+)
+
+
+@pytest.mark.parametrize(
+    ("markup", "message"),
+    [
+        (WEDGE, 'Label "intended path" touches a <line>'),
+        (ON_ARC, 'Label "(0, 2)" touches a <path>'),
+        ('<svg viewBox="0 0 300 100"><text x="250" y="50">far too long</text></svg>', "outside"),
+        (
+            '<svg viewBox="0 0 300 100"><text x="20" y="50">one</text>'
+            '<text x="30" y="52">two</text></svg>',
+            "overlap",
+        ),
+    ],
+)
+def test_labels_must_stay_clear_of_strokes_labels_and_edges(markup: str, message: str) -> None:
+    with pytest.raises(ValueError, match=re.escape(message)):
+        safe_svg(markup)
+
+
+def test_clear_labels_beside_lines_arcs_and_inside_boxes_pass() -> None:
+    safe_svg(
+        '<svg viewBox="0 0 440 300"><path d="M30 250 A120 120 0 0 1 270 250"/>'
+        '<text x="160" y="110">(0, 2)</text><rect x="300" y="160" width="120" height="60"/>'
+        '<text x="360" y="196" text-anchor="middle">room</text></svg>'
+    )
+    safe_svg(
+        '<svg viewBox="0 0 440 240"><line x1="80" y1="167" x2="259" y2="75" class="dashed"/>'
+        '<line x1="81" y1="170" x2="276" y2="150"/><text x="290" y="76">intended path</text>'
+        '<text x="290" y="156">actual path</text></svg>'
+    )

@@ -123,7 +123,10 @@ def read_content(root: Path) -> StudyContent:
     try:
         return StudyContent.model_validate_json(path.read_bytes())
     except ValidationError as error:
-        locations = [".".join(map(str, item["loc"])) for item in error.errors(include_input=False)]
+        locations = [
+            ".".join(map(str, item["loc"])) + f" ({item['msg'].removeprefix('Value error, ')})"
+            for item in error.errors(include_input=False)
+        ]
         raise CampusError(
             Code.INVALID_RESPONSE,
             "Invalid study content at: " + ", ".join(locations[:5]) + ". See study schema content.",
