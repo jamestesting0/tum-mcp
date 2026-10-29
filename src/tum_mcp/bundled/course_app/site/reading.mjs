@@ -39,28 +39,35 @@ export function diagram(block) {
   const box = node('div', 'surface diagram');
   // Crop unused canvas height so the drawing, not empty space, fills narrow screens.
   const reach = item => item.shape === 'box' ? 28 : RADIUS;
-  const top = Math.max(0, Math.min(...block.nodes.map(item => item.y - reach(item))) - 24);
-  const bottom = Math.min(320, Math.max(...block.nodes.map(item => item.y + reach(item))) + 24);
-  const graph = svgNode('svg', { viewBox: `0 ${top} 600 ${bottom - top}`, class: 'graph', role: 'img', 'aria-label': studyText('span', '', block.description).textContent });
   const nodes = new Map(block.nodes.map(item => [item.key, item]));
   function boundary(item, ux, uy) {
     return item.shape === 'box' ? Math.min(72 / (Math.abs(ux) || 1e-9), 30 / (Math.abs(uy) || 1e-9)) : RADIUS;
   }
+  const strokes = [], labels = [];
   for (const edge of block.edges) {
     const start = nodes.get(edge.start), end = nodes.get(edge.end);
     const dx = end.x - start.x, dy = end.y - start.y, distance = Math.hypot(dx, dy) || 1;
     const ux = dx / distance, uy = dy / distance;
     const a = boundary(start, ux, uy), b = boundary(end, ux, uy);
     const ex = end.x - b * ux, ey = end.y - b * uy;
-    graph.append(svgNode('line', { x1: start.x + a * ux, y1: start.y + a * uy, x2: ex, y2: ey, 'data-edge-key': `${edge.start}--${edge.end}` }));
+    strokes.push(svgNode('line', { x1: start.x + a * ux, y1: start.y + a * uy, x2: ex, y2: ey, 'data-edge-key': `${edge.start}--${edge.end}` }));
     if (edge.directed) {
-      graph.append(svgNode('path', { d: `M${ex-10*ux+5*uy},${ey-10*uy-5*ux} L${ex},${ey} L${ex-10*ux-5*uy},${ey-10*uy+5*ux}`, class: 'arrow' }));
+      strokes.push(svgNode('path', { d: `M${ex-10*ux+5*uy},${ey-10*uy-5*ux} L${ex},${ey} L${ex-10*ux-5*uy},${ey-10*uy+5*ux}`, class: 'arrow' }));
     }
     if (edge.label) {
-      const label = svgNode('text', { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 - 12, class: 'edge-label' });
-      label.textContent = edge.label; graph.append(label);
+      // Beside the line on its upper side; a label wider than the gap between the two shapes
+      // moves clear of them, so no node ever covers it.
+      const [nx, ny] = ux > 0 ? [uy, -ux] : [-uy, ux];
+      const fits = edge.label.length * 7.5 + 8 <= distance - a - b;
+      const offset = fits ? 14 : Math.max(reach(start), reach(end)) + 12;
+      labels.push({ text: edge.label, x: (start.x + end.x) / 2 + offset * nx, y: (start.y + end.y) / 2 + offset * ny });
     }
   }
+  // Crop unused canvas height so the drawing, not empty space, fills narrow screens.
+  const top = Math.max(0, Math.min(...block.nodes.map(item => item.y - reach(item)), ...labels.map(item => item.y - 12)) - 24);
+  const bottom = Math.min(320, Math.max(...block.nodes.map(item => item.y + reach(item)), ...labels.map(item => item.y + 6)) + 24);
+  const graph = svgNode('svg', { viewBox: `0 ${top} 600 ${bottom - top}`, class: 'graph', role: 'img', 'aria-label': studyText('span', '', block.description).textContent });
+  graph.append(...strokes);
   const groups = new Map();
   for (const item of block.nodes) {
     const group = svgNode('g', { class: item.shape === 'box' ? 'node-box' : 'node-circle', 'data-node-key': item.key });
@@ -74,6 +81,9 @@ export function diagram(block) {
     } else label.textContent = item.label;
     group.append(item.shape === 'box' ? svgNode('rect', { x: item.x - 70, y: item.y - 28, width: 140, height: 56, rx: 6 }) : svgNode('circle', { cx: item.x, cy: item.y, r: RADIUS }), label);
     groups.set(item.key, group); graph.append(group);
+  }
+  for (const item of labels) {
+    const label = svgNode('text', { x: item.x, y: item.y, class: 'edge-label' }); label.textContent = item.text; graph.append(label);
   }
   const description = studyText('p', 'small', block.description);
   const state = node('div', 'diagram-state'); state.setAttribute('aria-live', 'polite');
@@ -109,6 +119,8 @@ export function diagram(block) {
   const region = node('div', 'graph-region');
   region.append(graph);
   update(); controls.hidden = block.frames.length < 2; box.append(description, region, state, controls);
+  // A single picture says it once: its caption is visible, its description stays the image's name.
+  if (block.frames.length < 2) { box.classList.add('static'); description.hidden = true; }
   return box;
 }
 // A listing, optionally walked through: each stop marks its lines and says what they do.
@@ -141,15 +153,68 @@ export function renderReading(unit) {
   const root = node('div');
   const video = videoPanel(unit);
   if (video) root.append(video);
+  let material = null;
   for (const [index, block] of unit.blocks.entries()) {
+    // A term joins the passage it belongs to, under that passage's heading and citation;
+    // terms that open the lesson share one untitled section.
+    if (block.kind === 'definition' && material) {
+      const last = material.lastElementChild;
+      const list = last?.matches('dl.definitions') ? last : material.appendChild(node('dl', 'definitions'));
+      const item = definitionItem(block); item.dataset.blockIndex = String(index);
+      if (block.key) item.dataset.block = block.key;
+      list.append(item); continue;
+    }
     const section = node('section', 'read-section'); section.dataset.blockIndex = String(index);
     if (block.key) section.dataset.block = block.key;
-    const title = block.title || block.term;
-    const material = node('div', 'reading-material'); material.dataset.commentTarget = 'content'; material.append(append(node('div', 'section-heading'), studyText('h2', '', title), sourcesNote(block.sources, data.sources, data.course.synthetic, title, {}, block.pages)));
-    material.append(renderBlockBody(block));
+    material = node('div', 'reading-material'); material.dataset.commentTarget = 'content';
+    if (block.kind !== 'definition') material.append(append(node('div', 'section-heading'), studyText('h2', '', block.title), sourcesNote(block.sources, data.sources, data.course.synthetic, block.title, {}, block.pages)));
+    material.append(block.kind === 'definition' ? append(node('dl', 'definitions'), definitionItem(block)) : renderBlockBody(block));
     section.append(material); root.append(section);
   }
   return root;
+}
+
+function definitionItem(block, term = true) {
+  const item = node('div', 'definition-item');
+  if (term) item.append(studyText('dt', '', block.term));
+  const meaning = append(studyText('dd', '', block.statement));
+  if (block.conditions?.length) meaning.append(append(node('ul'), ...block.conditions.map(text => studyText('li', '', text))));
+  item.append(meaning);
+  return item;
+}
+
+// A picture of the idea itself: an allowlisted SVG drawing, checked at build, or an image
+// from the app's figures folder. Marker ids get a per-figure prefix so arrowheads never collide.
+let figures = 0;
+function figureBlock(block) {
+  const figure = node('figure', 'figure');
+  if (block.svg) {
+    const markup = block.svg.includes('xmlns=') ? block.svg : block.svg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    const svg = document.importNode(new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement, true);
+    const prefix = `figure-${++figures}-`;
+    for (const element of svg.querySelectorAll('[id]')) element.id = prefix + element.id;
+    for (const element of svg.querySelectorAll('[marker-start], [marker-end]')) {
+      for (const name of ['marker-start', 'marker-end']) {
+        const value = element.getAttribute(name);
+        if (value) element.setAttribute(name, value.replace('url(#', `url(#${prefix}`));
+      }
+    }
+    svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', studyText('span', '', block.alt).textContent);
+    figure.append(svg);
+    // Crop to what is drawn, once it is on screen, so unused canvas never leaves empty space.
+    const crop = new ResizeObserver(() => {
+      const box = svg.getBBox();
+      if (!box.width || !box.height) return;
+      svg.setAttribute('viewBox', `${box.x - 12} ${box.y - 12} ${box.width + 24} ${box.height + 24}`);
+      crop.disconnect();
+    });
+    crop.observe(svg);
+  } else {
+    const image = node('img'); image.src = block.image; image.alt = studyText('span', '', block.alt).textContent; image.loading = 'lazy';
+    figure.append(image);
+  }
+  if (block.caption) figure.append(studyText('figcaption', 'small', block.caption));
+  return figure;
 }
 
 // A hierarchy as an indented tree with connector lines; a note, such as a size, ends its row.
@@ -185,19 +250,15 @@ export function renderAnswers(solution, target = element => element) {
   return root;
 }
 
-export function renderBlockBody(block) {
+export function renderBlockBody(block, { term = true } = {}) {
   const root = node('div', 'block-body');
     switch (block.kind) {
       case 'text':
         for (const text of block.paragraphs) root.append(studyText('p', '', text));
+        if (block.steps?.length) root.append(append(node('ol', 'steps'), ...block.steps.map(text => studyText('li', '', text))));
         if (block.points.length) root.append(append(node('ul'), ...block.points.map(text => studyText('li', '', text))));
         break;
-      case 'definition': {
-        // Labelled by word and border, not colour alone, so a definition is recognisable at a glance.
-        const box = append(node('div', 'definition'), node('p', 'definition-label', 'Definition'), studyText('p', 'definition-statement', block.statement));
-        if (block.conditions?.length) box.append(append(node('ul', 'definition-conditions'), ...block.conditions.map(text => studyText('li', '', text))));
-        root.append(box); break;
-      }
+      case 'definition': root.append(append(node('dl', 'definitions'), definitionItem(block, term))); break;
       case 'formula': root.append(renderFormula(block)); break;
       case 'table': root.append(table(block)); break;
       case 'diagram': root.append(diagram(block)); break;
@@ -206,6 +267,7 @@ export function renderBlockBody(block) {
       case 'code': root.append(codeBlock(block), studyText('p', '', block.explanation)); break;
       case 'files': root.append(renderFiles(block)); break;
       case 'tree': root.append(treeBlock(block)); break;
+      case 'figure': root.append(figureBlock(block)); break;
       default: throw new Error('Unsupported study block. Rebuild the site with a compatible renderer.');
     }
   return root;

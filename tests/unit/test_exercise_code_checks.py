@@ -90,7 +90,7 @@ def test_distilled_practice_names_existing_originals() -> None:
         )
     )
     assert valid.sets[0].exercises[1].kind == "distilled"
-    with pytest.raises(ValidationError, match="needs a code snippet, diagram"):
+    with pytest.raises(ValidationError, match="needs a figure, code snippet, diagram"):
         ExerciseContent.model_validate(
             content(exercise("bank"), exercise("drill", kind="distilled", distilled_from=["bank"]))
         )

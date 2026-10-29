@@ -88,11 +88,14 @@ def mock_question(value: dict, index: int = 0) -> dict:
         ),
         (lambda v: v["concepts"][0].update(topic="missing"), "declared topic"),
         (lambda v: v.update(count=3), "Extra inputs are not permitted"),
-        (lambda v: mock_question(v)["statement"].pop(), "needs a code snippet, diagram"),
-        (lambda v: v["patterns"][0]["drill"][0].pop("blocks"), "Drill d1 needs a code snippet"),
+        (lambda v: mock_question(v)["statement"].pop(), "needs a figure, code snippet, diagram"),
+        (
+            lambda v: v["patterns"][0]["drill"][0].pop("blocks"),
+            "Drill d1 needs a figure, code snippet",
+        ),
         (
             lambda v: v["patterns"][1]["example"]["blocks"].pop(),
-            "worked practice question needs a code snippet",
+            "worked practice question needs a figure, code snippet",
         ),
         (
             lambda v: v["patterns"][0]["example"]["steps"][1].update(

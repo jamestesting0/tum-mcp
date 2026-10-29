@@ -141,7 +141,7 @@ def same_text(explanation: str, blocks: tuple[Block, ...]) -> bool:
         part
         for block in blocks
         if block.kind == "text"
-        for part in (*block.paragraphs, *block.points)
+        for part in (*block.paragraphs, *block.steps, *block.points)
     )
     return " ".join(explanation.split()).casefold() == " ".join(words.split()).casefold()
 

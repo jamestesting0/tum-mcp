@@ -250,6 +250,34 @@ thead th { background: var(--surface); }
 .graph .active circle, .graph .active rect { fill: var(--accent); stroke: var(--accent); }
 .graph .active text { fill: var(--canvas); }
 .diagram-state { min-height: 88px; padding-block: var(--s4); }
+.diagram.static .diagram-state { min-height: 0; padding-bottom: 0; }
+
+/* A hard idea one step at a time: numbered, with room between the steps. */
+.block-body ol.steps { display: grid; gap: var(--s3); margin: var(--s3) 0 0; padding: 0; list-style: none; counter-reset: step; }
+.block-body ol.steps > li { position: relative; padding-inline-start: 2.2em; counter-increment: step; }
+.block-body ol.steps > li::before { content: counter(step); position: absolute; inset-inline-start: 0; top: .05em; display: grid; place-items: center; width: 1.55em; height: 1.55em; border-radius: 50%; background: var(--surface); color: var(--accent); font-size: var(--text-ui); font-weight: 650; }
+
+/* A drawn figure: strokes and text follow the theme; classes pick theme colours, never fixed ones. */
+.figure { margin: var(--s4) 0 0; }
+.figure svg, .figure img { display: block; width: 100%; max-width: 640px; height: auto; max-height: 460px; margin-inline: auto; }
+.figure svg { color: var(--ink); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; font-family: inherit; font-size: 16px; }
+.figure svg text { fill: currentColor; stroke: none; }
+.figure svg .muted { stroke: var(--muted); color: var(--muted); }
+.figure svg .accent { stroke: var(--accent); color: var(--accent); }
+.figure svg text.muted { fill: var(--muted); }
+.figure svg text.accent { fill: var(--accent); }
+.figure svg .fill-ink { fill: var(--ink); }
+.figure svg .fill-muted { fill: var(--muted); }
+.figure svg .fill-accent { fill: var(--accent); }
+.figure svg .fill-surface { fill: var(--surface); }
+.figure svg .fill-canvas { fill: var(--canvas); }
+.figure svg .dashed { stroke-dasharray: 6 5; }
+.figure svg .thin { stroke-width: 1; }
+.figure svg .thick { stroke-width: 3.5; }
+.figure svg .small { font-size: 13px; }
+.figure svg .bold { font-weight: 650; }
+.figure img { border-radius: var(--r1); }
+.figure figcaption { margin-top: var(--s2); color: var(--muted); }
 .graph line.active { stroke: var(--accent); stroke-width: 4; }
 .frame-state { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s1) var(--s4); margin: var(--s2) 0 0; font-size: var(--text-ui); }
 .frame-state dt { color: var(--muted); font-weight: 500; }
@@ -257,11 +285,15 @@ thead th { background: var(--surface); }
 .frame-state dd.changed { font-weight: 650; }
 .frame-state dd.changed::before { content: '\25B8\00A0'; content: '\25B8\00A0' / ''; color: var(--accent); }
 
-/* A definition: labelled by word and a rule, so it reads as one without relying on colour. */
-.definition { padding: var(--s4) var(--s5); border: 1px solid var(--line); border-inline-start: 3px solid var(--accent); border-radius: var(--r1); background: var(--surface); }
-.definition-label { margin: 0; color: var(--muted); font-size: var(--text-small); font-weight: 650; letter-spacing: .02em; }
-.definition-statement { margin: var(--s1) 0 0; }
-.definition-conditions { margin: var(--s2) 0 0; font-size: var(--text-ui); }
+/* Terms inside their passage: the bolded term beside its meaning, set off by a quiet rule. */
+.definitions { display: grid; gap: var(--s3); margin: var(--s4) 0 0; padding-inline-start: var(--s4); border-inline-start: 2px solid var(--accent); }
+.block-body > .definitions:first-child, .reading-material > .definitions:first-child { margin-top: 0; }
+.definition-item { display: grid; grid-template-columns: minmax(7rem, 11rem) 1fr; gap: var(--s1) var(--s4); scroll-margin-top: var(--s6); }
+.definition-item:has(> dd:only-child) { grid-template-columns: 1fr; }
+.definition-item dt { font-weight: 650; }
+.definition-item dd { margin: 0; }
+.definition-item ul { margin: var(--s1) 0 0; font-size: var(--text-ui); }
+@media (max-width: 599px) { .definition-item { grid-template-columns: 1fr; } }
 
 /* A defined term in running text; activating it shows the definition beside it. */
 .term-tip { position: relative; }
@@ -340,7 +372,7 @@ button.reference-trigger { min-height: 0; padding: 0; border: 0; background: non
 .question-context { margin: 0 0 var(--s6); }
 .question-context > .block-body + .block-body { margin-top: var(--s4); }
 .question-hint { margin: var(--s4) 0 0; padding: var(--s3) var(--s4); border-inline-start: 2px solid var(--line); color: var(--ink); }
-.exercise-sheet.group-start { margin-top: var(--s2); padding-top: var(--s2); border-top: 1px solid var(--line); }
+.exercise-sheet.group-start { margin-top: var(--s2); }
 fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 legend { padding: 0; margin-bottom: var(--s6); font-size: var(--text-body); font-weight: 500; line-height: 1.5; }
 
@@ -502,6 +534,8 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 .exercise-sheet { margin-block: var(--s3); }
 .exercise-sheet .unit-link { border-bottom: 1px solid var(--line); border-radius: 0; }
 .sidebar .exercise-sheet .unit-link { border: 0; border-radius: var(--r1); padding-block: var(--s2); }
+.sidebar .exercise-sheet { margin-block: 0; }
+.sidebar .exercise-sheet.group-start { margin-top: var(--s2); }
 .exercise-sheet > summary .sheet-week { margin-inline-start: auto; padding-inline-start: var(--s3); color: var(--muted); font-size: var(--text-small); font-weight: 400; white-space: nowrap; }
 /* Lines up with the set title, after the chevron. */
 .sheet-summary { margin: 0 0 var(--s2); padding-inline-start: calc(2 * var(--s2) + 6px); color: var(--muted); font-size: var(--text-small); }
@@ -728,7 +762,7 @@ button.exam-map-item { display: flex; justify-content: space-between; gap: var(-
 .exam-marking { margin: var(--s2) 0 0; }
 .done-mark { display: inline-flex; vertical-align: -2px; margin-inline-start: 6px; color: var(--accent); }
 .done-mark svg { width: 14px; height: 14px; fill: currentColor; }
-.unit-link .unit-title .done-mark { display: inline-flex; margin: 0 0 0 6px; }
+.unit-link .done-mark { display: inline-flex; margin: 0 0 0 6px; vertical-align: -2px; }
 .context-menu { position: fixed; z-index: 50; min-width: 200px; padding: var(--s1); border: 1px solid var(--line); border-radius: var(--r1); background: var(--canvas); box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
 .context-menu-item { display: block; width: 100%; min-height: 36px; padding: var(--s2) var(--s3); border: 0; border-radius: 4px; background: none; color: var(--ink); font: inherit; font-size: var(--text-ui); text-align: start; }
 .context-menu-item:hover, .context-menu-item:focus-visible { background: var(--wash); }

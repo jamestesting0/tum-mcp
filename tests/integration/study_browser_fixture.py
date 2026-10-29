@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from playwright.sync_api import Browser, Route
+from playwright.sync_api import Browser, Page, Route
 from study_activity_comments_fixture import activity_comment_checks
 from study_comments_fixture import comment_checks
 from study_inline_fixture import inline_math_checks, mobile_outline_checks
@@ -19,6 +19,23 @@ from study_revision_fixture import (
     revision_checks,
 )
 from study_table_fixture import table_layout_checks
+
+
+def structure_checks(page: Page, content: dict) -> None:
+    """Terms join their passage, hard ideas read as steps and figures are named images."""
+    page.goto("https://study.invalid/#weighted/content")
+    section = page.locator("section.read-section").filter(
+        has=page.get_by_role("heading", name="Count cost, not just edges", exact=True)
+    )
+    assert section.locator("dl.definitions dt").inner_text() == "Tentative distance"
+    assert page.get_by_role("heading", name="Tentative distance", exact=True).count() == 0
+    assert section.locator("ol.steps > li").count() == 4
+    page.goto("https://study.invalid/#weighted/content/tentative-distance")
+    page.wait_for_function("document.activeElement?.closest('.definition-item') !== null")
+    page.goto("https://study.invalid/#probability/content")
+    figure = page.locator("figure.figure svg[role=img]")
+    assert figure.get_attribute("aria-label").startswith("Three coins")
+    assert figure.locator("text").count() == 3
 
 
 def study_website(browser: Browser) -> dict[str, object]:
@@ -202,7 +219,11 @@ def study_website(browser: Browser) -> dict[str, object]:
         mobile_outline_checks(page, content)
         inline_math_checks(page, project, content)
         context.close()
-        for height, check in ((900, option_order_checks), (360, outline_position_checks)):
+        for height, check in (
+            (900, option_order_checks),
+            (360, outline_position_checks),
+            (900, structure_checks),
+        ):
             context = browser.new_context(viewport={"width": 1440, "height": height})
             context.route("**/*", serve)
             page = context.new_page()

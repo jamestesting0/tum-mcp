@@ -30,6 +30,7 @@ from tum_mcp.study_content import (
     Unit,
     compile_formulas,
 )
+from tum_mcp.study_figures import figure_bytes, figure_images
 from tum_mcp.study_math import compile_latex, inline_math
 from tum_mcp.study_models import Digest, StudyState
 from tum_mcp.study_publish_models import PublishReport
@@ -410,6 +411,8 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
         source = files("tum_mcp") / "bundled/course_app/site"
         desired = {name: (source / name).read_bytes() for name in TEMPLATE_FILES}
         payload = _app_data(state, content, exercises, lectures, root, exam)
+        for image in sorted(set(figure_images(payload))):
+            figure_bytes(app_path(root, image))
         data = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
         desired["data.mjs"] = ("export default " + data + ";\n").encode()
         writes: list[Write] = []

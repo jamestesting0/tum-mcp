@@ -412,7 +412,7 @@ function route(initial = false) {
   // #unit/content/block opens the lesson at one keyed passage, as definitions and references link it.
   const passage = workspace === 'study' && !revising && currentView === 'content' && hash.split('/')[2];
   const section = passage && main.querySelector(`[data-block="${CSS.escape(passage)}"]`);
-  if (section) { scrollReadingTo(section); focusHeading(section.querySelector('h2')); }
+  if (section) { scrollReadingTo(section); focusHeading(section.querySelector('h2') || section); }
 }
 document.querySelector('.skip').addEventListener('click', event => { event.preventDefault(); main.focus(); });
 addEventListener('hashchange', () => route());

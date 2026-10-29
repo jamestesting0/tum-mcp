@@ -61,6 +61,21 @@
           ]
         },
         {
+          "kind": "text",
+          "title": "Steps",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "A hard idea reads as numbered steps after a one-sentence lead."
+          ],
+          "steps": [
+            "Take the vertex with the smallest tentative distance.",
+            "Settle that vertex.",
+            "Try each outgoing edge and keep any shorter distance."
+          ]
+        },
+        {
           "kind": "table",
           "title": "Table",
           "sources": [
@@ -423,6 +438,16 @@
               }
             ]
           }
+        },
+        {
+          "kind": "figure",
+          "title": "Figure",
+          "sources": [
+            "components"
+          ],
+          "alt": "A two-link arm with joint angles θ1 and θ2, link lengths l1 and l2 and the gripper at (x, y).",
+          "caption": "A drawing with labelled parts; its colours follow the theme.",
+          "svg": "<svg viewBox=\"0 0 440 290\"><line x1=\"40\" y1=\"262\" x2=\"130\" y2=\"262\" class=\"muted\"/><path d=\"M65 262 L80 240 L95 262 Z\" class=\"fill-surface\"/><line x1=\"80\" y1=\"240\" x2=\"150\" y2=\"240\" class=\"muted dashed thin\"/><line x1=\"80\" y1=\"240\" x2=\"200\" y2=\"140\" class=\"thick\"/><line x1=\"200\" y1=\"140\" x2=\"246\" y2=\"101.6\" class=\"muted dashed thin\"/><line x1=\"200\" y1=\"140\" x2=\"360\" y2=\"170\" class=\"thick\"/><path d=\"M120 240 A40 40 0 0 0 110.7 214.4\" class=\"accent\"/><path d=\"M226.1 118.2 A34 34 0 0 1 233.4 146.3\" class=\"accent\"/><circle cx=\"80\" cy=\"240\" r=\"7\" class=\"fill-surface\"/><circle cx=\"200\" cy=\"140\" r=\"7\" class=\"fill-surface\"/><path d=\"M360 170 L382 158 M360 170 L382 184\"/><text x=\"128\" y=\"230\" class=\"accent\">θ₁</text><text x=\"246\" y=\"138\" class=\"accent\">θ₂</text><text x=\"112\" y=\"176\">l₁</text><text x=\"285\" y=\"146\">l₂</text><text x=\"368\" y=\"212\">(x, y)</text></svg>"
         }
       ],
       "flashcards": [

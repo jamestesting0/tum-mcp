@@ -83,7 +83,7 @@ function openReference(unit, block, trigger) {
   const heading = append(node('div', ''), eyebrow, title);
   const header = append(node('div', 'reference-panel-header'), heading, close);
   // One passage under the panel's own title; a whole unit keeps its section titles.
-  const body = block ? append(node('div', 'reading-material'), renderBlockBody(block)) : renderReading({ blocks: unit.blocks });
+  const body = block ? append(node('div', 'reading-material'), renderBlockBody(block, { term: false })) : renderReading({ blocks: unit.blocks });
   const more = quietLink('Open in Study', `#${unit.key}/content${block?.key ? `/${block.key}` : ''}`);
   panel.append(header, body, append(node('p', 'small reference-panel-more'), more));
   // Returning focus can scroll the page; the student comes back to exactly where they were.

@@ -426,7 +426,7 @@ def block_text(blocks: tuple[Block, ...]) -> str:
     for block in blocks:
         match block.kind:
             case "text":
-                parts.extend((*block.paragraphs, *block.points))
+                parts.extend((*block.paragraphs, *block.steps, *block.points))
             case "formula":
                 parts.append(block.plain)
             case "table":
@@ -443,6 +443,8 @@ def block_text(blocks: tuple[Block, ...]) -> str:
                 parts.extend(item.text for item in block.messages)
             case "files":
                 parts.extend(item.code for item in block.files)
+            case "figure":
+                parts.extend((block.alt, block.caption or ""))
             case "tree":
                 parts.append(block.description or "")
                 parts.extend(f"{item.label} {item.note}" for item, _ in tree_nodes(block.root))

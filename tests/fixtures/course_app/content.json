@@ -1726,11 +1726,24 @@
           ],
           "kind": "text",
           "paragraphs": [
-            "Recall BFS: first discovery is shortest in edge count because each layer adds one edge. For weighted paths, add the costs instead. A tentative distance is the cheapest complete path found so far; it can still improve.",
-            "BFS gives the fewest edges in an unweighted graph. A weighted network asks a different question: which route has the smallest total cost?",
-            "Use nonnegative edge weights. Start with distance 0 at S and infinity elsewhere. Settle the smallest tentative distance, then try its outgoing edges."
+            "BFS finds the fewest edges in an unweighted graph. A weighted network asks a different question: which route has the smallest total cost?"
           ],
-          "points": []
+          "points": [],
+          "steps": [
+            "Use nonnegative edge weights.",
+            "Give S distance 0 and every other vertex infinity.",
+            "Settle the vertex with the smallest {{tentative distance}}.",
+            "Try its outgoing edges and keep any shorter distance."
+          ]
+        },
+        {
+          "kind": "definition",
+          "key": "tentative-distance",
+          "sources": [
+            "weighted"
+          ],
+          "term": "Tentative distance",
+          "statement": "The cost of the cheapest complete path found so far; it can still improve."
         },
         {
           "title": "The algorithm as a process",
@@ -2018,8 +2031,17 @@
             "weighted"
           ],
           "paragraphs": [
-            "Suppose a cheaper path to chosen X existed. Let Y be its first unsettled vertex. Its settled predecessor has already relaxed the edge to Y, so d(Y) is at most that prefix cost. The minimum rule gives d(X) ≤ d(Y). With nonnegative remaining edges, the prefix costs no more than the whole path. Thus d(X) is no larger than the allegedly cheaper path, a contradiction.",
-            "The nonnegative suffix is essential. With edges S→A (1), S→B (2), B→A (−3), settling A at 1 misses the path S→B→A costing −1. The minimum rule alone is insufficient."
+            "Assume a cheaper path to the chosen vertex X exists, and follow it to a contradiction."
+          ],
+          "steps": [
+            "Let Y be the first unsettled vertex on the cheaper path.",
+            "The settled predecessor of Y already relaxed the edge to Y, so d(Y) is at most the cost of the path up to Y.",
+            "The minimum rule chose X, so d(X) ≤ d(Y).",
+            "The rest of the path has nonnegative edges, so its start costs no more than the whole path.",
+            "So d(X) is no larger than the cheaper path, which contradicts the assumption."
+          ],
+          "points": [
+            "Negative edges break the argument: with S→A (1), S→B (2) and B→A (−3), settling A at 1 misses S→B→A at cost −1."
           ]
         },
         {
@@ -2788,6 +2810,16 @@
             "Include false alerts and the base rate when conditioning on an alert.",
             "A binomial model needs independent trials with the same success probability."
           ]
+        },
+        {
+          "kind": "figure",
+          "title": "Three tosses",
+          "sources": [
+            "probability"
+          ],
+          "alt": "Three coins in a row showing heads, tails and heads.",
+          "caption": "One outcome of three tosses: k = 2 heads.",
+          "svg": "<svg viewBox=\"0 0 360 120\"><circle cx=\"60\" cy=\"60\" r=\"34\" class=\"fill-surface\"/><circle cx=\"180\" cy=\"60\" r=\"34\" class=\"fill-surface\"/><circle cx=\"300\" cy=\"60\" r=\"34\" class=\"fill-surface accent\"/><text x=\"60\" y=\"66\" text-anchor=\"middle\" class=\"bold\">H</text><text x=\"180\" y=\"66\" text-anchor=\"middle\" class=\"bold\">T</text><text x=\"300\" y=\"66\" text-anchor=\"middle\" class=\"bold accent\">H</text></svg>"
         }
       ],
       "flashcards": [

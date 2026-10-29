@@ -7,6 +7,7 @@ from typing import Annotated, Literal, assert_never
 from pydantic import AfterValidator, Field, FiniteFloat, JsonValue, field_validator, model_validator
 
 from tum_mcp.settings import Frozen
+from tum_mcp.study_figures import FIGURE_IMAGE, safe_svg
 from tum_mcp.study_math import INLINE_SPANS, compile_latex, safe_mathml, validate_inline
 from tum_mcp.study_models import Digest, Key, PageRange
 
@@ -31,11 +32,13 @@ class Sourced(Frozen):
 class TextBlock(Sourced):
     kind: Literal["text"]
     paragraphs: tuple[Text, ...] = ()
+    # A hard idea one claim at a time, shown as a numbered sequence after the paragraphs.
+    steps: tuple[Text, ...] = Field(default=(), max_length=12)
     points: tuple[Text, ...] = ()
 
     @model_validator(mode="after")
     def nonempty(self) -> "TextBlock":
-        if not self.paragraphs and not self.points:
+        if not self.paragraphs and not self.steps and not self.points:
             raise ValueError("A text section needs an explanation.")
         return self
 
@@ -179,6 +182,26 @@ def tree_nodes(item: TreeNode, depth: int = 0) -> Iterator[tuple[TreeNode, int]]
     yield item, depth
     for child in item.children:
         yield from tree_nodes(child, depth + 1)
+
+
+class FigureBlock(Sourced):
+    """A picture of what the idea looks like: an SVG drawing or an image in the app's figures/."""
+
+    kind: Literal["figure"]
+    alt: Text
+    caption: Text | None = None
+    svg: str | None = Field(default=None, max_length=40000)
+    image: str | None = None
+
+    @model_validator(mode="after")
+    def drawn(self) -> "FigureBlock":
+        if (self.svg is None) == (self.image is None):
+            raise ValueError("A figure has either svg or image.")
+        if self.image is not None and not FIGURE_IMAGE.fullmatch(self.image):
+            raise ValueError("A figure image is a file in figures/ ending .png, .jpg or .webp.")
+        if self.svg is not None:
+            safe_svg(self.svg)
+        return self
 
 
 class TreeBlock(Sourced):
@@ -502,15 +525,20 @@ Block = Annotated[
     | PlotBlock
     | UmlBlock
     | FilesBlock
-    | TreeBlock,
+    | TreeBlock
+    | FigureBlock,
     Field(discriminator="kind"),
 ]
 
 
 # Authored questions pair their text with at least one of these, because prose alone
 # makes code, structures and calculations hard to picture.
-VISUAL_KINDS = frozenset({"formula", "table", "diagram", "code", "plot", "uml", "files", "tree"})
-VISUAL_RULE = "a code snippet, diagram, UML diagram, tree, formula, table or plot beside its text"
+VISUAL_KINDS = frozenset(
+    {"formula", "table", "diagram", "code", "plot", "uml", "files", "tree", "figure"}
+)
+VISUAL_RULE = (
+    "a figure, code snippet, diagram, UML diagram, tree, formula, table or plot beside its text"
+)
 
 
 def has_visual(blocks: tuple[Block, ...]) -> bool:
@@ -535,6 +563,7 @@ def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
                 | UmlBlock()
                 | FilesBlock()
                 | TreeBlock()
+                | FigureBlock()
             ):
                 pass
             case unreachable:
@@ -563,7 +592,8 @@ class Question(Frozen):
     prompt: Text
     level: Literal["recall", "apply", "reason"]
     # The situation the question is about, shown beside it in Practice and Revision.
-    blocks: tuple[Block, ...] = Field(min_length=1, max_length=3)
+    # Optional: a question about a concept stands alone; a picture must carry information.
+    blocks: tuple[Block, ...] = Field(default=(), max_length=3)
     options: tuple[Option, ...] = Field(min_length=3, max_length=5)
     correct: Key
     explanation: Text
@@ -577,8 +607,8 @@ class Question(Frozen):
             raise ValueError("Question needs distinct options and one correct key.")
         if len({item.text.strip().casefold() for item in self.options}) != len(ids):
             raise ValueError("Question options must have different meanings/text.")
-        if not has_visual(self.blocks):
-            raise ValueError(f"A practice question needs {VISUAL_RULE}.")
+        if self.blocks and not has_visual(self.blocks):
+            raise ValueError(f"A practice question's picture is {VISUAL_RULE}.")
         return self
 
 
@@ -662,7 +692,7 @@ class StudyContent(Frozen):
 
 # {{term}} marks a mention of a defined term; it opens the definition where it is used.
 TERM_MARKER = re.compile(r"\{\{([^{}\n]{1,80})\}\}")
-LITERAL_FIELDS = frozenset({"code", "starter_code", "latex", "mathml"})
+LITERAL_FIELDS = frozenset({"code", "starter_code", "latex", "mathml", "svg"})
 
 
 def term_markers(value: JsonValue) -> set[str]:

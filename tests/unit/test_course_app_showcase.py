@@ -23,7 +23,9 @@ def test_distributed_preview_is_one_component_unit_and_one_exercise() -> None:
         "uml",
         "files",
         "tree",
+        "figure",
     }
+    assert any(block.kind == "text" and block.steps for block in unit.blocks)
     assert len(unit.flashcards) == len(unit.questions) == 1
     assert len(exercises.sets[0].exercises) == 1
     exercise = exercises.sets[0].exercises[0]

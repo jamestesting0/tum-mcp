@@ -10,6 +10,8 @@ from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_assets import figure_bytes
 from tum_mcp.lecture_evidence import Figure
 from tum_mcp.study_build import _inline_math
+from tum_mcp.study_figures import figure_bytes as study_figure_bytes
+from tum_mcp.study_figures import figure_images
 
 
 def project(data: bytes, *, include_exercises: bool, include_lectures: bool) -> dict:
@@ -68,7 +70,10 @@ def project(data: bytes, *, include_exercises: bool, include_lectures: bool) -> 
 
 
 def assets(root: Path, payload: dict) -> dict[str, bytes]:
-    result = {}
+    result = {
+        image: study_figure_bytes(app_path(root, image))
+        for image in set(figure_images([payload.get("units"), payload.get("exercises")]))
+    }
     try:
         for lecture in payload.get("lectures", {}).get("lectures", []):
             for section in lecture["sections"]:

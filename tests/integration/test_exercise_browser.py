@@ -725,7 +725,8 @@ def test_outline_names_only_categories_that_add_information(
         sheets = listing.locator(".exercise-sheet")
         expect(sheets).to_have_count(4)
         borders = sheets.evaluate_all("els => els.map(el => getComputedStyle(el).borderTopStyle)")
-        assert borders == ["none", "solid", "none", "none"]
+        # Groups are separated by spacing alone; no rule lines between sheets.
+        assert borders == ["none", "none", "none", "none"]
     finally:
         context.close()
 
