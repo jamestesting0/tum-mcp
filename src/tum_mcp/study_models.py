@@ -10,9 +10,9 @@ from tum_mcp.settings import Frozen
 
 Key = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.-]{0,99}$")]
 Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
-ProviderName = Literal["moodle", "artemis", "zulip", "sample", "tum_live", "studocu", "local"]
+ProviderName = Literal["moodle", "artemis", "zulip", "sample", "tum_live", "local"]
 # Material only the user holds; never published and kept across campus syncs.
-PRIVATE_PROVIDERS = frozenset({"studocu", "local"})
+PRIVATE_PROVIDERS = frozenset({"local"})
 Kind = Literal["exam", "content", "exercise", "other"]
 FOLDERS = {"exam": "exams", "content": "content", "exercise": "exercises", "other": "other"}
 
@@ -66,21 +66,6 @@ class Coverage(Frozen):
     note: str = Field(default="", max_length=2000)
 
 
-class StudocuProvenance(Frozen):
-    document_id: Annotated[str, Field(pattern=r"^[1-9][0-9]{0,19}$")]
-    course_id: Annotated[str, Field(pattern=r"^[1-9][0-9]{0,19}$")]
-    storage_group: Literal["summaries", "exams", "other"]
-    raw_category: str = Field(default="", max_length=200)
-    document_type: Literal["exam", "mock", "solution", "summary", "other"] = "other"
-    year: int | None = Field(default=None, ge=1900, le=2100)
-    lecturer: str | None = Field(default=None, max_length=200)
-    language: str | None = Field(default=None, max_length=50)
-    acquisition_method: Literal["browser_import"] = "browser_import"
-    acquired_at: str | None = Field(default=None, max_length=100)
-    file_sha256: Digest | None = None
-    page_count: int | None = Field(default=None, ge=1, le=1500)
-
-
 class Resource(Frozen):
     key: Key
     binding: Key
@@ -91,7 +76,6 @@ class Resource(Frozen):
     revision: str | None = Field(default=None, max_length=200)
     text: str | None = Field(default=None, max_length=2_000_000)
     source_file: str | None = Field(default=None, max_length=500)
-    studocu: StudocuProvenance | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @field_validator("url")
     @classmethod
@@ -161,82 +145,39 @@ class Snapshot(Frozen):
         return self
 
 
-def is_studocu_link(url: str) -> bool:
-    hostname = (urlsplit(url).hostname or "").rstrip(".")
-    return hostname == "studocu.com" or hostname.endswith(".studocu.com")
-
-
 def validate_provenance(course: Course, resources: tuple[Resource, ...]) -> None:
     bindings = {item.key: item for item in course.bindings}
     for resource in resources:
         binding = bindings.get(resource.binding)
         if binding is None:
             raise ValueError("Resource is not bound to this course.")
-        source = resource.studocu
         if binding.provider != "local" and not resource.url:
-            raise ValueError("Campus and Studocu resources need their source link.")
-        if binding.provider != "studocu":
-            if source is not None:
-                raise ValueError("Studocu sources require a Studocu binding and provenance.")
-            continue
-        if source is None or source.course_id != binding.course_id:
-            raise ValueError("Studocu resources require course-matched provenance.")
-        parsed = urlsplit(resource.url)
-        parts = parsed.path.strip("/").split("/")
-        if (
-            parsed.scheme != "https"
-            or parsed.hostname not in {"www.studocu.com", "studocu.com"}
-            or parsed.port not in {None, 443}
-            or parsed.query
-            or parsed.fragment
-            or "document" not in parts
-            or parts[-1] != source.document_id
-            or resource.key != f"studocu-{source.document_id}"
-        ):
-            raise ValueError("Studocu document identity or canonical link is invalid.")
+            raise ValueError("Campus resources need their source link.")
 
 
 def material_path(resource: Resource, suffix: str) -> str:
-    if resource.studocu is not None:
-        return f"materials/studocu/{resource.studocu.storage_group}/material-{resource.key}{suffix}"
     return f"materials/{FOLDERS[resource.kind]}/material-{resource.key}{suffix}"
 
 
 class ResourceState(Frozen):
     resource: Resource
     path: str | None = None
-    alias_of: str | None = None
     sha256: Digest | None = None
     status: Literal["current", "needs_fetch", "local_edit", "withdrawn"]
 
     @model_validator(mode="after")
     def material_path(self) -> "ResourceState":
-        if self.alias_of is not None and (self.path is not None or self.resource.studocu is None):
-            raise ValueError("Only Studocu material can be an alias without its own path.")
-        if self.status == "current" and (
-            (self.path is None and self.alias_of is None) or self.sha256 is None
-        ):
+        if self.status == "current" and (self.path is None or self.sha256 is None):
             raise ValueError("Current material requires a stored path and hash.")
         if self.path is not None:
             path = PurePosixPath(self.path)
             valid = (
-                path.as_posix() == material_path(self.resource, path.suffix)
-                if self.resource.studocu is not None
-                else len(path.parts) == 3
+                len(path.parts) == 3
                 and path.parts[:2] == ("materials", FOLDERS[self.resource.kind])
                 and path.name.startswith(f"material-{self.resource.key}.")
             )
             if not valid or "\\" in self.path or ":" in self.path:
                 raise ValueError("Stored material path does not match its resource.")
-        if self.status == "current" and self.resource.studocu is not None:
-            source = self.resource.studocu
-            if (
-                source.file_sha256 != self.sha256
-                or source.page_count is None
-                or source.acquired_at is None
-                or (self.path is not None and not self.path.endswith(".pdf"))
-            ):
-                raise ValueError("Current Studocu material requires a validated PDF receipt.")
         return self
 
 
@@ -266,32 +207,4 @@ class StudyState(Frozen):
         if len(keys) != len(set(keys)):
             raise ValueError("Stored resource keys must be unique.")
         validate_provenance(self.course, tuple(item.resource for item in self.resources))
-        resources = {item.resource.key: item for item in self.resources}
-        for item in self.resources:
-            if item.alias_of is None:
-                continue
-            target = resources.get(item.alias_of)
-            source = item.resource.studocu
-            other = target.resource.studocu if target else None
-            if (
-                target is None
-                or target.alias_of is not None
-                or target.path is None
-                or source is None
-                or other is None
-                or source.year is None
-                or item.sha256 != target.sha256
-                or source.page_count != other.page_count
-                or item.resource.binding != target.resource.binding
-                or (source.course_id, source.storage_group, source.document_type, source.year)
-                != (other.course_id, other.storage_group, other.document_type, other.year)
-            ):
-                raise ValueError("Studocu alias target is invalid or incompatible.")
         return self
-
-
-def resolved_material_path(state: StudyState, item: ResourceState) -> str | None:
-    """Resolve a validated one-hop alias without changing its source identity."""
-    if item.alias_of is None:
-        return item.path
-    return next(source.path for source in state.resources if source.resource.key == item.alias_of)

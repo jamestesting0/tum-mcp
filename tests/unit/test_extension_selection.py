@@ -28,24 +28,23 @@ def config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_disabled_video_flag_keeps_the_previous_file_format() -> None:
-    value = ExtensionSelection(studocu=True)
-    assert value.serialized() == (
-        b'{\n  "schema_version": 1,\n  "studocu": true,\n  "audio_notes": false\n}'
-    )
+    value = ExtensionSelection(audio_notes=True)
+    assert value.serialized() == b'{\n  "schema_version": 1,\n  "audio_notes": true\n}'
     enabled = json.loads(value.model_copy(update={"video_notes": True}).serialized())
     assert enabled["video_notes"] is True
 
 
 def test_future_boolean_flags_load_and_survive_rewrites(config: Path) -> None:
     (config / "extensions.json").write_text(
-        '{"schema_version":1,"studocu":true,"future_tool":true}', encoding="utf-8"
+        '{"schema_version":1,"retired_tool":true,"future_tool":true}', encoding="utf-8"
     )
     loaded = selection()
-    assert loaded.studocu and not loaded.video_notes
+    assert loaded.model_extra == {"retired_tool": True, "future_tool": True}
+    assert not loaded.video_notes
     rewritten = json.loads(loaded.model_copy(update={"audio_notes": True}).serialized())
     assert rewritten == {
         "schema_version": 1,
-        "studocu": True,
+        "retired_tool": True,
         "audio_notes": True,
         "future_tool": True,
     }
@@ -79,7 +78,7 @@ def test_video_gate_names_the_install_command(config: Path) -> None:
 def test_installing_another_workflow_preserves_future_flags(config: Path) -> None:
     install_client("cursor", Path.home(), announce=False)
     (config / "extensions.json").write_text(
-        '{"schema_version":1,"studocu":false,"audio_notes":false,"future_tool":true}',
+        '{"schema_version":1,"retired_tool":false,"audio_notes":false,"future_tool":true}',
         encoding="utf-8",
     )
     result = CliRunner().invoke(app, ["install", "audio-notes"])
@@ -87,7 +86,7 @@ def test_installing_another_workflow_preserves_future_flags(config: Path) -> Non
     stored = json.loads((config / "extensions.json").read_text(encoding="utf-8"))
     assert stored == {
         "schema_version": 1,
-        "studocu": False,
+        "retired_tool": False,
         "audio_notes": True,
         "future_tool": True,
     }

@@ -16,8 +16,8 @@ SKETCH = 128
 SHINGLE = 5
 NEAR_THRESHOLD = 0.6
 MIN_SHINGLES = 20
-# Lower rank is preferred: official campus copies, then the user's files, then uploads.
-_PREFERENCE = {"moodle": 0, "artemis": 0, "tum_live": 0, "zulip": 1, "local": 2, "studocu": 3}
+# Lower rank is preferred: official campus copies, then the user's own files.
+_PREFERENCE = {"moodle": 0, "artemis": 0, "tum_live": 0, "zulip": 1, "local": 2}
 
 
 class ExactGroup(BaseModel):
@@ -91,9 +91,7 @@ def near_candidates(
     needs_visual, unreadable = [], []
     seen: set[str] = set()
     for item in sorted(state.resources, key=lambda entry: entry.resource.key):
-        studocu = item.resource.studocu
-        studocu_exam = studocu is not None and studocu.storage_group in {"exams", "other"}
-        if item.status != "current" or (item.resource.kind not in kinds and not studocu_exam):
+        if item.status != "current" or item.resource.kind not in kinds:
             continue
         if item.sha256 in seen:
             continue

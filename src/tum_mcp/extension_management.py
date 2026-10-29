@@ -12,7 +12,6 @@ from tum_mcp.extensions import (
     lecture_installation,
     selection,
     set_audio_notes,
-    set_studocu,
     set_video_notes,
     uninstall_lecture,
 )
@@ -21,7 +20,6 @@ from tum_mcp.ui import State, heading, select_many, status_rows, terminal_consol
 
 class ExtensionName(StrEnum):
     LECTURE = "lecture"
-    STUDOCU = "studocu"
     AUDIO_NOTES = "audio-notes"
     VIDEO_NOTES = "video-notes"
 
@@ -29,7 +27,6 @@ class ExtensionName(StrEnum):
 EXTENSIONS = tuple(ExtensionName)
 LABELS = {
     "lecture": "Lecture Notes",
-    "studocu": "Studocu",
     "audio-notes": "Audio Notes",
     "video-notes": "Video Notes",
 }
@@ -38,7 +35,6 @@ LABELS = {
 def extension_rows() -> list[tuple[str, State, str]]:
     descriptions = {
         "lecture": "Prepare Lecture, transcripts and selected recording frames.",
-        "studocu": "Search and collect selected supplementary materials.",
         "audio-notes": "Create spoken lessons from prepared Study content.",
         "video-notes": "Create narrated, animated explainers from prepared Study content.",
     }
@@ -49,8 +45,6 @@ def extension_rows() -> list[tuple[str, State, str]]:
                 case ExtensionName.LECTURE:
                     installation = lecture_installation(strict=True)
                     enabled = installation is not None and installation.enabled
-                case ExtensionName.STUDOCU:
-                    enabled = selection().studocu
                 case ExtensionName.AUDIO_NOTES:
                     enabled = selection().audio_notes
                 case ExtensionName.VIDEO_NOTES:
@@ -89,10 +83,6 @@ def remove_extensions(
             case ExtensionName.LECTURE:
                 report = uninstall_lecture()
                 review = bool(report["clients"]["needs_review"])
-            case ExtensionName.STUDOCU:
-                state = set_studocu(False) if selection().studocu else "disabled"
-                report = {"extension": name, "state": state}
-                review = state == "disabled_needs_review"
             case ExtensionName.AUDIO_NOTES:
                 state = set_audio_notes(False) if selection().audio_notes else "disabled"
                 report = {"extension": name, "state": state}
@@ -133,7 +123,7 @@ def choose_extensions(
     if json_output or not interactive_terminal():
         raise CampusError(
             Code.ACTION_REQUIRED,
-            "Use an interactive terminal or name lecture, studocu, audio-notes or video-notes.",
+            "Use an interactive terminal or name lecture, audio-notes or video-notes.",
         )
     rows = extension_rows()
     console = terminal_console()

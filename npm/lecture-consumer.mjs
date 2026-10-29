@@ -39,28 +39,23 @@ export function lectureLifecycle(root, command) {
   assert.match(readFileSync(join(customExport, 'prepare-lecture/SKILL.md'), 'utf8'), /Personal lecture preference/);
   command(['uninstall', 'lecture']);
   // The independently optional extensions must survive each other's client refreshes.
-  command(['install', 'studocu']);
+  command(['install', 'audio-notes']);
   command(['install', 'lecture', '--no-asr']);
   command(['update', '--local']);
   const both = JSON.parse(command(['skills', 'validate', '--json']));
   assert.equal(both.checked_skills.length, 8);
   assert.deepEqual(both.errors, []);
-  command(['install', 'audio-notes']);
-  assert.equal(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.length, 9);
   command(['install', 'video-notes']);
-  assert.equal(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.length, 10);
+  assert.equal(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.length, 9);
   assert.equal(JSON.parse(command(['doctor', '--json'])).extensions.find(row => row.label === 'Video Notes').state, 'Enabled');
   command(['uninstall', 'video-notes']);
   assert.ok(!JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.includes('video-notes'));
-  command(['uninstall', 'studocu']);
-  assert.ok(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.includes('prepare-lecture'));
-  assert.ok(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.includes('audio-notes'));
-  command(['install', 'studocu']);
-  command(['uninstall', 'lecture']);
-  assert.ok(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.includes('sync-studocu'));
   command(['uninstall', 'audio-notes']);
-  assert.ok(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.includes('sync-studocu'));
-  command(['uninstall', 'studocu']);
+  assert.ok(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.includes('prepare-lecture'));
+  command(['install', 'audio-notes']);
+  command(['uninstall', 'lecture']);
+  assert.ok(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.includes('audio-notes'));
+  command(['uninstall', 'audio-notes']);
   assert.equal(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.length, 6);
   return { base_skills: 6, installed_skills: 7, update_preserved: true, notes_and_customization_preserved: true };
 }

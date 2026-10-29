@@ -19,8 +19,8 @@ Exam Prep stays local: it is never published and publish-course never includes i
 1. **Scope.** Read the handbook's assessment section, then
    `tum-mcp study exam-report PROJECT`. A missing binding goes through sync-course.
    If past exams are missing, ask once: the user may sync them, import files they hold
-   with `tum-mcp study import PROJECT --file F --kind exam --title T`, or use
-   sync-studocu when installed. Prepare what the evidence supports; report the rest.
+   with `tum-mcp study import PROJECT --file F --kind exam --title T`. Prepare what
+   the evidence supports; report the rest.
 2. **Evidence** ([sources](references/sources.md)). Weigh official rules and exams
    above student copies; keep conflicts visible. Read text with
    `tum-mcp study text PROJECT --key K --pages N-M`; view pages only for scans,
@@ -58,5 +58,5 @@ per sitting, acyclic prerequisites, truthful labels and consistent marking.
 Never call a forecast a prediction, a leak or official; frequencies are history.
 Student solutions are unverified; official labels need an official source. Solve every
 answer independently. Never start, submit or execute course code, read `.git/` or
-credentials, or copy campus or Studocu material anywhere public. Exam Prep never
+credentials, or copy campus or imported material anywhere public. Exam Prep never
 replaces Study; link to its units when they exist.

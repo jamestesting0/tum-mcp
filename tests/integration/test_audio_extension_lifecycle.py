@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.clients import install_client
-from tum_mcp.extensions import audio_notes_enabled, lecture_enabled, studocu_enabled
+from tum_mcp.extensions import audio_notes_enabled, lecture_enabled, video_notes_enabled
 from tum_mcp.skills import export_pack, inspect_skills
 
 
@@ -45,20 +45,20 @@ def test_audio_is_opt_in_and_exports_its_complete_workflow(
     )
 
 
-@pytest.mark.parametrize("first", ["studocu", "audio-notes"])
+@pytest.mark.parametrize("first", ["video-notes", "audio-notes"])
 def test_all_three_extensions_preserve_each_others_selection(profile: Path, first: str) -> None:
     install_client("cursor", profile, announce=False)
     runner = CliRunner()
-    second = "audio-notes" if first == "studocu" else "studocu"
+    second = "audio-notes" if first == "video-notes" else "video-notes"
     for name in ("lecture", first, second):
         command = ["install", name, *(["--no-asr"] if name == "lecture" else [])]
         result = runner.invoke(app, command)
         assert result.exit_code == 0, result.output or repr(result.exception)
-    assert audio_notes_enabled() and lecture_enabled() and studocu_enabled()
+    assert audio_notes_enabled() and lecture_enabled() and video_notes_enabled()
     assert len(inspect_skills()) == 9
-    result = runner.invoke(app, ["uninstall", "studocu"])
+    result = runner.invoke(app, ["uninstall", "video-notes"])
     assert result.exit_code == 0, result.output
-    assert audio_notes_enabled() and lecture_enabled() and not studocu_enabled()
+    assert audio_notes_enabled() and lecture_enabled() and not video_notes_enabled()
     result = runner.invoke(app, ["uninstall", "audio-notes"])
     assert result.exit_code == 0, result.output
     assert lecture_enabled() and not audio_notes_enabled()

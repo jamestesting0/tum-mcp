@@ -190,37 +190,6 @@ def collect_services(*, live: bool = False) -> ServiceReport:
                     state, detail = State.ACTION, error.message
                     needs_connection = True
             services.append(Check(label=label, state=state, detail=detail))
-    from tum_mcp.extensions import selection
-
-    try:
-        if selection().studocu:
-            detail = "Enabled. Browser account and original-file permission have not been checked."
-            state = State.CONFIGURED
-            if live:
-                from tum_mcp.studocu.client import search
-
-                try:
-                    search(
-                        "search-institutions",
-                        {"query": "Technische Universität München", "limit": 1},
-                    )
-                    detail = (
-                        "Public search is reachable; browser account and download permission "
-                        "are unknown."
-                    )
-                    state = State.READY
-                except CampusError as error:
-                    detail, state = error.message, State.ACTION
-            services.append(Check(label="Studocu", state=state, detail=detail))
-    except CampusError:
-        issues.append(
-            Check(
-                label="Studocu extension",
-                state=State.FAILED,
-                detail="Invalid optional selection; Studocu is disabled until reviewed.",
-            )
-        )
-
     from tum_mcp.tumonline.diagnostics import connection_checks
 
     online = connection_checks(live=live)

@@ -31,12 +31,7 @@ from tum_mcp.study_content import (
     render_blocks,
 )
 from tum_mcp.study_math import compile_latex, inline_math
-from tum_mcp.study_models import (
-    Digest,
-    StudyState,
-    is_studocu_link,
-    resolved_material_path,
-)
+from tum_mcp.study_models import Digest, StudyState
 from tum_mcp.study_publish_models import PublishReport
 from tum_mcp.study_store import (
     END,
@@ -145,7 +140,7 @@ def stale_units(root: Path, state: StudyState, content: StudyContent) -> tuple[s
             if current is None or current.status != "current" or current.sha256 != source.sha256:
                 stale.append(unit.key)
                 break
-            relative = resolved_material_path(state, current)
+            relative = current.path
             path = confined(root, relative) if relative else None
             if path is None or not path.is_file() or digest(path.read_bytes()) != source.sha256:
                 stale.append(unit.key)
@@ -185,22 +180,13 @@ def _app_data(
         referenced.update(source.key for lecture in lectures.lectures for source in lecture.sources)
     if exam:
         referenced.update(exam_source_keys(exam))
-    studocu_bindings = {
-        binding.key for binding in state.course.bindings if binding.provider == "studocu"
-    }
     local_bindings = {
         binding.key for binding in state.course.bindings if binding.provider == "local"
     }
     sources: dict[str, JsonValue] = {
         item.resource.key: {
             "title": item.resource.title
-            + (
-                " (Studocu student upload)"
-                if item.resource.binding in studocu_bindings or is_studocu_link(item.resource.url)
-                else " (local file)"
-                if item.resource.binding in local_bindings
-                else ""
-            ),
+            + (" (local file)" if item.resource.binding in local_bindings else ""),
             "url": item.resource.url,
             "locator": item.resource.locator,
         }

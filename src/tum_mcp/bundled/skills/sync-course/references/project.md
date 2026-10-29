@@ -56,10 +56,10 @@ rather than rereading them. An unavailable source is a gap, not an empty course.
 | Failed source access | Mark unavailable; preserve previous bindings/material. An auth error is not evidence of deletion. |
 
 Every binding being checked needs coverage and an actual check time. Include
-existing Studocu and local (`study import`) bindings in the course identity and list
-their keys in `retained_bindings`; omit their coverage and resources from the campus
-snapshot. A forgotten binding makes the snapshot invalid; it never withdraws files.
-This copies their latest state unchanged without spending Studocu quota.
+existing local (`study import`) bindings in the course identity and list their keys
+in `retained_bindings`; omit their coverage and resources from the campus snapshot.
+A forgotten binding makes the snapshot invalid; it never withdraws files. This copies
+their latest state unchanged.
 State what scope/window was
 checked in note. Complete inventory does not mean all payloads were downloaded or
 learned: resource statuses separately record current/needs_fetch/local_edit/withdrawn.

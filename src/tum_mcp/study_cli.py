@@ -179,12 +179,7 @@ def exam_report_command(
     materials: dict[str, list[str]] = {}
     for item in state.resources:
         if item.status == "current":
-            group = (
-                f"studocu/{item.resource.studocu.storage_group}"
-                if item.resource.studocu
-                else item.resource.kind
-            )
-            materials.setdefault(group, []).append(item.resource.key)
+            materials.setdefault(item.resource.kind, []).append(item.resource.key)
     result: dict = {"exam_path": f"{app_folder(root)}/exam.json", "prepared": exam is not None}
     if section is None:
         result["materials"] = {key: sorted(value) for key, value in sorted(materials.items())}

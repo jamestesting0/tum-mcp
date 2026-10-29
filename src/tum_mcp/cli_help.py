@@ -43,7 +43,6 @@ def command_help(command: TyperCommand | TyperGroup, context: click.Context) -> 
                 "skills",
                 "study",
                 "lecture",
-                "studocu",
                 "video-notes",
                 "discover",
                 "update",

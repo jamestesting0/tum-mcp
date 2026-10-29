@@ -13,7 +13,7 @@ CURRENT_SKILLS: Final = (
     "prepare-exams",
     "publish-course",
 )
-OPTIONAL_SKILLS: Final = ("prepare-lecture", "sync-studocu", "audio-notes", "video-notes")
+OPTIONAL_SKILLS: Final = ("prepare-lecture", "audio-notes", "video-notes")
 BUNDLED_SKILLS: Final = (*CURRENT_SKILLS, *OPTIONAL_SKILLS)
 
 
@@ -28,8 +28,6 @@ def active_skills(*, extensions: ExtensionSelection | None = None) -> tuple[str,
     active = list(CURRENT_SKILLS)
     if lecture_enabled():
         active.append("prepare-lecture")
-    if chosen.studocu:
-        active.append("sync-studocu")
     if chosen.audio_notes:
         active.append("audio-notes")
     if chosen.video_notes:
@@ -59,5 +57,6 @@ LEGACY_SKILLS.update(
         "update-study": "sync-course",
         "sync-study": "sync-course",
         "publish-study": "publish-course",
+        "sync-studocu": "sync-course",
     }
 )

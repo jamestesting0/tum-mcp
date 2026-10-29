@@ -16,7 +16,7 @@ from tum_mcp.lecture_assets import ASSET
 from tum_mcp.settings import Frozen
 from tum_mcp.study_build import RETIRED_TEMPLATE_FILES, TEMPLATE_FILES
 from tum_mcp.study_github import Commit, GitHub, GitObject, Head, Response, Tree
-from tum_mcp.study_models import PRIVATE_PROVIDERS, Digest, is_studocu_link
+from tum_mcp.study_models import PRIVATE_PROVIDERS, Digest
 from tum_mcp.study_publish_models import GitSha, Publication, course_identity
 from tum_mcp.study_publish_projection import assets, project
 from tum_mcp.study_store import digest, load_state
@@ -72,7 +72,7 @@ def export_site(
     """Export referenced public workspaces; private evidence and arbitrary files stay local."""
     output = {name: app_path(root, name).read_bytes() for name in (*TEMPLATE_FILES, "data.mjs")}
     data = output["data.mjs"]
-    checked = _check_supplementary_sources(
+    checked = _check_private_sources(
         root, data, include_exercises=include_exercises, include_lectures=include_lectures
     )
     payload = (
@@ -95,18 +95,16 @@ def export_site(
     return output
 
 
-def _check_supplementary_sources(
+def _check_private_sources(
     root: Path, data: bytes, *, include_exercises: bool, include_lectures: bool
 ) -> dict | None:
-    """Refuse exports that reference personal student uploads, from live source bindings."""
+    """Refuse exports that reference the user's private local files."""
     state = load_state(root)
     private_bindings = {
         item.key for item in state.course.bindings if item.provider in PRIVATE_PROVIDERS
     }
     private_keys = {
-        item.resource.key
-        for item in state.resources
-        if item.resource.binding in private_bindings or is_studocu_link(item.resource.url)
+        item.resource.key for item in state.resources if item.resource.binding in private_bindings
     }
     if not private_bindings and not private_keys:
         return None

@@ -1,5 +1,10 @@
 # Changes
 
+## Unreleased
+
+- Remove the optional Studocu extension, its `sync-studocu` skill and `tum-mcp studocu`
+  commands. Download such material yourself and add it with `tum-mcp study import`.
+
 ## 0.11.0 — 2026-10-28
 
 - Add the base `prepare-exams` workflow and the local **Exam Prep** workspace: a

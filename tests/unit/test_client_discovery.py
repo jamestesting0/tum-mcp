@@ -129,7 +129,6 @@ def test_doctor_contains_extensions_without_duplicating_runtime_entries(
     states = {check["label"]: check["state"] for check in report["extensions"]}
     assert states == {
         "Lecture Notes": "Disabled",
-        "Studocu": "Disabled",
         "Audio Notes": "Enabled",
         "Video Notes": "Disabled",
     }
@@ -159,7 +158,6 @@ def test_status_alias_preserves_script_output_and_uses_doctor_for_people(profile
     assert legacy.exit_code == 0
     assert json.loads(legacy.output)["extensions"] == {
         "lecture": False,
-        "studocu": False,
         "audio-notes": False,
         "video-notes": False,
     }

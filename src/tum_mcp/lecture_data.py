@@ -16,7 +16,7 @@ from tum_mcp.lecture_processing.receipts import (
 )
 from tum_mcp.lecture_processing.timeline import watch_link
 from tum_mcp.study_content import render_blocks
-from tum_mcp.study_models import StudyState, resolved_material_path
+from tum_mcp.study_models import StudyState
 from tum_mcp.study_store import confined, digest
 
 
@@ -56,7 +56,7 @@ def stale_lectures(root: Path, state: StudyState, content: LectureContent) -> tu
             if stored is None or stored.status != "current" or stored.sha256 != source.sha256:
                 stale.add(lecture.key)
                 continue
-            relative = resolved_material_path(state, stored)
+            relative = stored.path
             if relative is None:
                 stale.add(lecture.key)
                 continue

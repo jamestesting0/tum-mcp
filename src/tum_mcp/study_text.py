@@ -9,7 +9,7 @@ from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
 from tum_mcp.moodle.errors import MoodleError
 from tum_mcp.settings import Frozen
-from tum_mcp.study_models import Digest, StudyState, resolved_material_path
+from tum_mcp.study_models import Digest, StudyState
 from tum_mcp.study_store import confined, digest, load_state, private_path
 
 # Bump when extraction output changes so older cache records are recomputed.
@@ -93,7 +93,7 @@ def material_bytes(root: Path, state: StudyState, key: str) -> tuple[Path, bytes
     item = next((entry for entry in state.resources if entry.resource.key == key), None)
     if item is None:
         raise CampusError(Code.ACTION_REQUIRED, f"No inventory resource has key {key}.")
-    relative = resolved_material_path(state, item)
+    relative = item.path
     if item.status != "current" or relative is None or item.sha256 is None:
         raise CampusError(Code.STALE_RESULT, f"Material {key} is not current; sync it first.")
     path = confined(root, relative)

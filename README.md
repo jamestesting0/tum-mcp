@@ -35,7 +35,8 @@ submissions, posting and exercise execution are unavailable.
 
 Each project holds one course. Run `tum-mcp study` in its folder to open the app.
 Ask the agent to refresh it when sources change or address comments left in the
-app. [Study guide and demo](docs/study.md).
+app. Add files you downloaded yourself, such as past exams from other websites, with
+`tum-mcp study import`. [Study guide and demo](docs/study.md).
 
 TUMonline currently provides study names/degrees, public course catalog metadata
 and partial course curriculum positions. The catalog does not show enrollments.
@@ -50,7 +51,6 @@ Run `tum-mcp install` to choose extensions, then reload your client.
 | Extension | Skill added | What it offers |
 | --- | --- | --- |
 | `lecture` | `prepare-lecture` | Lecture Notes with the professor's extra explanations, timestamps and selected critical visuals. Prefers transcripts and slides; local recognition is optional. |
-| `studocu` | `sync-studocu` | Search and collect selected supplementary PDFs saved in your browser. Personal use only; excluded from published sites. |
 | `audio-notes` | `audio-notes` | Turn prepared Study lessons into concise audio tracks, with resumable generation and coverage tracking. Voice setup happens when used. |
 | `video-notes` | `video-notes` | Turn prepared Study topics into short narrated, animated explainers that play inside the local app, with checked sync, captions and layout. The render runtime installs when first used. |
 
@@ -58,7 +58,6 @@ Use `tum-mcp doctor` to see installed workflows and `tum-mcp uninstall` to remov
 them.
 
 [Lecture and recognition](docs/lecture-notes.md) ·
-[Studocu collection](docs/study.md#studocu-materials) ·
 [Video Notes](docs/study.md#create-and-maintain-video-notes) · [Setup details](docs/setup.md)
 
 ## Course project
@@ -69,7 +68,6 @@ After initialization, a course project looks something like this:
 course/
   AGENTS.md                 Course instructions and inventory
   materials/                Course content, exams, exercises and other sources
-    studocu/                Optional: summaries/, exams/ and other/ PDFs
   app/                      Study, Exercises, Exam Prep and optional Lecture Notes website
     content.json            Study lessons, flashcards and practice
     exercises.json          Guided exercise content

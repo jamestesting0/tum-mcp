@@ -27,12 +27,7 @@ def generation_for(
         json.dumps(
             {
                 "course": course.model_dump(mode="json"),
-                "resources": [
-                    item.model_dump(
-                        mode="json", exclude={"alias_of"} if item.alias_of is None else set()
-                    )
-                    for item in resources
-                ],
+                "resources": [item.model_dump(mode="json") for item in resources],
                 "coverage": [item.model_dump(mode="json") for item in coverage],
             },
             sort_keys=True,

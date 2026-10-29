@@ -26,10 +26,7 @@ Antigravity setup installs all five base skills and MCP configuration; restart e
 client afterward. Existing MCP-only setups gain the skills through `tum-mcp update`
 or another setup run. Generic setup writes configuration for manual installation.
 
-Studocu is optional: run `tum-mcp install studocu`, then reload the client. The
-extension adds the `sync-studocu` skill and its tools. `tum-mcp doctor`
-reports the local selection; `tum-mcp uninstall studocu` disables it and
-preserves course materials and customized files. Generic clients use
+Generic clients use
 `tum-mcp skills export DESTINATION` to install the active pack manually.
 Setup preserves unrelated settings and refuses to
 replace customized entries. It does not authenticate or fetch courses.
@@ -44,8 +41,7 @@ Its render runtime (about 320 MB) installs on first use; `tum-mcp video-notes ru
 status` lists any prerequisite (macOS: `brew install cairo`; Linux/WSL: Cairo and
 Pango development packages and a C compiler) without installing it. Course videos are
 retained when the extension is disabled. Clients pinned to a runtime generation older
-than this release cannot read the enabled Video Notes setting and would hide Studocu
-tools; refresh them with `tum-mcp update` or `setup --client NAME`.
+than this release cannot read the enabled Video Notes setting; refresh them with `tum-mcp update` or `setup --client NAME`.
 
 ## Terminal output
 
@@ -61,8 +57,8 @@ label. `NO_COLOR` disables color; narrow terminals use stacked rows.
 Bare `tum-mcp setup`, `tum-mcp install` and `tum-mcp uninstall` share the same
 keyboard controls as login. Nothing is preselected; Ctrl+C cancels. Uninstall
 also offers **All — TUM MCP**, which removes the package and managed client setup.
-Personal notes, sessions and customized files are retained. Scripts can name one or both:
-`tum-mcp uninstall lecture studocu --json`.
+Personal notes, sessions and customized files are retained. Scripts can name extensions:
+`tum-mcp uninstall lecture audio-notes --json`.
 
 Use `--json` for machine-readable status, named extension removal/installation,
 skill listing/validation, lecture runtime status or TUMonline permissions.
@@ -81,15 +77,12 @@ retains its previous configuration format; new integrations should use `doctor -
 
 Run **`tum-mcp login`**, with no arguments, in an interactive terminal:
 
-1. Use up/down to move and Space to select services. Installed Lecture adds TUM-Live;
-   installed Studocu adds Studocu.
+1. Use up/down to move and Space to select services. Installed Lecture adds TUM-Live.
 2. Press Enter. If several browsers are installed, choose one and press Enter.
 3. Complete TUM sign-in/MFA in the opened window. Only selected service tabs open.
 4. Return to the terminal for the saved-connection result.
 
 Campus services use temporary-browser sign-in and encrypted session storage.
-Studocu opens your own default browser (the Windows browser from WSL); sign in
-there. Its browser session is neither copied nor claimed as verified.
 No API key or native credential-store prompt is needed. A temporary browser
 profile keeps the connection separate from your everyday browser. Ctrl+C closes it and preserves
 connections that already completed. A dumb terminal uses numbered prompts.

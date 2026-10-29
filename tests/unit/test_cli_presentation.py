@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.extensions import lecture_enabled, studocu_enabled
+from tum_mcp.extensions import audio_notes_enabled, lecture_enabled
 from tum_mcp.ui import STYLES, State, status_rows
 
 
@@ -76,17 +76,17 @@ def test_removal_without_names_in_a_pipe_cannot_change_extensions() -> None:
     result = CliRunner().invoke(app, ["uninstall"])
     assert isinstance(result.exception, CampusError)
     assert result.exception.code == Code.ACTION_REQUIRED
-    assert not lecture_enabled() and not studocu_enabled()
+    assert not lecture_enabled() and not audio_notes_enabled()
 
 
 def test_explicit_removal_accepts_both_extensions_and_returns_json() -> None:
     runner = CliRunner()
     assert runner.invoke(app, ["install", "lecture", "--no-asr"]).exit_code == 0
-    assert runner.invoke(app, ["install", "studocu"]).exit_code == 0
-    result = runner.invoke(app, ["uninstall", "lecture", "studocu", "--json"])
+    assert runner.invoke(app, ["install", "audio-notes"]).exit_code == 0
+    result = runner.invoke(app, ["uninstall", "lecture", "audio-notes", "--json"])
     assert result.exit_code == 0, result.output
-    assert {item["extension"] for item in json.loads(result.output)} == {"lecture", "studocu"}
-    assert not lecture_enabled() and not studocu_enabled()
+    assert {item["extension"] for item in json.loads(result.output)} == {"lecture", "audio-notes"}
+    assert not lecture_enabled() and not audio_notes_enabled()
 
 
 def test_cancelled_picker_preserves_both_enabled_extensions(
@@ -94,12 +94,12 @@ def test_cancelled_picker_preserves_both_enabled_extensions(
 ) -> None:
     runner = CliRunner()
     runner.invoke(app, ["install", "lecture", "--no-asr"])
-    runner.invoke(app, ["install", "studocu"])
+    runner.invoke(app, ["install", "audio-notes"])
     monkeypatch.setattr("tum_mcp.extension_management.interactive_terminal", lambda: True)
     monkeypatch.setattr("tum_mcp.extension_management.select_many", lambda *args, **kwargs: None)
     result = runner.invoke(app, ["uninstall"])
     assert result.exit_code == 130
-    assert lecture_enabled() and studocu_enabled()
+    assert lecture_enabled() and audio_notes_enabled()
 
 
 def test_invalid_extension_state_is_reported_without_hiding_the_other_extension(
@@ -110,7 +110,7 @@ def test_invalid_extension_state_is_reported_without_hiding_the_other_extension(
     (config / "lecture-extension.json").write_text("invalid", encoding="utf-8")
     result = CliRunner().invoke(app, ["status"])
     assert result.exit_code == 0, result.output
-    assert State.FAILED.value in result.output and "Studocu" in result.output
+    assert State.FAILED.value in result.output and "Audio Notes" in result.output
     assert (config / "lecture-extension.json").read_text() == "invalid"
 
 
@@ -118,7 +118,7 @@ def test_requested_credential_cleanup_cannot_select_an_individual_extension(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     runner = CliRunner()
-    for name in ("lecture", "studocu", "audio-notes"):
+    for name in ("lecture", "audio-notes", "video-notes"):
         result = runner.invoke(app, ["install", name, *(["--no-asr"] if name == "lecture" else [])])
         assert result.exit_code == 0, result.output
     monkeypatch.setattr("tum_mcp.extension_management.interactive_terminal", lambda: True)
@@ -131,4 +131,4 @@ def test_requested_credential_cleanup_cannot_select_an_individual_extension(
     monkeypatch.setattr("tum_mcp.extension_management.select_many", choose)
     result = runner.invoke(app, ["uninstall", "--forget-credentials"])
     assert result.exit_code == 20
-    assert lecture_enabled() and studocu_enabled()
+    assert lecture_enabled() and audio_notes_enabled()

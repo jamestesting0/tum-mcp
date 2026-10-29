@@ -7,7 +7,7 @@ import yaml
 from pydantic import Field, ValidationError
 
 from tum_mcp.settings import Frozen
-from tum_mcp.study_models import Course, Digest, Key, StudyState, resolved_material_path
+from tum_mcp.study_models import Course, Digest, Key, StudyState
 from tum_mcp.study_store import confined, digest, private_path
 
 
@@ -104,7 +104,7 @@ def context_review(root: Path, state: StudyState) -> CourseReview:
         item = resources.get(key)
         if item is None or item.status != "current" or item.sha256 != version:
             return True
-        relative = resolved_material_path(state, item)
+        relative = item.path
         if relative is None:
             return True
         path = confined(root, relative)

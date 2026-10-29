@@ -202,7 +202,6 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
         ServiceChoice.ZULIP: "Course discussions",
         ServiceChoice.TUMONLINE: "Studies and courses",
         ServiceChoice.TUM_LIVE: "Lecture recordings",
-        ServiceChoice.STUDOCU: "Supplementary materials",
     }
     choices = []
     for service in available_services():

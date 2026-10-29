@@ -6,7 +6,6 @@ MCP tools to read course sources. The CLI validates and stores the resulting loc
 files; it does not run an AI model.
 The optional `prepare-lecture` skill adds a Lecture Notes workspace; install it with
 `tum-mcp install lecture`. See [Lecture Notes](lecture-notes.md).
-The optional `sync-studocu` skill collects selected student-uploaded material separately.
 The optional `audio-notes` skill turns prepared lessons into spoken tracks; install
 it with `tum-mcp install audio-notes`. The optional `video-notes` skill turns prepared
 topics into short narrated explainer videos; install it with `tum-mcp install video-notes`.
@@ -204,8 +203,7 @@ use the existing private comment service; hosted exports do not expose it.
 ## Prepare for exams
 
 Ask `prepare-exams` to build the **Exam Prep** workspace from the course's past exams,
-exercises and materials. Past exams come from `materials/exams` (Moodle),
-`materials/studocu/exams` (Studocu) or files you hold yourself:
+exercises and materials. Past exams come from `materials/exams` (Moodle) or files you hold yourself:
 
 ```bash
 tum-mcp study import ./pse-ws26 --file "Klausur WS23.pdf" --kind exam --title "Endterm WS23/24"
@@ -441,33 +439,11 @@ compiler. `runtime status` prints the exact command and never runs it for you.
 Windows on ARM, Intel Macs, Linux ARM64 and musl Linux are not supported: Manim's
 OpenGL dependencies publish no wheels there.
 
-## Studocu materials
+## Materials you download yourself
 
-Install the optional extension with `tum-mcp install studocu` and reload your
-client. Ask `sync-studocu` to collect materials for a course project. It can
-initialize a Studocu-only project with a verified course and semester.
-Search is anonymous and bounded; a limited result set is not a complete inventory.
-`tum-mcp studocu login` explains how to sign in to Studocu in your own browser.
-The extension cannot infer account entitlement or download original files through
-the public MCP. Save an original that your account permits in the browser.
-
-The skill records a reviewed selection with `tum-mcp studocu plan PROJECT
---selection FILE` and tracks it with `tum-mcp studocu status PROJECT --json`.
-Import a selected original with `tum-mcp studocu import PROJECT --document-id ID
---file FILE`. The document-to-file association is user-selected. Originals go to
-`materials/studocu/summaries`, `materials/studocu/exams` (including mocks and
-solutions), or `materials/studocu/other`. Files remain local and retain their
-original bytes. Consult the skill's collection reference for the selection schema.
-Exact matches in the same group, type and known year share one original through
-a private alias. Each selected document retains its own source identity and URL.
-Changing a document's classification or refreshing its original separates aliases
-when they no longer match; previous versions remain in private history.
-When an existing selection is planned again, unchanged duplicate originals are
-consolidated. Edited or missing files are preserved for review.
-
-Local study material can cite student uploads. Publishing rejects included
-Studocu-backed sources; this source check cannot identify uncited copied text or
-replace a review of the published content.
+Files from other websites are not downloaded for you. Save them yourself and add them
+with `tum-mcp study import PROJECT --file FILE --kind exam --title TITLE`.
+Imported files stay private: they are never published.
 
 ## The course app
 

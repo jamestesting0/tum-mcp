@@ -22,7 +22,7 @@ from tum_mcp.exam_content import (
 )
 from tum_mcp.study_content import StudyContent, has_visual
 from tum_mcp.study_math import compile_latex
-from tum_mcp.study_models import StudyState, resolved_material_path
+from tum_mcp.study_models import StudyState
 from tum_mcp.study_store import confined, digest
 
 # Ordering weights (sitting occurrence, points share, recent occurrence); missing parts
@@ -70,7 +70,7 @@ def stale_exam(root: Path, state: StudyState, content: ExamContent) -> tuple[str
     def fresh(key: str, sha256: str) -> bool:
         if (key, sha256) not in current:
             stored = resources.get(key)
-            relative = resolved_material_path(state, stored) if stored else None
+            relative = stored.path if stored else None
             path = confined(root, relative) if relative else None
             current[(key, sha256)] = bool(
                 stored

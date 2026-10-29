@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.clients import install_client
-from tum_mcp.extensions import audio_notes_enabled, studocu_enabled, video_notes_enabled
+from tum_mcp.extensions import audio_notes_enabled, video_notes_enabled
 from tum_mcp.skills import export_pack, inspect_skills
 
 
@@ -45,16 +45,17 @@ def test_video_notes_is_opt_in_and_exports_its_complete_workflow(
     assert status["extensions"]["video-notes"] is True
 
 
-def test_four_extensions_keep_each_others_selection(profile: Path) -> None:
+def test_extensions_keep_each_others_selection(profile: Path) -> None:
     install_client("cursor", profile, announce=False)
     runner = CliRunner()
-    for name in ("video-notes", "studocu", "audio-notes"):
+    for name in ("video-notes", "audio-notes"):
         assert runner.invoke(app, ["install", name]).exit_code == 0
-    assert video_notes_enabled() and studocu_enabled() and audio_notes_enabled()
+    assert video_notes_enabled() and audio_notes_enabled()
     assert runner.invoke(app, ["uninstall", "audio-notes"]).exit_code == 0
-    assert video_notes_enabled() and studocu_enabled() and not audio_notes_enabled()
+    assert video_notes_enabled() and not audio_notes_enabled()
+    assert runner.invoke(app, ["install", "audio-notes"]).exit_code == 0
     assert runner.invoke(app, ["uninstall", "video-notes"]).exit_code == 0
-    assert not video_notes_enabled() and studocu_enabled()
+    assert not video_notes_enabled() and audio_notes_enabled()
     stored = json.loads((profile.parent / "config/extensions.json").read_text(encoding="utf-8"))
     assert "video_notes" not in stored
 

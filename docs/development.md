@@ -22,9 +22,8 @@ npm run test:package-lifecycle
 
 Python 3.13 is the managed runtime. Install Tesseract for OCR tests. Default tests
 use synthetic sources and credentials. No language-server installation is needed.
-Studocu fixtures must likewise use synthetic documents and local transports, never
-browser cookies, personal account details or live downloaded PDFs. The extension
-is off by default; validate both selected and unselected skill packs.
+Optional extensions are off by default; validate both selected and unselected skill
+packs.
 Set `TUM_MOODLE_SYSTEM_KEYRING=1` for a unique synthetic native-store round trip.
 The ordinary campus runtime uses encrypted local files and owner-restricted keys.
 Set `TUM_MCP_BROWSER_INTEGRATION=1` to include the real HTTP static-export browser

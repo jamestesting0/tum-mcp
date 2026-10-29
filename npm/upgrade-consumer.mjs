@@ -38,6 +38,7 @@ for (const previousVersion of ['0.9.0']) {
     const clients = ['codex', 'claude', 'generic', 'cursor', 'antigravity'];
     call(oldPrefix, ['setup', ...clients.flatMap(name => ['--client', name])]);
     call(oldPrefix, ['install', 'lecture', '--no-asr']);
+    // Studocu was discontinued; upgrading must drop its workflow from every client.
     call(oldPrefix, ['install', 'studocu']);
     const previous = JSON.parse(readFileSync(join(root, 'data/runtime.json')));
     const source = join(home, '.codex/plugins/local/tum-mcp');
@@ -56,7 +57,7 @@ for (const previousVersion of ['0.9.0']) {
     assert.notEqual(current.python, previous.python);
     assert.ok(existsSync(previous.python), 'Previous runtime must remain for pinned clients.');
     assert.equal(run(previous.python, ['-I', '-m', 'tum_mcp', 'version']).trim(), previousVersion);
-    const expectedSkills = ['prepare-exams', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course', 'prepare-lecture', 'sync-studocu'].sort();
+    const expectedSkills = ['prepare-exams', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'sync-course', 'prepare-lecture'].sort();
     assert.deepEqual(readdirSync(join(source, 'skills')).filter(name => existsSync(join(source, 'skills', name, 'SKILL.md'))).sort(), expectedSkills);
     assert.equal(JSON.parse(readFileSync(join(home, '.claude.json'))).mcpServers.tum.command, current.python);
     assert.equal(readFileSync(note, 'utf8'), 'retain this user note');
@@ -66,8 +67,8 @@ for (const previousVersion of ['0.9.0']) {
     assert.equal(readFileSync(join(root, 'data/runtime.json'), 'utf8'), first, 'Update must be idempotent.');
     const extensions = JSON.parse(call(currentPrefix, ['status', '--json'])).extensions;
     assert.equal(extensions.lecture, true);
-    assert.equal(extensions.studocu, true);
-    call(currentPrefix, ['uninstall', 'lecture', 'studocu', '--json']);
+    assert.equal(extensions.studocu, undefined);
+    call(currentPrefix, ['uninstall', 'lecture', '--json']);
     const lectureEvidence = lectureLifecycle(root, args => call(currentPrefix, args));
     assert.equal(lectureEvidence.installed_skills, 7);
     // An invalid prepared package must not replace the existing selected runtime.

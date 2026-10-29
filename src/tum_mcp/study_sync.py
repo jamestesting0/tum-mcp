@@ -1,7 +1,7 @@
 """Reconcile source snapshots without overwriting notes or inferring remote deletion."""
 
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 from filelock import FileLock
 from pydantic import ValidationError
@@ -15,7 +15,6 @@ from tum_mcp.study_models import (
     Snapshot,
     StudyState,
     material_path,
-    resolved_material_path,
 )
 from tum_mcp.study_store import (
     Write,
@@ -109,11 +108,6 @@ def _reconcile(
     path: Path,
     snapshot: Snapshot,
     previous: StudyState | None,
-    *,
-    before_writes: tuple[Write, ...] = (),
-    extra_writes: tuple[Write, ...] = (),
-    require_no_conflicts: bool = False,
-    alias_of: str | None = None,
 ) -> SyncReport:
     old = {item.resource.key: item for item in previous.resources} if previous else {}
     current: list[ResourceState] = []
@@ -125,39 +119,11 @@ def _reconcile(
         if (
             prior is not None
             and prior.resource.binding != resource.binding
-            and (
-                prior.resource.binding in snapshot.retained_bindings
-                or prior.resource.studocu is not None
-                or resource.studocu is not None
-            )
+            and prior.resource.binding in snapshot.retained_bindings
         ):
             raise CampusError(Code.SCOPE_DENIED, "A resource key belongs to another binding.")
         data, suffix = payload(resource, path)
-        if resource.studocu is not None and data is not None:
-            from tum_mcp.moodle.extract_worker import validate_pdf
-
-            source = resource.studocu
-            if (
-                prior is not None
-                and prior.resource.studocu is not None
-                and prior.resource.studocu.storage_group != source.storage_group
-            ):
-                raise CampusError(
-                    Code.ACTION_REQUIRED, "Reclassify Studocu material through studocu plan."
-                )
-            if prior and prior.sha256 != digest(data) and not before_writes:
-                raise CampusError(
-                    Code.ACTION_REQUIRED, "Refresh Studocu originals through the Studocu workflow."
-                )
-            if suffix != ".pdf" or source.file_sha256 != digest(data) or source.acquired_at is None:
-                raise CampusError(
-                    Code.INVALID_RESPONSE, "A validated original PDF receipt is required."
-                )
-            if validate_pdf(data) != source.page_count:
-                raise CampusError(
-                    Code.INVALID_RESPONSE, "PDF page count does not match the receipt."
-                )
-        prior_path = resolved_material_path(previous, prior) if previous and prior else None
+        prior_path = prior.path if prior else None
         if prior is not None and prior_path is not None:
             previous_data = read_bytes(confined(root, prior_path))
             edited = previous_data is None or digest(previous_data) != prior.sha256
@@ -191,19 +157,12 @@ def _reconcile(
             )
             continue
         if data is not None:
-            if alias_of is not None:
-                if prior and prior.path and before is not None:
-                    writes.append(Write(relative, before, None))
-                elif before is not None:
-                    raise CampusError(Code.WORKSPACE_CONFLICT, "The alias destination is occupied.")
-            else:
-                writes.append(Write(relative, before, data))
+            writes.append(Write(relative, before, data))
             imported += data != before
             current.append(
                 ResourceState(
                     resource=clean,
-                    path=None if alias_of else relative,
-                    alias_of=alias_of,
+                    path=relative,
                     sha256=digest(data),
                     status="current",
                 )
@@ -268,19 +227,12 @@ def _reconcile(
     )
     for folder in FOLDERS.values():
         confined(root, f"materials/{folder}").mkdir(mode=0o700, parents=True, exist_ok=True)
-    for item in ordered:
-        if item.path is not None and item.resource.studocu is not None:
-            confined(root, PurePosixPath(item.path).parent.as_posix()).mkdir(
-                mode=0o700, parents=True, exist_ok=True
-            )
     context = private_path(root, "course.md")
     if not context.exists():
         writes.append(
             Write(private_name(root, "course.md"), None, scaffold(snapshot.course).encode())
         )
-    if conflicts and require_no_conflicts:
-        raise CampusError(Code.WORKSPACE_CONFLICT, "Local source edits need review before import.")
-    apply(root, (*before_writes, *writes, *extra_writes))
+    apply(root, tuple(writes))
     return SyncReport(
         imported=imported,
         retained=len(ordered) - imported,

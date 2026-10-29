@@ -18,7 +18,6 @@ from tum_mcp.extensions import (
     audio_notes_enabled,
     lecture_enabled,
     require_lecture,
-    studocu_enabled,
     video_notes_enabled,
 )
 from tum_mcp.moodle.browsers import BrowserSetupError
@@ -44,13 +43,6 @@ app.add_typer(
     lecture_app,
     name="lecture",
     help="Prepare recording evidence with the optional Lecture extension.",
-)
-from tum_mcp.studocu.cli import app as studocu_app  # noqa: E402
-
-app.add_typer(
-    studocu_app,
-    name="studocu",
-    help="Collect selected materials with the optional Studocu extension.",
 )
 from tum_mcp.video_cli import app as video_app  # noqa: E402
 
@@ -106,7 +98,6 @@ def status(
                 "remote_actions": "disabled",
                 "extensions": {
                     "lecture": lecture_enabled(),
-                    "studocu": studocu_enabled(),
                     "audio-notes": audio_notes_enabled(),
                     "video-notes": video_notes_enabled(),
                 },
@@ -146,43 +137,23 @@ def connect() -> None:
                 "All MCP clients sharing this configuration use the same permission; "
                 "manage it with tum-mcp manage tumonline."
             )
-        campus_selected = any(service != ServiceChoice.STUDOCU for service in selected)
-        browser = select_browser(discover_browsers()) if campus_selected else None
+        browser = select_browser(discover_browsers())
     except (KeyboardInterrupt, EOFError):
         console.print("Cancelled. No browser was opened.")
         raise typer.Exit(130) from None
-    if browser is not None:
-        console.print(Text(f"Browser: {browser.label}"))
-        console.print(
-            Text(
-                "Opening "
-                + ", ".join(value.label for value in selected if value != ServiceChoice.STUDOCU)
-                + "."
-            )
-        )
-        console.print("Complete TUM sign-in/MFA in the browser window.")
-        if browser.windows_host:
-            console.print("Preparing the private Windows browser driver on first use.")
-            console.print("Sessions stay encrypted in WSL; no browser debugging port is opened.")
-        console.print("Campus sessions are encrypted locally with an owner-restricted key file.")
-    if ServiceChoice.STUDOCU in selected:
-        console.print(
-            "Studocu opens in your own browser. Sign in there; "
-            "browser credentials are not copied or verified."
-        )
+    console.print(Text(f"Browser: {browser.label}"))
+    console.print(Text("Opening " + ", ".join(value.label for value in selected) + "."))
+    console.print("Complete TUM sign-in/MFA in the browser window.")
+    if browser.windows_host:
+        console.print("Preparing the private Windows browser driver on first use.")
+        console.print("Sessions stay encrypted in WSL; no browser debugging port is opened.")
+    console.print("Campus sessions are encrypted locally with an owner-restricted key file.")
     console.print()
 
     def connected(result: ConnectionResult) -> None:
-        if result.verified:
-            console.print(
-                Text.assemble(("● ", "ready"), (f"Connected  {result.service.label}", "bold"))
-            )
-        else:
-            console.print(
-                Text.assemble(
-                    ("● ", "configured"), (f"Not verified  {result.service.label}", "bold")
-                )
-            )
+        console.print(
+            Text.assemble(("● ", "ready"), (f"Connected  {result.service.label}", "bold"))
+        )
         if result.account is not None:
             console.print(Text(f"Account ID: {result.account.id}"))
 
@@ -192,13 +163,11 @@ def connect() -> None:
         console.print("Cancelled. Completed connections were saved.")
         raise typer.Exit(130) from None
     console.print()
-    saved = sum(result.verified for result in results)
-    if saved:
+    if results:
         console.print(
-            f"Saved {saved} campus connection(s). Read access also depends on local settings."
+            f"Saved {len(results)} campus connection(s). "
+            "Read access also depends on local settings."
         )
-    if any(not result.verified for result in results):
-        console.print("Studocu stays in your browser; sign-in has not been verified by TUM MCP.")
     console.print("Your agent can discover courses and channels, then read the relevant material.")
 
 

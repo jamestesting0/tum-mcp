@@ -46,7 +46,6 @@ class ServiceChoice(StrEnum):
     ZULIP = "zulip"
     TUMONLINE = "tumonline"
     TUM_LIVE = "tum_live"
-    STUDOCU = "studocu"
 
     @property
     def label(self) -> str:
@@ -56,18 +55,16 @@ class ServiceChoice(StrEnum):
             ServiceChoice.ZULIP: "Zulip",
             ServiceChoice.TUMONLINE: "TUMonline",
             ServiceChoice.TUM_LIVE: "TUM-Live",
-            ServiceChoice.STUDOCU: "Studocu",
         }[self]
 
 
 def available_services() -> tuple[ServiceChoice, ...]:
-    from tum_mcp.extensions import lecture_enabled, studocu_enabled
+    from tum_mcp.extensions import lecture_enabled
 
     return tuple(
         service
         for service in ServiceChoice
-        if (service != ServiceChoice.TUM_LIVE or lecture_enabled())
-        and (service != ServiceChoice.STUDOCU or studocu_enabled())
+        if service != ServiceChoice.TUM_LIVE or lecture_enabled()
     )
 
 
@@ -75,7 +72,6 @@ def available_services() -> tuple[ServiceChoice, ...]:
 class ConnectionResult:
     service: ServiceChoice
     account: Account | AccountRef | None = None
-    verified: bool = True
 
 
 def connect_browser(providers: tuple[Provider, ...]) -> tuple[Account, ...]:
@@ -89,28 +85,8 @@ def connect_services(
     *,
     browser: BrowserChoice | None = None,
 ) -> tuple[ConnectionResult, ...]:
-    """Connect campus services and open optional browser-only providers honestly."""
-    if not services or len(set(services)) != len(services):
-        raise CampusError(Code.SCOPE_DENIED, "Select each service exactly once.")
-    if ServiceChoice.STUDOCU in services:
-        from tum_mcp.studocu.cli import require_enabled
-
-        require_enabled()
-    campus = tuple(service for service in services if service != ServiceChoice.STUDOCU)
-    results = (
-        list(_connect_campus_services(campus, on_connected, browser=browser)) if campus else []
-    )
-    if ServiceChoice.STUDOCU in services:
-        from tum_mcp.studocu.connection import open_browser
-
-        open_browser()
-        result = ConnectionResult(ServiceChoice.STUDOCU, verified=False)
-        results.append(result)
-        if on_connected:
-            on_connected(result)
-    return tuple(
-        next(result for result in results if result.service == service) for service in services
-    )
+    """Connect the selected campus services in one temporary browser."""
+    return _connect_campus_services(services, on_connected, browser=browser)
 
 
 def _connect_campus_services(

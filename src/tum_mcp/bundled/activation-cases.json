@@ -1024,30 +1024,6 @@
     "expected_skill": "prepare-lecture"
   },
   {
-    "id": "sync-studocu-01",
-    "target_skill": "sync-studocu",
-    "prompt": "Collect Studocu past exams for my selected course.",
-    "context": "studocu_enabled_project",
-    "partition": "development",
-    "expected_skill": "sync-studocu"
-  },
-  {
-    "id": "sync-studocu-02",
-    "target_skill": "sync-studocu",
-    "prompt": "Resume my Studocu summary collection.",
-    "context": "studocu_enabled_project",
-    "partition": "held_out",
-    "expected_skill": "sync-studocu"
-  },
-  {
-    "id": "sync-studocu-03",
-    "target_skill": "sync-studocu",
-    "prompt": "Refresh my Moodle course materials.",
-    "context": "initialized_study_project",
-    "partition": "held_out",
-    "expected_skill": "sync-course"
-  },
-  {
     "id": "video-notes-01",
     "target_skill": "video-notes",
     "prompt": "$video-notes Make short explainer videos for the graph traversal topics in my study site.",

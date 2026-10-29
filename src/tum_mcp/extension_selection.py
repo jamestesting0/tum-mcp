@@ -18,7 +18,6 @@ class ExtensionSelection(BaseModel):
     model_config = ConfigDict(frozen=True, extra="allow")
 
     schema_version: Literal[1] = 1
-    studocu: StrictBool = False
     audio_notes: StrictBool = False
     video_notes: StrictBool = False
 
@@ -52,13 +51,6 @@ def selection() -> ExtensionSelection:
         ) from None
 
 
-def studocu_enabled() -> bool:
-    try:
-        return selection().studocu
-    except CampusError:
-        return False
-
-
 def video_notes_enabled() -> bool:
     try:
         return selection().video_notes
@@ -74,11 +66,11 @@ def require_video_notes() -> None:
         )
 
 
-FIELDS = {"studocu": "studocu", "audio-notes": "audio_notes", "video-notes": "video_notes"}
-SKILLS = {"studocu": "sync-studocu", "audio-notes": "audio-notes", "video-notes": "video-notes"}
+FIELDS = {"audio-notes": "audio_notes", "video-notes": "video_notes"}
+SKILLS = {"audio-notes": "audio-notes", "video-notes": "video-notes"}
 
 
-def set_extension(name: Literal["studocu", "audio-notes", "video-notes"], enabled: bool) -> str:
+def set_extension(name: Literal["audio-notes", "video-notes"], enabled: bool) -> str:
     """Enable only after all clients preflight; disable before trying to prune files."""
     from tum_mcp.client_config import client_config_path, read_client_config
     from tum_mcp.client_installs import Write, commit_writes, prune_removed_folders
@@ -93,17 +85,6 @@ def set_extension(name: Literal["studocu", "audio-notes", "video-notes"], enable
         field = FIELDS[name]
         desired = previous.model_copy(update={field: enabled})
         after = desired.serialized()
-        if enabled and name == "studocu":
-            try:
-                from tum_mcp.moodle.protocol import StrictMCPServer
-                from tum_mcp.studocu.server import register
-
-                register(StrictMCPServer("Studocu activation preflight"))
-            except Exception:
-                raise CampusError(
-                    Code.CAPABILITY_UNSUPPORTED,
-                    "Studocu tools could not be prepared; activation was not changed.",
-                ) from None
         if enabled:
             metadata(selected(SKILLS[name]))
         was_enabled = getattr(previous, field)
@@ -137,10 +118,6 @@ def set_extension(name: Literal["studocu", "audio-notes", "video-notes"], enable
                 return "disabled_needs_review"
             raise
         return "enabled" if enabled else "disabled"
-
-
-def set_studocu(enabled: bool) -> str:
-    return set_extension("studocu", enabled)
 
 
 def audio_notes_enabled() -> bool:

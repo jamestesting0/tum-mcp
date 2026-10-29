@@ -27,7 +27,7 @@ def install(
 ) -> None:
     """Choose optional workflows to install, or provide their names."""
     from tum_mcp.extension_management import LABELS, choose_extensions
-    from tum_mcp.extensions import install_lecture, set_audio_notes, set_studocu, set_video_notes
+    from tum_mcp.extensions import install_lecture, set_audio_notes, set_video_notes
     from tum_mcp.ui import State, heading, status_rows, terminal_console
 
     selected = (
@@ -47,9 +47,6 @@ def install(
             case ExtensionName.LECTURE:
                 report = install_lecture(asr=asr)
                 review = bool(report["clients"]["needs_review"])
-            case ExtensionName.STUDOCU:
-                report = {"extension": name, "state": set_studocu(True)}
-                review = False
             case ExtensionName.AUDIO_NOTES:
                 report = {"extension": name, "state": set_audio_notes(True)}
                 review = False

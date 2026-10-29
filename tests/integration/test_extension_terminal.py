@@ -16,7 +16,7 @@ def run_removal(
     tmp_path: Path,
     keys: bytes,
     *,
-    enabled: tuple[str, ...] = ("lecture", "studocu"),
+    enabled: tuple[str, ...] = ("lecture", "audio-notes"),
     terminal: str = "xterm-256color",
     no_color: bool = False,
     columns: int = 80,
@@ -44,7 +44,8 @@ def run_removal(
             encoding="utf-8",
         )
     (config / "extensions.json").write_text(
-        json.dumps({"schema_version": 1, "studocu": "studocu" in enabled}), encoding="utf-8"
+        json.dumps({"schema_version": 1, "audio_notes": "audio-notes" in enabled}),
+        encoding="utf-8",
     )
     driver = tmp_path / "driver.py"
     driver.write_text(
@@ -104,7 +105,8 @@ def run_removal(
                     b"Selection: " in plain
                     if terminal == "dumb"
                     else (
-                        (b"Generic" if mode == "setup" else b"Studocu") in plain
+                        {"setup": b"Generic", "login": b"TUMonline"}.get(mode, b"Audio Notes")
+                        in plain
                         and b"\x1b[?25l" in captured
                     )
                 )
@@ -137,7 +139,9 @@ def run_removal(
     lecture = config / "lecture-extension.json"
     state = {
         "lecture": lecture.exists() and json.loads(lecture.read_text())["enabled"],
-        "studocu": json.loads((config / "extensions.json").read_text())["studocu"],
+        "audio-notes": json.loads((config / "extensions.json").read_text()).get(
+            "audio_notes", False
+        ),
     }
     return process.returncode, output, state
 
@@ -146,42 +150,44 @@ def run_removal(
 def test_keyboard_removal_changes_only_the_checked_extension(tmp_path: Path, columns: int) -> None:
     code, output, state = run_removal(tmp_path, b" \r", columns=columns)
     assert code == 0, output
-    assert state == {"lecture": False, "studocu": True}
+    assert state == {"lecture": False, "audio-notes": True}
     assert "●" in output
 
 
 def test_keyboard_removal_can_disable_both_extensions(tmp_path: Path) -> None:
     code, output, state = run_removal(tmp_path, b" \x1b[B \r")
     assert code == 0, output
-    assert state == {"lecture": False, "studocu": False}
+    assert state == {"lecture": False, "audio-notes": False}
 
 
 def test_keyboard_cancellation_preserves_every_extension(tmp_path: Path) -> None:
     code, output, state = run_removal(tmp_path, b"\x03")
     assert code == 130, output
-    assert state == {"lecture": True, "studocu": True}
+    assert state == {"lecture": True, "audio-notes": True}
     assert "\x1b[?25h" in output
 
 
 def test_disabled_extensions_cannot_be_selected(tmp_path: Path) -> None:
-    code, output, state = run_removal(tmp_path, b" \r", enabled=("studocu",))
+    code, output, state = run_removal(tmp_path, b" \r", enabled=("audio-notes",))
     assert code == 0, output
-    assert state == {"lecture": False, "studocu": False}
+    assert state == {"lecture": False, "audio-notes": False}
 
 
 def test_numbered_picker_rejects_disabled_items_and_removes_only_the_selected_one(
     tmp_path: Path,
 ) -> None:
-    code, output, state = run_removal(tmp_path, b"1\n2\n", enabled=("studocu",), terminal="dumb")
+    code, output, state = run_removal(
+        tmp_path, b"1\n2\n", enabled=("audio-notes",), terminal="dumb"
+    )
     assert code == 0, output
-    assert state == {"lecture": False, "studocu": False}
+    assert state == {"lecture": False, "audio-notes": False}
     assert "\x1b[" not in output
 
 
 def test_no_color_preserves_status_labels_and_keyboard_operation(tmp_path: Path) -> None:
     code, output, state = run_removal(tmp_path, b" \r", no_color=True)
     assert code == 0, output
-    assert state == {"lecture": False, "studocu": True}
+    assert state == {"lecture": False, "audio-notes": True}
     for sequence in re.findall(r"\x1b\[([\d;]*)m", output):
         assert not any(
             30 <= int(value) <= 49 or 90 <= int(value) <= 107
@@ -193,7 +199,7 @@ def test_no_color_preserves_status_labels_and_keyboard_operation(tmp_path: Path)
 def test_no_optional_extensions_still_offers_full_package_removal(tmp_path: Path) -> None:
     code, output, state = run_removal(tmp_path, b"\x03", enabled=())
     assert code == 130, output
-    assert state == {"lecture": False, "studocu": False}
+    assert state == {"lecture": False, "audio-notes": False}
     assert "All" in output
 
 
@@ -202,31 +208,31 @@ def test_all_selection_hands_off_to_the_launcher_without_partial_extension_chang
 ) -> None:
     code, output, state = run_removal(tmp_path, b"\x1b[B\x1b[B \r", launcher=True)
     assert code == 20, output
-    assert state == {"lecture": True, "studocu": True}
+    assert state == {"lecture": True, "audio-notes": True}
 
 
 def test_all_cannot_be_combined_with_individual_extension_removal(tmp_path: Path) -> None:
     code, output, state = run_removal(tmp_path, b" \x1b[B\x1b[B \r \r", launcher=True)
     assert code == 0, output
-    assert state == {"lecture": False, "studocu": True}
+    assert state == {"lecture": False, "audio-notes": True}
 
 
 def test_install_picker_can_install_both_workflows_without_recognition(tmp_path: Path) -> None:
     code, output, state = run_removal(tmp_path, b" \x1b[B \r", enabled=(), mode="install")
     assert code == 0, output
-    assert state == {"lecture": True, "studocu": True}
+    assert state == {"lecture": True, "audio-notes": True}
 
 
 def test_install_picker_skips_an_already_installed_workflow(tmp_path: Path) -> None:
     code, output, state = run_removal(tmp_path, b" \r", enabled=("lecture",), mode="install")
     assert code == 0, output
-    assert state == {"lecture": True, "studocu": True}
+    assert state == {"lecture": True, "audio-notes": True}
 
 
 def test_cancelled_install_picker_does_not_enable_any_workflow(tmp_path: Path) -> None:
     code, output, state = run_removal(tmp_path, b"\x03", enabled=(), mode="install")
     assert code == 130, output
-    assert state == {"lecture": False, "studocu": False}
+    assert state == {"lecture": False, "audio-notes": False}
 
 
 def test_setup_picker_configures_only_the_selected_client(tmp_path: Path) -> None:
@@ -245,5 +251,5 @@ def test_cancelled_setup_does_not_create_client_registrations(tmp_path: Path) ->
 def test_login_picker_cancels_without_opening_a_browser(tmp_path: Path) -> None:
     code, output, state = run_removal(tmp_path, b"\x03", mode="login")
     assert code == 130, output
-    assert state == {"lecture": True, "studocu": True}
+    assert state == {"lecture": True, "audio-notes": True}
     assert "\x1b[?25h" in output

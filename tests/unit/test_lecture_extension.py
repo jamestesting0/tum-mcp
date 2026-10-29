@@ -114,22 +114,21 @@ def test_optional_extensions_have_coherent_status_and_symmetric_removal(isolated
     from typer.testing import CliRunner
 
     from tum_mcp.cli import app
-    from tum_mcp.extensions import studocu_enabled
+    from tum_mcp.extensions import audio_notes_enabled
 
     runner = CliRunner()
     assert runner.invoke(app, ["install", "lecture", "--no-asr"]).exit_code == 0
-    assert runner.invoke(app, ["install", "studocu"]).exit_code == 0
+    assert runner.invoke(app, ["install", "audio-notes"]).exit_code == 0
     state = runner.invoke(app, ["status", "--json"])
     assert state.exit_code == 0
     assert json.loads(state.stdout)["extensions"]["lecture"] is True
-    assert json.loads(state.stdout)["extensions"]["studocu"] is True
+    assert json.loads(state.stdout)["extensions"]["audio-notes"] is True
     assert json.loads(runner.invoke(app, ["status", "--json"]).stdout)["extensions"] == {
         "lecture": True,
-        "studocu": True,
-        "audio-notes": False,
+        "audio-notes": True,
         "video-notes": False,
     }
-    removed = runner.invoke(app, ["uninstall", "studocu"])
+    removed = runner.invoke(app, ["uninstall", "audio-notes"])
     assert removed.exit_code == 0, removed.output
-    assert not studocu_enabled() and lecture_enabled()
+    assert not audio_notes_enabled() and lecture_enabled()
     assert {item["name"] for item in inspect_skills()} == {*CURRENT_SKILLS, "prepare-lecture"}
