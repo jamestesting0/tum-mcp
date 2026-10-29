@@ -22,9 +22,20 @@ from tum_mcp.study_math import INLINE_SPANS
 LONG_PARAGRAPH_WORDS = 110
 LONG_PARAGRAPH_SENTENCES = 4
 SENTENCE_PARAGRAPH_WORDS = 80
+SECTION_WORDS = 90
+STATEMENT_WORDS = 80
 # About one 390 px phone screen: a question beyond this scrolls before the student can answer.
 QUESTION_WORDS = 80
 QUESTION_TABLE_ROWS = 6
+# Sentences about the material instead of the subject, such as "the lecture groups ...".
+META_REFERENCE = re.compile(
+    r"\b(?:the|this|our) (?:lecture|course|slides?|lesson|section|page|unit|chapter|textbook) "
+    r"(?:groups?|says?|states?|shows?|focus(?:es)?|lists?|defines?|describes?|covers?|calls?|"
+    r"presents?|introduces?|explains?|treats?|uses?)\b"
+    r"|\bauthored (?:example|network|dataset|domain|chain|trace|graph)\b"
+    r"|\b(?:in|as) the (?:table|diagram|figure)(?: above| below)?(?: shows)?,",
+    re.IGNORECASE,
+)
 TITLE_CITATION = re.compile(r"\b(?:slides?|pages?|p\.)\s*\d", re.IGNORECASE)
 TRACE_VERBS = re.compile(r"\b(trace|execute|simulate|step through|run|apply)\b", re.IGNORECASE)
 # "1 + 0.5 × 6 = 4.5": numbers joined by + - × · * / and an equals sign, outside math and code.
@@ -117,6 +128,15 @@ def quality_flags(
         for index, block in enumerate(unit.blocks):
             if not isinstance(block, TextBlock):
                 continue
+            words = sum(len(part.split()) for part in block.paragraphs)
+            if words > SECTION_WORDS or len(block.paragraphs) > 2:
+                flag(
+                    f"{unit.key}#{index}",
+                    "long_section",
+                    f"'{block.title}': {words} words of prose in {len(block.paragraphs)} "
+                    "paragraph(s). Give one idea per section, and a hard idea as short numbered "
+                    "steps.",
+                )
             for paragraph in block.paragraphs:
                 words, sentences = len(paragraph.split()), _sentences(paragraph)
                 if words > LONG_PARAGRAPH_WORDS or (
@@ -141,6 +161,21 @@ def quality_flags(
                 "untraced_procedure",
                 "An objective asks students to trace or apply a procedure, but the lesson has no "
                 "step-by-step diagram, trace table or code walkthrough.",
+            )
+        narrated = [
+            sentence
+            for block in unit.blocks
+            if isinstance(block, TextBlock)
+            for paragraph in (*block.paragraphs, *block.steps, *block.points)
+            for sentence in re.split(r"(?<=[.!?])\s+", paragraph)
+            if META_REFERENCE.search(sentence)
+        ]
+        if narrated:
+            flag(
+                unit.key,
+                "meta_reference",
+                f"{len(narrated)} sentence(s) talk about the material instead of the subject, "
+                f"such as '{narrated[0][:90]}'; state the idea itself.",
             )
         cited = [
             block.title
@@ -169,6 +204,18 @@ def quality_flags(
                     "words of prompt and options do not fit one phone screen; keep the one "
                     "picture the question needs and trim the rest.",
                 )
+            prompt = question.prompt.casefold()
+            for block in question.blocks:
+                if not isinstance(block, TableBlock):
+                    continue
+                cells = [cell for row in block.rows for cell in row[1:] if len(cell.strip()) > 1]
+                if len(block.rows) == 1 or (cells and all(c.casefold() in prompt for c in cells)):
+                    flag(
+                        f"{unit.key}/{question.key}",
+                        "restated_context",
+                        f"'{block.title}' repeats what the prompt already says; keep the data in "
+                        "one place, or drop the table if the question is simple.",
+                    )
             for option in question.options:
                 if option.key != question.correct and len(option.feedback.split()) < 5:
                     flag(
@@ -179,6 +226,19 @@ def quality_flags(
                     break
     for group in exercises.sets if exercises else ():
         for exercise in group.exercises:
+            for block in exercise.statement:
+                if not isinstance(block, TextBlock):
+                    continue
+                words = sum(len(p.split()) for p in (*block.paragraphs, *block.steps))
+                parts = len(re.findall(r"\bProblem \d+(?:\.\d+)+", " ".join(block.paragraphs)))
+                if words > STATEMENT_WORDS or parts > 1:
+                    flag(
+                        exercise.key,
+                        "dense_statement",
+                        f"'{block.title}': {words} words, {parts} parts in one block. Keep the "
+                        "wording, but give each part its own block, lists as points, givens as "
+                        "a table and the setting as a figure.",
+                    )
             for step in exercise.steps:
                 item = f"{exercise.key}/{step.key}"
                 blank = any(

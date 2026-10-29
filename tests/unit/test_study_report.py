@@ -57,6 +57,12 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
     # Then each finding names its item, and clean content raises none of these flags.
     assert ("dense_paragraph", content["units"][0]["key"]) in kinds
     assert ("unanswered_table", payload["sets"][0]["exercises"][0]["key"]) in kinds
+    # A released statement pasted as one block, with several parts, is flagged for structure.
+    statement = payload["sets"][0]["exercises"][0]["statement"]
+    first = next(b for b in statement if b["kind"] == "text")
+    first["paragraphs"] = ["Problem 1.1: Trace it. Problem 1.2: Compare it."]
+    walls = quality_flags(None, ExerciseContent.model_validate(payload))
+    assert "dense_statement" in {flag["flag"] for flag in walls}
     # A question that carries two pictures no longer fits one phone screen.
     question = content["units"][0]["questions"][0]
     picture = next(b for b in content["units"][0]["blocks"] if b["kind"] == "formula")
@@ -67,6 +73,23 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
     found = {(flag["flag"], flag["item"]) for flag in long}
     assert ("long_question", f"{content['units'][0]['key']}/{question['key']}") in found
     assert ("citation_in_title", content["units"][0]["key"]) in found
+    # A one-row table beside a question only repeats its prompt.
+    question["blocks"] = [
+        {
+            "kind": "table",
+            "title": "The state",
+            "sources": picture["sources"],
+            "caption": "Given.",
+            "columns": ["Quantity", "Value"],
+            "rows": [["Cost", "6"]],
+        }
+    ]
+    restated = quality_flags(StudyContent.model_validate(content), None)
+    assert "restated_context" in {flag["flag"] for flag in restated}
+    # A sentence about the material, not the subject, is flagged for rewriting.
+    content["units"][0]["blocks"][0]["paragraphs"] = ["The lecture groups methods by cost."]
+    narrated = quality_flags(StudyContent.model_validate(content), None)
+    assert "meta_reference" in {flag["flag"] for flag in narrated}
     clean = quality_flags(
         StudyContent.model_validate(study()), ExerciseContent.model_validate(exercises())
     )
@@ -76,6 +99,10 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
         "arithmetic",
         "long_question",
         "citation_in_title",
+        "restated_context",
+        "meta_reference",
+        "long_section",
+        "dense_statement",
     }
 
 
