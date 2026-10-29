@@ -34,7 +34,7 @@ from tum_mcp.study_content import (
     tree_nodes,
 )
 from tum_mcp.study_math import compile_latex
-from tum_mcp.study_models import Digest, Key
+from tum_mcp.study_models import Digest, Key, PageRange
 from tum_mcp.study_store import digest
 
 QuestionFormat = Literal[
@@ -42,7 +42,6 @@ QuestionFormat = Literal[
 ]
 Points = Annotated[FiniteFloat, Field(gt=0, le=1000)]
 Minutes = Annotated[int, Field(ge=1, le=600)]
-PageRange = Annotated[str, Field(pattern=r"^[1-9][0-9]{0,3}(-[1-9][0-9]{0,3})?$")]
 Held = Annotated[
     str, Field(pattern=r"^(19|20)[0-9]{2}(-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?)?$")
 ]

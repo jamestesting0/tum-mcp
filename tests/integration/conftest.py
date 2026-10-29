@@ -79,7 +79,10 @@ def exercise_project(project: Path, request: pytest.FixtureRequest) -> Path:
     payload["course_key"] = load_state(project).course.key
     for exercise in payload["sets"][0]["exercises"]:
         exercise["sources"] = [source.model_dump(mode="json")]
-        for block in (*exercise["statement"], *exercise["solution"]["blocks"]):
+        for block in (
+            *exercise["statement"],
+            *(b for a in exercise["solution"]["answers"] for b in a["blocks"]),
+        ):
             block["sources"] = [source.key]
         for step in exercise["steps"]:
             for block in step.get("blocks", []):

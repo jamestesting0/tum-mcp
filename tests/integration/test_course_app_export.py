@@ -42,8 +42,21 @@ def test_excluded_exercises_leave_no_statement_hint_solution_math_or_source_cana
     exercise = content["sets"][0]["exercises"][0]
     exercise["sources"] = [{"key": "ex-only", "sha256": digest(secret)}]
     exercise["steps"][0]["hints"].append(r"EXCLUDED_HINT \(\mathrm{EXCLUDED_MATH}\)")
-    for block in (*exercise["statement"], *exercise["solution"]["blocks"]):
+
+    def blocks(value: object) -> list[dict]:
+        if isinstance(value, list):
+            return [block for item in value for block in blocks(item)]
+        if not isinstance(value, dict):
+            return []
+        own = [value] if "kind" in value and isinstance(value.get("sources"), list) else []
+        return own + blocks(list(value.values()))
+
+    for block in blocks(exercise):
         block["sources"] = ["ex-only"]
+    for block in (
+        *exercise["statement"],
+        *(b for a in exercise["solution"]["answers"] for b in a["blocks"]),
+    ):
         block["paragraphs"].append("EXCLUDED_STATEMENT_OR_SOLUTION")
     file.write_text(json.dumps(content))
     (root / ".tum-mcp/comments.json").write_text("PRIVATE_COMMENT")
@@ -60,4 +73,8 @@ def test_excluded_exercises_leave_no_statement_hint_solution_math_or_source_cana
     build(root, publish=False)
     with pytest.raises(CampusError, match="Explicitly include"):
         export_site(root)
-    assert b'"workspaces":["exercises"]' in export_site(root, include_exercises=True)["data.mjs"]
+    exported = export_site(root, include_exercises=True)["data.mjs"].decode()
+    payload = json.loads(exported.removeprefix("const data = ").split(";\ndata.hosted")[0])
+    assert payload["workspaces"] == ["exercises"]
+    # A published citation names its source but never the stored local copy.
+    assert all("file" not in source for source in payload["sources"].values())

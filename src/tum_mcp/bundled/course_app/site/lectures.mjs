@@ -64,6 +64,13 @@ export function renderLectures(hash) {
   summary.append(node('h2', '', 'Keep in mind'), append(node('ul'), ...lecture.takeaways.map(text => studyText('li', '', text))));
   const meta = node('p', 'small lecture-meta', `${lecture.coverage.status === 'complete' ? '' : 'Partial notes · '}Sources checked ${date(lecture.evidence_as_of)}`);
   header.append(meta);
+  // The Study topics that teach this lecture, so notes and lessons lead to each other.
+  const taught = data.units.filter(unit => (unit.lectures || []).includes(lecture.key));
+  if (taught.length) {
+    const line = append(node('p', 'small related-work'), node('span', 'related-label', 'Study: '));
+    taught.forEach((unit, index) => { if (index) line.append(', '); const link = studyText('a', '', unit.title); link.href = `#study/${unit.key}/content`; line.append(link); });
+    header.append(line);
+  }
   if (lecture.coverage.status !== 'complete') {
     const coverage = node('details', 'disclosure plain lecture-coverage small');
     coverage.append(node('summary', '', 'Coverage'));

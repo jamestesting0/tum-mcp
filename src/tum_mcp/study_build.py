@@ -28,7 +28,7 @@ from tum_mcp.settings import Frozen
 from tum_mcp.study_content import (
     StudyContent,
     Unit,
-    render_blocks,
+    compile_formulas,
 )
 from tum_mcp.study_math import compile_latex, inline_math
 from tum_mcp.study_models import Digest, StudyState
@@ -149,7 +149,7 @@ def stale_units(root: Path, state: StudyState, content: StudyContent) -> tuple[s
 
 
 def unit_revision(unit: Unit) -> str:
-    return digest(unit.model_dump_json(exclude={"path"}, exclude_none=True).encode())
+    return digest(unit.model_dump_json(exclude={"path", "lectures"}, exclude_none=True).encode())
 
 
 def _app_data(
@@ -162,8 +162,7 @@ def _app_data(
 ) -> dict[str, JsonValue]:
     units: list[JsonValue] = []
     for unit in content.units if content else ():
-        value = unit.model_dump(mode="json", exclude_none=True)
-        value["blocks"] = render_blocks(unit.blocks)
+        value = compile_formulas(unit.model_dump(mode="json", exclude_none=True))
         value["revision"] = unit_revision(unit)
         units.append(value)
     referenced = (
@@ -189,6 +188,8 @@ def _app_data(
             + (" (local file)" if item.resource.binding in local_bindings else ""),
             "url": item.resource.url,
             "locator": item.resource.locator,
+            # The stored copy the local preview can open; publication removes it.
+            **({"file": item.path} if item.path and item.status == "current" else {}),
         }
         for item in state.resources
         if item.resource.key in referenced
@@ -213,9 +214,16 @@ def _app_data(
         "units": units,
         "sources": sources,
         "inlineMath": _inline_math(content.model_dump(mode="json")) if content else {},
+        "definitions": {term.casefold(): item for term, item in content.definitions().items()}
+        if content
+        else {},
         "incompleteSources": sum(item.status != "complete" for item in state.coverage),
     }
     payload["workspaces"] = (["study"] if content else []) + (["exercises"] if exercises else [])
+    if root is not None and exercises:
+        from tum_mcp.study_coverage import pending_exercises, read_ledger
+
+        payload["pending"] = pending_exercises(read_ledger(root), state, exercises)
     if lectures:
         if root is None:
             raise CampusError(Code.ACTION_REQUIRED, "Lecture projection needs its bound project.")
@@ -366,9 +374,19 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             check_prerequisites(exercises, content)
         if lectures:
             stale += stale_lectures(root, state, lectures)
+            known = {lecture.key for lecture in lectures.lectures}
+            if content and (missing := {k for u in content.units for k in u.lectures} - known):
+                raise CampusError(
+                    Code.INVALID_RESPONSE,
+                    "Study links to unknown Lecture Notes: " + ", ".join(sorted(missing)),
+                )
         if exam:
             stale += stale_exam(root, state, exam)
             check_unit_links(exam, content)
+        from tum_mcp.study_coverage import check_ledger, read_ledger
+
+        if ledger := read_ledger(root):
+            check_ledger(ledger, state, content, exercises)
         if stale:
             raise CampusError(
                 Code.STALE_RESULT, "Refresh content for changed source units: " + ", ".join(stale)

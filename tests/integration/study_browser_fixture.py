@@ -13,6 +13,8 @@ from study_inline_fixture import inline_math_checks, mobile_outline_checks
 from study_revision_fixture import (
     identity_checks,
     learning_flow_checks,
+    option_order_checks,
+    outline_position_checks,
     practice_navigation_checks,
     revision_checks,
 )
@@ -200,6 +202,13 @@ def study_website(browser: Browser) -> dict[str, object]:
         mobile_outline_checks(page, content)
         inline_math_checks(page, project, content)
         context.close()
+        for height, check in ((900, option_order_checks), (360, outline_position_checks)):
+            context = browser.new_context(viewport={"width": 1440, "height": height})
+            context.route("**/*", serve)
+            page = context.new_page()
+            page.on("pageerror", lambda error: errors.append(str(error)))
+            check(page, content)
+            context.close()
         for view in ("flashcards", "practice"):
             for pooled in (False, True):
                 context = browser.new_context(viewport={"width": 390, "height": 900})

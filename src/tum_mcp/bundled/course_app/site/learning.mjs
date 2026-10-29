@@ -1,5 +1,6 @@
 import data from './data.mjs';
-import { node, studyText, button, append, sourcesNote, focusHeading } from './dom.mjs';
+import { node, studyText, button, append, sourcesNote, focusHeading, shuffled, announce } from './dom.mjs';
+import { renderBlockBody } from './reading.mjs';
 import { iconButton, iconGlyph } from './navigation.mjs';
 import { itemKey } from './revision.mjs';
 import { annotate } from './anchors.mjs';
@@ -16,8 +17,10 @@ export function renderPractice(unit, ui, progress, persist) {
   const form = node('form', 'practice-question');
   const group = node('fieldset');
   group.append(annotate(studyText('legend', '', question.prompt), unit, question, 'practice', 'prompt'));
-  const labels = new Map();
-  for (const option of question.options) {
+  // The picture the question is about sits with it, so pooled Revision needs nothing from the lesson.
+  if (question.blocks?.length) group.append(append(node('div', 'question-context'), ...question.blocks.map(block => renderBlockBody(block))));
+  const labels = new Map(), order = shuffled(question.options, key);
+  for (const option of order) {
     const label = node('label', 'option');
     const radio = node('input'); radio.type = 'radio'; radio.name = 'answer'; radio.value = option.key;
     radio.checked = state.selected === option.key; radio.disabled = state.checked;
@@ -34,7 +37,14 @@ export function renderPractice(unit, ui, progress, persist) {
   const check = node('button', 'primary', 'Check answer');
   check.type = 'submit'; check.disabled = state.selected === null;
   const actions = append(node('div', 'card-actions'), check); actions.hidden = state.checked;
-  form.append(group, actions);
+  const hint = studyText('p', 'question-hint', question.hint || ''); hint.hidden = !question.hint || !state.hint;
+  if (question.hint && !state.hint) {
+    const reveal = button('Hint', () => {
+      state.hint = true; hint.hidden = false; reveal.remove(); announce(hint.textContent);
+    }, 'secondary');
+    reveal.type = 'button'; actions.append(reveal);
+  }
+  form.append(group, hint, actions);
   const feedback = node('div'); feedback.setAttribute('aria-live', 'polite');
   const sources = sourcesNote(question.sources, data.sources, data.course.synthetic); sources.hidden = !state.checked;
   const ending = node('div');
@@ -66,7 +76,7 @@ export function renderPractice(unit, ui, progress, persist) {
           position: `${result.index + 1}/${results.length}`,
         }), 'summary-item');
         const copy = node('span', 'summary-copy');
-        copy.append(studyText('span', 'summary-prompt', `${result.index + 1}. ${result.item.prompt}`), node('span', 'small', result.value === false ? 'Incorrect' : 'Not answered'));
+        copy.append(studyText('span', 'summary-prompt', `${result.index + 1}. ${result.item.prompt}`), node('span', 'small', result.value === false ? 'Missed' : 'Not answered'));
         const action = node('span', 'summary-action'); action.append('Review', iconGlyph('right'));
         jump.append(copy, action);
         item.append(jump); list.append(item);
@@ -89,13 +99,15 @@ export function renderPractice(unit, ui, progress, persist) {
     }
     panel.append(annotate(studyText('p', '', question.explanation), unit, question, 'practice', 'explanation'));
     const alternatives = node('details', 'disclosure plain other-options source-note'); alternatives.append(node('summary', '', 'Other options'));
-    alternatives.append(append(node('ul'), ...question.options.filter(option => option.key !== state.selected).map(option => {
+    alternatives.append(append(node('ul'), ...order.filter(option => option.key !== state.selected).map(option => {
       const item = node('li'); item.append(annotate(studyText('span', '', option.text), unit, question, 'practice', `option:${option.key}`), document.createTextNode(' — '), annotate(studyText('span', '', option.feedback), unit, question, 'practice', `feedback:${option.key}`)); return item;
     })));
     panel.append(alternatives);
     const next = node('div', 'cluster feedback-actions');
+    // A retry after seeing the answer is practice, not new evidence: the first result stays
+    // saved, so a miss remains in To review until a later fresh attempt gets it right.
     next.append(button('Try again', () => {
-      state.selected = null; state.checked = false; delete progress.questions[key]; persist();
+      state.selected = null; state.checked = false; state.retry = true;
       replaceQuestion();
     }, 'secondary'));
     if (!last) next.append(button('Continue', () => go(ui.question + 1), 'primary'));
@@ -107,7 +119,9 @@ export function renderPractice(unit, ui, progress, persist) {
   }
   form.addEventListener('submit', event => {
     event.preventDefault(); if (state.selected === null || state.checked) return;
-    state.checked = true; progress.questions[key] = state.selected === question.correct; persist();
+    state.checked = true;
+    if (!state.retry) progress.questions[key] = state.selected === question.correct;
+    persist();
     group.querySelectorAll('input').forEach(input => { input.disabled = true; });
     actions.hidden = true; showFeedback().focus();
     root.dispatchEvent(new CustomEvent('study-activity-change', { bubbles: true }));

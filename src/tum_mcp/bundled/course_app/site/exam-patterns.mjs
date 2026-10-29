@@ -1,6 +1,6 @@
 import data from './data.mjs';
 import { node, studyText, button, append, sourcesNote, pageCitation, shareCitations } from './dom.mjs';
-import { renderBlockBody } from './reading.mjs';
+import { renderBlockBody, renderAnswers } from './reading.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExam } from './anchors.mjs';
 import { codeReferences, filesIn } from './files.mjs';
@@ -29,7 +29,7 @@ function answerControls(check, identity, answer, expected = true, shown = []) {
       if (!result.valid) { feedback.replaceChildren(node('p', 'small', 'Choose an answer first.')); return; }
       response.showResult(true);
       feedback.replaceChildren(append(node('section', `feedback${result.correct ? '' : ' incorrect'}`), node('h3', '', result.correct ? 'Correct' : 'Not quite'),
-        ...(result.correct ? [] : result.repairs.map(text => studyText('p', '', text))), answer), optionExplanations(check));
+        ...(result.correct ? [] : result.repairs.map(text => studyText('p', '', text))), answer), optionExplanations(check, identity));
     }, 'primary'));
     return [response.root, actions, feedback];
   }
@@ -62,7 +62,7 @@ function workedPractice(pattern) {
     steps.append(card);
   });
   const full = node('details', 'disclosure');
-  full.append(node('summary', '', 'Full solution'), blocksWithoutTitles(solution.blocks));
+  full.append(node('summary', '', 'Full solution'), renderAnswers(solution));
   return section('Worked practice', ...(past ? [node('p', 'small', `From ${plain(past.sitting.label)}, question ${past.question.number}`)] : []), blocksWithoutTitles(blocks), steps, full);
 }
 
@@ -98,6 +98,10 @@ export function renderPattern(key) {
   if (related.length) {
     const links = node('p', 'small');
     related.forEach((concept, index) => { if (index) links.append(' · '); links.append(quietLink(plain(concept.title), `#exam/sheet/${concept.key}`)); });
+    // The Study topics behind these entries, where the ideas are taught step by step.
+    for (const unit of data.units.filter(item => related.some(concept => (concept.units || []).includes(item.key)))) {
+      links.append(' · ', quietLink(`Study: ${plain(unit.title)}`, `#study/${unit.key}/content`));
+    }
     root.append(section('Cheatsheet entries', links));
   }
   if (stats.instances.length) {

@@ -99,7 +99,9 @@ def test_optional_guidance_and_workspace_round_trip(
             page.get_by_text("Replace 5 with 3 because 3 is cheaper.", exact=False)
         ).to_be_visible()
         page.locator(".reading").get_by_text("Solution", exact=True).click()
-        expect(page.get_by_role("heading", name="Worked solution", exact=True)).to_be_visible()
+        expect(
+            page.locator(".solution-answers").get_by_text("The candidate distance is", exact=False)
+        ).to_be_visible()
         # Then no extra mode/form is required and the existing reading layout stays usable.
         assert errors == []
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
@@ -142,7 +144,11 @@ def test_paper_only_review_and_direct_solution_do_not_require_a_form(
         # When opening the solution directly and comparing the guided step.
         expect(page.get_by_role("button", name="Mark reviewed", exact=True)).to_have_count(0)
         page.locator(".reading").get_by_text("Solution", exact=True).click()
-        expect(page.get_by_role("heading", name="Worked proof", exact=True)).to_be_visible()
+        expect(
+            page.locator(".solution-answers").get_by_text(
+                "Take the first unsettled vertex", exact=False
+            )
+        ).to_be_visible()
         page.locator(".reading").get_by_text("Guidance", exact=True).click()
         page.get_by_role("button", name="Compare", exact=True).click()
         # Then comparison is available with no typed response or automatic correctness claim.
@@ -405,7 +411,11 @@ def test_table_math_code_and_graph_work_survives_edits_reload_and_navigation(
         page.reload()
         expect(page.get_by_text("Path: A → B → C", exact=True)).to_be_visible()
         page.get_by_role("button", name="Compare", exact=True).click()
-        expect(page.locator(".expected-value")).to_have_text("Path: A → B → C")
+        # The answer is drawn on the graph, with the same path in words as its caption.
+        compared = page.locator(".feedback.compare")
+        expect(compared.locator(".diagram-state")).to_contain_text("Path: A → B → C")
+        expect(compared.locator(".graph g.active")).to_have_count(3)
+        expect(compared.locator(".graph line.active")).to_have_count(2)
         for step, labels, shown in (
             ("graph-nodes", ["A", "B", "C"], "Nodes: A, B, C"),
             ("graph-edges", ["A → B", "B → C"], "Edges: A–B, B–C"),
@@ -414,7 +424,7 @@ def test_table_math_code_and_graph_work_survives_edits_reload_and_navigation(
             for label in labels:
                 page.get_by_role("checkbox", name=label, exact=True).check()
             page.get_by_role("button", name="Compare", exact=True).click()
-            expect(page.locator(".expected-value")).to_have_text(shown)
+            expect(page.locator(".feedback.compare .diagram-state")).to_contain_text(shown)
         assert errors == []
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     finally:
@@ -566,25 +576,156 @@ def test_step_arrows_keep_the_same_control_focus_and_alignment(
         context.close()
 
 
-def test_ungraded_guidance_still_offers_prepared_explanation(
+def test_compare_is_the_one_place_a_step_reveals_its_reasoning(
     course_browser: Browser, exercise_project: Path, exercise_url: str
 ) -> None:
     path = exercise_project / "study/exercises.json"
     payload = json.loads(path.read_bytes())
-    step = payload["sets"][0]["exercises"][0]["steps"][0]
-    step.pop("check")
-    step["hints"] = []
+    steps = payload["sets"][0]["exercises"][0]["steps"]
+    ungraded = steps[0]
+    ungraded.pop("check")
+    ungraded["hints"] = ["Add the edge to the distance of A."]
     path.write_text(json.dumps(payload))
     build(exercise_project, publish=False)
     context = course_browser.new_context()
     try:
         page = context.new_page()
         page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/candidate")
-        page.get_by_role("button", name="Show explanation", exact=True).click()
-        expect(
-            page.locator("#content").get_by_text(step["explanation"], exact=True)
-        ).to_be_visible()
+        explanation = page.locator("#content").get_by_text(ungraded["explanation"], exact=True)
+        # Hints run out without turning into a second way to reveal the answer.
+        page.get_by_role("button", name="Hint", exact=True).click()
+        expect(page.get_by_role("button", name="Next hint", exact=True)).to_have_count(0)
+        expect(page.get_by_role("button", name="Show explanation", exact=True)).to_have_count(0)
+        expect(explanation).to_have_count(0)
+        # A step without a check is compared too, and shows its reasoning once.
+        page.get_by_role("button", name="Compare", exact=True).click()
+        expect(explanation).to_have_count(1)
         expect(page.get_by_role("button", name="Continue", exact=True)).to_be_enabled()
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("width", [390, 1440])
+def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
+    course_browser: Browser, exercise_project: Path, exercise_url: str, width: int
+) -> None:
+    # Given a Study definition the exercise names, a marked term in a step and two part answers.
+    content_path = exercise_project / "study/content.json"
+    content = json.loads(content_path.read_bytes())
+    weighted = next(unit for unit in content["units"] if unit["key"] == "weighted")
+    weighted["blocks"].insert(
+        0,
+        {
+            "kind": "definition",
+            "key": "relaxation",
+            "sources": ["weighted"],
+            "term": "Relaxation",
+            "statement": "Replacing a distance estimate by a cheaper one found through a neighbor.",
+        },
+    )
+    content_path.write_text(json.dumps(content))
+    path = exercise_project / "study/exercises.json"
+    payload = json.loads(path.read_bytes())
+    exercise = payload["sets"][0]["exercises"][0]
+    exercise["prerequisites"][0]["block"] = "relaxation"
+    exercise["steps"][1]["prompt"] = "Why does {{relaxation}} replace d(B)?"
+    exercise["parts"] = ["(a) Compute the cost through A.", "(b) Decide whether to replace d(B)."]
+    answer = exercise["solution"]["answers"][0]
+    exercise["solution"]["answers"] = [answer | {"label": "(a)"}, answer | {"label": "(b)"}]
+    path.write_text(json.dumps(payload))
+    build(exercise_project, publish=False)
+    context = course_browser.new_context(viewport={"width": width, "height": 900})
+    try:
+        page = context.new_page()
+        errors: list[str] = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/reason")
+        prompt = page.get_by_role("heading", name="Why does Relaxation replace d(B)?")
+        expect(prompt).to_be_visible()
+        scroll = "(document.scrollingElement.scrollTop || document.querySelector('main').scrollTop)"
+        # When the student opens the term, then the Study passage, then closes it.
+        page.get_by_role("button", name="relaxation", exact=True).click()
+        expect(page.get_by_role("status").filter(has_text="cheaper one")).to_be_visible()
+        page.keyboard.press("Escape")
+        page.get_by_role("button", name="Review Relaxation", exact=True).click()
+        panel = page.get_by_role("dialog", name="Relaxation")
+        expect(panel).to_contain_text("through a neighbor")
+        # Measured with the panel open: a click first scrolls its target into view.
+        before = page.evaluate(scroll)
+        expect(panel.get_by_role("link", name="Open in Study")).to_have_attribute(
+            "href", "#weighted/content/relaxation"
+        )
+        panel.get_by_role("button", name="Close", exact=True).click()
+        # Then the same step, focus point and scroll position remain, and nothing navigated.
+        expect(panel).to_have_count(0)
+        expect(page.get_by_role("button", name="Review Relaxation")).to_be_focused()
+        assert page.url.endswith("#exercises/sheet-1/sample-relaxation/reason")
+        assert abs(page.evaluate(scroll) - before) <= 2
+        # And the solution answers each original part under its own label.
+        page.locator(".reading").get_by_text("Solution", exact=True).click()
+        labels = page.locator(".solution-label")
+        expect(labels).to_have_text(["(a)", "(b)"])
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_local_preview_opens_only_inventory_files(
+    exercise_project: Path, exercise_url: str
+) -> None:
+    from http.client import HTTPConnection
+
+    from tum_mcp.study_store import load_state
+
+    stored = next(item.path for item in load_state(exercise_project).resources if item.path)
+    host = exercise_url.removeprefix("http://").rstrip("/")
+
+    def fetch(path: str) -> int:
+        connection = HTTPConnection(host, timeout=5)
+        try:
+            connection.request("GET", "/" + path, headers={"Host": host})
+            return connection.getresponse().status
+        finally:
+            connection.close()
+
+    # A cited course file opens in the local preview; nothing else under materials does.
+    assert fetch(stored) == 200
+    assert fetch("materials/../.tum-mcp/state.json") == 404
+    assert fetch(stored.rsplit("/", 1)[0] + "/unlisted.md") == 404
+
+
+def test_outline_names_only_categories_that_add_information(
+    course_browser: Browser, exercise_project: Path, exercise_url: str
+) -> None:
+    path = exercise_project / "study/exercises.json"
+    payload = json.loads(path.read_bytes())
+    first = payload["sets"][0]
+    first.update(category="Exercise 1", title="Exercise 1: Shortest paths")
+    groups = [first]
+    for number, (category, title) in enumerate(
+        [("Exercise 2", "Exercise 2: Search"), ("Tutorials", "Sheet 3"), ("Tutorials", "Sheet 4")],
+        start=2,
+    ):
+        group = json.loads(json.dumps(first))
+        group.update(key=f"sheet-{number}", category=category, title=title)
+        for exercise in group["exercises"]:
+            exercise["key"] = f"{exercise['key']}-{number}"
+        groups.append(group)
+    payload["sets"] = groups
+    path.write_text(json.dumps(payload))
+    build(exercise_project, publish=False)
+    context = course_browser.new_context(viewport={"width": 1440, "height": 900})
+    try:
+        page = context.new_page()
+        page.goto(exercise_url + "#exercises")
+        listing = page.locator(".exercise-list")
+        # "Exercise 2" only repeats its set's title, so a thin rule marks the new group.
+        expect(listing.get_by_text("Exercise 2", exact=True)).to_have_count(0)
+        expect(listing.get_by_role("heading", name="Tutorials", exact=True)).to_have_count(1)
+        sheets = listing.locator(".exercise-sheet")
+        expect(sheets).to_have_count(4)
+        borders = sheets.evaluate_all("els => els.map(el => getComputedStyle(el).borderTopStyle)")
+        assert borders == ["none", "solid", "none", "none"]
     finally:
         context.close()
 

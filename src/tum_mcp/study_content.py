@@ -1,15 +1,17 @@
 """Source-linked study content with editable LaTeX and legacy MathML inputs."""
 
+import re
 from collections.abc import Iterator
 from typing import Annotated, Literal, assert_never
 
 from pydantic import AfterValidator, Field, FiniteFloat, JsonValue, field_validator, model_validator
 
 from tum_mcp.settings import Frozen
-from tum_mcp.study_math import compile_latex, safe_mathml, validate_inline
-from tum_mcp.study_models import Digest, Key
+from tum_mcp.study_math import INLINE_SPANS, compile_latex, safe_mathml, validate_inline
+from tum_mcp.study_models import Digest, Key, PageRange
 
 Text = Annotated[str, Field(min_length=1, max_length=10000), AfterValidator(validate_inline)]
+Label = Annotated[str, Field(min_length=1, max_length=80), AfterValidator(validate_inline)]
 
 
 class Objective(Frozen):
@@ -20,6 +22,10 @@ class Objective(Frozen):
 class Sourced(Frozen):
     title: Text
     sources: tuple[Key, ...] = Field(min_length=1)
+    # An address for links into this block, unique within its unit or exercise.
+    key: Key | None = None
+    # The pages or slides of the cited material that this block draws on.
+    pages: PageRange | None = None
 
 
 class TextBlock(Sourced):
@@ -37,6 +43,16 @@ class TextBlock(Sourced):
 class Symbol(Frozen):
     symbol: Text
     meaning: Text
+
+
+class DefinitionBlock(Sourced):
+    """A term students must learn, set apart from explanation; its title defaults to the term."""
+
+    kind: Literal["definition"]
+    title: Text | None = None
+    term: Label
+    statement: Text
+    conditions: tuple[Text, ...] = Field(default=(), max_length=6)
 
 
 class FormulaBlock(Sourced):
@@ -241,11 +257,25 @@ class Edge(Frozen):
     label: Annotated[str, Field(max_length=50)] = ""
 
 
+class StateRow(Frozen):
+    """One named part of an algorithm's state at a step, such as its queue or a domain."""
+
+    label: Label
+    value: Annotated[str, Field(min_length=1, max_length=300), AfterValidator(validate_inline)]
+
+
+class EdgeRef(Frozen):
+    start: Key
+    end: Key
+
+
 class Frame(Frozen):
     caption: Text
     active: tuple[Key, ...] = ()
     frontier: tuple[Key, ...] = ()
     visited: tuple[Key, ...] = ()
+    state: tuple[StateRow, ...] = Field(default=(), max_length=6)
+    edges: tuple[EdgeRef, ...] = Field(default=(), max_length=20)
 
 
 class DiagramBlock(Sourced):
@@ -269,6 +299,15 @@ class DiagramBlock(Sourced):
             not set(frame.active + frame.frontier + frame.visited) <= ids for frame in self.frames
         ):
             raise ValueError("Diagram frame references an unknown node.")
+        pairs = {(edge.start, edge.end) for edge in self.edges}
+        pairs |= {(edge.end, edge.start) for edge in self.edges if not edge.directed}
+        if any(
+            (item.start, item.end) not in pairs for frame in self.frames for item in frame.edges
+        ):
+            raise ValueError("Diagram frame highlights an edge the diagram does not draw.")
+        for frame in self.frames:
+            if len({row.label for row in frame.state}) != len(frame.state):
+                raise ValueError("Each state row in a frame needs its own label.")
         return self
 
 
@@ -455,6 +494,7 @@ class UmlBlock(Sourced):
 
 Block = Annotated[
     TextBlock
+    | DefinitionBlock
     | FormulaBlock
     | TableBlock
     | DiagramBlock
@@ -487,6 +527,7 @@ def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
                 value["mathml"] = block.mathml or compile_latex(block.latex or "")
             case (
                 TextBlock()
+                | DefinitionBlock()
                 | TableBlock()
                 | CodeBlock()
                 | DiagramBlock()
@@ -521,9 +562,12 @@ class Question(Frozen):
     objective: Key
     prompt: Text
     level: Literal["recall", "apply", "reason"]
+    # The situation the question is about, shown beside it in Practice and Revision.
+    blocks: tuple[Block, ...] = Field(min_length=1, max_length=3)
     options: tuple[Option, ...] = Field(min_length=3, max_length=5)
     correct: Key
     explanation: Text
+    hint: Text | None = None
     sources: tuple[Key, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -533,6 +577,8 @@ class Question(Frozen):
             raise ValueError("Question needs distinct options and one correct key.")
         if len({item.text.strip().casefold() for item in self.options}) != len(ids):
             raise ValueError("Question options must have different meanings/text.")
+        if not has_visual(self.blocks):
+            raise ValueError(f"A practice question needs {VISUAL_RULE}.")
         return self
 
 
@@ -555,6 +601,8 @@ class Unit(Frozen):
     blocks: tuple[Block, ...] = Field(min_length=1, max_length=40)
     flashcards: tuple[Flashcard, ...] = Field(min_length=1, max_length=80)
     questions: tuple[Question, ...] = Field(min_length=1, max_length=80)
+    # Lecture Notes of the lectures this unit teaches, linked from the unit when prepared.
+    lectures: tuple[Key, ...] = Field(default=(), max_length=6)
 
     @model_validator(mode="after")
     def coverage(self) -> "Unit":
@@ -563,9 +611,13 @@ class Unit(Frozen):
         for items in (self.objectives, self.sources, self.flashcards, self.questions):
             if len({item.key for item in items}) != len(items):
                 raise ValueError("Unit item keys must be unique within their collection.")
-        for item in (*self.blocks, *self.flashcards, *self.questions):
+        cited = (*self.blocks, *self.flashcards, *self.questions)
+        for item in (*cited, *(block for question in self.questions for block in question.blocks)):
             if not set(item.sources) <= source_ids:
                 raise ValueError("Unit cites an undeclared source.")
+        keys = [block.key for block in self.blocks if block.key]
+        if len(set(keys)) != len(keys):
+            raise ValueError("Block keys must be unique within a unit.")
         if any(item.objective not in objectives for item in (*self.flashcards, *self.questions)):
             raise ValueError("Assessment references an unknown learning objective.")
         if {question.objective for question in self.questions} != objectives:
@@ -584,4 +636,63 @@ class StudyContent(Frozen):
     def unit_keys(self) -> "StudyContent":
         if len({unit.key for unit in self.units}) != len(self.units):
             raise ValueError("Study units must have unique keys.")
+        terms = [term.casefold() for term in self.definitions()]
+        if len(set(terms)) != len(terms):
+            raise ValueError("Define each term once across the course.")
+        if unknown := term_markers(self.model_dump(mode="json")) - set(terms):
+            raise ValueError(f"Marked terms need a definition block: {sorted(unknown)[:5]}.")
         return self
+
+    def definitions(self) -> dict[str, dict[str, JsonValue]]:
+        """Each defined term with where it is taught, for in-place explanations everywhere."""
+        return {
+            block.term: {
+                "term": block.term,
+                "statement": block.statement,
+                "conditions": list(block.conditions),
+                "unit": unit.key,
+                "block": block.key,
+                "sources": list(block.sources),
+            }
+            for unit in self.units
+            for block in unit.blocks
+            if isinstance(block, DefinitionBlock)
+        }
+
+
+# {{term}} marks a mention of a defined term; it opens the definition where it is used.
+TERM_MARKER = re.compile(r"\{\{([^{}\n]{1,80})\}\}")
+LITERAL_FIELDS = frozenset({"code", "starter_code", "latex", "mathml"})
+
+
+def term_markers(value: JsonValue) -> set[str]:
+    """Every marked term in authored text, outside code, inline code and math."""
+    match value:
+        case str():
+            text = INLINE_SPANS.sub(" ", value)
+            return {match[1].strip().casefold() for match in TERM_MARKER.finditer(text)}
+        case list():
+            return {term for item in value for term in term_markers(item)}
+        case dict():
+            return {
+                term
+                for field, item in value.items()
+                if field not in LITERAL_FIELDS
+                for term in term_markers(item)
+            }
+        case _:
+            return set()
+
+
+def compile_formulas(value: JsonValue) -> JsonValue:
+    """Compile every formula block's LaTeX once at build, wherever the block sits."""
+    match value:
+        case dict():
+            result = {key: compile_formulas(item) for key, item in value.items()}
+            if isinstance(result.get("latex"), str) and "mathml" not in result:
+                result["mathml"] = compile_latex(result["latex"])
+            return result
+        case list():
+            return [compile_formulas(item) for item in value]
+        case _:
+            return value

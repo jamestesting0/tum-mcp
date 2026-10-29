@@ -250,6 +250,51 @@ thead th { background: var(--surface); }
 .graph .active circle, .graph .active rect { fill: var(--accent); stroke: var(--accent); }
 .graph .active text { fill: var(--canvas); }
 .diagram-state { min-height: 88px; padding-block: var(--s4); }
+.graph line.active { stroke: var(--accent); stroke-width: 4; }
+.frame-state { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s1) var(--s4); margin: var(--s2) 0 0; font-size: var(--text-ui); }
+.frame-state dt { color: var(--muted); font-weight: 500; }
+.frame-state dd { margin: 0; overflow-wrap: anywhere; }
+.frame-state dd.changed { font-weight: 650; }
+.frame-state dd.changed::before { content: '\25B8\00A0'; content: '\25B8\00A0' / ''; color: var(--accent); }
+
+/* A definition: labelled by word and a rule, so it reads as one without relying on colour. */
+.definition { padding: var(--s4) var(--s5); border: 1px solid var(--line); border-inline-start: 3px solid var(--accent); border-radius: var(--r1); background: var(--surface); }
+.definition-label { margin: 0; color: var(--muted); font-size: var(--text-small); font-weight: 650; letter-spacing: .02em; }
+.definition-statement { margin: var(--s1) 0 0; }
+.definition-conditions { margin: var(--s2) 0 0; font-size: var(--text-ui); }
+
+/* A defined term in running text; activating it shows the definition beside it. */
+.term-tip { position: relative; }
+button.term { display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; font-weight: inherit; text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: help; }
+button.term[aria-expanded="true"] { color: var(--accent); }
+.term-bubble { position: absolute; z-index: 6; top: calc(100% + var(--s1)); left: 0; display: flex; flex-direction: column; gap: var(--s1); width: min(340px, 80vw); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r2); background: var(--canvas); color: var(--ink); font-size: var(--text-ui); font-weight: 400; line-height: 1.5; text-align: start; }
+.term-name { font-weight: 650; }
+.term-condition { color: var(--muted); }
+.term-more { font-size: var(--text-small); }
+
+/* One labelled answer per original part. */
+.solution-answers { display: flex; flex-direction: column; gap: var(--s6); }
+.solution-label { margin: 0 0 var(--s2); font-size: var(--text-ui); font-weight: 650; }
+.model-answer > .block-body + .block-body { margin-top: var(--s4); }
+
+/* A Study passage opened beside an exercise; full screen on narrower displays. */
+.reference-panel { position: fixed; inset: 0 0 0 auto; z-index: 8; width: min(440px, 100vw); height: 100dvh; max-height: none; margin: 0; padding: var(--s6); overflow: auto; border: 0; border-inline-start: 1px solid var(--line); color: var(--ink); background: var(--canvas); }
+.reference-panel::backdrop { background: var(--scrim); }
+.reference-panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s4); }
+.reference-panel-header h2 { margin: 0; font-size: var(--text-section); line-height: 1.3; }
+.reference-panel-header p { margin: 0; }
+.reference-panel-more { margin-top: var(--s6); }
+button.reference-trigger { min-height: 0; padding: 0; border: 0; background: none; color: var(--accent); font-size: inherit; text-decoration: underline; text-underline-offset: var(--s1); }
+.reference-panel-header .page-eyebrow { display: flex; align-items: center; gap: var(--s2); }
+.related-work { margin: var(--s3) 0 0; color: var(--muted); }
+.exercise-list .pending { margin: var(--s1) 0 var(--s2); color: var(--muted); }
+.related-label { font-weight: 500; }
+@media (min-width: 1200px) {
+  [data-reference="open"] .main { padding-inline-end: min(440px, 100vw); }
+  [data-reference="open"] .has-contents > .page-outline, [data-reference="open"] .contents-toggle { display: none; }
+  [data-contents="open"][data-reference="open"] .page-layout.has-contents { grid-template-columns: minmax(0, 1fr) minmax(0, calc(var(--measure) + 2 * var(--s12))) minmax(0, 1fr); }
+}
+@media (max-width: 1199px) { .reference-panel { width: 100vw; border: 0; } }
 .diagram-controls { display: flex; align-items: center; justify-content: center; gap: var(--s3); border-top: 1px solid var(--line); padding-top: var(--s4); }
 .plot svg { width: 100%; height: auto; display: block; }
 .plot text { fill: var(--muted); font: 16px var(--font-ui); }
@@ -291,7 +336,11 @@ thead th { background: var(--surface); }
 .card-ratings button { display: inline-flex; align-items: center; gap: var(--s4); }
 .card-end { justify-content: center; margin-top: var(--s3); text-align: center; }
 .practice-question { margin: var(--s6) 0; }
-.card-actions { margin-top: var(--s6); }
+.card-actions { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s6); }
+.question-context { margin: 0 0 var(--s6); }
+.question-context > .block-body + .block-body { margin-top: var(--s4); }
+.question-hint { margin: var(--s4) 0 0; padding: var(--s3) var(--s4); border-inline-start: 2px solid var(--line); color: var(--ink); }
+.exercise-sheet.group-start { margin-top: var(--s2); padding-top: var(--s2); border-top: 1px solid var(--line); }
 fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 legend { padding: 0; margin-bottom: var(--s6); font-size: var(--text-body); font-weight: 500; line-height: 1.5; }
 

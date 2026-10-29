@@ -64,7 +64,18 @@
                   "Compare candidate 3 with existing distance 5.",
                   "Explain that discovery alone does not finalize a distance."
                 ],
-                "model_answer": "Replace 5 with 3 because 3 is cheaper. First discovery does not guarantee the best weighted path."
+                "model_answer": [
+                  {
+                    "kind": "text",
+                    "title": "Model answer",
+                    "sources": [
+                      "weighted"
+                    ],
+                    "paragraphs": [
+                      "Replace 5 with 3 because 3 is cheaper. First discovery does not guarantee the best weighted path."
+                    ]
+                  }
+                ]
               },
               "hints": [
                 "Compare the two available costs."
@@ -109,22 +120,37 @@
           ],
           "solution": {
             "origin": "authored",
-            "blocks": [
+            "answers": [
               {
-                "kind": "text",
-                "title": "Worked solution",
-                "sources": [
-                  "weighted"
-                ],
-                "paragraphs": [
-                  "The candidate distance is d(A)+w(A,B)=2+1=3. Since 3 is less than 5, replace d(B) with 3."
+                "blocks": [
+                  {
+                    "kind": "text",
+                    "title": "Worked solution",
+                    "sources": [
+                      "weighted"
+                    ],
+                    "paragraphs": [
+                      "The candidate distance is d(A)+w(A,B)=2+1=3. Since 3 is less than 5, replace d(B) with 3."
+                    ]
+                  }
                 ]
               }
             ]
           },
           "transfer": {
             "prompt": "A routing table shows current cost 8. Another route reaches a neighbor at cost 4, then crosses a link of cost 6. Should the table change?",
-            "answer": "Keep 8: the candidate route costs 10 and is more expensive."
+            "answer": [
+              {
+                "kind": "text",
+                "title": "Answer",
+                "sources": [
+                  "weighted"
+                ],
+                "paragraphs": [
+                  "Keep 8: the candidate route costs 10 and is more expensive."
+                ]
+              }
+            ]
           }
         },
         {
@@ -171,22 +197,37 @@
                   "Nonnegative remaining edges make the prefix no more expensive than the complete path.",
                   "The minimum-choice rule says d(X) is at most d(Y), contradicting a cheaper path."
                 ],
-                "model_answer": "Take the first unsettled vertex Y on the proposed cheaper path. Its settled predecessor already relaxed the edge to Y, so d(Y) is at most the prefix cost. The remaining edges are nonnegative. Thus d(X) is at most d(Y), which is at most the prefix cost and at most the whole path cost. The whole path therefore cannot be cheaper than d(X)."
+                "model_answer": [
+                  {
+                    "kind": "text",
+                    "title": "Model answer",
+                    "sources": [
+                      "weighted"
+                    ],
+                    "paragraphs": [
+                      "Take the first unsettled vertex Y on the proposed cheaper path. Its settled predecessor already relaxed the edge to Y, so d(Y) is at most the prefix cost. The remaining edges are nonnegative. Thus d(X) is at most d(Y), which is at most the prefix cost and at most the whole path cost. The whole path therefore cannot be cheaper than d(X)."
+                    ]
+                  }
+                ]
               },
               "explanation": "The proof joins the relaxation boundary, minimum choice, and nonnegative suffix; each assumption is needed."
             }
           ],
           "solution": {
             "origin": "authored",
-            "blocks": [
+            "answers": [
               {
-                "kind": "text",
-                "title": "Worked proof",
-                "sources": [
-                  "weighted"
-                ],
-                "paragraphs": [
-                  "Take the first unsettled vertex Y on a hypothetical cheaper path to X. Its predecessor is settled, so its outgoing edge has been relaxed and d(Y) is no greater than that path prefix. Since all suffix weights are nonnegative, the prefix costs no more than the whole path. Choosing minimum tentative X gives d(X) ≤ d(Y) ≤ prefix cost ≤ whole path cost, contradicting a path cheaper than d(X)."
+                "blocks": [
+                  {
+                    "kind": "text",
+                    "title": "Worked proof",
+                    "sources": [
+                      "weighted"
+                    ],
+                    "paragraphs": [
+                      "Take the first unsettled vertex Y on a hypothetical cheaper path to X. Its predecessor is settled, so its outgoing edge has been relaxed and d(Y) is no greater than that path prefix. Since all suffix weights are nonnegative, the prefix costs no more than the whole path. Choosing minimum tentative X gives d(X) ≤ d(Y) ≤ prefix cost ≤ whole path cost, contradicting a path cheaper than d(X)."
+                    ]
+                  }
                 ]
               }
             ]

@@ -191,6 +191,33 @@
           "explanation": "Count endpoints of edges: 2 × 6 = 12.",
           "sources": [
             "graphs"
+          ],
+          "blocks": [
+            {
+              "title": "Count each edge twice",
+              "sources": [
+                "graphs"
+              ],
+              "kind": "formula",
+              "mathml": null,
+              "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
+              "plain": "The sum of all vertex degrees equals twice the number of edges.",
+              "symbols": [
+                {
+                  "symbol": "\\(V\\)",
+                  "meaning": "The set of vertices."
+                },
+                {
+                  "symbol": "\\(E\\)",
+                  "meaning": "The set of edges."
+                },
+                {
+                  "symbol": "\\(\\deg(v)\\)",
+                  "meaning": "The number of edges incident to vertex \\(v\\)."
+                }
+              ],
+              "conditions": "For a simple undirected graph. Six edges contribute twelve to the total degree."
+            }
           ]
         },
         {
@@ -224,6 +251,33 @@
           "explanation": "The task favors neighbor traversal and compact storage of existing edges.",
           "sources": [
             "graphs"
+          ],
+          "blocks": [
+            {
+              "title": "Count each edge twice",
+              "sources": [
+                "graphs"
+              ],
+              "kind": "formula",
+              "mathml": null,
+              "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
+              "plain": "The sum of all vertex degrees equals twice the number of edges.",
+              "symbols": [
+                {
+                  "symbol": "\\(V\\)",
+                  "meaning": "The set of vertices."
+                },
+                {
+                  "symbol": "\\(E\\)",
+                  "meaning": "The set of edges."
+                },
+                {
+                  "symbol": "\\(\\deg(v)\\)",
+                  "meaning": "The number of edges incident to vertex \\(v\\)."
+                }
+              ],
+              "conditions": "For a simple undirected graph. Six edges contribute twelve to the total degree."
+            }
           ]
         }
       ]
@@ -624,6 +678,222 @@
           "explanation": "The oldest waiting vertex remains first. New vertices join the back.",
           "sources": [
             "bfs"
+          ],
+          "blocks": [
+            {
+              "title": "Watch the frontier move",
+              "sources": [
+                "bfs"
+              ],
+              "kind": "diagram",
+              "description": "Undirected graph: A–B, A–C, B–D, C–E, D–F and E–F. The highlighted vertex is being expanded. The caption and seen list describe each step.",
+              "nodes": [
+                {
+                  "key": "a",
+                  "label": "A",
+                  "x": 70.0,
+                  "y": 160.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "b",
+                  "label": "B",
+                  "x": 220.0,
+                  "y": 70.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "c",
+                  "label": "C",
+                  "x": 220.0,
+                  "y": 250.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "d",
+                  "label": "D",
+                  "x": 380.0,
+                  "y": 70.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "e",
+                  "label": "E",
+                  "x": 380.0,
+                  "y": 250.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "f",
+                  "label": "F",
+                  "x": 530.0,
+                  "y": 160.0,
+                  "shape": "circle"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "a",
+                  "end": "b",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "a",
+                  "end": "c",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "b",
+                  "end": "d",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "c",
+                  "end": "e",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "d",
+                  "end": "f",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "e",
+                  "end": "f",
+                  "directed": false,
+                  "label": ""
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Start with A. Mark A as seen and put it in the queue.",
+                  "active": [],
+                  "frontier": [
+                    "a"
+                  ],
+                  "visited": [
+                    "a"
+                  ]
+                },
+                {
+                  "caption": "Expand A. Discover B and C, in alphabetical order.",
+                  "active": [
+                    "a"
+                  ],
+                  "frontier": [
+                    "b",
+                    "c"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                },
+                {
+                  "caption": "Expand B. Discover D. C stays at the front of the queue.",
+                  "active": [
+                    "b"
+                  ],
+                  "frontier": [
+                    "c",
+                    "d"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d"
+                  ]
+                },
+                {
+                  "caption": "Expand C. Discover E after D.",
+                  "active": [
+                    "c"
+                  ],
+                  "frontier": [
+                    "d",
+                    "e"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e"
+                  ]
+                },
+                {
+                  "caption": "Expand D. Discover F at distance three.",
+                  "active": [
+                    "d"
+                  ],
+                  "frontier": [
+                    "e",
+                    "f"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                },
+                {
+                  "caption": "Expand E. F is already seen, so do not enqueue it again.",
+                  "active": [
+                    "e"
+                  ],
+                  "frontier": [
+                    "f"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                },
+                {
+                  "caption": "Expand F. Its neighbors are already seen.",
+                  "active": [
+                    "f"
+                  ],
+                  "frontier": [],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                },
+                {
+                  "caption": "The queue is empty. Every reachable vertex is discovered.",
+                  "active": [],
+                  "frontier": [],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                }
+              ],
+              "state_labels": "traversal"
+            }
           ]
         },
         {
@@ -657,6 +927,222 @@
           "explanation": "The frontier layers are A; B and C; D and E; then F.",
           "sources": [
             "bfs"
+          ],
+          "blocks": [
+            {
+              "title": "Watch the frontier move",
+              "sources": [
+                "bfs"
+              ],
+              "kind": "diagram",
+              "description": "Undirected graph: A–B, A–C, B–D, C–E, D–F and E–F. The highlighted vertex is being expanded. The caption and seen list describe each step.",
+              "nodes": [
+                {
+                  "key": "a",
+                  "label": "A",
+                  "x": 70.0,
+                  "y": 160.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "b",
+                  "label": "B",
+                  "x": 220.0,
+                  "y": 70.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "c",
+                  "label": "C",
+                  "x": 220.0,
+                  "y": 250.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "d",
+                  "label": "D",
+                  "x": 380.0,
+                  "y": 70.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "e",
+                  "label": "E",
+                  "x": 380.0,
+                  "y": 250.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "f",
+                  "label": "F",
+                  "x": 530.0,
+                  "y": 160.0,
+                  "shape": "circle"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "a",
+                  "end": "b",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "a",
+                  "end": "c",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "b",
+                  "end": "d",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "c",
+                  "end": "e",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "d",
+                  "end": "f",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "e",
+                  "end": "f",
+                  "directed": false,
+                  "label": ""
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Start with A. Mark A as seen and put it in the queue.",
+                  "active": [],
+                  "frontier": [
+                    "a"
+                  ],
+                  "visited": [
+                    "a"
+                  ]
+                },
+                {
+                  "caption": "Expand A. Discover B and C, in alphabetical order.",
+                  "active": [
+                    "a"
+                  ],
+                  "frontier": [
+                    "b",
+                    "c"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                },
+                {
+                  "caption": "Expand B. Discover D. C stays at the front of the queue.",
+                  "active": [
+                    "b"
+                  ],
+                  "frontier": [
+                    "c",
+                    "d"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d"
+                  ]
+                },
+                {
+                  "caption": "Expand C. Discover E after D.",
+                  "active": [
+                    "c"
+                  ],
+                  "frontier": [
+                    "d",
+                    "e"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e"
+                  ]
+                },
+                {
+                  "caption": "Expand D. Discover F at distance three.",
+                  "active": [
+                    "d"
+                  ],
+                  "frontier": [
+                    "e",
+                    "f"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                },
+                {
+                  "caption": "Expand E. F is already seen, so do not enqueue it again.",
+                  "active": [
+                    "e"
+                  ],
+                  "frontier": [
+                    "f"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                },
+                {
+                  "caption": "Expand F. Its neighbors are already seen.",
+                  "active": [
+                    "f"
+                  ],
+                  "frontier": [],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                },
+                {
+                  "caption": "The queue is empty. Every reachable vertex is discovered.",
+                  "active": [],
+                  "frontier": [],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                }
+              ],
+              "state_labels": "traversal"
+            }
           ]
         },
         {
@@ -690,6 +1176,222 @@
           "explanation": "Add the vertex work and edge work: \\(O(|V|)+O(|E|)=O(|V|+|E|)\\).",
           "sources": [
             "bfs"
+          ],
+          "blocks": [
+            {
+              "title": "Watch the frontier move",
+              "sources": [
+                "bfs"
+              ],
+              "kind": "diagram",
+              "description": "Undirected graph: A–B, A–C, B–D, C–E, D–F and E–F. The highlighted vertex is being expanded. The caption and seen list describe each step.",
+              "nodes": [
+                {
+                  "key": "a",
+                  "label": "A",
+                  "x": 70.0,
+                  "y": 160.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "b",
+                  "label": "B",
+                  "x": 220.0,
+                  "y": 70.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "c",
+                  "label": "C",
+                  "x": 220.0,
+                  "y": 250.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "d",
+                  "label": "D",
+                  "x": 380.0,
+                  "y": 70.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "e",
+                  "label": "E",
+                  "x": 380.0,
+                  "y": 250.0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "f",
+                  "label": "F",
+                  "x": 530.0,
+                  "y": 160.0,
+                  "shape": "circle"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "a",
+                  "end": "b",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "a",
+                  "end": "c",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "b",
+                  "end": "d",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "c",
+                  "end": "e",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "d",
+                  "end": "f",
+                  "directed": false,
+                  "label": ""
+                },
+                {
+                  "start": "e",
+                  "end": "f",
+                  "directed": false,
+                  "label": ""
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Start with A. Mark A as seen and put it in the queue.",
+                  "active": [],
+                  "frontier": [
+                    "a"
+                  ],
+                  "visited": [
+                    "a"
+                  ]
+                },
+                {
+                  "caption": "Expand A. Discover B and C, in alphabetical order.",
+                  "active": [
+                    "a"
+                  ],
+                  "frontier": [
+                    "b",
+                    "c"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                },
+                {
+                  "caption": "Expand B. Discover D. C stays at the front of the queue.",
+                  "active": [
+                    "b"
+                  ],
+                  "frontier": [
+                    "c",
+                    "d"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d"
+                  ]
+                },
+                {
+                  "caption": "Expand C. Discover E after D.",
+                  "active": [
+                    "c"
+                  ],
+                  "frontier": [
+                    "d",
+                    "e"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e"
+                  ]
+                },
+                {
+                  "caption": "Expand D. Discover F at distance three.",
+                  "active": [
+                    "d"
+                  ],
+                  "frontier": [
+                    "e",
+                    "f"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                },
+                {
+                  "caption": "Expand E. F is already seen, so do not enqueue it again.",
+                  "active": [
+                    "e"
+                  ],
+                  "frontier": [
+                    "f"
+                  ],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                },
+                {
+                  "caption": "Expand F. Its neighbors are already seen.",
+                  "active": [
+                    "f"
+                  ],
+                  "frontier": [],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                },
+                {
+                  "caption": "The queue is empty. Every reachable vertex is discovered.",
+                  "active": [],
+                  "frontier": [],
+                  "visited": [
+                    "a",
+                    "b",
+                    "c",
+                    "d",
+                    "e",
+                    "f"
+                  ]
+                }
+              ],
+              "state_labels": "traversal"
+            }
           ]
         }
       ]
@@ -867,6 +1569,43 @@
           "explanation": "The return path preserves pending work. Seen markers prevent visiting the same vertex again.",
           "sources": [
             "dfs"
+          ],
+          "blocks": [
+            {
+              "title": "Two orders, two behaviors",
+              "sources": [
+                "dfs"
+              ],
+              "kind": "table",
+              "columns": [
+                "Property",
+                "BFS",
+                "DFS"
+              ],
+              "rows": [
+                [
+                  "What waits?",
+                  "A queue of the frontier.",
+                  "A stack or recursive return path."
+                ],
+                [
+                  "What comes next?",
+                  "The oldest waiting vertex.",
+                  "Work from the current deepest branch."
+                ],
+                [
+                  "What about cycles?",
+                  "Mark seen on discovery.",
+                  "Mark seen on discovery."
+                ],
+                [
+                  "Shortest paths?",
+                  "Fewest edges in an unweighted graph.",
+                  "Not guaranteed."
+                ]
+              ],
+              "caption": "Both methods need seen markers for graph traversal."
+            }
           ]
         },
         {
@@ -900,6 +1639,43 @@
           "explanation": "A single counterexample disproves the claim that DFS always gives shortest paths.",
           "sources": [
             "dfs"
+          ],
+          "blocks": [
+            {
+              "title": "Two orders, two behaviors",
+              "sources": [
+                "dfs"
+              ],
+              "kind": "table",
+              "columns": [
+                "Property",
+                "BFS",
+                "DFS"
+              ],
+              "rows": [
+                [
+                  "What waits?",
+                  "A queue of the frontier.",
+                  "A stack or recursive return path."
+                ],
+                [
+                  "What comes next?",
+                  "The oldest waiting vertex.",
+                  "Work from the current deepest branch."
+                ],
+                [
+                  "What about cycles?",
+                  "Mark seen on discovery.",
+                  "Mark seen on discovery."
+                ],
+                [
+                  "Shortest paths?",
+                  "Fewest edges in an unweighted graph.",
+                  "Not guaranteed."
+                ]
+              ],
+              "caption": "Both methods need seen markers for graph traversal."
+            }
           ]
         }
       ]
@@ -1312,6 +2088,80 @@
           "explanation": "Compare the sums. The three-edge route costs 5, less than either two-edge route.",
           "sources": [
             "weighted"
+          ],
+          "blocks": [
+            {
+              "title": "The algorithm as a process",
+              "sources": [
+                "weighted"
+              ],
+              "kind": "diagram",
+              "description": "A process diagram: begin with tentative distances, settle the minimum, then relax outgoing edges. Repeat selection and relaxation until the target is settled.",
+              "nodes": [
+                {
+                  "key": "distances",
+                  "label": "Best distances",
+                  "x": 85.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "settle",
+                  "label": "Settle minimum",
+                  "x": 300.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "relax",
+                  "label": "Relax neighbors",
+                  "x": 515.0,
+                  "y": 160.0,
+                  "shape": "box"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "distances",
+                  "end": "settle",
+                  "directed": true,
+                  "label": ""
+                },
+                {
+                  "start": "settle",
+                  "end": "relax",
+                  "directed": true,
+                  "label": ""
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Initialize S at zero and other distances at infinity.",
+                  "active": [
+                    "distances"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Settle the unsettled vertex with the smallest tentative distance.",
+                  "active": [
+                    "settle"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Try outgoing edges and improve any distance that gets cheaper. Repeat selection and relaxation.",
+                  "active": [
+                    "relax"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                }
+              ],
+              "state_labels": "caption"
+            }
           ]
         },
         {
@@ -1345,6 +2195,80 @@
           "explanation": "Take min(5,2+1)=3. The candidate uses the full cost from S through A to B.",
           "sources": [
             "weighted"
+          ],
+          "blocks": [
+            {
+              "title": "The algorithm as a process",
+              "sources": [
+                "weighted"
+              ],
+              "kind": "diagram",
+              "description": "A process diagram: begin with tentative distances, settle the minimum, then relax outgoing edges. Repeat selection and relaxation until the target is settled.",
+              "nodes": [
+                {
+                  "key": "distances",
+                  "label": "Best distances",
+                  "x": 85.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "settle",
+                  "label": "Settle minimum",
+                  "x": 300.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "relax",
+                  "label": "Relax neighbors",
+                  "x": 515.0,
+                  "y": 160.0,
+                  "shape": "box"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "distances",
+                  "end": "settle",
+                  "directed": true,
+                  "label": ""
+                },
+                {
+                  "start": "settle",
+                  "end": "relax",
+                  "directed": true,
+                  "label": ""
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Initialize S at zero and other distances at infinity.",
+                  "active": [
+                    "distances"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Settle the unsettled vertex with the smallest tentative distance.",
+                  "active": [
+                    "settle"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Try outgoing edges and improve any distance that gets cheaper. Repeat selection and relaxation.",
+                  "active": [
+                    "relax"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                }
+              ],
+              "state_labels": "caption"
+            }
           ]
         },
         {
@@ -1378,6 +2302,80 @@
           "explanation": "Use Dijkstra for nonnegative weighted paths; equal-cost edges are the special case that permits BFS.",
           "sources": [
             "weighted"
+          ],
+          "blocks": [
+            {
+              "title": "The algorithm as a process",
+              "sources": [
+                "weighted"
+              ],
+              "kind": "diagram",
+              "description": "A process diagram: begin with tentative distances, settle the minimum, then relax outgoing edges. Repeat selection and relaxation until the target is settled.",
+              "nodes": [
+                {
+                  "key": "distances",
+                  "label": "Best distances",
+                  "x": 85.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "settle",
+                  "label": "Settle minimum",
+                  "x": 300.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "relax",
+                  "label": "Relax neighbors",
+                  "x": 515.0,
+                  "y": 160.0,
+                  "shape": "box"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "distances",
+                  "end": "settle",
+                  "directed": true,
+                  "label": ""
+                },
+                {
+                  "start": "settle",
+                  "end": "relax",
+                  "directed": true,
+                  "label": ""
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Initialize S at zero and other distances at infinity.",
+                  "active": [
+                    "distances"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Settle the unsettled vertex with the smallest tentative distance.",
+                  "active": [
+                    "settle"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Try outgoing edges and improve any distance that gets cheaper. Repeat selection and relaxation.",
+                  "active": [
+                    "relax"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                }
+              ],
+              "state_labels": "caption"
+            }
           ]
         },
         {
@@ -1411,6 +2409,80 @@
           "explanation": "Nonnegative edges ensure a nonnegative suffix, so prefix cost ≤ whole path cost. Combined with the minimum rule this contradicts a cheaper path.",
           "sources": [
             "weighted"
+          ],
+          "blocks": [
+            {
+              "title": "The algorithm as a process",
+              "sources": [
+                "weighted"
+              ],
+              "kind": "diagram",
+              "description": "A process diagram: begin with tentative distances, settle the minimum, then relax outgoing edges. Repeat selection and relaxation until the target is settled.",
+              "nodes": [
+                {
+                  "key": "distances",
+                  "label": "Best distances",
+                  "x": 85.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "settle",
+                  "label": "Settle minimum",
+                  "x": 300.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "relax",
+                  "label": "Relax neighbors",
+                  "x": 515.0,
+                  "y": 160.0,
+                  "shape": "box"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "distances",
+                  "end": "settle",
+                  "directed": true,
+                  "label": ""
+                },
+                {
+                  "start": "settle",
+                  "end": "relax",
+                  "directed": true,
+                  "label": ""
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Initialize S at zero and other distances at infinity.",
+                  "active": [
+                    "distances"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Settle the unsettled vertex with the smallest tentative distance.",
+                  "active": [
+                    "settle"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Try outgoing edges and improve any distance that gets cheaper. Repeat selection and relaxation.",
+                  "active": [
+                    "relax"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                }
+              ],
+              "state_labels": "caption"
+            }
           ]
         },
         {
@@ -1444,6 +2516,80 @@
           "explanation": "The alternate path costs −1. Its negative suffix defeats the settling proof; the graph has no cycle, so this is not a negative-cycle issue.",
           "sources": [
             "weighted"
+          ],
+          "blocks": [
+            {
+              "title": "The algorithm as a process",
+              "sources": [
+                "weighted"
+              ],
+              "kind": "diagram",
+              "description": "A process diagram: begin with tentative distances, settle the minimum, then relax outgoing edges. Repeat selection and relaxation until the target is settled.",
+              "nodes": [
+                {
+                  "key": "distances",
+                  "label": "Best distances",
+                  "x": 85.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "settle",
+                  "label": "Settle minimum",
+                  "x": 300.0,
+                  "y": 160.0,
+                  "shape": "box"
+                },
+                {
+                  "key": "relax",
+                  "label": "Relax neighbors",
+                  "x": 515.0,
+                  "y": 160.0,
+                  "shape": "box"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "distances",
+                  "end": "settle",
+                  "directed": true,
+                  "label": ""
+                },
+                {
+                  "start": "settle",
+                  "end": "relax",
+                  "directed": true,
+                  "label": ""
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Initialize S at zero and other distances at infinity.",
+                  "active": [
+                    "distances"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Settle the unsettled vertex with the smallest tentative distance.",
+                  "active": [
+                    "settle"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                },
+                {
+                  "caption": "Try outgoing edges and improve any distance that gets cheaper. Repeat selection and relaxation.",
+                  "active": [
+                    "relax"
+                  ],
+                  "frontier": [],
+                  "visited": []
+                }
+              ],
+              "state_labels": "caption"
+            }
           ]
         }
       ]
@@ -1705,6 +2851,37 @@
           "explanation": "Condition on the alert: keep only flagged messages. Of the 240 that remain, 160 are urgent.",
           "sources": [
             "probability"
+          ],
+          "blocks": [
+            {
+              "title": "Reverse the condition carefully",
+              "sources": [
+                "probability"
+              ],
+              "kind": "formula",
+              "mathml": null,
+              "latex": "P(H\\mid E)=\\frac{P(E\\mid H)P(H)}{P(E\\mid H)P(H)+P(E\\mid\\neg H)P(\\neg H)}=\\frac{0.8\\cdot0.2}{0.8\\cdot0.2+0.1\\cdot0.8}=\\frac{2}{3}",
+              "plain": "Two thirds of the flagged messages are urgent. The denominator includes both true and false alerts.",
+              "symbols": [
+                {
+                  "symbol": "\\(H\\)",
+                  "meaning": "The message is urgent."
+                },
+                {
+                  "symbol": "\\(E\\)",
+                  "meaning": "The alert flags the message."
+                },
+                {
+                  "symbol": "\\(¬H\\)",
+                  "meaning": "The message is not urgent."
+                },
+                {
+                  "symbol": "\\(P(H)\\)",
+                  "meaning": "The base rate of urgent messages: 0.2."
+                }
+              ],
+              "conditions": "The evidence must have positive probability. Here \\(P(E)=0.24\\), and the stated rates apply to this population."
+            }
           ]
         },
         {
@@ -1738,6 +2915,37 @@
           "explanation": "Choose two positions from three: 3 arrangements. Each has probability (1/2)³, giving 3/8.",
           "sources": [
             "probability"
+          ],
+          "blocks": [
+            {
+              "title": "Reverse the condition carefully",
+              "sources": [
+                "probability"
+              ],
+              "kind": "formula",
+              "mathml": null,
+              "latex": "P(H\\mid E)=\\frac{P(E\\mid H)P(H)}{P(E\\mid H)P(H)+P(E\\mid\\neg H)P(\\neg H)}=\\frac{0.8\\cdot0.2}{0.8\\cdot0.2+0.1\\cdot0.8}=\\frac{2}{3}",
+              "plain": "Two thirds of the flagged messages are urgent. The denominator includes both true and false alerts.",
+              "symbols": [
+                {
+                  "symbol": "\\(H\\)",
+                  "meaning": "The message is urgent."
+                },
+                {
+                  "symbol": "\\(E\\)",
+                  "meaning": "The alert flags the message."
+                },
+                {
+                  "symbol": "\\(¬H\\)",
+                  "meaning": "The message is not urgent."
+                },
+                {
+                  "symbol": "\\(P(H)\\)",
+                  "meaning": "The base rate of urgent messages: 0.2."
+                }
+              ],
+              "conditions": "The evidence must have positive probability. Here \\(P(E)=0.24\\), and the stated rates apply to this population."
+            }
           ]
         }
       ]

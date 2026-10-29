@@ -43,8 +43,17 @@ def exercise(key: str, **overrides: object) -> dict:
         "objectives": ["Apply the idea."],
         "steps": [{"key": "s1", "purpose": "p", "prompt": "Try.", "explanation": "Done."}],
         "solution": {
-            "blocks": [
-                {"kind": "text", "title": "Solution", "sources": ["sheet"], "paragraphs": ["It."]}
+            "answers": [
+                {
+                    "blocks": [
+                        {
+                            "kind": "text",
+                            "title": "Solution",
+                            "sources": ["sheet"],
+                            "paragraphs": ["It."],
+                        }
+                    ]
+                }
             ]
         },
     }

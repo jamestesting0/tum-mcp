@@ -202,6 +202,32 @@ def exam_report_command(
 
 
 @app.command()
+def report(
+    project: Path,
+    section: Annotated[
+        Literal["quality", "coverage"] | None, typer.Option(help="Only this part.")
+    ] = None,
+) -> None:
+    """Report review flags for Study and Exercises and what the sources leave uncovered."""
+    from tum_mcp.exercise_data import read_exercises
+    from tum_mcp.study_build import read_content
+    from tum_mcp.study_coverage import coverage_report, read_ledger
+    from tum_mcp.study_report import quality_flags
+    from tum_mcp.study_store import load_state
+
+    root = project.expanduser().resolve()
+    state = load_state(root)
+    content = read_content(root) if app_path(root, "content.json").is_file() else None
+    exercises = read_exercises(root)
+    parts = {
+        "quality": lambda: quality_flags(content, exercises),
+        "coverage": lambda: coverage_report(state, content, exercises, read_ledger(root)),
+    }
+    result = {name: build() for name, build in parts.items() if section in {None, name}}
+    typer.echo(json.dumps(result, indent=2, ensure_ascii=False))
+
+
+@app.command()
 def duplicates(
     project: Path,
     near: Annotated[
@@ -266,7 +292,9 @@ def build(
 
 
 @app.command()
-def schema(kind: Literal["snapshot", "content", "exercises", "lectures", "exam"]) -> None:
+def schema(
+    kind: Literal["snapshot", "content", "exercises", "lectures", "exam", "coverage"],
+) -> None:
     """Print the machine-readable input schema for the calling agent."""
     from tum_mcp.study_content import StudyContent
     from tum_mcp.study_models import Snapshot
@@ -284,6 +312,10 @@ def schema(kind: Literal["snapshot", "content", "exercises", "lectures", "exam"]
             from tum_mcp.exam_content import ExamContent
 
             result = ExamContent.model_json_schema()
+        case "coverage":
+            from tum_mcp.study_coverage import CoverageLedger
+
+            result = CoverageLedger.model_json_schema()
         case "lectures":
             from tum_mcp.extensions import require_lecture
             from tum_mcp.lecture_content import LectureContent

@@ -217,6 +217,19 @@ export function renderSidebar(context) {
   toggle.setAttribute('aria-controls', 'outline-body');
   top.append(title, toggle, where);
   const body = node('div', 'sidebar-body'); body.id = 'outline-body';
+  // Every route rebuilds the outline; each workspace's list keeps the place the student scrolled to.
+  const tops = context.outlineTops ||= {};
+  body.addEventListener('scroll', () => { if (!body.hidden) tops[context.workspace] = body.scrollTop; }, { passive: true });
+  function restoreOutline() {
+    if (body.hidden || !body.isConnected) return;
+    body.scrollTop = tops[context.workspace] || 0;
+    const current = body.querySelector('[aria-current="page"]');
+    if (!current) return;
+    const box = body.getBoundingClientRect(), item = current.getBoundingClientRect();
+    if (item.top < box.top) body.scrollTop += item.top - box.top;
+    else if (item.bottom > box.bottom) body.scrollTop += item.bottom - box.bottom;
+  }
+  sidebar.restoreOutline = restoreOutline;
   const footer = node('div', 'sidebar-footer cluster');
   function themeControl() {
     const dark = document.documentElement.dataset.theme === 'dark';
@@ -259,6 +272,7 @@ export function renderSidebar(context) {
     const icon = narrow.matches ? (context.collapsed ? 'menu' : 'close') : (context.collapsed ? 'right' : 'left');
     toggle.querySelector('path').setAttribute('d', paths[icon]);
     if (modal && sidebar.isConnected && !sidebar.contains(document.activeElement)) toggle.focus({ preventScroll: true });
+    restoreOutline();
   }
   refresh = update; update(); return sidebar;
 }

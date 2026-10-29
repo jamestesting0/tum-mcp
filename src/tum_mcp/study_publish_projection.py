@@ -21,6 +21,7 @@ def project(data: bytes, *, include_exercises: bool, include_lectures: bool) -> 
         payload = json.loads(data.removeprefix(b"export default ").removesuffix(b";\n"))
         if not include_exercises:
             payload.pop("exercises", None)
+            payload.pop("pending", None)
         if not include_lectures:
             payload.pop("lectures", None)
         # Exam Prep reproduces past exams and private uploads: it is never published.
@@ -47,7 +48,12 @@ def project(data: bytes, *, include_exercises: bool, include_lectures: bool) -> 
             for lecture in payload.get("lectures", {}).get("lectures", [])
             for s in lecture["sources"]
         )
-        payload["sources"] = {k: v for k, v in payload["sources"].items() if k in references}
+        # Course files stay local: a published citation names its source but never its stored copy.
+        payload["sources"] = {
+            k: {field: value for field, value in v.items() if field != "file"}
+            for k, v in payload["sources"].items()
+            if k in references
+        }
         payload["inlineMath"] = _inline_math(
             [
                 payload["introduction"],

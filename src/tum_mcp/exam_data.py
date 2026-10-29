@@ -123,6 +123,18 @@ def check_unit_links(content: ExamContent, study: StudyContent | None) -> None:
         raise CampusError(
             Code.INVALID_RESPONSE, "Exam Prep links to unknown Study topics: " + ", ".join(missing)
         )
+    blocks = {unit.key: {block.key for block in unit.blocks if block.key} for unit in study.units}
+    for _, _, question in content.past_questions().values():
+        for prerequisite in question.guidance.prerequisites if question.guidance else ():
+            if prerequisite.block and prerequisite.block not in blocks[prerequisite.unit]:
+                raise CampusError(
+                    Code.INVALID_RESPONSE,
+                    f"Exam Prep links to block {prerequisite.block}, which unit "
+                    f"{prerequisite.unit} does not have.",
+                )
+    from tum_mcp.exercise_data import check_terms
+
+    check_terms(content.model_dump(mode="json"), study, "Exam Prep")
 
 
 def _considered(content: ExamContent):

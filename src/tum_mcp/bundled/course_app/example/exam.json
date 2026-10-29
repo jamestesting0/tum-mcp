@@ -77,15 +77,19 @@
                 }
               ],
               "solution": {
-                "blocks": [
+                "answers": [
                   {
-                    "kind": "text",
-                    "title": "Solution",
-                    "sources": [
-                      "demo-past-paper"
-                    ],
-                    "paragraphs": [
-                      "A queue (FIFO); both operations take O(1) with a linked list or ring buffer."
+                    "blocks": [
+                      {
+                        "kind": "text",
+                        "title": "Solution",
+                        "sources": [
+                          "demo-past-paper"
+                        ],
+                        "paragraphs": [
+                          "A queue (FIFO); both operations take O(1) with a linked list or ring buffer."
+                        ]
+                      }
                     ]
                   }
                 ]
@@ -148,26 +152,30 @@
                 }
               ],
               "solution": {
-                "blocks": [
+                "answers": [
                   {
-                    "kind": "text",
-                    "title": "Solution",
-                    "sources": [
-                      "demo-past-paper"
-                    ],
-                    "paragraphs": [
-                      "Enqueue the start, then repeatedly dequeue and enqueue unvisited neighbours."
+                    "blocks": [
+                      {
+                        "kind": "text",
+                        "title": "Solution",
+                        "sources": [
+                          "demo-past-paper"
+                        ],
+                        "paragraphs": [
+                          "Enqueue the start, then repeatedly dequeue and enqueue unvisited neighbours."
+                        ]
+                      },
+                      {
+                        "kind": "code",
+                        "title": "Code",
+                        "sources": [
+                          "demo-past-paper"
+                        ],
+                        "language": "python",
+                        "code": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    seen = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbour in graph[node]:\n            if neighbour not in seen:\n                seen.add(neighbour)\n                queue.append(neighbour)\n    return order\n",
+                        "explanation": "A queue gives breadth-first order."
+                      }
                     ]
-                  },
-                  {
-                    "kind": "code",
-                    "title": "Code",
-                    "sources": [
-                      "demo-past-paper"
-                    ],
-                    "language": "python",
-                    "code": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    seen = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbour in graph[node]:\n            if neighbour not in seen:\n                seen.add(neighbour)\n                queue.append(neighbour)\n    return order\n",
-                    "explanation": "A queue gives breadth-first order."
                   }
                 ]
               },
@@ -583,15 +591,19 @@
           }
         ],
         "solution": {
-          "blocks": [
+          "answers": [
             {
-              "kind": "text",
-              "title": "Solution",
-              "sources": [
-                "components"
-              ],
-              "paragraphs": [
-                "A queue holds the frontier. Put S in; then repeatedly take the oldest node, visit its unseen neighbours and add them."
+              "blocks": [
+                {
+                  "kind": "text",
+                  "title": "Solution",
+                  "sources": [
+                    "components"
+                  ],
+                  "paragraphs": [
+                    "A queue holds the frontier. Put S in; then repeatedly take the oldest node, visit its unseen neighbours and add them."
+                  ]
+                }
               ]
             }
           ]
@@ -735,15 +747,19 @@
           "minutes": 25,
           "difficulty": 1,
           "solution": {
-            "blocks": [
+            "answers": [
               {
-                "kind": "text",
-                "title": "Solution",
-                "sources": [
-                  "components"
-                ],
-                "paragraphs": [
-                  "A stack: push and pop at the top in O(1)."
+                "blocks": [
+                  {
+                    "kind": "text",
+                    "title": "Solution",
+                    "sources": [
+                      "components"
+                    ],
+                    "paragraphs": [
+                      "A stack: push and pop at the top in O(1)."
+                    ]
+                  }
                 ]
               }
             ]
@@ -789,15 +805,19 @@
           "minutes": 30,
           "difficulty": 2,
           "solution": {
-            "blocks": [
+            "answers": [
               {
-                "kind": "text",
-                "title": "Solution",
-                "sources": [
-                  "components"
-                ],
-                "paragraphs": [
-                  "Recursion keeps pending nodes on the call stack; an explicit stack stores the same frontier."
+                "blocks": [
+                  {
+                    "kind": "text",
+                    "title": "Solution",
+                    "sources": [
+                      "components"
+                    ],
+                    "paragraphs": [
+                      "Recursion keeps pending nodes on the call stack; an explicit stack stores the same frontier."
+                    ]
+                  }
                 ]
               }
             ]

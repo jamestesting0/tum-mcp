@@ -77,7 +77,9 @@ export function diagram(block) {
   }
   const description = studyText('p', 'small', block.description);
   const state = node('div', 'diagram-state'); state.setAttribute('aria-live', 'polite');
-  const caption = node('p'), frontier = node('p', 'small'); state.append(caption, frontier);
+  const caption = node('p'), frontier = node('p', 'small'), rows = node('dl', 'frame-state');
+  state.append(caption, rows, frontier);
+  const lines = [...graph.querySelectorAll('line[data-edge-key]')];
   let index = 0;
   const prev = iconButton('Previous step', 'left', () => { index--; update(); });
   const next = iconButton('Next step', 'right', () => { index++; update(); });
@@ -88,8 +90,18 @@ export function diagram(block) {
     for (const [key, group] of groups) {
       group.classList.toggle('active', frame.active.includes(key)); group.classList.toggle('visited', frame.visited.includes(key) && !frame.active.includes(key));
     }
+    const marked = new Set((frame.edges || []).flatMap(edge => [`${edge.start}--${edge.end}`, `${edge.end}--${edge.start}`]));
+    for (const line of lines) line.classList.toggle('active', marked.has(line.dataset.edgeKey));
     caption.replaceChildren(...studyText('span', '', frame.caption).childNodes);
-    frontier.hidden = block.state_labels === 'caption' || (block.frames.length === 1 && !frame.frontier.length && !frame.visited.length);
+    // The algorithm's own state (a queue, the domains) at this step; what changed since the last step is marked.
+    const before = new Map((block.frames[index - 1]?.state || []).map(row => [row.label, row.value]));
+    rows.replaceChildren(...(frame.state || []).flatMap(row => {
+      const changed = index > 0 && before.get(row.label) !== row.value, value = studyText('dd', changed ? 'changed' : '', row.value);
+      if (changed) value.append(node('span', 'visually-hidden', ' (changed)'));
+      return [studyText('dt', '', row.label), value];
+    }));
+    rows.hidden = !frame.state?.length;
+    frontier.hidden = Boolean(frame.state?.length) || block.state_labels === 'caption' || (block.frames.length === 1 && !frame.frontier.length && !frame.visited.length);
     frontier.textContent = `Frontier: ${frame.frontier.map(key => nodes.get(key).label).join(', ') || 'empty'} · Seen: ${frame.visited.map(key => nodes.get(key).label).join(', ') || 'none'}`;
     counter.textContent = `${index + 1} / ${block.frames.length}`;
     prev.disabled = index === 0; next.disabled = index === block.frames.length - 1;
@@ -131,7 +143,9 @@ export function renderReading(unit) {
   if (video) root.append(video);
   for (const [index, block] of unit.blocks.entries()) {
     const section = node('section', 'read-section'); section.dataset.blockIndex = String(index);
-    const material = node('div', 'reading-material'); material.dataset.commentTarget = 'content'; material.append(append(node('div', 'section-heading'), studyText('h2', '', block.title), sourcesNote(block.sources, data.sources, data.course.synthetic, block.title)));
+    if (block.key) section.dataset.block = block.key;
+    const title = block.title || block.term;
+    const material = node('div', 'reading-material'); material.dataset.commentTarget = 'content'; material.append(append(node('div', 'section-heading'), studyText('h2', '', title), sourcesNote(block.sources, data.sources, data.course.synthetic, title, {}, block.pages)));
     material.append(renderBlockBody(block));
     section.append(material); root.append(section);
   }
@@ -154,6 +168,23 @@ function treeBlock(block) {
   return figure;
 }
 
+// The direct answers of a solution, one labelled answer per original part, then any notes.
+export function renderAnswers(solution, target = element => element) {
+  const root = node('div', 'solution-answers');
+  solution.answers.forEach((answer, index) => {
+    const item = node('section', 'solution-answer');
+    if (answer.label) item.append(studyText('h3', 'solution-label', answer.label));
+    item.append(target(append(node('div', 'reading-material'), ...answer.blocks.map(block => renderBlockBody(block))), `solution:${index}`));
+    root.append(item);
+  });
+  if (solution.notes?.length) {
+    const notes = renderReading({ blocks: solution.notes });
+    [...notes.querySelectorAll('.reading-material')].forEach((element, index) => target(element, `solution-note:${index}`));
+    root.append(notes);
+  }
+  return root;
+}
+
 export function renderBlockBody(block) {
   const root = node('div', 'block-body');
     switch (block.kind) {
@@ -161,6 +192,12 @@ export function renderBlockBody(block) {
         for (const text of block.paragraphs) root.append(studyText('p', '', text));
         if (block.points.length) root.append(append(node('ul'), ...block.points.map(text => studyText('li', '', text))));
         break;
+      case 'definition': {
+        // Labelled by word and border, not colour alone, so a definition is recognisable at a glance.
+        const box = append(node('div', 'definition'), node('p', 'definition-label', 'Definition'), studyText('p', 'definition-statement', block.statement));
+        if (block.conditions?.length) box.append(append(node('ul', 'definition-conditions'), ...block.conditions.map(text => studyText('li', '', text))));
+        root.append(box); break;
+      }
       case 'formula': root.append(renderFormula(block)); break;
       case 'table': root.append(table(block)); break;
       case 'diagram': root.append(diagram(block)); break;

@@ -15,7 +15,7 @@ export function exerciseState(read, write, prefix = exercisePrefix) {
         steps[step.key] = { draft: text(previous.draft),
           hints: Number.isInteger(previous.hints) ? Math.max(0, Math.min(step.hints.length, previous.hints)) : 0,
           checked: typeof previous.checked === 'string' ? text(previous.checked) : null,
-          compared: previous.compared === true, revealed: previous.revealed === true, skipped: previous.skipped === true,
+          compared: previous.compared === true, skipped: previous.skipped === true,
           first: object(previous.first), latest: object(previous.latest) };
       }
       cache.set(key, { key, revision: exercise.revision, steps,
@@ -34,7 +34,7 @@ export function exerciseState(read, write, prefix = exercisePrefix) {
   }
   function attempt(exercise, step, correct = null) {
     const value = get(exercise), state = value.steps[step.key];
-    const summary = { value: state.draft, correct, hints: state.hints, stepReasoning: state.revealed, solutionViewed: value.solutionViewed };
+    const summary = { value: state.draft, correct, hints: state.hints, solutionViewed: value.solutionViewed };
     if (!Object.keys(state.first).length) state.first = summary;
     state.latest = summary; save(exercise);
   }

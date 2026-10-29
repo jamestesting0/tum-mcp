@@ -177,6 +177,27 @@ function renderPanel() {
   step.replaceWith(replacement); step = replacement;
   syncMode();
 }
+// Where else this topic is worked on, derived from links authors already made: the lecture's
+// notes, exercises that build on the topic and exam patterns whose cheatsheet entries cite it.
+function relatedWork(unit) {
+  const groups = [];
+  const notes = (unit.lectures || []).map(key => data.lectures?.lectures.find(item => item.key === key)).filter(Boolean);
+  if (notes.length) groups.push(['Lecture Notes', notes.map(lecture => [lecture.title, `#lectures/${encodeURIComponent(lecture.key)}`])]);
+  const work = (data.exercises?.sets || []).flatMap(group => group.exercises.filter(exercise => exercise.prerequisites.some(item => item.unit === unit.key))
+    .map(exercise => [`${exercise.label} · ${exercise.title}`, `#exercises/${group.key}/${exercise.key}`]));
+  if (work.length) groups.push(['Exercises', work]);
+  const tested = new Set((data.exam?.concepts || []).filter(concept => (concept.units || []).includes(unit.key)).map(concept => concept.key));
+  const patterns = (data.exam?.patterns || []).filter(pattern => pattern.concepts.some(key => tested.has(key)));
+  if (patterns.length) groups.push(['Exam Prep', patterns.map(pattern => [pattern.title, `#exam/patterns/${pattern.key}`])]);
+  if (!groups.length) return null;
+  const line = node('p', 'small related-work');
+  groups.forEach(([name, links], index) => {
+    if (index) line.append(' · ');
+    line.append(node('span', 'related-label', `${name}: `));
+    links.forEach(([title, href], position) => { if (position) line.append(', '); const link = studyText('a', '', title); link.href = href; line.append(link); });
+  });
+  return line;
+}
 function confirmReset(trigger) {
   const isExercise = workspace === 'exercises', isExam = workspace === 'exam';
   confirmAction({
@@ -317,6 +338,8 @@ function render() {
       unitEyebrow = node('p', 'eyebrow', `${breadcrumb} · ${unit.minutes} min`);
       heading.append(unitEyebrow, unitHeading, summary, objectives);
       headerDetails = [summary, objectives];
+      const related = relatedWork(unit);
+      if (related) { heading.append(related); headerDetails.push(related); }
     }
     const tabs = node('div', 'tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Study view');
     const available = activeViews();
@@ -340,6 +363,7 @@ function render() {
   }
   main.append(append(node('div', 'page-layout'), reading)); shell.append(sidebar, main);
   document.querySelector('#app').replaceChildren(shell);
+  sidebar.restoreOutline();
   if (!notesPage && !unavailable && !home) renderPanel();
   contentsOutline(reading);
   persist();
@@ -385,6 +409,10 @@ function route(initial = false) {
   if (workspace === 'exercises' && raw.split('/')[3] && !restore) {
     focusHeading(unitHeading); scrollReadingTo(main.querySelector('.step-navigation') || unitHeading);
   }
+  // #unit/content/block opens the lesson at one keyed passage, as definitions and references link it.
+  const passage = workspace === 'study' && !revising && currentView === 'content' && hash.split('/')[2];
+  const section = passage && main.querySelector(`[data-block="${CSS.escape(passage)}"]`);
+  if (section) { scrollReadingTo(section); focusHeading(section.querySelector('h2')); }
 }
 document.querySelector('.skip').addEventListener('click', event => { event.preventDefault(); main.focus(); });
 addEventListener('hashchange', () => route());

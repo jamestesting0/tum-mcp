@@ -1,6 +1,8 @@
 """Revision selection and shared-progress checks for the installed study app."""
 
-from playwright.sync_api import Page
+import re
+
+from playwright.sync_api import Page, expect
 
 
 def expand_topic_categories(page: Page) -> None:
@@ -73,6 +75,55 @@ def practice_navigation_checks(page: Page, question_count: int) -> None:
         previous.click()
     assert previous.is_disabled()
     assert page.get_by_role("heading", name="Correct", exact=True).is_visible()
+
+
+def option_order_checks(page: Page, content: dict) -> None:
+    """Options keep one shuffled order per question, so authored position gives nothing away."""
+    moved = False
+    for unit in content["units"]:
+        page.goto(f"https://study.invalid/#{unit['key']}/practice")
+        for index, question in enumerate(unit["questions"]):
+            expect(page.locator(".practice-meta p.small").first).to_have_text(
+                re.compile(rf"^{index + 1} / ")
+            )
+            radios = page.locator(".practice-question input[type=radio]")
+            rendered = radios.evaluate_all("inputs => inputs.map(input => input.value)")
+            authored = [option["key"] for option in question["options"]]
+            assert sorted(rendered) == sorted(authored)
+            moved |= rendered != authored
+            if index == 0:
+                page.reload()
+                expect(radios).to_have_count(len(authored))
+                again = radios.evaluate_all("inputs => inputs.map(input => input.value)")
+                assert again == rendered
+            if index < len(unit["questions"]) - 1:
+                page.get_by_role("button", name="Next question", exact=True).click()
+    assert moved
+
+
+def outline_position_checks(page: Page, content: dict) -> None:
+    """Choosing a lesson low in a long outline keeps the outline where the student left it."""
+    last = content["units"][-1]
+    page.goto(f"https://study.invalid/#{content['units'][0]['key']}/content")
+    page.locator("h1").wait_for()
+    body = page.locator(".sidebar-body")
+    page.evaluate(
+        "document.querySelectorAll('.sidebar .unit-group').forEach(g => { g.open = true; })"
+    )
+    assert body.evaluate("el => el.scrollHeight > el.clientHeight")
+    body.evaluate("el => { el.scrollTop = el.scrollHeight; }")
+    before = body.evaluate("el => el.scrollTop")
+    page.locator(f'a.unit-link[href="#{last["key"]}/content"]').click()
+    page.get_by_role("heading", name=last["title"], exact=True).wait_for()
+    # Only the nudge that keeps the chosen entry fully visible may move it.
+    assert body.evaluate("el => el.scrollTop") > before / 2
+    current = page.locator('.sidebar-body [aria-current="page"]').bounding_box()
+    frame = body.bounding_box()
+    assert current and frame
+    assert (
+        frame["y"] <= current["y"]
+        and current["y"] + current["height"] <= frame["y"] + frame["height"]
+    )
 
 
 def revision_checks(page: Page, content: dict) -> None:
@@ -214,6 +265,13 @@ def learning_flow_checks(page: Page, content: dict) -> None:
         page.get_by_role("radio", name=choice["text"], exact=True).check()
         page.get_by_role("button", name="Check answer", exact=True).click()
         assert page.get_by_role("button", name="Check answer", exact=True).count() == 0
+        if index == 0:
+            # Retrying with the revealed answer is practice; the first miss stays for review.
+            page.get_by_role("button", name="Try again", exact=True).click()
+            right = next(o for o in question["options"] if o["key"] == question["correct"])
+            page.get_by_role("radio", name=right["text"], exact=True).check()
+            page.get_by_role("button", name="Check answer", exact=True).click()
+            assert page.get_by_role("heading", name="Correct", exact=True).is_visible()
         if index < len(questions) - 1:
             page.get_by_role("button", name="Continue", exact=True).click()
             assert page.evaluate("document.activeElement.matches('.practice-question legend')")
@@ -221,6 +279,7 @@ def learning_flow_checks(page: Page, content: dict) -> None:
     correct = f"{len(questions) - 1} of {len(questions)} correct"
     assert summary.get_by_text(correct, exact=True).is_visible()
     review_row = summary.get_by_role("button").first
+    assert review_row.get_by_text("Missed", exact=True).is_visible()
     assert review_row.get_by_text("Review", exact=True).is_visible()
     assert review_row.locator(".summary-action svg").is_visible()
     boundary = review_row.evaluate("el => getComputedStyle(el).borderTopColor")
@@ -229,7 +288,8 @@ def learning_flow_checks(page: Page, content: dict) -> None:
     review_row.click()
     review = page.get_by_role("dialog", name=questions[0]["prompt"], exact=True)
     assert review.is_visible()
-    assert review.get_by_text("Correct answer", exact=True).is_visible()
+    # The list keeps the first miss; the dialog shows the corrected retry the student just made.
+    assert review.get_by_text("Your answer · Correct", exact=True).is_visible()
     assert page.locator(".practice-meta").inner_text().startswith(f"{len(questions)} /")
     assert page.url == before_url
     page.keyboard.press("Escape")

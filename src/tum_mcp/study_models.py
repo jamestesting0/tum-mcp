@@ -10,6 +10,7 @@ from tum_mcp.settings import Frozen
 
 Key = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.-]{0,99}$")]
 Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+PageRange = Annotated[str, Field(pattern=r"^[1-9][0-9]{0,3}(-[1-9][0-9]{0,3})?$")]
 ProviderName = Literal["moodle", "artemis", "zulip", "sample", "tum_live", "local"]
 # Material only the user holds; never published and kept across campus syncs.
 PRIVATE_PROVIDERS = frozenset({"local"})

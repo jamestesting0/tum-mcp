@@ -107,12 +107,16 @@ def exercise(step: dict) -> dict:
                             {"key": "s", "purpose": "p", "prompt": "q", "explanation": "x"} | step
                         ],
                         "solution": {
-                            "blocks": [
+                            "answers": [
                                 {
-                                    "kind": "text",
-                                    "title": "S",
-                                    "sources": ["sheet"],
-                                    "paragraphs": ["a"],
+                                    "blocks": [
+                                        {
+                                            "kind": "text",
+                                            "title": "S",
+                                            "sources": ["sheet"],
+                                            "paragraphs": ["a"],
+                                        }
+                                    ]
                                 }
                             ]
                         },

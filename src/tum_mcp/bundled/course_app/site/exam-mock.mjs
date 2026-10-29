@@ -1,6 +1,6 @@
 import data from './data.mjs';
 import { node, studyText, append, sourcesNote, shareCitations } from './dom.mjs';
-import { renderBlockBody } from './reading.mjs';
+import { renderBlockBody, renderAnswers } from './reading.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam } from './exam-state.mjs';
 
@@ -44,12 +44,13 @@ export function renderPaper(paper) {
     const section = node('section', 'exam-section exam-question'); section.dataset.question = question.key;
     const title = `Question ${question.number}${question.points ? ` · ${question.points} points` : ''}`;
     // One citation per question, covering its statement and solution.
-    const cited = [...new Set([...question.statement, ...question.solution.blocks].flatMap(block => block.sources))];
+    const answers = [...question.solution.answers.flatMap(answer => answer.blocks), ...(question.solution.notes || [])];
+    const cited = [...new Set([...question.statement, ...answers].flatMap(block => block.sources))];
     section.append(append(node('div', 'section-heading'), node('h2', '', title), sourcesNote(cited, data.sources, data.course.synthetic, title)));
     section.append(statementBody(question.statement, (element, index) => annotateExam(element, questionItem(paper, question), paper.revision, `${question.key}:statement:${index}`)));
     if (question.parts?.length) section.append(append(node('ol', 'exam-parts'), ...question.parts.map(text => studyText('li', '', text))));
     const solution = node('details', 'disclosure exam-solution');
-    solution.append(node('summary', '', 'Solution'), statementBody(question.solution.blocks));
+    solution.append(node('summary', '', 'Solution'), renderAnswers(question.solution));
     if (question.marking?.length) {
       solution.append(node('p', 'small', question.marking_basis === 'official' ? 'Official marking' : 'Where the marks are'),
         append(node('ul', 'exam-marking'), ...question.marking.map(item => studyText('li', '', `${item.text} (${item.points})`))));

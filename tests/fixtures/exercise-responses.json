@@ -91,7 +91,18 @@
                   "Uses two groups of two.",
                   "Counts four altogether."
                 ],
-                "model_answer": "Two pairs contain four items."
+                "model_answer": [
+                  {
+                    "kind": "text",
+                    "title": "Model answer",
+                    "sources": [
+                      "weighted"
+                    ],
+                    "paragraphs": [
+                      "Two pairs contain four items."
+                    ]
+                  }
+                ]
               },
               "hints": [],
               "explanation": "Equivalent reasoning is welcome."
@@ -157,7 +168,18 @@
                   "States the positive-integer assumption.",
                   "Explains a pairing or induction argument."
                 ],
-                "model_answer": "Pair the first and last terms; every pair sums to n + 1. Account for the middle term when n is odd."
+                "model_answer": [
+                  {
+                    "kind": "text",
+                    "title": "Model answer",
+                    "sources": [
+                      "weighted"
+                    ],
+                    "paragraphs": [
+                      "Pair the first and last terms; every pair sums to n + 1. Account for the middle term when n is odd."
+                    ]
+                  }
+                ]
               },
               "explanation": "Compare the argument, not just the final formula.",
               "hints": []
@@ -424,26 +446,30 @@
           ],
           "solution": {
             "origin": "authored",
-            "blocks": [
+            "answers": [
               {
-                "kind": "text",
-                "title": "Worked solution preview",
-                "sources": [
-                  "weighted"
-                ],
-                "paragraphs": [
-                  "Two pairs contain four items. This demonstrates solution disclosure."
+                "blocks": [
+                  {
+                    "kind": "text",
+                    "title": "Worked solution preview",
+                    "sources": [
+                      "weighted"
+                    ],
+                    "paragraphs": [
+                      "Two pairs contain four items. This demonstrates solution disclosure."
+                    ]
+                  },
+                  {
+                    "kind": "code",
+                    "title": "Code comparison",
+                    "sources": [
+                      "weighted"
+                    ],
+                    "language": "Python",
+                    "code": "def add(a, b):\n    return a + b",
+                    "explanation": "A minimal code block, not a programming lesson."
+                  }
                 ]
-              },
-              {
-                "kind": "code",
-                "title": "Code comparison",
-                "sources": [
-                  "weighted"
-                ],
-                "language": "Python",
-                "code": "def add(a, b):\n    return a + b",
-                "explanation": "A minimal code block, not a programming lesson."
               }
             ]
           }
@@ -536,16 +562,20 @@
             }
           ],
           "solution": {
-            "blocks": [
+            "answers": [
               {
-                "kind": "code",
-                "title": "increment()",
-                "sources": [
-                  "weighted"
-                ],
-                "language": "java",
-                "code": "public void increment() {\n    count++;\n}",
-                "explanation": "Increment the field."
+                "blocks": [
+                  {
+                    "kind": "code",
+                    "title": "increment()",
+                    "sources": [
+                      "weighted"
+                    ],
+                    "language": "java",
+                    "code": "public void increment() {\n    count++;\n}",
+                    "explanation": "Increment the field."
+                  }
+                ]
               }
             ]
           }

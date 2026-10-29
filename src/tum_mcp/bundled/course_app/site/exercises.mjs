@@ -1,6 +1,6 @@
 import data from './data.mjs';
 import { node, studyText, button, append, announce, sourcesNote, shareCitations, focusHeading, scrollReadingTo } from './dom.mjs';
-import { renderReading, renderBlockBody } from './reading.mjs';
+import { renderReading, renderBlockBody, renderAnswers } from './reading.mjs';
 import { iconButton, nextStep } from './navigation.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExercise } from './anchors.mjs';
@@ -20,12 +20,28 @@ function due(group) {
 export function exerciseOutline(current = '', compact = false) {
   const root = node(compact ? 'nav' : 'section', compact ? 'unit-list' : 'exercise-list');
   root.setAttribute('aria-label', 'Course exercises');
-  let category;
+  // Problems not prepared yet, so a partial workspace never looks complete.
+  const pending = data.pending || [], unstarted = pending.filter(item => !item.set);
+  if (!compact && unstarted.length) {
+    // Sheets with nothing prepared share one quiet line; the names open on request.
+    const more = node('details', 'disclosure plain small pending');
+    more.append(node('summary', '', `Not prepared yet: ${unstarted.length} ${unstarted.length === 1 ? 'sheet' : 'sheets'}`),
+      append(node('ul'), ...unstarted.map(entry => studyText('li', '', `${entry.source} (${entry.labels.join(', ')})`))));
+    root.append(more);
+  }
+  let category = null;
   for (const group of sets) {
-    if (group.category && group.category !== category) {
-      category = group.category; root.append(studyText(compact ? 'p' : 'h2', compact ? 'small' : 'topic-group', category));
+    // A category is named only when it groups several sets and says more than their titles;
+    // otherwise a thin rule marks where the next group starts.
+    let starts = false;
+    if ((group.category || '') !== category) {
+      starts = category !== null; category = group.category || '';
+      const members = sets.filter(item => (item.category || '') === category);
+      if (category && members.length > 1 && !members.every(item => item.title.startsWith(category))) {
+        root.append(studyText(compact ? 'p' : 'h2', compact ? 'small' : 'topic-group', category)); starts = false;
+      }
     }
-    const sheet = node('details', 'unit-group exercise-sheet');
+    const sheet = node('details', `unit-group exercise-sheet${starts ? ' group-start' : ''}`);
     sheet.open = group.exercises.some(item => item.key === current) || group === sets[0];
     // The week and due date sit quietly at the end of the set's own row; the summary lines up under its title.
     const summary = studyText('summary', '', group.title), meta = [group.week, due(group)].filter(Boolean).join(' · ');
@@ -33,6 +49,7 @@ export function exerciseOutline(current = '', compact = false) {
     sheet.append(summary);
     const list = node('div', compact ? 'group-children' : '');
     if (!compact && group.summary) list.append(studyText('p', 'sheet-summary', group.summary));
+    if (!compact) for (const entry of pending.filter(item => item.set === group.key)) list.append(studyText('p', 'small pending', `Not prepared yet: ${entry.labels.join(', ')}`));
     for (const exercise of group.exercises) {
       const link = node('a', 'unit-link'); link.href = exerciseLink(group, exercise);
       if (exercise.key === current) link.setAttribute('aria-current', 'page');
@@ -52,6 +69,38 @@ function disclosure(label, content, opened, onToggle) {
   details.addEventListener('toggle', () => onToggle(details.open)); return details;
 }
 function quietLink(label, href) { const link = node('a', '', label); link.href = href; return link; }
+
+// The Study passage a prerequisite names, opened beside the exercise instead of in its place,
+// so the step, drafts and scroll position stay where the student left them.
+const wide = matchMedia('(min-width: 1200px)');
+function openReference(unit, block, trigger) {
+  document.querySelector('dialog.reference-panel')?.close();
+  const panel = node('dialog', 'reference-panel'), title = studyText('h2', '', block ? block.title || block.term : unit.title);
+  title.id = 'reference-panel-title'; panel.setAttribute('aria-labelledby', title.id);
+  const close = iconButton('Close', 'close', () => panel.close());
+  const eyebrow = append(node('div', 'page-eyebrow'), node('p', 'small', unit.title));
+  if (block) eyebrow.append(sourcesNote(block.sources, data.sources, data.course.synthetic, block.title || block.term, {}, block.pages));
+  const heading = append(node('div', ''), eyebrow, title);
+  const header = append(node('div', 'reference-panel-header'), heading, close);
+  // One passage under the panel's own title; a whole unit keeps its section titles.
+  const body = block ? append(node('div', 'reading-material'), renderBlockBody(block)) : renderReading({ blocks: unit.blocks });
+  const more = quietLink('Open in Study', `#${unit.key}/content${block?.key ? `/${block.key}` : ''}`);
+  panel.append(header, body, append(node('p', 'small reference-panel-more'), more));
+  // Returning focus can scroll the page; the student comes back to exactly where they were.
+  const scroller = trigger.closest('main')?.scrollHeight > trigger.closest('main')?.clientHeight ? trigger.closest('main') : document.scrollingElement;
+  const top = scroller.scrollTop;
+  panel.addEventListener('close', () => {
+    panel.remove(); delete document.documentElement.dataset.reference;
+    if (trigger.isConnected) trigger.focus({ preventScroll: true });
+    scroller.scrollTop = top;
+  });
+  panel.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); panel.close(); } });
+  addEventListener('hashchange', () => panel.close(), { once: true });
+  document.body.append(panel);
+  // Wide screens keep the exercise readable beside the panel; narrower ones give the panel the screen.
+  if (wide.matches) { document.documentElement.dataset.reference = 'open'; panel.show(); } else panel.showModal();
+  close.focus();
+}
 
 export function renderExercises(hash, state) {
   const root = node('div', 'exercise-workspace'), [, setKey, exerciseKey, stepKey] = hash.split('/');
@@ -112,9 +161,13 @@ export function exercisePage(exercise, options) {
   root.append(statement);
   if (exercise.parts?.length) root.append(append(node('ul'), ...exercise.parts.map((part, index) => target(studyText('li', '', part), `part:${index}`))));
   for (const prerequisite of exercise.prerequisites) {
-    const note = studyText('p', 'small', prerequisite.explanation);
+    const note = studyText('p', 'small prerequisite', prerequisite.explanation);
     const unit = data.units.find(item => item.key === prerequisite.unit);
-    if (unit) note.append(' ', quietLink(`Review ${unit.title}`, `#study/${unit.key}/content`));
+    const block = unit?.blocks.find(item => prerequisite.block && item.key === prerequisite.block);
+    if (unit) {
+      const review = button(`Review ${block ? block.title || block.term : unit.title}`, () => openReference(unit, block, review), 'quiet reference-trigger');
+      note.append(' ', review);
+    }
     root.append(note);
   }
   const panel = node('section', 'exercise-step');
@@ -171,12 +224,12 @@ export function exercisePage(exercise, options) {
     }, `exercise-${exercise.key}-${step.key}`, (step.code || []).map(ref => ref.path));
     if (response.root.matches('.reading-material')) target(response.root, 'graph', step.key);
     for (const element of response.root.querySelectorAll('.reading-material')) target(element, 'graph', step.key);
-    // Only a choice is checked; every other answer is compared with the expected one.
-    const compares = Boolean(check) && check.kind !== 'choice';
+    // Only a choice is checked; every other step, including one without a check, is compared.
+    const compares = !check || check.kind !== 'choice';
     const primary = button('', event => {
       if (event.detail > 1) return;
       const result = response.validate();
-      if (!check || (checked && result.correct) || (compares && saved.compared)) { advance(); return; }
+      if ((checked && result.correct) || (compares && saved.compared)) { advance(); return; }
       if (compares) { saved.compared = true; state.attempt(exercise, step); }
       else if (result.valid) { saved.checked = saved.draft; checked = true; state.attempt(exercise, step, result.correct); }
       state.save(exercise); update(); activityChanged();
@@ -186,11 +239,11 @@ export function exercisePage(exercise, options) {
     function paintHelp() {
       hints.replaceChildren();
       for (const [i, text] of step.hints.slice(0, saved.hints).entries()) hints.append(target(studyText('p', '', text), `hint:${i}`, step.key));
-      if (saved.revealed) hints.append(target(studyText('p', '', step.explanation), 'reasoning', step.key));
     }
+    // Hints are the only help before Compare; Compare is the one place the answer and its reasoning appear.
     const hint = button('', () => {
-      if (saved.hints < step.hints.length) { saved.hints++; announce(step.hints[saved.hints - 1]); }
-      else { saved.revealed = true; announce(step.explanation); }
+      if (saved.hints >= step.hints.length) return;
+      saved.hints++; announce(step.hints[saved.hints - 1]);
       paintHelp(); update(); state.save(exercise); activityChanged();
     }, 'secondary');
     function update() {
@@ -198,21 +251,20 @@ export function exercisePage(exercise, options) {
       response.showResult(!compares && checked);
       if (compares && saved.compared) {
         const section = node('section', 'feedback compare');
-        section.append(node('h3', '', 'Compare with your work'), expectedAnswer(check));
-        if (check.kind !== 'self_check') {
-          section.append(studyText('p', '', step.explanation));
-          if (check.feedback) section.append(append(node('p', 'small'), node('strong', '', 'If yours differs: '), studyText('span', '', check.feedback)));
-        }
+        section.append(node('h3', '', 'Compare with your work'));
+        if (check) section.append(expectedAnswer(check));
+        section.append(studyText('p', '', step.explanation));
+        if (check?.feedback) section.append(append(node('p', 'small'), node('strong', '', 'If yours differs: '), studyText('span', '', check.feedback)));
         feedback.append(section);
       } else if (checked && result.valid) {
         feedback.append(result.correct ? verdict(true, studyText('p', '', step.explanation)) : verdict(false, ...result.repairs.map(repair => studyText('p', '', repair))));
-        if (check.kind === 'choice') feedback.append(optionExplanations(check));
+        if (check.kind === 'choice') feedback.append(optionExplanations(check, `exercise-${exercise.key}-${step.key}`));
       }
-      const ready = !check || (compares ? saved.compared : checked && result.correct);
+      const ready = compares ? saved.compared : checked && result.correct;
       primary.textContent = ready ? (index === exercise.steps.length - 1 ? 'Finish' : 'Continue') : compares ? 'Compare' : 'Check answer';
       primary.disabled = Boolean(check && !compares && !result.valid);
-      hint.textContent = saved.hints < step.hints.length ? (saved.hints ? 'Next hint' : 'Hint') : 'Show explanation';
-      hint.hidden = Boolean(check && ready) || saved.revealed;
+      hint.textContent = saved.hints ? 'Next hint' : 'Hint';
+      hint.hidden = ready || saved.hints >= step.hints.length;
     }
     const actions = append(node('div', 'cluster exercise-actions'), primary, hint);
     body.append(response.root, actions, feedback, hints);
@@ -230,14 +282,13 @@ export function exercisePage(exercise, options) {
     update(); state.save(exercise); if (root.dataset.citations !== undefined) shareCitations(root, eyebrow); return title;
   }
   paintStep();
-  const solution = renderReading({ blocks: exercise.solution.blocks });
-  [...solution.querySelectorAll('.reading-material')].forEach((element, index) => target(element, `solution:${index}`));
+  const solution = renderAnswers(exercise.solution, (element, field) => target(element, field));
   root.append(disclosure('Solution', solution, value.solutionOpen, opened => {
     value.solutionOpen = opened; value.solutionViewed ||= opened; state.save(exercise); activityChanged();
   }));
   if (exercise.transfer) {
     const answer = node('details', 'disclosure plain');
-    answer.append(node('summary', '', 'Compare'), target(studyText('p', '', exercise.transfer.answer), 'transfer-answer'));
+    answer.append(node('summary', '', 'Compare'), target(append(node('div', 'reading-material'), ...exercise.transfer.answer.map(block => renderBlockBody(block))), 'transfer-answer'));
     answer.addEventListener('toggle', activityChanged);
     root.append(disclosure('Try another', append(node('div', 'stack'), target(studyText('p', '', exercise.transfer.prompt), 'transfer-prompt'), answer), false, activityChanged));
   }

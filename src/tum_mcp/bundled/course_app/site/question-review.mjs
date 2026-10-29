@@ -1,6 +1,8 @@
 import data from './data.mjs';
-import { node, studyText, button, sourcesNote } from './dom.mjs';
+import { node, studyText, button, sourcesNote, append, shuffled } from './dom.mjs';
 import { iconButton, iconGlyph } from './navigation.mjs';
+import { renderBlockBody } from './reading.mjs';
+import { itemKey } from './revision.mjs';
 
 export function reviewQuestion(context) {
   const { unit, question, answer, trigger, position } = context;
@@ -12,11 +14,13 @@ export function reviewQuestion(context) {
   const heading = studyText('h2', '', question.prompt); heading.id = 'question-review-title';
   dialog.setAttribute('aria-labelledby', heading.id);
   body.append(heading);
+  if (question.blocks?.length) body.append(append(node('div', 'question-context'), ...question.blocks.map(block => renderBlockBody(block))));
+  const order = shuffled(question.options, itemKey(unit, question));
   const choices = node('div', 'question-review-options'); choices.setAttribute('role', 'list');
   const explanation = node('div', 'question-review-explanation');
   function reveal(show) {
     choices.replaceChildren(); explanation.replaceChildren();
-    for (const option of question.options) {
+    for (const option of order) {
       const row = node('div', 'option'); row.setAttribute('role', 'listitem');
       const correct = show && option.key === question.correct;
       const chosen = answer?.checked && option.key === answer.selected;

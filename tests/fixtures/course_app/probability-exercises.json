@@ -69,7 +69,18 @@
                   "Uses all 240 flagged messages as the denominator.",
                   "Distinguishes urgent given flagged from flagged given urgent."
                 ],
-                "model_answer": "160/240 = 2/3. The 80% rate is P(flagged | urgent), not P(urgent | flagged)."
+                "model_answer": [
+                  {
+                    "kind": "text",
+                    "title": "Model answer",
+                    "sources": [
+                      "probability"
+                    ],
+                    "paragraphs": [
+                      "160/240 = 2/3. The 80% rate is P(flagged | urgent), not P(urgent | flagged)."
+                    ]
+                  }
+                ]
               },
               "hints": [
                 "The numerator is the intersection; the denominator is the conditioned group."
@@ -79,22 +90,71 @@
           ],
           "solution": {
             "origin": "authored",
-            "blocks": [
+            "answers": [
               {
-                "kind": "text",
-                "title": "Worked solution",
-                "sources": [
-                  "probability"
-                ],
-                "paragraphs": [
-                  "Flagged urgent: 200 × 0.8 = 160. Flagged nonurgent: 800 × 0.1 = 80. Therefore P(urgent | flagged) = 160/(160+80) = 2/3."
+                "label": "(a)",
+                "blocks": [
+                  {
+                    "kind": "table",
+                    "title": "Flagged messages",
+                    "sources": [
+                      "probability"
+                    ],
+                    "caption": "Messages flagged by the alert",
+                    "columns": [
+                      "Type",
+                      "Messages",
+                      "Flag rate",
+                      "Flagged"
+                    ],
+                    "rows": [
+                      [
+                        "Urgent",
+                        "200",
+                        "80%",
+                        "160"
+                      ],
+                      [
+                        "Nonurgent",
+                        "800",
+                        "10%",
+                        "80"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "(b)",
+                "blocks": [
+                  {
+                    "kind": "text",
+                    "title": "Fraction of flagged messages that are urgent",
+                    "sources": [
+                      "probability"
+                    ],
+                    "paragraphs": [
+                      "P(urgent | flagged) = 160 / (160 + 80) = 2/3. It is not 80%, because nonurgent messages are four times as common, so they contribute half as many flags as urgent ones."
+                    ]
+                  }
                 ]
               }
             ]
           },
           "transfer": {
             "prompt": "Now only 20 of the same 1,000 messages are urgent; both alert rates stay unchanged. Is the fraction of flagged messages that are urgent still 2/3?",
-            "answer": "No. There are 16 flagged urgent and 98 flagged nonurgent messages, so the fraction is 16/114 = 8/57. The changed base rate matters."
+            "answer": [
+              {
+                "kind": "text",
+                "title": "Answer",
+                "sources": [
+                  "probability"
+                ],
+                "paragraphs": [
+                  "No. There are 16 flagged urgent and 98 flagged nonurgent messages, so the fraction is 16/114 = 8/57. The changed base rate matters."
+                ]
+              }
+            ]
           }
         }
       ]

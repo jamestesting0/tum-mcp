@@ -14,6 +14,7 @@ def test_distributed_preview_is_one_component_unit_and_one_exercise() -> None:
     unit = study.units[0]
     assert {block.kind for block in unit.blocks} == {
         "text",
+        "definition",
         "formula",
         "table",
         "code",

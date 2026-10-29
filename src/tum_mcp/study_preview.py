@@ -132,12 +132,14 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    content_policy: str | None = (
+        "default-src 'self'; img-src 'self' data:; media-src 'self'; "
+        "object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+    )
+
     def end_headers(self) -> None:
-        self.send_header(
-            "Content-Security-Policy",
-            "default-src 'self'; img-src 'self' data:; media-src 'self'; "
-            "object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
-        )
+        if self.content_policy:
+            self.send_header("Content-Security-Policy", self.content_policy)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Cache-Control", "no-store")
@@ -167,6 +169,8 @@ class Handler(SimpleHTTPRequestHandler):
             return None
         if urlsplit(self.path).path.startswith("/videos/"):
             return self.video_head()
+        if urlsplit(self.path).path.startswith("/materials/"):
+            return _material_reply(self)
         base = Path(self.directory).resolve()
         target = Path(self.translate_path(self.path))
         try:
@@ -196,6 +200,43 @@ class Handler(SimpleHTTPRequestHandler):
             except OSError:
                 return super().send_head()
         return super().send_head()
+
+
+MATERIAL_TYPES = {
+    ".pdf": "application/pdf",
+    ".md": "text/plain; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+    ".html": "text/plain; charset=utf-8",
+}
+
+
+def _material_reply(handler: "Handler") -> BinaryIO | None:
+    """Open one stored course file for a citation: only current inventory paths, read-only."""
+    from tum_mcp.study_store import load_state
+
+    project = Path(handler.directory).resolve().parent
+    wanted = unquote(urlsplit(handler.path).path).removeprefix("/")
+    try:
+        stored = {
+            item.path
+            for item in load_state(project).resources
+            if item.path and item.status == "current"
+        }
+        path = confined(project, wanted) if wanted in stored else None
+    except CampusError:
+        path = None
+    kind = MATERIAL_TYPES.get(Path(wanted).suffix.lower())
+    if path is None or kind is None or not path.is_file():
+        handler.send_error(404)
+        return None
+    body = path.read_bytes()
+    # The browser's PDF viewer is a plugin the app policy forbids; text stays sandboxed text.
+    handler.content_policy = None if kind == "application/pdf" else "sandbox; default-src 'none'"
+    handler.send_response(200)
+    handler.send_header("Content-Type", kind)
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    return io.BytesIO(body)
 
 
 def _video_reply(handler: "Handler") -> BinaryIO | Slice | None:

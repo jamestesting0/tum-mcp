@@ -7,7 +7,7 @@ from pydantic import JsonValue, ValidationError
 from tum_mcp.course_app_paths import app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.exercise_content import ExerciseContent, exercise_revision
-from tum_mcp.study_content import StudyContent, render_blocks
+from tum_mcp.study_content import StudyContent, compile_formulas, term_markers
 from tum_mcp.study_models import StudyState
 from tum_mcp.study_store import confined, digest
 
@@ -51,24 +51,39 @@ def check_prerequisites(content: ExerciseContent, study: StudyContent | None) ->
     """An absent Study workspace uses inline explanations; broken prepared links fail."""
     if study is None:
         return
-    units = {unit.key for unit in study.units}
-    if any(
-        prerequisite.unit not in units
-        for group in content.sets
-        for exercise in group.exercises
-        for prerequisite in exercise.prerequisites
-    ):
-        raise CampusError(Code.INVALID_RESPONSE, "An exercise links to an unknown Study topic.")
+    blocks = {unit.key: {block.key for block in unit.blocks if block.key} for unit in study.units}
+    for group in content.sets:
+        for exercise in group.exercises:
+            for prerequisite in exercise.prerequisites:
+                if prerequisite.unit not in blocks:
+                    raise CampusError(
+                        Code.INVALID_RESPONSE, "An exercise links to an unknown Study topic."
+                    )
+                if prerequisite.block and prerequisite.block not in blocks[prerequisite.unit]:
+                    raise CampusError(
+                        Code.INVALID_RESPONSE,
+                        f"Exercise {exercise.key} links to block {prerequisite.block}, which "
+                        f"unit {prerequisite.unit} does not have.",
+                    )
+    check_terms(content.model_dump(mode="json"), study, "Exercises")
+
+
+def check_terms(value: JsonValue, study: StudyContent | None, workspace: str) -> None:
+    """Marked terms in other workspaces open Study definitions, so each must exist."""
+    if study is None:
+        return
+    known = {term.casefold() for term in study.definitions()}
+    if unknown := term_markers(value) - known:
+        raise CampusError(
+            Code.INVALID_RESPONSE,
+            f"{workspace} mark terms that Study does not define: {sorted(unknown)[:5]}.",
+        )
 
 
 def render_exercises(content: ExerciseContent) -> dict[str, JsonValue]:
     """Compile safe blocks and attach stable learning revisions for the renderer."""
-    value = content.model_dump(mode="json", exclude_none=True)
+    value = compile_formulas(content.model_dump(mode="json", exclude_none=True))
     for group, rendered_group in zip(content.sets, value["sets"], strict=True):
         for exercise, rendered in zip(group.exercises, rendered_group["exercises"], strict=True):
             rendered["revision"] = exercise_revision(exercise)
-            rendered["statement"] = render_blocks(exercise.statement)
-            rendered["solution"]["blocks"] = render_blocks(exercise.solution.blocks)
-            for step, rendered_step in zip(exercise.steps, rendered["steps"], strict=True):
-                rendered_step["blocks"] = render_blocks(step.blocks)
     return value

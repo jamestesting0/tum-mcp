@@ -100,6 +100,16 @@ def minimal_unit(key: str, source: str, sha256: str) -> dict:
                 "objective": "o1",
                 "prompt": "Which is the idea?",
                 "level": "recall",
+                "blocks": [
+                    {
+                        "kind": "table",
+                        "title": "Candidates",
+                        "sources": [source],
+                        "caption": "Candidate ideas",
+                        "columns": ["Name", "Role"],
+                        "rows": [["Idea", "Taught"], ["Other", "Not taught"]],
+                    }
+                ],
                 "options": [
                     {"key": "a", "text": "Idea", "feedback": "Yes."},
                     {"key": "b", "text": "Other", "feedback": "No."},
@@ -187,7 +197,9 @@ def exam_document(root: Path) -> dict:
     solution = {
         "origin": "official",
         "official_source": "exam-ws23-solution",
-        "blocks": [text("Solution", "exam-ws23-solution", "The station is the subject.")],
+        "answers": [
+            {"blocks": [text("Solution", "exam-ws23-solution", "The station is the subject.")]}
+        ],
     }
     return {
         "schema_version": 1,
@@ -454,7 +466,9 @@ def exam_document(root: Path) -> dict:
                         text("Task", "slides", "Export switches on a format flag."),
                         code("Export", "slides", 'if (format.equals("csv")) csv(); else pdf();'),
                     ],
-                    "solution": {"blocks": [text("Solution", "slides", "One Exporter each.")]},
+                    "solution": {
+                        "answers": [{"blocks": [text("Solution", "slides", "One Exporter each.")]}]
+                    },
                     "steps": [
                         {
                             "step": 1,
@@ -482,7 +496,9 @@ def exam_document(root: Path) -> dict:
                             "class File { long size; }\nclass Folder { List<?> items; }",
                         ),
                     ],
-                    "solution": {"blocks": [text("Solution", "slides", "Node: File, Folder.")]},
+                    "solution": {
+                        "answers": [{"blocks": [text("Solution", "slides", "Node: File, Folder.")]}]
+                    },
                     "steps": [
                         {
                             "step": 1,
@@ -548,7 +564,11 @@ def exam_document(root: Path) -> dict:
                         "marking": [{"text": "Notification implemented", "points": 10}],
                         "minutes": 20,
                         "difficulty": 2,
-                        "solution": {"blocks": [text("Solution", "slides", "Loop over members.")]},
+                        "solution": {
+                            "answers": [
+                                {"blocks": [text("Solution", "slides", "Loop over members.")]}
+                            ]
+                        },
                     },
                     {
                         "key": "f1-2",
@@ -574,7 +594,13 @@ def exam_document(root: Path) -> dict:
                         "minutes": 10,
                         "difficulty": 1,
                         "solution": {
-                            "blocks": [text("Solution", "slides", "Decorators wrap at runtime.")]
+                            "answers": [
+                                {
+                                    "blocks": [
+                                        text("Solution", "slides", "Decorators wrap at runtime.")
+                                    ]
+                                }
+                            ]
                         },
                     },
                 ],
@@ -592,7 +618,9 @@ def with_guided_paper(document: dict) -> dict:
     ]
     second["solution"] = {
         "origin": "authored",
-        "blocks": [text("Solution", "exam-ws23", "Introduce a SortStrategy interface.")],
+        "answers": [
+            {"blocks": [text("Solution", "exam-ws23", "Introduce a SortStrategy interface.")]}
+        ],
     }
     variant["questions"][0]["guidance"] = {
         "objectives": ["Separate the changing part from the stable part."],

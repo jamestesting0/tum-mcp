@@ -38,6 +38,29 @@
           ]
         },
         {
+          "kind": "definition",
+          "key": "invariant",
+          "sources": [
+            "components"
+          ],
+          "term": "Invariant",
+          "statement": "A property that holds before and after every step of a procedure.",
+          "conditions": [
+            "It holds at the start.",
+            "Each step that begins with it true ends with it true."
+          ]
+        },
+        {
+          "kind": "text",
+          "title": "Marked terms",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "A marked term such as {{invariant}} opens its definition in place, in every workspace."
+          ]
+        },
+        {
           "kind": "table",
           "title": "Table",
           "sources": [
@@ -154,7 +177,18 @@
               ],
               "frontier": [
                 "b"
-              ]
+              ],
+              "state": [
+                {
+                  "label": "Queue",
+                  "value": "B"
+                },
+                {
+                  "label": "Reached",
+                  "value": "none"
+                }
+              ],
+              "edges": []
             },
             {
               "caption": "Second state",
@@ -163,10 +197,27 @@
               ],
               "active": [
                 "b"
+              ],
+              "state": [
+                {
+                  "label": "Queue",
+                  "value": "empty"
+                },
+                {
+                  "label": "Reached",
+                  "value": "A"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "a",
+                  "end": "b"
+                }
               ]
             }
           ],
-          "state_labels": "traversal"
+          "state_labels": "traversal",
+          "key": "graph-trace"
         },
         {
           "kind": "diagram",
@@ -417,7 +468,32 @@
           "explanation": "2 + 2 = 4. This item demonstrates the four-choice control.",
           "sources": [
             "components"
-          ]
+          ],
+          "blocks": [
+            {
+              "kind": "table",
+              "title": "Table",
+              "sources": [
+                "components"
+              ],
+              "caption": "A small comparison",
+              "columns": [
+                "Format",
+                "Use"
+              ],
+              "rows": [
+                [
+                  "Text",
+                  "Explain an idea"
+                ],
+                [
+                  "Diagram",
+                  "Show a relation"
+                ]
+              ]
+            }
+          ],
+          "hint": "Count two, then two more."
         }
       ]
     }

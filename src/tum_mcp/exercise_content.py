@@ -14,6 +14,7 @@ from tum_mcp.study_content import (
     VISUAL_RULE,
     Block,
     CodeRef,
+    Label,
     SourceVersion,
     Text,
     check_code_refs,
@@ -39,24 +40,41 @@ class GuidanceStep(Frozen):
 
 class Prerequisite(Frozen):
     unit: Key
+    # The keyed Study block that teaches it; it opens beside the exercise.
+    block: Key | None = None
     explanation: Text
+
+
+class SolutionAnswer(Frozen):
+    """The direct answer to one original part, in the form the part asks for."""
+
+    label: Label | None = None
+    blocks: tuple[Block, ...] = Field(min_length=1, max_length=10)
 
 
 class WorkedSolution(Frozen):
     origin: Literal["authored", "official"] = "authored"
     official_source: Key | None = None
-    blocks: tuple[Block, ...] = Field(min_length=1, max_length=40)
+    answers: tuple[SolutionAnswer, ...] = Field(min_length=1, max_length=50)
+    # Assumptions, alternatives and anything else the answers alone do not say.
+    notes: tuple[Block, ...] = Field(default=(), max_length=10)
 
     @model_validator(mode="after")
     def attribution(self) -> "WorkedSolution":
         if (self.origin == "official") != (self.official_source is not None):
             raise ValueError("Official solutions need their actual official source.")
+        if len(self.answers) > 1 and not all(answer.label for answer in self.answers):
+            raise ValueError("Label each answer with the part it answers, such as (a).")
         return self
+
+    @property
+    def blocks(self) -> tuple[Block, ...]:
+        return (*(block for answer in self.answers for block in answer.blocks), *self.notes)
 
 
 class TransferTask(Frozen):
     prompt: Text
-    answer: Text
+    answer: tuple[Block, ...] = Field(min_length=1, max_length=8)
 
 
 class Exercise(Frozen):
@@ -86,13 +104,25 @@ class Exercise(Frozen):
             raise ValueError("Exercise source keys must be distinct.")
         if len({step.key for step in self.steps}) != len(self.steps):
             raise ValueError("Exercise step keys must be distinct.")
-        for item in (*self.statement, *self.solution.blocks, *self.steps):
+        transfer = self.transfer.answer if self.transfer else ()
+        for item in (*self.statement, *self.solution.blocks, *self.steps, *transfer):
             if not set(item.sources) <= source_keys:
                 raise ValueError("Exercise content cites an undeclared source.")
+        if self.parts and len(self.solution.answers) != len(self.parts):
+            raise ValueError("Give one solution answer for each original part, in order.")
+        keys = [block.key for block in self.statement if block.key]
+        if len(set(keys)) != len(keys):
+            raise ValueError("Block keys must be unique within an exercise.")
         for step in self.steps:
-            for block in step.blocks:
+            answer = (
+                step.check.model_answer if step.check and step.check.kind == "self_check" else ()
+            )
+            for block in (*step.blocks, *(answer if isinstance(answer, tuple) else ())):
                 if not set(block.sources) <= source_keys:
                     raise ValueError("Step content cites an undeclared source.")
+            if step.check and step.check.kind == "self_check" and isinstance(answer, tuple):
+                if same_text(step.explanation, answer):
+                    raise ValueError("A step's explanation repeats its model answer; say it once.")
             if step.check and step.check.kind == "plot":
                 if not set(step.check.plot.sources) <= source_keys:
                     raise ValueError("Plot check cites an undeclared source.")
@@ -103,6 +133,17 @@ class Exercise(Frozen):
             raise ValueError("The official solution source must be declared.")
         check_steps_against_files(self.statement, self.steps)
         return self
+
+
+def same_text(explanation: str, blocks: tuple[Block, ...]) -> bool:
+    """Whether an explanation only restates text blocks (whitespace and case aside)."""
+    words = " ".join(
+        part
+        for block in blocks
+        if block.kind == "text"
+        for part in (*block.paragraphs, *block.points)
+    )
+    return " ".join(explanation.split()).casefold() == " ".join(words.split()).casefold()
 
 
 def check_steps_against_files(

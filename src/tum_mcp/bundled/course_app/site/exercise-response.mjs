@@ -1,11 +1,13 @@
-import { node, svgNode, studyText, button, append } from './dom.mjs';
+import { node, svgNode, studyText, button, append, shuffled } from './dom.mjs';
 import { graphResponse, plotResponse } from './graph-response.mjs';
 import { renderCode, codeEditor, languageName } from './code.mjs';
 import { openInWorkspace } from './files.mjs';
+import { renderBlockBody, diagram } from './reading.mjs';
 
 // A code model answer stays code: highlighted, literal and labelled with its language.
 function modelAnswer(check) {
-  if (check.format !== 'code') return studyText('p', '', check.model_answer);
+  // A text answer keeps the shape the task asks for: a table per case, a list, a formula.
+  if (check.format !== 'code') return append(node('div', 'model-answer'), ...check.model_answer.map(block => renderBlockBody(block)));
   const region = node('div', 'code-region model-code'); region.tabIndex = 0;
   region.setAttribute('role', 'region'); region.setAttribute('aria-label', 'Model answer');
   region.append(node('span', 'small code-language', languageName(check.language, check.file || '') || 'Code'), renderCode(check.model_answer, check.language || (check.file || '').split('.').pop()));
@@ -35,9 +37,13 @@ export function expectedAnswer(check) {
       break;
     }
     case 'graph': {
+      // The answer drawn on the graph itself, with the same answer in words as its caption.
       const label = new Map(check.graph.nodes.map(item => [item.key, item.label]));
       const name = key => key.split('--').map(part => label.get(part) || part).join('\u2013');
-      box.append(value(`${{ nodes: 'Nodes', edges: 'Edges', path: 'Path' }[check.mode]}: ${check.answers[0].map(name).join(check.mode === 'path' ? ' \u2192 ' : ', ')}`));
+      const answer = check.answers[0], words = `${{ nodes: 'Nodes', edges: 'Edges', path: 'Path' }[check.mode]}: ${answer.map(name).join(check.mode === 'path' ? ' \u2192 ' : ', ')}`;
+      const pairs = check.mode === 'path' ? answer.slice(1).map((key, i) => [answer[i], key]) : check.mode === 'edges' ? answer.map(key => key.split('--')) : [];
+      const nodes = check.mode === 'edges' ? [...new Set(pairs.flat())] : answer;
+      box.append(diagram({ ...check.graph, state_labels: 'caption', frames: [{ caption: words, active: nodes, frontier: [], visited: [], state: [], edges: pairs.map(([start, end]) => ({ start, end })) }] }));
       break;
     }
     case 'plot': {
@@ -52,11 +58,11 @@ export function expectedAnswer(check) {
 }
 
 // After a choice is checked: why every option is right or wrong, collapsed by default.
-export function optionExplanations(check) {
+export function optionExplanations(check, identity) {
   const box = node('details', 'disclosure option-explanations');
   box.append(node('summary', '', 'Show reasoning'));
   const list = node('ul', 'option-explanation-list');
-  for (const option of check.options) {
+  for (const option of shuffled(check.options, identity)) {
     const right = option.key === check.correct, item = node('li', right ? 'right' : 'wrong');
     const mark = node('span', 'option-mark'), icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
     icon.append(svgNode('path', { d: right ? 'M3.5 8.5 6.5 11.5 12.5 4.5' : 'M4.5 4.5l7 7M11.5 4.5l-7 7' }));
@@ -78,7 +84,7 @@ export function renderResponse(check, draft, edit, identity, shown = []) {
   if (check.kind === 'choice') {
     let value = draft;
     const choices = node('fieldset', 'exercise-choices'); choices.append(node('legend', 'visually-hidden', 'Your answer'));
-    for (const option of check.options) {
+    for (const option of shuffled(check.options, identity)) {
       const label = node('label', 'option'), input = node('input'); input.type = 'radio'; input.name = identity;
       input.value = option.key; input.checked = value === option.key;
       input.addEventListener('change', () => { value = option.key; edit(option.key); }); label.append(input, studyText('span', 'option-body', option.text)); choices.append(label);
