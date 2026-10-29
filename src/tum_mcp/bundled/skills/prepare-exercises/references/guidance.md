@@ -12,8 +12,9 @@ The app shows one step at a time with the statement still reachable, and the ful
 solution is always available without passing steps.
 
 An early hint points to a relevant relation or asks a smaller question. A later
-hint can narrow the operation; explanation and solution may complete it. Add only
-useful hint levels, without quotas. A check's feedback repairs the earliest likely
+hint works the first operation; Compare completes it ([hint ladder](../../prepare-study/references/review.md#help-before-the-answer)).
+A step whose answer has many parts gets that middle hint or is split. Add only useful
+hint levels, without quotas. A check's feedback repairs the earliest likely
 error; the app shows it beside the expected answer when the student compares. An optional prerequisite link
 and inline reminder can repair a gap without a separate prerequisite wizard.
 
@@ -29,7 +30,9 @@ pretend prose is automatically graded. Do not require typing, confidence forms, 
 or self-ratings. Every step stands on what the student has seen; see
 [content](content.md#give-the-student-everything-the-answer-uses).
 
-Review by attempting the task without looking at its solution. Then simulate one
+State the conventions the answer depends on in the statement or step prompt. Review by
+attempting the task without looking at its solution, then pass the
+[review gate](../../prepare-study/references/review.md). Then simulate one
 plausible miss and request only the next hint. It should help the student do the
 next inference. Check an altered case where a condition fails; merely renaming
 the original task is not a transfer check. Assistance and retries are not mastery

@@ -18,8 +18,13 @@ formats; it is not a model of good teaching or question design.
 - **Units:** Content, Flashcards and Practice. A Next link leads through the three
   views and on to the next unit; the last unit leads to Revision.
 - **Revision:** cards and questions pooled from chosen topics (all topics until the
-  student chooses), optionally only the cards marked Again and questions answered
-  incorrectly. Pooled items keep their original progress.
+  student chooses), optionally only the cards marked Again and questions missed at the
+  first attempt. A retry after seeing the answer does not clear a miss; a later correct
+  answer from a fresh start does. Pooled items keep their original progress.
+- **Connections:** a unit's header links its Lecture Notes, the exercises whose
+  prerequisites name it and the Exam Prep patterns whose entries cite it. Marked terms
+  open their definition in place; an exercise prerequisite opens its Study block beside
+  the exercise. In the local preview, a citation opens the stored course file at its page.
 - **Exercises and Lecture Notes:** separate workspaces in the same app when prepared.
   Lecture Notes lists lectures newest first. The sources of each passage and figure
   link to the recording at the measured time; the text itself carries no timestamps.
@@ -38,7 +43,8 @@ formats; it is not a model of good teaching or question design.
 | `summary`, `objectives` | The Content view's header |
 | block `title`, `sources` | A section heading with a sources icon |
 | flashcard `front`, `back` | One card that flips; its sources appear after reveal |
-| question `prompt`, `options`, `explanation` | Practice and Revision; after a check the app marks the chosen and correct options, shows the chosen option's feedback and the explanation, and keeps the other options' feedback on request |
+| question `prompt`, `blocks`, `options`, `explanation`, `hint` | Practice and Revision; the blocks sit between prompt and options, options appear in a stable shuffled order, the hint is one optional button before checking; after a check the app marks the chosen and correct options, shows the chosen option's feedback and the explanation, and keeps the other options' feedback on request |
+| `definition` block | A box labelled Definition; `{{term}}` mentions open it in place |
 
 Keep titles and labels short enough to scan in an outline. Long text wraps, but it
 crowds navigation. Questions must stand alone because Revision pools them; see

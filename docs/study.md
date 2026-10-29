@@ -110,8 +110,14 @@ one category level. Every unit has:
 
 - Content: a short lesson with objectives, source links, assumptions and worked
   examples, using formulas, tables, code, diagrams or line graphs where they help.
+  Terms to learn appear in labelled **Definition** boxes; a dotted term anywhere in
+  the app opens its definition in place. Algorithm traces step through one operation
+  at a time and show the algorithm's state (a queue, the domains) beside the drawing,
+  marking what changed.
 - Flashcards for recall. On a keyboard, arrows move, Space flips and 1/2 rate a card.
-- Practice questions with plausible options and feedback for every option.
+- Practice questions that show their situation (a graph, a table, a formula) beside
+  the question, with options in a stable shuffled order, an optional hint and feedback
+  for every option.
 
 The agent uses stored material first, so local content edits work offline. Ask for
 an upstream refresh when you want new course content; an existing check is reused
@@ -122,9 +128,13 @@ short, direct sentences that keep necessary terms and conditions.
 The course home introduces the course, resumes where you left off and lists topics
 with progress. Each view ends with a Next link through cards and practice to the
 next unit. Revision pools cards and questions from the topics you choose (all topics
-until you choose) and can focus on cards marked Again and questions you missed. It
-reuses the original items and progress, so changing the topic selection never clears
-results, and it remembers your selection for this course. Formulas and inline
+until you choose) and can focus on cards marked Again and questions you missed. A
+question you missed stays there after **Try again**; it leaves once you answer it
+correctly from a fresh start. Revision reuses the original items and progress, so
+changing the topic selection never clears results, and it remembers your selection
+for this course. A unit's header links the Lecture Notes, exercises and Exam Prep
+patterns that build on it. In the local preview, a citation opens the stored course
+file at the cited page. Formulas and inline
 notation such as `\(v_i\)` compile locally to native MathML; code and dollar signs
 stay literal. The app has light and dark themes and a phone layout.
 
@@ -137,7 +147,13 @@ and reported, so the agent must review compatibility when extending them.
 ```sh
 tum-mcp study inspect ./pse-ws26
 tum-mcp study build ./pse-ws26
+tum-mcp study report ./pse-ws26   # review flags and what the sources leave uncovered
 ```
+
+The agent records what each lecture states students should learn, and which sheet
+problems are prepared, in `.tum-mcp/coverage.json`. `study report` lists outcomes
+that are not yet taught, sources not yet read and problems still pending, so a request
+to cover a whole course is judged against the course's own outcomes.
 
 ## Preview the app
 
@@ -184,10 +200,13 @@ it sits inside the open outline. The exercise list groups exercises by sheet and
 each sheet's summary and due date when the sources provide them.
 
 Each exercise shows the original statement and subparts first. Work on paper, open the
-worked solution directly, or open **Guidance** for the exercise's goals and one step at
-a time with optional hints. Multiple-choice steps are checked; for every other step you
-work on paper and press **Compare** to see the answer, its explanation and a hint for
-the likeliest mistake. Code steps open the function skeleton in a small editor and
+solution directly (one short answer per part, as a table, graph, formula or code), or
+open **Guidance** for the exercise's goals and one step at a time with optional hints.
+Multiple-choice steps are checked; for every other step you work on paper and press
+**Compare**, the one place that shows the answer, its reasoning and a hint for the
+likeliest mistake. **Review** beside a prerequisite opens the Study passage next to
+the exercise without losing your place. A sheet whose problems are not all prepared
+says which ones are still missing. Code steps open the function skeleton in a small editor and
 show the model answer as code; code is never run, and nothing is graded by keywords.
 Finishing the last step marks the exercise completed in the outline; you can also
 right-click any entry to mark it. A Next link leads to the following exercise. Large

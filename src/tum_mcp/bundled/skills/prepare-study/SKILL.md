@@ -24,16 +24,18 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
    from local sources and fetch only missing material through read-content. Run
    sync-course once, and only when fresh upstream content was requested.
 2. **Plan units.** Inspect the app folder and the affected source and unit IDs. Keep
-   notes, edits, labels and stable IDs of unchanged units. Choose one lecture, week or
-   topic organization that follows course dependencies, with at most one category
-   level; use a flat list when sufficient.
+   notes, edits, labels and stable IDs of unchanged units. Record each source's stated
+   outcomes in the [coverage ledger](references/coverage.md) first, then plan units that
+   teach them. Choose one lecture, week or topic organization that follows course
+   dependencies, with at most one category level; use a flat list when sufficient.
 3. **Author.** Shape each unit as a short lesson ([teaching](references/teaching.md))
    using the block types the schema offers ([content](references/content.md)). On a
    new site, prove one unit with the hardest required formats, then author the rest
    in batches. Never fill gaps with invented course facts.
 4. **Review.** Check every changed explanation, answer and assumption against its
-   source. Schema and browser checks do not replace this review. Rebind source hashes
-   only after you read the changed content.
+   source, run `tum-mcp study report PROJECT` and pass the [review gate](references/review.md)
+   for each batch, the last as carefully as the first. Schema and browser checks do not
+   replace this review. Rebind source hashes only after you read the changed content.
 5. **Build.** Run `tum-mcp study build PROJECT`. Do not author duplicate decks,
    hand-copy the app, add a framework or edit generated `data.mjs`. Investigate stale
    sources and preserved custom templates.
@@ -43,8 +45,10 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
    its report; resume pending or failed deployment through publish-course before
    calling the hosted update complete. A local-only project stays local.
 8. **Report.** Name changed and reused units, relevant gaps, checks actually run and
-   `tum-mcp study` to launch from the course project folder. Unrun checks are not
-   passes. Do not claim bug-free software, official exam coverage or mastery.
+   `tum-mcp study` to launch from the course project folder. A whole-course request is
+   finished only when the coverage report shows nothing uncovered in scope; otherwise
+   list what remains. Unrun checks are not passes. Do not claim bug-free software,
+   official exam coverage or mastery.
 
 ## References
 
@@ -58,6 +62,8 @@ Read only what the change needs.
 | How content appears, or a course that needs an app change | [The course app](references/app.md) |
 | Feedback left on the study site | [Passage comments](references/comments.md) |
 | Choosing checks | [Verification](references/verification.md) |
+| Reviewing a batch, choosing a representation, tracing an algorithm | [Review gate](references/review.md) |
+| Source outcomes, course state and completion | [Coverage ledger](references/coverage.md) |
 
 ## Boundaries
 

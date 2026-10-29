@@ -23,11 +23,15 @@ Each unit reads as one short lesson, built from ordinary blocks (the app does no
 label these roles; the writing makes them clear):
 
 1. Summary: the problem the unit solves, in one or two sentences.
-2. Objectives: observable outcomes such as trace, explain, choose or compute.
+2. Objectives: observable outcomes such as trace, explain, choose or compute, taken from
+   the source's own outcomes in the coverage ledger.
 3. Bridge: the first section names the prerequisite and notation it builds on.
-4. Mechanism, then one worked example or trace the student can follow step by step.
-5. Pitfall: the common misconception or limiting condition, where it applies.
-6. Recap: for units with more than three sections, a final text block with two to
+4. Intuition: a concrete case or picture before the formal statement.
+5. Definitions: a `definition` block for each term students must learn, one new idea per
+   section; later mentions anywhere in the course are marked `{{term}}`.
+6. Mechanism, then one worked example or trace the student can follow step by step.
+7. Pitfall: the common misconception or limiting condition, where it applies.
+8. Recap: for units with more than three sections, a final text block with two to
    four points a student should recall without the page.
 
 Flashcards test recall of those points; practice tests application. Review mode
@@ -35,14 +39,11 @@ reuses Again ratings and wrong answers, so every objective needs at least one ca
 or question that a student can genuinely get wrong.
 
 For each new/changed objective, cover the mechanism, assumptions and a useful
-example. Show the example; do not only tell it. Pair it with the picture of the thing
-itself: a UML class diagram for a design, a sequence diagram for an interaction, a
-state diagram for behaviour over events, a code walkthrough for code, a stepping
-diagram for an algorithm, a tree for a hierarchy, a table for a trace, a plot for a
-relation. Pick the visual with the shape of the thing: a hierarchy as a table of
-parents makes the reader rebuild the tree in their head. Prose then says
-only what the picture cannot: why it works and when it fails. Name the elements the
-reader should look at, in the order they should look. No diagram quotas or equal
+example. Show the example in the shape it has ([representations](review.md#choose-the-representation));
+an algorithm is a trace whose frames carry its state ([traces](review.md#algorithm-traces)).
+Prose then says only what the picture cannot: why it works and when it fails. Name the
+elements the reader should look at, in the order they should look. Parallel cases go in a
+list or table, not one paragraph. No diagram quotas or equal
 word/card/question counts. Split independent goals,
 remove duplication and keep essential conditions/counterexamples visible. Optional
 proof detail may use disclosure; essential meaning must not be hidden there.
@@ -72,7 +73,7 @@ question if a useful distractor is missing instead of adding filler. Feedback
 explains; it does not restate the verdict, which the app already shows.
 Prefer application/transfer where the
 objective requires it; avoid tricks, double negatives, all/none shortcuts and
-answer-position/length clues. Check EVERY new/changed option independently. If two
+length clues (the app shuffles positions). Check EVERY new/changed option independently. If two
 answers are defensible, repair the question/assumptions rather than forcing a key.
 
 Audit objective → explanation → card/question → source. Work the example, trace or

@@ -42,25 +42,31 @@ block for anything longer than one line.
 
 ## Blocks
 
-Every block has a title and sources.
+Every block has a title and sources. Optional `key` gives a block an address
+(`#unit/content/key`) for definitions, exercise prerequisites and the coverage ledger;
+optional `pages` ("11" or "16-27") names the PDF pages of its first source it draws
+on; citations open there, and later pages can differ from the printed slide numbers.
 
 | Block | Provide |
 | --- | --- |
 | text | Paragraphs and/or points; never an empty explanation. |
+| definition | A `term`, the `statement` and optional `conditions`; the title defaults to the term. Give it a `key`. Write `{{term}}` in any later text, in every workspace, to let students open it in place; the build rejects unknown terms. |
 | formula | LaTeX without dollar delimiters (JSON-escaped, e.g. `"\\frac{a}{b}"`), a plain-language reading, symbol definitions and conditions. Unsupported macros, links and unsafe markup fail validation. Keep `mathml` only for legacy input; never supply both. |
 | table | Column labels, rectangular rows and a meaningful caption. |
 | code | Language, literal code and an explanation; the app highlights common languages. Label authored examples; never execute downloaded code. Add a `walkthrough` (stops of `lines` such as `"5-6"` and a short `note`) when the reader should follow the code part by part: one idea per stop, at most about six stops. |
-| diagram | Positioned nodes, optional directed or labelled edges and frames on the schema's canvas. Circles hold up to four characters; use boxes for longer labels. Frames name active, frontier and visited nodes; `state_labels: caption` omits traversal bookkeeping for concept maps. |
+| diagram | Positioned nodes, optional directed or labelled edges and frames on the schema's canvas. Circles hold up to four characters; use boxes for longer labels. Frames name active, frontier and visited nodes, highlight `edges`, and list up to six `state` rows (label and value, such as a queue or a domain) that the app shows beside the drawing, marking what changed; the caption says why the step happens. `state_labels: caption` omits traversal bookkeeping for concept maps. |
 | uml | `diagram: class` (classes with optional `interface`, `abstract` or `enumeration` stereotype, attributes and operations in UML notation such as `+ update(t: double): void`, `static`/`abstract` flags; relations with kind, label and multiplicities) or `diagram: sequence` (participants as objects `name: Type` or actors; ordered call, return, async or create messages, self-calls allowed; loop, alt, opt or par fragments over a message range). The app lays it out. `start` is the child for inheritance and realization, the whole for aggregation and composition, and the client for directed association and dependency. `diagram: state` has `states` (`initial` and `final` pseudostates, named states with an optional `entry / ...` activity) and `transitions` labelled `event [guard] / action`, self-loops allowed. Use for object-oriented designs, design patterns, interactions and behaviour over events instead of a generic diagram. |
 | files | A small project with a `key`, a `description` and `files` (relative `path`, literal `code`, `editable` for files the student changes). The app shows a file tree, tabs and highlighted, numbered code; edits stay in the browser. Use for programming exercises that span several files. |
 | tree | An optional `description` only for what the tree does not show (it is readable text, so never restate it) and a `root` entry with a short `label`, an optional `note` (such as a size or a return value), `kind` (`folder` or `file` for a file structure, else the default `item`) and nested `children`. The app draws an indented tree with connector lines. Use for hierarchies: file structures, object trees of a Composite, call or recursion trees. Never encode a hierarchy as a table of parents. |
 | plot | A description, short axis labels, increasing finite bounds and series of ordered points inside the axes. The app adds a data table. Use source-backed quantities, units and sensible scales. |
 
 Flashcards use one objective plus front, back and sources. Questions use an
-objective, prompt, level, options with individual feedback, one correct key,
-an explanation and sources. Write four plausible options by default; the schema
-sets the accepted range. Every objective needs a question; counts follow learning
-needs, not quotas.
+objective, prompt, level, one to three context `blocks` (at least one code, diagram,
+formula, table, tree, UML or plot block), options with individual feedback, one correct
+key, an explanation, an optional `hint` and sources. Write four plausible options by
+default; the schema sets the accepted range. Every objective needs a question; counts
+follow learning needs, not quotas. A unit's optional `lectures` names the Lecture Notes
+that cover it.
 
 ## Build
 

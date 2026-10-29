@@ -27,7 +27,10 @@ Record the course's actual structure, in these sections as needed:
 - Staff/office hours and announcement/help channels. Identify the authoritative
   source for each kind of rule. A student message does not establish an official rule.
 - Preparation map: which material groups feed Study, Exercises and exam preparation;
-  missing statements/diagrams, inaccessible platforms and unresolved questions.
+  missing statements/diagrams, inaccessible platforms and unresolved questions. Record
+  each source's availability and whether it was taught, with evidence and date, in the
+  [coverage ledger](../../prepare-study/references/coverage.md#course-state); unknown
+  stays unknown.
 
 Every material factual claim needs a nearby resource ID, source URL and precise
 locator (section/page/announcement date), plus a checked date for changing facts.

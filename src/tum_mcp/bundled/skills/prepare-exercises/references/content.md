@@ -13,8 +13,11 @@ types (text, code, table, formula, diagram, UML diagram and line graph); no embe
 Declare every used source. Use optional parts for original subparts and objectives
 for observable reasoning goals; the app lists objectives as goals when a student
 opens Guidance, so phrase them without giving away the method. A step's purpose is
-a private review note and is not shown. Prerequisites pair a Study unit key with an
-inline explanation so Exercises can be prepared first; later Study builds validate links.
+a private review note and is not shown. Prerequisites pair a Study unit key, and the
+`block` key of the passage that teaches the idea when there is one, with an inline
+explanation so Exercises can be prepared first; the app opens that passage beside the
+exercise, and later Study builds validate links. Check that the passage really teaches
+what the task needs ([coverage](../../prepare-study/references/coverage.md#while-authoring)).
 
 Steps contain purpose, prompt, optional rich blocks, sources/check, requested hints
 and reviewed explanation. Students answer on paper; the app shows no answer boxes
@@ -29,12 +32,14 @@ check by what the student should compare with:
 | graph | A safe diagram, a mode (`nodes`, `edges` or `path`), the answer and feedback. The student can select on the diagram; Compare shows the first answer by node label. Use a neutral frame that does not reveal the solution. |
 | plot | A line graph with labelled axes and optional given series, increasing `x_values`, one target `y` each, a snap step and feedback. The student can place points; Compare shows the targets as a table. |
 | text | One short `answer`, such as a name, a value with words or one line of code (`format: code` with a language), and feedback. Not for prose with many valid phrasings; use `self_check` for those. |
-| self_check | A `model_answer` and a rubric of the essential points, with format `text` or `code`. For code, either `file` names an editable file of the question's `files` block, which the student edits there, or `starter_code` is a skeleton that opens in the step's own editor. The model answer is shown as highlighted code. Code is never run, and nothing is graded by keywords. |
+| self_check | A `model_answer` and a rubric of the essential points, with format `text` or `code`. A text model answer is a list of blocks in the shape of the answer: a filled table for cases, points for parallel items, a formula for a derivation. For code, the model answer is code, and either `file` names an editable file of the question's `files` block, which the student edits there, or `starter_code` is a skeleton that opens in the step's own editor. Code is never run, and nothing is graded by keywords. |
 
-For every check except `choice` the student presses Compare and sees the answer, the
-step's explanation and the check's `feedback` under "If yours differs". Give exactly
-one answer: the clearest form, not a list of variants. Write the feedback as the repair
-for the likeliest mistake.
+For every check except `choice`, and for a step without a check, the student presses
+Compare and sees the answer, the step's explanation and the check's `feedback` under
+"If yours differs". Compare is the only reveal: the explanation adds the reasoning and
+never repeats the model answer (the build rejects a copy). Give exactly one answer: the
+clearest form, not a list of variants. Write the feedback as the repair for the likeliest
+mistake.
 
 ## Say the task first
 
@@ -78,17 +83,11 @@ A question students must picture from prose alone is harder than the subject. Ev
 question you write (distilled practice, Exam Prep practice exams, worked practices
 and drills) pairs its text with at least one block that shows the situation; the
 build rejects text-only ones. Original statements stay as released: add the picture
-in a step or the worked answer instead. Pick what the question is about:
-
-| The question is about | Show it with |
-| --- | --- |
-| Code to write, fix, trace or extend | A code block with the starting code, the class or method signatures, or the faulty lines (`line_numbers: true` when steps refer to lines). |
-| Classes, interfaces and their relations, design patterns | A UML class diagram (`uml`, `diagram: class`) with the members the question needs. |
-| Calls between objects over time, protocols, callbacks | A UML sequence diagram (`uml`, `diagram: sequence`), with loop or alt fragments for repetition and branches. |
-| Graphs, trees, object structures, data structures | A diagram of the structure, or a table of its state after each operation. |
-| Calculations, proofs, definitions with symbols | A formula block with every symbol explained. |
-| Comparisons, traces, inputs and outputs, costs | A table. |
-| Functions, growth, measurements | A plot. |
+in a step or the worked answer instead. When a statement relies on a slide or figure,
+redraw what it needs beside the statement and cite it with `pages`. Choose the shape as
+in [representations](../../prepare-study/references/review.md#choose-the-representation):
+code or signatures for code, UML for designs and interactions, a diagram or state table
+for structures, a formula for symbols, a table for cases and traces, a plot for growth.
 
 In prompts, hints and feedback, put identifiers and short code in backticks
 (`` `notify()` ``) so they render as inline code, as in prepare-study.
@@ -96,17 +95,17 @@ In prompts, hints and feedback, put identifiers and short code in backticks
 Make the visual carry information the question needs; never decorate. Keep the code
 short enough to read on a phone, and do not let the visual reveal the answer.
 
-Use rich step blocks for long mathematical givens, diagrams, code and tables. Code
+Use rich step blocks for long mathematical givens, diagrams, code and tables. A table
+the student fills in is the step's `table` check, not a block. Code
 blocks accept `line_numbers: true` when a step refers to lines. Distilled practice sets
 `kind: distilled` and `distilled_from` (original exercise keys). All
-block/graph sources must be declared. Put full model proofs/code in safe worked
-solution blocks, with assumptions and alternative valid methods; do not bury them
-in a multiple-choice answer. The app already labels the solution, so title its blocks
-by what they show ("Composite roles"), never "Solution". A step may omit a check. The direct solution is always
-available. Record whether a solution is authored or official (official requires a
-declared official_source) for provenance; the app shows every solution simply as the
-solution. Optional
-transfer contains a fresh prompt and comparison answer. Set category, summary, week
+block/graph sources must be declared. The solution's `answers` give one short, direct
+answer per original part, in order and labelled ("(a)"), in the form the part asks for: a
+filled table, the graph, a formula, code. The working belongs in Guidance; assumptions
+and alternative valid methods go in `notes`. A step may omit a check. The direct solution
+is always available. Record whether a solution is authored or official (official requires
+a declared official_source) for provenance; the app shows every solution simply as the
+solution. Optional transfer contains a fresh prompt and comparison answer blocks. Set category, summary, week
 and due_at are optional and appear in the exercise list; date values include a timezone.
 
 Semantic exercise changes start fresh progress while retaining old browser records;

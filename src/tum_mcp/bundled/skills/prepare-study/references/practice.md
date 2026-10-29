@@ -18,15 +18,16 @@ Changing names or numbers while naming the same method does not establish transf
 A useful progression might pair a trace with a choice of method and a changed
 assumption. Keep only the members that teach or test different decisions.
 
-Every question must stand alone in both topic Practice and pooled Revision.
-Include graph edges/weights, observations, notation, units and assumptions in the
-prompt, or a complete textual equivalent. A reference to “the graph above” breaks
-when the item is pooled. Do not require a new question-block schema just for context.
+Every question must stand alone in both topic Practice and pooled Revision. Put the
+situation it is about in the question's `blocks` (the graph with its weights, the table,
+the formula, the code); the build rejects a question without one. Include notation, units
+and assumptions the answer depends on. A reference to “the graph above” breaks when the
+item is pooled. An optional `hint` recalls the idea without naming the option.
 
 Write four distinct options by default; the schema sets the accepted range. Map
 each distractor to a plausible reasoning error, and verify every option under the
-stated assumptions. Revise ambiguous premises; never force a key. Vary answer
-positions without detectable cycles. Match option length/style; avoid joke options
+stated assumptions. Revise ambiguous premises; never force a key. The app shows options
+in a stable shuffled order. Match option length/style; avoid joke options
 and all/none shortcuts. If no further meaningful option exists, change the task
 rather than adding filler.
 
