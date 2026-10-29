@@ -73,7 +73,7 @@ def test_private_learning_answers_have_independent_arithmetic_oracles() -> None:
     assert "cost 5" in answer(questions["cheapest"])
     assert "=3" in answer(questions["update-b"])
     assert answer(questions["negative-case"]) == "−1"
-    assert "S→A (2)" in questions["cheapest"].prompt
+    assert r"\(S \rightarrow A\) (2)" in questions["cheapest"].prompt
     assert Fraction(200 * 8 // 10, 200 * 8 // 10 + 800 // 10) == Fraction(2, 3)
 
 

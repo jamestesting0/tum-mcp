@@ -8,6 +8,15 @@ import { renderFormula } from './formulas.mjs';
 import { renderUml } from './uml.mjs';
 import { videoPanel } from './video.mjs';
 
+// A step or point that opens with a short label ("Initialize: ...") shows the label in bold,
+// so a procedure reads as named stages and an example as named sub-results.
+function labelledItem(text) {
+  const label = /^([A-Z][^:`\\{}()]{0,30}):\s+(?=\S)/.exec(text);
+  const item = studyText('li', '', label ? text.slice(label[0].length) : text);
+  if (label) item.prepend(node('strong', 'item-label', `${label[1]}:`), ' ');
+  return item;
+}
+
 function table(block) {
   const region = node('div', 'table-region');
   region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', studyText('span', '', block.caption).textContent);
@@ -258,8 +267,8 @@ export function renderBlockBody(block, { term = true } = {}) {
     switch (block.kind) {
       case 'text':
         for (const text of block.paragraphs) root.append(studyText('p', '', text));
-        if (block.steps?.length) root.append(append(node('ol', 'steps'), ...block.steps.map(text => studyText('li', '', text))));
-        if (block.points.length) root.append(append(node('ul'), ...block.points.map(text => studyText('li', '', text))));
+        if (block.steps?.length) root.append(append(node('ol', 'steps'), ...block.steps.map(labelledItem)));
+        if (block.points.length) root.append(append(node('ul'), ...block.points.map(labelledItem)));
         break;
       case 'definition': root.append(append(node('dl', 'definitions'), definitionItem(block, term))); break;
       case 'formula': root.append(renderFormula(block)); break;

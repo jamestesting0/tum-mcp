@@ -77,7 +77,7 @@
                       "probability"
                     ],
                     "paragraphs": [
-                      "160/240 = 2/3. The 80% rate is P(flagged | urgent), not P(urgent | flagged)."
+                      "160/240 = 2/3. The 80% rate is \\(P(\\mathrm{flagged} \\mid \\mathrm{urgent})\\), not \\(P(\\mathrm{urgent} \\mid \\mathrm{flagged})\\)."
                     ]
                   }
                 ]
@@ -134,7 +134,7 @@
                       "probability"
                     ],
                     "paragraphs": [
-                      "P(urgent | flagged) = 160 / (160 + 80) = 2/3. It is not 80%, because nonurgent messages are four times as common, so they contribute half as many flags as urgent ones."
+                      "\\(P(\\mathrm{urgent} \\mid \\mathrm{flagged}) = 160 / (160 + 80) = 2/3\\). It is not 80%, because nonurgent messages are four times as common, so they contribute half as many flags as urgent ones."
                     ]
                   }
                 ]

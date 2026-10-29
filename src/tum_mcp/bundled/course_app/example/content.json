@@ -67,12 +67,12 @@
             "components"
           ],
           "paragraphs": [
-            "A hard idea reads as numbered steps after a one-sentence lead."
+            "A procedure reads as labelled steps after a one-sentence lead."
           ],
           "steps": [
-            "Take the vertex with the smallest tentative distance.",
-            "Settle that vertex.",
-            "Try each outgoing edge and keep any shorter distance."
+            "Choose: the unsettled vertex with the smallest tentative distance.",
+            "Settle: fix that vertex's distance.",
+            "Relax: try each outgoing edge and keep any shorter distance."
           ]
         },
         {

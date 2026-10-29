@@ -19,10 +19,11 @@ from tum_mcp.study_content import (
 )
 from tum_mcp.study_math import INLINE_SPANS
 
-LONG_PARAGRAPH_WORDS = 110
-LONG_PARAGRAPH_SENTENCES = 4
-SENTENCE_PARAGRAPH_WORDS = 80
-SECTION_WORDS = 90
+# A prose paragraph frames an idea; anything longer becomes steps, points, a table or a figure.
+PARAGRAPH_WORDS = 45
+PARAGRAPH_SENTENCES = 2
+RUN_ON_WORDS = 30
+SECTION_WORDS = 70
 STATEMENT_WORDS = 80
 # About one 390 px phone screen: a question beyond this scrolls before the student can answer.
 QUESTION_WORDS = 80
@@ -36,6 +37,16 @@ META_REFERENCE = re.compile(
     r"|\b(?:in|as) the (?:table|diagram|figure)(?: above| below)?(?: shows)?,",
     re.IGNORECASE,
 )
+# Mathematics typed as plain text: Greek letters, math symbols, sub/superscripts, a function
+# applied to a condition or several arguments (P(A|B), Q(S, a)) or a one-letter equation (V = 3).
+PLAIN_MATH = re.compile(
+    r"[\u0391-\u03a9\u03b1-\u03c9≤≥≠≈∑∏∫√∞∀∃¬∧∨⇒⇔→∈∉⊂⊆∪∩×÷²³⁰-⁹₀-₉ᵈⁿ]"
+    r"|(?:\d|\b[A-Za-z]\b|\))\s*−\s*[\w(]"
+    r"|\b[A-Z][A-Za-z]{0,2}\([^()\n]*[|=,][^()\n]*\)"
+    r"|(?<![\w.])[A-Za-z]\*?(?:\([^()\n]{1,12}\))?\s*[=<>]\s*[-\w(]"
+)
+NON_PROSE = frozenset({"key", "sources", "pages", "kind", "image", "language", "course_key"})
+DRAWN = frozenset({"diagram", "plot", "figure", "code"})
 TITLE_CITATION = re.compile(r"\b(?:slides?|pages?|p\.)\s*\d", re.IGNORECASE)
 TRACE_VERBS = re.compile(r"\b(trace|execute|simulate|step through|run|apply)\b", re.IGNORECASE)
 # "1 + 0.5 × 6 = 4.5": numbers joined by + - × · * / and an equals sign, outside math and code.
@@ -66,9 +77,18 @@ def _evaluate(node: ast.AST) -> float:
             raise ValueError("unsupported arithmetic")
 
 
+def _plain_latex(expression: str) -> str:
+    for command, symbol in ((r"\times", "×"), (r"\cdot", "·"), (r"\,", " "), ("{", ""), ("}", "")):
+        expression = expression.replace(command, symbol)
+    return expression
+
+
 def arithmetic_errors(text: str) -> list[str]:
     """Plain arithmetic written in prose whose stated result is wrong."""
-    plain = INLINE_SPANS.sub(" ", text)
+    # Inline code stays unread; numeric LaTeX is read with its operators as plain symbols.
+    plain = INLINE_SPANS.sub(
+        lambda span: " " if span[1] is None else f" {_plain_latex(span[1])} ", text
+    )
     errors = []
     for match in EQUATION.finditer(plain):
         expression = re.sub(r"[×·]", "*", match[1]).replace("−", "-")
@@ -137,18 +157,29 @@ def quality_flags(
                     "paragraph(s). Give one idea per section, and a hard idea as short numbered "
                     "steps.",
                 )
-            for paragraph in block.paragraphs:
-                words, sentences = len(paragraph.split()), _sentences(paragraph)
-                if words > LONG_PARAGRAPH_WORDS or (
-                    sentences > LONG_PARAGRAPH_SENTENCES and words > SENTENCE_PARAGRAPH_WORDS
-                ):
-                    flag(
-                        f"{unit.key}#{index}",
-                        "dense_paragraph",
-                        f"'{block.title}': {words} words, {sentences} sentences. Split it, or "
-                        "show cases as a list or table and steps as a trace.",
-                    )
-                    break
+            calculation = next((part for part in block.paragraphs if part.count("=") >= 2), None)
+            if calculation is not None:
+                flag(
+                    f"{unit.key}#{index}",
+                    "prose_calculation",
+                    f"'{block.title}': a chain of calculations inside a sentence. Give each "
+                    "computed value as its own step: what is computed, the expression, the result.",
+                )
+            dense = [
+                (len(part.split()), _sentences(part))
+                for part in block.paragraphs
+                if len(part.split()) > PARAGRAPH_WORDS
+                or (_sentences(part) > PARAGRAPH_SENTENCES and len(part.split()) > RUN_ON_WORDS)
+            ]
+            if dense:
+                words, sentences = dense[0]
+                flag(
+                    f"{unit.key}#{index}",
+                    "dense_paragraph",
+                    f"'{block.title}': {words} words, {sentences} sentences. Keep one or two "
+                    "framing sentences; give a procedure as labelled steps, conditions as points "
+                    "and cases as a table.",
+                )
         traced = any(
             (isinstance(block, DiagramBlock) and len(block.frames) > 1)
             or (block.kind == "code" and block.walkthrough)
@@ -274,4 +305,34 @@ def quality_flags(
         for path, text in _strings(value):
             for error in arithmetic_errors(text):
                 flag(f"{name}:{path}", "arithmetic", error)
+        plain: dict[str, list[str]] = {}
+        for item, text in _prose(value):
+            found = PLAIN_MATH.search(INLINE_SPANS.sub(" ", text))
+            if found:
+                plain.setdefault(item, []).append(found[0])
+        for item, samples in plain.items():
+            flag(
+                item,
+                "plain_math",
+                f"{len(samples)} text(s) type mathematics as plain characters, such as "
+                f"'{samples[0]}'. Write every symbol, variable and formula as inline LaTeX: "
+                r"\(P(A \mid B)\), \(\gamma\), \(V = 3\).",
+            )
     return flags
+
+
+def _prose(value: JsonValue, item: str = "") -> Iterator[tuple[str, str]]:
+    """Rendered text with the unit or exercise it belongs to; drawings and code are skipped."""
+    match value:
+        case str():
+            yield item, value
+        case list():
+            for entry in value:
+                yield from _prose(entry, item)
+        case dict() if value.get("kind") not in DRAWN:
+            owner = value.get("key") if "blocks" in value or "statement" in value else None
+            for field, entry in value.items():
+                if field not in LITERAL_FIELDS and field not in NON_PROSE:
+                    yield from _prose(entry, owner if isinstance(owner, str) else item)
+        case _:
+            return

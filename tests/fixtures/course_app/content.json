@@ -188,7 +188,7 @@
             }
           ],
           "correct": "1",
-          "explanation": "Count endpoints of edges: 2 × 6 = 12.",
+          "explanation": "Count endpoints of edges: \\(2 \\times 6 = 12\\).",
           "sources": [
             "graphs"
           ],
@@ -1730,10 +1730,10 @@
           ],
           "points": [],
           "steps": [
-            "Use nonnegative edge weights.",
-            "Give S distance 0 and every other vertex infinity.",
-            "Settle the vertex with the smallest {{tentative distance}}.",
-            "Try its outgoing edges and keep any shorter distance."
+            "Check: every edge weight is nonnegative.",
+            "Initialize: give S distance 0 and every other vertex infinity.",
+            "Settle: the unsettled vertex with the smallest {{tentative distance}}.",
+            "Relax: try its outgoing edges and keep any shorter distance."
           ]
         },
         {
@@ -1829,7 +1829,7 @@
           "symbols": [
             {
               "symbol": "\\(P\\)",
-              "meaning": "A path with vertices v₀ through vₘ."
+              "meaning": "A path with vertices \\(v_{0}\\) through \\(v_{m}\\)."
             },
             {
               "symbol": "\\(m\\)",
@@ -2007,17 +2007,17 @@
           ],
           "rows": [
             [
-              "S → A → T",
+              "\\(S \\rightarrow A \\rightarrow T\\)",
               "2",
               "2 + 6 = 8"
             ],
             [
-              "S → B → T",
+              "\\(S \\rightarrow B \\rightarrow T\\)",
               "2",
               "5 + 2 = 7"
             ],
             [
-              "S → A → B → T",
+              "\\(S \\rightarrow A \\rightarrow B \\rightarrow T\\)",
               "3",
               "2 + 1 + 2 = 5"
             ]
@@ -2036,12 +2036,12 @@
           "steps": [
             "Let Y be the first unsettled vertex on the cheaper path.",
             "The settled predecessor of Y already relaxed the edge to Y, so d(Y) is at most the cost of the path up to Y.",
-            "The minimum rule chose X, so d(X) ≤ d(Y).",
+            "The minimum rule chose X, so \\(d(X) \\le d(Y)\\).",
             "The rest of the path has nonnegative edges, so its start costs no more than the whole path.",
             "So d(X) is no larger than the cheaper path, which contradicts the assumption."
           ],
           "points": [
-            "Negative edges break the argument: with S→A (1), S→B (2) and B→A (−3), settling A at 1 misses S→B→A at cost −1."
+            "Negative edges break the argument: with \\(S \\rightarrow A\\) (1), \\(S \\rightarrow B\\) (2) and \\(B \\rightarrow A\\) (-3), settling A at 1 misses \\(S\\rightarrow B\\rightarrow A\\) at cost −1."
           ]
         },
         {
@@ -2082,27 +2082,27 @@
         {
           "key": "cheapest",
           "objective": "cost",
-          "prompt": "A directed graph has edges S→A (2), S→B (5), A→B (1), A→T (6), B→T (2), and no others. Which route has the lowest total cost from S to T?",
+          "prompt": "A directed graph has edges \\(S \\rightarrow A\\) (2), \\(S \\rightarrow B\\) (5), \\(A \\rightarrow B\\) (1), \\(A \\rightarrow T\\) (6), \\(B \\rightarrow T\\) (2), and no others. Which route has the lowest total cost from S to T?",
           "level": "apply",
           "options": [
             {
               "key": "d",
-              "text": "S → A → B → T, cost 3",
+              "text": "\\(S \\rightarrow A \\rightarrow B \\rightarrow T\\), cost 3",
               "feedback": "Three is the number of edges. It is not their total weight."
             },
             {
               "key": "a",
-              "text": "S → A → T, cost 8",
+              "text": "\\(S \\rightarrow A \\rightarrow T\\), cost 8",
               "feedback": "This uses fewer edges, but 2+6 is larger than 5."
             },
             {
               "key": "b",
-              "text": "S → B → T, cost 7",
+              "text": "\\(S \\rightarrow B \\rightarrow T\\), cost 7",
               "feedback": "This costs 5+2=7. Going through A improves the route to B."
             },
             {
               "key": "c",
-              "text": "S → A → B → T, cost 5",
+              "text": "\\(S \\rightarrow A \\rightarrow B \\rightarrow T\\), cost 5",
               "feedback": "Its three weights sum to 2+1+2=5."
             }
           ],
@@ -2189,7 +2189,7 @@
         {
           "key": "update-b",
           "objective": "relax",
-          "prompt": "The current \\(d(B)\\) is 5. With \\(d(A)=2\\) and \\(w(A,B)=1\\), what does relaxing A → B do?",
+          "prompt": "The current \\(d(B)\\) is 5. With \\(d(A)=2\\) and \\(w(A,B)=1\\), what does relaxing \\(A \\rightarrow B\\) do?",
           "level": "apply",
           "options": [
             {
@@ -2403,7 +2403,7 @@
         {
           "key": "settling-premise",
           "objective": "justify",
-          "prompt": "The settled-prefix argument gives d(X) ≤ d(Y) ≤ cost(prefix to Y) on a hypothetical cheaper path to X. Which premise lets this bound reach the cost of the whole path?",
+          "prompt": "The settled-prefix argument gives \\(d(X) \\le d(Y) \\le \\mathrm{cost}(\\mathrm{prefix}\\ \\mathrm{to} Y)\\) on a hypothetical cheaper path to X. Which premise lets this bound reach the cost of the whole path?",
           "level": "reason",
           "options": [
             {
@@ -2428,7 +2428,7 @@
             }
           ],
           "correct": "c",
-          "explanation": "Nonnegative edges ensure a nonnegative suffix, so prefix cost ≤ whole path cost. Combined with the minimum rule this contradicts a cheaper path.",
+          "explanation": "Nonnegative edges ensure a nonnegative suffix, so prefix cost \\(\\le\\) whole path cost. Combined with the minimum rule this contradicts a cheaper path.",
           "sources": [
             "weighted"
           ],
@@ -2510,7 +2510,7 @@
         {
           "key": "negative-case",
           "objective": "limits",
-          "prompt": "A directed graph has only S→A (1), S→B (2), B→A (−3). A routine permanently settles A at 1 before exploring B. What is the actual shortest cost from S to A?",
+          "prompt": "A directed graph has only \\(S \\rightarrow A\\) (1), \\(S \\rightarrow B\\) (2), \\(B \\rightarrow A\\) (-3). A routine permanently settles A at 1 before exploring B. What is the actual shortest cost from S to A?",
           "level": "reason",
           "options": [
             {
@@ -2521,7 +2521,7 @@
             {
               "key": "b",
               "text": "−1",
-              "feedback": "S→B→A costs 2−3=−1."
+              "feedback": "\\(S\\rightarrow B\\rightarrow A\\) costs \\(2-3=-1\\)."
             },
             {
               "key": "c",
@@ -2944,7 +2944,7 @@
             }
           ],
           "correct": "d",
-          "explanation": "Choose two positions from three: 3 arrangements. Each has probability (1/2)³, giving 3/8.",
+          "explanation": "Choose two positions from three: 3 arrangements. Each has probability \\((1/2)^{3}\\), giving 3/8.",
           "sources": [
             "probability"
           ],

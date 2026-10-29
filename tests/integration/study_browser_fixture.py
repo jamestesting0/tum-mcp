@@ -30,6 +30,9 @@ def structure_checks(page: Page, content: dict) -> None:
     assert section.locator("dl.definitions dt").inner_text() == "Tentative distance"
     assert page.get_by_role("heading", name="Tentative distance", exact=True).count() == 0
     assert section.locator("ol.steps > li").count() == 4
+    # A step that opens with a short label shows the label in bold, before its own text.
+    labels = section.locator("ol.steps > li > strong.item-label")
+    assert labels.all_inner_texts() == ["Check:", "Initialize:", "Settle:", "Relax:"]
     page.goto("https://study.invalid/#weighted/content/tentative-distance")
     page.wait_for_function("document.activeElement?.closest('.definition-item') !== null")
     page.goto("https://study.invalid/#probability/content")
