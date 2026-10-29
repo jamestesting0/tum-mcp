@@ -43,6 +43,8 @@
 - Give every skill a Codex display name, so Codex no longer shows "Tum MCP:" prefixes.
 - Pages no longer wait for the local video index; the video panel appears once it loads,
   so a slow preview server cannot drop it.
+- Pages no longer over-scroll: hidden labels cannot stretch the page, and the space that
+  keeps step arrows in place goes once you scroll back up.
 
 ## 0.10.0 — 2026-10-27
 

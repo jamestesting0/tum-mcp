@@ -130,6 +130,7 @@ export function exercisePage(exercise, options) {
   let index = exercise.steps.findIndex(item => item.key === (stepKey || value.lastStep));
   if (index < 0) index = 0;
   const navigation = node('div', 'step-navigation'), counter = node('p', 'small');
+  let trim = null;
   const prev = iconButton('Previous step', 'left', event => { event.currentTarget.focus({ preventScroll: true }); location.hash = options.link(exercise.steps[index - 1].key); });
   const next = iconButton('Next step', 'right', event => {
     event.currentTarget.focus({ preventScroll: true });
@@ -251,7 +252,7 @@ export function exercisePage(exercise, options) {
       const usingArrows = navigation.contains(document.activeElement);
       const previousTop = navigation.getBoundingClientRect().top;
       const scroller = matchMedia('(max-width: 799px)').matches ? document.scrollingElement : root.closest('main');
-      root.style.paddingBottom = '0px';
+      trim?.(); root.style.paddingBottom = '0px';
       index = nextIndex; guidance.open = true; value.helpOpen = true;
       const prompt = paintStep();
       if (usingArrows) { if (document.activeElement.disabled) (prev.disabled ? next : prev).focus({ preventScroll: true }); }
@@ -261,6 +262,19 @@ export function exercisePage(exercise, options) {
         const space = Math.max(0, desired - (scroller.scrollHeight - scroller.clientHeight));
         if (space) root.style.paddingBottom = `${Math.ceil(space)}px`;
         scroller.scrollTo({ top: desired, behavior: 'instant' });
+        if (space) {
+          // The padding only holds the arrows in place; it shrinks as the student scrolls up,
+          // so the page never offers empty space below its end.
+          const target = scroller === document.scrollingElement ? window : scroller;
+          const shrink = () => {
+            const padding = parseFloat(root.style.paddingBottom) || 0;
+            const need = Math.max(0, Math.ceil(scroller.scrollTop + scroller.clientHeight - (scroller.scrollHeight - padding)));
+            if (need < padding) root.style.paddingBottom = `${need}px`;
+            if (!need) trim();
+          };
+          trim = () => { target.removeEventListener('scroll', shrink); trim = null; };
+          target.addEventListener('scroll', shrink, { passive: true });
+        }
       } else scrollReadingTo(navigation);
       announce(`Step ${index + 1} of ${exercise.steps.length}. ${exercise.steps[index].prompt}`);
       activityChanged(); return true;

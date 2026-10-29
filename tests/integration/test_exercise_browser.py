@@ -779,3 +779,30 @@ def test_demo_walkthrough_and_state_diagram(course_browser: Browser, tmp_path: P
             context.close()
             server.shutdown()
             thread.join(timeout=3)
+
+
+@pytest.mark.parametrize("exercise_project", ["responses"], indirect=True)
+def test_steps_never_leave_empty_space_to_scroll_into(
+    course_browser: Browser, exercise_url: str
+) -> None:
+    context = course_browser.new_context(viewport={"width": 1280, "height": 745})
+    try:
+        page = context.new_page()
+        page.goto(exercise_url + "#exercises/responses/response-controls/choice")
+        page.get_by_role("button", name="Check answer").wait_for()
+        # Hidden labels far down the reading pane must not make the whole page scroll.
+        assert page.evaluate("document.scrollingElement.scrollHeight <= innerHeight")
+        page.goto(exercise_url + "#exercises/responses/response-controls/number")
+        workspace, padding = page.locator(".exercise-workspace"), "0px"
+        # Arrow on until a shorter step needs padding to hold the arrows in place.
+        for _ in range(9):
+            page.get_by_role("button", name="Next step", exact=True).click()
+            padding = workspace.evaluate("e => e.style.paddingBottom")
+            if padding not in ("", "0px"):
+                break
+        assert padding not in ("", "0px")
+        # That padding goes once the student scrolls back up.
+        page.locator("main").evaluate("m => m.scrollTo({ top: 0, behavior: 'instant' })")
+        expect(workspace).to_have_css("padding-bottom", "0px")
+    finally:
+        context.close()
