@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.12.0 — 2026-10-29
 
 - Remove the optional Studocu extension, its `sync-studocu` skill and `tum-mcp studocu`
   commands. Download such material yourself and add it with `tum-mcp study import`.

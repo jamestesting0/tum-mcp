@@ -1,6 +1,6 @@
 [project]
 name = "tum-mcp"
-version = "0.11.0"
+version = "0.12.0"
 description = "Read-only TUM course tools and source-backed local study workflows."
 readme = "README.md"
 license = "MIT"
