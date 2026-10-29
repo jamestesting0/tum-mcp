@@ -96,10 +96,10 @@ export function renderCommentedView(unit, view, activity, activate) {
     activeHost = state.host; selectedId = item.id; showResolved = item.status === 'resolved' || !state.items.some(value => value.status === 'open');
     const found = locate(item);
     message.textContent = found?.pending && view === 'practice' ? 'Check an answer first.' : '';
-    if (found?.range) {
-      const rect = found.range.getBoundingClientRect();
-      if (rect.bottom < 0 || rect.top > innerHeight) found.range.startContainer.parentElement.scrollIntoView({ block: 'center', behavior: 'instant' });
-    }
+    // A passage not shown yet anchors the popup to the marker, which must then be on screen.
+    const anchor = found?.range ? found.range.startContainer.parentElement : state.marker;
+    const rect = (found?.range || anchor).getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > innerHeight) anchor.scrollIntoView({ block: 'center', behavior: 'instant' });
     paintList();
     popup.show(state.marker, () => locations.get(selectedId)?.range?.getBoundingClientRect() || state.marker.getBoundingClientRect());
     highlightPassages(openRanges(), found?.range ? [found.range] : []);
