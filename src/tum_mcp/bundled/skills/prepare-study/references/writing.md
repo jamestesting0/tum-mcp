@@ -4,6 +4,28 @@ Shared by prepare-study, prepare-exercises, prepare-exams and review-course. The
 reads to learn the idea. Every sentence teaches something about the subject; a sentence
 that only talks about the material, the page or the writing is removed.
 
+## Structure before prose
+
+Working memory holds only a few new elements, so a learner studies a procedure one stage at
+a time. Prose frames an idea in one or two sentences; everything else is structure.
+
+- **Procedure or algorithm**: one lead sentence saying what it computes, then `steps`, one
+  action each, opened by a short label: "Initialize: …", "Back up: …", "Stop: …".
+  Conditions and guarantees follow as labelled `points`: "Converges when: …",
+  "Approximation: …". The app shows each label in bold.
+- **Worked example**: its own section after the procedure. Give the setting first (a
+  table, points or a figure), then one computed value per step, labelled with the
+  sub-result it reaches:
+  "First backup: \(Q(\mathrm{continue}) = 1 + 0.5 \times 3 = 2.5\), below 3."
+  End with the conclusion as the last step. Several states over several rounds are a
+  table trace instead.
+- **Cases, conditions, comparisons**: points or a table, never a sentence joined by
+  "and", "while" or "whereas".
+
+Every symbol and formula in that structure is inline LaTeX
+([notation](content.md#notation)), so a step reads as one expression instead of typed
+characters.
+
 ## Say the idea, not where it came from
 
 - Do not narrate the source: no "the lecture groups…", "the slides say…", "the course
@@ -22,8 +44,7 @@ These rules follow ASD-STE100, adapted for teaching:
 
 - One idea per sentence. Keep a step or instruction under 20 words and a description
   under 25.
-- One topic per paragraph, at most four sentences. Show a list of cases as points or a
-  table instead of a long sentence.
+- One topic per paragraph, at most two sentences (see above).
 - Use the active voice and the present tense, with the actor first: "A* expands the
   node", not "The node is expanded".
 - Use one term for one concept. When the frontier is "the frontier", it never becomes
@@ -49,5 +70,19 @@ Cut or rewrite:
 ## Check
 
 Read each passage once as the student would. Remove every sentence the student does not
-need, and split every sentence they would read twice. `tum-mcp study report PROJECT`
-flags narration of the source as `meta_reference`.
+need, and split every sentence they would read twice. Then run `tum-mcp study report
+PROJECT` and restructure, never justify, what it flags: `dense_paragraph` (a paragraph
+over 45 words, or three sentences over 30), `prose_calculation` (calculations chained in
+a sentence), `plain_math` (mathematics typed as characters) and `meta_reference`
+(narration of the source).
+
+## Sources
+
+The structure rules come from learning research as packaged in open teaching skills:
+[education-agent-skills](https://github.com/GarethManning/education-agent-skills) (worked
+examples and explicit instruction: Sweller, Renkl, Rosenshine's "small steps") and
+[id-skills-for-claude](https://github.com/trinarimmer-stack/id-skills-for-claude)
+(chunking, signalling, worked-example annotation). Step labels follow subgoal labelling
+(Catrambone): naming each stage helps the learner transfer the procedure. Not adopted:
+classroom scripts, think-alouds, audio narration and interactive fading, which need a
+teacher or features the app deliberately leaves out.

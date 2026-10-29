@@ -27,13 +27,25 @@ folders never changes progress.
 
 ## Notation
 
-Use `\( ... \)` for variables and short expressions in teaching text: paragraphs,
-objectives, table cells, symbol definitions, card faces, question options and
-feedback. JSON escapes the backslashes: `"Use \\(v_i\\)."`. Build validates and
-compiles them locally to MathML. Convert complete mathematical tokens, never letters
-inside ordinary words, and reread the prose after notation edits. Long equations
-belong in formula blocks. Keep source titles, outline labels and diagram labels
-plain. Dollar signs stay literal; code blocks and comments never interpret markup.
+Every symbol, variable, formula and calculation in teaching text is inline LaTeX in
+`\( ... \)`: paragraphs, steps, points, objectives, table cells, symbol definitions,
+card faces, question options and feedback. JSON escapes the backslashes:
+`"Use \\(v_i\\)."`. Build validates and compiles them locally to MathML.
+
+- Greek letters, relations and operators: `\(\gamma\)`, `\(0 \le \gamma < 1\)`,
+  `\(x \neq y\)`, `\(\forall x\, P(x)\)`, never γ, ≤, ≠ or ∀ as characters.
+- Conditionals and functions: `\(P(A \mid B)\)`, `\(Q(s, a)\)`, `\(\log_2 p\)`.
+  Word operands take `\mathrm{}`: `\(e = \mathrm{output} - \mathrm{reference}\)`.
+- Calculations: the whole line, `\(1 + 0.5 \times 3 = 2.5\)`, so the student reads one
+  expression. `study report` still recomputes it.
+- Sub- and superscripts: `\(V_0(S)\)`, `\(b^{*}\)`, `\(2^{2}\)`, never V₀ or b*.
+
+Convert complete mathematical tokens, never letters inside ordinary words, and reread
+the prose after notation edits. Long equations belong in formula blocks. Keep source
+titles and outline labels plain. Diagrams and figures have no LaTeX renderer; their
+labels use Unicode, such as θ₁ or γ = 0.5. Dollar signs stay literal; code blocks and
+comments never interpret markup. `study report` flags plain-text mathematics as
+`plain_math`.
 
 Wrap identifiers, method names, short expressions in code and file names in single
 backticks in the same teaching text: `` `getChildren()` `` renders as inline code in
@@ -49,7 +61,7 @@ on; citations open there, and later pages can differ from the printed slide numb
 
 | Block | Provide |
 | --- | --- |
-| text | Paragraphs, numbered `steps` and/or points; never an empty explanation. Give a hard argument or procedure as steps, one claim each, after a one-sentence lead. |
+| text | Paragraphs, numbered `steps` and/or points; never an empty explanation. Paragraphs frame (one or two sentences); a procedure is steps and conditions are points. An item opening with a short `Label: ` shows the label in bold. |
 | definition | A `term`, the `statement` and optional `conditions`, placed right after the passage that introduces the term: it appears inside that section as the term beside its meaning, with no heading of its own. Give it a `key`. Write `{{term}}` in any later text, in every workspace, to let students open it in place; the build rejects unknown terms. |
 | formula | LaTeX without dollar delimiters (JSON-escaped, e.g. `"\\frac{a}{b}"`), a plain-language reading, symbol definitions and conditions. Unsupported macros, links and unsafe markup fail validation. Keep `mathml` only for legacy input; never supply both. |
 | table | Column labels, rectangular rows and a meaningful caption. |

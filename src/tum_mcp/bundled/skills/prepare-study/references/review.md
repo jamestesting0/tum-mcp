@@ -16,9 +16,11 @@ with this gate.
 4. Every wrong option's feedback names the mistake that leads to it.
 5. Show each idea in the shape it has (table below); prose says only what the picture cannot.
 6. Review the last batch to the same depth as the first, against the source's own outcomes.
-7. Resolve or justify every flag from `study report`; `long_section`, `meta_reference`,
-   `restated_context` and `dense_statement` mean the student meets a wall of text, a
-   sentence about the material or a fact said twice. Write as in [writing](writing.md).
+7. Resolve or justify every flag from `study report`. Restructure, never justify,
+   `long_section`, `dense_paragraph`, `prose_calculation`, `plain_math`,
+   `meta_reference`, `restated_context` and `dense_statement`: each means a wall of
+   text, mathematics typed as characters, a sentence about the material or a fact said
+   twice. Write as in [writing](writing.md).
 8. Score the batch with [review-course](../../review-course/SKILL.md); its scorecard turns
    stale when an item changes, so the review follows the content.
 

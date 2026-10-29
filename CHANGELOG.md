@@ -2,6 +2,7 @@
 
 ## 0.13.0 — 2026-10-29
 
+- Lessons read as structure rather than prose: a `text` step or point that opens with a short `Label: ` shows the label in bold, and `study report` flags paragraphs over 45 words or three long sentences (`dense_paragraph`), calculations chained inside a sentence (`prose_calculation`) and mathematics typed as plain characters instead of inline LaTeX (`plain_math`). Arithmetic in inline LaTeX is recomputed like arithmetic in prose. prepare-study's writing guide gains the procedure, worked-example and notation rules behind them.
 - Figures are checked for readable labels at build time: a label that touches a line, sits on a filled shape, overlaps another label or leaves the canvas is rejected with its text named, and the app draws labels on a page-coloured halo at the drawn size. prepare-study's figure guide adopts label and spacing rules from open-source diagram skills.
 - Study lessons gain definitions that sit inside the section introducing them, as the
   term in bold beside its meaning; a `{{term}}` mention anywhere in the app opens the

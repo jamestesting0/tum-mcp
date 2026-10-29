@@ -28,8 +28,9 @@ The student can read each passage once and know what it says.
 
 What the student has to hold in mind at once.
 
-- 3: one new idea per section or step, and no section of continuous prose longer than
-  about 110 words: a hard idea comes as numbered steps; the state of a procedure is shown,
+- 3: one new idea per section or step, and no paragraph longer than two sentences or
+  45 words: a procedure comes as labelled steps and a worked example as one computed value
+  per step; every symbol and formula is set as mathematics rather than typed characters; the state of a procedure is shown,
   not tracked mentally; text and the picture it refers to sit together; a question fits one phone
   screen; large steps have a middle hint.
 - 2: two new ideas in one step, a long question, or a trace the student has to follow

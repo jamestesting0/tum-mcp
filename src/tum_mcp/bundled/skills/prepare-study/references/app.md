@@ -45,7 +45,7 @@ formats; it is not a model of good teaching or question design.
 | flashcard `front`, `back` | One card that flips; its sources appear after reveal |
 | question `prompt`, `blocks`, `options`, `explanation`, `hint` | Practice and Revision; the blocks sit between prompt and options, options appear in a stable shuffled order, the hint is one optional button before checking; after a check the app marks the chosen and correct options, shows the chosen option's feedback and the explanation, and keeps the other options' feedback on request |
 | `definition` block | The term in bold beside its meaning, inside the section before it; consecutive terms form one list; `{{term}}` mentions open it in place |
-| text `steps` | A numbered sequence after the paragraphs, one claim per step |
+| text `steps` | A numbered sequence after the paragraphs, one action per step; a step or point opening with a short `Label: ` shows the label in bold |
 | `figure` block | The drawing or image at full width with its caption; the `alt` text names it for screen readers |
 
 Keep titles and labels short enough to scan in an outline. Long text wraps, but it

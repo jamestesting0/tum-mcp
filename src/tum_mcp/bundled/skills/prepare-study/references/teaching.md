@@ -30,8 +30,8 @@ label these roles; the writing makes them clear):
 5. Definitions: a `definition` block right after the passage that introduces each term
    students must learn. It appears inside that passage as the term beside its meaning, so
    the prose does not restate it. Later mentions anywhere in the course are `{{term}}`.
-6. Mechanism as short numbered `steps`, one claim each, then one worked example or trace
-   the student can follow step by step.
+6. Mechanism as labelled `steps`, one action each, then a worked example in its own
+   section: one computed value per step, or a trace.
 7. Pitfall: the common misconception or limiting condition, where it applies.
 8. Recap: for units with more than three sections, a final text block with two to
    four points a student should recall without the page.
@@ -40,18 +40,22 @@ Flashcards test recall of those points; practice tests application. Review mode
 reuses Again ratings and wrong answers, so every objective needs at least one card
 or question that a student can genuinely get wrong.
 
-For each new/changed objective, cover the mechanism, assumptions and a useful
-example. Show the example in the shape it has ([representations](review.md#choose-the-representation));
-an algorithm is a trace whose frames carry its state ([traces](review.md#algorithm-traces)).
-Never leave a wall of explanation. A section carries one idea in about 110 words at
-most; give a hard argument or procedure as numbered steps, cases as points or a table, a
-rule with two inputs as a decision matrix, and anything with a physical or spatial shape
-as a drawn figure. Prose then says only what the picture cannot: why it works and when it fails. Name the
-elements the reader should look at, in the order they should look. Parallel cases go in a
-list or table, not one paragraph. No diagram quotas or equal
-word/card/question counts. Split independent goals,
-remove duplication and keep essential conditions/counterexamples visible. Optional
-proof detail may use disclosure; essential meaning must not be hidden there.
+For each new or changed objective, cover the mechanism, its assumptions and a useful
+example, each in the shape it has ([representations](review.md#choose-the-representation)):
+
+- One idea per section, with at most 70 words of prose, structured as in
+  [writing](writing.md#structure-before-prose).
+- A procedure or hard argument: labelled steps. An algorithm's run: a trace whose frames
+  carry its state ([traces](review.md#algorithm-traces)).
+- Parallel cases: points or a table. A rule with two inputs: a decision matrix.
+- Anything with a physical or spatial shape: a drawn figure.
+- Prose says only what the picture cannot (why it works, when it fails) and names what to
+  look at, in reading order.
+- Essential conditions and counterexamples stay visible; optional proof detail may sit in
+  a disclosure, essential meaning never.
+
+Split independent goals and remove duplication. There are no diagram quotas and no equal
+word, card or question counts.
 
 ## Precision and language
 
