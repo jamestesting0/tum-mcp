@@ -22,6 +22,10 @@ from tum_mcp.study_math import INLINE_SPANS
 LONG_PARAGRAPH_WORDS = 110
 LONG_PARAGRAPH_SENTENCES = 4
 SENTENCE_PARAGRAPH_WORDS = 80
+# About one 390 px phone screen: a question beyond this scrolls before the student can answer.
+QUESTION_WORDS = 80
+QUESTION_TABLE_ROWS = 6
+TITLE_CITATION = re.compile(r"\b(?:slides?|pages?|p\.)\s*\d", re.IGNORECASE)
 TRACE_VERBS = re.compile(r"\b(trace|execute|simulate|step through|run|apply)\b", re.IGNORECASE)
 # "1 + 0.5 × 6 = 4.5": numbers joined by + - × · * / and an equals sign, outside math and code.
 NUMBER = r"\(?[-−]?\d+(?:\.\d+)?\)?"
@@ -138,7 +142,33 @@ def quality_flags(
                 "An objective asks students to trace or apply a procedure, but the lesson has no "
                 "step-by-step diagram, trace table or code walkthrough.",
             )
+        cited = [
+            block.title
+            for block in (*unit.blocks, *(b for q in unit.questions for b in q.blocks))
+            if isinstance(getattr(block, "title", None), str) and TITLE_CITATION.search(block.title)
+        ]
+        if cited:
+            flag(
+                unit.key,
+                "citation_in_title",
+                f"{len(cited)} title(s) carry a slide or page number, such as '{cited[0]}'; move "
+                "it to the block's pages so the citation opens there.",
+            )
         for question in unit.questions:
+            words = len(question.prompt.split()) + sum(
+                len(option.text.split()) for option in question.options
+            )
+            rows = max(
+                (len(b.rows) for b in question.blocks if isinstance(b, TableBlock)), default=0
+            )
+            if len(question.blocks) > 1 or words > QUESTION_WORDS or rows > QUESTION_TABLE_ROWS:
+                flag(
+                    f"{unit.key}/{question.key}",
+                    "long_question",
+                    f"{len(question.blocks)} context block(s), {rows} table rows and {words} "
+                    "words of prompt and options do not fit one phone screen; keep the one "
+                    "picture the question needs and trim the rest.",
+                )
             for option in question.options:
                 if option.key != question.correct and len(option.feedback.split()) < 5:
                     flag(

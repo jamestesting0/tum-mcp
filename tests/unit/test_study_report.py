@@ -57,6 +57,16 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
     # Then each finding names its item, and clean content raises none of these flags.
     assert ("dense_paragraph", content["units"][0]["key"]) in kinds
     assert ("unanswered_table", payload["sets"][0]["exercises"][0]["key"]) in kinds
+    # A question that carries two pictures no longer fits one phone screen.
+    question = content["units"][0]["questions"][0]
+    picture = next(b for b in content["units"][0]["blocks"] if b["kind"] == "formula")
+    question["blocks"] = [picture, picture]
+    # A slide number in a title belongs in pages, where the citation opens.
+    picture["title"] = "Weighted sum · slides 4–6"
+    long = quality_flags(StudyContent.model_validate(content), None)
+    found = {(flag["flag"], flag["item"]) for flag in long}
+    assert ("long_question", f"{content['units'][0]['key']}/{question['key']}") in found
+    assert ("citation_in_title", content["units"][0]["key"]) in found
     clean = quality_flags(
         StudyContent.model_validate(study()), ExerciseContent.model_validate(exercises())
     )
@@ -64,6 +74,8 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
         "dense_paragraph",
         "unanswered_table",
         "arithmetic",
+        "long_question",
+        "citation_in_title",
     }
 
 

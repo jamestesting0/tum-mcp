@@ -446,7 +446,7 @@
             {
               "key": "a",
               "text": "2",
-              "feedback": "This repeats one addend."
+              "feedback": "This keeps one addend and drops the other."
             },
             {
               "key": "b",
@@ -456,12 +456,12 @@
             {
               "key": "c",
               "text": "6",
-              "feedback": "Check the two supplied addends."
+              "feedback": "This adds a third 2 that the prompt does not give."
             },
             {
               "key": "d",
               "text": "8",
-              "feedback": "This doubles the sum."
+              "feedback": "This doubles the sum instead of adding once."
             }
           ],
           "correct": "b",
