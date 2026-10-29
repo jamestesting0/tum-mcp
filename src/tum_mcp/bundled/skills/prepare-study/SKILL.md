@@ -65,6 +65,7 @@ Read only what the change needs.
 | Choosing checks | [Verification](references/verification.md) |
 | Reviewing a batch, choosing a representation, tracing an algorithm | [Review gate](references/review.md) |
 | Wording of any explanation, card, question or feedback | [Writing](references/writing.md) |
+| Drawing a figure | [Figures](references/figures.md) |
 | Source outcomes, course state and completion | [Coverage ledger](references/coverage.md) |
 
 ## Boundaries

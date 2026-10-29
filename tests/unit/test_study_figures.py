@@ -28,6 +28,8 @@ def test_drawings_use_theme_classes_and_nothing_that_runs_or_loads() -> None:
         '<svg viewBox="0 0 1 1"><foreignObject><div>x</div></foreignObject></svg>',
         '<svg viewBox="0 0 1 1"><rect class="red" width="1" height="1"/></svg>',
         "<svg><rect width='1' height='1'/></svg>",
+        '<svg viewBox="0 0 1200 300"><rect width="1" height="1"/></svg>',
+        '<svg viewBox="0 0 400 300"><text font-size="9">tiny</text></svg>',
     ):
         with pytest.raises(ValueError):
             safe_svg(unsafe)

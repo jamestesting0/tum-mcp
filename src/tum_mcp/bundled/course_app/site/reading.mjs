@@ -200,12 +200,15 @@ function figureBlock(block) {
       }
     }
     svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', studyText('span', '', block.alt).textContent);
+    // Never wider than drawn, so a 16-unit label reads as 16 px text and only shrinks on narrow screens.
+    svg.style.maxWidth = `${svg.viewBox.baseVal.width}px`;
     figure.append(svg);
     // Crop to what is drawn, once it is on screen, so unused canvas never leaves empty space.
     const crop = new ResizeObserver(() => {
       const box = svg.getBBox();
       if (!box.width || !box.height) return;
       svg.setAttribute('viewBox', `${box.x - 12} ${box.y - 12} ${box.width + 24} ${box.height + 24}`);
+      svg.style.maxWidth = `${box.width + 24}px`;
       crop.disconnect();
     });
     crop.observe(svg);

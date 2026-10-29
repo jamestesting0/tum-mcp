@@ -109,7 +109,7 @@ THEME_CLASSES = frozenset(
 )
 PAINT = frozenset({"none", "currentColor"})
 LOCAL_REFERENCE = re.compile(r"url\(#[A-Za-z][\w-]{0,40}\)\Z")
-NUMBERS = re.compile(r"-?\d+(\.\d+)?")
+NUMBERS = re.compile(r"-?\d+(?:\.\d+)?")
 
 
 def _local(name: str) -> str:
@@ -124,8 +124,11 @@ def safe_svg(markup: str) -> str:
         root = fromstring(markup)
     except (ParseError, DefusedXmlException):
         raise ValueError("A figure's SVG must be well-formed XML.") from None
-    if _local(root.tag) != "svg" or len(NUMBERS.findall(root.get("viewBox", ""))) != 4:
+    box = NUMBERS.findall(root.get("viewBox", ""))
+    if _local(root.tag) != "svg" or len(box) != 4:
         raise ValueError("A figure's SVG starts with <svg> and gives a viewBox.")
+    if not 160 <= float(box[2]) <= 480:
+        raise ValueError("Draw a figure 160 to 480 units wide, so its labels stay readable.")
     elements = list(root.iter())
     if len(elements) > 400:
         raise ValueError("Keep a figure to at most 400 SVG elements.")
@@ -137,6 +140,9 @@ def safe_svg(markup: str) -> str:
             name = _local(raw)
             if name not in SVG_ATTRIBUTES:
                 raise ValueError(f"A figure's SVG may not use the attribute {name}.")
+            size = NUMBERS.match(value) if name == "font-size" else None
+            if name == "font-size" and (size is None or float(size[0]) < 14):
+                raise ValueError("Label text in a figure is at least 14 units.")
             if name in {"fill", "stroke"} and value not in PAINT:
                 raise ValueError(
                     "Colour a figure with theme classes; fill and stroke take none or currentColor."

@@ -261,7 +261,7 @@ thead th { background: var(--surface); }
 .figure { margin: var(--s4) 0 0; }
 .figure svg, .figure img { display: block; width: 100%; max-width: 640px; height: auto; max-height: 460px; margin-inline: auto; }
 .figure svg { color: var(--ink); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; font-family: inherit; font-size: 16px; }
-.figure svg text { fill: currentColor; stroke: none; }
+.figure svg text, .figure svg tspan { fill: currentColor; stroke: none !important; font-weight: 500; }
 .figure svg .muted { stroke: var(--muted); color: var(--muted); }
 .figure svg .accent { stroke: var(--accent); color: var(--accent); }
 .figure svg text.muted { fill: var(--muted); }
@@ -274,7 +274,7 @@ thead th { background: var(--surface); }
 .figure svg .dashed { stroke-dasharray: 6 5; }
 .figure svg .thin { stroke-width: 1; }
 .figure svg .thick { stroke-width: 3.5; }
-.figure svg .small { font-size: 13px; }
+.figure svg .small { font-size: 14px; }
 .figure svg .bold { font-weight: 650; }
 .figure img { border-radius: var(--r1); }
 .figure figcaption { margin-top: var(--s2); color: var(--muted); }

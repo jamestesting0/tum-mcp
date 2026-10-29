@@ -30,7 +30,7 @@ with this gate.
 | An algorithm or process over time | A diagram whose frames carry `state` rows (queue, domains, values) and a reason in each caption, or a trace table with one row per step |
 | Parallel cases (games, environments, designs) | A table with one row per case, or a list |
 | A rule or value that depends on two inputs | A decision matrix: one input down the side, the other across the top, the result in each cell |
-| Something with a physical or spatial shape (an arm and its angles, rooms, a map, a mechanism) | A `figure`: a drawing with labelled parts, or an image |
+| Something with a physical or spatial shape (an arm and its angles, rooms, a map, a mechanism) | A `figure` drawn as in [figures](figures.md), or an image |
 | A hard argument or a multi-part explanation | Numbered `steps`, one claim each |
 | A calculation or definition with symbols | A formula block with every symbol explained |
 | Classes, relations, interactions, behaviour over events | A UML class, sequence or state diagram |
