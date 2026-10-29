@@ -132,7 +132,10 @@ def check_page(page, server: str) -> None:  # noqa: ANN001 - Playwright page
     page.goto(server + "/#components")
     panel = page.locator("section.video-note")
     panel.get_by_role("heading", name="Video explainer").wait_for()
-    assert page.locator(".page-outline a", has_text="Video explainer").count() == 1
+    # The outline follows the late panel on its next refresh.
+    entry = page.locator(".page-outline a", has_text="Video explainer")
+    entry.wait_for(state="attached")
+    assert entry.count() == 1
     chapters = panel.locator(".video-chapters button")
     assert chapters.count() == 2
     page.evaluate("document.querySelector('.video-note video').muted = true")
