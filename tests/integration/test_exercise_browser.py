@@ -354,26 +354,27 @@ def test_static_exercises_under_a_project_prefix(
                 lambda request: failed_requests.append((request.url, request.failure)),
             )
             base = f"http://127.0.0.1:{server.server_port}/course/"
-            page.goto(base + "#exercises/sheet-1/sample-relaxation/candidate")
             try:
+                page.goto(base + "#exercises/sheet-1/sample-relaxation/candidate")
                 page.get_by_role("button", name="Compare", exact=True).wait_for()
-            except BrowserTimeout:
+                page.get_by_role("button", name="Compare", exact=True).click()
+                expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
+                page.reload()
+                expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
+                assert errors == []
+                assert all(url.startswith(base) for url in requests)
+                assert not any("/_study/comments" in url for url in requests)
+                if exercise_only:
+                    expect(page.get_by_role("link", name="Study", exact=True)).to_have_count(0)
+            except (BrowserTimeout, AssertionError) as error:
                 pytest.fail(
                     f"Static exercise did not become usable: url={page.url!r}, "
+                    f"failure={error!s}, "
                     f"page_errors={errors!r}, console_errors={console_errors!r}, "
                     f"failed_requests={failed_requests!r}, "
                     f"body={page.locator('body').inner_text()[:2000]!r}",
                     pytrace=False,
                 )
-            page.get_by_role("button", name="Compare", exact=True).click()
-            expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
-            page.reload()
-            expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
-            assert errors == []
-            assert all(url.startswith(base) for url in requests)
-            assert not any("/_study/comments" in url for url in requests)
-            if exercise_only:
-                expect(page.get_by_role("link", name="Study", exact=True)).to_have_count(0)
         finally:
             context.close()
             server.shutdown()
