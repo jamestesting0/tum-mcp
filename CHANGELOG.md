@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.14.0 — 2026-10-30
 
 - Graph diagrams sit on a grid: each node takes a `row` and `col` instead of pixel
   coordinates. The app sizes boxes from their labels (two lines, centred), spaces rows and
