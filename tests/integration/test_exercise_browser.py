@@ -339,8 +339,20 @@ def test_static_exercises_under_a_project_prefix(
             page = context.new_page()
             requests = []
             errors = []
+            console_errors = []
+            failed_requests = []
             page.on("request", lambda request: requests.append(request.url))
             page.on("pageerror", lambda error: errors.append(str(error)))
+            page.on(
+                "console",
+                lambda message: (
+                    console_errors.append(message.text) if message.type == "error" else None
+                ),
+            )
+            page.on(
+                "requestfailed",
+                lambda request: failed_requests.append((request.url, request.failure)),
+            )
             base = f"http://127.0.0.1:{server.server_port}/course/"
             page.goto(base + "#exercises/sheet-1/sample-relaxation/candidate")
             try:
@@ -348,7 +360,9 @@ def test_static_exercises_under_a_project_prefix(
             except BrowserTimeout:
                 pytest.fail(
                     f"Static exercise did not become usable: url={page.url!r}, "
-                    f"page_errors={errors!r}, body={page.locator('body').inner_text()[:2000]!r}",
+                    f"page_errors={errors!r}, console_errors={console_errors!r}, "
+                    f"failed_requests={failed_requests!r}, "
+                    f"body={page.locator('body').inner_text()[:2000]!r}",
                     pytrace=False,
                 )
             page.get_by_role("button", name="Compare", exact=True).click()

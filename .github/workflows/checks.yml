@@ -53,6 +53,11 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22.22.2'
+      - name: Diagnose Windows module startup
+        if: runner.os == 'Windows'
+        env:
+          TUM_MCP_WINDOWS_STARTUP_PROBE: '1'
+        run: uv run pytest -x -v -s tests/integration/test_windows_startup_probe.py --tb=short
       - name: Verify optional native lecture recognition
         env:
           TUM_MCP_LECTURE_ASR_INTEGRATION: '1'
