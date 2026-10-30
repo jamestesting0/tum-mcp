@@ -30,8 +30,9 @@ else.
    decoration.
 5. **Check.** The build estimates every label's box and rejects labels that touch a
    stroke, sit on a filled shape, overlap another label or leave the canvas; move the label,
-   never the rule. Then look at the figure in dark mode at phone and desktop widths when
-   the host can render pages. If the message is not obvious within five seconds, simplify.
+   never the rule. Then run `tum-mcp study visuals PROJECT --unit KEY` and look at the
+   figure on its contact sheets at phone and desktop width, and in dark mode when the host
+   can render pages. If the message is not obvious within five seconds, simplify.
 
 The app draws each label on a small halo of the page colour and never shows a figure wider
 than its canvas, so 16-unit text reads as 16 px on a laptop. The halo is a safety net, not

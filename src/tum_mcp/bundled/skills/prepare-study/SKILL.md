@@ -33,10 +33,10 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
    new site, prove one unit with the hardest required formats, then author the rest
    in batches. Never fill gaps with invented course facts.
 4. **Review.** Check every changed explanation, answer and assumption against its
-   source, run `tum-mcp study report PROJECT` and pass the [review gate](references/review.md)
-   for each batch, the last as carefully as the first. Then score the changed units with
-   [review-course](../review-course/SKILL.md) and fix what it finds until the report's
-   review passes. Schema and browser checks do not replace this review. Rebind source hashes only after you read the changed content.
+   source, run `tum-mcp study report PROJECT` and `tum-mcp study visuals PROJECT`, and pass
+   the [review gate](references/review.md) for each batch, the last as carefully as the
+   first. Then score the changed units with [review-course](../review-course/SKILL.md) and
+   fix what it finds until the report's review and render sections pass. Schema and browser checks do not replace this review. Rebind source hashes only after you read the changed content.
 5. **Build.** Run `tum-mcp study build PROJECT`. Do not author duplicate decks,
    hand-copy the app, add a framework or edit generated `data.mjs`. Investigate stale
    sources and preserved custom templates.
@@ -65,6 +65,8 @@ Read only what the change needs.
 | Choosing checks | [Verification](references/verification.md) |
 | Reviewing a batch, choosing a representation, tracing an algorithm | [Review gate](references/review.md) |
 | Wording of any explanation, card, question or feedback | [Writing](references/writing.md) |
+| Drawing a graph, UML diagram or flowchart | [Diagrams](references/diagrams.md) |
+| Drawing a plot | [Plots](references/plots.md) |
 | Drawing a figure | [Figures](references/figures.md) |
 | Source outcomes, course state and completion | [Coverage ledger](references/coverage.md) |
 

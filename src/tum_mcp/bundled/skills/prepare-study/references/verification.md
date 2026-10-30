@@ -16,7 +16,7 @@ relying on them.
 | Change | Check |
 | --- | --- |
 | New site | Prove one demanding unit, then confirm every unit's Content, Flashcards and Practice render with their sources and without script errors. Walk the student path below once. |
-| Content edit | Rebuild and open the changed view. Read the rendered text, notation, tables and diagrams at a phone width (~390px) and a desktop width. |
+| Content edit | Rebuild, run `tum-mcp study visuals PROJECT --unit KEY` and fix what it reports, then open the changed view. Read the rendered text and notation, and the contact sheets of its tables, diagrams and plots, at a phone width (~390px) and a desktop width. |
 | Unit order, labels, paths or citations | Outline grouping, home topic rows, Next links and Revision order; these can change without unit revisions changing. |
 | Inventory-only update | Staleness and coverage reporting; rebuild affected units, not unchanged teaching. |
 | Skill prose | Links, metadata and instructions; not unrelated application suites. |

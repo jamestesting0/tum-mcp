@@ -43,7 +43,8 @@ Exam Prep stays local: it is never published and publish-course never includes i
 7. **Build and verify** ([verification](references/verification.md)). Edit
    `exam.json` programmatically by key and preserve unrelated items. Build once per
    coherent batch, review `exam-report --section targets`, pass the
-   [review gate](../prepare-study/references/review.md), then check the app. Solutions
+   [review gate](../prepare-study/references/review.md), run
+   `tum-mcp study visuals PROJECT --exam` and fix what it reports, then check the app. Solutions
    answer each part once, labelled, in the form the part asks for. When a question needs
    knowledge Study lacks, record it in the [coverage ledger](../prepare-study/references/coverage.md).
 8. **Report** sittings, questions and their coverage, review items, kept outliers with

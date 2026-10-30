@@ -109,8 +109,11 @@ course's lecture or week sequence when useful, or consistent topics, with at mos
 one category level. Every unit has:
 
 - Content: a short lesson with objectives, source links, assumptions and worked
-  examples, using formulas, tables, code, diagrams, drawn figures or line graphs where
-  they help. A hard idea comes as short numbered steps instead of a long paragraph. A
+  examples, using formulas, tables, code, graphs, UML diagrams, flowcharts, drawn figures
+  or plots where they help. Graphs keep the rows and columns the author chose; UML
+  diagrams and flowcharts are laid out automatically; plots draw functions from their
+  formula. On a phone a drawing shrinks only until its text reaches 12 px and scrolls
+  sideways beyond that. A hard idea comes as short numbered steps instead of a long paragraph. A
   term to learn appears in bold beside its meaning, inside the section that introduces
   it; a dotted term anywhere in the app opens its definition in place. Algorithm traces
   step through one operation at a time and show the algorithm's state (a queue, the
@@ -149,6 +152,7 @@ and reported, so the agent must review compatibility when extending them.
 tum-mcp study inspect ./pse-ws26
 tum-mcp study build ./pse-ws26
 tum-mcp study report ./pse-ws26   # review flags and what the sources leave uncovered
+tum-mcp study visuals ./pse-ws26  # measure every drawn visual and draw contact sheets
 ```
 
 The agent records what each lecture states students should learn, and which sheet
@@ -156,10 +160,22 @@ problems are prepared, in `.tum-mcp/coverage.json`. `study report` lists outcome
 that are not yet taught, sources not yet read and problems still pending, so a request
 to cover a whole course is judged against the course's own outcomes.
 
+`study visuals` opens every lesson, practice question, exercise step and Exam Prep
+visual in an installed Chrome, Edge or Chromium at phone (390 px), narrow (600 px) and
+desktop (1280 px) width. It reports lines through nodes, labels that overlap or sit on a
+line, text under 12 px, clipped text and drawings that differ from their block, writes
+contact sheets to `.tum-mcp/visuals/` and records the result in
+`.tum-mcp/visual-check.json`. Editing an item or updating the app makes its result stale,
+and `study report` lists items whose check is missing, stale or failing.
+
 Ask `review-course` to score the lessons and exercises the way a student meets them.
-It gives each unit and exercise 1 to 3 points for correctness, clarity, cognitive load,
-representation, practice and coverage, names what costs each point and saves the
-scores in `.tum-mcp/review.json`. The agent then fixes the findings and scores again.
+It reads each item in five passes (logic, text, visuals, interaction and intuition) and
+gives each unit and exercise 1 to 3 points for correctness, clarity, cognitive load,
+representation, practice, coverage and intuition. Each drawn visual gets its own score
+from the contact sheets for fidelity, form, layout, legibility, focus and convention,
+calibrated against a gallery of rated examples (`study visuals --gallery`). The agent
+names what costs each point, saves the scores in `.tum-mcp/review.json`, then fixes the
+findings and scores again.
 Editing a unit or exercise makes its score stale, so `study report` lists what needs a
 new review and what is still below the bar. The scores are not shown in the app.
 
@@ -489,7 +505,7 @@ tum-mcp study serve ./component-preview
 ```
 
 The demo creates one small Study unit and one exercise covering prose, code, tables,
-formulas, graph/process diagrams, cards and response controls. It is a format
+formulas, graphs, UML diagrams, a flowchart, plots, cards and response controls. It is a format
 reference, not necessarily a good teaching or question-authoring example; actual
 course authoring follows reviewed sources and the preparation skills. Rich learning
 pilots stay in private test fixtures. It uses no campus account, and an existing

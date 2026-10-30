@@ -21,7 +21,11 @@ with this gate.
    `meta_reference`, `restated_context` and `dense_statement`: each means a wall of
    text, mathematics typed as characters, a sentence about the material or a fact said
    twice. Write as in [writing](writing.md).
-8. Score the batch with [review-course](../../review-course/SKILL.md); its scorecard turns
+8. After the build, run `tum-mcp study visuals PROJECT` and fix every defect it reports in
+   the content (an edge through a node, clashing labels, text under 12 px, a drawing that
+   differs from its block). Open the contact sheets in `.tum-mcp/visuals/` and look at each
+   visual at phone and desktop width.
+9. Score the batch with [review-course](../../review-course/SKILL.md); its scorecard turns
    stale when an item changes, so the review follows the content.
 
 ## Choose the representation
@@ -35,10 +39,12 @@ with this gate.
 | Something with a physical or spatial shape (an arm and its angles, rooms, a map, a mechanism) | A `figure` drawn as in [figures](figures.md), or an image |
 | A hard argument or a multi-part explanation | Numbered `steps`, one claim each |
 | A calculation or definition with symbols | A formula block with every symbol explained |
-| Classes, relations, interactions, behaviour over events | A UML class, sequence or state diagram |
+| Classes, relations, interactions, behaviour over events | A UML class, sequence or state diagram, written as in [diagrams](diagrams.md) |
+| An algorithm whose branches or loops are the point | A flowchart (`uml`, `diagram: flowchart`); a straight procedure stays numbered steps |
+| A network, map, chain over time or concept map | A `diagram` arranged on a lattice as in [diagrams](diagrams.md) |
 | A hierarchy (files, objects, recursion) | A tree |
 | Code to read, trace, fix or write | Code, with a walkthrough when it is read part by part |
-| A relation between quantities | A plot |
+| A relation between quantities, a distribution, growth or decay | A plot with the marks of [plots](plots.md) |
 
 ## Algorithm traces
 

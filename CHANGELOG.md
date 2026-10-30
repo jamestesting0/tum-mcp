@@ -1,5 +1,37 @@
 # Changes
 
+## Unreleased
+
+- Graph diagrams sit on a grid: each node takes a `row` and `col` instead of pixel
+  coordinates. The app sizes boxes from their labels (two lines, centred), spaces rows and
+  columns, crops to what is drawn, bends a blocked edge around nodes to the side where it
+  crosses fewest edges, draws self-loops and bows the two arrows of a two-way pair apart,
+  each with its own label, and places every edge label clear of lines and nodes.
+- UML class and state diagrams and a new `flowchart` diagram are laid out by the bundled
+  Eclipse Layout Kernel (elkjs, EPL-2.0, loaded only on pages that show such a diagram)
+  in the order the author lists elements: an interface above its implementations with one
+  joined trunk, state machines with curved transitions and entry activities in a
+  compartment, flowcharts with questions inside the diamonds and labelled exits.
+  Sequence diagrams keep their renderer.
+- Plots: a series can be a `function` of x that the build samples, split at poles and
+  jumps, or data drawn as lines, markers, points, connected steps or stems with their
+  values; plots add shaded `areas`, marked `notes`, explicit ticks, a logarithmic y
+  axis labelled with real values and labels at the line ends. Axis labels are Unicode.
+- Drawings keep 12 px text on a phone: graphs and UML diagrams shrink only that far and
+  scroll sideways beyond it; plots redraw at their real width.
+- `tum-mcp study visuals PROJECT` measures every drawn visual of lessons, practice
+  questions, exercise steps and Exam Prep at 390, 600 and 1280 px (lines through nodes,
+  clashing labels, small or clipped text, drawings that differ from their block), writes
+  contact sheets to `.tum-mcp/visuals/` and records the result; `study report` gains a
+  render section that lists missing, stale and failing checks.
+- `review-course` reviews in five passes (logic, text, visuals, interaction and
+  intuition), scores a new intuition dimension and each drawn visual on a six-criterion
+  visual rubric, and calibrates against a gallery of rated examples
+  (`study visuals --gallery`). A review passes only when every visual is scored, and
+  representation never scores above the item's weakest visual.
+- prepare-study gains guides for diagrams and plots, and the study skills run the render
+  check after each build. The component demo shows each new diagram and plot form.
+
 ## 0.13.0 — 2026-10-29
 
 - Lessons read as structure rather than prose: a `text` step or point that opens with a short `Label: ` shows the label in bold, and `study report` flags paragraphs over 45 words or three long sentences (`dense_paragraph`), calculations chained inside a sentence (`prose_calculation`) and mathematics typed as plain characters instead of inline LaTeX (`plain_math`). Arithmetic in inline LaTeX is recomputed like arithmetic in prose. prepare-study's writing guide gains the procedure, worked-example and notation rules behind them.
