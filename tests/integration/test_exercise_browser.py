@@ -415,7 +415,7 @@ def test_table_math_code_and_graph_work_survives_edits_reload_and_navigation(
         compared = page.locator(".feedback.compare")
         expect(compared.locator(".diagram-state")).to_contain_text("Path: A → B → C")
         expect(compared.locator(".graph g.active")).to_have_count(3)
-        expect(compared.locator(".graph line.active")).to_have_count(2)
+        expect(compared.locator(".graph .edge.active")).to_have_count(2)
         for step, labels, shown in (
             ("graph-nodes", ["A", "B", "C"], "Nodes: A, B, C"),
             ("graph-edges", ["A → B", "B → C"], "Edges: A–B, B–C"),
@@ -912,6 +912,17 @@ def test_demo_walkthrough_and_state_diagram(course_browser: Browser, tmp_path: P
             state = page.locator('.uml-region[aria-label="UML state diagram"]')
             expect(state.locator(".uml-state")).to_have_count(5)
             expect(state.locator(".uml-transition")).to_have_count(6)
+            # A plot's values stay folded under it until the reader asks for them.
+            graph = page.locator(
+                ".read-section", has=page.get_by_role("heading", name="Line graph")
+            )
+            values = graph.get_by_role("region", name="Graph data")
+            expect(values).to_be_hidden()
+            toggle = graph.get_by_role("button", name="Data")
+            toggle.click()
+            expect(toggle).to_have_attribute("aria-expanded", "true")
+            expect(values.locator("thead th")).to_have_text(["Time", "Value"])
+            expect(values.locator("tbody tr")).to_have_count(3)
             expect(page.locator(".project")).to_have_count(1)
             tree = page.locator(".tree")
             expect(tree.locator(".tree-row")).to_have_count(5)

@@ -83,8 +83,9 @@ def test_teaching_hash_ignores_layout_provenance_and_navigation(content: StudyCo
     data["label"] = "Renamed eyebrow"
     for block in data["blocks"]:
         if block["kind"] == "diagram":
+            shift = 5 - max(node["row"] for node in block["nodes"])
             for node in block["nodes"]:
-                node["x"] = min(570, node["x"] + 5)
+                node["row"] += shift
     moved = type(unit).model_validate(data)
     assert semantic_hash(moved) == original
     data["summary"] = data["summary"] + " Changed meaning."

@@ -10,6 +10,7 @@ from tum_mcp.settings import Frozen
 from tum_mcp.study_figures import FIGURE_IMAGE, safe_svg
 from tum_mcp.study_math import INLINE_SPANS, compile_latex, safe_mathml, validate_inline
 from tum_mcp.study_models import Digest, Key, PageRange
+from tum_mcp.study_plot import compile_expression, sample
 
 Text = Annotated[str, Field(min_length=1, max_length=10000), AfterValidator(validate_inline)]
 Label = Annotated[str, Field(min_length=1, max_length=80), AfterValidator(validate_inline)]
@@ -258,18 +259,18 @@ def check_target_file(files: dict[str, ProjectFile], path: str) -> None:
 
 
 class Node(Frozen):
+    """A node on the diagram's lattice: the app sizes it from its label and spaces the cells."""
+
     key: Key
-    label: Annotated[str, Field(min_length=1, max_length=30)]
-    x: float = Field(ge=30, le=570)
-    y: float = Field(ge=30, le=290)
+    label: Annotated[str, Field(min_length=1, max_length=40)]
+    row: int = Field(ge=0, le=5)
+    col: int = Field(ge=0, le=5)
     shape: Literal["circle", "box"] = "circle"
 
     @model_validator(mode="after")
     def fits(self) -> "Node":
         if self.shape == "circle" and len(self.label) > 4:
             raise ValueError("Use a box for labels longer than four characters.")
-        if self.shape == "box" and not 70 <= self.x <= 530:
-            raise ValueError("Keep a labelled box inside the diagram canvas.")
         return self
 
 
@@ -316,8 +317,11 @@ class DiagramBlock(Sourced):
             raise ValueError("Diagram nodes must have unique keys.")
         if any(edge.start not in ids or edge.end not in ids for edge in self.edges):
             raise ValueError("Diagram edge references an unknown node.")
-        if any(edge.start == edge.end for edge in self.edges):
-            raise ValueError("Self-loop diagrams need a renderer extension before use.")
+        cells = [(node.row, node.col) for node in self.nodes]
+        if len(set(cells)) != len(cells):
+            raise ValueError("Each diagram node needs its own row and column.")
+        if len({(edge.start, edge.end) for edge in self.edges}) != len(self.edges):
+            raise ValueError("Draw each diagram edge once.")
         if any(
             not set(frame.active + frame.frontier + frame.visited) <= ids for frame in self.frames
         ):
@@ -340,35 +344,119 @@ class PlotPoint(Frozen):
 
 
 class PlotSeries(Frozen):
+    """Data `points` or a `function` of x sampled at build. `style` says how it is drawn:
+    `line`, `markers` (line with a dot per point), `points`, `steps` (each value holds until
+    the next x; a CDF) or `stems` (a dot on a line per value; a PMF)."""
+
     key: Key
     label: Text
-    points: tuple[PlotPoint, ...] = Field(min_length=2, max_length=200)
+    points: tuple[PlotPoint, ...] = Field(default=(), max_length=200)
+    function: Annotated[str, Field(min_length=1, max_length=200)] | None = None
+    style: Literal["line", "markers", "points", "steps", "stems"] = "line"
+    values: bool = False
+
+    @model_validator(mode="after")
+    def drawn(self) -> "PlotSeries":
+        if (self.function is None) == (not self.points):
+            raise ValueError("A plot series has either points or a function.")
+        if self.function is not None:
+            if self.style != "line" or self.values:
+                raise ValueError("A function series is drawn as a line without value labels.")
+            compile_expression(self.function)
+        elif len(self.points) < (1 if self.style in ("points", "stems") else 2):
+            raise ValueError("A line needs at least two points.")
+        xs = [point.x for point in self.points]
+        if self.style in ("steps", "stems", "markers") and xs != sorted(set(xs)):
+            raise ValueError("Steps, stems and markers need distinct increasing x values.")
+        return self
+
+
+class PlotArea(Frozen):
+    """Shade under a series between two x values, such as a probability under a density."""
+
+    series: Key
+    x_from: FiniteFloat
+    x_to: FiniteFloat
+    label: Annotated[str, Field(max_length=30), AfterValidator(validate_inline)] = ""
+
+
+class PlotNote(Frozen):
+    """A marked point with a short label, such as the value the text is about."""
+
+    x: FiniteFloat
+    y: FiniteFloat
+    text: Annotated[str, Field(min_length=1, max_length=40), AfterValidator(validate_inline)]
+
+
+AxisLabel = Annotated[str, Field(min_length=1, max_length=30), AfterValidator(validate_inline)]
+AxisTicks = tuple[Annotated[float, Field(allow_inf_nan=False)], ...]
 
 
 class PlotBlock(Sourced):
     kind: Literal["plot"]
     description: Text
-    x_label: Text = Field(max_length=30)
-    y_label: Text = Field(max_length=30)
+    x_label: AxisLabel
+    y_label: AxisLabel
     x_min: FiniteFloat = Field(ge=-1e12, le=1e12)
     x_max: FiniteFloat = Field(ge=-1e12, le=1e12)
     y_min: FiniteFloat = Field(ge=-1e12, le=1e12)
     y_max: FiniteFloat = Field(ge=-1e12, le=1e12)
+    y_scale: Literal["linear", "log"] = "linear"
+    x_ticks: AxisTicks = Field(default=(), max_length=12)
+    y_ticks: AxisTicks = Field(default=(), max_length=12)
     series: tuple[PlotSeries, ...] = Field(default=(), max_length=5)
+    areas: tuple[PlotArea, ...] = Field(default=(), max_length=3)
+    notes: tuple[PlotNote, ...] = Field(default=(), max_length=4)
+    legend: Literal["auto", "direct"] = "auto"
 
     @model_validator(mode="after")
     def bounds(self) -> "PlotBlock":
         if self.x_min >= self.x_max or self.y_min >= self.y_max:
             raise ValueError("Plot axes require increasing bounds.")
+        if self.y_scale == "log" and self.y_min <= 0:
+            raise ValueError("A log axis starts above zero.")
+        for label in (self.x_label, self.y_label):
+            if "\\(" in label or "$" in label:
+                raise ValueError("Write axis labels in Unicode (σ(z), x²), not LaTeX.")
         if len({line.key for line in self.series}) != len(self.series):
             raise ValueError("Plot series keys must be distinct.")
-        if any(
-            not (self.x_min <= point.x <= self.x_max and self.y_min <= point.y <= self.y_max)
-            for line in self.series
-            for point in line.points
-        ):
+
+        def inside(x: float, y: float) -> bool:
+            return self.x_min <= x <= self.x_max and self.y_min <= y <= self.y_max
+
+        if any(not inside(point.x, point.y) for line in self.series for point in line.points):
             raise ValueError("Plot points must fit the declared axes.")
+        if any(not inside(note.x, note.y) for note in self.notes):
+            raise ValueError("Plot notes must sit inside the axes.")
+        if any(not self.x_min <= tick <= self.x_max for tick in self.x_ticks) or any(
+            not self.y_min <= tick <= self.y_max for tick in self.y_ticks
+        ):
+            raise ValueError("Plot ticks must lie inside the axes.")
+        keys = {line.key: line for line in self.series}
+        for area in self.areas:
+            line = keys.get(area.series)
+            if line is None or line.style != "line":
+                raise ValueError("A shaded area lies under a line series of the plot.")
+            if not self.x_min <= area.x_from < area.x_to <= self.x_max:
+                raise ValueError("A shaded area spans increasing x values inside the axes.")
         return self
+
+    def sampled(self) -> list[list[list[list[float]]]]:
+        """The visible pieces of each function series, one list per series (empty for data)."""
+        return [
+            [
+                [[x, y] for x, y in piece]
+                for piece in sample(
+                    line.function,
+                    (self.x_min, self.x_max),
+                    (self.y_min, self.y_max),
+                    log_y=self.y_scale == "log",
+                )
+            ]
+            if line.function
+            else []
+            for line in self.series
+        ]
 
 
 UmlLine = Annotated[str, Field(min_length=1, max_length=120)]
@@ -449,11 +537,27 @@ class UmlTransition(Frozen):
     label: Annotated[str, Field(max_length=60)] = ""
 
 
+class FlowStep(Frozen):
+    """One box of a flowchart: `start`/`end` terminals, an `action`, `io`, or a `decision`."""
+
+    key: Key
+    kind: Literal["start", "end", "action", "io", "decision"] = "action"
+    text: Annotated[str, Field(min_length=1, max_length=80)]
+
+
+class Flow(Frozen):
+    """An arrow between flowchart steps; every exit of a decision carries its answer."""
+
+    start: Key
+    end: Key
+    label: Annotated[str, Field(max_length=30)] = ""
+
+
 class UmlBlock(Sourced):
-    """A UML class, sequence or state diagram, laid out by the app from its structure."""
+    """A UML class, sequence or state diagram or a flowchart, laid out by the app."""
 
     kind: Literal["uml"]
-    diagram: Literal["class", "sequence", "state"]
+    diagram: Literal["class", "sequence", "state", "flowchart"]
     description: Text
     classes: tuple[UmlClass, ...] = Field(default=(), max_length=20)
     relations: tuple[UmlRelation, ...] = Field(default=(), max_length=40)
@@ -462,13 +566,19 @@ class UmlBlock(Sourced):
     fragments: tuple[UmlFragment, ...] = Field(default=(), max_length=10)
     states: tuple[UmlState, ...] = Field(default=(), max_length=20)
     transitions: tuple[UmlTransition, ...] = Field(default=(), max_length=40)
+    steps: tuple[FlowStep, ...] = Field(default=(), max_length=24)
+    flows: tuple[Flow, ...] = Field(default=(), max_length=40)
 
     @model_validator(mode="after")
     def consistent(self) -> "UmlBlock":
         if self.diagram != "state" and (self.states or self.transitions):
             raise ValueError("Only a UML state diagram has states and transitions.")
+        if self.diagram != "flowchart" and (self.steps or self.flows):
+            raise ValueError("Only a flowchart has steps and flows.")
         if self.diagram == "state":
             return self._state_machine()
+        if self.diagram == "flowchart":
+            return self._flowchart()
         if self.diagram == "class":
             if not self.classes or self.participants or self.messages or self.fragments:
                 raise ValueError("A UML class diagram has classes and relations only.")
@@ -495,6 +605,31 @@ class UmlBlock(Sourced):
             item.first > item.last or item.last >= len(self.messages) for item in self.fragments
         ):
             raise ValueError("A UML fragment must cover existing messages in order.")
+        return self
+
+    def _flowchart(self) -> "UmlBlock":
+        if not self.steps or self.classes or self.relations or self.participants or self.messages:
+            raise ValueError("A flowchart has steps and flows only.")
+        kinds = {item.key: item.kind for item in self.steps}
+        if len(kinds) != len(self.steps):
+            raise ValueError("Flowchart step keys must be distinct.")
+        if list(kinds.values()).count("start") != 1 or "end" not in kinds.values():
+            raise ValueError("A flowchart has one start and at least one end.")
+        if len({(item.start, item.end) for item in self.flows}) != len(self.flows):
+            raise ValueError("Draw each flowchart arrow once.")
+        for item in self.flows:
+            if item.start not in kinds or item.end not in kinds:
+                raise ValueError("A flow names an unknown step.")
+            if kinds[item.start] == "end" or kinds[item.end] == "start":
+                raise ValueError("Flows leave the start and enter an end, never the reverse.")
+        for key, kind in kinds.items():
+            exits = [item for item in self.flows if item.start == key]
+            if kind == "decision" and (len(exits) < 2 or not all(item.label for item in exits)):
+                raise ValueError(
+                    "A decision has at least two exits, each labelled with its answer."
+                )
+            if kind in ("start", "action", "io") and len(exits) != 1:
+                raise ValueError("A start, action or input/output step has exactly one exit.")
         return self
 
     def _state_machine(self) -> "UmlBlock":
@@ -553,13 +688,16 @@ def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
         match block:
             case FormulaBlock():
                 value["mathml"] = block.mathml or compile_latex(block.latex or "")
+            case PlotBlock():
+                for line, pieces in zip(value["series"], block.sampled(), strict=True):
+                    if pieces:
+                        line["pieces"] = pieces
             case (
                 TextBlock()
                 | DefinitionBlock()
                 | TableBlock()
                 | CodeBlock()
                 | DiagramBlock()
-                | PlotBlock()
                 | UmlBlock()
                 | FilesBlock()
                 | TreeBlock()
@@ -715,12 +853,27 @@ def term_markers(value: JsonValue) -> set[str]:
 
 
 def compile_formulas(value: JsonValue) -> JsonValue:
-    """Compile every formula block's LaTeX once at build, wherever the block sits."""
+    """Compile every formula's LaTeX and sample every plot function once at build, wherever
+    the block sits (units, questions, exercise checks)."""
     match value:
         case dict():
             result = {key: compile_formulas(item) for key, item in value.items()}
             if isinstance(result.get("latex"), str) and "mathml" not in result:
                 result["mathml"] = compile_latex(result["latex"])
+            if result.get("kind") == "plot" and isinstance(result.get("series"), list):
+                plot = PlotBlock.model_validate(
+                    {
+                        **result,
+                        "series": [
+                            {k: v for k, v in line.items() if k != "pieces"}
+                            for line in result["series"]
+                            if isinstance(line, dict)
+                        ],
+                    }
+                )
+                for line, pieces in zip(result["series"], plot.sampled(), strict=True):
+                    if pieces and isinstance(line, dict):
+                        line["pieces"] = pieces
             return result
         case list():
             return [compile_formulas(item) for item in value]

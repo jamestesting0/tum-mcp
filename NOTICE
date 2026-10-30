@@ -1,4 +1,8 @@
 The project's original code and documentation are provided under the MIT License.
 
+The course app ships third-party files under their own licenses, each beside it: the
+interface fonts (`fonts-license.txt`) and elkjs, the Eclipse Layout Kernel compiled to
+JavaScript, under the Eclipse Public License 2.0 (`elk-license.txt`).
+
 No TUM logo is distributed. TUM names and trademarks belong to their respective
 owners; no trademark rights or university endorsement are granted by this project.

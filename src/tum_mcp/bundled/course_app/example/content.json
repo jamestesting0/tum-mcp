@@ -164,15 +164,15 @@
             {
               "key": "a",
               "label": "A",
-              "x": 160,
-              "y": 100,
+              "row": 0,
+              "col": 0,
               "shape": "circle"
             },
             {
               "key": "b",
               "label": "B",
-              "x": 440,
-              "y": 100,
+              "row": 0,
+              "col": 1,
               "shape": "circle"
             }
           ],
@@ -245,15 +245,15 @@
             {
               "key": "a",
               "label": "Input",
-              "x": 160,
-              "y": 100,
+              "row": 0,
+              "col": 0,
               "shape": "box"
             },
             {
               "key": "b",
               "label": "Output",
-              "x": 440,
-              "y": 100,
+              "row": 0,
+              "col": 1,
               "shape": "box"
             }
           ],
@@ -288,6 +288,56 @@
           "state_labels": "caption"
         },
         {
+          "kind": "diagram",
+          "title": "Loops and two-way edges",
+          "sources": [
+            "components"
+          ],
+          "description": "Two boxes joined in both directions; one box returns to itself.",
+          "nodes": [
+            {
+              "key": "idle",
+              "label": "Idle",
+              "row": 0,
+              "col": 0,
+              "shape": "box"
+            },
+            {
+              "key": "busy",
+              "label": "Busy",
+              "row": 0,
+              "col": 1,
+              "shape": "box"
+            }
+          ],
+          "edges": [
+            {
+              "start": "idle",
+              "end": "busy",
+              "directed": true,
+              "label": "start"
+            },
+            {
+              "start": "busy",
+              "end": "idle",
+              "directed": true,
+              "label": "done"
+            },
+            {
+              "start": "busy",
+              "end": "busy",
+              "directed": true,
+              "label": "tick"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Each direction keeps its own label; a self-loop returns to the same box."
+            }
+          ],
+          "state_labels": "caption"
+        },
+        {
           "kind": "plot",
           "title": "Line graph",
           "sources": [
@@ -316,6 +366,197 @@
                 {
                   "x": 4,
                   "y": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "plot",
+          "title": "Function, area and point",
+          "sources": [
+            "components"
+          ],
+          "description": "A function the build samples, a shaded area and a marked point.",
+          "x_label": "z",
+          "y_label": "φ(z)",
+          "x_min": -3.5,
+          "x_max": 3.5,
+          "y_min": 0,
+          "y_max": 0.45,
+          "series": [
+            {
+              "key": "phi",
+              "label": "φ(z)",
+              "function": "exp(-x^2/2)/sqrt(2*pi)"
+            }
+          ],
+          "areas": [
+            {
+              "series": "phi",
+              "x_from": -1,
+              "x_to": 1,
+              "label": "≈ 0.683"
+            }
+          ],
+          "notes": [
+            {
+              "x": 0,
+              "y": 0.3989,
+              "text": "peak ≈ 0.399"
+            }
+          ]
+        },
+        {
+          "kind": "plot",
+          "title": "Probability mass",
+          "sources": [
+            "components"
+          ],
+          "description": "Stems with their values for a distribution over whole numbers.",
+          "x_label": "k",
+          "y_label": "P(X = k)",
+          "x_min": -0.5,
+          "x_max": 4.5,
+          "y_min": 0,
+          "y_max": 0.45,
+          "x_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "series": [
+            {
+              "key": "p",
+              "label": "P(X = k)",
+              "style": "stems",
+              "values": true,
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0.0625
+                },
+                {
+                  "x": 1,
+                  "y": 0.25
+                },
+                {
+                  "x": 2,
+                  "y": 0.375
+                },
+                {
+                  "x": 3,
+                  "y": 0.25
+                },
+                {
+                  "x": 4,
+                  "y": 0.0625
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "plot",
+          "title": "Log axis",
+          "sources": [
+            "components"
+          ],
+          "description": "Growth across orders of magnitude on a logarithmic axis.",
+          "x_label": "depth d",
+          "y_label": "nodes",
+          "x_min": 0,
+          "x_max": 8,
+          "y_min": 1,
+          "y_max": 10000,
+          "y_scale": "log",
+          "legend": "direct",
+          "series": [
+            {
+              "key": "b3",
+              "label": "b = 3",
+              "style": "markers",
+              "points": [
+                {
+                  "x": 0,
+                  "y": 1
+                },
+                {
+                  "x": 1,
+                  "y": 3
+                },
+                {
+                  "x": 2,
+                  "y": 9
+                },
+                {
+                  "x": 3,
+                  "y": 27
+                },
+                {
+                  "x": 4,
+                  "y": 81
+                },
+                {
+                  "x": 5,
+                  "y": 243
+                },
+                {
+                  "x": 6,
+                  "y": 729
+                },
+                {
+                  "x": 7,
+                  "y": 2187
+                },
+                {
+                  "x": 8,
+                  "y": 6561
+                }
+              ]
+            },
+            {
+              "key": "b2",
+              "label": "b = 2",
+              "style": "markers",
+              "points": [
+                {
+                  "x": 0,
+                  "y": 1
+                },
+                {
+                  "x": 1,
+                  "y": 2
+                },
+                {
+                  "x": 2,
+                  "y": 4
+                },
+                {
+                  "x": 3,
+                  "y": 8
+                },
+                {
+                  "x": 4,
+                  "y": 16
+                },
+                {
+                  "x": 5,
+                  "y": 32
+                },
+                {
+                  "x": 6,
+                  "y": 64
+                },
+                {
+                  "x": 7,
+                  "y": 128
+                },
+                {
+                  "x": 8,
+                  "y": 256
                 }
               ]
             }
@@ -380,6 +621,197 @@
             {
               "start": "done",
               "end": "end"
+            }
+          ]
+        },
+        {
+          "kind": "uml",
+          "diagram": "class",
+          "title": "Class diagram",
+          "sources": [
+            "components"
+          ],
+          "description": "A drawing holds shapes; circles and squares are shapes.",
+          "classes": [
+            {
+              "key": "shape",
+              "name": "Shape",
+              "stereotype": "interface",
+              "attributes": [],
+              "operations": [
+                {
+                  "text": "+ area(): double"
+                }
+              ]
+            },
+            {
+              "key": "circle",
+              "name": "Circle",
+              "attributes": [
+                {
+                  "text": "- r: double"
+                }
+              ],
+              "operations": [
+                {
+                  "text": "+ area(): double"
+                }
+              ]
+            },
+            {
+              "key": "square",
+              "name": "Square",
+              "attributes": [
+                {
+                  "text": "- side: double"
+                }
+              ],
+              "operations": [
+                {
+                  "text": "+ area(): double"
+                }
+              ]
+            },
+            {
+              "key": "drawing",
+              "name": "Drawing",
+              "attributes": [],
+              "operations": [
+                {
+                  "text": "+ total(): double"
+                }
+              ]
+            }
+          ],
+          "relations": [
+            {
+              "kind": "realization",
+              "start": "circle",
+              "end": "shape"
+            },
+            {
+              "kind": "realization",
+              "start": "square",
+              "end": "shape"
+            },
+            {
+              "kind": "aggregation",
+              "start": "drawing",
+              "end": "shape",
+              "label": "shapes",
+              "end_multiplicity": "*"
+            }
+          ]
+        },
+        {
+          "kind": "uml",
+          "diagram": "sequence",
+          "title": "Sequence diagram",
+          "sources": [
+            "components"
+          ],
+          "description": "A student opens a unit; the app loads saved progress.",
+          "participants": [
+            {
+              "key": "s",
+              "name": "Student",
+              "kind": "actor"
+            },
+            {
+              "key": "a",
+              "name": "app: CourseApp",
+              "kind": "object"
+            },
+            {
+              "key": "p",
+              "name": "store: Progress",
+              "kind": "object"
+            }
+          ],
+          "messages": [
+            {
+              "start": "s",
+              "end": "a",
+              "text": "open(unit)",
+              "kind": "call"
+            },
+            {
+              "start": "a",
+              "end": "p",
+              "text": "load(unit)",
+              "kind": "call"
+            },
+            {
+              "start": "p",
+              "end": "a",
+              "text": "progress",
+              "kind": "return"
+            },
+            {
+              "start": "a",
+              "end": "s",
+              "text": "page",
+              "kind": "return"
+            }
+          ]
+        },
+        {
+          "kind": "uml",
+          "diagram": "flowchart",
+          "title": "Flowchart",
+          "sources": [
+            "components"
+          ],
+          "description": "A loop that counts down to one.",
+          "steps": [
+            {
+              "key": "start",
+              "kind": "start",
+              "text": "Start"
+            },
+            {
+              "key": "read",
+              "kind": "io",
+              "text": "Read n"
+            },
+            {
+              "key": "more",
+              "kind": "decision",
+              "text": "n > 1?"
+            },
+            {
+              "key": "down",
+              "kind": "action",
+              "text": "n ← n − 1"
+            },
+            {
+              "key": "end",
+              "kind": "end",
+              "text": "Done"
+            }
+          ],
+          "flows": [
+            {
+              "start": "start",
+              "end": "read"
+            },
+            {
+              "start": "read",
+              "end": "more"
+            },
+            {
+              "start": "more",
+              "end": "down",
+              "label": "yes"
+            },
+            {
+              "start": "down",
+              "end": "more"
+            },
+            {
+              "start": "more",
+              "end": "end",
+              "label": "no"
             }
           ]
         },

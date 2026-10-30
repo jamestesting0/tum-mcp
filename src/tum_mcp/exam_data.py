@@ -20,8 +20,7 @@ from tum_mcp.exam_content import (
     similarity,
     variant_revision,
 )
-from tum_mcp.study_content import StudyContent, has_visual
-from tum_mcp.study_math import compile_latex
+from tum_mcp.study_content import StudyContent, compile_formulas, has_visual
 from tum_mcp.study_models import StudyState
 from tum_mcp.study_store import confined, digest
 
@@ -428,20 +427,6 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
     }
 
 
-def _math(value: JsonValue) -> JsonValue:
-    """Compile every LaTeX formula (blocks and compact cheatsheet formulas) once at build."""
-    match value:
-        case dict():
-            result = {key: _math(item) for key, item in value.items()}
-            if isinstance(result.get("latex"), str) and "mathml" not in result:
-                result["mathml"] = compile_latex(result["latex"])
-            return result
-        case list():
-            return [_math(item) for item in value]
-        case _:
-            return value
-
-
 def exam_revisions(content: ExamContent) -> dict[str, str]:
     """Revision of every commentable Exam Prep item, keyed as the app's comment anchors."""
     revisions = {f"concept:{item.key}": concept_revision(item) for item in content.concepts}
@@ -457,7 +442,7 @@ def exam_revisions(content: ExamContent) -> dict[str, str]:
 def render_exam(content: ExamContent) -> dict[str, JsonValue]:
     from tum_mcp.exam_layout import layout
 
-    value = _math(content.model_dump(mode="json", exclude_none=True))
+    value = compile_formulas(content.model_dump(mode="json", exclude_none=True))
     for concept, rendered in zip(content.concepts, value.get("concepts", []), strict=True):
         rendered["revision"] = concept_revision(concept)
     for pattern, rendered in zip(content.patterns, value.get("patterns", []), strict=True):

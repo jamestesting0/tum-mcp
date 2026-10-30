@@ -49,7 +49,7 @@ def _teaching(value: JsonValue) -> JsonValue:
                 continue
             if kind == "diagram" and key == "nodes" and isinstance(item, list):
                 result[key] = [
-                    {k: v for k, v in node.items() if k not in {"x", "y", "shape"}}
+                    {k: v for k, v in node.items() if k not in {"row", "col", "shape"}}
                     if isinstance(node, dict)
                     else node
                     for node in item

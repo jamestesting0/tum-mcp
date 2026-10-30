@@ -89,10 +89,10 @@ button.danger:hover { background: var(--surface); }
 .icon-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 
 /* One disclosure chevron for outline folders, revision categories and details controls. */
-.unit-group > summary::before, .disclosure > summary::before, .topic-category-toggle::before {
+.unit-group > summary::before, .disclosure > summary::before, .topic-category-toggle::before, .plot-data-toggle::before {
   content: ''; flex: 0 0 6px; width: 6px; height: 6px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg);
 }
-.unit-group[open] > summary::before, .disclosure[open] > summary::before, .topic-category-toggle[aria-expanded="true"]::before { transform: rotate(135deg); }
+.unit-group[open] > summary::before, .disclosure[open] > summary::before, .topic-category-toggle[aria-expanded="true"]::before, .plot-data-toggle[aria-expanded="true"]::before { transform: rotate(135deg); }
 .unit-group > summary, .disclosure > summary { list-style: none; cursor: pointer; }
 .unit-group > summary::-webkit-details-marker, .disclosure > summary::-webkit-details-marker { display: none; }
 .disclosure > summary { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); font-size: var(--text-ui); font-weight: 500; }
@@ -239,9 +239,10 @@ thead th { background: var(--surface); }
 .practice-for { margin: var(--s1) 0 0; }
 .code-region + p { margin-top: var(--s4); }
 .diagram { margin-top: var(--s4); }
-.graph { display: block; width: 100%; height: auto; max-height: 320px; }
+.graph { display: block; max-width: 100%; height: auto; margin-inline: auto; overflow: visible; }
+.graph-region { overflow-x: auto; }
 /* Edges carry meaning, so they use the muted text color rather than the hairline rule. */
-.graph line, .graph .arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.graph .edge, .graph .arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .graph circle, .graph rect { fill: var(--canvas); stroke: var(--muted); stroke-width: 1.5; }
 .graph text { fill: var(--ink); font: 18px var(--font-ui); text-anchor: middle; dominant-baseline: central; }
 .graph .node-box text { font-size: 16px; }
@@ -279,7 +280,7 @@ thead th { background: var(--surface); }
 .figure svg .bold { font-weight: 650; }
 .figure img { border-radius: var(--r1); }
 .figure figcaption { margin-top: var(--s2); color: var(--muted); }
-.graph line.active { stroke: var(--accent); stroke-width: 4; }
+.graph .edge.active, .graph .arrow.active { stroke: var(--accent); stroke-width: 4; }
 .frame-state { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s1) var(--s4); margin: var(--s2) 0 0; font-size: var(--text-ui); }
 .frame-state dt { color: var(--muted); font-weight: 500; }
 .frame-state dd { margin: 0; overflow-wrap: anywhere; }
@@ -329,15 +330,35 @@ button.reference-trigger { min-height: 0; padding: 0; border: 0; background: non
 }
 @media (max-width: 1199px) { .reference-panel { width: 100vw; border: 0; } }
 .diagram-controls { display: flex; align-items: center; justify-content: center; gap: var(--s3); border-top: 1px solid var(--line); padding-top: var(--s4); }
-.plot svg { width: 100%; height: auto; display: block; }
-.plot text { fill: var(--muted); font: 16px var(--font-ui); }
+.plot svg { display: block; max-width: 100%; height: auto; overflow: visible; }
+.plot-drawing { width: 100%; }
+.plot text { fill: var(--muted); font: 14px var(--font-ui); }
+.plot .plot-title { font-size: 15px; }
+.plot .plot-strong { fill: var(--ink); }
+.plot .plot-strong, .plot .plot-value { paint-order: stroke; stroke: var(--canvas); stroke-width: 4px; stroke-linejoin: round; }
+.plot .plot-value { font-size: 13px; }
+.plot-fill { fill: var(--accent); opacity: .14; }
+.plot .plot-knockout { fill: var(--canvas); }
+.plot-dot { fill: var(--accent); }
+.plot-dot.plot-open { fill: var(--canvas); stroke: var(--accent); stroke-width: 2; }
+.plot-dot.plot-mark { fill: var(--ink); }
+.plot-line.plot-guide { stroke-width: 1.5; }
+.plot-line.plot-stem { stroke-width: 2.5; }
 .plot > .small { margin-bottom: var(--s2); }
 .plot-area { fill: var(--canvas); stroke: var(--line); }
 .plot-grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
 .plot-axis { stroke: var(--muted); stroke-width: 1; }
 .plot-line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
-.plot-data { margin-top: var(--s3); }
-.plot-legend { display: flex; flex-wrap: wrap; gap: var(--s3); list-style: none; padding: 0; margin: 0 0 var(--s2); font-size: var(--text-small); }
+.plot-footer { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s4); margin-top: var(--s1); }
+.plot-data-toggle { display: inline-flex; align-items: center; gap: var(--s2); min-height: 36px; margin-inline-start: auto; padding: 0 var(--s2); border-color: transparent; background: transparent; color: var(--muted); font-size: var(--text-small); }
+.plot-data-toggle:hover { background: var(--wash); color: var(--ink); }
+/* The values hang under their toggle, compact, with numbers lined up on the right. */
+.plot-data { width: fit-content; margin-block-start: var(--s2); margin-inline-start: auto; }
+.plot-table { width: auto; font-size: var(--text-small); line-height: 1.4; font-variant-numeric: tabular-nums; }
+.plot-table th, .plot-table td { padding: var(--s1) var(--s3); }
+.plot-table td, .plot-table.numeric th { text-align: end; }
+.plot-table.numeric tbody th { font-weight: inherit; }
+.plot-legend { display: flex; flex-wrap: wrap; gap: var(--s3); list-style: none; padding: 0; margin: 0; font-size: var(--text-small); }
 .plot-legend li { display: flex; align-items: center; gap: var(--s2); margin: 0; }
 .plot-legend svg { width: 32px; height: 12px; }
 
@@ -569,10 +590,10 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 .graph-response .graph-control { cursor: pointer; outline: none; }
 .graph-response .graph-control:focus-visible > circle:not(.graph-hit), .graph-response .graph-control:focus-visible > rect { stroke: var(--accent); stroke-width: 4; }
 .graph .graph-hit { fill: transparent; stroke: transparent; pointer-events: all; }
-.graph line.graph-hit { stroke-width: 44px; vector-effect: non-scaling-stroke; }
+.graph path.graph-hit { fill: none; stroke-width: 44px; }
 .graph-control:hover > circle:not(.graph-hit), .graph-control:hover > rect { stroke: var(--accent); }
 .graph .answer-selected circle:not(.graph-hit), .graph .answer-selected rect { fill: var(--wash); stroke: var(--accent); stroke-width: 3; }
-.graph .graph-edge-control.answer-selected line:not(.graph-hit), .graph .graph-edge-control:focus-visible line:not(.graph-hit) { stroke: var(--accent); stroke-width: 4; }
+.graph .graph-edge-control.answer-selected .edge:not(.graph-hit), .graph .graph-edge-control:focus-visible .edge:not(.graph-hit) { stroke: var(--accent); stroke-width: 4; }
 .graph-answer-bar { display: flex; align-items: center; gap: var(--s2); }
 .graph-selection { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 .selection-chip { padding-inline: var(--s2); background: var(--wash); border-radius: var(--r1); font-size: var(--text-ui); }
@@ -631,11 +652,6 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 }
 /* Phones fit the whole drawing; larger glyphs keep labels legible after scaling. */
 @media (max-width: 599px) {
-  .graph text { font-size: 22px; }
-  .graph .node-circle text { font-size: 20px; }
-  .graph .node-box text { font-size: 18px; }
-  .graph .edge-label { font-size: 16px; }
-  .plot text { font-size: 20px; }
 }
 @media (hover: none), (pointer: coarse) {
   .outline-toggle { opacity: 1; }
@@ -767,11 +783,19 @@ button.exam-map-item { display: flex; justify-content: space-between; gap: var(-
 .context-menu { position: fixed; z-index: 50; min-width: 200px; padding: var(--s1); border: 1px solid var(--line); border-radius: var(--r1); background: var(--canvas); box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
 .context-menu-item { display: block; width: 100%; min-height: 36px; padding: var(--s2) var(--s3); border: 0; border-radius: 4px; background: none; color: var(--ink); font: inherit; font-size: var(--text-ui); text-align: start; }
 .context-menu-item:hover, .context-menu-item:focus-visible { background: var(--wash); }
-.uml-region { overflow-x: auto; margin: var(--s3) 0; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r1); background: var(--canvas); }
+.uml-region { overflow-x: auto; margin: var(--s3) 0; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r1); }
+/* A diagram wider than the column scrolls; shadows at the edges show that more lies beyond. */
+.uml-region, .graph-region {
+  background: linear-gradient(to right, var(--canvas) 30%, transparent) left / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--canvas) 30%, transparent) right / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / .2), transparent) left / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / .2), transparent) right / 12px 100% no-repeat scroll,
+    var(--canvas);
+}
 .uml-region:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-svg.uml { display: block; max-width: none; margin-inline: auto; font-family: var(--font-ui); font-size: 13px; }
+svg.uml { display: block; max-width: 100%; height: auto; margin-inline: auto; font-family: var(--font-ui); font-size: 13px; }
 svg.uml text { fill: var(--ink); }
-svg.uml .uml-note, svg.uml .uml-message-text { font-size: 12px; }
+svg.uml .uml-note, svg.uml .uml-message-text { font-size: 13px; }
 svg.uml .uml-note { fill: var(--muted); }
 svg.uml .uml-class rect, svg.uml .uml-participant rect { fill: var(--surface); stroke: var(--ink); stroke-width: 1.3; }
 svg.uml .uml-divider { stroke: var(--ink); stroke-width: 1; }
@@ -901,3 +925,15 @@ button.project-reset { min-height: 28px; padding: 0 var(--s2); font-size: 13px; 
 }
 svg.uml .uml-state rect { fill: var(--surface); stroke: var(--ink); stroke-width: 1.3; }
 svg.uml .uml-halo { paint-order: stroke; stroke: var(--canvas); stroke-width: 4px; stroke-linejoin: round; }
+svg.uml[data-diagram="class"], svg.uml[data-diagram="state"], svg.uml[data-diagram="flowchart"] { font-size: 14px; }
+svg.uml[data-diagram="flowchart"], svg.uml[data-diagram="state"] { --uml-edge: var(--muted); }
+svg.uml[data-diagram="flowchart"] .uml-line, svg.uml[data-diagram="state"] .uml-line { stroke: var(--muted); stroke-width: 1.4; }
+svg.uml[data-diagram="flowchart"] .uml-edge .uml-filled, svg.uml[data-diagram="state"] .uml-edge .uml-open { fill: var(--muted); stroke: var(--muted); }
+svg.uml[data-diagram="state"] .uml-edge .uml-open { fill: none; }
+svg.uml[data-diagram="flowchart"] text { font-size: 15px; }
+svg.uml[data-diagram="flowchart"] .uml-note { font-size: 14px; }
+svg.uml .uml-member { font-size: 13px; }
+svg.uml .uml-note { font-size: 13px; }
+svg.uml .uml-knockout { fill: var(--canvas); }
+svg.uml .uml-action rect, svg.uml .uml-io path, svg.uml .uml-decision path, svg.uml .uml-terminal rect { fill: var(--surface); stroke: var(--ink); stroke-width: 1.3; }
+.uml-region.uml-pending { min-height: 160px; }

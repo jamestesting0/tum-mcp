@@ -21,9 +21,6 @@ export function graphResponse(check, draft, edit) {
   drawing.querySelector('.diagram-state').hidden = true;
   drawing.querySelector('.diagram-controls').hidden = true;
   const graph = drawing.querySelector('svg'); graph.setAttribute('role', 'group');
-  const top = Math.max(0, Math.min(...check.graph.nodes.map(item => item.y)) - 60);
-  const bottom = Math.min(320, Math.max(...check.graph.nodes.map(item => item.y)) + 60);
-  graph.setAttribute('viewBox', `0 ${top} 600 ${bottom - top}`);
   const nodes = new Map(check.graph.nodes.map(item => [item.key, item.label]));
   let selected = savedArray(draft).filter(key => typeof key === 'string').slice(0, 100);
   const controls = [], options = check.mode === 'edges' ? check.graph.edges.map(edge => ({ key: `${edge.start}--${edge.end}`, label: `${nodes.get(edge.start)} ${edge.directed ? '→' : '—'} ${nodes.get(edge.end)}` })) : check.graph.nodes;
@@ -54,12 +51,11 @@ export function graphResponse(check, draft, edit) {
   for (const option of options) {
     let element = [...graph.querySelectorAll(check.mode === 'edges' ? '[data-edge-key]' : '[data-node-key]')].find(el => (el.dataset.nodeKey || el.dataset.edgeKey) === option.key);
     if (check.mode === 'edges') {
+      // A wide transparent copy of the edge takes the tap; its arrowhead moves into the control.
       const group = svgNode('g', { class: 'graph-edge-control' }), hit = element.cloneNode(); hit.removeAttribute('data-edge-key'); hit.classList.add('graph-hit');
-      const x1 = Number(element.getAttribute('x1')), x2 = Number(element.getAttribute('x2'));
-      const y1 = Number(element.getAttribute('y1')), y2 = Number(element.getAttribute('y2'));
-      const bounds = svgNode('rect', { x: Math.min(x1,x2), y: Math.min(y1,y2)-46, width: Math.max(1,Math.abs(x2-x1)), height: Math.abs(y2-y1)+92, class:'graph-hit' });
-      element.before(group); group.append(bounds, hit, element); element = group;
-    } else element.prepend(svgNode('circle', { cx: check.graph.nodes.find(item => item.key === option.key).x, cy: check.graph.nodes.find(item => item.key === option.key).y, r: 54, class: 'graph-hit' }));
+      const head = graph.querySelector(`[data-arrow-key="${option.key}"]`);
+      element.before(group); group.append(hit, element, ...(head ? [head] : [])); element = group;
+    } else element.prepend(svgNode('circle', { cx: element.dataset.cx, cy: element.dataset.cy, r: element.dataset.reach, class: 'graph-hit' }));
     element.classList.add('graph-control'); element.setAttribute('role', check.mode === 'path' ? 'button' : 'checkbox'); element.setAttribute('aria-label', option.label);
     activate(element, () => choose(option.key)); controls.push({ key: option.key, element });
   }
@@ -115,6 +111,8 @@ export function plotResponse(check, draft, edit) {
     change(closest, String(Math.max(check.plot.y_min, Math.min(check.plot.y_max, Number(value.toPrecision(15)))))); handles[closest].focus({ preventScroll: true });
   });
   const clear = button('Clear', () => { values = []; paint(); edit(''); }, 'secondary');
+  // The plot redraws at its shown width; its handles follow the new scale.
+  plot.onResize(() => { check.x_values.forEach((x, i) => handles[i].setAttribute('cx', plot.x(x))); paint(); });
   root.append(fields, clear); paint();
   return { root, showResult: checked => inputs.forEach((input, i) => {
     if (checked && (!valid(i) || Math.abs(Number(values[i])-check.answer[i]) > check.tolerance)) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');

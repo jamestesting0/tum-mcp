@@ -86,3 +86,75 @@ def test_uml_class_and_sequence_diagrams_validate_and_count_as_visuals() -> None
 def test_uml_diagrams_reject_inconsistent_structure(value: dict, message: str) -> None:
     with pytest.raises(ValidationError, match=message):
         BLOCK.validate_python(value)
+
+
+def flowchart(**overrides: object) -> dict:
+    value = {
+        "kind": "uml",
+        "title": "AC-3",
+        "sources": ["slides"],
+        "diagram": "flowchart",
+        "description": "AC-3 revises arcs until the queue is empty.",
+        "steps": [
+            {"key": "start", "kind": "start", "text": "Start"},
+            {"key": "empty", "kind": "decision", "text": "Queue empty?"},
+            {"key": "revise", "text": "Revise the next arc"},
+            {"key": "done", "kind": "end", "text": "Consistent"},
+        ],
+        "flows": [
+            {"start": "start", "end": "empty"},
+            {"start": "empty", "end": "done", "label": "yes"},
+            {"start": "empty", "end": "revise", "label": "no"},
+            {"start": "revise", "end": "empty"},
+        ],
+    }
+    return value | overrides
+
+
+def test_a_flowchart_validates_with_labelled_decision_exits() -> None:
+    assert BLOCK.validate_python(flowchart()).diagram == "flowchart"
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        (
+            flowchart(
+                flows=[
+                    {"start": "start", "end": "empty"},
+                    {"start": "empty", "end": "done", "label": "yes"},
+                    {"start": "empty", "end": "revise"},
+                    {"start": "revise", "end": "empty"},
+                ]
+            ),
+            "each labelled",
+        ),
+        (flowchart(steps=[{"key": "a", "kind": "end", "text": "End"}], flows=[]), "one start"),
+        (
+            flowchart(
+                flows=[
+                    {"start": "start", "end": "empty"},
+                    {"start": "empty", "end": "done", "label": "yes"},
+                    {"start": "empty", "end": "revise", "label": "no"},
+                ]
+            ),
+            "exactly one exit",
+        ),
+        (
+            flowchart(
+                flows=[
+                    {"start": "start", "end": "empty"},
+                    {"start": "empty", "end": "done", "label": "yes"},
+                    {"start": "empty", "end": "revise", "label": "no"},
+                    {"start": "revise", "end": "empty"},
+                    {"start": "done", "end": "empty"},
+                ]
+            ),
+            "never the reverse",
+        ),
+        (class_diagram(steps=[{"key": "a", "text": "A"}]), "Only a flowchart"),
+    ],
+)
+def test_flowcharts_reject_unlabelled_or_dangling_steps(value: dict, message: str) -> None:
+    with pytest.raises(ValidationError, match=message):
+        BLOCK.validate_python(value)

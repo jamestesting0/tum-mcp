@@ -336,43 +336,43 @@
             {
               "key": "a",
               "label": "A",
-              "x": 70.0,
-              "y": 160.0,
+              "row": 1,
+              "col": 0,
               "shape": "circle"
             },
             {
               "key": "b",
               "label": "B",
-              "x": 220.0,
-              "y": 70.0,
+              "row": 0,
+              "col": 1,
               "shape": "circle"
             },
             {
               "key": "c",
               "label": "C",
-              "x": 220.0,
-              "y": 250.0,
+              "row": 2,
+              "col": 1,
               "shape": "circle"
             },
             {
               "key": "d",
               "label": "D",
-              "x": 380.0,
-              "y": 70.0,
+              "row": 0,
+              "col": 2,
               "shape": "circle"
             },
             {
               "key": "e",
               "label": "E",
-              "x": 380.0,
-              "y": 250.0,
+              "row": 2,
+              "col": 2,
               "shape": "circle"
             },
             {
               "key": "f",
               "label": "F",
-              "x": 530.0,
-              "y": 160.0,
+              "row": 1,
+              "col": 3,
               "shape": "circle"
             }
           ],
@@ -691,43 +691,43 @@
                 {
                   "key": "a",
                   "label": "A",
-                  "x": 70.0,
-                  "y": 160.0,
+                  "row": 1,
+                  "col": 0,
                   "shape": "circle"
                 },
                 {
                   "key": "b",
                   "label": "B",
-                  "x": 220.0,
-                  "y": 70.0,
+                  "row": 0,
+                  "col": 1,
                   "shape": "circle"
                 },
                 {
                   "key": "c",
                   "label": "C",
-                  "x": 220.0,
-                  "y": 250.0,
+                  "row": 2,
+                  "col": 1,
                   "shape": "circle"
                 },
                 {
                   "key": "d",
                   "label": "D",
-                  "x": 380.0,
-                  "y": 70.0,
+                  "row": 0,
+                  "col": 2,
                   "shape": "circle"
                 },
                 {
                   "key": "e",
                   "label": "E",
-                  "x": 380.0,
-                  "y": 250.0,
+                  "row": 2,
+                  "col": 2,
                   "shape": "circle"
                 },
                 {
                   "key": "f",
                   "label": "F",
-                  "x": 530.0,
-                  "y": 160.0,
+                  "row": 1,
+                  "col": 3,
                   "shape": "circle"
                 }
               ],
@@ -940,43 +940,43 @@
                 {
                   "key": "a",
                   "label": "A",
-                  "x": 70.0,
-                  "y": 160.0,
+                  "row": 1,
+                  "col": 0,
                   "shape": "circle"
                 },
                 {
                   "key": "b",
                   "label": "B",
-                  "x": 220.0,
-                  "y": 70.0,
+                  "row": 0,
+                  "col": 1,
                   "shape": "circle"
                 },
                 {
                   "key": "c",
                   "label": "C",
-                  "x": 220.0,
-                  "y": 250.0,
+                  "row": 2,
+                  "col": 1,
                   "shape": "circle"
                 },
                 {
                   "key": "d",
                   "label": "D",
-                  "x": 380.0,
-                  "y": 70.0,
+                  "row": 0,
+                  "col": 2,
                   "shape": "circle"
                 },
                 {
                   "key": "e",
                   "label": "E",
-                  "x": 380.0,
-                  "y": 250.0,
+                  "row": 2,
+                  "col": 2,
                   "shape": "circle"
                 },
                 {
                   "key": "f",
                   "label": "F",
-                  "x": 530.0,
-                  "y": 160.0,
+                  "row": 1,
+                  "col": 3,
                   "shape": "circle"
                 }
               ],
@@ -1189,43 +1189,43 @@
                 {
                   "key": "a",
                   "label": "A",
-                  "x": 70.0,
-                  "y": 160.0,
+                  "row": 1,
+                  "col": 0,
                   "shape": "circle"
                 },
                 {
                   "key": "b",
                   "label": "B",
-                  "x": 220.0,
-                  "y": 70.0,
+                  "row": 0,
+                  "col": 1,
                   "shape": "circle"
                 },
                 {
                   "key": "c",
                   "label": "C",
-                  "x": 220.0,
-                  "y": 250.0,
+                  "row": 2,
+                  "col": 1,
                   "shape": "circle"
                 },
                 {
                   "key": "d",
                   "label": "D",
-                  "x": 380.0,
-                  "y": 70.0,
+                  "row": 0,
+                  "col": 2,
                   "shape": "circle"
                 },
                 {
                   "key": "e",
                   "label": "E",
-                  "x": 380.0,
-                  "y": 250.0,
+                  "row": 2,
+                  "col": 2,
                   "shape": "circle"
                 },
                 {
                   "key": "f",
                   "label": "F",
-                  "x": 530.0,
-                  "y": 160.0,
+                  "row": 1,
+                  "col": 3,
                   "shape": "circle"
                 }
               ],
@@ -1756,22 +1756,22 @@
             {
               "key": "distances",
               "label": "Best distances",
-              "x": 85.0,
-              "y": 160.0,
+              "row": 0,
+              "col": 0,
               "shape": "box"
             },
             {
               "key": "settle",
               "label": "Settle minimum",
-              "x": 300.0,
-              "y": 160.0,
+              "row": 0,
+              "col": 1,
               "shape": "box"
             },
             {
               "key": "relax",
               "label": "Relax neighbors",
-              "x": 515.0,
-              "y": 160.0,
+              "row": 0,
+              "col": 2,
               "shape": "box"
             }
           ],
@@ -1853,29 +1853,29 @@
             {
               "key": "s",
               "label": "S",
-              "x": 70.0,
-              "y": 160.0,
+              "row": 1,
+              "col": 0,
               "shape": "circle"
             },
             {
               "key": "a",
               "label": "A",
-              "x": 270.0,
-              "y": 65.0,
+              "row": 0,
+              "col": 1,
               "shape": "circle"
             },
             {
               "key": "b",
               "label": "B",
-              "x": 270.0,
-              "y": 255.0,
+              "row": 2,
+              "col": 1,
               "shape": "circle"
             },
             {
               "key": "t",
               "label": "T",
-              "x": 530.0,
-              "y": 160.0,
+              "row": 1,
+              "col": 2,
               "shape": "circle"
             }
           ],
@@ -2123,22 +2123,22 @@
                 {
                   "key": "distances",
                   "label": "Best distances",
-                  "x": 85.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 0,
                   "shape": "box"
                 },
                 {
                   "key": "settle",
                   "label": "Settle minimum",
-                  "x": 300.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 1,
                   "shape": "box"
                 },
                 {
                   "key": "relax",
                   "label": "Relax neighbors",
-                  "x": 515.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 2,
                   "shape": "box"
                 }
               ],
@@ -2230,22 +2230,22 @@
                 {
                   "key": "distances",
                   "label": "Best distances",
-                  "x": 85.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 0,
                   "shape": "box"
                 },
                 {
                   "key": "settle",
                   "label": "Settle minimum",
-                  "x": 300.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 1,
                   "shape": "box"
                 },
                 {
                   "key": "relax",
                   "label": "Relax neighbors",
-                  "x": 515.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 2,
                   "shape": "box"
                 }
               ],
@@ -2337,22 +2337,22 @@
                 {
                   "key": "distances",
                   "label": "Best distances",
-                  "x": 85.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 0,
                   "shape": "box"
                 },
                 {
                   "key": "settle",
                   "label": "Settle minimum",
-                  "x": 300.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 1,
                   "shape": "box"
                 },
                 {
                   "key": "relax",
                   "label": "Relax neighbors",
-                  "x": 515.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 2,
                   "shape": "box"
                 }
               ],
@@ -2444,22 +2444,22 @@
                 {
                   "key": "distances",
                   "label": "Best distances",
-                  "x": 85.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 0,
                   "shape": "box"
                 },
                 {
                   "key": "settle",
                   "label": "Settle minimum",
-                  "x": 300.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 1,
                   "shape": "box"
                 },
                 {
                   "key": "relax",
                   "label": "Relax neighbors",
-                  "x": 515.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 2,
                   "shape": "box"
                 }
               ],
@@ -2551,22 +2551,22 @@
                 {
                   "key": "distances",
                   "label": "Best distances",
-                  "x": 85.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 0,
                   "shape": "box"
                 },
                 {
                   "key": "settle",
                   "label": "Settle minimum",
-                  "x": 300.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 1,
                   "shape": "box"
                 },
                 {
                   "key": "relax",
                   "label": "Relax neighbors",
-                  "x": 515.0,
-                  "y": 160.0,
+                  "row": 0,
+                  "col": 2,
                   "shape": "box"
                 }
               ],

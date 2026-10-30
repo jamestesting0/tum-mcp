@@ -1,11 +1,12 @@
 import data from './data.mjs';
-import { node, studyText, append, sourcesNote, svgNode } from './dom.mjs';
+import { node, studyText, append, sourcesNote } from './dom.mjs';
 import { iconButton } from './navigation.mjs';
 import { renderPlot } from './plot.mjs';
 import { renderCode, languageName, lineSet, markLines } from './code.mjs';
 import { renderFiles, fileIcon } from './files.mjs';
 import { renderFormula } from './formulas.mjs';
 import { renderUml } from './uml.mjs';
+import { drawGraph } from './graph.mjs';
 import { videoPanel } from './video.mjs';
 
 // A step or point that opens with a short label ("Initialize: ...") shows the label in bold,
@@ -33,72 +34,15 @@ function table(block) {
   region.append(append(grid, body));
   return region;
 }
-// Box labels wrap at word boundaries into at most two lines of about fifteen characters.
-function labelLines(text) {
-  const lines = [];
-  for (const word of text.split(/\s+/)) {
-    const current = lines.at(-1);
-    if (current !== undefined && current.length + word.length < 15) lines[lines.length - 1] = `${current} ${word}`;
-    else lines.push(word);
-  }
-  return lines.length <= 2 && lines.every(line => line.length <= 15) ? lines : [text.slice(0, 15), text.slice(15)];
-}
-const RADIUS = 26;
 export function diagram(block) {
   const box = node('div', 'surface diagram');
-  // Crop unused canvas height so the drawing, not empty space, fills narrow screens.
-  const reach = item => item.shape === 'box' ? 28 : RADIUS;
   const nodes = new Map(block.nodes.map(item => [item.key, item]));
-  function boundary(item, ux, uy) {
-    return item.shape === 'box' ? Math.min(72 / (Math.abs(ux) || 1e-9), 30 / (Math.abs(uy) || 1e-9)) : RADIUS;
-  }
-  const strokes = [], labels = [];
-  for (const edge of block.edges) {
-    const start = nodes.get(edge.start), end = nodes.get(edge.end);
-    const dx = end.x - start.x, dy = end.y - start.y, distance = Math.hypot(dx, dy) || 1;
-    const ux = dx / distance, uy = dy / distance;
-    const a = boundary(start, ux, uy), b = boundary(end, ux, uy);
-    const ex = end.x - b * ux, ey = end.y - b * uy;
-    strokes.push(svgNode('line', { x1: start.x + a * ux, y1: start.y + a * uy, x2: ex, y2: ey, 'data-edge-key': `${edge.start}--${edge.end}` }));
-    if (edge.directed) {
-      strokes.push(svgNode('path', { d: `M${ex-10*ux+5*uy},${ey-10*uy-5*ux} L${ex},${ey} L${ex-10*ux-5*uy},${ey-10*uy+5*ux}`, class: 'arrow' }));
-    }
-    if (edge.label) {
-      // Beside the line on its upper side; a label wider than the gap between the two shapes
-      // moves clear of them, so no node ever covers it.
-      const [nx, ny] = ux > 0 ? [uy, -ux] : [-uy, ux];
-      const fits = edge.label.length * 7.5 + 8 <= distance - a - b;
-      const offset = fits ? 14 : Math.max(reach(start), reach(end)) + 12;
-      labels.push({ text: edge.label, x: (start.x + end.x) / 2 + offset * nx, y: (start.y + end.y) / 2 + offset * ny });
-    }
-  }
-  // Crop unused canvas height so the drawing, not empty space, fills narrow screens.
-  const top = Math.max(0, Math.min(...block.nodes.map(item => item.y - reach(item)), ...labels.map(item => item.y - 12)) - 24);
-  const bottom = Math.min(320, Math.max(...block.nodes.map(item => item.y + reach(item)), ...labels.map(item => item.y + 6)) + 24);
-  const graph = svgNode('svg', { viewBox: `0 ${top} 600 ${bottom - top}`, class: 'graph', role: 'img', 'aria-label': studyText('span', '', block.description).textContent });
-  graph.append(...strokes);
-  const groups = new Map();
-  for (const item of block.nodes) {
-    const group = svgNode('g', { class: item.shape === 'box' ? 'node-box' : 'node-circle', 'data-node-key': item.key });
-    const label = svgNode('text', { x: item.x, y: item.y });
-    const lines = item.shape === 'box' && item.label.length > 15 ? labelLines(item.label) : [item.label];
-    if (lines.length > 1) {
-      label.setAttribute('y', item.y - 9);
-      lines.forEach((text, index) => {
-        const line = svgNode('tspan', { x: item.x, dy: index ? 18 : 0 }); line.textContent = text; label.append(line);
-      });
-    } else label.textContent = item.label;
-    group.append(item.shape === 'box' ? svgNode('rect', { x: item.x - 70, y: item.y - 28, width: 140, height: 56, rx: 6 }) : svgNode('circle', { cx: item.x, cy: item.y, r: RADIUS }), label);
-    groups.set(item.key, group); graph.append(group);
-  }
-  for (const item of labels) {
-    const label = svgNode('text', { x: item.x, y: item.y, class: 'edge-label' }); label.textContent = item.text; graph.append(label);
-  }
+  const { graph, groups } = drawGraph(block, studyText('span', '', block.description).textContent);
   const description = studyText('p', 'small', block.description);
   const state = node('div', 'diagram-state'); state.setAttribute('aria-live', 'polite');
   const caption = node('p'), frontier = node('p', 'small'), rows = node('dl', 'frame-state');
   state.append(caption, rows, frontier);
-  const lines = [...graph.querySelectorAll('line[data-edge-key]')];
+  const lines = [...graph.querySelectorAll('[data-edge-key], [data-arrow-key]')];
   let index = 0;
   const prev = iconButton('Previous step', 'left', () => { index--; update(); });
   const next = iconButton('Next step', 'right', () => { index++; update(); });
@@ -110,7 +54,7 @@ export function diagram(block) {
       group.classList.toggle('active', frame.active.includes(key)); group.classList.toggle('visited', frame.visited.includes(key) && !frame.active.includes(key));
     }
     const marked = new Set((frame.edges || []).flatMap(edge => [`${edge.start}--${edge.end}`, `${edge.end}--${edge.start}`]));
-    for (const line of lines) line.classList.toggle('active', marked.has(line.dataset.edgeKey));
+    for (const line of lines) line.classList.toggle('active', marked.has(line.dataset.edgeKey || line.dataset.arrowKey));
     caption.replaceChildren(...studyText('span', '', frame.caption).childNodes);
     // The algorithm's own state (a queue, the domains) at this step; what changed since the last step is marked.
     const before = new Map((block.frames[index - 1]?.state || []).map(row => [row.label, row.value]));
