@@ -27,12 +27,13 @@ def test_repeated_table_keyboard_scrolling(
             if (event.key !== 'ArrowRight') return;
             const r = document.querySelector('.table-region');
             const item = {target:event.target.className, focus:document.hasFocus(),
-              active:document.activeElement?.className, left:r?.scrollLeft,
-              width:r?.scrollWidth, client:r?.clientWidth};
+              active:document.activeElement?.className, ctrl:event.ctrlKey,
+              alt:event.altKey, meta:event.metaKey, shift:event.shiftKey};
             tableKeys.push(item);
             queueMicrotask(() => { item.prevented = event.defaultPrevented; });
             requestAnimationFrame(() => { item.nextFrameLeft = r?.scrollLeft;
-              item.nextFrameActive = document.activeElement?.className; });
+              item.nextFrameActive = document.activeElement?.className;
+              item.nextFrameWidth = r?.scrollWidth; item.nextFrameClient = r?.clientWidth; });
           });
         """)
         for index in range(100):
