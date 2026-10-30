@@ -1,5 +1,6 @@
 import json
 import shutil
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -18,7 +19,14 @@ def course_browser() -> Iterator[Browser]:
     choices = discover_browsers()
     assert choices, "The requested browser QA requires an existing Chromium browser."
     with browser_driver(choices[0]), sync_playwright() as playwright:
-        browser = playwright.chromium.launch(executable_path=choices[0].executable, headless=True)
+        args = (
+            ["--disable-features=TcpPortRandomizationWin"]
+            if sys.platform == "win32" or choices[0].windows_host
+            else []
+        )
+        browser = playwright.chromium.launch(
+            executable_path=choices[0].executable, headless=True, args=args
+        )
         try:
             yield browser
         finally:
