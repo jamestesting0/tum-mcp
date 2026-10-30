@@ -74,6 +74,9 @@ SETTLE = """async () => {
 }"""
 FRAMES = "() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))"
 NOT_DRAWN = {"code": "fidelity", "detail": "the block was not drawn"}
+# Loaded as a module script of the page: a dynamic import from an evaluated script fetches
+# the app's modules again, and that fetch failed on Windows.
+INJECTOR = "__visual-inject.mjs"
 # A copy of a drawing that scrolls sideways, laid over the page at full size for its photograph.
 UNROLL = """id => {
   const shot = document.querySelector(`[data-visual-shot="${CSS.escape(id)}"]`);
@@ -342,13 +345,20 @@ def _measure(
                         device_scale_factor=2 if photograph else 1,
                     )
                     page = context.new_page()
+                    # The injector is served by the browser itself, never written to the site.
+                    page.route(
+                        base + INJECTOR,
+                        lambda route: route.fulfill(content_type="text/javascript", body=inject),
+                    )
                     errors: list[str] = []
                     page.on("pageerror", lambda error, sink=errors: sink.append(str(error)))
                     shots.clear()
                     for visit in visits:
                         _open(page, base + (visit.route or host))
                         if visit.inject:
-                            page.evaluate(inject, visit.inject)
+                            if not page.evaluate("() => Boolean(window.__visualInject)"):
+                                page.add_script_tag(url=base + INJECTOR, type="module")
+                            page.evaluate("items => window.__visualInject(items)", visit.inject)
                             page.evaluate(SETTLE)
                         found = page.evaluate(
                             measure, {"step": visit.step, "expected": visit.expected}
