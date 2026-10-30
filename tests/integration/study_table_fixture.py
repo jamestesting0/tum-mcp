@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from playwright.sync_api import Page
+from playwright.sync_api import TimeoutError as BrowserTimeout
 
 
 def table_layout_checks(page: Page, project: Path) -> None:
@@ -75,7 +76,19 @@ def table_layout_checks(page: Page, project: Path) -> None:
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         region.focus()
         page.keyboard.press("ArrowRight")
-        page.wait_for_function("() => document.querySelector('.table-region').scrollLeft > 0")
+        try:
+            page.wait_for_function("() => document.querySelector('.table-region').scrollLeft > 0")
+        except BrowserTimeout as error:
+            state = page.evaluate("""() => ({
+              keys: window.tableKeys, focus: document.hasFocus(),
+              active: document.activeElement?.outerHTML.slice(0, 200),
+              selection: getSelection()?.toString().slice(0, 100),
+              regions: [...document.querySelectorAll('.table-region')].map(r => ({
+                left:r.scrollLeft, width:r.scrollWidth, client:r.clientWidth,
+                rect:r.getBoundingClientRect().toJSON(), inert:r.closest('[inert]')?.tagName
+              }))
+            })""")
+            raise AssertionError(f"Table keyboard scroll failed: {state!r}") from error
     finally:
         source.write_bytes(original)
         build(project)
