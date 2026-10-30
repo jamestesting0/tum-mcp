@@ -72,6 +72,14 @@ def read_response(client: httpx2.Client, request: httpx2.Request, expected: int)
         if response.status_code != expected:
             if response.status_code in {401, 403} or response.is_redirect:
                 raise CampusError(Code.AUTH_REQUIRED, "Reconnect the TUMonline account.")
+            # The anonymous desktop returns an empty 200 until sign-in establishes a token.
+            if (
+                request.method == "POST"
+                and request.url.path == REFRESH
+                and response.status_code == 200
+                and not next(response.iter_bytes(chunk_size=1), b"")
+            ):
+                raise CampusError(Code.AUTH_REQUIRED, "Complete TUMonline sign-in.")
             raise CampusError(Code.INVALID_RESPONSE, "TUMonline returned an unexpected response.")
         body = bytearray()
         for chunk in response.iter_bytes():

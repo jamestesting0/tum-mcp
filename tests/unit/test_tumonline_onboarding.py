@@ -89,6 +89,58 @@ def test_connect_context_waits_for_login_without_writing(
     assert not (tmp_path / "credentials").exists()
 
 
+def test_anonymous_refresh_waits_then_connects_after_sign_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from unittest.mock import MagicMock
+
+    import httpx2
+
+    from tum_mcp.tumonline import auth
+    from tum_mcp.tumonline.onboarding import connect_context
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
+    signed_in = False
+    calls = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        calls.append(request.url.path)
+        if request.method == "POST":
+            if not signed_in:
+                return httpx2.Response(200)
+            return httpx2.Response(201, json={"accessToken": "synthetic-token"})
+        assert signed_in
+        assert request.url.path == auth.PROFILE
+        return httpx2.Response(
+            200,
+            json={
+                "resource": [
+                    {"content": {"desktopProfileLibDto": {"obfuscatedId": "synthetic-student"}}}
+                ]
+            },
+        )
+
+    original = auth.resume_session
+    monkeypatch.setattr(
+        auth,
+        "resume_session",
+        lambda cookies, **kwargs: original(cookies, httpx2.MockTransport(handler), **kwargs),
+    )
+    context = MagicMock()
+    context.cookies.return_value = [COOKIE.model_dump()]
+    attempt = begin_login()
+    assert connect_context(context, attempt) is None
+    assert calls == [auth.REFRESH]
+    assert PolicyStore.snapshot() == ()
+    assert not Vault().record_path(ACCOUNT).exists()
+
+    signed_in = True
+    assert connect_context(context, attempt) == ACCOUNT
+    assert calls == [auth.REFRESH, auth.REFRESH, auth.PROFILE, auth.REFRESH, auth.PROFILE]
+    assert Vault().load(ACCOUNT).cookies == (COOKIE,)
+
+
 def test_disconnect_invalidates_an_inflight_login(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -67,8 +67,20 @@ def test_wrong_identity_fails_closed() -> None:
     assert len(seen) == 2
 
 
-@pytest.mark.parametrize("status", [302, 401, 403, 429, 500])
-def test_failed_refresh_never_echoes_response_or_sends_token(status: int) -> None:
+@pytest.mark.parametrize(
+    ("status", "code"),
+    [
+        (200, "INVALID_RESPONSE"),
+        (204, "INVALID_RESPONSE"),
+        (400, "INVALID_RESPONSE"),
+        (302, "AUTH_REQUIRED"),
+        (401, "AUTH_REQUIRED"),
+        (403, "AUTH_REQUIRED"),
+        (429, "RATE_LIMITED"),
+        (500, "OFFLINE"),
+    ],
+)
+def test_failed_refresh_never_echoes_response_or_sends_token(status: int, code: str) -> None:
     calls = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -80,6 +92,7 @@ def test_failed_refresh_never_echoes_response_or_sends_token(status: int) -> Non
     with pytest.raises(CampusError) as error:
         resume_session((COOKIE,), httpx2.MockTransport(handler))
     assert len(calls) == 1
+    assert error.value.code == code
     assert "private" not in str(error.value)
 
 
