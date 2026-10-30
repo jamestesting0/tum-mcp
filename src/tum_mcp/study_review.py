@@ -20,7 +20,13 @@ from tum_mcp.study_models import Key, StudyState
 from tum_mcp.study_store import private_path
 
 Dimension = Literal[
-    "correctness", "clarity", "cognitive_load", "representation", "practice", "coverage"
+    "correctness",
+    "clarity",
+    "cognitive_load",
+    "representation",
+    "practice",
+    "coverage",
+    "intuition",
 ]
 DIMENSIONS: tuple[Dimension, ...] = (
     "correctness",
@@ -29,11 +35,28 @@ DIMENSIONS: tuple[Dimension, ...] = (
     "representation",
     "practice",
     "coverage",
+    "intuition",
+)
+Criterion = Literal["fidelity", "form", "layout", "legibility", "focus", "convention"]
+CRITERIA: tuple[Criterion, ...] = (
+    "fidelity",
+    "form",
+    "layout",
+    "legibility",
+    "focus",
+    "convention",
 )
 # 1 blocks learning, 2 works with friction, 3 easy to learn from.
 Score = Literal[1, 2, 3]
 ItemKey = Annotated[str, Field(pattern=r"^(study/[a-z0-9-]+|exercises/[a-z0-9-]+/[a-z0-9-]+)$")]
 Revision = Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]
+# The visual's address on the render check's contact sheets, such as block:3 or step:trace:0.
+VisualKey = Annotated[
+    str,
+    Field(
+        pattern=r"^(block|statement|question:[a-z0-9][a-z0-9_.-]*|step:[a-z0-9][a-z0-9_.-]*):[0-9]+$"
+    ),
+]
 
 
 class Finding(Frozen):
@@ -43,12 +66,29 @@ class Finding(Frozen):
     note: Text
 
 
+class VisualReview(Frozen):
+    """One drawn visual, scored from the contact sheets on each criterion of the visual rubric."""
+
+    visual: VisualKey
+    scores: dict[Criterion, Score]
+    note: Text | None = None
+
+    @model_validator(mode="after")
+    def explained(self) -> "VisualReview":
+        if set(self.scores) != set(CRITERIA):
+            raise ValueError("Score every visual criterion: " + ", ".join(CRITERIA) + ".")
+        if min(self.scores.values()) < 3 and not self.note:
+            raise ValueError(f"{self.visual} scores below 3, so its note names what is wrong.")
+        return self
+
+
 class ItemReview(Frozen):
     item: ItemKey
     revision: Revision
     reviewed_at: datetime.date
     scores: dict[Dimension, Score]
     findings: tuple[Finding, ...] = Field(default=(), max_length=30)
+    visuals: tuple[VisualReview, ...] = Field(default=(), max_length=80)
     kept: Text | None = None
 
     @model_validator(mode="after")
@@ -60,6 +100,11 @@ class ItemReview(Frozen):
             name for name, score in self.scores.items() if score < 3 and name not in found
         ]:
             raise ValueError("A score below 3 names its finding: " + ", ".join(missing) + ".")
+        if len({visual.visual for visual in self.visuals}) != len(self.visuals):
+            raise ValueError("Score each visual once.")
+        weakest = min((min(visual.scores.values()) for visual in self.visuals), default=3)
+        if self.scores["representation"] > weakest:
+            raise ValueError("Representation scores no higher than the item's weakest visual.")
         return self
 
 
@@ -121,26 +166,57 @@ def review_report(
     scorecard: ReviewScorecard | None,
 ) -> dict[str, JsonValue]:
     """What still needs a review or a fix before the content is easy to learn from."""
+    from tum_mcp.study_visuals import visual_ids
+
     if scorecard and scorecard.course_key != state.course.key:
         raise CampusError(Code.SCOPE_DENIED, "The review scorecard belongs to another course.")
     current = reviewable(content, exercises)
+    drawn = visual_ids(content, exercises)
     reviews = {review.item: review for review in scorecard.reviews} if scorecard else {}
     unreviewed = [
-        {"item": key, "title": title, "revision": value}
+        {"item": key, "title": title, "revision": value, "visuals": drawn.get(key, [])}
         for key, (title, value) in current.items()
         if key not in reviews
     ]
     stale = [
-        {"item": key, "title": current[key][0], "revision": current[key][1]}
+        {
+            "item": key,
+            "title": current[key][0],
+            "revision": current[key][1],
+            "visuals": drawn.get(key, []),
+        }
         for key, review in reviews.items()
         if key in current and review.revision != current[key][1]
     ]
     scored = [review for key, review in reviews.items() if key in current]
+    unscored = [
+        {"item": review.item, "visuals": missing}
+        for review in scored
+        if review.revision == current[review.item][1]
+        and (
+            missing := [
+                key
+                for key in drawn.get(review.item, [])
+                if key not in {visual.visual for visual in review.visuals}
+            ]
+        )
+    ]
     below = [
         {
             "item": review.item,
             "scores": {name: score for name, score in review.scores.items() if score < 3},
             "findings": [finding.model_dump(mode="json") for finding in review.findings],
+            **(
+                {"visuals": low}
+                if (
+                    low := [
+                        visual.model_dump(mode="json")
+                        for visual in review.visuals
+                        if min(visual.scores.values()) < 3
+                    ]
+                )
+                else {}
+            ),
             **({"kept": review.kept} if review.kept else {}),
         }
         for review in scored
@@ -149,9 +225,10 @@ def review_report(
     blocking = [item for item in below if "kept" not in item or 1 in item["scores"].values()]
     return {
         "scorecard": scorecard is not None,
-        "passed": not (unreviewed or stale or blocking),
+        "passed": not (unreviewed or stale or unscored or blocking),
         "unreviewed": unreviewed,
         "stale": stale,
+        "unscored_visuals": unscored,
         "below_bar": below,
         "removed": sorted(set(reviews) - set(current)),
         "averages": {

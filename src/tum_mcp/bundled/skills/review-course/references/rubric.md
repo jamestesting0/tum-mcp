@@ -2,7 +2,15 @@
 
 Each dimension scores 1 (blocks learning), 2 (works with friction) or 3 (easy to learn
 from). Score the item as a whole by its weakest place: one wrong answer makes correctness
-1 even if the rest is right.
+1 even if the rest is right. Each pass of the review feeds its dimensions:
+
+| Pass | Dimensions |
+| --- | --- |
+| [Logic](logic.md) | Correctness, Coverage |
+| [Text](text.md) | Clarity, Cognitive load |
+| [Visuals](visuals.md) | Representation, plus a score per drawn visual |
+| [Interaction](interaction.md) | Practice |
+| [Intuition](intuition.md) | Intuition |
 
 ## Correctness
 
@@ -30,9 +38,9 @@ What the student has to hold in mind at once.
 
 - 3: one new idea per section or step, and no paragraph longer than two sentences or
   45 words: a procedure comes as labelled steps and a worked example as one computed value
-  per step; every symbol and formula is set as mathematics rather than typed characters; the state of a procedure is shown,
-  not tracked mentally; text and the picture it refers to sit together; a question fits one phone
-  screen; large steps have a middle hint.
+  per step; every symbol and formula is set as mathematics rather than typed characters;
+  the state of a procedure is shown, not tracked mentally; text and the picture it refers
+  to sit together; a question fits one phone screen; large steps have a middle hint.
 - 2: two new ideas in one step, a long question, or a trace the student has to follow
   without its state.
 - 1: the student must combine several unexplained pieces before anything makes sense.
@@ -44,9 +52,14 @@ Each idea is shown in the shape it has ([representations](../../prepare-study/re
 - 3: procedures are traces with their state, parallel cases are tables or lists, two-input
   rules are matrices, physical or spatial ideas are drawn figures, symbols are formulas
   with each symbol explained, structures are diagrams or trees; a question's picture
-  carries its data instead of repeating the prompt; prose says only what the picture cannot.
-- 2: an idea that has a shape is given as prose, or a picture needs prose to be read.
-- 1: the central idea of the item has no fitting picture, table, formula or code.
+  carries its data instead of repeating the prompt; prose says only what the picture
+  cannot; every drawn visual scores 3 on the [visual rubric](visuals.md#rubric).
+- 2: an idea that has a shape is given as prose, a picture needs prose to be read, or a
+  visual scores 2.
+- 1: the central idea of the item has no fitting picture, table, formula or code, or a
+  visual scores 1.
+
+Representation never scores higher than the item's weakest visual; the scorecard rejects it.
 
 ## Practice
 
@@ -67,3 +80,16 @@ The item teaches what its sources say students should learn, and nothing else is
   them.
 - 2: an outcome is taught but not practised, or a prerequisite is missing its link.
 - 1: an assigned outcome or an original part is missing.
+
+## Intuition
+
+The student leaves knowing why the idea works and when to use it, not only its steps.
+
+- 3: each new idea starts from the problem it solves or a concrete case; a worked example
+  or picture comes before the general rule; every step of a procedure says why it is
+  allowed; the misconception students bring is named and shown to fail; the student
+  predicts before a result is revealed; the item says where the idea stops working.
+- 2: correct and complete, but a rule arrives without its reason, the example comes only
+  after the abstract definition, or a known misconception goes unaddressed.
+- 1: the student can repeat the steps but not say why they work or when they apply, or an
+  analogy misleads.
