@@ -1,5 +1,11 @@
 # Changes
 
+## 0.14.2 — 2026-10-30
+
+- TUMonline login keeps its browser open when an unauthenticated session refresh
+  returns an empty HTTP 204, allowing sign-in to finish instead of reporting
+  `INVALID_RESPONSE`.
+
 ## 0.14.1 — 2026-10-30
 
 - TUMonline login keeps waiting while sign-in is incomplete. An empty HTTP 200
