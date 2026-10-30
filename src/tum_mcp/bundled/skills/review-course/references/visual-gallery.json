@@ -1,0 +1,1725 @@
+{
+  "items": [
+    {
+      "key": "bayes-row",
+      "score": 2,
+      "criterion": "layout",
+      "reason": "Parents and child in one row: two edges bend around nodes and the network reads as a chain. Put the parents side by side above their child.",
+      "source": "rule; the owner rated this layout 1 when the old renderer hid an edge behind a node",
+      "block": {
+        "kind": "diagram",
+        "title": "Sprinkler network",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Cloudy weather influences the sprinkler and rain; both wet the grass.",
+        "nodes": [
+          {
+            "key": "cloudy",
+            "label": "Cloudy",
+            "row": 0,
+            "col": 0,
+            "shape": "box"
+          },
+          {
+            "key": "sprinkler",
+            "label": "Sprinkler",
+            "row": 0,
+            "col": 1,
+            "shape": "box"
+          },
+          {
+            "key": "rain",
+            "label": "Rain",
+            "row": 0,
+            "col": 2,
+            "shape": "box"
+          },
+          {
+            "key": "wet",
+            "label": "Wet grass",
+            "row": 0,
+            "col": 3,
+            "shape": "box"
+          }
+        ],
+        "edges": [
+          {
+            "start": "cloudy",
+            "end": "sprinkler",
+            "directed": true
+          },
+          {
+            "start": "cloudy",
+            "end": "rain",
+            "directed": true
+          },
+          {
+            "start": "sprinkler",
+            "end": "wet",
+            "directed": true
+          },
+          {
+            "start": "rain",
+            "end": "wet",
+            "directed": true
+          }
+        ],
+        "frames": [
+          {
+            "caption": "Wet grass has two parents, so its table conditions on Sprinkler and Rain together."
+          }
+        ],
+        "state_labels": "caption"
+      }
+    },
+    {
+      "key": "bayes-diamond",
+      "score": 3,
+      "criterion": "layout",
+      "reason": "Parents side by side above their common child; every edge joins neighbouring cells.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "diagram",
+        "title": "Sprinkler network",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Cloudy weather influences the sprinkler and rain; both wet the grass.",
+        "nodes": [
+          {
+            "key": "cloudy",
+            "label": "Cloudy",
+            "row": 0,
+            "col": 1,
+            "shape": "box"
+          },
+          {
+            "key": "sprinkler",
+            "label": "Sprinkler",
+            "row": 1,
+            "col": 0,
+            "shape": "box"
+          },
+          {
+            "key": "rain",
+            "label": "Rain",
+            "row": 1,
+            "col": 2,
+            "shape": "box"
+          },
+          {
+            "key": "wet",
+            "label": "Wet grass",
+            "row": 2,
+            "col": 1,
+            "shape": "box"
+          }
+        ],
+        "edges": [
+          {
+            "start": "cloudy",
+            "end": "sprinkler",
+            "directed": true
+          },
+          {
+            "start": "cloudy",
+            "end": "rain",
+            "directed": true
+          },
+          {
+            "start": "sprinkler",
+            "end": "wet",
+            "directed": true
+          },
+          {
+            "start": "rain",
+            "end": "wet",
+            "directed": true
+          }
+        ],
+        "frames": [
+          {
+            "caption": "Wet grass has two parents, so its table conditions on Sprinkler and Rain together."
+          }
+        ],
+        "state_labels": "caption"
+      }
+    },
+    {
+      "key": "map-scrambled",
+      "score": 1,
+      "criterion": "layout",
+      "reason": "The regions are sorted by name, so the map is lost and edges cross; position carries meaning here.",
+      "source": "course owner, 2026-10-29 review (an automatic layout that lost the map)",
+      "block": {
+        "kind": "diagram",
+        "title": "Map colouring constraints",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Regions of a map; an edge joins regions that share a border.",
+        "nodes": [
+          {
+            "key": "nsw",
+            "label": "NSW",
+            "row": 0,
+            "col": 0,
+            "shape": "circle"
+          },
+          {
+            "key": "nt",
+            "label": "NT",
+            "row": 0,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "q",
+            "label": "Q",
+            "row": 0,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "sa",
+            "label": "SA",
+            "row": 0,
+            "col": 3,
+            "shape": "circle"
+          },
+          {
+            "key": "t",
+            "label": "T",
+            "row": 1,
+            "col": 0,
+            "shape": "circle"
+          },
+          {
+            "key": "v",
+            "label": "V",
+            "row": 1,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "wa",
+            "label": "WA",
+            "row": 1,
+            "col": 2,
+            "shape": "circle"
+          }
+        ],
+        "edges": [
+          {
+            "start": "wa",
+            "end": "nt",
+            "directed": false
+          },
+          {
+            "start": "wa",
+            "end": "sa",
+            "directed": false
+          },
+          {
+            "start": "nt",
+            "end": "sa",
+            "directed": false
+          },
+          {
+            "start": "nt",
+            "end": "q",
+            "directed": false
+          },
+          {
+            "start": "sa",
+            "end": "q",
+            "directed": false
+          },
+          {
+            "start": "sa",
+            "end": "nsw",
+            "directed": false
+          },
+          {
+            "start": "sa",
+            "end": "v",
+            "directed": false
+          },
+          {
+            "start": "q",
+            "end": "nsw",
+            "directed": false
+          },
+          {
+            "start": "nsw",
+            "end": "v",
+            "directed": false
+          }
+        ],
+        "frames": [
+          {
+            "caption": "Neighbouring regions need different colours; T has no neighbour."
+          }
+        ],
+        "state_labels": "caption"
+      }
+    },
+    {
+      "key": "map-lattice",
+      "score": 3,
+      "criterion": "layout",
+      "reason": "The map snapped to the lattice: neighbours stay neighbours and no edge crosses.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "diagram",
+        "title": "Map colouring constraints",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Regions of a map; an edge joins regions that share a border.",
+        "nodes": [
+          {
+            "key": "wa",
+            "label": "WA",
+            "row": 1,
+            "col": 0,
+            "shape": "circle"
+          },
+          {
+            "key": "nt",
+            "label": "NT",
+            "row": 0,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "sa",
+            "label": "SA",
+            "row": 1,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "q",
+            "label": "Q",
+            "row": 0,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "nsw",
+            "label": "NSW",
+            "row": 1,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "v",
+            "label": "V",
+            "row": 2,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "t",
+            "label": "T",
+            "row": 3,
+            "col": 2,
+            "shape": "circle"
+          }
+        ],
+        "edges": [
+          {
+            "start": "wa",
+            "end": "nt",
+            "directed": false
+          },
+          {
+            "start": "wa",
+            "end": "sa",
+            "directed": false
+          },
+          {
+            "start": "nt",
+            "end": "sa",
+            "directed": false
+          },
+          {
+            "start": "nt",
+            "end": "q",
+            "directed": false
+          },
+          {
+            "start": "sa",
+            "end": "q",
+            "directed": false
+          },
+          {
+            "start": "sa",
+            "end": "nsw",
+            "directed": false
+          },
+          {
+            "start": "sa",
+            "end": "v",
+            "directed": false
+          },
+          {
+            "start": "q",
+            "end": "nsw",
+            "directed": false
+          },
+          {
+            "start": "nsw",
+            "end": "v",
+            "directed": false
+          }
+        ],
+        "frames": [
+          {
+            "caption": "Neighbouring regions need different colours; T has no neighbour."
+          }
+        ],
+        "state_labels": "caption"
+      }
+    },
+    {
+      "key": "mdp-fake-state",
+      "score": 1,
+      "criterion": "fidelity",
+      "reason": "An action drawn as a state: the picture shows a state the process does not have. Draw staying in Cool as a self-loop.",
+      "source": "rule (mistake found in a real course)",
+      "block": {
+        "kind": "diagram",
+        "title": "Racing car MDP",
+        "description": "Two states of a racing car and the actions between them.",
+        "nodes": [
+          {
+            "key": "cool",
+            "label": "Cool",
+            "row": 0,
+            "col": 0,
+            "shape": "box"
+          },
+          {
+            "key": "slow",
+            "label": "Continue slowly",
+            "row": 1,
+            "col": 0,
+            "shape": "box"
+          },
+          {
+            "key": "warm",
+            "label": "Warm",
+            "row": 0,
+            "col": 1,
+            "shape": "box"
+          }
+        ],
+        "edges": [
+          {
+            "start": "cool",
+            "end": "slow",
+            "directed": true,
+            "label": "slow"
+          },
+          {
+            "start": "slow",
+            "end": "cool",
+            "directed": true,
+            "label": "+1"
+          },
+          {
+            "start": "cool",
+            "end": "warm",
+            "directed": true,
+            "label": "fast: +2"
+          },
+          {
+            "start": "warm",
+            "end": "cool",
+            "directed": true,
+            "label": "slow: +1"
+          }
+        ],
+        "frames": [
+          {
+            "caption": "Going slow from Cool keeps the car cool."
+          }
+        ],
+        "state_labels": "caption",
+        "sources": [
+          "gallery"
+        ]
+      }
+    },
+    {
+      "key": "mdp-self-loop",
+      "score": 3,
+      "criterion": "fidelity",
+      "reason": "Staying in a state is a self-loop; the two-way pair keeps one label per direction.",
+      "source": "rule",
+      "block": {
+        "kind": "diagram",
+        "title": "Racing car MDP",
+        "description": "Two states of a racing car and the actions between them.",
+        "nodes": [
+          {
+            "key": "cool",
+            "label": "Cool",
+            "row": 0,
+            "col": 0,
+            "shape": "box"
+          },
+          {
+            "key": "warm",
+            "label": "Warm",
+            "row": 0,
+            "col": 1,
+            "shape": "box"
+          }
+        ],
+        "edges": [
+          {
+            "start": "cool",
+            "end": "cool",
+            "directed": true,
+            "label": "slow: +1"
+          },
+          {
+            "start": "cool",
+            "end": "warm",
+            "directed": true,
+            "label": "fast: +2"
+          },
+          {
+            "start": "warm",
+            "end": "cool",
+            "directed": true,
+            "label": "slow: +1"
+          }
+        ],
+        "frames": [
+          {
+            "caption": "Going slow from Cool keeps the car cool."
+          }
+        ],
+        "state_labels": "caption",
+        "sources": [
+          "gallery"
+        ]
+      }
+    },
+    {
+      "key": "mdp-row-on-phone",
+      "score": 2,
+      "criterion": "legibility",
+      "reason": "Three boxes with worded edges in one row are wider than a phone, so the drawing scrolls sideways. Nothing forces the row.",
+      "source": "rule",
+      "block": {
+        "kind": "diagram",
+        "title": "Racing car MDP",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Three states of a racing car and the actions that move between them.",
+        "nodes": [
+          {
+            "key": "cool",
+            "label": "Cool",
+            "row": 0,
+            "col": 0,
+            "shape": "box"
+          },
+          {
+            "key": "warm",
+            "label": "Warm",
+            "row": 0,
+            "col": 1,
+            "shape": "box"
+          },
+          {
+            "key": "over",
+            "label": "Overheated",
+            "row": 0,
+            "col": 2,
+            "shape": "box"
+          }
+        ],
+        "edges": [
+          {
+            "start": "cool",
+            "end": "cool",
+            "directed": true,
+            "label": "slow: +1"
+          },
+          {
+            "start": "cool",
+            "end": "warm",
+            "directed": true,
+            "label": "fast: +2"
+          },
+          {
+            "start": "warm",
+            "end": "cool",
+            "directed": true,
+            "label": "slow: +1"
+          },
+          {
+            "start": "warm",
+            "end": "over",
+            "directed": true,
+            "label": "fast: −10"
+          }
+        ],
+        "frames": [
+          {
+            "caption": "Going fast from Warm overheats the car; going slow from Cool keeps it cool."
+          }
+        ],
+        "state_labels": "caption"
+      }
+    },
+    {
+      "key": "mdp-two-rows",
+      "score": 3,
+      "criterion": "legibility",
+      "reason": "The third state moved to the next row: the whole drawing fits a phone with 12 px labels.",
+      "source": "rule",
+      "block": {
+        "kind": "diagram",
+        "title": "Racing car MDP",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Three states of a racing car and the actions that move between them.",
+        "nodes": [
+          {
+            "key": "cool",
+            "label": "Cool",
+            "row": 0,
+            "col": 0,
+            "shape": "box"
+          },
+          {
+            "key": "warm",
+            "label": "Warm",
+            "row": 0,
+            "col": 1,
+            "shape": "box"
+          },
+          {
+            "key": "over",
+            "label": "Overheated",
+            "row": 1,
+            "col": 1,
+            "shape": "box"
+          }
+        ],
+        "edges": [
+          {
+            "start": "cool",
+            "end": "cool",
+            "directed": true,
+            "label": "slow: +1"
+          },
+          {
+            "start": "cool",
+            "end": "warm",
+            "directed": true,
+            "label": "fast: +2"
+          },
+          {
+            "start": "warm",
+            "end": "cool",
+            "directed": true,
+            "label": "slow: +1"
+          },
+          {
+            "start": "warm",
+            "end": "over",
+            "directed": true,
+            "label": "fast: −10"
+          }
+        ],
+        "frames": [
+          {
+            "caption": "Going fast from Warm overheats the car; going slow from Cool keeps it cool."
+          }
+        ],
+        "state_labels": "caption"
+      }
+    },
+    {
+      "key": "pmf-line",
+      "score": 1,
+      "criterion": "convention",
+      "reason": "A line joins the probability masses and suggests values between whole numbers of successes.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "plot",
+        "title": "Binomial PMF (n = 4, p = 0.5)",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Probability of k successes in 4 fair trials.",
+        "x_label": "k (successes in 4 trials)",
+        "y_label": "P(X = k)",
+        "x_min": -0.5,
+        "x_max": 4.5,
+        "y_min": 0,
+        "y_max": 0.45,
+        "x_ticks": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "y_ticks": [
+          0,
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "series": [
+          {
+            "key": "p",
+            "label": "P(X = k)",
+            "style": "line",
+            "values": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 0.0625
+              },
+              {
+                "x": 1,
+                "y": 0.25
+              },
+              {
+                "x": 2,
+                "y": 0.375
+              },
+              {
+                "x": 3,
+                "y": 0.25
+              },
+              {
+                "x": 4,
+                "y": 0.0625
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "pmf-stems",
+      "score": 3,
+      "criterion": "convention",
+      "reason": "One stem per value of k, each with its probability.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "plot",
+        "title": "Binomial PMF (n = 4, p = 0.5)",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Probability of k successes in 4 fair trials.",
+        "x_label": "k (successes in 4 trials)",
+        "y_label": "P(X = k)",
+        "x_min": -0.5,
+        "x_max": 4.5,
+        "y_min": 0,
+        "y_max": 0.45,
+        "x_ticks": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "y_ticks": [
+          0,
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "series": [
+          {
+            "key": "p",
+            "label": "P(X = k)",
+            "style": "stems",
+            "values": true,
+            "points": [
+              {
+                "x": 0,
+                "y": 0.0625
+              },
+              {
+                "x": 1,
+                "y": 0.25
+              },
+              {
+                "x": 2,
+                "y": 0.375
+              },
+              {
+                "x": 3,
+                "y": 0.25
+              },
+              {
+                "x": 4,
+                "y": 0.0625
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "growth-log-values",
+      "score": 1,
+      "criterion": "fidelity",
+      "reason": "Plots log₁₀ of the counts on a linear axis, so the reader must undo the logarithm; the owner called it a clear degradation.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "plot",
+        "title": "Search cost",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Nodes generated to depth d.",
+        "x_label": "depth d",
+        "y_label": "log₁₀ nodes",
+        "x_min": 0,
+        "x_max": 10,
+        "y_min": 0,
+        "y_max": 5,
+        "y_scale": "linear",
+        "legend": "direct",
+        "series": [
+          {
+            "key": "a",
+            "label": "b = 3",
+            "style": "markers",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.477
+              },
+              {
+                "x": 2,
+                "y": 0.954
+              },
+              {
+                "x": 3,
+                "y": 1.431
+              },
+              {
+                "x": 4,
+                "y": 1.908
+              },
+              {
+                "x": 5,
+                "y": 2.386
+              },
+              {
+                "x": 6,
+                "y": 2.863
+              },
+              {
+                "x": 7,
+                "y": 3.34
+              },
+              {
+                "x": 8,
+                "y": 3.817
+              },
+              {
+                "x": 9,
+                "y": 4.294
+              },
+              {
+                "x": 10,
+                "y": 4.771
+              }
+            ]
+          },
+          {
+            "key": "b",
+            "label": "b = 2",
+            "style": "markers",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.301
+              },
+              {
+                "x": 2,
+                "y": 0.602
+              },
+              {
+                "x": 3,
+                "y": 0.903
+              },
+              {
+                "x": 4,
+                "y": 1.204
+              },
+              {
+                "x": 5,
+                "y": 1.505
+              },
+              {
+                "x": 6,
+                "y": 1.806
+              },
+              {
+                "x": 7,
+                "y": 2.107
+              },
+              {
+                "x": 8,
+                "y": 2.408
+              },
+              {
+                "x": 9,
+                "y": 2.709
+              },
+              {
+                "x": 10,
+                "y": 3.01
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "growth-log-axis",
+      "score": 3,
+      "criterion": "convention",
+      "reason": "A logarithmic axis labelled with the real counts 1, 10, 100, …",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "plot",
+        "title": "Search cost",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Nodes generated to depth d.",
+        "x_label": "depth d",
+        "y_label": "nodes bᵈ",
+        "x_min": 0,
+        "x_max": 10,
+        "y_min": 1,
+        "y_max": 100000,
+        "y_scale": "log",
+        "legend": "direct",
+        "series": [
+          {
+            "key": "a",
+            "label": "b = 3",
+            "style": "markers",
+            "points": [
+              {
+                "x": 0,
+                "y": 1
+              },
+              {
+                "x": 1,
+                "y": 3
+              },
+              {
+                "x": 2,
+                "y": 9
+              },
+              {
+                "x": 3,
+                "y": 27
+              },
+              {
+                "x": 4,
+                "y": 81
+              },
+              {
+                "x": 5,
+                "y": 243
+              },
+              {
+                "x": 6,
+                "y": 729
+              },
+              {
+                "x": 7,
+                "y": 2187
+              },
+              {
+                "x": 8,
+                "y": 6561
+              },
+              {
+                "x": 9,
+                "y": 19683
+              },
+              {
+                "x": 10,
+                "y": 59049
+              }
+            ]
+          },
+          {
+            "key": "b",
+            "label": "b = 2",
+            "style": "markers",
+            "points": [
+              {
+                "x": 0,
+                "y": 1
+              },
+              {
+                "x": 1,
+                "y": 2
+              },
+              {
+                "x": 2,
+                "y": 4
+              },
+              {
+                "x": 3,
+                "y": 8
+              },
+              {
+                "x": 4,
+                "y": 16
+              },
+              {
+                "x": 5,
+                "y": 32
+              },
+              {
+                "x": 6,
+                "y": 64
+              },
+              {
+                "x": 7,
+                "y": 128
+              },
+              {
+                "x": 8,
+                "y": 256
+              },
+              {
+                "x": 9,
+                "y": 512
+              },
+              {
+                "x": 10,
+                "y": 1024
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "cdf-steps",
+      "score": 3,
+      "criterion": "convention",
+      "reason": "Each cumulative distribution is a connected staircase; the owner preferred it to open and closed dots.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "plot",
+        "title": "Stochastic dominance",
+        "sources": [
+          "gallery"
+        ],
+        "description": "Two cumulative distribution functions.",
+        "x_label": "outcome t",
+        "y_label": "P(outcome ≤ t)",
+        "x_min": 0,
+        "x_max": 8,
+        "y_min": 0,
+        "y_max": 1,
+        "x_ticks": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "series": [
+          {
+            "key": "a",
+            "label": "S1",
+            "style": "steps",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 2,
+                "y": 0.3
+              },
+              {
+                "x": 4,
+                "y": 1
+              }
+            ]
+          },
+          {
+            "key": "b",
+            "label": "S2",
+            "style": "steps",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.5
+              },
+              {
+                "x": 3,
+                "y": 0.8
+              },
+              {
+                "x": 5,
+                "y": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "composite-without-client",
+      "score": 1,
+      "criterion": "fidelity",
+      "reason": "Client is in the source but was left out to tidy the picture; a missing model element makes the diagram wrong.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "uml",
+        "title": "Composite pattern",
+        "sources": [
+          "gallery"
+        ],
+        "description": "A directory contains components; files, directories and shortcuts are components.",
+        "classes": [
+          {
+            "key": "component",
+            "name": "Component",
+            "stereotype": "interface",
+            "operations": [
+              {
+                "text": "+ size(): int",
+                "static": false,
+                "abstract": false
+              },
+              {
+                "text": "+ getChildren(): List<Component>",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "attributes": []
+          },
+          {
+            "key": "file",
+            "name": "File",
+            "attributes": [
+              {
+                "text": "- bytes: int",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "operations": [
+              {
+                "text": "+ size(): int",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "stereotype": null
+          },
+          {
+            "key": "dir",
+            "name": "Directory",
+            "attributes": [
+              {
+                "text": "- children: List<Component>",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "operations": [
+              {
+                "text": "+ size(): int",
+                "static": false,
+                "abstract": false
+              },
+              {
+                "text": "+ add(c: Component): void",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "stereotype": null
+          },
+          {
+            "key": "link",
+            "name": "Shortcut",
+            "operations": [
+              {
+                "text": "+ size(): int",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "attributes": [],
+            "stereotype": null
+          }
+        ],
+        "relations": [
+          {
+            "start": "file",
+            "end": "component",
+            "kind": "realization",
+            "label": "",
+            "start_multiplicity": "",
+            "end_multiplicity": ""
+          },
+          {
+            "start": "dir",
+            "end": "component",
+            "kind": "realization",
+            "label": "",
+            "start_multiplicity": "",
+            "end_multiplicity": ""
+          },
+          {
+            "start": "link",
+            "end": "component",
+            "kind": "realization",
+            "label": "",
+            "start_multiplicity": "",
+            "end_multiplicity": ""
+          },
+          {
+            "start": "dir",
+            "end": "component",
+            "kind": "aggregation",
+            "label": "children",
+            "end_multiplicity": "*",
+            "start_multiplicity": ""
+          },
+          {
+            "start": "link",
+            "end": "file",
+            "kind": "directed_association",
+            "label": "target",
+            "start_multiplicity": "",
+            "end_multiplicity": ""
+          }
+        ],
+        "diagram": "class"
+      }
+    },
+    {
+      "key": "composite-full",
+      "score": 3,
+      "criterion": "layout",
+      "reason": "The interface on top, one joined realization trunk, Client kept.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "uml",
+        "title": "Composite pattern",
+        "sources": [
+          "gallery"
+        ],
+        "description": "A directory contains components; files, directories and shortcuts are components.",
+        "classes": [
+          {
+            "key": "client",
+            "name": "Client",
+            "operations": [
+              {
+                "text": "+ run(): void",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "attributes": [],
+            "stereotype": null
+          },
+          {
+            "key": "component",
+            "name": "Component",
+            "stereotype": "interface",
+            "operations": [
+              {
+                "text": "+ size(): int",
+                "static": false,
+                "abstract": false
+              },
+              {
+                "text": "+ getChildren(): List<Component>",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "attributes": []
+          },
+          {
+            "key": "file",
+            "name": "File",
+            "attributes": [
+              {
+                "text": "- bytes: int",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "operations": [
+              {
+                "text": "+ size(): int",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "stereotype": null
+          },
+          {
+            "key": "dir",
+            "name": "Directory",
+            "attributes": [
+              {
+                "text": "- children: List<Component>",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "operations": [
+              {
+                "text": "+ size(): int",
+                "static": false,
+                "abstract": false
+              },
+              {
+                "text": "+ add(c: Component): void",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "stereotype": null
+          },
+          {
+            "key": "link",
+            "name": "Shortcut",
+            "operations": [
+              {
+                "text": "+ size(): int",
+                "static": false,
+                "abstract": false
+              }
+            ],
+            "attributes": [],
+            "stereotype": null
+          }
+        ],
+        "relations": [
+          {
+            "start": "file",
+            "end": "component",
+            "kind": "realization",
+            "label": "",
+            "start_multiplicity": "",
+            "end_multiplicity": ""
+          },
+          {
+            "start": "dir",
+            "end": "component",
+            "kind": "realization",
+            "label": "",
+            "start_multiplicity": "",
+            "end_multiplicity": ""
+          },
+          {
+            "start": "link",
+            "end": "component",
+            "kind": "realization",
+            "label": "",
+            "start_multiplicity": "",
+            "end_multiplicity": ""
+          },
+          {
+            "start": "dir",
+            "end": "component",
+            "kind": "aggregation",
+            "label": "children",
+            "end_multiplicity": "*",
+            "start_multiplicity": ""
+          },
+          {
+            "start": "client",
+            "end": "component",
+            "kind": "dependency",
+            "label": "uses",
+            "start_multiplicity": "",
+            "end_multiplicity": ""
+          },
+          {
+            "start": "link",
+            "end": "file",
+            "kind": "directed_association",
+            "label": "target",
+            "start_multiplicity": "",
+            "end_multiplicity": ""
+          }
+        ],
+        "diagram": "class"
+      }
+    },
+    {
+      "key": "state-machine",
+      "score": 3,
+      "criterion": "convention",
+      "reason": "States in reading order, the entry activity in a compartment, curved transitions with inline labels and no crossing.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "uml",
+        "title": "Media player states",
+        "sources": [
+          "gallery"
+        ],
+        "description": "The states of a media player.",
+        "states": [
+          {
+            "key": "i",
+            "kind": "initial",
+            "name": "",
+            "activity": ""
+          },
+          {
+            "key": "idle",
+            "name": "Idle",
+            "kind": "state",
+            "activity": ""
+          },
+          {
+            "key": "play",
+            "name": "Playing",
+            "activity": "entry / start audio",
+            "kind": "state"
+          },
+          {
+            "key": "pause",
+            "name": "Paused",
+            "kind": "state",
+            "activity": ""
+          },
+          {
+            "key": "buf",
+            "name": "Buffering",
+            "kind": "state",
+            "activity": ""
+          },
+          {
+            "key": "f",
+            "kind": "final",
+            "name": "",
+            "activity": ""
+          }
+        ],
+        "transitions": [
+          {
+            "start": "i",
+            "end": "idle",
+            "label": ""
+          },
+          {
+            "start": "idle",
+            "end": "play",
+            "label": "play"
+          },
+          {
+            "start": "play",
+            "end": "pause",
+            "label": "pause"
+          },
+          {
+            "start": "pause",
+            "end": "play",
+            "label": "resume"
+          },
+          {
+            "start": "play",
+            "end": "buf",
+            "label": "[buffer empty]"
+          },
+          {
+            "start": "buf",
+            "end": "play",
+            "label": "[buffer full]"
+          },
+          {
+            "start": "pause",
+            "end": "idle",
+            "label": "stop"
+          },
+          {
+            "start": "buf",
+            "end": "idle",
+            "label": "timeout / show error"
+          },
+          {
+            "start": "play",
+            "end": "play",
+            "label": "seek(t)"
+          },
+          {
+            "start": "idle",
+            "end": "f",
+            "label": "quit"
+          }
+        ],
+        "diagram": "state"
+      }
+    },
+    {
+      "key": "flowchart",
+      "score": 3,
+      "criterion": "convention",
+      "reason": "Questions inside the diamonds, every exit labelled, the main path straight down, curved back edges.",
+      "source": "course owner, 2026-10-29 review",
+      "block": {
+        "kind": "uml",
+        "title": "AC-3",
+        "sources": [
+          "gallery"
+        ],
+        "description": "AC-3 as a flowchart.",
+        "steps": [
+          {
+            "key": "start",
+            "kind": "start",
+            "text": "Start"
+          },
+          {
+            "key": "init",
+            "kind": "action",
+            "text": "Put every arc in the queue"
+          },
+          {
+            "key": "empty",
+            "kind": "decision",
+            "text": "Queue empty?"
+          },
+          {
+            "key": "pop",
+            "kind": "action",
+            "text": "Remove arc (X, Y)"
+          },
+          {
+            "key": "revise",
+            "kind": "action",
+            "text": "Revise X against Y"
+          },
+          {
+            "key": "changed",
+            "kind": "decision",
+            "text": "X changed?"
+          },
+          {
+            "key": "none",
+            "kind": "decision",
+            "text": "X empty?"
+          },
+          {
+            "key": "add",
+            "kind": "action",
+            "text": "Queue (Z, X) for each neighbour Z ≠ Y"
+          },
+          {
+            "key": "ok",
+            "kind": "end",
+            "text": "Consistent"
+          },
+          {
+            "key": "fail",
+            "kind": "end",
+            "text": "No solution"
+          }
+        ],
+        "flows": [
+          {
+            "start": "start",
+            "end": "init",
+            "label": ""
+          },
+          {
+            "start": "init",
+            "end": "empty",
+            "label": ""
+          },
+          {
+            "start": "empty",
+            "end": "pop",
+            "label": "no"
+          },
+          {
+            "start": "empty",
+            "end": "ok",
+            "label": "yes"
+          },
+          {
+            "start": "pop",
+            "end": "revise",
+            "label": ""
+          },
+          {
+            "start": "revise",
+            "end": "changed",
+            "label": ""
+          },
+          {
+            "start": "changed",
+            "end": "none",
+            "label": "yes"
+          },
+          {
+            "start": "changed",
+            "end": "empty",
+            "label": "no"
+          },
+          {
+            "start": "none",
+            "end": "add",
+            "label": "no"
+          },
+          {
+            "start": "none",
+            "end": "fail",
+            "label": "yes"
+          },
+          {
+            "start": "add",
+            "end": "empty",
+            "label": ""
+          }
+        ],
+        "diagram": "flowchart"
+      }
+    },
+    {
+      "key": "sequence-long-signature",
+      "score": 2,
+      "criterion": "legibility",
+      "reason": "One long message signature widens the drawing until it scrolls even on a desktop. Shorten it and give the types in the text.",
+      "source": "course owner, 2026-10-29 review (fine apart from one long label)",
+      "block": {
+        "kind": "uml",
+        "title": "Checkout",
+        "sources": [
+          "gallery"
+        ],
+        "description": "A checkout call sequence.",
+        "participants": [
+          {
+            "key": "u",
+            "name": "Customer",
+            "kind": "actor"
+          },
+          {
+            "key": "c",
+            "name": "cart: ShoppingCart",
+            "kind": "object"
+          },
+          {
+            "key": "o",
+            "name": "OrderService",
+            "kind": "object"
+          },
+          {
+            "key": "p",
+            "name": "gateway: PaymentGateway",
+            "kind": "object"
+          }
+        ],
+        "messages": [
+          {
+            "start": "u",
+            "end": "c",
+            "text": "checkout()",
+            "kind": "call"
+          },
+          {
+            "start": "c",
+            "end": "o",
+            "text": "createOrder(items: List<Item>, customerId: String)",
+            "kind": "call"
+          },
+          {
+            "start": "o",
+            "end": "o",
+            "text": "validateStock()",
+            "kind": "call"
+          },
+          {
+            "start": "o",
+            "end": "p",
+            "text": "charge(amount)",
+            "kind": "call"
+          },
+          {
+            "start": "p",
+            "end": "o",
+            "text": "receipt",
+            "kind": "return"
+          },
+          {
+            "start": "o",
+            "end": "c",
+            "text": "order",
+            "kind": "return"
+          },
+          {
+            "start": "c",
+            "end": "u",
+            "text": "confirmation page",
+            "kind": "return"
+          }
+        ],
+        "fragments": [
+          {
+            "kind": "alt",
+            "condition": "payment accepted",
+            "first": 3,
+            "last": 5
+          }
+        ],
+        "diagram": "sequence"
+      }
+    }
+  ]
+}

@@ -1,0 +1,1746 @@
+{
+  "key": "visuals",
+  "path": [
+    "Foundations"
+  ],
+  "label": "Topic 06",
+  "title": "Pictures of structure",
+  "summary": "Graphs, UML diagrams, flowcharts and plots drawn from structure.",
+  "minutes": 12,
+  "objectives": [
+    {
+      "key": "model",
+      "text": "Explain vertices, edges and degree."
+    },
+    {
+      "key": "storage",
+      "text": "Choose a graph representation for a sparse network."
+    }
+  ],
+  "sources": [
+    {
+      "key": "graphs",
+      "sha256": "2fa8b96f90407d5dfa424f7d864b9f5f236da5dc75433bb3d8df130e21196520"
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "diagram",
+      "title": "Sprinkler network",
+      "sources": [
+        "graphs"
+      ],
+      "description": "Cloudy weather influences the sprinkler and rain; both wet the grass.",
+      "nodes": [
+        {
+          "key": "cloudy",
+          "label": "Cloudy",
+          "row": 0,
+          "col": 1,
+          "shape": "box"
+        },
+        {
+          "key": "sprinkler",
+          "label": "Sprinkler",
+          "row": 1,
+          "col": 0,
+          "shape": "box"
+        },
+        {
+          "key": "rain",
+          "label": "Rain",
+          "row": 1,
+          "col": 2,
+          "shape": "box"
+        },
+        {
+          "key": "wet",
+          "label": "Wet grass",
+          "row": 2,
+          "col": 1,
+          "shape": "box"
+        }
+      ],
+      "edges": [
+        {
+          "start": "cloudy",
+          "end": "sprinkler",
+          "directed": true
+        },
+        {
+          "start": "cloudy",
+          "end": "rain",
+          "directed": true
+        },
+        {
+          "start": "sprinkler",
+          "end": "wet",
+          "directed": true
+        },
+        {
+          "start": "rain",
+          "end": "wet",
+          "directed": true
+        }
+      ],
+      "frames": [
+        {
+          "caption": "Wet grass has two parents, so its table conditions on Sprinkler and Rain together."
+        }
+      ],
+      "state_labels": "caption"
+    },
+    {
+      "kind": "diagram",
+      "title": "Map colouring constraints",
+      "sources": [
+        "graphs"
+      ],
+      "description": "Regions of a map; an edge joins regions that share a border.",
+      "nodes": [
+        {
+          "key": "wa",
+          "label": "WA",
+          "row": 1,
+          "col": 0,
+          "shape": "circle"
+        },
+        {
+          "key": "nt",
+          "label": "NT",
+          "row": 0,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "sa",
+          "label": "SA",
+          "row": 1,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "q",
+          "label": "Q",
+          "row": 0,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "nsw",
+          "label": "NSW",
+          "row": 1,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "v",
+          "label": "V",
+          "row": 2,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "t",
+          "label": "T",
+          "row": 3,
+          "col": 2,
+          "shape": "circle"
+        }
+      ],
+      "edges": [
+        {
+          "start": "wa",
+          "end": "nt",
+          "directed": false
+        },
+        {
+          "start": "wa",
+          "end": "sa",
+          "directed": false
+        },
+        {
+          "start": "nt",
+          "end": "sa",
+          "directed": false
+        },
+        {
+          "start": "nt",
+          "end": "q",
+          "directed": false
+        },
+        {
+          "start": "sa",
+          "end": "q",
+          "directed": false
+        },
+        {
+          "start": "sa",
+          "end": "nsw",
+          "directed": false
+        },
+        {
+          "start": "sa",
+          "end": "v",
+          "directed": false
+        },
+        {
+          "start": "q",
+          "end": "nsw",
+          "directed": false
+        },
+        {
+          "start": "nsw",
+          "end": "v",
+          "directed": false
+        }
+      ],
+      "frames": [
+        {
+          "caption": "Neighbouring regions need different colours; T has no neighbour."
+        }
+      ],
+      "state_labels": "caption"
+    },
+    {
+      "kind": "diagram",
+      "title": "Hidden Markov model, unrolled",
+      "sources": [
+        "graphs"
+      ],
+      "description": "Hidden states over four time steps, each with its evidence variable.",
+      "nodes": [
+        {
+          "key": "x0",
+          "label": "X₀",
+          "row": 0,
+          "col": 0,
+          "shape": "circle"
+        },
+        {
+          "key": "x1",
+          "label": "X₁",
+          "row": 0,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "x2",
+          "label": "X₂",
+          "row": 0,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "x3",
+          "label": "X₃",
+          "row": 0,
+          "col": 3,
+          "shape": "circle"
+        },
+        {
+          "key": "e1",
+          "label": "E₁",
+          "row": 1,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "e2",
+          "label": "E₂",
+          "row": 1,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "e3",
+          "label": "E₃",
+          "row": 1,
+          "col": 3,
+          "shape": "circle"
+        }
+      ],
+      "edges": [
+        {
+          "start": "x0",
+          "end": "x1",
+          "directed": true
+        },
+        {
+          "start": "x1",
+          "end": "x2",
+          "directed": true
+        },
+        {
+          "start": "x2",
+          "end": "x3",
+          "directed": true
+        },
+        {
+          "start": "x1",
+          "end": "e1",
+          "directed": true
+        },
+        {
+          "start": "x2",
+          "end": "e2",
+          "directed": true
+        },
+        {
+          "start": "x3",
+          "end": "e3",
+          "directed": true
+        }
+      ],
+      "frames": [
+        {
+          "caption": "Each state depends only on the state before it; each evidence variable only on its own state."
+        }
+      ],
+      "state_labels": "caption"
+    },
+    {
+      "kind": "diagram",
+      "title": "Racing car MDP",
+      "sources": [
+        "graphs"
+      ],
+      "description": "Three states of a racing car and the actions that move between them.",
+      "nodes": [
+        {
+          "key": "cool",
+          "label": "Cool",
+          "row": 0,
+          "col": 0,
+          "shape": "box"
+        },
+        {
+          "key": "warm",
+          "label": "Warm",
+          "row": 0,
+          "col": 1,
+          "shape": "box"
+        },
+        {
+          "key": "over",
+          "label": "Overheated",
+          "row": 0,
+          "col": 2,
+          "shape": "box"
+        }
+      ],
+      "edges": [
+        {
+          "start": "cool",
+          "end": "cool",
+          "directed": true,
+          "label": "slow: +1"
+        },
+        {
+          "start": "cool",
+          "end": "warm",
+          "directed": true,
+          "label": "fast: +2"
+        },
+        {
+          "start": "warm",
+          "end": "cool",
+          "directed": true,
+          "label": "slow: +1"
+        },
+        {
+          "start": "warm",
+          "end": "over",
+          "directed": true,
+          "label": "fast: −10"
+        }
+      ],
+      "frames": [
+        {
+          "caption": "Going fast from Warm overheats the car; going slow from Cool keeps it cool."
+        }
+      ],
+      "state_labels": "caption"
+    },
+    {
+      "kind": "diagram",
+      "title": "Agent and environment",
+      "sources": [
+        "graphs"
+      ],
+      "description": "The agent acts on its environment and perceives the result.",
+      "nodes": [
+        {
+          "key": "agent",
+          "label": "Agent",
+          "row": 0,
+          "col": 0,
+          "shape": "box"
+        },
+        {
+          "key": "env",
+          "label": "Environment",
+          "row": 0,
+          "col": 1,
+          "shape": "box"
+        }
+      ],
+      "edges": [
+        {
+          "start": "agent",
+          "end": "env",
+          "directed": true,
+          "label": "actions"
+        },
+        {
+          "start": "env",
+          "end": "agent",
+          "directed": true,
+          "label": "percepts"
+        }
+      ],
+      "frames": [
+        {
+          "caption": "Every action changes the environment, and the next percept reports the change."
+        }
+      ],
+      "state_labels": "caption"
+    },
+    {
+      "kind": "diagram",
+      "title": "Weighted search graph",
+      "sources": [
+        "graphs"
+      ],
+      "description": "A directed graph with step costs.",
+      "nodes": [
+        {
+          "key": "s",
+          "label": "S",
+          "row": 0,
+          "col": 0,
+          "shape": "circle"
+        },
+        {
+          "key": "a",
+          "label": "A",
+          "row": 0,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "c",
+          "label": "C",
+          "row": 0,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "b",
+          "label": "B",
+          "row": 1,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "g",
+          "label": "G",
+          "row": 1,
+          "col": 2,
+          "shape": "circle"
+        }
+      ],
+      "edges": [
+        {
+          "start": "s",
+          "end": "a",
+          "directed": true,
+          "label": "1"
+        },
+        {
+          "start": "s",
+          "end": "b",
+          "directed": true,
+          "label": "4"
+        },
+        {
+          "start": "a",
+          "end": "b",
+          "directed": true,
+          "label": "2"
+        },
+        {
+          "start": "a",
+          "end": "c",
+          "directed": true,
+          "label": "5"
+        },
+        {
+          "start": "b",
+          "end": "g",
+          "directed": true,
+          "label": "3"
+        },
+        {
+          "start": "c",
+          "end": "g",
+          "directed": true,
+          "label": "2"
+        },
+        {
+          "start": "s",
+          "end": "c",
+          "directed": true,
+          "label": "12"
+        }
+      ],
+      "frames": [
+        {
+          "caption": "The cheapest path S → A → B → G costs 6."
+        }
+      ],
+      "state_labels": "caption"
+    },
+    {
+      "kind": "diagram",
+      "title": "Learning agent",
+      "sources": [
+        "graphs"
+      ],
+      "description": "The parts of a learning agent and what they pass to each other.",
+      "nodes": [
+        {
+          "key": "critic",
+          "label": "Critic",
+          "row": 0,
+          "col": 1,
+          "shape": "box"
+        },
+        {
+          "key": "learn",
+          "label": "Learning element",
+          "row": 1,
+          "col": 1,
+          "shape": "box"
+        },
+        {
+          "key": "perf",
+          "label": "Performance element",
+          "row": 1,
+          "col": 2,
+          "shape": "box"
+        },
+        {
+          "key": "gen",
+          "label": "Problem generator",
+          "row": 2,
+          "col": 1,
+          "shape": "box"
+        }
+      ],
+      "edges": [
+        {
+          "start": "critic",
+          "end": "learn",
+          "directed": true,
+          "label": "feedback"
+        },
+        {
+          "start": "learn",
+          "end": "perf",
+          "directed": true,
+          "label": "changes"
+        },
+        {
+          "start": "perf",
+          "end": "learn",
+          "directed": true,
+          "label": "knowledge"
+        },
+        {
+          "start": "learn",
+          "end": "gen",
+          "directed": true,
+          "label": "learning goals"
+        }
+      ],
+      "frames": [
+        {
+          "caption": "The critic grades behaviour; the learning element improves the performance element."
+        }
+      ],
+      "state_labels": "caption"
+    },
+    {
+      "kind": "uml",
+      "title": "Composite pattern",
+      "sources": [
+        "graphs"
+      ],
+      "description": "A directory contains components; files, directories and shortcuts are components.",
+      "classes": [
+        {
+          "key": "client",
+          "name": "Client",
+          "operations": [
+            {
+              "text": "+ run(): void",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "attributes": [],
+          "stereotype": null
+        },
+        {
+          "key": "component",
+          "name": "Component",
+          "stereotype": "interface",
+          "operations": [
+            {
+              "text": "+ size(): int",
+              "static": false,
+              "abstract": false
+            },
+            {
+              "text": "+ getChildren(): List<Component>",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "attributes": []
+        },
+        {
+          "key": "file",
+          "name": "File",
+          "attributes": [
+            {
+              "text": "- bytes: int",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "operations": [
+            {
+              "text": "+ size(): int",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "stereotype": null
+        },
+        {
+          "key": "dir",
+          "name": "Directory",
+          "attributes": [
+            {
+              "text": "- children: List<Component>",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "operations": [
+            {
+              "text": "+ size(): int",
+              "static": false,
+              "abstract": false
+            },
+            {
+              "text": "+ add(c: Component): void",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "stereotype": null
+        },
+        {
+          "key": "link",
+          "name": "Shortcut",
+          "operations": [
+            {
+              "text": "+ size(): int",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "attributes": [],
+          "stereotype": null
+        }
+      ],
+      "relations": [
+        {
+          "start": "file",
+          "end": "component",
+          "kind": "realization",
+          "label": "",
+          "start_multiplicity": "",
+          "end_multiplicity": ""
+        },
+        {
+          "start": "dir",
+          "end": "component",
+          "kind": "realization",
+          "label": "",
+          "start_multiplicity": "",
+          "end_multiplicity": ""
+        },
+        {
+          "start": "link",
+          "end": "component",
+          "kind": "realization",
+          "label": "",
+          "start_multiplicity": "",
+          "end_multiplicity": ""
+        },
+        {
+          "start": "dir",
+          "end": "component",
+          "kind": "aggregation",
+          "label": "children",
+          "end_multiplicity": "*",
+          "start_multiplicity": ""
+        },
+        {
+          "start": "client",
+          "end": "component",
+          "kind": "dependency",
+          "label": "uses",
+          "start_multiplicity": "",
+          "end_multiplicity": ""
+        },
+        {
+          "start": "link",
+          "end": "file",
+          "kind": "directed_association",
+          "label": "target",
+          "start_multiplicity": "",
+          "end_multiplicity": ""
+        }
+      ],
+      "diagram": "class"
+    },
+    {
+      "kind": "uml",
+      "title": "Observer pattern",
+      "sources": [
+        "graphs"
+      ],
+      "description": "Subjects notify observers.",
+      "classes": [
+        {
+          "key": "subject",
+          "name": "Subject",
+          "stereotype": "abstract",
+          "attributes": [
+            {
+              "text": "- observers: List<Observer>",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "operations": [
+            {
+              "text": "+ attach(o: Observer): void",
+              "static": false,
+              "abstract": false
+            },
+            {
+              "text": "+ notifyAll(): void",
+              "static": false,
+              "abstract": false
+            }
+          ]
+        },
+        {
+          "key": "observer",
+          "name": "Observer",
+          "stereotype": "interface",
+          "operations": [
+            {
+              "text": "+ update(s: Subject): void",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "attributes": []
+        },
+        {
+          "key": "weather",
+          "name": "WeatherStation",
+          "attributes": [
+            {
+              "text": "- temperature: double",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "operations": [
+            {
+              "text": "+ setTemperature(t: double): void",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "stereotype": null
+        },
+        {
+          "key": "display",
+          "name": "PhoneDisplay",
+          "operations": [
+            {
+              "text": "+ update(s: Subject): void",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "attributes": [],
+          "stereotype": null
+        },
+        {
+          "key": "logger",
+          "name": "Logger",
+          "operations": [
+            {
+              "text": "+ update(s: Subject): void",
+              "static": false,
+              "abstract": false
+            }
+          ],
+          "attributes": [],
+          "stereotype": null
+        }
+      ],
+      "relations": [
+        {
+          "start": "weather",
+          "end": "subject",
+          "kind": "inheritance",
+          "label": "",
+          "start_multiplicity": "",
+          "end_multiplicity": ""
+        },
+        {
+          "start": "display",
+          "end": "observer",
+          "kind": "realization",
+          "label": "",
+          "start_multiplicity": "",
+          "end_multiplicity": ""
+        },
+        {
+          "start": "logger",
+          "end": "observer",
+          "kind": "realization",
+          "label": "",
+          "start_multiplicity": "",
+          "end_multiplicity": ""
+        },
+        {
+          "start": "subject",
+          "end": "observer",
+          "kind": "directed_association",
+          "label": "notifies",
+          "end_multiplicity": "0..*",
+          "start_multiplicity": ""
+        },
+        {
+          "start": "display",
+          "end": "weather",
+          "kind": "directed_association",
+          "label": "reads",
+          "start_multiplicity": "",
+          "end_multiplicity": ""
+        }
+      ],
+      "diagram": "class"
+    },
+    {
+      "kind": "uml",
+      "title": "Media player states",
+      "sources": [
+        "graphs"
+      ],
+      "description": "The states of a media player.",
+      "states": [
+        {
+          "key": "i",
+          "kind": "initial",
+          "name": "",
+          "activity": ""
+        },
+        {
+          "key": "idle",
+          "name": "Idle",
+          "kind": "state",
+          "activity": ""
+        },
+        {
+          "key": "play",
+          "name": "Playing",
+          "activity": "entry / start audio",
+          "kind": "state"
+        },
+        {
+          "key": "pause",
+          "name": "Paused",
+          "kind": "state",
+          "activity": ""
+        },
+        {
+          "key": "buf",
+          "name": "Buffering",
+          "kind": "state",
+          "activity": ""
+        },
+        {
+          "key": "f",
+          "kind": "final",
+          "name": "",
+          "activity": ""
+        }
+      ],
+      "transitions": [
+        {
+          "start": "i",
+          "end": "idle",
+          "label": ""
+        },
+        {
+          "start": "idle",
+          "end": "play",
+          "label": "play"
+        },
+        {
+          "start": "play",
+          "end": "pause",
+          "label": "pause"
+        },
+        {
+          "start": "pause",
+          "end": "play",
+          "label": "resume"
+        },
+        {
+          "start": "play",
+          "end": "buf",
+          "label": "[buffer empty]"
+        },
+        {
+          "start": "buf",
+          "end": "play",
+          "label": "[buffer full]"
+        },
+        {
+          "start": "pause",
+          "end": "idle",
+          "label": "stop"
+        },
+        {
+          "start": "buf",
+          "end": "idle",
+          "label": "timeout / show error"
+        },
+        {
+          "start": "play",
+          "end": "play",
+          "label": "seek(t)"
+        },
+        {
+          "start": "idle",
+          "end": "f",
+          "label": "quit"
+        }
+      ],
+      "diagram": "state"
+    },
+    {
+      "kind": "uml",
+      "title": "Checkout",
+      "sources": [
+        "graphs"
+      ],
+      "description": "A checkout call sequence.",
+      "participants": [
+        {
+          "key": "u",
+          "name": "Customer",
+          "kind": "actor"
+        },
+        {
+          "key": "c",
+          "name": "cart: ShoppingCart",
+          "kind": "object"
+        },
+        {
+          "key": "o",
+          "name": "OrderService",
+          "kind": "object"
+        },
+        {
+          "key": "p",
+          "name": "gateway: PaymentGateway",
+          "kind": "object"
+        }
+      ],
+      "messages": [
+        {
+          "start": "u",
+          "end": "c",
+          "text": "checkout()",
+          "kind": "call"
+        },
+        {
+          "start": "c",
+          "end": "o",
+          "text": "createOrder(items: List<Item>, customerId: String)",
+          "kind": "call"
+        },
+        {
+          "start": "o",
+          "end": "o",
+          "text": "validateStock()",
+          "kind": "call"
+        },
+        {
+          "start": "o",
+          "end": "p",
+          "text": "charge(amount)",
+          "kind": "call"
+        },
+        {
+          "start": "p",
+          "end": "o",
+          "text": "receipt",
+          "kind": "return"
+        },
+        {
+          "start": "o",
+          "end": "c",
+          "text": "order",
+          "kind": "return"
+        },
+        {
+          "start": "c",
+          "end": "u",
+          "text": "confirmation page",
+          "kind": "return"
+        }
+      ],
+      "fragments": [
+        {
+          "kind": "alt",
+          "condition": "payment accepted",
+          "first": 3,
+          "last": 5
+        }
+      ],
+      "diagram": "sequence"
+    },
+    {
+      "kind": "uml",
+      "title": "AC-3",
+      "sources": [
+        "graphs"
+      ],
+      "description": "AC-3 as a flowchart.",
+      "steps": [
+        {
+          "key": "start",
+          "kind": "start",
+          "text": "Start"
+        },
+        {
+          "key": "init",
+          "kind": "action",
+          "text": "Put every arc in the queue"
+        },
+        {
+          "key": "empty",
+          "kind": "decision",
+          "text": "Queue empty?"
+        },
+        {
+          "key": "pop",
+          "kind": "action",
+          "text": "Remove arc (X, Y)"
+        },
+        {
+          "key": "revise",
+          "kind": "action",
+          "text": "Revise X against Y"
+        },
+        {
+          "key": "changed",
+          "kind": "decision",
+          "text": "X changed?"
+        },
+        {
+          "key": "none",
+          "kind": "decision",
+          "text": "X empty?"
+        },
+        {
+          "key": "add",
+          "kind": "action",
+          "text": "Queue (Z, X) for each neighbour Z ≠ Y"
+        },
+        {
+          "key": "ok",
+          "kind": "end",
+          "text": "Consistent"
+        },
+        {
+          "key": "fail",
+          "kind": "end",
+          "text": "No solution"
+        }
+      ],
+      "flows": [
+        {
+          "start": "start",
+          "end": "init",
+          "label": ""
+        },
+        {
+          "start": "init",
+          "end": "empty",
+          "label": ""
+        },
+        {
+          "start": "empty",
+          "end": "pop",
+          "label": "no"
+        },
+        {
+          "start": "empty",
+          "end": "ok",
+          "label": "yes"
+        },
+        {
+          "start": "pop",
+          "end": "revise",
+          "label": ""
+        },
+        {
+          "start": "revise",
+          "end": "changed",
+          "label": ""
+        },
+        {
+          "start": "changed",
+          "end": "none",
+          "label": "yes"
+        },
+        {
+          "start": "changed",
+          "end": "empty",
+          "label": "no"
+        },
+        {
+          "start": "none",
+          "end": "add",
+          "label": "no"
+        },
+        {
+          "start": "none",
+          "end": "fail",
+          "label": "yes"
+        },
+        {
+          "start": "add",
+          "end": "empty",
+          "label": ""
+        }
+      ],
+      "diagram": "flowchart"
+    },
+    {
+      "kind": "plot",
+      "title": "The sigmoid",
+      "sources": [
+        "graphs"
+      ],
+      "description": "The logistic sigmoid squashes any input into (0, 1).",
+      "x_label": "z",
+      "y_label": "σ(z)",
+      "x_min": -6,
+      "x_max": 6,
+      "y_min": 0,
+      "y_max": 1,
+      "series": [
+        {
+          "key": "s",
+          "label": "σ(z)",
+          "function": "1/(1+exp(-x))"
+        }
+      ],
+      "notes": [
+        {
+          "x": 0,
+          "y": 0.5,
+          "text": "σ(0) = 0.5"
+        }
+      ]
+    },
+    {
+      "kind": "plot",
+      "title": "1/x near its pole",
+      "sources": [
+        "graphs"
+      ],
+      "description": "y = 1/x has no value at x = 0.",
+      "x_label": "x",
+      "y_label": "y = 1/x",
+      "x_min": -3,
+      "x_max": 3,
+      "y_min": -5,
+      "y_max": 5,
+      "series": [
+        {
+          "key": "f",
+          "label": "1/x",
+          "function": "1/x"
+        }
+      ]
+    },
+    {
+      "kind": "plot",
+      "title": "Stochastic dominance",
+      "sources": [
+        "graphs"
+      ],
+      "description": "Two cumulative distribution functions.",
+      "x_label": "outcome t",
+      "y_label": "P(outcome ≤ t)",
+      "x_min": 0,
+      "x_max": 8,
+      "y_min": 0,
+      "y_max": 1,
+      "x_ticks": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "series": [
+        {
+          "key": "a",
+          "label": "S1",
+          "style": "steps",
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 2,
+              "y": 0.3
+            },
+            {
+              "x": 4,
+              "y": 1
+            }
+          ]
+        },
+        {
+          "key": "b",
+          "label": "S2",
+          "style": "steps",
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 1,
+              "y": 0.5
+            },
+            {
+              "x": 3,
+              "y": 0.8
+            },
+            {
+              "x": 5,
+              "y": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "plot",
+      "title": "Binomial PMF (n = 4, p = 0.5)",
+      "sources": [
+        "graphs"
+      ],
+      "description": "Probability of k successes in 4 fair trials.",
+      "x_label": "k (successes in 4 trials)",
+      "y_label": "P(X = k)",
+      "x_min": -0.5,
+      "x_max": 4.5,
+      "y_min": 0,
+      "y_max": 0.45,
+      "x_ticks": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "y_ticks": [
+        0,
+        0.1,
+        0.2,
+        0.3,
+        0.4
+      ],
+      "series": [
+        {
+          "key": "p",
+          "label": "P(X = k)",
+          "style": "stems",
+          "values": true,
+          "points": [
+            {
+              "x": 0,
+              "y": 0.0625
+            },
+            {
+              "x": 1,
+              "y": 0.25
+            },
+            {
+              "x": 2,
+              "y": 0.375
+            },
+            {
+              "x": 3,
+              "y": 0.25
+            },
+            {
+              "x": 4,
+              "y": 0.0625
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "plot",
+      "title": "Discount weights",
+      "sources": [
+        "graphs"
+      ],
+      "description": "How much a reward t steps ahead counts.",
+      "x_label": "steps ahead t",
+      "y_label": "weight γᵗ",
+      "x_min": 0,
+      "x_max": 8,
+      "y_min": 0,
+      "y_max": 1,
+      "legend": "direct",
+      "series": [
+        {
+          "key": "a",
+          "label": "γ = 0.9",
+          "style": "markers",
+          "points": [
+            {
+              "x": 0,
+              "y": 1
+            },
+            {
+              "x": 1,
+              "y": 0.9
+            },
+            {
+              "x": 2,
+              "y": 0.81
+            },
+            {
+              "x": 3,
+              "y": 0.729
+            },
+            {
+              "x": 4,
+              "y": 0.6561
+            },
+            {
+              "x": 5,
+              "y": 0.59049
+            },
+            {
+              "x": 6,
+              "y": 0.531441
+            },
+            {
+              "x": 7,
+              "y": 0.478297
+            },
+            {
+              "x": 8,
+              "y": 0.430467
+            }
+          ]
+        },
+        {
+          "key": "b",
+          "label": "γ = 0.5",
+          "style": "markers",
+          "points": [
+            {
+              "x": 0,
+              "y": 1
+            },
+            {
+              "x": 1,
+              "y": 0.5
+            },
+            {
+              "x": 2,
+              "y": 0.25
+            },
+            {
+              "x": 3,
+              "y": 0.125
+            },
+            {
+              "x": 4,
+              "y": 0.0625
+            },
+            {
+              "x": 5,
+              "y": 0.03125
+            },
+            {
+              "x": 6,
+              "y": 0.015625
+            },
+            {
+              "x": 7,
+              "y": 0.007813
+            },
+            {
+              "x": 8,
+              "y": 0.003906
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "plot",
+      "title": "P(−1 ≤ Z ≤ 1)",
+      "sources": [
+        "graphs"
+      ],
+      "description": "The standard normal density.",
+      "x_label": "z",
+      "y_label": "density φ(z)",
+      "x_min": -3.5,
+      "x_max": 3.5,
+      "y_min": 0,
+      "y_max": 0.45,
+      "x_ticks": [
+        -3,
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3
+      ],
+      "series": [
+        {
+          "key": "phi",
+          "label": "φ(z)",
+          "function": "exp(-x^2/2)/sqrt(2*pi)"
+        }
+      ],
+      "areas": [
+        {
+          "series": "phi",
+          "x_from": -1,
+          "x_to": 1,
+          "label": "≈ 0.683"
+        }
+      ]
+    },
+    {
+      "kind": "plot",
+      "title": "Search cost",
+      "sources": [
+        "graphs"
+      ],
+      "description": "Nodes generated to depth d.",
+      "x_label": "depth d",
+      "y_label": "nodes bᵈ",
+      "x_min": 0,
+      "x_max": 10,
+      "y_min": 1,
+      "y_max": 100000,
+      "y_scale": "log",
+      "legend": "direct",
+      "series": [
+        {
+          "key": "a",
+          "label": "b = 3",
+          "style": "markers",
+          "points": [
+            {
+              "x": 0,
+              "y": 1
+            },
+            {
+              "x": 1,
+              "y": 3
+            },
+            {
+              "x": 2,
+              "y": 9
+            },
+            {
+              "x": 3,
+              "y": 27
+            },
+            {
+              "x": 4,
+              "y": 81
+            },
+            {
+              "x": 5,
+              "y": 243
+            },
+            {
+              "x": 6,
+              "y": 729
+            },
+            {
+              "x": 7,
+              "y": 2187
+            },
+            {
+              "x": 8,
+              "y": 6561
+            },
+            {
+              "x": 9,
+              "y": 19683
+            },
+            {
+              "x": 10,
+              "y": 59049
+            }
+          ]
+        },
+        {
+          "key": "b",
+          "label": "b = 2",
+          "style": "markers",
+          "points": [
+            {
+              "x": 0,
+              "y": 1
+            },
+            {
+              "x": 1,
+              "y": 2
+            },
+            {
+              "x": 2,
+              "y": 4
+            },
+            {
+              "x": 3,
+              "y": 8
+            },
+            {
+              "x": 4,
+              "y": 16
+            },
+            {
+              "x": 5,
+              "y": 32
+            },
+            {
+              "x": 6,
+              "y": 64
+            },
+            {
+              "x": 7,
+              "y": 128
+            },
+            {
+              "x": 8,
+              "y": 256
+            },
+            {
+              "x": 9,
+              "y": 512
+            },
+            {
+              "x": 10,
+              "y": 1024
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "key": "degree",
+      "objective": "model",
+      "front": "What does the degree of a vertex count?",
+      "back": "It counts the edges incident to that vertex.",
+      "sources": [
+        "graphs"
+      ]
+    },
+    {
+      "key": "double",
+      "objective": "model",
+      "front": "Why does the degree sum count each undirected edge twice?",
+      "back": "Each edge has two endpoints. It contributes one to the degree of each endpoint.",
+      "sources": [
+        "graphs"
+      ]
+    },
+    {
+      "key": "sparse",
+      "objective": "storage",
+      "front": "Why does an adjacency list suit a sparse graph?",
+      "back": "It stores existing neighbors. It avoids reserving a cell for every possible pair of vertices.",
+      "sources": [
+        "graphs"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "key": "degree-sum",
+      "objective": "model",
+      "prompt": "A simple undirected graph has six edges. What is the sum of all vertex degrees?",
+      "level": "apply",
+      "options": [
+        {
+          "key": "0",
+          "text": "6",
+          "feedback": "This counts each edge once. An edge contributes to two endpoint degrees."
+        },
+        {
+          "key": "1",
+          "text": "12",
+          "feedback": "Each of the six edges contributes two to the degree sum."
+        },
+        {
+          "key": "2",
+          "text": "36",
+          "feedback": "This resembles a square-size calculation. The degree sum depends on edges, not matrix cells."
+        },
+        {
+          "key": "3",
+          "text": "3",
+          "feedback": "This divides the edge count by two. Each edge contributes two endpoints, so multiply by two."
+        }
+      ],
+      "correct": "1",
+      "explanation": "Count endpoints of edges: \\(2 \\times 6 = 12\\).",
+      "sources": [
+        "graphs"
+      ],
+      "blocks": [
+        {
+          "title": "Count each edge twice",
+          "sources": [
+            "graphs"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
+          "plain": "The sum of all vertex degrees equals twice the number of edges.",
+          "symbols": [
+            {
+              "symbol": "\\(V\\)",
+              "meaning": "The set of vertices."
+            },
+            {
+              "symbol": "\\(E\\)",
+              "meaning": "The set of edges."
+            },
+            {
+              "symbol": "\\(\\deg(v)\\)",
+              "meaning": "The number of edges incident to vertex \\(v\\)."
+            }
+          ],
+          "conditions": "For a simple undirected graph. Six edges contribute twelve to the total degree."
+        }
+      ]
+    },
+    {
+      "key": "sparse-choice",
+      "objective": "storage",
+      "prompt": "A network has many vertices and few edges. You mainly traverse neighbors. Which representation fits this task?",
+      "level": "reason",
+      "options": [
+        {
+          "key": "0",
+          "text": "An adjacency list",
+          "feedback": "It stores existing connections and gives direct access to each neighbor list."
+        },
+        {
+          "key": "1",
+          "text": "An adjacency matrix for its smaller memory use",
+          "feedback": "A matrix uses \\(O(|V|^2)\\) memory, including absent edges."
+        },
+        {
+          "key": "2",
+          "text": "A matrix because every graph is dense",
+          "feedback": "The prompt describes a sparse graph. Density is a property of this graph, not all graphs."
+        },
+        {
+          "key": "3",
+          "text": "An edge list because it finds every vertex’s neighbors without scanning",
+          "feedback": "An ordinary edge list may require scanning all edges to find one vertex’s neighbors. An adjacency list stores those neighbors together."
+        }
+      ],
+      "correct": "0",
+      "explanation": "The task favors neighbor traversal and compact storage of existing edges.",
+      "sources": [
+        "graphs"
+      ],
+      "blocks": [
+        {
+          "title": "Count each edge twice",
+          "sources": [
+            "graphs"
+          ],
+          "kind": "formula",
+          "mathml": null,
+          "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
+          "plain": "The sum of all vertex degrees equals twice the number of edges.",
+          "symbols": [
+            {
+              "symbol": "\\(V\\)",
+              "meaning": "The set of vertices."
+            },
+            {
+              "symbol": "\\(E\\)",
+              "meaning": "The set of edges."
+            },
+            {
+              "symbol": "\\(\\deg(v)\\)",
+              "meaning": "The number of edges incident to vertex \\(v\\)."
+            }
+          ],
+          "conditions": "For a simple undirected graph. Six edges contribute twelve to the total degree."
+        }
+      ]
+    }
+  ]
+}

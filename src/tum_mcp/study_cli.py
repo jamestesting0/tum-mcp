@@ -205,16 +205,19 @@ def exam_report_command(
 def report(
     project: Path,
     section: Annotated[
-        Literal["quality", "coverage", "review"] | None, typer.Option(help="Only this part.")
+        Literal["quality", "coverage", "review", "render"] | None,
+        typer.Option(help="Only this part."),
     ] = None,
 ) -> None:
-    """Report review flags, what the sources leave uncovered and the review scorecard."""
+    """Report review flags, uncovered sources, the review scorecard and the render check."""
+    from tum_mcp.exam_data import read_exam
     from tum_mcp.exercise_data import read_exercises
     from tum_mcp.study_build import read_content
     from tum_mcp.study_coverage import coverage_report, read_ledger
     from tum_mcp.study_report import quality_flags
     from tum_mcp.study_review import read_scorecard, review_report
     from tum_mcp.study_store import load_state
+    from tum_mcp.study_visuals import render_report
 
     root = project.expanduser().resolve()
     state = load_state(root)
@@ -224,6 +227,7 @@ def report(
         "quality": lambda: quality_flags(content, exercises),
         "coverage": lambda: coverage_report(state, content, exercises, read_ledger(root)),
         "review": lambda: review_report(state, content, exercises, read_scorecard(root)),
+        "render": lambda: render_report(root, content, exercises, read_exam(root)),
     }
     result = {name: build() for name, build in parts.items() if section in {None, name}}
     typer.echo(json.dumps(result, indent=2, ensure_ascii=False))
@@ -331,6 +335,27 @@ def schema(
         case unreachable:
             assert_never(unreachable)
     typer.echo(json.dumps(result, indent=2))
+
+
+@app.command()
+def visuals(
+    project: Path,
+    unit: Annotated[list[str] | None, typer.Option(help="Only this unit; repeatable.")] = None,
+    exercise: Annotated[
+        list[str] | None, typer.Option(help="Only this exercise, as SET/KEY; repeatable.")
+    ] = None,
+    exam: Annotated[bool, typer.Option("--exam", help="Only the Exam Prep visuals.")] = False,
+    gallery: Annotated[
+        bool, typer.Option("--gallery", help="Draw review-course's calibration gallery instead.")
+    ] = False,
+) -> None:
+    """Measure every drawn visual at phone, narrow and desktop width and draw contact sheets."""
+    from tum_mcp.study_visuals import check_visuals
+
+    result = check_visuals(
+        project, tuple(unit or ()), tuple(exercise or ()), exam=exam, gallery=gallery
+    )
+    typer.echo(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 @app.command()
