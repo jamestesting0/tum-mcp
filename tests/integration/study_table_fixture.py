@@ -3,7 +3,8 @@
 import json
 from pathlib import Path
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
+from playwright.sync_api import TimeoutError as BrowserTimeout
 
 
 def table_layout_checks(page: Page, project: Path) -> None:
@@ -73,9 +74,22 @@ def table_layout_checks(page: Page, project: Path) -> None:
         )
         assert region.evaluate("element => element.scrollWidth > element.clientWidth")
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        # Finish the responsive layout before exercising native keyboard scrolling.
+        region.scroll_into_view_if_needed()
         region.focus()
-        page.keyboard.press("ArrowRight")
-        page.wait_for_function("() => document.querySelector('.table-region').scrollLeft > 0")
+        expect(region).to_be_focused()
+        page.keyboard.down("ArrowRight")
+        try:
+            page.wait_for_function("() => document.querySelector('.table-region').scrollLeft > 0")
+        except BrowserTimeout as error:
+            state = region.evaluate("""r => ({
+              focus: document.hasFocus(), active: document.activeElement?.className,
+              left: r.scrollLeft, width: r.scrollWidth, client: r.clientWidth,
+              rect: r.getBoundingClientRect().toJSON(), inert: Boolean(r.closest('[inert]'))
+            })""")
+            raise AssertionError(f"Table keyboard scroll failed: {state!r}") from error
+        finally:
+            page.keyboard.up("ArrowRight")
     finally:
         source.write_bytes(original)
         build(project)
