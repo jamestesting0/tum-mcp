@@ -1,5 +1,11 @@
 # Changes
 
+## 0.14.1 — 2026-10-30
+
+- TUMonline login keeps waiting while sign-in is incomplete. An empty HTTP 200
+  from the anonymous session refresh no longer closes the login window with
+  `INVALID_RESPONSE`. Malformed responses and server failures still report errors.
+
 ## 0.14.0 — 2026-10-30
 
 - Graph diagrams sit on a grid: each node takes a `row` and `col` instead of pixel
