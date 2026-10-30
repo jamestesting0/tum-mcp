@@ -28,6 +28,32 @@ Set `TUM_MOODLE_SYSTEM_KEYRING=1` for a unique synthetic native-store round trip
 The ordinary campus runtime uses encrypted local files and owner-restricted keys.
 Set `TUM_MCP_BROWSER_INTEGRATION=1` to include the real HTTP static-export browser
 check locally; CI enables it. Set environment variables using your shell's syntax.
+Consumer checks default to full study journeys on every discovered browser.
+CI sets `TUM_MCP_STUDY_BROWSER_JOURNEYS=primary`: the first browser on each desktop
+OS and WSL engine runs the full installed study journey; every additional browser
+runs a short installed UI check. All browsers retain real pipe transport, synthetic
+cookie and encrypted-session checks. The shorter journey covers module loading,
+content/flashcard/practice views, saved progress after reload, keyboard navigation,
+theme switching and phone/desktop overflow under a project URL prefix. Consumer
+JSON names each browser's `studyCoverage` and records `studySeconds`. Unset the
+variable or use `all` for a browser-specific investigation; other values fail
+before consumer installation.
+
+The broad checkout study journey runs on Linux. macOS and Windows deselect only
+`tests/integration/test_study_browser.py::test_study_website_journeys_pass_in_the_checkout`;
+their full installed journeys still exercise that fixture. Other source tests and
+native checks keep their existing coverage. Package builds, upgrades and lifecycle
+tests continue in all five environments. Ruff lint/format runs once on Linux, after dependency
+installation. The existing five exact-revision GitHub checks remain required.
+
+During development, run affected tests and focused regressions. Reuse applicable
+passing results instead of running a complete local suite immediately before the
+same required CI suite. Full integration/release coverage may come from that
+exact-revision CI run; a local pass never substitutes for pending or failed native
+checks. Relevant source, test, dependency or environment changes invalidate earlier
+results. `AGENTS.md` is local and ignored; this tracked document carries the policy
+to other checkouts.
+
 Verbose test IDs, immediate first-failure output, slowest-test timings and a stack
 dump after 60 seconds make a stalled boundary visible. The dump is diagnostic;
 it does not skip a slow test or extend the CI deadline.

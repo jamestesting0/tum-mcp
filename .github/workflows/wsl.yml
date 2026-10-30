@@ -54,6 +54,7 @@ jobs:
           mkdir -p /opt/tum-ci-node
           tar -xJf /tmp/tum-node.tar.xz -C /opt/tum-ci-node --strip-components=1
           export PATH="/opt/tum-ci-node/bin:$PATH"
+          export TUM_MCP_STUDY_BROWSER_JOURNEYS=primary
           npm run test:consumer
           npm run test:upgrade
           npm run test:package-lifecycle

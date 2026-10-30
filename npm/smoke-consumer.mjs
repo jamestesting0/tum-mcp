@@ -6,6 +6,8 @@ import { tmpdir, release } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version;
+const studyJourneys = process.env.TUM_MCP_STUDY_BROWSER_JOURNEYS ?? 'all';
+assert.ok(['all', 'primary'].includes(studyJourneys), 'Study browser journeys must be all or primary.');
 const artifact = process.argv[2] || `dist/jamestesting888-tum-mcp-${version}.tgz`;
 if (!artifact || !process.env.npm_execpath) throw new Error('Run npm run test:consumer -- /path/to/package.tgz.');
 const root = mkdtempSync(join(tmpdir(), 'tum-mcp-packaged-smoke-'));
@@ -115,6 +117,8 @@ for name in ('cursor','antigravity'):
       writeFileSync(join(studyFixtureRoot, name), readFileSync(new URL(`../tests/fixtures/course_app/${name}`, import.meta.url)));
     }
     browserEnv.TUM_MCP_STUDY_QA_FIXTURE = studyFixtureRoot;
+    browserEnv.TUM_MCP_STUDY_QA_PROJECT = studyProject;
+    browserEnv.TUM_MCP_STUDY_BROWSER_JOURNEYS = studyJourneys;
     const fixture = readFileSync(new URL('../tests/integration/browser_consumer_fixture.py', import.meta.url), 'utf8');
     const revisionFixture = readFileSync(new URL('../tests/integration/study_revision_fixture.py', import.meta.url), 'utf8');
     const popoverFixture = readFileSync(new URL('../tests/integration/study_popover_fixture.py', import.meta.url), 'utf8');
