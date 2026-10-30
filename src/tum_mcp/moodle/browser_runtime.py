@@ -8,6 +8,7 @@ import shlex
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 import zipfile
 from collections.abc import Iterator
@@ -17,6 +18,8 @@ from typing import Final
 
 import httpx2
 from filelock import FileLock, Timeout
+from playwright.sync_api import Browser, BrowserType
+from pydantic import TypeAdapter
 
 from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError, windows_host, wsl_path
 from tum_mcp.moodle.config import private_write
@@ -35,6 +38,29 @@ NODE_HASHES: Final = {
 }
 MAX_ARCHIVE: Final = 80 * 1024 * 1024
 MAX_EXECUTABLE: Final = 128 * 1024 * 1024
+
+
+def launch_loopback_browser(engine: BrowserType, choice: BrowserChoice) -> Browser:
+    """Launch owned local QA without Chromium's Windows random-port allocation bug."""
+    args = ["--enable-automation"]
+    if sys.platform == "win32" or choice.windows_host:
+        # Preserve Playwright's defaults: Chromium uses the last --disable-features value.
+        with engine.launch(executable_path=choice.executable, headless=True, args=args) as baseline:
+            session = baseline.new_browser_cdp_session()
+            try:
+                arguments = TypeAdapter(tuple[str, ...]).validate_python(
+                    session.send("Browser.getBrowserCommandLine")["arguments"]
+                )
+            finally:
+                session.detach()
+        disabled: list[str] = []
+        for argument in arguments:
+            if argument.startswith("--disable-features="):
+                disabled = argument.partition("=")[2].split(",")
+        # https://issuetracker.google.com/issues/572515601
+        disabled.append("TcpPortRandomizationWin")
+        args.append("--disable-features=" + ",".join(dict.fromkeys(disabled)))
+    return engine.launch(executable_path=choice.executable, headless=True, args=args)
 
 
 def _direct_pipes_work(node: Path) -> bool:

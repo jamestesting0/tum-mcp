@@ -314,7 +314,7 @@ def _measure(
 ) -> tuple[dict[str, dict[str, Visual]], dict[str, list[str]]]:
     from playwright.sync_api import sync_playwright
 
-    from tum_mcp.moodle.browser_runtime import browser_driver
+    from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
     from tum_mcp.moodle.browsers import discover_browsers
     from tum_mcp.study_preview import Handler, PreviewServer
 
@@ -336,7 +336,7 @@ def _measure(
     base = f"http://127.0.0.1:{server.server_port}/"
     try:
         with browser_driver(choices[0]), sync_playwright() as playwright:
-            browser = playwright.chromium.launch(executable_path=choices[0].executable)
+            browser = launch_loopback_browser(playwright.chromium, choices[0])
             try:
                 for name, pixels in WIDTHS.items():
                     photograph = name in SHEET_WIDTHS

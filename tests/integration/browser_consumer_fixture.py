@@ -18,7 +18,7 @@ from playwright.sync_api import Browser, Route, expect, sync_playwright
 from study_browser_fixture import study_website
 
 from tum_mcp.moodle.auth import Cookie, Session, SessionStore
-from tum_mcp.moodle.browser_runtime import browser_driver
+from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
 from tum_mcp.moodle.browsers import discover_browsers, is_wsl
 from tum_mcp.moodle.config import Paths
 
@@ -117,9 +117,7 @@ def main() -> None:
     for index, choice in enumerate(browsers):
         print(f"Verifying owned browser: {choice.label}", file=sys.stderr, flush=True)
         with browser_driver(choice), sync_playwright() as playwright:
-            browser = playwright.chromium.launch(
-                executable_path=choice.executable, headless=True, args=["--enable-automation"]
-            )
+            browser = launch_loopback_browser(playwright.chromium, choice)
             try:
                 context = browser.new_context()
                 context.route("**/*", fixture)
@@ -134,6 +132,12 @@ def main() -> None:
                 arguments = cdp.send("Browser.getBrowserCommandLine")["arguments"]
                 assert "--remote-debugging-pipe" in arguments
                 assert not any(value.startswith("--remote-debugging-port") for value in arguments)
+                disabled = next(
+                    value.partition("=")[2].split(",")
+                    for value in reversed(arguments)
+                    if value.startswith("--disable-features=")
+                )
+                assert ("TcpPortRandomizationWin" in disabled) == (platform == "Win32")
                 # Cookie writes cross renderer/network processes. Observe their
                 # completion instead of racing the CDP snapshot after the click.
                 deadline = time.monotonic() + 5

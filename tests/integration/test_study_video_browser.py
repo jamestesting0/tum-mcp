@@ -104,13 +104,13 @@ def test_index_omits_missing_or_changed_files_and_survives_bad_manifests(
 def browsers() -> Iterator[dict]:
     from playwright.sync_api import sync_playwright
 
-    from tum_mcp.moodle.browser_runtime import browser_driver
+    from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
     from tum_mcp.moodle.browsers import discover_browsers
 
     choices = discover_browsers()
     assert choices, "The requested browser QA requires an existing Chromium browser."
     with browser_driver(choices[0]), sync_playwright() as playwright:
-        found = {"chromium": playwright.chromium.launch(executable_path=choices[0].executable)}
+        found = {"chromium": launch_loopback_browser(playwright.chromium, choices[0])}
         if Path(playwright.webkit.executable_path).exists():
             found["webkit"] = playwright.webkit.launch()
         try:

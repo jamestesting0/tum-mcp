@@ -12,7 +12,7 @@ import pytest
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
-from tum_mcp.moodle.browser_runtime import browser_driver
+from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
 from tum_mcp.moodle.browsers import discover_browsers
 from tum_mcp.study_preview import PreviewServer
 from tum_mcp.study_publish_site import export_site
@@ -66,9 +66,7 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
     captures: list[str] = []
     try:
         with browser_driver(choices[0]), sync_playwright() as playwright:
-            browser = playwright.chromium.launch(
-                executable_path=choices[0].executable, headless=True, args=["--enable-automation"]
-            )
+            browser = launch_loopback_browser(playwright.chromium, choices[0])
             try:
                 # When opening the complete hosted site on phones and desktop displays.
                 for width in (390, 1440):

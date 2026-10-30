@@ -1,4 +1,5 @@
-import('./app.mjs').catch(() => {
+import('./app.mjs').catch(error => {
+  console.error('Course startup failed:', error);
   const root = document.querySelector('#app');
   const main = document.createElement('main'); main.className = 'reading';
   const title = document.createElement('h1'); title.textContent = 'Course unavailable';
