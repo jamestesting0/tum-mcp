@@ -39,6 +39,15 @@ JSON names each browser's `studyCoverage` and records `studySeconds`. Unset the
 variable or use `all` for a browser-specific investigation; other values fail
 before consumer installation.
 
+Owned loopback browsers use `launch_loopback_browser`, including local visual
+checks and Windows browsers launched through WSL. On Windows it disables
+Chromium's `TcpPortRandomizationWin`, which can fail local module requests with
+`ERR_NO_BUFFER_SPACE` even when socket resources are available
+([upstream issue](https://issuetracker.google.com/issues/572515601)). The launcher
+reads and preserves Playwright's default disabled features before adding this
+opt-out. A native browser regression checks the effective arguments, and installed
+consumer checks verify that the option reaches Windows browsers through WSL.
+
 The broad checkout study journey runs on Linux. macOS and Windows deselect only
 `tests/integration/test_study_browser.py::test_study_website_journeys_pass_in_the_checkout`;
 their full installed journeys still exercise that fixture. Other source tests and
