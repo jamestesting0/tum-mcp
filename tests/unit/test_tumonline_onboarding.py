@@ -89,8 +89,9 @@ def test_connect_context_waits_for_login_without_writing(
     assert not (tmp_path / "credentials").exists()
 
 
+@pytest.mark.parametrize("pending_status", [200, 204])
 def test_anonymous_refresh_waits_then_connects_after_sign_in(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, pending_status: int
 ) -> None:
     from unittest.mock import MagicMock
 
@@ -108,7 +109,7 @@ def test_anonymous_refresh_waits_then_connects_after_sign_in(
         calls.append(request.url.path)
         if request.method == "POST":
             if not signed_in:
-                return httpx2.Response(200)
+                return httpx2.Response(pending_status)
             return httpx2.Response(201, json={"accessToken": "synthetic-token"})
         assert signed_in
         assert request.url.path == auth.PROFILE
