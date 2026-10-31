@@ -134,3 +134,10 @@ def test_partial_body_match_needs_distinct_terms_without_matching_a_substring():
     assert lexical_score(value, "composition missing") == 0
     assert lexical_score(value, "composition registration missing") == 2
     assert lexical_score(value, "composit") == 0
+
+
+def test_exact_symbol_and_short_aliases_precede_scaffold_filtering():
+    graph = Graph(None)
+    graph.add(node("concept/sum", "Sum", "", "concept", {"aliases": ["∑", "a_b", "a", "BFS"]}))
+    for value in ("∑", "a_b", "a", "Please explain BFS"):
+        assert seeds(graph, value) == (["concept/sum"], [])
