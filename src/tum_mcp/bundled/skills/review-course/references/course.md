@@ -15,6 +15,9 @@ course Organization, course Redundancy and, when the report lists it, Integratio
    - Exam topics in order, and each lecture with whether a unit links it;
    - `flags` for forward terms, odd groups, order clashes, repeated passages and
      practice, and missing links.
+   - optional `media` targets, chapter order, coverage/dependencies and text-first
+     decisions. These do not create a fake workspace. Integration applies when
+     media links to prepared Study or Exercises even if it is the only workspace.
 
    `builds_on` is only as complete as the `{{term}}` marks: a dependency you find by
    reading still counts, and an unlinked one is an `organization.links_back` finding.
@@ -51,6 +54,11 @@ course Organization, course Redundancy and, when the report lists it, Integratio
    workspaces is a finding.
 6. **Backbone.** Exercise sets and Exam topics should follow the order of the units
    they need; check every `order_mismatch` flag and say whether the course has a reason.
+7. **Media links.** Follow each actual target and used prerequisite. Check notation,
+   chapter/part order and disclosed Study-only construction. Score broken links as
+   `integration.media_links`. Optional audio/video is alternate access, not redundant
+   copying; judge filler within the encounter. Codec/evidence bytes do not reorder
+   the course, while chapter/coverage link changes do.
 
 ## Save
 

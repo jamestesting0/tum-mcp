@@ -99,6 +99,6 @@ external speech generation. Explainer videos work the same way through the optio
 video-notes workflow (`tum-mcp install video-notes`): finish content first, pass the
 changed unit IDs, and keep videos under videos/.
 
-For timestamped notes about the professor's additional explanations beyond slides,
-use the optional prepare-lecture workflow when installed. Preserve existing
+For concise lecture notes and highlights of substantial explanations worth watching, use
+the optional prepare-lecture workflow when installed. Preserve existing
 Lecture while updating Study; do not duplicate or automatically author it.

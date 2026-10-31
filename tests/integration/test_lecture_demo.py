@@ -28,9 +28,15 @@ def test_optional_demo_and_edited_asset_preservation(
     )
     assert payload["workspaces"] == ["study", "exercises", "lectures", "exam"]
     assert len(payload["lectures"]["lectures"]) == 1
-    figure = next((root / ".tum-mcp/lecture-assets").iterdir())
-    figure.write_bytes(b"Personal altered image")
+    assert len(payload["lectures"]["lectures"][0]["notes"]) == 2
+    highlights = payload["lectures"]["lectures"][0]["highlights"]
+    staged = sorted((root / ".tum-mcp/lecture-assets").iterdir())
+    assert [path.name for path in staged] == sorted(
+        {item["thumbnail"]["asset"].removeprefix("lecture-assets/") for item in highlights}
+    )
+    thumbnail = staged[0]
+    thumbnail.write_bytes(b"Personal altered image")
     result = CliRunner().invoke(app, args)
     assert result.exit_code != 0 and "preserved" in str(result.exception)
-    assert figure.read_bytes() == b"Personal altered image"
+    assert thumbnail.read_bytes() == b"Personal altered image"
     assert (root / "app/lectures.json").read_bytes() == notes

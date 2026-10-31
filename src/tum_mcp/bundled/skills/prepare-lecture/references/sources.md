@@ -57,21 +57,37 @@ uncertain intervals. `--words` adds word timings/probabilities only for alignmen
 or repair. A transcript page is not proof of full lecture coverage. Compare with
 the receipt's processed/missing/uncertain spans and make a full topic map first.
 
-Frames are a targeted escalation after text/material comparison:
+Classify before acquiring images: text notes need no frame, every highlight needs
+a thumbnail, and a visual note may need an informative frame. Capture selected
+frames in one call, then stage each and check the evidence:
 
 ```sh
-tum-mcp lecture prepare PROJECT --recording URL --frame-at SECONDS
+tum-mcp lecture prepare PROJECT --recording URL --frame-at 772 --frame-at 1402
 tum-mcp lecture frames PROJECT --recording KEY --start START --end END --limit 10
+tum-mcp lecture thumbnail PROJECT --recording KEY --at 772
+tum-mcp lecture thumbnail PROJECT --recording KEY --at 1402 --crop X,Y,WIDTH,HEIGHT
+tum-mcp lecture check PROJECT
 ```
 
-Use a frame only when it settles a consequential unresolved question. If a visual
-moment cannot be located from text, explicitly requesting `prepare --previews`
-fetches cheap approximate seek candidates. A candidate timestamp is not a measured
-capture. Review a selected full frame's actual capture time and visible bytes;
-never infer final frame content from a damaged image, caption or recognizer vote.
-Repeated preparation reuses verified media/chunks and preserves prior selected
-frames. There is no reason to send every frame or all word probabilities to an LLM.
+`--at` names the requested `--frame-at` time; the frame's measured capture time may
+differ slightly. `lecture thumbnail` writes a lossless PNG of at most 960 px to
+`.tum-mcp/lecture-assets/` and prints the thumbnail object plus a frame evidence item
+ready to paste once you give it a key and review it. For a note, use the object as
+`image` with a descriptive `alt`. `--crop` uses original frame
+pixels. `lecture check` reports each highlight's opening and closing speech, boundary
+errors (`start_off_passage`, `end_off_passage`), overlap with unclear speech
+(`uncertain_speech`) and the share of processed time the highlights cover. Its
+`note_items` prints the supporting speech and uncertainty for each note, without
+imposing clip boundaries. It exits 1 on boundary errors or missing note speech.
 
-Cached notes can be prepared offline, with the as-of date disclosed. A requested
+If a visual moment cannot be located from text, explicitly requesting
+`prepare --previews` fetches cheap approximate seek candidates. A candidate timestamp
+is not a measured capture. Review a selected full frame's actual capture time and
+visible bytes; never infer frame content from a damaged image, caption or recognizer
+vote. Repeated preparation reuses verified media/chunks and preserves prior selected
+frames. There is no frame-by-frame model loop and no reason to send all word
+probabilities to an LLM.
+
+Cached notes and highlights can be prepared offline, with the as-of date disclosed. A requested
 refresh needs the selected recording's live metadata; use the established campus
 connection if needed. Preserve existing authoring on denied access or failures.

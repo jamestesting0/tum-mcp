@@ -2,7 +2,7 @@
 
 ## Inputs and scope
 
-Read AGENTS.md, app/content.json (legacy study/content.json), relevant .tum-mcp/state.json entries
+Read AGENTS.md, app/content.json, relevant .tum-mcp/state.json entries
 and existing audio records. Use the content schema already used by prepare-study;
 `tum-mcp study schema content` describes unfamiliar fields. Reuse an existing source
 check; otherwise `tum-mcp study inspect PROJECT` identifies stale units without
@@ -87,6 +87,8 @@ matches, rounded durations or model-invented hashes. For structured fingerprints
 serialize UTF-8 JSON with sorted object keys, no insignificant spaces and preserved
 array order. For scripts and audio files, hash their exact bytes.
 
+Use `tum-mcp study schema audio-plan` and `audio-manifest` as the field authority.
+`study report PROJECT --section review` discovers these records read-only.
 plan.json records schema_version=1, course_key, the exact content-file hash, current
 category order, each category's key/stem/title, ordered unit keys, semantic input
 hashes, source versions, coverage targets and pending actions. It is desired state,
@@ -108,7 +110,7 @@ hash, source references, script/track/chapter paths and SHA-256 values, actual v
 profile, chunk input hashes, duration and validation evidence paths. Coverage
 entries identify the source concept and narration section/chapter. Store only
 checks actually performed, including the teaching-review evidence path. That review
-records the exact script hash and the SHA-256 of references/narration.md used for
+records the exact script hash and the bundled audio guidance hash used for
 its assessment. Recheck input/script/voice and review fingerprints before promotion
 so a concurrent edit cannot be certified against an older snapshot.
 
@@ -135,11 +137,9 @@ requires the review below even when the source and audio hashes still match.
 | Missing, corrupt or externally edited file | Regenerate missing/corrupt output; preserve and reconcile personal edits before replacing them. |
 | Script exists but track is absent/unverified | Resume generation; coverage is still pending. |
 
-When no manifest exists, inventory legacy tracks and scripts, including nested
-audio packages. Their presence is not proof of current coverage or provider
-identity. Adopt a category only after matching its script to current prepared
-content and checking its audio; otherwise preserve it as unverified. Migrate legacy
-layout only within the requested scope, keeping originals recoverable under audio/.
+When no manifest exists, preserve any existing files as unverified and plan current
+targets. Do not infer coverage, provider identity or an adoption/migration workflow
+from filenames.
 
 ## Generation, validation and publication
 
@@ -196,7 +196,16 @@ README from the verified receipts, including unchanged categories. A failed buil
 keeps the previous usable files and pending work; never overwrite them with empty
 or unverified output. Do not delete useful resumable chunks on failure.
 
-Report complete only when the requested current categories have verified coverage.
+Record each coverage locator as `spoken`, `study_required` with an exact dependency
+and reason, or `missing` with a reason. `study_required` is an honest adaptation
+limit, not complete audio-only instruction. `missing` remains pending.
+Validation JSON records actual tool/version, codec/container, duration, sample
+rate/channels, decode result, measured LUFS/peak and hashed raw probe/decode/loudness
+files. It has no self-authored `passed` flag. Use the schema's typed chapter records
+(`key`, `title`, `start`, `end`), measured and ordered within the final duration.
+
+Report complete only when the requested current categories have verified coverage
+and the required real listening evidence exists.
 Otherwise list the completed/reused categories and precise pending material or
 provider limitation, with the prepared scripts and recovery path.
 

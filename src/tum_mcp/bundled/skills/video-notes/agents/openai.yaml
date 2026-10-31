@@ -1,6 +1,6 @@
 interface:
   display_name: "Video Notes"
-  short_description: "Create short narrated explainer videos from prepared study topics"
-  default_prompt: "Use $video-notes to plan and create short narrated explainer videos from my prepared study website, keeping every claim faithful to the prepared content and all outputs inside videos/."
+  short_description: "Explain prepared concepts and work through exercise solutions visually"
+  default_prompt: "Use $video-notes to explain selected prepared Study concepts in depth or solve selected prepared Exercises with intuitive visual demonstrations. Preserve every demand and needed reasoning, with no duration target; keep outputs inside videos/."
 policy:
   allow_implicit_invocation: true

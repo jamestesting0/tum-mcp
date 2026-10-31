@@ -71,7 +71,8 @@
           ],
           "paragraphs": [
             "Inline notation: \\(x^2\\). Prose and short lists use the same reading style.",
-            "A column vector \\(\\begin{pmatrix}1\\\\0\\end{pmatrix}\\) or a small matrix \\(\\begin{pmatrix}0 & 1\\\\ 1 & 0\\end{pmatrix}\\) sits in the line, which grows to fit."
+            "A column vector \\(\\begin{pmatrix}1\\\\0\\end{pmatrix}\\) or a small matrix \\(\\begin{pmatrix}0 & 1\\\\ 1 & 0\\end{pmatrix}\\) sits in the line, which grows to fit.",
+            "An inline vector equation also fits within a sentence: \\(\\begin{pmatrix}1\\\\2\\end{pmatrix} + \\begin{pmatrix}2\\\\1\\end{pmatrix} = \\begin{pmatrix}3\\\\3\\end{pmatrix}\\)."
           ],
           "points": [
             "Long equation: \\(\\langle a \\mid b \\rangle = a_0^{*} b_0 + a_1^{*} b_1 = \\tfrac{1}{2} - \\tfrac{1}{2} = 0\\) wraps after its relations on a phone."
@@ -154,11 +155,11 @@
           "plain": "The mean is the sum divided by the count.",
           "symbols": [
             {
-              "symbol": "n",
+              "symbol": "\\(n\\)",
               "meaning": "Count"
             },
             {
-              "symbol": "x_i",
+              "symbol": "\\(x_i\\)",
               "meaning": "One value"
             }
           ],
@@ -174,7 +175,7 @@
           "plain": "A two by two identity matrix.",
           "symbols": [
             {
-              "symbol": "I",
+              "symbol": "\\(I\\)",
               "meaning": "Identity matrix"
             }
           ],

@@ -56,6 +56,7 @@ def structure_revision(
     lectures: LectureContent | None,
     *,
     ledger: CoverageLedger | None = None,
+    media: list[dict[str, JsonValue]] | None = None,
 ) -> str:
     """A hash of what the course review judges: order, categories, homes of terms and links."""
     outline = {
@@ -135,6 +136,8 @@ def structure_revision(
     )
     if classifications:
         outline["enrichment_classification"] = classifications
+    if media:
+        outline["media"] = media
     payload = json.dumps(outline, sort_keys=True, ensure_ascii=False).encode()
     return hashlib.sha256(payload).hexdigest()[:16]
 
@@ -146,10 +149,13 @@ def course_map(
     lectures: LectureContent | None,
     *,
     ledger: CoverageLedger | None = None,
+    media: list[dict[str, JsonValue]] | None = None,
 ) -> dict[str, JsonValue]:
     """Every workspace in course order with what each unit builds on and what links to it."""
     result: dict[str, JsonValue] = {
-        "revision": structure_revision(content, exercises, exam, lectures, ledger=ledger),
+        "revision": structure_revision(
+            content, exercises, exam, lectures, ledger=ledger, media=media
+        ),
         "workspaces": workspaces(content, exercises, exam, lectures),
     }
     if content:
@@ -183,6 +189,26 @@ def course_map(
             for lecture in lectures.lectures
         ]
     result["flags"] = structure_flags(content, exercises, exam, lectures)
+    if media:
+        result["media"] = media
+        known = {f"study/{unit.key}" for unit in content.units} if content else set()
+        if exercises:
+            known.update(
+                f"exercises/{group.key}/{exercise.key}"
+                for group in exercises.sets
+                for exercise in group.exercises
+            )
+        for entry in media:
+            targets = entry.get("targets", [entry["source"]] if "source" in entry else [])
+            for target in targets:
+                if target not in known:
+                    result["flags"].append(
+                        {
+                            "item": entry.get("item", target),
+                            "flag": "media_link_missing",
+                            "detail": f"Prepared media target {target} was removed or moved.",
+                        }
+                    )
     return result
 
 

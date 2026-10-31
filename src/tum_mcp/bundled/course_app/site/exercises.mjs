@@ -7,6 +7,7 @@ import { annotateExercise } from './anchors.mjs';
 import { markCompleted } from './completion.mjs';
 import { codeReferences, filesIn } from './files.mjs';
 import { renderCommentedView } from './comments.mjs';
+import { exerciseVideo } from './video.mjs';
 
 const sets = data.exercises?.sets || [];
 const ordered = sets.flatMap(group => group.exercises.map(exercise => ({ group, exercise })));
@@ -126,7 +127,7 @@ export function renderExercises(hash, state) {
   }
   const following = ordered[ordered.findIndex(item => item.exercise === exercise) + 1];
   return exercisePage(exercise, {
-    state, stepKey, completes: exerciseLink(group, exercise),
+    state, stepKey, completes: exerciseLink(group, exercise), video: `${group.key}/${exercise.key}`,
     eyebrow: [group.title, exercise.label, due(group)].filter(Boolean).join(' · '),
     link: step => exerciseLink(group, exercise, step),
     annotate: (element, field, step) => annotateExercise(element, group, exercise, field, step),
@@ -347,11 +348,17 @@ export function exercisePage(exercise, options) {
         value.solutionOpen = opened; state.save(exercise); activityChanged();
       }));
     }
+    if (options.video) help.append(exerciseVideo(exercise, options.video));
   } else {
     const solution = renderAnswers(exercise.solution, (element, field) => target(element, field));
-    help.append(disclosure('Solution', solution, value.solutionOpen, opened => {
+    const details = disclosure('Solution', solution, value.solutionOpen, opened => {
       value.solutionOpen = opened; value.solutionViewed ||= opened; state.save(exercise); activityChanged();
-    }));
+    });
+    help.append(details);
+    if (options.video) {
+      if (exercise.parts?.length > 1) help.append(exerciseVideo(exercise, options.video));
+      else exerciseVideo(exercise, options.video, details);
+    }
   }
   if (exercise.transfer) {
     const answer = node('details', 'disclosure plain');

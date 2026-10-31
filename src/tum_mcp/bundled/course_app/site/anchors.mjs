@@ -2,7 +2,7 @@
 import data from './data.mjs';
 import { studyText, SECTION_HEADING, plainText } from './dom.mjs';
 // KaTeX's visible layer is aria-hidden (its MathML copy is spoken), yet it is what readers select.
-const excluded = 'button:not(.flashcard),input,textarea,select,svg:not(.katex *),.source-note,.lecture-figure,.lecture-coverage,[data-comment-ui],[hidden],[aria-hidden="true"]:not(.katex-html)';
+const excluded = 'button:not(.flashcard),input,textarea,select,svg:not(.katex *),.source-note,.lecture-thumb,.lecture-when,.lecture-coverage,[data-comment-ui],[hidden],[aria-hidden="true"]:not(.katex-html)';
 export function annotate(element, unit, item, view, field) {
   const owner = item.origin || unit;
   Object.assign(element.dataset, { commentTarget: view, unitKey: owner.key, unitRevision: owner.revision, itemKey: item.key, field });
@@ -159,7 +159,7 @@ export function locatePassage(root, unit, anchor, indexes = new Map()) {
   const b = index.segments.find(item => item.start < end && end <= item.end);
   if (!a || !b) return null;
   const range = document.createRange(); range.setStart(a.node, start - a.start); range.setEnd(b.node, end - b.start);
-  const focus = view === 'lectures' ? section.querySelector('h2') : view === 'exercises' || view === 'exam' ? root.querySelector('h1') : view === 'content' || view === 'explore' ? section.querySelector(SECTION_HEADING) || section : material.closest('.flashcard') || root.querySelector('.practice-question legend');
+  const focus = view === 'lectures' ? section.querySelector('h2,h3') || section : view === 'exercises' || view === 'exam' ? root.querySelector('h1') : view === 'content' || view === 'explore' ? section.querySelector(SECTION_HEADING) || section : material.closest('.flashcard') || root.querySelector('.practice-question legend');
   return { range, section, focus };
 }
 export function highlightPassages(ranges, focused = []) {

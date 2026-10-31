@@ -1,6 +1,6 @@
 ---
 name: review-course
-description: Score how easy a local TUM course app is to learn from, unit by unit, exercise by exercise and as a whole course (organization, redundancy, and how Study, Exercises, Exam and Lecture connect), save the scores with evidence, and fix what falls below the bar. Use after prepare-study or prepare-exercises, or when asked to review, rate or improve course content, its structure, its diagrams or its plots.
+description: Review and improve prepared Study, Exercises, audio revision, concept videos, exercise walkthroughs and course structure. Save source-bound scores with actual evidence, fix findings and re-review. Media needs real listening/playback; source and media scores stay separate.
 ---
 
 Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. Study content
@@ -23,6 +23,9 @@ their text.
    reviews missing a dimension (`unscored_dimensions`) and the `course` review's status.
    `render` lists items whose render check is missing, stale or failing. The `quality`,
    `structure` and `coverage` sections are evidence for the scores, not a substitute.
+   `review.media` discovers optional published/pending/broken media and required
+   evidence. Apply [media](references/media.md) for audio and both video sources,
+   not the nine-dimension page rubric or a Practice requirement.
 2. **Render.** Run `tum-mcp study visuals PROJECT` (or `--unit KEY`, `--exercise SET/KEY`).
    It opens every lesson, practice question and exercise step at phone, narrow and
    desktop width, measures each drawn visual and writes contact sheets to
@@ -34,6 +37,8 @@ their text.
    draws them), and three cases of the [structure gallery](references/structure-gallery.md),
    before reading their verdicts. On any disagreement, re-read the criterion or check
    before you score real content.
+   For media, use the actual [media pairs](references/media-gallery.md); missing
+   sound/video perception remains an incomplete review, never a perfect score.
 4. **Review each item in six passes.** Read its [workspace profile](references/profiles.md)
    first: an exercise guide is not a second Study lesson. Each pass reads the item for one
    thing, so nothing hides behind another:
@@ -80,6 +85,8 @@ Scores, findings, contact sheets and render results stay in `.tum-mcp/`; they ar
 shown to students or published. Do not raise a score without re-reading the item, and do
 not lower the bar to pass. A review does not authorize new sources: fetch missing material
 through read-content, and record outcome gaps in the coverage ledger instead of guessing.
+Media also needs re-hearing/re-watching changed artifacts. Report separate modality
+averages and incomplete perception honestly; script or ASR review cannot supply it.
 
 For units with Explore or changed optional classifications, include the
 [core-only counterfactual review](../prepare-study/references/explore.md#review-with-explore-closed).

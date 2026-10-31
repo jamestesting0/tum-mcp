@@ -20,7 +20,7 @@ export function lectureLifecycle(root, command) {
   const before = readFileSync(notes);
   const payload = JSON.parse(readFileSync(join(project, 'app/data.mjs'), 'utf8').slice('export default '.length).trim().replace(/;$/, ''));
   assert.deepEqual(payload.workspaces, ['study', 'exercises', 'lectures', 'exam']);
-  const image = join(project, 'app', payload.lectures.lectures[0].sections[0].figures[0].asset);
+  const image = join(project, 'app', payload.lectures.lectures[0].highlights[0].thumbnail.asset);
   assert.ok(readFileSync(image).subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])));
   command(['update', '--local']);
   assert.equal(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.length, 8);

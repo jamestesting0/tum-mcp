@@ -4,8 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from tum_mcp.video_content import BeatTiming, ChapterBound, Cue, Timing
+from tum_mcp.errors import CampusError
+from tum_mcp.video_content import BeatTiming, ChapterBound, Cue, StyleProfile, Timing
 from tum_mcp.video_media import Probe, captions, chapters, check_media, faststart, parse_vtt
+from tum_mcp.video_style import STYLESHEET, resolve
 
 FIXTURES = Path(__file__).parents[1] / "fixtures/video"
 STYLE = Path(__file__).parents[2] / "src/tum_mcp/bundled/video_runtime/vnotes/style.py"
@@ -139,7 +141,8 @@ def test_style_tokens_meet_contrast_targets_in_both_themes() -> None:
     assert spec and spec.loader
     style = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(style)
-    for tokens in style.THEMES.values():
+    for theme in ("light", "dark"):
+        tokens = resolve(StyleProfile(theme=theme))["tokens"]
         background = tokens["background"]
         for name in style.TEXT_TOKENS:
             assert style.contrast(tokens[name], background) >= 4.5, name
@@ -152,3 +155,39 @@ def test_style_tokens_meet_contrast_targets_in_both_themes() -> None:
         assert left < x < right and bottom < y < top
     with pytest.raises(ValueError):
         style.anchor(6, 0)
+
+
+def test_palette_uses_only_effective_colors_and_rejects_invalid_tokens(tmp_path: Path) -> None:
+    css = STYLESHEET.read_text(encoding="utf-8")
+    path = tmp_path / "styles.css"
+    original = resolve(StyleProfile())
+    path.write_text(css.replace("--s1: 4px", "--s1: 7px"), encoding="utf-8")
+    assert resolve(StyleProfile(), stylesheet=path) == original
+    path.write_text(css.replace("--accent: #3070b3", "--accent: #205080"), encoding="utf-8")
+    changed = resolve(StyleProfile(), stylesheet=path)
+    assert changed["tokens"]["accent"] == "#205080"
+    assert changed["tokens"]["line"] == changed["tokens"]["muted"]
+    assert changed["tokens"]["frontier"] == changed["tokens"]["accent"]
+    path.write_text(css.replace("--accent: #3070b3;", ""), encoding="utf-8")
+    with pytest.raises(CampusError, match="--accent"):
+        resolve(StyleProfile(), stylesheet=path)
+    path.write_text(css.replace("--accent: #3070b3", "--accent: red"), encoding="utf-8")
+    with pytest.raises(CampusError, match="--accent"):
+        resolve(StyleProfile(), stylesheet=path)
+
+
+def test_symbol_colors_are_preserved_but_cannot_disappear_on_canvas() -> None:
+    dark = StyleProfile(theme="dark", symbol_colors={"mass": "#FFFFFF"})
+    assert resolve(dark)["symbol_colors"] == {"mass": "#FFFFFF"}
+    with pytest.raises(CampusError, match="mass"):
+        resolve(StyleProfile(symbol_colors={"mass": "#FFFFFF"}))
+
+
+def test_initial_system_theme_matches_explicit_dark() -> None:
+    from tum_mcp.video_style import _declarations
+
+    css = STYLESHEET.read_text(encoding="utf-8")
+    initial = css.split("@media (prefers-color-scheme: dark)", 1)[1]
+    explicit = _declarations(css, ':root[data-theme="dark"]')
+    initial = _declarations(initial.replace("  :root", ":root"), ":root:not([data-theme])")
+    assert initial == explicit

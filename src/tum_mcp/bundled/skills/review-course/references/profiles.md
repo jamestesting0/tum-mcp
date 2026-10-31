@@ -68,3 +68,10 @@ and check the recording/transcript evidence before judging fidelity.
 
 Synthetic template examples can test whether a check is usable. They cannot validate
 recording fidelity, real-exam representativeness or learning outcomes.
+
+## Audio and Video Notes
+
+Use the separate [media profile and evidence contract](media.md): eight dimensions
+for hands-free audio, ten for concept or Exercise video, never Practice. The actual
+source variant selects the profile. Page reviews and media reviews have distinct
+revisions and averages. Technical success is not listening/playback evidence.

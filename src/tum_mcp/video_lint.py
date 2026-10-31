@@ -3,7 +3,7 @@
 import ast
 from dataclasses import dataclass
 
-from tum_mcp.video_content import Storyboard
+from tum_mcp.video_content import ExerciseStoryboard, Storyboard
 
 ALLOWED_IMPORTS = {"manim", "numpy", "math", "vnotes"}
 FORBIDDEN_NAMES = {
@@ -109,7 +109,7 @@ def _literal(node: ast.AST) -> str | None:
     return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
 
 
-def lint(source: str, storyboard: Storyboard) -> LintReport:
+def lint(source: str, storyboard: Storyboard | ExerciseStoryboard) -> LintReport:
     errors: list[str] = []
     warnings: list[str] = []
     try:
@@ -120,6 +120,7 @@ def lint(source: str, storyboard: Storyboard) -> LintReport:
     used: set[str] = set()
     beats_by_chapter = {c.key: [b.key for b in c.beats] for c in storyboard.chapters}
     classes: dict[str, list[str]] = {}
+    parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
 
     def where(node: ast.AST) -> str:
         return f"line {getattr(node, 'lineno', '?')}"
@@ -160,6 +161,43 @@ def lint(source: str, storyboard: Storyboard) -> LintReport:
             name = node.func.attr
             owner = node.func.value
             is_self = isinstance(owner, ast.Name) and owner.id == "self"
+            if is_self and name == "cue":
+                index = (
+                    node.args[0].value
+                    if node.args and isinstance(node.args[0], ast.Constant)
+                    else None
+                )
+                parent = parents.get(node)
+                beat = None
+                while parent is not None:
+                    if isinstance(parent, ast.With):
+                        for item in parent.items:
+                            call = item.context_expr
+                            if (
+                                isinstance(call, ast.Call)
+                                and isinstance(call.func, ast.Attribute)
+                                and isinstance(call.func.value, ast.Name)
+                                and call.func.value.id == "self"
+                                and call.func.attr == "beat"
+                                and call.args
+                            ):
+                                beat = next(
+                                    (
+                                        b
+                                        for b in storyboard.beats()
+                                        if b.key == _literal(call.args[0])
+                                    ),
+                                    None,
+                                )
+                        if beat is not None:
+                            break
+                    parent = parents.get(parent)
+                if beat is None:
+                    errors.append(f"cue {where(node)}: self.cue() needs an enclosing beat")
+                elif type(index) is not int or not 1 <= index <= len(beat.narration):
+                    errors.append(
+                        f"cue {where(node)}: use a literal sentence index 1-{len(beat.narration)}"
+                    )
             if is_self and name in HELPERS:
                 key = _literal(node.args[0]) if node.args else None
                 if key is None:
@@ -174,7 +212,7 @@ def lint(source: str, storyboard: Storyboard) -> LintReport:
                     used.add(key)
             if (
                 is_self
-                and name in {"color", "beat"}
+                and name in {"color", "beat", "asset"}
                 and (not node.args or _literal(node.args[0]) is None)
             ):
                 errors.append(f"key {where(node)}: self.{name}() needs a literal argument")

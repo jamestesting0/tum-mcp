@@ -1,7 +1,8 @@
 # Teaching through sound
 
-Aim for the shortest self-contained explanation that preserves the prepared
-learning objectives and distinct ideas. Adapt for a listener without a screen;
+Aim for a self-contained hands-free revision explanation that preserves the prepared
+learning objectives, reasoning and distinctions. Use [revision design](revision-design.md).
+Adapt for a listener without a screen;
 do not turn every website block into its own spoken paragraph. An unclear or
 contradictory source needs a reported content issue, not a guessed correction.
 Do not add new subject-matter claims, invented examples or exercises.
@@ -67,7 +68,7 @@ symbols/acronyms for synthesis and maintain their pronunciation map in voice.jso
 | Formula | Explain the purpose, symbols and conditions, state the expression unambiguously, then follow any existing worked example. |
 | Code | Name the inputs and state, follow the relevant operations/branches and explain the result using the prepared example. Avoid long punctuation readings. |
 | Diagram | Establish the starting state and edge meanings; introduce components as needed while walking through frames in order. Replace "here/above/this arrow" with explicit names. |
-| Flashcard/practice | Select existing prompts that check a central distinction; leave a thinking pause, then explain the answer. Consolidate duplicate feedback and label any misconception discussed. |
+| Flashcard/practice | Reuse distinct teaching from correct feedback. A source-backed recall prompt is optional, continues to its answer automatically, and requires no response. Consolidate duplicate feedback and label misconceptions. |
 
 Retain the source's exact relationships, qualifications, numeric results and
 logical direction. Verify that verbalizing a formula has not reversed an
@@ -79,7 +80,7 @@ of claiming audio-only mastery or silently reducing coverage.
 
 Use one consistent tutor narrator by default. Skip background music, theatrical
 dialogue, sound effects and voice switching unless requested. Where the prepared
-content offers useful recall prompts, place a few after the relevant teaching,
+content offers useful recall prompts, they may follow the relevant teaching,
 rather than immediately restating the answer as another lecture paragraph. A
 roughly 3–5 second thinking pause is a starting setting to test, not an evidence-based
 optimum. Record it as intentional silence in synthesis/chapter inputs. Continue
@@ -102,8 +103,8 @@ Review the complete affected script as continuous speech, then repair failures:
 - Listenability: terms and referents are introduced in time, transitions are clear,
   and spoken explanations stand alone. Any remaining visual/practical dependency
   is disclosed and reflected in coverage.
-- Concision: each section has a teaching purpose; repeated framing, duplicate
-  examples and recaps that repeat the lesson have been removed or justified.
+- Purpose: each section teaches or restores orientation; remove filler, but keep
+  reminders and complementary explanations that make continuous listening possible.
 - Recall: any selected source question has a deliberate pause and an automatic
   correct answer; the prompt and lead-in do not give away the answer before the pause.
 
