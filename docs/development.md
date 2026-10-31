@@ -215,8 +215,9 @@ records explicit selection, refreshes managed clients and provisions the optiona
 recognizer only when requested/supported. `--no-asr` keeps captions/imported WebVTT.
 Heavy recognition dependencies and model weights stay outside the base environment
 and package artifacts. `lecture_processing/` owns bounded media/ASR evidence;
-`lecture_content.py`, `lecture_data.py` and `lecture_assets.py` validate the notes
-and figures used by the static app. See [the workflow guide](lecture-notes.md).
+`lecture_content.py`, `lecture_data.py`, `lecture_assets.py` and `lecture_thumbnails.py`
+validate the highlights and thumbnails used by the static app; `lecture_check.py`
+checks highlight boundaries against the cached transcript. See [the workflow guide](lecture-notes.md).
 
 Use `skills validate --all` to check the packaged optional workflow without installing
 it; default validation checks the selected workflows. Activation statistics remain

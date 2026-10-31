@@ -59,7 +59,7 @@ Run `tum-mcp install` to choose extensions, then reload your client.
 
 | Extension | Skill added | What it offers |
 | --- | --- | --- |
-| `lecture` | `prepare-lecture` | Lecture with the professor's extra explanations, timestamps and selected critical visuals. Prefers transcripts and slides; local recognition is optional. |
+| `lecture` | `prepare-lecture` | Lecture highlights: the stretches of a recording worth watching, each with its time range, what it teaches and a frame. Prefers transcripts and slides; local recognition is optional. |
 | `audio-notes` | `audio-notes` | Turn prepared Study lessons into concise audio tracks, with resumable generation and coverage tracking. Voice setup happens when used. |
 | `video-notes` | `video-notes` | Turn prepared Study topics into short narrated, animated explainers that play inside the local app, with checked sync, captions and layout. The render runtime installs when first used. |
 
@@ -82,7 +82,7 @@ course/
     exercises.json          Guided exercise content
     exam.json               Exam: cheatsheet, exam patterns, practice exams (local only)
     lectures.json           Optional: Lecture
-    lecture-assets/         Optional: selected lecture figures
+    lecture-assets/         Optional: lecture highlight thumbnails
   .tum-mcp/                 Private course state, comments and lecture evidence
   audio/                    Optional: scripts, tracks and chapters for Audio Notes
   videos/                   Optional: storyboards, scenes and explainer videos for Video Notes

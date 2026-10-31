@@ -127,14 +127,15 @@ def change_comment(root: Path, operation: Operation) -> dict:
                         else None
                     )
                     if lecture is None or not any(
-                        item.key == operation.anchor.section_key for item in lecture.sections
+                        item.key == operation.anchor.section_key for item in lecture.entries
                     ):
                         raise CampusError(
                             Code.SCOPE_DENIED, "This lecture passage no longer exists."
                         )
                     if lecture.semantic_revision != operation.anchor.semantic_revision:
                         raise CampusError(
-                            Code.STALE_RESULT, "Lecture notes changed. Reload before commenting."
+                            Code.STALE_RESULT,
+                            "Lecture highlights changed. Reload before commenting.",
                         )
                 items.append(
                     Comment(

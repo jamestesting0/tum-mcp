@@ -1,10 +1,9 @@
 import data from './data.mjs';
 import { node, studyText, append, sourcesNote } from './dom.mjs';
 import { renderCommentedView } from './comments.mjs';
-import { renderBlockBody, headingTag } from './reading.mjs';
 
 const lectures = [...(data.lectures?.lectures || [])].sort((a, b) => b.recording.recorded_on.localeCompare(a.recording.recorded_on) || a.key.localeCompare(b.key));
-export const lectureLink = (lecture, section) => `#lectures/${encodeURIComponent(lecture.key)}${section ? `/${encodeURIComponent(section.key)}` : ''}`;
+export const lectureLink = (lecture, highlight) => `#lectures/${encodeURIComponent(lecture.key)}${highlight ? `/${encodeURIComponent(highlight.key)}` : ''}`;
 function date(value) {
   const day = new Date(value.length === 10 ? value + 'T12:00:00Z' : value);
   return Number.isFinite(day.getTime()) ? new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(day) : 'Date unavailable';
@@ -13,6 +12,8 @@ export function clock(value) {
   const seconds = Math.floor(value), h = Math.floor(seconds / 3600), m = Math.floor(seconds / 60) % 60;
   return `${h ? h + ':' + String(m).padStart(2, '0') : m}:${String(seconds % 60).padStart(2, '0')}`;
 }
+const duration = seconds => seconds < 60 ? `${Math.round(seconds)} s` : `${Math.round(seconds / 60)} min`;
+const watchTime = lecture => lecture.highlights.reduce((total, item) => total + item.interval.end_s - item.interval.start_s, 0);
 function timeLink(url, start, end) {
   const link = node('a', 'lecture-time small', `${clock(start)}${end == null ? '' : '–' + clock(end)}`);
   link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
@@ -30,20 +31,42 @@ export function lectureOutline(current = '') {
   return nav;
 }
 function decode(value) { try { return decodeURIComponent(value || ''); } catch { return ''; } }
-// A figure's capture time opens from its own sources, like a passage's, rather than from the caption text.
-function figureView(figure, source) {
-  const root = node('figure', 'lecture-figure'), image = node('img');
-  Object.assign(image, { src: figure.asset, alt: figure.alt, width: figure.width, height: figure.height, loading: 'lazy', decoding: 'async' });
-  const enlarge = node('a', 'lecture-image'); enlarge.href = figure.asset; enlarge.target = '_blank'; enlarge.rel = 'noopener';
-  enlarge.setAttribute('aria-label', `Open full-size image: ${figure.alt}`); enlarge.append(image);
-  const fallback = node('p', 'small', 'This image could not load. Its sources link to the recording.'); fallback.hidden = true;
-  image.addEventListener('error', () => { enlarge.hidden = true; fallback.hidden = false; });
-  const sources = sourcesNote([source], data.sources, data.course.synthetic, 'this figure', { [source]: [timeLink(figure.url, figure.captured_at_s)] });
-  const caption = append(node('figcaption', 'small'), studyText('span', '', figure.caption), sources);
-  root.append(enlarge, fallback, caption); return root;
+function noteView(note, active) {
+  const root = node('li', 'lecture-note'); root.dataset.lectureSection = note.key; root.dataset.commentTarget = 'lectures'; root.tabIndex = -1;
+  if (active) root.dataset.lectureActiveSection = '';
+  const sources = [...new Set([...note.sources, note.recording_source])];
+  const provenance = { [note.recording_source]: [timeLink(note.url, note.at_s)] };
+  root.append(append(node('div', 'lecture-note-row'), studyText('p', 'lecture-note-text', note.text),
+    sourcesNote(sources, data.sources, data.course.synthetic, '', provenance, note.pages || '')));
+  if (note.image) {
+    const image = node('img', 'lecture-note-image');
+    Object.assign(image, { src: note.image.asset, alt: note.image.alt, width: note.image.width, height: note.image.height, loading: 'lazy', decoding: 'async' });
+    root.append(image);
+  }
+  return root;
+}
+function highlightView(highlight, active) {
+  const root = node('section', 'read-section lecture-highlight'); root.dataset.lectureSection = highlight.key; root.dataset.commentTarget = 'lectures';
+  if (active) root.dataset.lectureActiveSection = '';
+  // The frame opens the same moment as the time link beside it, so it stays out of the tab order.
+  const thumb = node('a', 'lecture-thumb'); thumb.href = highlight.url; thumb.target = '_blank'; thumb.rel = 'noopener noreferrer';
+  thumb.tabIndex = -1; thumb.setAttribute('aria-hidden', 'true');
+  const image = node('img');
+  Object.assign(image, { src: highlight.thumbnail.asset, alt: '', width: highlight.thumbnail.width, height: highlight.thumbnail.height, loading: 'lazy', decoding: 'async' });
+  image.addEventListener('error', () => { thumb.hidden = true; });
+  thumb.append(image);
+  const heading = append(node('div', 'section-heading'), studyText('h3', '', highlight.title));
+  if (highlight.sources.length) heading.append(sourcesNote(highlight.sources, data.sources, data.course.synthetic, highlight.title, {}, highlight.pages || ''));
+  const { start_s: start, end_s: end } = highlight.interval;
+  const body = append(node('div', 'lecture-highlight-body'), heading,
+    append(node('p', 'lecture-when small'), timeLink(highlight.url, start, end), ` · ${duration(end - start)}`),
+    studyText('p', 'lecture-teaches', highlight.teaches));
+  if (highlight.points.length) body.append(append(node('ul', 'lecture-points'), ...highlight.points.map(text => studyText('li', '', text))));
+  root.append(thumb, body);
+  return root;
 }
 export function renderLectures(hash) {
-  const [, key, sectionKey] = hash.split('/'), lecture = lectures.find(item => item.key === decode(key));
+  const [, key, highlightKey] = hash.split('/'), lecture = lectures.find(item => item.key === decode(key));
   const root = node('div', 'lecture-workspace');
   if (!lecture) {
     const heading = node('h1', '', 'Lecture');
@@ -53,18 +76,19 @@ export function renderLectures(hash) {
     const list = node('ul', 'topic-list');
     for (const item of lectures) {
       const link = node('a'); link.href = lectureLink(item);
-      link.append(append(node('span', 'topic-copy'), studyText('span', 'topic-title', item.title), node('span', 'small', date(item.recording.recorded_on)), studyText('span', 'small', item.overview)));
+      const parts = [];
+      if (item.notes.length) parts.push(`${item.notes.length} note${item.notes.length === 1 ? '' : 's'}`);
+      if (item.highlights.length) parts.push(`${item.highlights.length} highlight${item.highlights.length === 1 ? '' : 's'}`, `${duration(watchTime(item))} of ${duration(item.recording.duration_s)}`);
+      const count = parts.join(' · ') || 'No lecture additions';
+      link.append(append(node('span', 'topic-copy'), studyText('span', 'topic-title', item.title), node('span', 'small', date(item.recording.recorded_on)), studyText('span', 'small', item.summary), node('span', 'small lecture-count', count)));
       list.append(append(node('li', 'topic-row'), link));
     }
     root.append(list); return { root, heading, title: 'Lecture' };
   }
   const heading = studyText('h1', '', lecture.title), header = node('div', 'unit-header');
-  header.append(node('p', 'eyebrow', date(lecture.recording.recorded_on)), heading, studyText('p', 'unit-summary', lecture.overview));
-  const summary = node('section', 'lecture-takeaways');
-  summary.append(node('h2', '', 'Keep in mind'), append(node('ul'), ...lecture.takeaways.map(text => studyText('li', '', text))));
-  const meta = node('p', 'small lecture-meta', `${lecture.coverage.status === 'complete' ? '' : 'Partial notes · '}Sources checked ${date(lecture.evidence_as_of)}`);
-  header.append(meta);
-  // The Study topics that teach this lecture, so notes and lessons lead to each other.
+  header.append(node('p', 'eyebrow', date(lecture.recording.recorded_on)), heading, studyText('p', 'unit-summary', lecture.summary));
+  header.append(node('p', 'small lecture-meta', `${lecture.coverage.status === 'complete' ? '' : 'Partial coverage · '}Sources checked ${date(lecture.evidence_as_of)}`));
+  // The Study topics that teach this lecture, so highlights and lessons lead to each other.
   const taught = data.units.filter(unit => (unit.lectures || []).includes(lecture.key));
   if (taught.length) {
     const line = append(node('p', 'small related-work'), node('span', 'related-label', 'Study: '));
@@ -81,35 +105,20 @@ export function renderLectures(hash) {
     }
     header.append(coverage);
   }
-  root.append(header, summary);
-  if (sectionKey && !lecture.sections.some(section => section.key === decode(sectionKey))) root.append(node('p', 'notice', 'That section is no longer here. The lecture content is below.'));
-  for (const section of lecture.sections) {
-    const topic = node('section', 'read-section lecture-section'); topic.dataset.lectureSection = section.key; topic.dataset.commentTarget = 'lectures';
-    if (section.key === decode(sectionKey)) topic.dataset.lectureActiveSection = '';
-    const title = studyText('h2', '', section.title);
-    // The section's measured recording times open from each passage's sources instead of repeating in the text.
-    const timed = section.citations.filter(cite => cite.key && !section.figures.some(figure => figure.evidence === cite.key)).sort((a, b) => a.start_s - b.start_s);
-    const sectionHeading = append(node('div', 'section-heading'), title);
-    topic.append(sectionHeading);
-    section.blocks.forEach((block, index) => {
-      const moments = {};
-      for (const cite of timed) (moments[cite.source] ||= []).push(timeLink(cite.url, cite.start_s, cite.end_s));
-      const material = node('div', 'reading-material lecture-material');
-      const sources = sourcesNote([...new Set([...block.sources, ...Object.keys(moments)])], data.sources, data.course.synthetic, block.title || section.title, moments);
-      // An untitled first block continues the section title, so its sources sit on that row.
-      if (!index && !block.title) sectionHeading.append(sources);
-      else {
-        // Lecture sections are the page's level 1, so a block's own levels start one below.
-        const heading = append(node('div', `section-heading${block.title ? '' : ' untitled'}`));
-        if (block.title) heading.append(studyText(headingTag(block, 2), '', block.title));
-        material.append(append(heading, sources));
-      }
-      material.append(renderBlockBody(block));
-      topic.append(material);
-    });
-    for (const figure of section.figures) topic.append(figureView(figure, section.citations.find(cite => cite.key === figure.evidence).source));
-    root.append(topic);
+  root.append(header);
+  const active = decode(highlightKey);
+  if (highlightKey && ![...lecture.notes, ...lecture.highlights].some(item => item.key === active)) root.append(node('p', 'notice', 'That lecture passage is no longer here.'));
+  if (lecture.notes.length) {
+    const notes = append(node('section', 'lecture-notes read-section'), node('h2', '', 'Notes'));
+    notes.append(append(node('ul', 'lecture-note-list'), ...lecture.notes.map(note => noteView(note, note.key === active))));
+    root.append(notes);
   }
+  if (lecture.highlights.length) {
+    const highlights = append(node('section', 'lecture-highlights read-section'), node('h2', '', 'Highlights'));
+    for (const highlight of lecture.highlights) highlights.append(highlightView(highlight, highlight.key === active));
+    root.append(highlights);
+  }
+  if (!lecture.notes.length && !lecture.highlights.length) root.append(node('p', 'small', 'No additional notes or highlights were selected from this lecture.'));
   const comments = renderCommentedView(lecture, 'lectures', root);
   return { root: comments.root, heading, title: lecture.title, current: lecture.key, lecture };
 }

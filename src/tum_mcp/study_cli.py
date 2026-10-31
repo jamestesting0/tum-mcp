@@ -456,16 +456,13 @@ def demo(
         from tum_mcp.lecture_content import LectureContent
 
         notes = LectureContent.model_validate_json((example / "lectures.json").read_bytes())
-        for lecture in notes.lectures:
-            for section in lecture.sections:
-                for figure in section.figures:
-                    desired = (example / figure.asset).read_bytes()
-                    before = read_bytes(private_path(root, figure.asset))
-                    if before is not None and before != desired:
-                        raise CampusError(
-                            Code.WORKSPACE_CONFLICT, "Edited demo figure was preserved."
-                        )
-                    writes.append(Write(private_name(root, figure.asset), before, desired))
+        assets = {image.asset for lecture in notes.lectures for image in lecture.images}
+        for asset in sorted(assets):
+            desired = (example / asset).read_bytes()
+            before = read_bytes(private_path(root, asset))
+            if before is not None and before != desired:
+                raise CampusError(Code.WORKSPACE_CONFLICT, "Edited demo thumbnail was preserved.")
+            writes.append(Write(private_name(root, asset), before, desired))
     snapshot = example / "snapshot.json"
     sync(root, snapshot, course_input=read_snapshot(snapshot).course.title)
     apply(root, tuple(writes))

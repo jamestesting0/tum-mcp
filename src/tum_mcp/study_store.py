@@ -113,7 +113,7 @@ local state, choose the workflow below and finish it.
 - Comments left on the website (`tum-mcp study comments list .`): the prepare skill of
   the workspace they belong to.
 - Publishing or sharing the website: publish-course.
-- Lecture recording notes, audio lessons, explainer videos: prepare-lecture, audio-notes,
+- Lecture notes/highlights, audio lessons, explainer videos: prepare-lecture, audio-notes,
   video-notes. They are optional; install them with `tum-mcp install lecture` (or
   `audio-notes`, `video-notes`).
 - "What should I do now?" or a study plan: no skill. Combine the course.md schedule,

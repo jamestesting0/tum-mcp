@@ -7,7 +7,6 @@ from pydantic import JsonValue, ValidationError
 from tum_mcp.course_app_paths import app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_content import LectureContent
-from tum_mcp.lecture_figures import verify_figures
 from tum_mcp.lecture_processing.receipts import (
     InvalidReceipt,
     read_receipt,
@@ -15,7 +14,7 @@ from tum_mcp.lecture_processing.receipts import (
     usable_receipt,
 )
 from tum_mcp.lecture_processing.timeline import watch_link
-from tum_mcp.study_content import render_blocks
+from tum_mcp.lecture_thumbnails import verify_thumbnails
 from tum_mcp.study_models import StudyState
 from tum_mcp.study_store import confined, digest
 
@@ -32,7 +31,7 @@ def read_lectures(root: Path) -> LectureContent | None:
         locations = [".".join(map(str, item["loc"])) for item in error.errors(include_input=False)]
         raise CampusError(
             Code.INVALID_RESPONSE,
-            "Invalid lecture notes at: "
+            "Invalid lecture notes or highlights at: "
             + ", ".join(locations[:5])
             + ". See study schema lectures.",
         ) from None
@@ -63,12 +62,7 @@ def stale_lectures(root: Path, state: StudyState, content: LectureContent) -> tu
             path = confined(root, relative)
             if not path.is_file() or digest(path.read_bytes()) != source.sha256:
                 stale.add(lecture.key)
-        primary = {
-            evidence[key].source_key
-            for section in lecture.sections
-            for key in section.evidence
-            if evidence[key].kind != "document"
-        }
+        primary = {evidence[key].source_key for entry in lecture.entries for key in entry.evidence}
         for key in primary:
             stored = resources.get(key)
             if stored is None:
@@ -104,7 +98,7 @@ def stale_lectures(root: Path, state: StudyState, content: LectureContent) -> tu
                 or (lecture.coverage.status == "complete" and receipt.status != "prepared")
             ):
                 stale.add(lecture.key)
-            verify_figures(root, lecture)
+            verify_thumbnails(root, lecture)
     return tuple(sorted(stale))
 
 
@@ -119,21 +113,16 @@ def render_lectures(root: Path, content: LectureContent) -> dict[str, JsonValue]
             else usable_receipt(root, lecture.recording.key).checked_at
         )
         rendered["source_link"] = watch_link(lecture.recording, 0).removesuffix("?t=0")
-        for section, body in zip(lecture.sections, rendered["sections"], strict=True):
-            body["blocks"] = render_blocks(section.blocks)
-            body["citations"] = [
-                {
-                    "key": key,
-                    "source": evidence[key].source_key,
-                    "start_s": evidence[key].interval.start_s,
-                    "end_s": evidence[key].interval.end_s,
-                    "url": watch_link(lecture.recording, evidence[key].interval.start_s),
-                }
-                for key in section.evidence
-                if evidence[key].interval is not None
-            ]
-            for figure, picture in zip(section.figures, body["figures"], strict=True):
-                picture["url"] = watch_link(lecture.recording, figure.captured_at_s)
+        for highlight, body in zip(lecture.highlights, rendered["highlights"], strict=True):
+            body["url"] = watch_link(lecture.recording, highlight.interval.start_s)
+        for note, body in zip(lecture.notes, rendered["notes"], strict=True):
+            anchor = min(
+                (evidence[key] for key in note.evidence if evidence[key].kind != "frame"),
+                key=lambda item: item.interval.start_s,
+            )
+            body["recording_source"] = anchor.source_key
+            body["at_s"] = anchor.interval.start_s
+            body["url"] = watch_link(lecture.recording, anchor.interval.start_s)
     return value
 
 

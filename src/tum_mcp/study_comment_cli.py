@@ -69,7 +69,7 @@ def list_comments(
             current = lectures.get(anchor["lecture_key"])
             revision = current.semantic_revision if current else None
             previous = anchor["semantic_revision"]
-            exists = current and any(s.key == anchor["section_key"] for s in current.sections)
+            exists = current and any(item.key == anchor["section_key"] for item in current.entries)
         elif anchor["view"] == "explore":
             owner = units.get(anchor["unit_key"])
             material = (
