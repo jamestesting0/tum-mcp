@@ -604,8 +604,8 @@ then maintains affected relationships during authorized source/content updates.
 `study status PROJECT` reports the `course_memory` capability without reading the
 graph. No whole-course ingestion, background process or model benchmark is started.
 
-`study context PROJECT "topic"` connects authored Study, Exercises, Exam and Lecture
-items using explicit native links and optional reviewed assertions. Use `--item REF` or
+`study context PROJECT "topic" --limit 4 --max-bytes 8000` connects authored Study,
+Exercises, Exam and Lecture items using explicit native links and optional reviewed assertions. Use `--item REF` or
 `--concept KEY` instead of a query for an exact selector, and `--purpose exercises` (or
 study, exam, lectures, review) to rank the task's workspace first.
 
@@ -616,7 +616,10 @@ report sections. `study schema knowledge` defines the optional private
 `.tum-mcp/knowledge.json` (legacy `.study/`). No graph database, embeddings, provider call
 or persistent index is involved.
 
-Context defaults to 12 items / 24,000 UTF-8 bytes, at most two hops, 256 nodes, 2,048
+For teaching, reuse one narrow packet within the unchanged request, then read its
+actual source pages natively. Long queries may match partial terms; those matches
+remain navigation, not reviewed semantic claims. Avoid speculative whole-course
+source searches alongside context. Context defaults remain 12 items / 24,000 UTF-8 bytes, at most two hops, 256 nodes, 2,048
 examined edges, 64 distinct checked payloads and four lectures. All limits are reported;
 partial or ambiguous navigation is not supported teaching. Review receipts bind complete
 item meaning and source scope, independently of learner progress. Source changes require
@@ -627,6 +630,11 @@ native `revision` only after reviewing the integration. Semantic changes stale t
 optional binding, including stale reviewed records. Native revisions and student
 progress remain independent. Earlier graph-bound review hashes may require one
 explicit course review; approvals are never silently migrated or rewritten.
+
+Finish bounded authored-content changes before reviewing their relationships together.
+Structure/review reports verify reviewed semantic dependencies without constructing all
+inactive-assertion diagnostics; the explicit knowledge report remains a full audit.
+Snapshot byte verification and review fingerprints are unchanged.
 
 Annotations and packets stay private and are not exported to the course website. Ordinary
 builds do not load this optional registry. Use the installed `course-memory` skill's

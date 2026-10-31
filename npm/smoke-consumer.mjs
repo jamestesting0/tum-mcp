@@ -115,6 +115,11 @@ for name in ('cursor','antigravity'):
   assert.equal(knowledgeSchema.properties.schema_version.const, 1);
   const contextPacket = JSON.parse(run(process.execPath, [launcher, 'study', 'context', studyProject, '--item', `study/unit/${nativeUnit.key}`]));
   assert.ok(contextPacket.items.some(item => item.id === `study/unit/${nativeUnit.key}`));
+  const narrowRaw = run(process.execPath, [launcher, 'study', 'context', studyProject, '--item', `study/unit/${nativeUnit.key}`, '--limit', '4', '--max-bytes', '8000']);
+  const narrowPacket = JSON.parse(narrowRaw);
+  assert.ok(narrowPacket.items.some(item => item.id === `study/unit/${nativeUnit.key}`));
+  assert.ok(narrowPacket.items.length <= 4);
+  assert.ok(Buffer.byteLength(narrowRaw, 'utf8') <= 8000);
   const impactPacket = JSON.parse(run(process.execPath, [launcher, 'study', 'impact', studyProject, '--source', nativeUnit.sources[0].key]));
   assert.ok(impactPacket.direct.length > 0);
   assert.equal(impactPacket.source_status, 'current');

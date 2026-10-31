@@ -10,7 +10,9 @@ retained graph files or packets. Old instructions and file presence are not acti
 
 On the next relationship, prerequisite, practice-choice or source-update request,
 read [local course relationships](references/knowledge.md). Work only in the current
-bound course. Use one narrow context packet and reuse it; simple facts need no graph.
+bound course. Prefer a known item/concept selector; for teaching use `--limit 4`
+and `--max-bytes 8000`. Reuse one packet within the unchanged request; simple facts
+need no graph. A later request revalidates normally.
 The native workspace links are available immediately, even without extra annotations.
 Do not build a whole-course graph before answering the student.
 
@@ -29,7 +31,8 @@ until actual source/content review and explicit receipts make them current. Do n
 copy a new fingerprint merely to pass validation.
 
 After authorized source/content changes, run impact for changed keys, repair affected
-owners and relationships, then the explicit knowledge report. Keep unrelated memory,
+owners first. Once the content and references are stable, review the necessary
+relationships together, then run the explicit knowledge report. Keep unrelated memory,
 rejected history, unresolved candidates and intentional alias ambiguity. When the
 course review report supplies `knowledge_revision`, copy that field along with its
 native `revision` only after reviewing cross-workspace integration. The optional

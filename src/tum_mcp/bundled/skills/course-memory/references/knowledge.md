@@ -1,6 +1,7 @@
 # Local course relationships
 
-Use the existing course handbook, inventory and authored workspaces first. The optional
+Reuse course handbook, inventory and authored context already read for this request.
+Use known item/concept keys and source pages without rereading the whole inventory. The optional
 knowledge tools connect Study, Exercises, Exam Prep and Lecture Notes; any subset may
 exist. They read local validated files and cached evidence. They never fetch, transcribe,
 extract documents, build or publish. No graph database or indexing job is needed.
@@ -8,12 +9,13 @@ extract documents, build or publish. No graph database or indexing job is needed
 ## Retrieve selectively
 
 For a relationship, prerequisite, comparison, practice choice or update decision, get
-one narrow packet and reuse it until the task or inputs change:
+one narrow packet and reuse it within the unchanged request. Revalidate on a later
+request. For teaching, start with four items and an 8,000-byte packet:
 
 ```sh
-tum-mcp study context . "Observer" --purpose study
-tum-mcp study context . --item exercises/set/sheet-1/exercise/observer --purpose exercises
-tum-mcp study context . --concept observer --purpose exam
+tum-mcp study context . "Observer" --purpose study --limit 4 --max-bytes 8000
+tum-mcp study context . --item exercises/set/sheet-1/exercise/observer --purpose exercises --limit 4 --max-bytes 8000
+tum-mcp study context . --concept observer --purpose exam --limit 4 --max-bytes 8000
 tum-mcp study impact . --source slides-01
 tum-mcp study report . --section knowledge
 tum-mcp study schema knowledge
@@ -24,7 +26,11 @@ The default is twelve learning items and 24,000 UTF-8 bytes. Retrieval stops at 
 256 nodes, 2,048 edges, 64 distinct source payloads and four lectures. A two-hop packet
 does not describe the whole curriculum. `ambiguous` requires an explicit selection;
 `partial` requires a narrower request or the existing source tools. Absence of a result
-does not establish absence of coverage. A simple date/fact need not use context.
+does not establish absence of coverage. After an empty/partial result, try at most one
+narrower selector before following known native sources or stating the gap. Do not
+launch an all-source `study find` speculatively alongside context. Read the indicated
+PDF pages natively where supported; source helpers remain optional fallbacks. A simple
+date/fact needs no graph. These teaching limits do not change the CLI defaults.
 
 Native references, lexical hints and reviewed semantic assertions have separate origins.
 Follow the recorded fact direction; reverse navigation does not reverse a prerequisite.
@@ -81,7 +87,10 @@ remain ambiguous. Relations are teaches, practices, assesses, clarifies, prerequ
 and contrasts. Prerequisites point from foundation to dependent; attachments do not
 manufacture prerequisites between concepts. Add only useful, source-supported relations.
 
-New or changed assertions stay `candidate` with `revision: null`. Each support group is
+Finish the authorized content changes and settle item IDs/source references before
+reviewing their relationships. Add only the useful assertions for that scope together;
+do not annotate the entire course before answering. New or changed assertions stay
+`candidate` with `revision: null`. Each support group is
 conjunctive; separate groups are independent alternatives. They are not votes. Timed
 support needs reviewed, resolved evidence from the right recording. After reading the
 actual evidence and checking meaning/conditions, run the explicit knowledge report. It
@@ -90,6 +99,8 @@ after that source review may the author explicitly set `review.status` to `revie
 copy the matching expected revision. A matching hash records an authorship decision,
 not an automatic factual review. Resolve invalid roles, missing refs and prerequisite
 cycles before review. Run the report again, then the existing item/course review gates.
+This two-report pattern assumes stable content and successful checks; further relevant
+edits or unresolved failures require another actual review, never a copied fresh hash.
 
 After an authorized source refresh, run impact only for changed/added/withdrawn keys.
 `unmapped` means no authored dependents, not already covered. Incomplete inventory is not
@@ -99,7 +110,9 @@ may preserve a relation but cannot repair stale owning content. Never rebind has
 make checks green. Retire obsolete assertions as `rejected` with `revision: null`; retain
 unresolved candidates, homonyms and qualified alternatives without activating them.
 
-The explicit report performs a full local semantic audit; context/impact are bounded.
+The explicit report performs a full local semantic audit, including inactive records;
+context/impact are bounded. Ordinary structure/review reports verify reviewed semantic
+dependencies and the snapshot without constructing candidate/rejected diagnostics.
 Reviewed semantic changes stale the course review's optional `knowledge_revision`
 binding without changing its native `revision` or resetting student progress. Save
 both report fields after reviewing integration. The optional binding is ignored when
