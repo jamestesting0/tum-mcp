@@ -60,6 +60,15 @@ def test_incremental_writing_is_compared_with_last_retained_board_state() -> Non
 
 @pytest.fixture(params=("mpegts", "fmp4"))
 def generated_vod(tmp_path: Path, request) -> Path:
+    return vod(tmp_path, request.param)
+
+
+def vod(tmp_path: Path, segments: str, rate: int = 16000, jitter: bool = False) -> Path:
+    """A synthetic six-second HLS recording with AAC audio sampled at `rate`.
+
+    `jitter` delays each audio packet's timestamp by one more clock tick than the last,
+    as some lecture encoders do, so timestamps run slightly ahead of the samples.
+    """
     if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
         pytest.skip("Local FFmpeg/ffprobe optional capability is absent.")
     root = tmp_path / "source"
@@ -71,7 +80,7 @@ def generated_vod(tmp_path: Path, request) -> Path:
         "-f",
         "lavfi",
         "-i",
-        "sine=frequency=440:sample_rate=16000:duration=6",
+        f"sine=frequency=440:sample_rate={rate}:duration=6",
         "-filter_complex",
         "[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]",
         "-map",
@@ -87,7 +96,8 @@ def generated_vod(tmp_path: Path, request) -> Path:
         "-c:a",
         "aac",
         "-ar",
-        "16000",
+        str(rate),
+        *(["-bsf:a", "setts=pts=PTS+N:dts=DTS+N"] if jitter else []),
         "-f",
         "hls",
         "-hls_time",
@@ -97,7 +107,7 @@ def generated_vod(tmp_path: Path, request) -> Path:
         "-hls_playlist_type",
         "vod",
     ]
-    if request.param == "fmp4":
+    if segments == "fmp4":
         argv += [
             "-hls_segment_type",
             "fmp4",
