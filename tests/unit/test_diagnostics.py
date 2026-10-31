@@ -1,4 +1,5 @@
 import io
+import json
 import shutil
 import subprocess
 import sys
@@ -8,12 +9,213 @@ import pytest
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app, main
+from tum_mcp.connect import ServiceChoice
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.diagnostics import collect_diagnostics
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle import auth
 from tum_mcp.settings import Account, Provider, save_account
 from tum_mcp.ui import State
+
+
+@pytest.fixture(params=tuple(ServiceChoice))
+def saved_service(
+    request: pytest.FixtureRequest,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    lecture_extension: Path,
+) -> tuple[ServiceChoice, Path, Path]:
+    """Save synthetic sessions and replace only the remote identity probes."""
+    from tum_mcp.moodle.config import Paths
+    from tum_mcp.settings import TUM_LIVE, data_path
+    from tum_mcp.tumonline.policy import PolicyStore
+
+    service = ServiceChoice(request.param)
+    monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "moodle"))
+    monkeypatch.setattr("tum_mcp.diagnostics.time.time", lambda: 100_000)
+    monkeypatch.setattr(auth, "system_keyring", lambda: pytest.fail("No Keychain access"))
+    for method in (
+        "tum_mcp.moodle.http_client.MoodleHTTP.get",
+        "tum_mcp.artemis.Artemis.identity",
+        "tum_mcp.zulip.Zulip.identity",
+        "tum_mcp.tum_live.TumLive.identity",
+        "tum_mcp.tumonline.study_service.StudyService.verify",
+    ):
+        monkeypatch.setattr(method, lambda *args, **kwargs: None)
+    if service == ServiceChoice.MOODLE:
+        store = auth.SessionStore(Paths(tmp_path / "moodle"), storage="file")
+        store.save(auth.Session(generation=store.begin_login(), cookies=[], verified_at=0))
+        return service, store.file("session.enc"), store.file("session.key")
+    if service == ServiceChoice.TUMONLINE:
+        from tum_mcp.tumonline.identity import AccountRef
+
+        owner = AccountRef(account_id="a" * 64)
+        PolicyStore().create(owner.id)
+    else:
+        owner = Account(
+            provider=Provider(service.value),
+            origin=TUM_LIVE if service == ServiceChoice.TUM_LIVE else "https://example.invalid",
+            principal="synthetic",
+        )
+        save_account(owner)
+    Vault().save(owner, Credential(account_id=owner.id, authentication="browser_session"))
+    root = data_path() / "credentials/local"
+    return service, root / f"{owner.id}.enc", root / "session.key"
+
+
+def test_live_result_survives_in_doctor_json_and_login_selector_without_remote_calls(
+    saved_service: tuple[ServiceChoice, Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Given a service freshly checked through the CLI.
+    from tum_mcp import ui
+
+    service, session, _ = saved_service
+    runner = CliRunner()
+    live = runner.invoke(app, ["doctor", "--live", "--json"])
+    assert live.exit_code == 0, live.output
+    record = json.loads(session.with_suffix(".verification.json").read_bytes())
+    assert record["checked_at"] == 100_000 and record["succeeded"]
+    monkeypatch.setattr(Vault, "load", lambda *args: pytest.fail("No credential decryption"))
+    for method in (
+        "tum_mcp.moodle.http_client.MoodleHTTP.get",
+        "tum_mcp.artemis.Artemis.identity",
+        "tum_mcp.zulip.Zulip.identity",
+        "tum_mcp.tum_live.TumLive.identity",
+        "tum_mcp.tumonline.study_service.StudyService.verify",
+    ):
+        monkeypatch.setattr(method, lambda *args, **kwargs: pytest.fail("No remote checks"))
+    choices = []
+
+    def select(title, rows):
+        choices.extend(rows)
+        return None
+
+    monkeypatch.setattr(ui, "select_many", select)
+    # When independent doctor and login status readers run without --live.
+    local = runner.invoke(app, ["doctor", "--json"])
+    ui.select_services()
+    # Then both retain the verified service status.
+    assert local.exit_code == 0, local.output
+    checked = next(s for s in json.loads(local.output)["services"] if s["label"] == service.label)
+    assert checked["state"] == State.READY
+    assert next(row[2] for row in choices if row[0] == service) == State.READY
+
+
+@pytest.mark.parametrize("age", [43_199, 43_200, 43_201, -1])
+def test_saved_live_verification_expires_at_twelve_hours(
+    saved_service: tuple[ServiceChoice, Path, Path], monkeypatch: pytest.MonkeyPatch, age: int
+) -> None:
+    # Given a successful check at a fixed time.
+    from tum_mcp.diagnostics import collect_services
+
+    service, _, _ = saved_service
+    collect_services(live=True)
+    monkeypatch.setattr("tum_mcp.diagnostics.time.time", lambda: 100_000 + age)
+    # When local status reads the result at the expiry boundary.
+    result = next(s for s in collect_services().services if s.label == service.label)
+    # Then an expired (or future-dated) result is unverified, not disconnected.
+    assert result.state == (State.READY if 0 <= age < 43_200 else State.CONFIGURED)
+
+
+def test_failed_live_check_replaces_saved_success(
+    saved_service: tuple[ServiceChoice, Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Given an earlier successful check and a newly rejected remote identity.
+    from tum_mcp.diagnostics import collect_services
+
+    service, session, _ = saved_service
+    collect_services(live=True)
+
+    def rejected(*args, **kwargs):
+        raise CampusError(Code.AUTH_REQUIRED, "synthetic rejection")
+
+    for method in (
+        "tum_mcp.moodle.http_client.MoodleHTTP.get",
+        "tum_mcp.artemis.Artemis.identity",
+        "tum_mcp.zulip.Zulip.identity",
+        "tum_mcp.tum_live.TumLive.identity",
+        "tum_mcp.tumonline.study_service.StudyService.verify",
+    ):
+        monkeypatch.setattr(method, rejected)
+    # When a fresh live check fails.
+    collect_services(live=True)
+    # Then subsequent local status cannot reuse the old success or persist response text.
+    result = next(s for s in collect_services().services if s.label == service.label)
+    assert result.state == State.ACTION
+    assert b"synthetic rejection" not in session.with_suffix(".verification.json").read_bytes()
+
+
+@pytest.mark.parametrize("change", ["login", "key", "logout"])
+def test_session_changes_invalidate_saved_live_verification(
+    saved_service: tuple[ServiceChoice, Path, Path], change: str
+) -> None:
+    # Given a successful result for the original session.
+    from tum_mcp.diagnostics import collect_services
+    from tum_mcp.moodle.config import Paths, private_write
+    from tum_mcp.tumonline.identity import AccountRef
+
+    service, session, key = saved_service
+    collect_services(live=True)
+    # When credentials are replaced or removed.
+    if change == "key":
+        private_write(key, b"replacement")
+    elif service == ServiceChoice.MOODLE:
+        store = auth.SessionStore(Paths(session.parent.parent), storage="file")
+        if change == "logout":
+            store.logout()
+        else:
+            store.save(auth.Session(generation=store.begin_login(), cookies=[], verified_at=0))
+    else:
+        owner = AccountRef(account_id=session.stem)
+        if change == "logout":
+            Vault().logout(owner)
+        else:
+            Vault().replace_login(owner, Credential(account_id=owner.id))
+    # Then local status no longer claims verification of the old credentials.
+    result = next(s for s in collect_services().services if s.label == service.label)
+    assert result.state != State.READY
+    if change != "logout":
+        assert result.state == State.CONFIGURED
+
+
+def test_cookie_refresh_preserves_live_verification(
+    saved_service: tuple[ServiceChoice, Path, Path],
+) -> None:
+    # Given verification of the current login.
+    from tum_mcp.diagnostics import collect_services
+    from tum_mcp.moodle.config import Paths
+    from tum_mcp.tumonline.identity import AccountRef
+
+    service, session, _ = saved_service
+    collect_services(live=True)
+    # When ordinary reads save rotated cookies without replacing the login.
+    cookies = (auth.Cookie(name="synthetic", value="rotated", domain="example.invalid"),)
+    if service == ServiceChoice.MOODLE:
+        store = auth.SessionStore(Paths(session.parent.parent), storage="file")
+        store.save(store.load().model_copy(update={"cookies": list(cookies)}))
+    else:
+        Vault().refresh_browser_session(
+            AccountRef(account_id=session.stem), lambda credential, checkpoint: (cookies, None)
+        )
+    # Then the recently verified identity remains ready.
+    result = next(s for s in collect_services().services if s.label == service.label)
+    assert result.state == State.READY
+
+
+def test_corrupt_verification_record_does_not_hide_saved_session(
+    saved_service: tuple[ServiceChoice, Path, Path],
+) -> None:
+    # Given an unreadable verification record beside valid credentials.
+    from tum_mcp.diagnostics import collect_services
+
+    service, session, _ = saved_service
+    record = session.with_suffix(".verification.json")
+    record.write_bytes(b"invalid json")
+    # When local status reads the session.
+    result = next(s for s in collect_services().services if s.label == service.label)
+    # Then it reports unverified without overwriting the damaged record.
+    assert result.state == State.CONFIGURED
+    assert record.read_bytes() == b"invalid json"
 
 
 @pytest.fixture(autouse=True)
@@ -146,6 +348,12 @@ def test_live_doctor_verifies_identity_without_reading_course_content(
     live = collect_diagnostics(live=True, home=tmp_path)
     checked = next(item for item in live.services if item.label == provider.value.title())
     assert checked.state == (State.ACTION if expired else State.READY)
+    assert calls == ["identity"]
+    cached = collect_diagnostics(home=tmp_path)
+    assert (
+        next(item for item in cached.services if item.label == provider.value.title()).state
+        == checked.state
+    )
     assert calls == ["identity"]
 
 

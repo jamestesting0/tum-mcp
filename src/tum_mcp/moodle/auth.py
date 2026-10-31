@@ -116,6 +116,7 @@ class SessionStore:
 
     def begin_login(self) -> str:
         with self.lock:
+            self.file("session.verification.json").unlink(missing_ok=True)
             generation = uuid4().hex
             private_write(self.file("generation"), generation.encode())
             return generation
@@ -151,6 +152,7 @@ class SessionStore:
 
     def logout(self) -> None:
         with self.lock:
+            self.file("session.verification.json").unlink(missing_ok=True)
             private_write(self.file("generation"), uuid4().hex.encode())
             self.file("session.enc").unlink(missing_ok=True)
             self.file("login.json").unlink(missing_ok=True)

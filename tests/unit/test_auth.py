@@ -40,6 +40,16 @@ def test_logout_prevents_stale_process_restoring_session(store: SessionStore) ->
         store.load()
 
 
+def test_beginning_moodle_login_invalidates_previous_live_verification(store: SessionStore) -> None:
+    # Given verification for the current login generation.
+    verification = store.file("session.verification.json")
+    verification.write_text("previous verification")
+    # When another login generation starts, before its session is saved.
+    store.begin_login()
+    # Then the old session cannot still appear recently verified.
+    assert not verification.exists()
+
+
 def test_missing_session_has_explicit_status(store: SessionStore) -> None:
     assert store.status()["state"] == "AUTH_REQUIRED"
 

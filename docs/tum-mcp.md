@@ -191,7 +191,13 @@ The tools resolve one exact mapping; ambiguity never grants broader access.
 
 `doctor` reads local configuration and checks runtime prerequisites. It does not
 open a browser, contact campus services, decrypt sessions, or read native stores.
-Saved sessions are **Not verified** until checked. Git and Docker are not
+Saved sessions are **Not verified** until checked. Live campus results are saved
+locally with a timestamp and reused by `doctor` and the `login` selector for
+12 hours. Expiry means verification is stale, not that the session is disconnected.
+A fresh live check replaces the previous result, including failures. Replacing
+credentials or logging out invalidates their saved verification. Only the result,
+timestamp and file metadata are recorded, not credentials or campus responses.
+Git and Docker are not
 prerequisites. Client registration is distinguished
 from activation; the host must confirm a running MCP connection after setup.
 

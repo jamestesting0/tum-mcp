@@ -5,9 +5,11 @@ import re
 import shutil
 import subprocess
 import sys
+import time
+from collections.abc import Callable
 from pathlib import Path
 
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 
 from tum_mcp import __version__
 from tum_mcp.client_hosts import ClientHost, client_home
@@ -16,8 +18,10 @@ from tum_mcp.clients import CLIENTS, client_config_path, read_client_config
 from tum_mcp.connect import ServiceChoice
 from tum_mcp.errors import CampusError
 from tum_mcp.moodle.browsers import BrowserSetupError, discover_browsers, is_wsl
+from tum_mcp.moodle.config import private_write
+from tum_mcp.moodle.errors import MoodleError
 from tum_mcp.moodle.platforms import data_root
-from tum_mcp.settings import Frozen, Preferences, Provider, config_path, data_path
+from tum_mcp.settings import Account, Frozen, Preferences, Provider, config_path, data_path
 from tum_mcp.skills import inspect_skills
 from tum_mcp.ui import State
 
@@ -27,6 +31,70 @@ class Check(Frozen):
     state: State
     detail: str
     location: str | None = None
+
+
+class LiveVerification(Frozen):
+    checked_at: float = Field(ge=0, allow_inf_nan=False)
+    succeeded: bool
+    key_stamp: tuple[int, int, int, int]
+
+
+def file_stamp(path: Path) -> tuple[int, int, int, int]:
+    """Bind verification to local file identity without reading credential material."""
+    stat = path.stat()
+    return stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+
+
+def session_check(
+    check: Check,
+    *,
+    session: Path,
+    key: Path,
+    live: bool,
+    verify: Callable[[], None],
+    verified_detail: str,
+) -> Check:
+    """Share timestamped live results across local status readers."""
+    path = session.with_suffix(".verification.json")
+    if not live:
+        try:
+            cached = LiveVerification.model_validate_json(path.read_bytes())
+        except FileNotFoundError:
+            return check
+        except ValidationError:
+            return check.model_copy(
+                update={"detail": "Invalid verification record; run tum-mcp doctor --live."}
+            )
+        if cached.key_stamp != file_stamp(key):
+            return check
+        age = time.time() - cached.checked_at
+        if not 0 <= age < 12 * 60 * 60:
+            return check.model_copy(
+                update={"detail": "Live verification expired; run tum-mcp doctor --live."}
+            )
+        timestamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(cached.checked_at))
+        return check.model_copy(
+            update={
+                "state": State.READY if cached.succeeded else State.ACTION,
+                "detail": (
+                    f"Live session verified at {timestamp} (valid for 12 hours)."
+                    if cached.succeeded
+                    else f"Live check failed at {timestamp}; run tum-mcp doctor --live to retry."
+                ),
+            }
+        )
+    try:
+        verify()
+        result = check.model_copy(update={"state": State.READY, "detail": verified_detail})
+    except (CampusError, MoodleError) as error:
+        result = check.model_copy(update={"state": State.ACTION, "detail": error.message})
+    cached = LiveVerification(
+        checked_at=time.time(),
+        succeeded=result.state == State.READY,
+        key_stamp=file_stamp(key),
+    )
+    private_write(path, cached.model_dump_json().encode())
+    return result
 
 
 class DoctorReport(Frozen):
@@ -112,21 +180,22 @@ def collect_services(*, live: bool = False) -> ServiceReport:
             state=State.CONFIGURED,
             detail="Local encrypted session saved; live authentication not checked.",
         )
-        if live:
+
+        def verify_moodle() -> None:
             from tum_mcp.moodle.auth import SessionStore
             from tum_mcp.moodle.config import Paths
-            from tum_mcp.moodle.errors import MoodleError
             from tum_mcp.moodle.http_client import MoodleHTTP
 
-            try:
-                MoodleHTTP(SessionStore(Paths(moodle_root), storage="file")).get("/my/courses.php")
-                check = Check(
-                    label="Moodle",
-                    state=State.READY,
-                    detail="Live session verified; Moodle read tools available.",
-                )
-            except MoodleError as error:
-                check = Check(label="Moodle", state=State.ACTION, detail=error.message)
+            MoodleHTTP(SessionStore(Paths(moodle_root), storage="file")).get("/my/courses.php")
+
+        check = session_check(
+            check,
+            session=moodle_session,
+            key=moodle_key,
+            live=live,
+            verify=verify_moodle,
+            verified_detail="Live session verified; Moodle read tools available.",
+        )
     else:
         legacy = (moodle_root / "session.enc").is_file()
         detail = (
@@ -169,27 +238,36 @@ def collect_services(*, live: bool = False) -> ServiceReport:
                 if saved
                 else "Reconnect for local encrypted storage; any legacy session is retained."
             )
-            if live and saved:
+
+            def verify_account(account: Account = account, provider: Provider = provider) -> None:
                 from tum_mcp.artemis import Artemis
                 from tum_mcp.transport import API
                 from tum_mcp.tum_live import TumLive
                 from tum_mcp.zulip import Zulip
 
-                try:
-                    api = API(account)
-                    match provider:
-                        case Provider.ARTEMIS:
-                            Artemis(api).identity()
-                        case Provider.ZULIP:
-                            Zulip(api).identity()
-                        case Provider.TUM_LIVE:
-                            TumLive(api).identity()
-                    state = State.READY
-                    detail = "Live identity verified; read access follows your campus account."
-                except CampusError as error:
-                    state, detail = State.ACTION, error.message
-                    needs_connection = True
-            services.append(Check(label=label, state=state, detail=detail))
+                api = API(account)
+                match provider:
+                    case Provider.ARTEMIS:
+                        Artemis(api).identity()
+                    case Provider.ZULIP:
+                        Zulip(api).identity()
+                    case Provider.TUM_LIVE:
+                        TumLive(api).identity()
+
+            check = Check(label=label, state=state, detail=detail)
+            if saved:
+                check = session_check(
+                    check,
+                    session=path,
+                    key=key,
+                    live=live,
+                    verify=verify_account,
+                    verified_detail=(
+                        "Live identity verified; read access follows your campus account."
+                    ),
+                )
+            needs_connection |= check.state == State.ACTION
+            services.append(check)
     from tum_mcp.tumonline.diagnostics import connection_checks
 
     online = connection_checks(live=live)

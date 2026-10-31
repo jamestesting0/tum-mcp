@@ -55,6 +55,24 @@ def test_corrupt_policy_stays_visible_as_a_failure_and_is_not_replaced(tmp_path:
     assert path.read_text() == "invalid"
 
 
+def test_cached_verification_cannot_override_disabled_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Given a verified session under the default policy.
+    policies = PolicyStore()
+    policies.create(ACCOUNT)
+    folder = tmp_path / "data/credentials/local"
+    folder.mkdir(parents=True)
+    (folder / f"{ACCOUNT}.enc").write_bytes(b"synthetic-encrypted-marker")
+    (folder / "session.key").write_bytes(b"synthetic-key-marker")
+    monkeypatch.setattr("tum_mcp.tumonline.study_service.StudyService.verify", lambda *args: None)
+    assert connection_checks(live=True)[0].state == State.READY
+    # When read permission is disabled after verification.
+    policies.set_scope(ACCOUNT, Scope.STUDIES_COURSES, False)
+    # Then cached authentication cannot imply read availability.
+    assert connection_checks()[0].state == State.DISABLED
+
+
 def test_read_only_snapshot_cannot_follow_a_policy_directory_symlink(tmp_path: Path) -> None:
     target = tmp_path / "elsewhere"
     target.mkdir()

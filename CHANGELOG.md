@@ -1,5 +1,11 @@
 # Changes
 
+## Unreleased
+
+- `tum-mcp doctor --live` saves each campus check with its time, and `doctor` and the
+  `login` selector show that result for 12 hours instead of "Not verified". Signing in
+  again or logging out clears it; only the result, its time and file metadata are stored.
+
 ## 0.14.2 — 2026-10-30
 
 - TUMonline login keeps its browser open when an unauthenticated session refresh

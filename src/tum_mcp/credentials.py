@@ -117,6 +117,7 @@ class Vault:
         if credential.account_id != account.id:
             raise CampusError(Code.SCOPE_DENIED, "Credential principal does not match.")
         with self.lease(account), self.lock:
+            self.record_path(account).with_suffix(".verification.json").unlink(missing_ok=True)
             self._write(account, credential)
 
     def _write(self, account: CredentialOwner, credential: Credential) -> Credential:
@@ -153,6 +154,7 @@ class Vault:
 
     def logout(self, account: CredentialOwner) -> None:
         with self.lease(account), self.lock:
+            self.record_path(account).with_suffix(".verification.json").unlink(missing_ok=True)
             self.record_path(account).unlink(missing_ok=True)
 
     def replace_login(self, account: CredentialOwner, credential: Credential) -> None:
@@ -164,6 +166,7 @@ class Vault:
             if path.exists():
                 previous = self.load(account)
                 credential = credential.model_copy(update={"repositories": previous.repositories})
+            path.with_suffix(".verification.json").unlink(missing_ok=True)
             self._write(account, credential)
 
     def refresh_browser_session[T](

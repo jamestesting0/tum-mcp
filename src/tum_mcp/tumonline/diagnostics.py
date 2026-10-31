@@ -1,6 +1,6 @@
 """Read-only local TUMonline connection and permission diagnostics."""
 
-from tum_mcp.diagnostics import Check
+from tum_mcp.diagnostics import Check, session_check
 from tum_mcp.errors import CampusError
 from tum_mcp.settings import data_path
 from tum_mcp.tumonline.policy import PolicyStore, Scope
@@ -43,15 +43,22 @@ def connection_checks(*, live: bool = False) -> tuple[Check, ...]:
             detail += " Studies and courses are disabled by policy."
         else:
             detail += " Studies and courses allowed."
-        if live and saved and allowed:
+        check = Check(label=label, state=state, detail=detail)
+        if saved and allowed:
             from tum_mcp.tumonline.study_service import StudyService
 
-            try:
-                StudyService().verify(policy.account_id)
-                state = State.READY
-                detail = "Identity verified. Studies and courses allowed."
-            except CampusError as error:
-                state, detail = State.ACTION, error.message
-        detail += " Grades and progress unavailable."
-        checks.append(Check(label=label, state=state, detail=detail))
+            def verify_account(account_id: str = policy.account_id) -> None:
+                StudyService().verify(account_id)
+
+            check = session_check(
+                check,
+                session=credentials / f"{policy.account_id}.enc",
+                key=credentials / "session.key",
+                live=live,
+                verify=verify_account,
+                verified_detail="Identity verified. Studies and courses allowed.",
+            )
+        checks.append(
+            check.model_copy(update={"detail": check.detail + " Grades and progress unavailable."})
+        )
     return tuple(checks)
