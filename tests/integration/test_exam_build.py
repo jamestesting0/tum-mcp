@@ -131,3 +131,65 @@ def test_exam_comments_round_trip_with_current_revisions(course: Path) -> None:
         CliRunner().invoke(app, ["study", "comments", "list", str(course), "--view", "exam"]).output
     )
     assert [item["content_state"] for item in listed["comments"]] == ["current"]
+
+
+def test_exam_guidance_cannot_use_an_optional_only_study_block(course: Path) -> None:
+    from tum_mcp.exam_data import check_unit_links
+    from tum_mcp.study_content import StudyContent
+
+    state = load_state(course)
+    source = next(item for item in state.resources if item.resource.key == "slides")
+    from material_fixture import with_guided_paper
+
+    document = with_guided_paper(exam_document(course))
+    unit = minimal_unit("observer", "slides", source.sha256)
+    unit["explore"] = [
+        {
+            "key": "context",
+            "title": "Historical context",
+            "sources": unit["sources"],
+            "blocks": [
+                {
+                    "kind": "text",
+                    "key": "origin",
+                    "sources": ["slides"],
+                    "paragraphs": ["Background."],
+                }
+            ],
+        }
+    ]
+    exam = ExamContent.model_validate(document)
+    # Supply every linked unit while keeping the requested block solely optional.
+    keys = {key for concept in exam.concepts for key in concept.units}
+    keys.update(key for topic in exam.topics for key in topic.units)
+    keys.update(
+        p.unit
+        for _, _, question in exam.past_questions().values()
+        if question.guidance
+        for p in question.guidance.prerequisites
+    )
+    units = [
+        unit if key == "observer" else minimal_unit(key, "slides", source.sha256)
+        for key in keys | {"observer"}
+    ]
+    study = StudyContent.model_validate(
+        {
+            "course_key": state.course.key,
+            "organization": "topics",
+            "introduction": "Synthetic Study.",
+            "units": units,
+        }
+    )
+    raw = exam.model_dump(mode="json")
+    first = next(
+        question
+        for sitting in raw["sittings"]
+        for variant in sitting["variants"]
+        for question in variant["questions"]
+        if question.get("guidance")
+    )
+    first["guidance"]["prerequisites"] = [
+        {"unit": "observer", "block": "origin", "explanation": "Requires background."}
+    ]
+    with pytest.raises(CampusError, match="does not have"):
+        check_unit_links(ExamContent.model_validate(raw), study)

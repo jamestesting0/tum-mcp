@@ -4,8 +4,8 @@ Six base skills cover source reading, course sync, Study preparation, Exercises
 preparation, exam preparation and publishing. They run in your local agent, using the connected
 MCP tools to read course sources. The CLI validates and stores the resulting local
 files; it does not run an AI model.
-The optional `prepare-lecture` skill adds a Lecture Notes workspace; install it with
-`tum-mcp install lecture`. See [Lecture Notes](lecture-notes.md).
+The optional `prepare-lecture` skill adds a Lecture workspace; install it with
+`tum-mcp install lecture`. See [Lecture](lecture-notes.md).
 The optional `audio-notes` skill turns prepared lessons into spoken tracks; install
 it with `tum-mcp install audio-notes`. The optional `video-notes` skill turns prepared
 topics into short narrated explainer videos; install it with `tum-mcp install video-notes`.
@@ -29,7 +29,7 @@ retrieved source is recorded as a gap rather than an empty course.
 
 ```text
 pse-ws26/
-  AGENTS.md                 Course knowledge and current inventory
+  AGENTS.md                 Managed agent guide, then your own rules
   materials/
     content/                Lectures, slides and reading
     exams/                  Available revision material
@@ -39,17 +39,26 @@ pse-ws26/
     course.md               Cited course structure, logistics, rules and unknowns
     state.json              Course binding, source versions and coverage
     notes/                  Detailed course/agent notes when needed
-  app/                      Shared Study, Exercises, Exam Prep and optional Lecture Notes website
+  app/                      Shared Study, Exercises, Exam and optional Lecture website
     content.json            Optional source-backed Study content
     exercises.json          Optional prepared exercise guidance
-    exam.json               Optional Exam Prep content (local only)
+    exam.json               Optional Exam content (local only)
   audio/                    Optional category audio derived from the prepared website
   videos/                   Optional explainer videos derived from the prepared website
 ```
 
-`AGENTS.md` retains user rules and points agents to `.tum-mcp/course.md`. That short
-handbook explains the course's goals, lectures/tutorials, weekly work and platforms,
-assessment/bonus conditions, communication and preparation map. Claims carry source
+`AGENTS.md` starts with a managed agent guide; keep your own rules and standing
+preferences outside it. The guide tells the agent that it works for a student of this
+course, which skill handles which kind of request, how to read short requests such as
+"this week" or "the exam", where each kind of course information lives, and how to
+answer as a tutor: from the course's own sources and notation, with the next step
+before a full solution. `study sync` and `study upgrade` replace an outdated guide and
+keep the rest of the file; an edited guide is kept and reported for review.
+
+The guide sends the agent to `.tum-mcp/course.md` first. That short handbook explains
+the course's goals, lectures/tutorials, weekly work and platforms, assessment/bonus
+conditions, conventions (textbook, notation, answer format), communication and
+preparation map. Claims carry source
 links/locators and checked dates; unknowns and conflicting announcements stay visible.
 Detailed source content remains in materials/. All TUM MCP course state, plans and
 agent notes live under .tum-mcp/.
@@ -68,7 +77,8 @@ comments, publication settings and the full old root instructions as
 `.tum-mcp/legacy-AGENTS.md`. Course identity, materials and browser progress stay the
 same. Existing legacy state remains readable until upgrade; two state folders are
 a conflict to reconcile, never silently merged. This differs from the web-folder
-upgrade below.
+upgrade below. In a project that already uses `.tum-mcp/`, `study upgrade` only
+refreshes the agent guide in `AGENTS.md`.
 
 ## State-based workflow
 
@@ -136,7 +146,7 @@ until you choose) and can focus on cards marked Again and questions you missed. 
 question you missed stays there after **Try again**; it leaves once you answer it
 correctly from a fresh start. Revision reuses the original items and progress, so
 changing the topic selection never clears results, and it remembers your selection
-for this course. A unit's header links the Lecture Notes, exercises and Exam Prep
+for this course. A unit's header links the Lecture, exercises and Exam
 patterns that build on it. In the local preview, a citation opens the stored course
 file at the cited page. Formulas and inline
 notation such as `\(v_i\)` compile locally to native MathML; code and dollar signs
@@ -150,18 +160,36 @@ and reported, so the agent must review compatibility when extending them.
 
 ```sh
 tum-mcp study inspect ./pse-ws26
+tum-mcp study find ./pse-ws26 "observer pattern"   # stored pages that mention every word
+tum-mcp study text ./pse-ws26 --key KEY --pages 3-5 --images   # page text plus a PNG of each page
 tum-mcp study build ./pse-ws26
-tum-mcp study report ./pse-ws26   # review flags and what the sources leave uncovered
+tum-mcp study report ./pse-ws26   # review flags, the course map and what the sources leave uncovered
 tum-mcp study visuals ./pse-ws26  # measure every drawn visual and draw contact sheets
 ```
+
+Slide text finds and quotes a page, but it drops figures and scrambles tables and
+formulas, so the agent looks at every slide or sheet page it relies on. Hosts that
+display PDFs, such as Claude Code, open the page directly; for the others, such as
+Codex, `study text --images` renders up to 12 pages to PNGs under `.tum-mcp/cache/`,
+once per file version, without Poppler or any other system tool.
 
 The agent records what each lecture states students should learn, and which sheet
 problems are prepared, in `.tum-mcp/coverage.json`. `study report` lists outcomes
 that are not yet taught, sources not yet read and problems still pending, so a request
 to cover a whole course is judged against the course's own outcomes.
 
-`study visuals` opens every lesson, practice question, exercise step and Exam Prep
-visual in an installed Chrome, Edge or Chromium at phone (390 px), narrow (600 px) and
+The Study overview shows known core gaps under **Not prepared yet**, including outcomes
+that are partly prepared. Unknown source coverage and optional reading backlog stay
+in the local agent report. They do not create learner-facing panels or count as prepared.
+The core list updates on build after the agent reviews and updates the ledger; it does
+not track the student's progress. Exercises uses the same expandable presentation for
+pending sheets. Hosted Study queues include
+only sources referenced by the published Study units; the local coverage report keeps
+the full preparation inventory.
+
+`study visuals` opens every lesson, practice question, exercise step and Exam
+visual, including exercise Solution, Compare and transfer-answer blocks, in an installed
+Chrome, Edge or Chromium at phone (390 px), narrow (600 px) and
 desktop (1280 px) width. It reports lines through nodes, labels that overlap or sit on a
 line, text under 12 px, clipped text and drawings that differ from their block, writes
 contact sheets to `.tum-mcp/visuals/` and records the result in
@@ -169,15 +197,29 @@ contact sheets to `.tum-mcp/visuals/` and records the result in
 and `study report` lists items whose check is missing, stale or failing.
 
 Ask `review-course` to score the lessons and exercises the way a student meets them.
-It reads each item in five passes (logic, text, visuals, interaction and intuition) and
-gives each unit and exercise 1 to 3 points for correctness, clarity, cognitive load,
-representation, practice, coverage and intuition. Each drawn visual gets its own score
-from the contact sheets for fidelity, form, layout, legibility, focus and convention,
-calibrated against a gallery of rated examples (`study visuals --gallery`). The agent
-names what costs each point, saves the scores in `.tum-mcp/review.json`, then fixes the
-findings and scores again.
-Editing a unit or exercise makes its score stale, so `study report` lists what needs a
-new review and what is still below the bar. The scores are not shown in the app.
+It reads each item in six passes (logic, text, visuals, interaction, intuition and
+structure) and gives each unit and exercise 1 to 3 points for correctness, clarity,
+cognitive load, representation, practice, coverage, intuition, organization and
+redundancy. Each drawn visual gets its own score from the contact sheets for fidelity,
+form, layout, legibility, focus and convention, calibrated against a gallery of rated
+examples (`study visuals --gallery`). A course pass then scores the course as a whole:
+the order of its units and groups, what repeats across units and workspaces, and, when
+Exercises, Exam or Lecture are prepared beside Study, how well they link to
+the passages that teach what they need. `study report --section structure` gives that
+pass a course map and flags terms used before they are taught, odd groups, repeated
+passages and practice, and missing links. The agent names the rubric check behind each
+lost point, saves the scores in `.tum-mcp/review.json`, then fixes the findings and
+scores again.
+Editing a unit or exercise makes its score stale, and so does changing the course's
+units, groups or links for the course score, so `study report` lists what needs a new
+review and what is still below the bar. A scorecard saved under an earlier rubric still
+loads; the report lists the dimensions it lacks. The scores are not shown in the app.
+
+Workspace profiles keep the shared dimensions but tailor their evidence: exercise
+reviews preserve released statements and assess each part's guide and answer rather
+than requiring a second lesson. Exam checks distinguish cheatsheets, patterns and papers;
+Lecture checks recording fidelity and added explanation without requiring quizzes.
+Exam and Lecture findings currently belong to the course pass, not separate item scores.
 
 ## Preview the app
 
@@ -201,7 +243,7 @@ locally. Nothing is published by these commands.
 
 ## Passage comments
 
-Select text in Content, Flashcards, Practice, Exercises or Lecture Notes, then click
+Select text in Content, Flashcards, Practice, Exercises or Lecture, then click
 **Comment** to record what is unclear. You can also use Ctrl/Command+Alt+M after
 selecting text. The local preview saves notes in `.tum-mcp/comments.json`, separately
 from learning progress. Click a numbered marker or highlighted text to open its notes
@@ -223,13 +265,16 @@ at the bottom of the outline switches between them and remembers your place; on 
 it sits inside the open outline. The exercise list groups exercises by sheet and shows
 each sheet's summary and due date when the sources provide them.
 
-Each exercise shows the original statement and subparts first. Work on paper, open the
-solution directly (one short answer per part, as a table, graph, formula or code), or
-open **Guidance** for the exercise's goals and one step at a time with optional hints.
+Each sub-question keeps its statement, supporting blocks, Guide and Solution together.
+Shared givens come first. Work on paper, open that question's Solution directly (as a
+table, graph, formula or code), or use its guide for one step at a time with optional
+hints. Solutions open independently and reveal only their own question's answer;
+shared solution notes appear once after the questions.
 Multiple-choice steps are checked; for every other step you work on paper and press
 **Compare**, the one place that shows the answer, its reasoning and a hint for the
 likeliest mistake. **Review** beside a prerequisite opens the Study passage next to
-the exercise without losing your place. A sheet whose problems are not all prepared
+the exercise on desktop, or as a full-page view on mobile. Closing it returns to the
+same step and scroll position. A sheet whose problems are not all prepared
 says which ones are still missing. Code steps open the function skeleton in a small editor and
 show the model answer as code; code is never run, and nothing is graded by keywords.
 Finishing the last step marks the exercise completed in the outline; you can also
@@ -245,7 +290,7 @@ use the existing private comment service; hosted exports do not expose it.
 
 ## Prepare for exams
 
-Ask `prepare-exams` to build the **Exam Prep** workspace from the course's past exams,
+Ask `prepare-exams` to build the **Exam** workspace from the course's past exams,
 exercises and materials. Past exams come from `materials/exams` (Moodle) or files you hold yourself:
 
 ```bash
@@ -270,7 +315,7 @@ different places count once.
 
 Right-click any entry in the sidebar, in any workspace, to mark it as completed.
 
-Statistics such as "seen in 4 of 6 exams" are history, never a prediction. Exam Prep
+Statistics such as "seen in 4 of 6 exams" are history, never a prediction. Exam
 always stays local: it is never published.
 
 Existing `study/` projects continue to work. New projects use `app/`. To upgrade a
@@ -311,7 +356,7 @@ Study is the default hosted workspace, including for old settings. Exercise
 statements, hints and full solutions need explicit `--include-exercises` on the
 publish command after reviewing their public exposure. `--exclude-exercises`
 removes Exercises from subsequent eligible exports, using the same repository and URL. An
-Exercises-only site also requires explicit inclusion. Lecture Notes separately requires
+Exercises-only site also requires explicit inclusion. Lecture separately requires
 `--include-lectures`; old settings default to exclusion. `--exclude-lectures` also removes
 previously managed lecture images. A notes-only export with notes excluded is refused.
 
@@ -492,7 +537,7 @@ Imported files stay private: they are never published.
 
 The shared course app is packaged in `bundled/course_app/site/`, separately from the
 skill instructions. It owns layout, styling and interaction for Study, Exercises and
-Lecture Notes. Agents author only course content; `study build` installs the app,
+Lecture. Agents author only course content; `study build` installs the app,
 preserves customized files and checks sources, so courses gain app improvements
 without rewriting content. `tum-mcp study template` shows the bundled files and
 their combined revision for reproducible development.
@@ -505,8 +550,10 @@ tum-mcp study serve ./component-preview
 ```
 
 The demo creates one small Study unit and one exercise covering prose, code, tables,
-formulas, graphs, UML diagrams, a flowchart, plots, cards and response controls. It is a format
-reference, not necessarily a good teaching or question-authoring example; actual
+formulas, graphs, UML diagrams, a flowchart, plots, cards and response controls.
+It also includes pending Study topics and exercise sheets, plus private report examples
+of unknown coverage and optional backlog. It is a
+format reference, not necessarily a good teaching or question-authoring example; actual
 course authoring follows reviewed sources and the preparation skills. Rich learning
 pilots stay in private test fixtures. It uses no campus account, and an existing
 edited demo is preserved.
@@ -527,3 +574,20 @@ Import paths are confined to the snapshot directory. Data is stored under the
 bound project; credentials and unrelated personal records must never enter it.
 Keep real course projects private and out of package artifacts. Uninstalling the
 package preserves projects; remove your own project directory separately when wanted.
+
+## Optional Explore reading
+
+Prepared topics can include an **Explore** tab after Practice for useful supporting
+context and further reading. It appears only when that topic has authored material
+and opens directly on the reading. Core Content stays sufficient for the course tasks.
+Explore has no required completion, cards, questions or minutes, and Continue/Next
+keeps the core learning sequence.
+
+Authors classify passages against course outcomes and task dependencies, using the
+bundled prepare-study `references/explore.md` policy and private coverage ledger.
+Core gaps, optional backlog and unrecorded coverage remain separate in agent reports;
+only known core gaps appear on the learner overview. Optional items
+carry their own source versions and stable keyed blocks. Changes still need source,
+teaching and visual review but preserve saved core practice progress. Local passage
+comments remain item-scoped; published sites include optional reading with Study and
+exclude private comments/classification reasons. `study demo PROJECT` shows an example.

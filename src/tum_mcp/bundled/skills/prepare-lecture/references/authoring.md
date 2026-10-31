@@ -39,7 +39,7 @@ Full audio/transcript processing is separate from full semantic review.
 These writing decisions adapt two inspected sources:
 
 - [ASD-STE100 skill writing rules](https://github.com/danyuchn/asd-ste100-skill/blob/8da6b6340aa22faf46fd07db8efbdea010cd38d9/references/writing-rules.md): clear sentence references, direct actors and stable terminology. Retain necessary technical terms and mathematical qualifications. This is not certified STE or an approved-dictionary claim.
-- [LearnHarness teaching method](https://github.com/amosblomqvist/learnharness/blob/3dc88472eea41eed0d5e5f29c2f16f8d063c415b/src/agent/prompts/teacher/05-method.md) and [teaching guide](https://github.com/amosblomqvist/learnharness/blob/3dc88472eea41eed0d5e5f29c2f16f8d063c415b/src/agent/prompts/teacher/20-teaching.md): preserve prerequisites, justified inference and useful examples. Its interactive checks/learner-state machinery are not part of Lecture Notes.
+- [LearnHarness teaching method](https://github.com/amosblomqvist/learnharness/blob/3dc88472eea41eed0d5e5f29c2f16f8d063c415b/src/agent/prompts/teacher/05-method.md) and [teaching guide](https://github.com/amosblomqvist/learnharness/blob/3dc88472eea41eed0d5e5f29c2f16f8d063c415b/src/agent/prompts/teacher/20-teaching.md): preserve prerequisites, justified inference and useful examples. Its interactive checks/learner-state machinery are not part of Lecture.
 
 The existing Study teaching guide already adopts related principles. These are
 writing adaptations, not evidence of measured learning superiority or mastery.

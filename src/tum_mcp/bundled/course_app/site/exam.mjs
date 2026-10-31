@@ -30,18 +30,18 @@ const orderedPatterns = () => (exam.statistics.pattern_order || []).map(key => e
 const firstPaper = () => { const past = replayable()[0]; return past ? `#exam/paper/${past.variant.key}` : exam.mocks[0] ? `#exam/mock/${exam.mocks[0].key}` : ''; };
 
 function home() {
-  const { box, heading } = header('Exam Prep', data.course.title);
+  const { box, heading } = header('Exam', data.course.title);
   const root = node('div', 'exam-home'); root.append(box);
   const profile = exam.profile;
   if (profile) {
     const facts = node('dl', 'exam-profile');
-    const add = (label, value) => facts.append(node('dt', '', label), studyText('dd', '', value || 'Not stated'));
+    const add = (label, value) => facts.append(append(node('div'), node('dt', '', label), studyText('dd', '', value || 'Not stated')));
     add('Format', { written: 'Written exam', online: 'Online exam', programming: 'Programming exam', oral: 'Oral exam', mixed: 'Mixed format' }[profile.format]);
     add('Duration', profile.duration_minutes && `${profile.duration_minutes} minutes`);
-    add('Points', profile.total_points && String(profile.total_points));
+    add('Total points', profile.total_points && String(profile.total_points));
     add('Allowed aids', profile.allowed_aids);
-    if (profile.languages?.length) add('Languages', profile.languages.join(', '));
-    root.append(append(node('section', 'exam-section'), node('h2', '', 'The exam'), facts));
+    if (profile.languages?.length) add(profile.languages.length === 1 ? 'Language' : 'Languages', profile.languages.join(', '));
+    root.append(append(node('section', 'exam-section'), facts));
   }
   const stats = exam.statistics;
   // The evidence line only appears when past exams exist; without them there is nothing to report.
@@ -53,7 +53,7 @@ function home() {
   const papers = replayable().length, mocks = exam.mocks.length;
   if (papers || mocks) cards.append(card(firstPaper(), 'Practice exams', [papers && `${papers} past paper${papers === 1 ? '' : 's'}`, mocks && `${mocks} practice exam${mocks === 1 ? '' : 's'}`].filter(Boolean).join(' · ')));
   root.append(cards);
-  return { root, heading, title: 'Exam Prep', items: [] };
+  return { root, heading, title: 'Exam', items: [] };
 }
 
 function paperOverview(variantKey) {
@@ -127,7 +127,7 @@ export function renderExam(hash, read, write) {
 // The course title already opens the overview, so the outline lists only the sections;
 // sections with pages of their own collapse into groups.
 export function examOutline(current = '', currentKey = '') {
-  const nav = node('nav', 'unit-list'); nav.setAttribute('aria-label', 'Exam Prep');
+  const nav = node('nav', 'unit-list'); nav.setAttribute('aria-label', 'Exam');
   const link = (label, href, active, detail = '') => {
     const item = quietLink('', href, 'unit-link'); item.append(studyText('span', 'unit-title', label));
     if (detail) item.append(node('span', 'small', detail));

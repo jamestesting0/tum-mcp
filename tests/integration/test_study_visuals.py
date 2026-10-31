@@ -9,9 +9,10 @@ import pytest
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.exercise_content import ExerciseContent
 from tum_mcp.study_build import build, read_content
 from tum_mcp.study_review import revision
-from tum_mcp.study_visuals import app_revision, report_path
+from tum_mcp.study_visuals import _visits, app_revision, report_path, visual_ids
 
 CORPUS = Path(__file__).parents[1] / "fixtures/visual-corpus.json"
 browser = pytest.mark.skipif(
@@ -36,6 +37,31 @@ def add_corpus(project: Path) -> None:
     content["units"].append(json.loads(CORPUS.read_bytes()))
     path.write_text(json.dumps(content), encoding="utf-8")
     build(project, publish=False)
+
+
+def test_answer_visuals_are_listed_and_injected() -> None:
+    payload = json.loads((CORPUS.parent / "exercises.json").read_bytes())
+    exercise = payload["sets"][0]["exercises"][0]
+    table = {
+        "kind": "table",
+        "caption": "Path costs",
+        "sources": ["weighted"],
+        "columns": ["Existing", "Candidate"],
+        "rows": [["5", "3"]],
+    }
+    exercise["solution"]["answers"][0]["blocks"] = [table]
+    step = next(step for step in exercise["steps"] if step["check"]["kind"] == "self_check")
+    step["check"]["model_answer"] = [table]
+    exercise["transfer"] = {"prompt": "Compare the costs.", "answer": [table]}
+    parsed = ExerciseContent.model_validate(payload)
+    item = "exercises/sheet-1/sample-relaxation"
+    expected = {"solution:0", f"compare:{step['key']}:0", "transfer:0"}
+    assert expected <= set(visual_ids(None, parsed)[item])
+    visits, revisions = _visits(None, parsed)
+    injected = {str(entry["id"]) for visit in visits for entry in visit.inject}
+    assert expected <= injected
+    assert revisions[item] == revision(parsed.sets[0].exercises[0])
+    assert _visits(None, parsed, tasks=frozenset({"other/missing"})) == ([], {})
 
 
 def test_render_report_follows_the_content_and_the_app(project: Path) -> None:
@@ -77,6 +103,34 @@ def test_render_report_follows_the_content_and_the_app(project: Path) -> None:
     report_path(project).write_text(json.dumps(record | {"app": "0" * 16}), encoding="utf-8")
     stale = render(project)
     assert stale["stale"] == sorted(unchecked) and stale["defects"] == []
+
+
+@browser
+def test_wide_solution_table_is_measured(exercise_project: Path) -> None:
+    path = exercise_project / "study/exercises.json"
+    payload = json.loads(path.read_bytes())
+    exercise = payload["sets"][0]["exercises"][0]
+    source = exercise["sources"][0]["key"]
+    exercise["solution"]["answers"][0]["blocks"] = [
+        {
+            "kind": "table",
+            "caption": "Classification cases",
+            "sources": [source],
+            "columns": [f"Classification criterion {index}" for index in range(8)],
+            "rows": [["A substantially longer classification value"] * 8],
+        }
+    ]
+    path.write_text(json.dumps(payload))
+    build(exercise_project, publish=False)
+    checked = invoke("visuals", str(exercise_project), "--exercise", "sheet-1/sample-relaxation")
+    record = json.loads(report_path(exercise_project).read_bytes())
+    visuals = record["items"]["exercises/sheet-1/sample-relaxation"]["visuals"]
+    answer = next(visual for visual in visuals if visual["id"] == "solution:0")
+    assert set(answer["widths"]) == {"phone", "narrow", "desktop"}
+    assert any(
+        finding["code"] == "table_scrolls" for finding in answer["widths"]["phone"]["findings"]
+    )
+    assert checked["passed"] is False
 
 
 @browser

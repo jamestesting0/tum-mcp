@@ -1,6 +1,6 @@
 interface:
   display_name: "Review Course"
   short_description: "Score and improve course app content"
-  default_prompt: "Use $review-course to score my course app's lessons and exercises for how easy they are to learn from, then fix what falls below the bar."
+  default_prompt: "Use $review-course to score my course app's lessons, exercises and overall structure for how easy they are to learn from, then fix what falls below the bar."
 policy:
   allow_implicit_invocation: true

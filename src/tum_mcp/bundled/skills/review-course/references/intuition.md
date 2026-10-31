@@ -4,6 +4,8 @@ Ask of each item: after it, could the student explain why the method works, pred
 it does on a new case, and say when it fails? Correct steps without their reason leave
 the student unable to choose the method on a new problem. This pass scores Intuition,
 against prepare-study's [lesson shape](../../prepare-study/references/teaching.md#lesson-shape).
+For exercises, use the [profile](profiles.md#exercises): read the reasons in the guide
+and solution, without requiring the released statement to become a lesson.
 
 ## Procedure
 
@@ -15,8 +17,9 @@ against prepare-study's [lesson shape](../../prepare-study/references/teaching.m
    allowed or chosen.
 4. **Misconceptions.** The wrong belief students bring is named and refuted with a case
    where it fails.
-5. **Prediction.** The student commits to a guess before a result is shown: a question
-   before the trace, or an exercise step that asks for the next state.
+5. **Prediction.** Where a practice question or exercise step asks for a prediction,
+   the result stays hidden until the student can make it. Do not add prediction prompts
+   to the lesson itself.
 6. **Connections and limits.** The idea links to an earlier unit or an everyday case; an
    analogy says where it breaks; the item says when the method does not apply.
 

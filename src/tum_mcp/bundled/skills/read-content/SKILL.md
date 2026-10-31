@@ -12,7 +12,11 @@ request. Do not re-read the whole inventory for each authoring step.
 
 
 Resolve the course from the request, conversation or project binding. Reuse known
-IDs and relevant local sources; inspect only needed state entries. Check
+IDs and relevant local sources; inspect only needed state entries. In a course
+project, `tum-mcp study find PROJECT "words"` finds the stored pages that mention a
+topic and `tum-mcp study text PROJECT --key KEY --pages N-M` reads them. That text drops
+figures and scrambles tables and formulas, so look at every page you answer from: open the
+PDF page if your tools display PDFs; otherwise add `--images` and open the image. Check
 `tum_status` or discover IDs only when connection or identity is unknown.
 Do not initialize, refresh or build a project merely to answer a question.
 
@@ -50,5 +54,5 @@ failures. Continue independent work and report the gap.
 
 With the optional Lecture extension installed, bounded `tum_live_*` metadata tools
 can inspect selected TUM-Live recordings. Prefer cached/supplied timed transcripts
-for source questions. Creating or updating the Lecture Notes workspace belongs to
+for source questions. Creating or updating the Lecture workspace belongs to
 prepare-lecture; do not start long media processing for a simple source lookup.

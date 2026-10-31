@@ -23,6 +23,10 @@ downloaded course code. When website and videos are both requested, finish
 prepare-study first and carry its changed unit IDs forward. A video-only request does
 not refresh campus sources, rebuild the website or publish anything.
 
+Default lessons and locators are core-only. Do not narrate `Unit.explore` or turn it
+into a required dependency. An explicit request for supplementary video needs a
+separately stated scope; see [Explore](../prepare-study/references/explore.md).
+
 ## Workflow
 
 1. **Scope.** Run `tum-mcp video-notes inspect PROJECT` once; it lists planned,

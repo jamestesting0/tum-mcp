@@ -16,6 +16,72 @@ from tum_mcp.study_models import Resource
 from tum_mcp.transport import API
 
 
+def test_explore_preserves_legacy_core_progress_but_changes_teaching_review() -> None:
+    from tum_mcp.study_build import unit_revision
+    from tum_mcp.study_review import revision
+
+    payload = json.loads(
+        (Path(__file__).parents[1] / "fixtures/course_app/content.json").read_bytes()
+    )
+    before = StudyContent.model_validate(payload).units[1]
+    assert before.key == "bfs"
+    assert (
+        unit_revision(before) == "3c3f0059e28219e78082801a80a63cc0e63d05e9372bbdd27a17f703df1d42b5"
+    )
+    assert revision(before) == "f15badad09e4ed7e"
+    material = {
+        "key": "origin",
+        "title": "Where the idea came from",
+        "sources": payload["units"][1]["sources"],
+        "blocks": [
+            {
+                "key": "history",
+                "kind": "text",
+                "sources": [before.sources[0].key],
+                "title": "Historical context",
+                "paragraphs": ["A synthetic supporting passage."],
+            }
+        ],
+    }
+    payload["units"][1]["explore"] = [material]
+    after = StudyContent.model_validate(payload).units[1]
+    assert unit_revision(after) == unit_revision(before)
+    assert revision(after) != revision(before)
+    payload["units"][1]["explore"] = []
+    empty = StudyContent.model_validate(payload).units[1]
+    assert empty.model_dump_json() == before.model_dump_json()
+    assert revision(empty) == revision(before)
+    payload["units"][1]["blocks"][0]["title"] = "Changed core explanation"
+    assert unit_revision(StudyContent.model_validate(payload).units[1]) != unit_revision(before)
+
+
+@pytest.mark.parametrize("invalid", ["empty", "missing_key", "duplicate_key", "undeclared_source"])
+def test_explore_blocks_have_scoped_keys_and_sources(invalid: str) -> None:
+    payload = json.loads(
+        (Path(__file__).parents[1] / "fixtures/course_app/content.json").read_bytes()
+    )
+    unit = payload["units"][0]
+    block = {
+        "kind": "text",
+        "key": "background",
+        "sources": [unit["sources"][0]["key"]],
+        "paragraphs": ["A synthetic optional explanation."],
+    }
+    material = {"key": "origin", "title": "Origins", "sources": unit["sources"], "blocks": [block]}
+    match invalid:
+        case "empty":
+            material["blocks"] = []
+        case "missing_key":
+            block.pop("key")
+        case "duplicate_key":
+            material["blocks"].append(block.copy())
+        case "undeclared_source":
+            block["sources"] = ["not-declared"]
+    unit["explore"] = [material]
+    with pytest.raises(ValidationError):
+        StudyContent.model_validate(payload)
+
+
 @pytest.mark.parametrize("text", [r"Use \(x", r"Use x\)", r"Use \(\href{https://x}{x}\)"])
 def test_invalid_inline_math_is_rejected_without_treating_prose_as_html(text: str) -> None:
     with pytest.raises(ValidationError):
@@ -129,3 +195,34 @@ def test_even_internal_start_is_denied_before_loading_credentials_or_sending_htt
     with pytest.raises(CampusError) as error:
         api._request("POST", "/api/core/public/account", None)
     assert error.value.code == Code.SCOPE_DENIED
+
+
+def _headed(levels: list[int | None]) -> dict:
+    content = json.loads(
+        (Path(__file__).parents[1] / "fixtures/course_app/content.json").read_bytes()
+    )
+    unit = content["units"][0]
+    template = next(block for block in unit["blocks"] if block["kind"] == "text")
+    blocks = []
+    for index, level in enumerate(levels):
+        block = {
+            key: value for key, value in template.items() if key not in {"title", "level", "key"}
+        }
+        if level is not None:
+            block.update(title=f"Heading {index}", level=level)
+        blocks.append(block)
+    unit["blocks"] = blocks
+    return content
+
+
+def test_titled_blocks_form_an_outline_and_untitled_blocks_continue_a_section() -> None:
+    # Sections, subsections and untitled continuations descend one level at a time.
+    StudyContent.model_validate(_headed([1, None, 2, 3, None, 2, 1]))
+    # A lesson may open with an untitled passage before its first heading.
+    StudyContent.model_validate(_headed([None, 1, 2]))
+
+
+@pytest.mark.parametrize("levels", [[2], [1, 3], [1, None, 3]])
+def test_a_skipped_heading_level_is_rejected(levels: list[int | None]) -> None:
+    with pytest.raises(ValidationError, match="one level deeper at a time"):
+        StudyContent.model_validate(_headed(levels))

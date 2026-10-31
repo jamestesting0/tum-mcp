@@ -16,11 +16,36 @@ def report(project: Path) -> dict:
     return json.loads(result.output)["review"]
 
 
-def score(project: Path, reviews: list[dict]) -> None:
+def score(project: Path, reviews: list[dict], course: dict | None = None) -> None:
+    card = {"course_key": load_state(project).course.key, "reviews": reviews}
     scorecard_path(project).write_text(
-        json.dumps({"course_key": load_state(project).course.key, "reviews": reviews}),
-        encoding="utf-8",
+        json.dumps(card | ({"course": course} if course else {})), encoding="utf-8"
     )
+
+
+def whole(review: dict) -> dict:
+    """A course review that scores every dimension the report lists at 3."""
+    course = review["course"]
+    scores = {name: 3 for name in course["dimensions"]}
+    return {"revision": course["revision"], "reviewed_at": "2026-10-30", "scores": scores}
+
+
+def reviewed(project: Path) -> list[dict]:
+    """Every unit and exercise scored 3 on every dimension and visual."""
+    listed = report(project)["unreviewed"]
+    return [
+        {
+            "item": entry["item"],
+            "revision": entry["revision"],
+            "reviewed_at": "2026-10-30",
+            "scores": {name: 3 for name in DIMENSIONS},
+            "visuals": [
+                {"visual": key, "scores": {name: 3 for name in CRITERIA}}
+                for key in entry["visuals"]
+            ],
+        }
+        for entry in listed
+    ]
 
 
 def test_scores_follow_the_content_they_read_and_low_scores_need_a_fix(
@@ -50,43 +75,47 @@ def test_scores_follow_the_content_they_read_and_low_scores_need_a_fix(
         review["visuals"] = [
             {"visual": key, "scores": sharp} for key in listed[review["item"]]["visuals"]
         ]
-    # When every item and visual scores 3, the review passes.
+    # When every item and visual scores 3, only the course review is missing; then it passes.
     score(project, reviews)
+    assert report(project)["course"]["status"] == "unreviewed"
+    assert report(project)["passed"] is False
+    course = whole(report(project))
+    score(project, reviews, course)
     assert report(project)["passed"] is True
     # A weak visual needs a note and caps the item's representation score.
     index = next(i for i, review in enumerate(reviews) if review["item"] == drawn)
     weak = dict(reviews[index], visuals=[dict(reviews[index]["visuals"][0])])
     weak["visuals"][0]["scores"] = sharp | {"legibility": 2}
-    score(project, [*reviews[:index], weak, *reviews[index + 1 :]])
+    score(project, [*reviews[:index], weak, *reviews[index + 1 :]], course)
     with pytest.raises(CampusError, match="note names what is wrong"):
         read_scorecard(project)
     weak["visuals"][0]["note"] = "On a phone the edge labels shrink below 12 px."
-    score(project, [*reviews[:index], weak, *reviews[index + 1 :]])
+    score(project, [*reviews[:index], weak, *reviews[index + 1 :]], course)
     with pytest.raises(CampusError, match="weakest visual"):
         read_scorecard(project)
-    score(project, reviews)
+    score(project, reviews, course)
     # A score below 3 must name what the student meets.
     unit = next(key for key in items if key.startswith("study/"))
     reviews[0] = reviews[0] | {"scores": good | {"cognitive_load": 2}}
-    score(project, reviews)
+    score(project, reviews, course)
     with pytest.raises(CampusError, match="names its finding"):
         read_scorecard(project)
     finding = {"dimension": "cognitive_load", "note": "Three ideas in one paragraph."}
     reviews[0] |= {"findings": [finding]}
-    score(project, reviews)
+    score(project, reviews, course)
     low = report(project)
     assert low["passed"] is False and low["below_bar"][0]["scores"] == {"cognitive_load": 2}
     # A friction kept for a stated reason passes; an item that blocks learning never does.
     reviews[0] |= {"kept": "The source gives no smaller example."}
-    score(project, reviews)
+    score(project, reviews, course)
     assert report(project)["passed"] is True
     reviews[0] |= {"scores": good | {"cognitive_load": 1}}
-    score(project, reviews)
+    score(project, reviews, course)
     assert report(project)["passed"] is False
     # Editing a reviewed unit makes its review stale.
     reviews[0] = {**reviews[0], "scores": good, "findings": []}
     reviews[0].pop("kept")
-    score(project, reviews)
+    score(project, reviews, course)
     content_path = project / "study/content.json"
     content = json.loads(content_path.read_bytes())
     target = next(u for u in content["units"] if f"study/{u['key']}" == unit)
@@ -94,3 +123,57 @@ def test_scores_follow_the_content_they_read_and_low_scores_need_a_fix(
     content_path.write_text(json.dumps(content), encoding="utf-8")
     stale = report(project)
     assert [entry["item"] for entry in stale["stale"]] == [unit] and stale["passed"] is False
+
+
+def test_older_reviews_still_load_and_the_course_review_follows_the_outline(
+    exercise_project: Path,
+) -> None:
+    # Given a scorecard saved before intuition, organization and redundancy were scored.
+    project = exercise_project
+    reviews = reviewed(project)
+    later = {"intuition", "organization", "redundancy"}
+    older = [r | {"scores": {n: 3 for n in DIMENSIONS if n not in later}} for r in reviews]
+    score(project, older)
+    # When the report reads it, nothing breaks: each item lists only the missing dimensions.
+    first = report(project)
+    assert first["unreviewed"] == [] and first["stale"] == [] and first["passed"] is False
+    assert {tuple(entry["dimensions"]) for entry in first["unscored_dimensions"]} == {
+        ("intuition", "organization", "redundancy")
+    }
+    # Study and Exercises are both prepared, so the course review also scores integration.
+    course = first["course"]
+    assert course["workspaces"] == ["study", "exercises"] and "integration" in course["dimensions"]
+    partial = whole(first)
+    partial["scores"].pop("integration")
+    score(project, reviews, partial)
+    assert report(project)["course"]["unscored"] == ["integration"]
+    # A check id belongs to the dimension of its finding.
+    linked = whole(first) | {
+        "scores": whole(first)["scores"] | {"integration": 2},
+        "findings": [
+            {
+                "dimension": "integration",
+                "check": "redundancy.one_home",
+                "note": "sample-minimum-proof links no Study passage.",
+            }
+        ],
+    }
+    score(project, reviews, linked)
+    with pytest.raises(CampusError, match="another dimension"):
+        read_scorecard(project)
+    linked["findings"][0]["check"] = "integration.prerequisite_links"
+    score(project, reviews, linked)
+    low = report(project)
+    assert low["passed"] is False and low["course"]["below_bar"]["scores"] == {"integration": 2}
+    assert low["failed_checks"] == {"integration.prerequisite_links": 1}
+    score(project, reviews, whole(first))
+    assert report(project)["passed"] is True
+    # Rewording a unit leaves the course review fresh; reordering units makes it stale.
+    content_path = project / "study/content.json"
+    content = json.loads(content_path.read_bytes())
+    content["units"][0]["summary"] += " Revised."
+    content_path.write_text(json.dumps(content), encoding="utf-8")
+    assert report(project)["course"]["status"] == "fresh"
+    content["units"][:2] = content["units"][1::-1]
+    content_path.write_text(json.dumps(content), encoding="utf-8")
+    assert report(project)["course"]["status"] == "stale"

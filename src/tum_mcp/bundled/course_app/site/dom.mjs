@@ -67,6 +67,15 @@ export function button(label, handler, className = '') {
   return element;
 }
 export function append(parent, ...children) { parent.append(...children); return parent; }
+export function preparationDisclosure({ title, entries, noun, description }) {
+  const more = node('details', 'disclosure pending-sheets');
+  const count = `${entries.length} ${noun}${entries.length === 1 ? '' : 's'}`;
+  more.append(append(node('summary'), node('span', 'topic-title', title), node('span', 'small pending-count', count)));
+  if (description) more.append(node('p', 'small pending-description', description));
+  more.append(append(node('ul', 'pending-sheet-list'), ...entries.map(entry => append(node('li'),
+      node('span', 'pending-source', entry.title), ...entry.labels.map(label => node('span', 'small', label))))));
+  return more;
+}
 // Options in a stable order per item, so the authored position never gives away the answer.
 export function shuffled(items, seed) {
   const hash = text => { let value = 2166136261; for (const char of text) value = Math.imul(value ^ char.codePointAt(0), 16777619); return value >>> 0; };
@@ -82,6 +91,8 @@ export function confirmAction({ title, message, action, onConfirm, trigger }) {
   dialog.addEventListener('close', () => { dialog.remove(); if (trigger?.isConnected) trigger.focus(); });
   document.body.append(dialog); dialog.showModal(); cancel.focus();
 }
+// The heading of a reading section, whatever its level.
+export const SECTION_HEADING = '.section-heading > :is(h2, h3, h4, h5, h6)';
 export function focusHeading(heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
 export function scrollReadingTo(element) {
   const main = element.closest('main');

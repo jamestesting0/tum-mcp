@@ -128,7 +128,7 @@ def test_doctor_contains_extensions_without_duplicating_runtime_entries(
     report = json.loads(result.output)
     states = {check["label"]: check["state"] for check in report["extensions"]}
     assert states == {
-        "Lecture Notes": "Disabled",
+        "Lecture": "Disabled",
         "Audio Notes": "Enabled",
         "Video Notes": "Disabled",
     }

@@ -19,6 +19,12 @@ and review an authored one, including alternative valid methods and edge cases.
 Do not infer deadline/timezone or release status from a title. Dates are optional
 and, when present, require an explicit timezone and current source evidence.
 
+When the student asks for the latest sheet and no release date is shown, read each
+sheet's semester stamp, take the newest sheet stamped for the current semester, say
+which one you chose and why, and continue; ask only when two sheets qualify equally.
+Prepare every presented problem and part of the chosen sheet. A part you cannot
+prepare stays pending in the coverage ledger, never silently left out.
+
 Reuse a compact handoff: course identity, affected source IDs/paths/hashes/locators,
 coverage gaps and set/exercise IDs. Do not pass full fetched payloads or refetch
 unchanged material. Preserve incomplete coverage as uncertainty, not withdrawal.

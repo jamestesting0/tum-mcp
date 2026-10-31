@@ -11,9 +11,11 @@ findings and the cited source page beside it. Never score a visual from its JSON
    its title, its key (`block:3`, `question:q1:0`, `statement:0`, `step:trace:1`) and the
    codes it was flagged with. A drawing that scrolls sideways appears twice: as the
    student first sees it and whole, captioned "whole drawing".
-2. Open every sheet of the item, the phone sheet first: most students read there. Look
+2. Include the solution, Compare and transfer-answer sheets. Open their controls in the app
+   to check the surrounding context; an injected sheet checks the drawing, not its reveal.
+3. Open every sheet of the item, the phone sheet first: most students read there. Look
    at each picture for five seconds and say its message; then read its caption.
-3. Open the cited source page. Fidelity can only be judged against it.
+4. Open the cited source page. Fidelity can only be judged against it.
 
 ## Hard gates
 
@@ -36,10 +38,10 @@ Representation score never exceeds its weakest visual.
 | Criterion | 3 means | 2 | 1 |
 | --- | --- | --- | --- |
 | Fidelity | Says exactly what the source says: every node, edge, direction, label and value; nothing invented or dropped; discrete things drawn discrete; real scales | A simplification the text does not mention | A wrong, invented or dropped element; a misleading scale |
-| Form | The block fits the idea, as in prepare-study's [representation table](../../prepare-study/references/review.md#choose-the-representation) | A workable but weaker form, such as a table for a decision tree | A form that hides the idea, such as a chain for a network |
+| Form | The kind of block fits the idea, as in prepare-study's [representation table](../../prepare-study/references/review.md#choose-the-representation); how it is arranged is Layout | A workable but weaker form, such as a table for a decision tree | A form that hides the idea, such as numbered steps for a network |
 | Layout | Reading order kept; main path straight; meaningful positions (map, timeline, ring) kept; no crossing or bend the structure does not force | One avoidable crossing, bend or detour | The structure cannot be followed |
 | Legibility | Every label beside its own mark and clear of the others; text at least 12 px on a phone; the drawing fits the phone column, or scrolls only because it cannot be narrower | A phone scroll the content could avoid; crowded labels | A hard-gate finding |
-| Focus | One message; the caption states it; colour and frames mark only what the caption discusses | Two messages, or a caption that describes the picture instead of its point | No visible message |
+| Focus | One message; a picture's caption states it, a table of cases may name what it lists; colour and frames mark only what the caption discusses | Two messages, a picture whose caption names it or explains its symbols instead of its point, or a caption whose point the picture does not show | No visible message |
 | Convention | The notation's rules: UML arrowheads, multiplicities and compartments; flowchart decisions as questions with labelled exits; a probability mass function as stems; a log axis labelled with real values; axis titles with units | One rule broken without changing what the picture says | A rule broken so the picture says something else |
 
 ## Calibrate
@@ -47,9 +49,10 @@ Representation score never exceeds its weakest visual.
 `tum-mcp study visuals PROJECT --gallery` draws the [calibration gallery](visual-gallery.json)
 with this app at both widths, each picture captioned with its key only. Most verdicts come
 from the course owner's own review; the rest follow a rule from prepare-study's guides, and
-each entry says which. Score three pictures before opening the file, then compare. A
-disagreement means you misread a criterion: re-read its row and the gallery's reasons. Use
-the gallery's 1s and 3s as anchors while scoring.
+each entry says which. Score three pictures before opening the file, then compare your
+score on the criterion each verdict names. A disagreement means you misread a criterion:
+re-read its row and the gallery's reasons. Use the gallery's 1s and 3s as anchors while
+scoring.
 
 ## Improve
 

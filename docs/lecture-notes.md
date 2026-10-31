@@ -1,4 +1,4 @@
-# Lecture Notes
+# Lecture
 
 Install the optional extension only when needed:
 
@@ -13,14 +13,14 @@ tools. Base setup keeps its five skills and existing services. Removing the opti
 with `tum-mcp uninstall lecture` preserves course notes, evidence, sessions,
 model caches and customizations. Reinstalling can reuse them.
 
-Ask: “Prepare Lecture Notes from this recording and these slides, focusing on
-what the professor explains beyond the material.” It adds Lecture Notes to the
+Ask: “Prepare Lecture from this recording and these slides, focusing on
+what the professor explains beyond the material.” It adds Lecture to the
 same course app, alongside Study and Exercises. Notes have coherent explanations,
 examples, important qualifications, formulas and selective source images. The
 sources of each passage and figure open the recording at the measured time, so the
 text carries no timestamps, and the Contents button lists the lecture's sections. Attribution
 review stays private, so the reading flow is clean.
-Lecture Notes has no quizzes or flashcards; broader teaching/practice stays in Study.
+Lecture has no quizzes or flashcards; broader teaching/practice stays in Study.
 
 ## Processing order and cost
 
@@ -136,12 +136,13 @@ receipt/image updates. Local comments support `--view lectures --lecture KEY`.
 
 Open with `tum-mcp study` from the course folder. For a credential-free synthetic
 preview after installing the extension, use `tum-mcp study demo PROJECT --lectures`.
-The default demo still has only Study and Exercises. Synthetic teaching/timestamps
+The default demo includes Study, Exercises and Exam. The Lecture option
+adds a synthetic recording, source image and nested heading examples. Synthetic teaching/timestamps
 exercise the product and do not establish real lecture accuracy.
 
 ## Publication
 
-Lecture Notes is excluded from publication by default, including old saved
+Lecture is excluded from publication by default, including old saved
 configurations. After reviewing public exposure, use the existing publish-course
 workflow with `--include-lectures`; Exercises has a separate choice. Exclusion
 removes lecture text, lecture-only sources/math and referenced images from exports,

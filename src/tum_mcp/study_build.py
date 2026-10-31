@@ -26,6 +26,7 @@ from tum_mcp.lecture_content import LectureContent
 from tum_mcp.lecture_data import read_lectures, render_lectures, stale_lectures
 from tum_mcp.settings import Frozen
 from tum_mcp.study_content import (
+    ExploreMaterial,
     StudyContent,
     Unit,
     compile_formulas,
@@ -52,6 +53,7 @@ TEMPLATE_FILES = (
     "index.html",
     "styles.css",
     "app.mjs",
+    "explore.mjs",
     "start.mjs",
     "exercises.mjs",
     "lectures.mjs",
@@ -143,7 +145,7 @@ def stale_units(root: Path, state: StudyState, content: StudyContent) -> tuple[s
     resources = {item.resource.key: item for item in state.resources}
     stale: list[str] = []
     for unit in content.units:
-        for source in unit.sources:
+        for source in (*unit.sources, *(s for item in unit.explore for s in item.sources)):
             current = resources.get(source.key)
             if current is None or current.status != "current" or current.sha256 != source.sha256:
                 stale.append(unit.key)
@@ -157,7 +159,14 @@ def stale_units(root: Path, state: StudyState, content: StudyContent) -> tuple[s
 
 
 def unit_revision(unit: Unit) -> str:
-    return digest(unit.model_dump_json(exclude={"path", "lectures"}, exclude_none=True).encode())
+    return digest(
+        unit.model_dump_json(exclude={"path", "lectures", "explore"}, exclude_none=True).encode()
+    )
+
+
+def explore_revision(material: ExploreMaterial) -> str:
+    """Full optional passage identity, independent of core practice progress."""
+    return digest(material.model_dump_json().encode())
 
 
 def _app_data(
@@ -172,10 +181,16 @@ def _app_data(
     for unit in content.units if content else ():
         value = compile_formulas(unit.model_dump(mode="json", exclude_none=True))
         value["revision"] = unit_revision(unit)
+        for item, rendered in zip(unit.explore, value.get("explore", []), strict=True):
+            rendered["revision"] = explore_revision(item)
         units.append(value)
     referenced = (
         {source.key for unit in content.units for source in unit.sources} if content else set()
     )
+    if content:
+        referenced.update(
+            source.key for unit in content.units for item in unit.explore for source in item.sources
+        )
     if exercises:
         referenced.update(
             source.key
@@ -228,10 +243,13 @@ def _app_data(
         "incompleteSources": sum(item.status != "complete" for item in state.coverage),
     }
     payload["workspaces"] = (["study"] if content else []) + (["exercises"] if exercises else [])
-    if root is not None and exercises:
-        from tum_mcp.study_coverage import pending_exercises, read_ledger
+    if root is not None:
+        from tum_mcp.study_coverage import pending_exercises, read_ledger, study_preparation
 
-        payload["pending"] = pending_exercises(read_ledger(root), state, exercises)
+        ledger = read_ledger(root)
+        payload["studyPreparation"] = {"pending": study_preparation(state, ledger)["pending"]}
+        if exercises:
+            payload["pending"] = pending_exercises(ledger, state, exercises)
     if lectures:
         if root is None:
             raise CampusError(Code.ACTION_REQUIRED, "Lecture projection needs its bound project.")
@@ -386,15 +404,22 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             if content and (missing := {k for u in content.units for k in u.lectures} - known):
                 raise CampusError(
                     Code.INVALID_RESPONSE,
-                    "Study links to unknown Lecture Notes: " + ", ".join(sorted(missing)),
+                    "Study links to unknown Lecture: " + ", ".join(sorted(missing)),
                 )
         if exam:
             stale += stale_exam(root, state, exam)
             check_unit_links(exam, content)
         from tum_mcp.study_coverage import check_ledger, read_ledger
 
-        if ledger := read_ledger(root):
+        ledger = read_ledger(root)
+        if ledger is not None:
             check_ledger(ledger, state, content, exercises)
+        elif content and any(unit.explore for unit in content.units):
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                "Record Explore classification in coverage.json before building. "
+                "See study schema coverage.",
+            )
         if stale:
             raise CampusError(
                 Code.STALE_RESULT, "Refresh content for changed source units: " + ", ".join(stale)

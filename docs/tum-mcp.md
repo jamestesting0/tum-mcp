@@ -214,7 +214,7 @@ in JSON for troubleshooting. Default diagnostics do not create state folders.
 uses read-only local status to initialize an explicitly chosen available course or
 reconcile an existing project. Incomplete state is preserved for recovery.
 `prepare-study` authors lessons; `prepare-exercises` authors guided released sheets
-and `prepare-exams` builds a local Exam Prep workspace in the same app. See the
+and `prepare-exams` builds a local Exam workspace in the same app. See the
 [study guide](study.md) for examples, state structure and helper commands.
 
 One project holds one course. Source revisions, coverage and course knowledge

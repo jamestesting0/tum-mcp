@@ -24,6 +24,9 @@ Record the course's actual structure, in these sections as needed:
 - Assessment: format, registration/eligibility, required versus optional work, pass
   conditions, bonus threshold/cap/conditions and effect on the grade. Never assume a
   bonus exists. Preserve distinctions such as “60% of sheets” versus “60% of points”.
+- Conventions: textbook and edition, notation, terminology and the answer format the
+  course expects, so explanations and practice match lectures and exams. Add them as
+  sources confirm them; the agent guide in AGENTS.md tells other workflows to do the same.
 - Staff/office hours and announcement/help channels. Identify the authoritative
   source for each kind of rule. A student message does not establish an official rule.
 - Preparation map: which material groups feed Study, Exercises and exam preparation;

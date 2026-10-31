@@ -14,7 +14,13 @@ Choose the demand that fits the goal:
 | Reverse or premise | Infer a missing input or explain which assumption a claim needs |
 | Changed case | Adapt reasoning when a meaningful condition or representation changes |
 
-Changing names or numbers while naming the same method does not establish transfer.
+Ask only what the lesson teaches: every term, rule and fact a card or question needs
+appears in the lesson's blocks first. A card whose answer lives only in the source
+teaches the source, not the lesson; add the idea to the lesson or drop the card.
+
+Never re-ask a case the lesson works: a question with the worked example's numbers
+checks recall of that example, not the method. Changing names or numbers while naming
+the same method does not establish transfer either.
 A useful progression might pair a trace with a choice of method and a changed
 assumption. Keep only the members that teach or test different decisions.
 

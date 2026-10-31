@@ -6,7 +6,7 @@ whole-course request is judged against the sources' own outcomes, not against un
 
 import datetime
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, assert_never
 
 from pydantic import Field, JsonValue, ValidationError, model_validator
 
@@ -32,6 +32,16 @@ class SourceStatus(Frozen):
     checked_at: datetime.date
 
 
+class EnrichmentClassification(Frozen):
+    basis: Literal["source_optional", "reviewed_enrichment"]
+    reason: Text
+
+
+class ExploreRef(Frozen):
+    unit: Key
+    item: Key
+
+
 class Outcome(Frozen):
     """One learning outcome the source states, and where Study teaches and practises it."""
 
@@ -41,11 +51,39 @@ class Outcome(Frozen):
     status: Literal["covered", "partial", "gap", "out_of_scope"]
     units: tuple[Key, ...] = Field(default=(), max_length=10)
     note: Text | None = None
+    role: Literal["core", "enrichment"] = Field(
+        default="core", exclude_if=lambda value: value == "core"
+    )
+    classification: EnrichmentClassification | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    explore: tuple[ExploreRef, ...] = Field(
+        default=(), max_length=10, exclude_if=lambda value: not value
+    )
 
     @model_validator(mode="after")
     def taught(self) -> "Outcome":
-        if self.status in {"covered", "partial"} and not self.units:
-            raise ValueError("A covered or partial outcome names the units that teach it.")
+        match self.role:
+            case "core":
+                if self.explore or self.classification is not None:
+                    raise ValueError(
+                        "Core outcomes use unit references, not Explore classification."
+                    )
+                if self.status in {"covered", "partial"} and not self.units:
+                    raise ValueError("A covered or partial outcome names the units that teach it.")
+            case "enrichment":
+                if self.classification is None or self.units:
+                    raise ValueError(
+                        "Enrichment needs a classification and no core unit references."
+                    )
+                if (self.status in {"covered", "partial"}) != bool(self.explore):
+                    raise ValueError(
+                        "Covered or partial enrichment names its prepared Explore items."
+                    )
+                if len(set(self.explore)) != len(self.explore):
+                    raise ValueError("Explore references must be distinct.")
+            case unreachable:
+                assert_never(unreachable)
         if self.status in {"gap", "out_of_scope"} and not self.note:
             raise ValueError("A gap or out-of-scope outcome says why.")
         return self
@@ -71,6 +109,16 @@ class SourceCoverage(Frozen):
     status: SourceStatus
     outcomes: tuple[Outcome, ...] = Field(default=(), max_length=60)
     items: tuple[Item, ...] = Field(default=(), max_length=100)
+
+    @model_validator(mode="after")
+    def enrichment_keys(self) -> "SourceCoverage":
+        for outcome in self.outcomes:
+            if (
+                outcome.role == "enrichment"
+                and sum(other.key == outcome.key for other in self.outcomes) != 1
+            ):
+                raise ValueError("Enrichment outcome keys must be distinct within a source.")
+        return self
 
 
 class CoverageLedger(Frozen):
@@ -115,6 +163,12 @@ def check_ledger(
         raise CampusError(Code.SCOPE_DENIED, "The coverage ledger belongs to another course.")
     resources = {item.resource.key for item in state.resources}
     units = {unit.key for unit in content.units} if content else set()
+    explore = (
+        {(unit.key, item.key): item for unit in content.units for item in unit.explore}
+        if content
+        else {}
+    )
+    classified: set[tuple[str, str]] = set()
     prepared = {e.key for group in exercises.sets for e in group.exercises} if exercises else set()
     for entry in ledger.sources:
         if entry.source not in resources:
@@ -127,12 +181,27 @@ def check_ledger(
                     Code.INVALID_RESPONSE,
                     f"Outcome {outcome.key} names units Study does not have: {sorted(missing)}.",
                 )
+            for reference in outcome.explore:
+                target = (reference.unit, reference.item)
+                material = explore.get(target)
+                if material is None or entry.source not in {s.key for s in material.sources}:
+                    raise CampusError(
+                        Code.INVALID_RESPONSE,
+                        f"Enrichment {outcome.key} must reference an existing Explore item "
+                        "citing its source.",
+                    )
+                classified.add(target)
         for item in entry.items:
             if item.exercise and item.exercise not in prepared:
                 raise CampusError(
                     Code.INVALID_RESPONSE,
                     f"Item {item.label} names exercise {item.exercise}, which is not prepared.",
                 )
+    if missing := set(explore) - classified:
+        raise CampusError(
+            Code.INVALID_RESPONSE,
+            f"Explore items need covered or partial enrichment classification: {sorted(missing)}.",
+        )
 
 
 def pending_exercises(
@@ -158,6 +227,39 @@ def pending_exercises(
     return result
 
 
+def study_preparation(state: StudyState, ledger: CoverageLedger | None) -> dict[str, JsonValue]:
+    """Authoring preparation states; the learner app projects only known core gaps."""
+    recorded = {entry.source: entry for entry in ledger.sources} if ledger else {}
+    pending: list[JsonValue] = []
+    enrichment: list[JsonValue] = []
+    unrecorded: list[JsonValue] = []
+    for resource in state.resources:
+        if resource.status != "current" or resource.resource.kind != "content":
+            continue
+        key, title = resource.resource.key, resource.resource.title
+        entry = recorded.get(key)
+        if entry is None or (not entry.outcomes and not entry.items):
+            unrecorded.append({"source": key, "title": title})
+            continue
+        for role, target in (("core", pending), ("enrichment", enrichment)):
+            outcomes: list[JsonValue] = [
+                {
+                    "key": outcome.key,
+                    "text": outcome.text,
+                    "status": outcome.status,
+                    "locator": outcome.locator,
+                }
+                for outcome in entry.outcomes
+                if outcome.role == role and outcome.status in {"gap", "partial"}
+            ]
+            if outcomes:
+                target.append({"source": key, "title": title, "outcomes": outcomes})
+    result = {"pending": pending, "unrecorded": unrecorded}
+    if enrichment:
+        result["enrichmentPending"] = enrichment
+    return result
+
+
 def coverage_report(
     state: StudyState,
     content: StudyContent | None,
@@ -173,7 +275,7 @@ def coverage_report(
         for item in current
         if item.resource.kind in {"content", "exercise"} and item.resource.key not in recorded
     ]
-    outcomes = [
+    gaps = [
         {
             "source": entry.source,
             "outcome": outcome.key,
@@ -181,10 +283,17 @@ def coverage_report(
             "status": outcome.status,
             "locator": outcome.locator,
             **({"note": outcome.note} if outcome.note else {}),
+            "role": outcome.role,
         }
         for entry in recorded.values()
         for outcome in entry.outcomes
         if outcome.status in {"gap", "partial"}
+    ]
+    outcomes = [
+        {k: v for k, v in gap.items() if k != "role"} for gap in gaps if gap["role"] == "core"
+    ]
+    enrichment = [
+        {k: v for k, v in gap.items() if k != "role"} for gap in gaps if gap["role"] == "enrichment"
     ]
     sources_without_outcomes = [
         key
@@ -207,12 +316,15 @@ def coverage_report(
     unlinked_units = sorted(
         taught - {key for e in recorded.values() for o in e.outcomes for key in o.units}
     )
-    complete = not (uninspected or outcomes or sources_without_outcomes or items)
+    core_complete = not (uninspected or outcomes or sources_without_outcomes or items)
     return {
         "ledger": ledger is not None,
-        "complete": complete,
+        "study_preparation": study_preparation(state, ledger),
+        "complete": core_complete and not enrichment,
+        "core_complete": core_complete,
         "not_inspected": uninspected,
         "outcome_gaps": outcomes,
+        "enrichment_gaps": enrichment,
         "sources_without_outcomes": sources_without_outcomes,
         "unprepared_items": items,
         "other_semester": other_semester,

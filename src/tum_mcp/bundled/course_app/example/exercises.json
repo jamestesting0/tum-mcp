@@ -27,8 +27,38 @@
                 "Component template preview. These snippets and questions demonstrate reusable UI components; they are not necessarily good examples of teaching or question design. Author actual courses from reviewed sources.",
                 "Inspect the response controls below; each step showcases one component with minimal placeholder content."
               ]
+            },
+            {
+              "kind": "text",
+              "key": "numbers",
+              "title": "Numbers and choices",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "Calculate \\(2+2\\), justify the result and compare the numerical and mathematical representations."
+              ]
+            },
+            {
+              "kind": "text",
+              "key": "code-and-diagrams",
+              "title": "Code and diagrams",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "Implement addition, construct the directed path from A to C and plot \\(y=x+1\\) at the supplied positions."
+              ]
             }
           ],
+          "parts": [
+            "Numbers and choices",
+            "Code and diagrams"
+          ],
+          "part_blocks": {
+            "Numbers and choices": "numbers",
+            "Code and diagrams": "code-and-diagrams"
+          },
           "objectives": [
             "Inspect optional exercise guidance."
           ],
@@ -42,6 +72,7 @@
           "steps": [
             {
               "key": "number",
+              "part": "Numbers and choices",
               "purpose": "Demonstrate finite decimal input.",
               "prompt": "Work out 2 + 2.",
               "check": {
@@ -56,6 +87,7 @@
             },
             {
               "key": "choice",
+              "part": "Numbers and choices",
               "purpose": "Demonstrate four-option feedback.",
               "prompt": "Select 2 + 2.",
               "check": {
@@ -89,6 +121,7 @@
             },
             {
               "key": "paper",
+              "part": "Numbers and choices",
               "purpose": "Demonstrate optional open-response comparison.",
               "prompt": "Explain the sum on paper.",
               "check": {
@@ -115,6 +148,7 @@
             },
             {
               "key": "table",
+              "part": "Numbers and choices",
               "purpose": "Show editable cells with row/column labels.",
               "prompt": "Complete the small table.",
               "check": {
@@ -147,6 +181,7 @@
             },
             {
               "key": "math",
+              "part": "Numbers and choices",
               "purpose": "Show long mathematical working without automatic grading.",
               "prompt": "Write a short derivation on paper.",
               "blocks": [
@@ -192,6 +227,7 @@
             },
             {
               "key": "code",
+              "part": "Code and diagrams",
               "purpose": "Show a saved code response and prepared rubric.",
               "prompt": "Write a function returning the sum of two inputs.",
               "check": {
@@ -210,6 +246,7 @@
             },
             {
               "key": "graph",
+              "part": "Code and diagrams",
               "purpose": "Show an ordered graph response.",
               "prompt": "Build the directed path from A to C.",
               "check": {
@@ -278,6 +315,7 @@
             },
             {
               "key": "plot",
+              "part": "Code and diagrams",
               "purpose": "Demonstrate plotting and coordinate editing.",
               "prompt": "Plot \\(y = x + 1\\) at the three x positions.",
               "check": {
@@ -334,7 +372,7 @@
                 ]
               },
               {
-                "label": "Code",
+              "label": "Code and diagrams",
                 "blocks": [
                   {
                     "kind": "code",

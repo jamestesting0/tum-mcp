@@ -18,6 +18,7 @@ from tum_mcp.study_content import (
     SourceVersion,
     Text,
     check_code_refs,
+    check_heading_levels,
     check_target_file,
     has_visual,
     project_files,
@@ -28,6 +29,8 @@ from tum_mcp.study_store import digest
 
 class GuidanceStep(Frozen):
     key: Key
+    # The original part this step guides, so each part of a multi-part problem gets its own guide.
+    part: Text | None = None
     purpose: Text
     prompt: Text
     sources: tuple[Key, ...] = Field(default=(), max_length=30)
@@ -86,6 +89,10 @@ class Exercise(Frozen):
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=30)
     statement: tuple[Block, ...] = Field(min_length=1, max_length=40)
     parts: tuple[Text, ...] = Field(default=(), max_length=50)
+    # Each part starts at this keyed heading and keeps the context nested beneath it.
+    part_blocks: dict[Text, Key] = Field(
+        default_factory=dict, max_length=50, exclude_if=lambda value: not value
+    )
     objectives: tuple[Text, ...] = Field(min_length=1, max_length=12)
     prerequisites: tuple[Prerequisite, ...] = Field(default=(), max_length=10)
     steps: tuple[GuidanceStep, ...] = Field(min_length=1, max_length=50)
@@ -110,9 +117,34 @@ class Exercise(Frozen):
                 raise ValueError("Exercise content cites an undeclared source.")
         if self.parts and len(self.solution.answers) != len(self.parts):
             raise ValueError("Give one solution answer for each original part, in order.")
+        guided = [step.part for step in self.steps]
+        if any(guided):
+            if not all(guided) or set(guided) != set(self.parts):
+                raise ValueError(
+                    "With parts, every step names its part and every part has a guide."
+                )
+            runs = [
+                part for index, part in enumerate(guided) if index == 0 or guided[index - 1] != part
+            ]
+            if runs != [part for part in self.parts if part in runs] or len(runs) != len(set(runs)):
+                raise ValueError("Group each part's steps together, in the order of the parts.")
+        for blocks in (self.statement, self.solution.notes, *(step.blocks for step in self.steps)):
+            check_heading_levels(blocks)
         keys = [block.key for block in self.statement if block.key]
         if len(set(keys)) != len(keys):
             raise ValueError("Block keys must be unique within an exercise.")
+        if any(guided) or self.part_blocks:
+            if not all(guided) or set(self.part_blocks) != set(self.parts):
+                raise ValueError("Each guided part needs its statement block in part_blocks.")
+            blocks = {block.key: (index, block) for index, block in enumerate(self.statement)}
+            if any(key not in blocks for key in self.part_blocks.values()):
+                raise ValueError("Part guides must point to existing statement block keys.")
+            starts = [blocks[self.part_blocks[part]] for part in self.parts]
+            positions = [index for index, _ in starts]
+            if positions != sorted(set(positions)):
+                raise ValueError("Part statement blocks must be distinct and in part order.")
+            if any(not block.title or block.kind == "definition" for _, block in starts):
+                raise ValueError("Each part starts with a titled statement block.")
         for step in self.steps:
             answer = (
                 step.check.model_answer if step.check and step.check.kind == "self_check" else ()

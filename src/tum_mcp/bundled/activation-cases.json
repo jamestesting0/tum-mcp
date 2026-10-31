@@ -954,7 +954,7 @@
   {
     "id": "prepare-lecture-02",
     "target_skill": "prepare-lecture",
-    "prompt": "Update the Lecture Notes workspace using the cached transcript and course slides.",
+    "prompt": "Update the Lecture workspace using the cached transcript and course slides.",
     "context": "lecture_extension_installed_bound_course",
     "partition": "held_out",
     "expected_skill": "prepare-lecture"
@@ -1010,7 +1010,7 @@
   {
     "id": "prepare-lecture-09",
     "target_skill": "prepare-lecture",
-    "prompt": "I left comments on two passages in Lecture Notes. Correct those notes and verify their timestamps.",
+    "prompt": "I left comments on two passages in Lecture. Correct those notes and verify their timestamps.",
     "context": "lecture_extension_installed_bound_course",
     "partition": "development",
     "expected_skill": "prepare-lecture"
@@ -1018,7 +1018,7 @@
   {
     "id": "prepare-lecture-10",
     "target_skill": "prepare-lecture",
-    "prompt": "Use the offline prepared transcript to add the professor’s limiting conditions to my Lecture Notes; keep Study as it is.",
+    "prompt": "Use the offline prepared transcript to add the professor’s limiting conditions to my Lecture; keep Study as it is.",
     "context": "lecture_extension_installed_bound_course",
     "partition": "held_out",
     "expected_skill": "prepare-lecture"

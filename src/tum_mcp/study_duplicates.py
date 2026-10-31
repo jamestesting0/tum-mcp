@@ -63,7 +63,7 @@ def exact_groups(state: StudyState) -> tuple[ExactGroup, ...]:
     return tuple(groups)
 
 
-def _sketch(text: str) -> frozenset[int] | None:
+def sketch(text: str) -> frozenset[int] | None:
     """Bottom-k sketch: the SKETCH smallest shingle hashes estimate Jaccard similarity."""
     words = re.findall(r"[^\W_]+", text.casefold())
     shingles = {" ".join(words[i : i + SHINGLE]) for i in range(len(words) - SHINGLE + 1)}
@@ -76,7 +76,7 @@ def _sketch(text: str) -> frozenset[int] | None:
     return frozenset(heapq.nsmallest(SKETCH, hashes))
 
 
-def _similarity(left: frozenset[int], right: frozenset[int]) -> float:
+def similarity(left: frozenset[int], right: frozenset[int]) -> float:
     union = heapq.nsmallest(SKETCH, left | right)
     return sum(value in left and value in right for value in union) / len(union)
 
@@ -100,7 +100,7 @@ def near_candidates(
         except CampusError:
             unreadable.append(item.resource.key)
             continue
-        signature = _sketch(" ".join(page.text for page in record.pages))
+        signature = sketch(" ".join(page.text for page in record.pages))
         if signature is None:
             needs_visual.append(item.resource.key)
             continue
@@ -112,7 +112,7 @@ def near_candidates(
         for index, left in enumerate(keys)
         for right in keys[index + 1 :]
         if (left, right) not in same
-        and (value := _similarity(signatures[left], signatures[right])) >= NEAR_THRESHOLD
+        and (value := similarity(signatures[left], signatures[right])) >= NEAR_THRESHOLD
     ]
     pairs.sort(key=lambda pair: (-pair.similarity, pair.left, pair.right))
     return DuplicateReport(

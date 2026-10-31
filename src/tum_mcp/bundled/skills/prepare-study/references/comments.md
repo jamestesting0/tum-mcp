@@ -6,14 +6,16 @@ preserve notes, unrelated teaching, unit IDs and customized templates.
 
 1. Run `tum-mcp study comments list PROJECT` once. It returns open notes, quoted
    passages, section/unit IDs, original unit revisions and a concurrency token.
-   Use `--unit KEY` for a named topic and `--view content|flashcards|practice` for
+   Use `--unit KEY` for a named topic and `--view content|flashcards|practice|explore` for
    a specified activity. Follow `next_offset` with `--offset N` only
    when the request needs more notes; default pages contain at most 20. Use
    `--status all` only when resolved history is relevant.
 2. Group requested notes by original unit, view and issue. Content notes identify
    a section; card/practice notes identify an item key and field (face, prompt,
    option or feedback), including in combined revision. Inspect those content.json
-   objects and their local cited material once. For `content_changed`
+   objects and their local cited material once. Explore notes identify a unit, item
+   and keyed section with their own `semantic_revision`; inspect that item's declared
+   sources. Never move notes across core/Explore or similarly worded optional items. For `content_changed`
    or `missing_unit`, compare the original quote with current teaching; never
    assume a positional match. Fetch only missing relevant source content through
    read-content. An annotation does not justify a full upstream refresh.

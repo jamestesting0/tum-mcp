@@ -95,15 +95,16 @@ def status(project: Path) -> None:
 
 @app.command()
 def upgrade(project: Path) -> None:
-    """Move legacy private course state/docs to .tum-mcp without changing the website."""
+    """Move legacy state to .tum-mcp and refresh the AGENTS.md guide; the website is kept."""
     from tum_mcp.study_store import private_folder, upgrade_private
 
     root = project.expanduser().resolve()
-    upgrade_private(root)
+    refreshed = upgrade_private(root)
     typer.echo(
         json.dumps(
             {
                 "private_folder": private_folder(root),
+                "agent_guide": "refreshed" if refreshed else "current",
                 "preserved": "state, comments, publication settings and user files",
             }
         )
@@ -168,7 +169,7 @@ def exam_report_command(
         typer.Option(help="Only this part; duplicates also compares exam and exercise text."),
     ] = None,
 ) -> None:
-    """Report Exam Prep statistics, blueprint, review items, targets and stale items as JSON."""
+    """Report Exam statistics, blueprint, review items, targets and stale items as JSON."""
     from tum_mcp.exam_data import exam_report, read_exam, stale_exam
     from tum_mcp.study_duplicates import exact_groups, near_candidates
     from tum_mcp.study_store import load_state
@@ -205,29 +206,39 @@ def exam_report_command(
 def report(
     project: Path,
     section: Annotated[
-        Literal["quality", "coverage", "review", "render"] | None,
+        Literal["quality", "structure", "coverage", "review", "render"] | None,
         typer.Option(help="Only this part."),
     ] = None,
 ) -> None:
-    """Report review flags, uncovered sources, the review scorecard and the render check."""
+    """Report review flags, the course map, uncovered sources, scorecard and render check."""
+    from functools import cache
+
     from tum_mcp.exam_data import read_exam
     from tum_mcp.exercise_data import read_exercises
+    from tum_mcp.lecture_data import read_lectures
     from tum_mcp.study_build import read_content
     from tum_mcp.study_coverage import coverage_report, read_ledger
     from tum_mcp.study_report import quality_flags
     from tum_mcp.study_review import read_scorecard, review_report
     from tum_mcp.study_store import load_state
+    from tum_mcp.study_structure import course_map
     from tum_mcp.study_visuals import render_report
 
     root = project.expanduser().resolve()
     state = load_state(root)
     content = read_content(root) if app_path(root, "content.json").is_file() else None
     exercises = read_exercises(root)
+    exam = cache(lambda: read_exam(root))
+    lectures = cache(lambda: read_lectures(root))
+    ledger = cache(lambda: read_ledger(root))
     parts = {
         "quality": lambda: quality_flags(content, exercises),
-        "coverage": lambda: coverage_report(state, content, exercises, read_ledger(root)),
-        "review": lambda: review_report(state, content, exercises, read_scorecard(root)),
-        "render": lambda: render_report(root, content, exercises, read_exam(root)),
+        "structure": lambda: course_map(content, exercises, exam(), lectures(), ledger=ledger()),
+        "coverage": lambda: coverage_report(state, content, exercises, ledger()),
+        "review": lambda: review_report(
+            state, content, exercises, read_scorecard(root), exam(), lectures(), ledger=ledger()
+        ),
+        "render": lambda: render_report(root, content, exercises, exam()),
     }
     result = {name: build() for name, build in parts.items() if section in {None, name}}
     typer.echo(json.dumps(result, indent=2, ensure_ascii=False))
@@ -270,11 +281,42 @@ def text(
     project: Path,
     key: Annotated[str, typer.Option(help="Inventory resource key.")],
     pages: Annotated[str | None, typer.Option(help="Page N or FIRST-LAST.")] = None,
+    images: Annotated[
+        bool, typer.Option(help="Also render each page to a PNG to look at (12 pages at most).")
+    ] = False,
 ) -> None:
     """Print a stored material's page text, extracted once per content hash."""
-    from tum_mcp.study_text import document_text, text_view
+    from tum_mcp.study_store import load_state
+    from tum_mcp.study_text import document_text, page_images, text_view
 
-    typer.echo(json.dumps(text_view(document_text(project, key), key, pages), indent=2))
+    root = project.expanduser().resolve()
+    state = load_state(root)
+    view = text_view(document_text(root, key, state), key, pages)
+    view["path"] = next(item.path for item in state.resources if item.resource.key == key)
+    if images:
+        rendered = page_images(root, key, [page["number"] for page in view["pages"]], state)
+        for page in view["pages"]:
+            page["image"] = rendered[page["number"]]
+    typer.echo(json.dumps(view, indent=2))
+
+
+@app.command()
+def find(
+    project: Path,
+    query: Annotated[
+        str | None, typer.Argument(help="Words that must all appear on one page.")
+    ] = None,
+    kind: Annotated[
+        Literal["exam", "content", "exercise", "other"] | None,
+        typer.Option(help="Only this material folder."),
+    ] = None,
+    limit: Annotated[int, typer.Option(min=1, max=100, help="Most pages to list.")] = 10,
+) -> None:
+    """List stored sources, or find the pages that contain every query word."""
+    from tum_mcp.study_text import find_sources
+
+    result = find_sources(project, query, kind, limit)
+    typer.echo(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 @app.command()
@@ -344,7 +386,7 @@ def visuals(
     exercise: Annotated[
         list[str] | None, typer.Option(help="Only this exercise, as SET/KEY; repeatable.")
     ] = None,
-    exam: Annotated[bool, typer.Option("--exam", help="Only the Exam Prep visuals.")] = False,
+    exam: Annotated[bool, typer.Option("--exam", help="Only the Exam visuals.")] = False,
     gallery: Annotated[
         bool, typer.Option("--gallery", help="Draw review-course's calibration gallery instead.")
     ] = False,
@@ -371,7 +413,7 @@ def demo(
     project: Path,
     lectures: Annotated[
         bool,
-        typer.Option("--lectures", help="Include the optional synthetic Lecture Notes preview."),
+        typer.Option("--lectures", help="Include the optional synthetic Lecture preview."),
     ] = False,
     videos: Annotated[
         bool,
@@ -380,7 +422,7 @@ def demo(
 ) -> None:
     """Create a minimal component-template preview, not a teaching example."""
     from tum_mcp.study_build import build as build_site
-    from tum_mcp.study_store import Write, apply, read_bytes
+    from tum_mcp.study_store import Write, apply, private_name, private_path, read_bytes
     from tum_mcp.study_sync import read_snapshot, sync
 
     if lectures:
@@ -405,9 +447,13 @@ def demo(
         if before is not None and before != desired:
             raise CampusError(Code.WORKSPACE_CONFLICT, "Existing edited content was preserved.")
         writes.append(Write(f"{app_folder(root)}/{name}", before, desired))
+    desired = (example / "coverage.json").read_bytes()
+    before = read_bytes(private_path(root, "coverage.json"))
+    if before is not None and before != desired:
+        raise CampusError(Code.WORKSPACE_CONFLICT, "Existing edited coverage was preserved.")
+    writes.append(Write(private_name(root, "coverage.json"), before, desired))
     if lectures:
         from tum_mcp.lecture_content import LectureContent
-        from tum_mcp.study_store import private_name, private_path
 
         notes = LectureContent.model_validate_json((example / "lectures.json").read_bytes())
         for lecture in notes.lectures:

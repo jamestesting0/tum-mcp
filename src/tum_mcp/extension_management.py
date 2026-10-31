@@ -26,7 +26,7 @@ class ExtensionName(StrEnum):
 
 EXTENSIONS = tuple(ExtensionName)
 LABELS = {
-    "lecture": "Lecture Notes",
+    "lecture": "Lecture",
     "audio-notes": "Audio Notes",
     "video-notes": "Video Notes",
 }

@@ -143,7 +143,7 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/client_*.py` | Host-specific configuration and managed skill installation |
 | `src/tum_mcp/study_*.py` | Course snapshots, teaching, build, preview and project-local passage comments |
 | `src/tum_mcp/bundled/skills/` | Canonical versioned source of reading, study, audio and video skills and their references/assets |
-| `src/tum_mcp/exam_*.py` | Exam Prep contracts, derived statistics, report and map layout; never published |
+| `src/tum_mcp/exam_*.py` | Exam contracts, derived statistics, report and map layout; never published |
 | `src/tum_mcp/study_text.py`, `study_import.py`, `study_duplicates.py` | Page-text cache, private local imports and cross-provider duplicate reports |
 | `src/tum_mcp/video_*.py`, `bundled/video_runtime/` | Video Notes contracts, lint, media checks, orchestration and the isolated render worker |
 | `npm/` | Private-runtime installation, updates, integrity and cleanup |
@@ -174,7 +174,11 @@ regressions. The preparation skills describe content and point to the app instea
 of restating its styling, so app changes need no skill edits unless an authored field
 or its meaning changes. Remove a template file by moving it to
 `RETIRED_TEMPLATE_FILES`: builds then delete unedited copies and publication removes
-them from managed sites. The shipped component preview is deliberately minimal;
+them from managed sites. The shipped component preview demonstrates the three
+heading levels, untitled continuations and guides placed beneath their own exercise
+parts using validated `part_blocks` anchors. Include the optional Lecture
+workspace with `tum-mcp study demo PROJECT --lectures` after selecting the Lecture
+extension. The preview remains deliberately minimal;
 richer learning pilots live in `tests/fixtures/course_app/`. Local agent notes and
 screenshots belong in ignored `docs/local/` or `.omo/`. Keep real course projects,
 session files, databases, downloads and environment files out of artifacts.
@@ -218,3 +222,20 @@ unmeasured until genuine fresh-session trial records exist. Default tests use
 synthetic media and course data. `test:consumer` and `test:upgrade` exercise optional
 install/update/export/removal from an actual local npm artifact. Never publish or
 stage npm as a test.
+
+## Explore maintenance boundary
+
+`ExploreMaterial` uses existing safe blocks and its own versioned sources. Empty
+`Unit.explore` is omitted for legacy serialization; `unit_revision` excludes it to
+preserve core progress. Full teaching/render reviews include it. The private ledger
+records source-backed enrichment classification and separate pending work; classification
+changes invalidate course-review structure identity. Default global definitions,
+prerequisite maps, Revision and audio/video inputs stay core-only.
+
+`explore.mjs` is a packaged template asset. Routes, tab sets, reading outlines and
+comments must be checked with and without optional items. Explore anchors use comment
+schema v4 without rewriting legacy files on read. Keep export source/asset closure
+complete while removing private paths and classification reasons. Extend the existing
+installed browser journey, rather than adding a platform matrix. Focused regressions
+live in `test_study_explore.py` and `test_study_explore_browser.py`; run them plus affected
+study/course-app/exercise tests and installation/migration checks for integration.

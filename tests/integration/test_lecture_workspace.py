@@ -38,6 +38,49 @@ def lecture_url(lecture_project: Path) -> Iterator[str]:
             assert not thread.is_alive()
 
 
+@pytest.mark.parametrize("width", [390, 1440])
+def test_contents_reaches_nested_lecture_headings(
+    course_browser: Browser, lecture_project: Path, lecture_url: str, width: int
+) -> None:
+    # Given nested headings and a return to a shallower section in prepared notes.
+    path = lecture_project / "study/lectures.json"
+    notes = json.loads(path.read_bytes())
+    lecture = notes["lectures"][0]
+    section = lecture["sections"][0]
+    section["blocks"] = [
+        {
+            "kind": "text",
+            "title": title,
+            "level": level,
+            "sources": section["blocks"][0]["sources"],
+            "paragraphs": ["A short passage under this heading."],
+        }
+        for title, level in [("Parent", 1), ("Child", 2), ("Detail", 3), ("Sibling", 2)]
+    ]
+    path.write_text(json.dumps(notes))
+    build(lecture_project, publish=False)
+    context = course_browser.new_context(viewport={"width": width, "height": 900})
+    try:
+        page = context.new_page()
+        page.goto(lecture_url + "#lectures/" + lecture["key"])
+        # When the reader opens the contents and chooses the deepest heading.
+        if width < 1200:
+            page.get_by_role("button", name="Show contents", exact=True).click()
+        outline = page.locator(".page-outline")
+        detail = outline.get_by_role("link", name="Detail", exact=True)
+        expect(detail).to_be_visible()
+        assert detail.locator("xpath=ancestor::ol").count() == 4
+        sibling = outline.get_by_role("link", name="Sibling", exact=True)
+        assert sibling.locator("xpath=ancestor::ol").count() == 3
+        detail.focus()
+        detail.press("Enter")
+        # Then focus reaches the real heading and the selected entry stays marked.
+        expect(page.get_by_role("heading", name="Detail", level=5, exact=True)).to_be_focused()
+        expect(outline.locator('[aria-current="location"]')).to_have_text("Detail")
+    finally:
+        context.close()
+
+
 @pytest.mark.parametrize(
     "width,theme", [(390, "light"), (390, "dark"), (1440, "light"), (1440, "dark")]
 )
@@ -58,7 +101,7 @@ def test_notes_deep_links_figure_and_workspace_return(
     )
     try:
         page.goto(lecture_url + "#lectures")
-        expect(page.get_by_role("heading", name="Lecture Notes", exact=True)).to_be_visible()
+        expect(page.get_by_role("heading", name="Lecture", exact=True)).to_be_visible()
         directory = Path(os.environ.get("TUM_MCP_LECTURE_QA_PATH", str(tmp_path)))
         directory.mkdir(parents=True, exist_ok=True)
         page.screenshot(path=str(directory / f"{width}-{theme}-list.png"))
@@ -107,7 +150,7 @@ def test_notes_deep_links_figure_and_workspace_return(
         expect(page.locator(".lecture-section")).to_be_visible()
         switch_workspace(page, "Study")
         switch_workspace(page, "Exercises")
-        switch_workspace(page, "Lecture Notes")
+        switch_workspace(page, "Lecture")
         expect(page.locator(".lecture-section")).to_be_visible()
         page.go_back()
         expect(page.get_by_role("heading", name="Exercises", exact=True)).to_be_visible()
@@ -151,7 +194,7 @@ def test_all_workspace_subsets_route_without_two_way_fallthrough(
         try:
             page = context.new_page()
             page.goto(f"http://127.0.0.1:{server.server_port}/")
-            label = {"study": "Study", "exercises": "Exercises", "lectures": "Lecture Notes"}
+            label = {"study": "Study", "exercises": "Exercises", "lectures": "Lecture"}
             for workspace in selected:
                 if len(selected) > 1:
                     switch_workspace(page, label[workspace])

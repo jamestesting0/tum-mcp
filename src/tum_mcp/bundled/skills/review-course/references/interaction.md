@@ -5,6 +5,12 @@ Work the item in the app as a student, at phone width (390 px) and desktop width
 data and the contact sheets and say which steps you could not try. This pass scores
 Practice.
 
+The app's own tests cover its controls; this pass is about the content as the student
+meets it: what feedback, hints, Compare and the solution say, in the order they appear.
+Work every question and step from the data, and walk at least one question and one
+exercise step of the course in the browser, where text revealed only on interaction
+(feedback, Compare, explanations) is read in context.
+
 ## Procedure
 
 1. Practice questions: answer before Check answer. Pick a wrong option first; its

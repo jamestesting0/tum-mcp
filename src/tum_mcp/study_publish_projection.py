@@ -26,7 +26,7 @@ def project(data: bytes, *, include_exercises: bool, include_lectures: bool) -> 
             payload.pop("pending", None)
         if not include_lectures:
             payload.pop("lectures", None)
-        # Exam Prep reproduces past exams and private uploads: it is never published.
+        # Exam reproduces past exams and private uploads: it is never published.
         payload.pop("exam", None)
         payload["workspaces"] = (
             (["study"] if payload["units"] else [])
@@ -36,9 +36,24 @@ def project(data: bytes, *, include_exercises: bool, include_lectures: bool) -> 
         if not payload["workspaces"]:
             raise CampusError(
                 Code.ACTION_REQUIRED,
-                "Explicitly include Exercises or Lecture Notes to publish this app.",
+                "Explicitly include Exercises or Lecture to publish this app.",
             )
-        references = {s["key"] for unit in payload["units"] for s in unit["sources"]}
+        study_references = {s["key"] for unit in payload["units"] for s in unit["sources"]}
+        study_references.update(
+            source["key"]
+            for unit in payload["units"]
+            for item in unit.get("explore", [])
+            for source in item["sources"]
+        )
+        references = set(study_references)
+        if "studyPreparation" in payload:
+            payload["studyPreparation"] = {
+                "pending": [
+                    entry
+                    for entry in payload["studyPreparation"].get("pending", [])
+                    if entry["source"] in study_references
+                ]
+            }
         references.update(
             s["key"]
             for group in payload.get("exercises", {}).get("sets", [])

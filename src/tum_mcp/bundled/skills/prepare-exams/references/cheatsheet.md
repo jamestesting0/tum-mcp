@@ -3,6 +3,8 @@
 The cheatsheet is what a student rereads in the last days: the ideas that earn points,
 each in one line. Lecture content that is good to know but not exam-relevant stays in
 Study. Record deliberate exclusions in `.tum-mcp/notes/exam-exclusions.md`.
+Blocks follow the Study [heading rules](../../prepare-study/references/content.md#blocks):
+an untitled block continues the entry above it.
 
 ## Choose entries
 
@@ -30,7 +32,8 @@ Use tier `core` for what every student must know and `supporting` for the rest. 
   Study units. Never put essential conditions only in details.
 
 Use the course's notation and language. Each fact appears once; link instead of
-repeating it in another entry.
+repeating it in another entry. When Study exists, every concept names in `units` the
+units that teach it; its line and details compress that lesson, never copy it.
 
 ## Draw the map
 
@@ -40,3 +43,8 @@ for ideas students confuse. Prerequisite and derivation links must not form a cy
 Draw only links a student benefits from seeing. Put the core ideas on the map
 (`on_map`) and leave supporting detail off when the map would get crowded; around 60
 to 80 nodes stay readable. Topics are the map's columns in course order.
+
+Study Explore is not evidence for an exam requirement and cannot supply core unit
+links. If an actual task requires an optional-only concept, record the dependency and
+repair core Study teaching when authorized. Keep this separate from Exam's own
+`supporting` tier; see [Explore](../../prepare-study/references/explore.md).

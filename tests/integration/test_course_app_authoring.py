@@ -1,8 +1,28 @@
 import json
 from pathlib import Path
 
+from typer.testing import CliRunner
+
+from tum_mcp.cli import app
 from tum_mcp.study_build import build, read_content
 from tum_mcp.study_store import load_state
+
+
+def test_demo_preserves_edited_optional_classification(tmp_path: Path) -> None:
+    root = tmp_path / "Preview"
+    args = ["study", "demo", str(root)]
+    runner = CliRunner()
+    first = runner.invoke(app, args)
+    assert first.exit_code == 0, first.output
+    ledger = root / ".tum-mcp/coverage.json"
+    edited = ledger.read_text().replace("The synthetic source", "The edited synthetic source")
+    assert edited != ledger.read_text()
+    ledger.write_text(edited)
+    content = (root / "app/content.json").read_bytes()
+    again = runner.invoke(app, args)
+    assert again.exit_code != 0 and "preserved" in str(again.exception)
+    assert ledger.read_text() == edited
+    assert (root / "app/content.json").read_bytes() == content
 
 
 def test_either_preparation_order_and_targeted_update_preserve_other_workspace(

@@ -44,3 +44,12 @@ before retrying; do not reinstall browsers or frameworks to repair a locator.
 Keep a short private record of tested unit revisions, cases and results. Stop only
 processes you started. Honor required project gates. Report unrun checks and gaps
 honestly; neither a build nor testing certifies bug-free software.
+
+## Explore changes
+
+After a reviewed optional edit, check its real Explore route, citations, Contents and
+comments at phone/desktop widths. Units without items keep three tabs. Explore stays
+outside Revision, core Next/Continue, counts, minutes and Video Notes. Its own source
+changes require review/rebinding; core saved ratings must survive optional-only edits.
+Run `study visuals` for optional visuals too and refresh stale teaching/course reviews
+when content or classification changes. See [Explore](explore.md).

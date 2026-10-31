@@ -26,12 +26,13 @@
         {
           "kind": "text",
           "title": "About this template",
+          "level": 1,
           "sources": [
             "components"
           ],
           "paragraphs": [
             "Component template preview. These snippets and questions demonstrate reusable UI components; they are not necessarily good examples of teaching or question design. Author actual courses from reviewed sources.",
-            "Inline notation: \\(x^2\\). Prose and short lists use the same reading style."
+            "The headings below show a section, a subsection and a detail heading."
           ],
           "points": [
             "A compact list item."
@@ -53,6 +54,7 @@
         {
           "kind": "text",
           "title": "Marked terms",
+          "level": 2,
           "sources": [
             "components"
           ],
@@ -62,7 +64,28 @@
         },
         {
           "kind": "text",
+          "title": "Inline notation",
+          "level": 3,
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "Inline notation: \\(x^2\\). Prose and short lists use the same reading style."
+          ]
+        },
+        {
+          "kind": "text",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "This untitled block continues the same passage without adding another heading."
+          ]
+        },
+        {
+          "kind": "text",
           "title": "Steps",
+          "level": 1,
           "sources": [
             "components"
           ],
@@ -951,6 +974,54 @@
             }
           ],
           "hint": "Count two, then two more."
+        }
+      ],
+      "explore": [
+        {
+          "key": "background",
+          "title": "Beyond the core lesson",
+          "sources": [
+            {
+              "key": "explore-demo",
+              "sha256": "a6168a57b2867c741a96ec0ac98ce3faeebf9f0e0b4a489f692ff130be1ffdde"
+            }
+          ],
+          "blocks": [
+            {
+              "kind": "text",
+              "key": "context",
+              "title": "Context and origins",
+              "sources": [
+                "explore-demo"
+              ],
+              "paragraphs": [
+                "Synthetic supporting material demonstrates a place for origins, related ideas and further reading. It does not add flashcards or practice questions."
+              ]
+            },
+            {
+              "kind": "table",
+              "key": "reading",
+              "title": "Related perspectives",
+              "sources": [
+                "explore-demo"
+              ],
+              "columns": [
+                "Material",
+                "Purpose"
+              ],
+              "rows": [
+                [
+                  "Origins",
+                  "Historical context"
+                ],
+                [
+                  "Further reading",
+                  "A broader perspective"
+                ]
+              ],
+              "caption": "A synthetic optional comparison."
+            }
+          ]
         }
       ]
     }

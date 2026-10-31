@@ -283,7 +283,11 @@ def unit_locators(root: Path, unit_key: str) -> dict:
     items: list[dict] = [{"kind": "summary", "ref": "summary", "preview": unit.summary[:120]}]
     for index, block in enumerate(unit.blocks):
         items.append(
-            {"kind": "block", "ref": f"blocks[{index}]", "preview": f"{block.kind}: {block.title}"}
+            {
+                "kind": "block",
+                "ref": f"blocks[{index}]",
+                "preview": f"{block.kind}: {block.title or 'untitled'}",
+            }
         )
     items += [{"kind": "objective", "ref": o.key, "preview": o.text[:120]} for o in unit.objectives]
     items += [

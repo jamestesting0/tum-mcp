@@ -199,3 +199,10 @@ or unverified output. Do not delete useful resumable chunks on failure.
 Report complete only when the requested current categories have verified coverage.
 Otherwise list the completed/reused categories and precise pending material or
 provider limitation, with the prepared scripts and recovery path.
+
+## Explore boundary
+
+Default category lessons use core blocks, cards and correct practice feedback.
+Exclude `Unit.explore` from required narration, minutes and core coverage claims.
+Do not silently promote optional context; an explicit request for supplementary audio
+needs its own stated scope. See [Explore](../../prepare-study/references/explore.md).

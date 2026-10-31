@@ -1,5 +1,7 @@
 """Page text for stored course materials, extracted once per content hash."""
 
+import re
+import unicodedata
 from pathlib import Path
 from typing import Literal
 
@@ -10,7 +12,7 @@ from tum_mcp.moodle.config import private_write
 from tum_mcp.moodle.errors import MoodleError
 from tum_mcp.settings import Frozen
 from tum_mcp.study_models import Digest, StudyState
-from tum_mcp.study_store import confined, digest, load_state, private_path
+from tum_mcp.study_store import confined, digest, load_state, private_name, private_path
 
 # Bump when extraction output changes so older cache records are recomputed.
 EXTRACTOR = 1
@@ -131,6 +133,34 @@ def document_text(root: Path, key: str, state: StudyState | None = None) -> Text
     return record
 
 
+def page_images(
+    root: Path, key: str, numbers: list[int], state: StudyState | None = None
+) -> dict[int, str]:
+    """Project-relative PNGs of PDF pages, rendered once per content hash."""
+    from tum_mcp.moodle.extract_worker import render_pdf_pages
+
+    root = root.expanduser().resolve()
+    _, body, sha256 = material_bytes(root, state or load_state(root), key)
+    if not body.startswith(b"%PDF-"):
+        raise CampusError(
+            Code.CAPABILITY_UNSUPPORTED, "Page images exist for PDFs; open the original file."
+        )
+    if len(numbers) > 12:
+        raise CampusError(Code.INVALID_RESPONSE, "Request images for at most 12 pages at once.")
+    paths = {number: private_name(root, f"cache/pages/{sha256}/{number}.png") for number in numbers}
+    missing = [number for number, path in paths.items() if not confined(root, path).is_file()]
+    if missing:
+        try:
+            images = render_pdf_pages(body, missing)
+        except MoodleError as error:
+            raise CampusError(Code.INVALID_RESPONSE, error.message) from None
+        for number, image in zip(missing, images, strict=True):
+            target = confined(root, paths[number])
+            target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            private_write(target, image)
+    return paths
+
+
 def parse_pages(value: str, total: int) -> range:
     """Parse "4" or "2-9" into a page range within a document."""
     try:
@@ -141,6 +171,72 @@ def parse_pages(value: str, total: int) -> range:
     if not 1 <= start <= end <= total:
         raise CampusError(Code.INVALID_RESPONSE, f"Pages must lie within 1-{total}.")
     return range(start, end + 1)
+
+
+def find_sources(root: Path, query: str | None, kind: str | None = None, limit: int = 10) -> dict:
+    """List stored sources, or rank the pages of current sources that contain every word."""
+    root = root.expanduser().resolve()
+    state = load_state(root)
+    items = [item for item in state.resources if kind in {None, item.resource.kind}]
+    words = unicodedata.normalize("NFKC", query or "").split()
+    if not words:
+        return {
+            "sources": [
+                {
+                    "key": item.resource.key,
+                    "kind": item.resource.kind,
+                    "title": item.resource.title,
+                    "path": item.path,
+                    "status": item.status,
+                }
+                for item in items
+            ]
+        }
+    patterns = [re.compile(re.escape(word), re.IGNORECASE) for word in words]
+    titles: list[str] = []
+    pages: list[dict] = []
+    skipped: dict[str, list[str]] = {}
+    without_text: dict[str, int] = {}
+    for item in items:
+        key = item.resource.key
+        label = unicodedata.normalize("NFKC", f"{item.resource.title} {key}")
+        if all(pattern.search(label) for pattern in patterns):
+            titles.append(key)
+        if item.status != "current":
+            skipped.setdefault(item.status, []).append(key)
+            continue
+        try:
+            record = document_text(root, key, state)
+        except CampusError as error:
+            skipped.setdefault(error.message, []).append(key)
+            continue
+        if record.needs_visual:
+            without_text[key] = len(record.needs_visual)
+        for page in record.pages:
+            text = unicodedata.normalize("NFKC", page.text)  # ligatures such as "\ufb01" -> "fi"
+            counts = [len(pattern.findall(text)) for pattern in patterns]
+            if not all(counts):
+                continue
+            first = min(match.start() for p in patterns if (match := p.search(text)))
+            pages.append(
+                {
+                    "key": key,
+                    "title": item.resource.title,
+                    "path": item.path,
+                    "page": page.number,
+                    "matches": sum(counts),
+                    "snippet": " ".join(text[max(0, first - 80) : first + 160].split()),
+                }
+            )
+    pages.sort(key=lambda hit: -hit["matches"])
+    return {
+        "query": query,
+        "title_matches": titles,
+        "pages": pages[:limit],
+        "total_pages": len(pages),
+        "pages_without_text": without_text,
+        "not_searched": skipped,
+    }
 
 
 def text_view(record: TextRecord, key: str, pages: str | None) -> dict:

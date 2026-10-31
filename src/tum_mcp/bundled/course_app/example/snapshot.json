@@ -38,9 +38,9 @@
       "kind": "content",
       "title": "Synthetic lecture transcript and board",
       "url": "https://example.invalid/lectures/synthetic",
-      "locator": "Synthetic0:00–1:00 transcript; board0:37.5",
+      "locator": "Synthetic0:00\u20131:00 transcript; board0:37.5",
       "revision": "1",
-      "text": "Synthetic recording transcript. 0:00–0:20: BFS explores an unweighted graph with a queue. 0:20–1:00: When a vertex at distance d is removed, undiscovered neighbors get distance d+1. FIFO preserves the layer order, so first discovery gives minimum edge count. Mark at enqueue time. A–B–C has distances0,1,2. Equal edge costs are essential; this is not a guarantee of minimum arbitrary weighted cost. Synthetic source board at0:37.5 shows the path. End at1:00."
+      "text": "Synthetic recording transcript. 0:00\u20130:20: BFS explores an unweighted graph with a queue. 0:20\u20131:00: When a vertex at distance d is removed, undiscovered neighbors get distance d+1. FIFO preserves the layer order, so first discovery gives minimum edge count. Mark at enqueue time. A\u2013B\u2013C has distances0,1,2. Equal edge costs are essential; this is not a guarantee of minimum arbitrary weighted cost. Synthetic source board at0:37.5 shows the path. End at1:00."
     },
     {
       "key": "demo-past-paper",
@@ -50,6 +50,46 @@
       "url": "https://example.invalid/components",
       "revision": "1",
       "text": "# Synthetic past paper\n\nQuestion 1 (10 points). A queue serves requests in arrival order. Name the data structure and give the cost of enqueue and dequeue.\n\nQuestion 2 (8 points). Order the steps of breadth-first search from a start node.\n"
+    },
+    {
+      "key": "explore-demo",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Synthetic supporting material",
+      "url": "https://example.invalid/explore-components",
+      "locator": "Optional template note",
+      "revision": "1",
+      "text": "Synthetic optional material: origins, related ideas and further reading belong outside the core practice sequence.\n"
+    },
+    {
+      "key": "pending-study-demo",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Graph representations",
+      "url": "https://example.invalid/template/graph-representations",
+      "locator": "Synthetic Study preparation example",
+      "revision": "1",
+      "text": "Synthetic unprepared Study source. Learning outcome: compare adjacency lists and adjacency matrices. No lesson for this outcome has been prepared.\n"
+    },
+    {
+      "key": "pending-exercises-demo",
+      "binding": "demo",
+      "kind": "exercise",
+      "title": "Practice sheet 2",
+      "url": "https://example.invalid/template/practice-sheet-2",
+      "locator": "Synthetic exercise preparation example",
+      "revision": "1",
+      "text": "Synthetic unprepared exercise sheet. Problem 1: compare graph representations. Problem 2: trace breadth-first search. Neither problem has prepared guidance.\n"
+    },
+    {
+      "key": "pending-explore-demo",
+      "binding": "demo",
+      "kind": "content",
+      "title": "Origins of graph theory",
+      "url": "https://example.invalid/template/graph-origins",
+      "locator": "Synthetic Explore preparation example",
+      "revision": "1",
+      "text": "Synthetic optional reading source: origins of graph theory. This historical context is independent of the core component examples and practice. The optional reading has not been prepared.\n"
     }
   ]
 }

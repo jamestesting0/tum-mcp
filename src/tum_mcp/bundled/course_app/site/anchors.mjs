@@ -1,6 +1,6 @@
 // Quote selectors use literal text and context, never HTML or guessed fuzzy matches.
 import data from './data.mjs';
-import { studyText } from './dom.mjs';
+import { studyText, SECTION_HEADING } from './dom.mjs';
 const excluded = 'button:not(.flashcard),input,textarea,select,svg,.source-note,.lecture-figure,.lecture-coverage,[data-comment-ui],[hidden],[aria-hidden="true"]';
 export function annotate(element, unit, item, view, field) {
   const owner = item.origin || unit;
@@ -64,6 +64,10 @@ export function selectedPassage(root, unit) {
   const quote = index.text.slice(first, last);
   if (!quote || quote.length > 2000) return null;
   const section = material.closest('[data-block-index]'), view = material.dataset.commentTarget;
+  if (view === 'explore') return { anchor: { view, unit_key: material.dataset.unitKey,
+    item_key: material.dataset.itemKey, block_key: material.dataset.blockKey,
+    semantic_revision: material.dataset.exploreRevision, quote,
+    prefix: before(index.text, first), suffix: after(index.text, last) }, rect: range.getBoundingClientRect() };
   if (view === 'exercises') return { anchor: { workspace: 'exercises', view,
     set_key: material.dataset.setKey, exercise_key: material.dataset.exerciseKey,
     exercise_revision: material.dataset.exerciseRevision, step_key: material.dataset.stepKey || null,
@@ -75,7 +79,7 @@ export function selectedPassage(root, unit) {
   if (view === 'lectures') return { anchor: { view, lecture_key: unit.key, section_key: material.dataset.lectureSection, semantic_revision: unit.revision, quote, prefix: before(index.text, first), suffix: after(index.text, last) }, rect: range.getBoundingClientRect() };
   const anchor = { view, unit_key: material.dataset.unitKey || unit.key,
     unit_revision: material.dataset.unitRevision || unit.revision, block_index: 0,
-    block_title: view === 'content' ? unit.blocks[Number(section.dataset.blockIndex)].title : view === 'flashcards' ? 'Flashcards' : 'Practice',
+    block_title: view === 'content' ? unit.blocks[Number(section.dataset.blockIndex)].title || unit.title : view === 'flashcards' ? 'Flashcards' : 'Practice',
     quote, prefix: before(index.text, first), suffix: after(index.text, last) };
   if (view === 'content') anchor.block_index = Number(section.dataset.blockIndex);
   else { anchor.item_key = material.dataset.itemKey; anchor.field = material.dataset.field; }
@@ -105,7 +109,14 @@ function sourceText(anchor) {
 }
 export function locatePassage(root, unit, anchor, indexes = new Map()) {
   const view = anchor.view || 'content'; let section, material;
-  if (view === 'lectures') {
+  if (view === 'explore') {
+    if (unit.key !== anchor.unit_key) return null;
+    const item = root.querySelector(`[data-explore-key="${CSS.escape(anchor.item_key)}"]`);
+    section = item && [...item.querySelectorAll('[data-block]')].find(block =>
+      block.dataset.block === anchor.block_key && block.querySelector('[data-comment-target="explore"]'));
+    if (!section) return null;
+    material = section.querySelector('[data-comment-target="explore"]');
+  } else if (view === 'lectures') {
     if (unit.key !== anchor.lecture_key) return null;
     section = [...root.querySelectorAll('[data-lecture-section]')].find(item => item.dataset.lectureSection === anchor.section_key);
     if (!section) return null;
@@ -125,8 +136,8 @@ export function locatePassage(root, unit, anchor, indexes = new Map()) {
     section = material;
   } else if (view === 'content') {
     const sections = [...root.querySelectorAll('[data-block-index]')]; section = sections[anchor.block_index];
-    if (!section || unit.blocks[Number(section.dataset.blockIndex)].title !== anchor.block_title) {
-      const matching = sections.filter(item => unit.blocks[Number(item.dataset.blockIndex)].title === anchor.block_title);
+    if (!section || (unit.blocks[Number(section.dataset.blockIndex)].title || unit.title) !== anchor.block_title) {
+      const matching = sections.filter(item => (unit.blocks[Number(item.dataset.blockIndex)].title || unit.title) === anchor.block_title);
       if (matching.length !== 1) return null;
       [section] = matching;
     }
@@ -146,7 +157,7 @@ export function locatePassage(root, unit, anchor, indexes = new Map()) {
   const b = index.segments.find(item => item.start < end && end <= item.end);
   if (!a || !b) return null;
   const range = document.createRange(); range.setStart(a.node, start - a.start); range.setEnd(b.node, end - b.start);
-  const focus = view === 'lectures' ? section.querySelector('h2') : view === 'exercises' || view === 'exam' ? root.querySelector('h1') : view === 'content' ? section.querySelector('h2') : material.closest('.flashcard') || root.querySelector('.practice-question legend');
+  const focus = view === 'lectures' ? section.querySelector('h2') : view === 'exercises' || view === 'exam' ? root.querySelector('h1') : view === 'content' || view === 'explore' ? section.querySelector(SECTION_HEADING) || section : material.closest('.flashcard') || root.querySelector('.practice-question legend');
   return { range, section, focus };
 }
 export function highlightPassages(ranges, focused = []) {

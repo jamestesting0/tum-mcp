@@ -51,17 +51,18 @@
             {
               "kind": "text",
               "title": "The layer invariant",
+              "level": 1,
               "sources": [
                 "lecture-demo"
               ],
               "paragraphs": [
-                "When a vertex at distance d is removed, every newly discovered neighbor receives distance d+1. FIFO processes vertices already in the queue first. Those vertices have distance d or d+1, so a later discovery cannot provide a shorter route.",
-                "For A\u2013B\u2013C, the distances from A are 0, 1 and 2. This argument counts edges; it does not establish minimum total cost for arbitrary weighted edges."
+                "When a vertex at distance d is removed, every newly discovered neighbor receives distance d+1. FIFO processes vertices already in the queue first. Those vertices have distance d or d+1, so a later discovery cannot provide a shorter route."
               ]
             },
             {
               "kind": "formula",
               "title": "Distance on first discovery",
+              "level": 2,
               "sources": [
                 "lecture-demo"
               ],
@@ -82,6 +83,17 @@
                 }
               ],
               "conditions": "Unweighted graph with FIFO order and marking when enqueuing."
+            },
+            {
+              "kind": "text",
+              "title": "When this guarantee holds",
+              "level": 3,
+              "sources": [
+                "lecture-demo"
+              ],
+              "paragraphs": [
+                "For A\u2013B\u2013C, the distances from A are 0, 1 and 2. This argument counts edges; it does not establish minimum total cost for arbitrary weighted edges."
+              ]
             }
           ],
           "evidence": [

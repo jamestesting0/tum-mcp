@@ -1,7 +1,7 @@
 import data from './data.mjs';
 import { node, studyText, append, sourcesNote } from './dom.mjs';
 import { renderCommentedView } from './comments.mjs';
-import { renderBlockBody } from './reading.mjs';
+import { renderBlockBody, headingTag } from './reading.mjs';
 
 const lectures = [...(data.lectures?.lectures || [])].sort((a, b) => b.recording.recorded_on.localeCompare(a.recording.recorded_on) || a.key.localeCompare(b.key));
 export const lectureLink = (lecture, section) => `#lectures/${encodeURIComponent(lecture.key)}${section ? `/${encodeURIComponent(section.key)}` : ''}`;
@@ -20,7 +20,7 @@ function timeLink(url, start, end) {
   return link;
 }
 export function lectureOutline(current = '') {
-  const nav = node('nav', 'unit-list'); nav.setAttribute('aria-label', 'Lecture notes');
+  const nav = node('nav', 'unit-list'); nav.setAttribute('aria-label', 'Lecture');
   for (const lecture of lectures) {
     const link = node('a', 'unit-link'); link.href = lectureLink(lecture);
     link.append(node('span', 'small', date(lecture.recording.recorded_on)), studyText('span', 'unit-title', lecture.title));
@@ -46,17 +46,17 @@ export function renderLectures(hash) {
   const [, key, sectionKey] = hash.split('/'), lecture = lectures.find(item => item.key === decode(key));
   const root = node('div', 'lecture-workspace');
   if (!lecture) {
-    const heading = node('h1', '', 'Lecture Notes');
+    const heading = node('h1', '', 'Lecture');
     root.append(append(node('div', 'unit-header'), node('p', 'eyebrow', data.course.title), heading));
     if (key) root.append(node('p', 'notice', 'That lecture is no longer here. Choose a prepared lecture below.'));
-    if (!lectures.length) root.append(node('p', '', 'Lecture notes have not been prepared for this course.'));
+    if (!lectures.length) root.append(node('p', '', 'Lecture content has not been prepared for this course.'));
     const list = node('ul', 'topic-list');
     for (const item of lectures) {
       const link = node('a'); link.href = lectureLink(item);
-      link.append(studyText('span', 'topic-title', item.title), node('span', 'small', date(item.recording.recorded_on)));
-      list.append(append(node('li', 'topic-row'), link, studyText('p', 'small', item.overview)));
+      link.append(append(node('span', 'topic-copy'), studyText('span', 'topic-title', item.title), node('span', 'small', date(item.recording.recorded_on)), studyText('span', 'small', item.overview)));
+      list.append(append(node('li', 'topic-row'), link));
     }
-    root.append(list); return { root, heading, title: 'Lecture Notes' };
+    root.append(list); return { root, heading, title: 'Lecture' };
   }
   const heading = studyText('h1', '', lecture.title), header = node('div', 'unit-header');
   header.append(node('p', 'eyebrow', date(lecture.recording.recorded_on)), heading, studyText('p', 'unit-summary', lecture.overview));
@@ -82,7 +82,7 @@ export function renderLectures(hash) {
     header.append(coverage);
   }
   root.append(header, summary);
-  if (sectionKey && !lecture.sections.some(section => section.key === decode(sectionKey))) root.append(node('p', 'notice', 'That section is no longer here. The lecture notes are below.'));
+  if (sectionKey && !lecture.sections.some(section => section.key === decode(sectionKey))) root.append(node('p', 'notice', 'That section is no longer here. The lecture content is below.'));
   for (const section of lecture.sections) {
     const topic = node('section', 'read-section lecture-section'); topic.dataset.lectureSection = section.key; topic.dataset.commentTarget = 'lectures';
     if (section.key === decode(sectionKey)) topic.dataset.lectureActiveSection = '';
@@ -94,8 +94,11 @@ export function renderLectures(hash) {
       const moments = {};
       for (const cite of timed) (moments[cite.source] ||= []).push(timeLink(cite.url, cite.start_s, cite.end_s));
       const material = node('div', 'reading-material lecture-material');
-      const sources = sourcesNote([...new Set([...block.sources, ...Object.keys(moments)])], data.sources, data.course.synthetic, block.title, moments);
-      material.append(append(node('div', 'section-heading'), studyText('h3', '', block.title), sources), renderBlockBody(block));
+      const sources = sourcesNote([...new Set([...block.sources, ...Object.keys(moments)])], data.sources, data.course.synthetic, block.title || section.title, moments);
+      // Lecture sections are the page's level 1, so a block's own levels start one below.
+      const heading = append(node('div', `section-heading${block.title ? '' : ' untitled'}`));
+      if (block.title) heading.append(studyText(headingTag(block, 2), '', block.title));
+      material.append(append(heading, sources), renderBlockBody(block));
       topic.append(material);
     }
     for (const figure of section.figures) topic.append(figureView(figure, section.citations.find(cite => cite.key === figure.evidence).source));

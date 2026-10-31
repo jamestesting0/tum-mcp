@@ -25,7 +25,7 @@ def read_lectures(root: Path) -> LectureContent | None:
     if not path.exists():
         return None
     if not path.is_file() or path.stat().st_size > 8 * 1024**2:
-        raise CampusError(Code.INVALID_RESPONSE, "Lecture notes must be a file below 8 MiB.")
+        raise CampusError(Code.INVALID_RESPONSE, "Lecture content must be a file below 8 MiB.")
     try:
         return LectureContent.model_validate_json(path.read_bytes())
     except ValidationError as error:
@@ -40,7 +40,7 @@ def read_lectures(root: Path) -> LectureContent | None:
 
 def stale_lectures(root: Path, state: StudyState, content: LectureContent) -> tuple[str, ...]:
     if state.course.key != content.course_key:
-        raise CampusError(Code.SCOPE_DENIED, "Lecture notes belong to a different course.")
+        raise CampusError(Code.SCOPE_DENIED, "Lecture content belongs to a different course.")
     resources = {item.resource.key: item for item in state.resources}
     bindings = {item.key: item for item in state.course.bindings}
     evidence = {item.key: item for item in content.evidence}

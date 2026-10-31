@@ -93,6 +93,27 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
     content["units"][0]["blocks"][0]["paragraphs"] = ["The lecture groups methods by cost."]
     narrated = quality_flags(StudyContent.model_validate(content), None)
     assert "meta_reference" in {flag["flag"] for flag in narrated}
+    content["units"][0]["blocks"][0]["paragraphs"] = ["The lecture gives a bound of n squared."]
+    narrated = quality_flags(StudyContent.model_validate(content), None)
+    assert "meta_reference" in {flag["flag"] for flag in narrated}
+    # The same applies to an exercise's guide, though not to its released statement.
+    guided = exercises()
+    guided["sets"][0]["exercises"][0]["steps"][0]["explanation"] = (
+        "The lecture checks a generated goal before inserting it."
+    )
+    narrated = quality_flags(None, ExerciseContent.model_validate(guided))
+    assert "meta_reference" in {flag["flag"] for flag in narrated}
+    guided = exercises()
+    exercise = guided["sets"][0]["exercises"][0]
+    exercise["statement"][0]["paragraphs"] = ["The lecture gives the following problem."]
+    assert "meta_reference" not in {
+        flag["flag"] for flag in quality_flags(None, ExerciseContent.model_validate(guided))
+    }
+    step = next(step for step in exercise["steps"] if step["check"]["kind"] == "self_check")
+    step["check"]["model_answer"][0]["paragraphs"] = ["The lecture explains this update."]
+    assert "meta_reference" in {
+        flag["flag"] for flag in quality_flags(None, ExerciseContent.model_validate(guided))
+    }
     clean = quality_flags(
         StudyContent.model_validate(study()), ExerciseContent.model_validate(exercises())
     )
@@ -183,3 +204,38 @@ def test_mathematics_typed_as_plain_text_is_flagged_and_latex_passes() -> None:
     ]
     flags = quality_flags(StudyContent.model_validate(content), None)
     assert key not in {f["item"] for f in flags if f["flag"] == "plain_math"}
+
+
+def test_flags_a_flat_outline_a_shared_guide_and_assumption_asides() -> None:
+    # Given a five-unit course without groups and a two-part exercise with one guide.
+    content = study()
+    for unit in content["units"]:
+        unit.pop("path", None)
+    payload = exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    exercise["parts"] = ["(a)", "(b)"]
+    answer = exercise["solution"]["answers"][0]
+    exercise["solution"]["answers"] = [{**answer, "label": "(a)"}, {**answer, "label": "(b)"}]
+    exercise["solution"]["notes"] = [
+        {
+            "kind": "text",
+            "title": "Assumptions and sources",
+            "sources": exercise["statement"][0]["sources"],
+            "paragraphs": ["Dirt does not return."],
+        }
+    ]
+    # When the report reads them.
+    flags = {
+        item["flag"]
+        for item in quality_flags(
+            StudyContent.model_validate(content), ExerciseContent.model_validate(payload)
+        )
+    }
+    # Then each structural gap is named.
+    assert {"flat_outline", "shared_guide", "assumption_aside"} <= flags
+    grouped = quality_flags(
+        StudyContent.model_validate(study()), ExerciseContent.model_validate(exercises())
+    )
+    assert not {"flat_outline", "shared_guide", "assumption_aside"} & {
+        item["flag"] for item in grouped
+    }

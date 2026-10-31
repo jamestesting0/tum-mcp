@@ -1,7 +1,7 @@
 # Review gate and representations
 
 Shared by prepare-study, prepare-exercises and prepare-exams. A build checks the schema;
-`tum-mcp study report PROJECT` (and `study exam-report` for Exam Prep) derives review flags
+`tum-mcp study report PROJECT` (and `study exam-report` for Exam) derives review flags
 and the coverage of the course sources. Revise each flagged item or keep it with a reason
 in your report. Neither a pass nor an empty flag list proves the teaching is good, so finish
 with this gate.
@@ -15,18 +15,24 @@ with this gate.
    before the task, or accept and explain each valid alternative.
 4. Every wrong option's feedback names the mistake that leads to it.
 5. Show each idea in the shape it has (table below); prose says only what the picture cannot.
+   Teach each idea in one unit; elsewhere mark it `{{term}}` or link its block, and
+   revisit it only to take it further or to practise it in a new situation. Give a worked
+   case once, as steps or as a table, not both. Insert a section where it belongs in the
+   lesson shape; a section appended on a later pass leaves the lesson out of order
+   (`study report` flags it as `source_order`).
 6. Review the last batch to the same depth as the first, against the source's own outcomes.
 7. Resolve or justify every flag from `study report`. Restructure, never justify,
    `long_section`, `dense_paragraph`, `prose_calculation`, `plain_math`,
-   `meta_reference`, `restated_context` and `dense_statement`: each means a wall of
-   text, mathematics typed as characters, a sentence about the material or a fact said
-   twice. Write as in [writing](writing.md).
+   `meta_reference`, `restated_context`, `dense_statement` and `forward_term`: each means
+   a wall of text, mathematics typed as characters, a sentence about the material, a fact
+   said twice or a term used before it is taught. Write as in [writing](writing.md).
 8. After the build, run `tum-mcp study visuals PROJECT` and fix every defect it reports in
    the content (an edge through a node, clashing labels, text under 12 px, a drawing that
    differs from its block). Open the contact sheets in `.tum-mcp/visuals/` and look at each
    visual at phone and desktop width.
 9. Score the batch with [review-course](../../review-course/SKILL.md); its scorecard turns
-   stale when an item changes, so the review follows the content.
+   stale when an item changes, and its course review when units, groups or links change,
+   so the review follows the content.
 
 ## Choose the representation
 
@@ -65,3 +71,11 @@ may carry one `hint` that recalls the idea without naming the option.
 When a statement relies on a slide, figure or earlier result, check that the cited edition
 matches, then redraw what the student needs beside the statement and cite it with `pages`.
 If the source is missing or another edition, record the gap instead of guessing.
+
+## Explore classification pass
+
+For changed optional material or classification, apply the counterfactual in
+[Explore](explore.md#review-with-explore-closed): attempt the core path and its linked
+tasks with Explore closed. Check the source/locator and private classification reason,
+then review optional accuracy and visuals. Keep optional gaps separate from core gaps;
+never use reclassification to make an unresolved core outcome appear prepared.

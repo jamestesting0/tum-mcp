@@ -203,9 +203,7 @@ def zulip_get_checkpoint(account_id: str, channel_id: Id) -> Checkpoint | None:
     return get_checkpoint(Zulip(API(find_account(account_id, Provider.ZULIP))), channel_id)
 
 
-@server.tool(
-    annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True)
-)
+@server.tool(annotations=READ)
 def zulip_save_checkpoint(account_id: str, channel_id: Id, message_id: Id) -> Checkpoint:
     """Advance a local summary checkpoint to an accessible message; does not mark it read."""
     from tum_mcp.checkpoints import save_checkpoint
@@ -246,9 +244,7 @@ def artemis_get_lecture(account_id: str, course_id: Id, lecture_id: Id) -> Lectu
     )
 
 
-@server.tool(
-    annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True)
-)
+@server.tool(annotations=READ)
 def artemis_get_attachment(
     account_id: str,
     course_id: Id,
@@ -258,7 +254,11 @@ def artemis_get_attachment(
     page_limit: Annotated[int, Field(ge=1, le=12)] = 8,
     save_original: bool = False,
 ) -> AttachmentView:
-    """Read cited pages from the student PDF; optionally save that student copy locally."""
+    """Read cited pages' text from the student PDF; optionally save that copy locally.
+
+    Page text drops figures and scrambles tables and formulas: look at a page before relying
+    on it (the course project's copy, or the file saved with save_original=true).
+    """
     from tum_mcp.artemis.lectures import Lectures
 
     return Lectures(Artemis(API(find_account(account_id, Provider.ARTEMIS)))).attachment(

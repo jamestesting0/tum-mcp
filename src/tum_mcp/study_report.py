@@ -32,7 +32,8 @@ QUESTION_TABLE_ROWS = 6
 META_REFERENCE = re.compile(
     r"\b(?:the|this|our) (?:lecture|course|slides?|lesson|section|page|unit|chapter|textbook) "
     r"(?:groups?|says?|states?|shows?|focus(?:es)?|lists?|defines?|describes?|covers?|calls?|"
-    r"presents?|introduces?|explains?|treats?|uses?)\b"
+    r"presents?|introduces?|explains?|treats?|uses?|gives?|tests?|checks?|notes?|mentions?|"
+    r"discuss(?:es)?|assumes?|emphasi[sz]es?)\b"
     r"|\bauthored (?:example|network|dataset|domain|chain|trace|graph)\b"
     r"|\b(?:in|as) the (?:table|diagram|figure)(?: above| below)?(?: shows)?,",
     re.IGNORECASE,
@@ -48,6 +49,8 @@ PLAIN_MATH = re.compile(
 NON_PROSE = frozenset({"key", "sources", "pages", "kind", "image", "language", "course_key"})
 DRAWN = frozenset({"diagram", "plot", "figure", "code"})
 TITLE_CITATION = re.compile(r"\b(?:slides?|pages?|p\.)\s*\d", re.IGNORECASE)
+ASIDE_TITLE = re.compile(r"\b(?:assumptions?|sources?|references?)\b", re.IGNORECASE)
+FLAT_OUTLINE_UNITS = 4
 TRACE_VERBS = re.compile(r"\b(trace|execute|simulate|step through|run|apply)\b", re.IGNORECASE)
 # "1 + 0.5 × 6 = 4.5": numbers joined by + - × · * / and an equals sign, outside math and code.
 NUMBER = r"\(?[-−]?\d+(?:\.\d+)?\)?"
@@ -120,6 +123,10 @@ def _sentences(text: str) -> int:
     return len([part for part in re.split(r"(?<=[.!?])\s+", text.strip()) if part])
 
 
+def _name(block) -> str:
+    return block.title or block.kind
+
+
 def quality_flags(
     content: StudyContent | None, exercises: ExerciseContent | None
 ) -> list[dict[str, JsonValue]]:
@@ -132,6 +139,13 @@ def quality_flags(
     units = content.units if content else ()
     sizes = [len(unit.blocks) for unit in units]
     median = statistics.median(sizes) if sizes else 0
+    if len(units) >= FLAT_OUTLINE_UNITS and not any(unit.path for unit in units):
+        flag(
+            "outline",
+            "flat_outline",
+            f"{len(units)} units in one flat list; give each a `path` such as its lecture, "
+            "week or topic so the outline folds them into groups.",
+        )
     for unit in units:
         if len(unit.blocks) < median / 2:
             flag(
@@ -145,24 +159,33 @@ def quality_flags(
         definitions = sum(block.kind == "definition" for block in unit.blocks)
         if definitions > 5:
             flag(unit.key, "many_terms", f"{definitions} definitions in one lesson; split it.")
-        for index, block in enumerate(unit.blocks):
+        reading_blocks = (*unit.blocks, *(block for item in unit.explore for block in item.blocks))
+        passages = [
+            *((f"{unit.key}#{index}", block) for index, block in enumerate(unit.blocks)),
+            *(
+                (f"{unit.key}/explore/{item.key}#{index}", block)
+                for item in unit.explore
+                for index, block in enumerate(item.blocks)
+            ),
+        ]
+        for location, block in passages:
             if not isinstance(block, TextBlock):
                 continue
             words = sum(len(part.split()) for part in block.paragraphs)
             if words > SECTION_WORDS or len(block.paragraphs) > 2:
                 flag(
-                    f"{unit.key}#{index}",
+                    location,
                     "long_section",
-                    f"'{block.title}': {words} words of prose in {len(block.paragraphs)} "
+                    f"'{_name(block)}': {words} words of prose in {len(block.paragraphs)} "
                     "paragraph(s). Give one idea per section, and a hard idea as short numbered "
                     "steps.",
                 )
             calculation = next((part for part in block.paragraphs if part.count("=") >= 2), None)
             if calculation is not None:
                 flag(
-                    f"{unit.key}#{index}",
+                    location,
                     "prose_calculation",
-                    f"'{block.title}': a chain of calculations inside a sentence. Give each "
+                    f"'{_name(block)}': a chain of calculations inside a sentence. Give each "
                     "computed value as its own step: what is computed, the expression, the result.",
                 )
             dense = [
@@ -174,9 +197,9 @@ def quality_flags(
             if dense:
                 words, sentences = dense[0]
                 flag(
-                    f"{unit.key}#{index}",
+                    location,
                     "dense_paragraph",
-                    f"'{block.title}': {words} words, {sentences} sentences. Keep one or two "
+                    f"'{_name(block)}': {words} words, {sentences} sentences. Keep one or two "
                     "framing sentences; give a procedure as labelled steps, conditions as points "
                     "and cases as a table.",
                 )
@@ -195,7 +218,7 @@ def quality_flags(
             )
         narrated = [
             sentence
-            for block in unit.blocks
+            for block in reading_blocks
             if isinstance(block, TextBlock)
             for paragraph in (*block.paragraphs, *block.steps, *block.points)
             for sentence in re.split(r"(?<=[.!?])\s+", paragraph)
@@ -210,7 +233,7 @@ def quality_flags(
             )
         cited = [
             block.title
-            for block in (*unit.blocks, *(b for q in unit.questions for b in q.blocks))
+            for block in (*reading_blocks, *(b for q in unit.questions for b in q.blocks))
             if isinstance(getattr(block, "title", None), str) and TITLE_CITATION.search(block.title)
         ]
         if cited:
@@ -244,7 +267,7 @@ def quality_flags(
                     flag(
                         f"{unit.key}/{question.key}",
                         "restated_context",
-                        f"'{block.title}' repeats what the prompt already says; keep the data in "
+                        f"'{_name(block)}' repeats what the prompt already says; keep the data in "
                         "one place, or drop the table if the question is simple.",
                     )
             for option in question.options:
@@ -257,6 +280,68 @@ def quality_flags(
                     break
     for group in exercises.sets if exercises else ():
         for exercise in group.exercises:
+            if len(exercise.parts) > 1 and not any(step.part for step in exercise.steps):
+                flag(
+                    exercise.key,
+                    "shared_guide",
+                    f"{len(exercise.parts)} parts share one guide; name each step's `part` so "
+                    "every part gets its own guide.",
+                )
+            # A released statement may cite its lecture; authored guidance and solutions may not.
+            authored = [
+                text
+                for step in exercise.steps
+                for text in (
+                    step.prompt,
+                    *step.hints,
+                    step.explanation,
+                    *(
+                        part
+                        for block in (
+                            *step.blocks,
+                            *(
+                                step.check.model_answer
+                                if step.check
+                                and step.check.kind == "self_check"
+                                and isinstance(step.check.model_answer, tuple)
+                                else ()
+                            ),
+                        )
+                        if isinstance(block, TextBlock)
+                        for part in (*block.paragraphs, *block.steps, *block.points)
+                    ),
+                )
+            ] + [
+                part
+                for block in exercise.solution.blocks
+                if isinstance(block, TextBlock)
+                for part in (*block.paragraphs, *block.steps, *block.points)
+            ]
+            narrated = [
+                sentence
+                for text in authored
+                for sentence in re.split(r"(?<=[.!?])\s+", text)
+                if META_REFERENCE.search(sentence)
+            ]
+            if narrated:
+                flag(
+                    exercise.key,
+                    "meta_reference",
+                    f"{len(narrated)} sentence(s) in the guide or solution talk about the material "
+                    f"instead of the subject, such as '{narrated[0][:90]}'; state the idea itself.",
+                )
+            asides = [
+                block.title
+                for block in (*exercise.statement, *exercise.solution.notes)
+                if block.title and ASIDE_TITLE.search(block.title)
+            ]
+            if asides:
+                flag(
+                    exercise.key,
+                    "assumption_aside",
+                    f"'{asides[0]}' sets assumptions or sources apart; state assumptions in the "
+                    "problem statement and leave sources to the citation button.",
+                )
             for block in exercise.statement:
                 if not isinstance(block, TextBlock):
                     continue
@@ -266,7 +351,7 @@ def quality_flags(
                     flag(
                         exercise.key,
                         "dense_statement",
-                        f"'{block.title}': {words} words, {parts} parts in one block. Keep the "
+                        f"'{_name(block)}': {words} words, {parts} parts in one block. Keep the "
                         "wording, but give each part its own block, lists as points, givens as "
                         "a table and the setting as a figure.",
                     )

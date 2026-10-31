@@ -22,7 +22,10 @@ class Objective(Frozen):
 
 
 class Sourced(Frozen):
-    title: Text
+    # Without a title the block continues the section above it, under that heading.
+    title: Text | None = None
+    # 1 opens a section, 2 a subsection, 3 a sub-subsection; titled blocks never skip a level.
+    level: Literal[1, 2, 3] = 1
     sources: tuple[Key, ...] = Field(min_length=1)
     # An address for links into this block, unique within its unit or exercise.
     key: Key | None = None
@@ -53,7 +56,6 @@ class DefinitionBlock(Sourced):
     """A term students must learn, set apart from explanation; its title defaults to the term."""
 
     kind: Literal["definition"]
-    title: Text | None = None
     term: Label
     statement: Text
     conditions: tuple[Text, ...] = Field(default=(), max_length=6)
@@ -680,6 +682,20 @@ def has_visual(blocks: tuple[Block, ...]) -> bool:
     return any(block.kind in VISUAL_KINDS for block in blocks)
 
 
+def check_heading_levels(blocks: tuple[Block, ...]) -> None:
+    """Titled blocks form an outline: it starts at level 1 and descends one level at a time."""
+    previous = 0
+    for block in blocks:
+        if block.kind == "definition" or not block.title:
+            continue
+        if block.level > previous + 1:
+            raise ValueError(
+                f"'{block.title}' is a level-{block.level} heading after level {previous}; "
+                "headings start at level 1 and go one level deeper at a time."
+            )
+        previous = block.level
+
+
 def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
     """Project safe blocks for both workspaces without rewriting authored notation."""
     result: list[dict[str, JsonValue]] = []
@@ -755,6 +771,26 @@ class SourceVersion(Frozen):
     sha256: Digest
 
 
+class ExploreMaterial(Frozen):
+    key: Key
+    title: Text
+    sources: tuple[SourceVersion, ...] = Field(min_length=1)
+    blocks: tuple[Block, ...] = Field(min_length=1, max_length=40)
+
+    @model_validator(mode="after")
+    def references(self) -> "ExploreMaterial":
+        source_ids = {source.key for source in self.sources}
+        if len(source_ids) != len(self.sources):
+            raise ValueError("Explore source keys must be unique.")
+        keys = [block.key for block in self.blocks]
+        if None in keys or len(set(keys)) != len(keys):
+            raise ValueError("Explore blocks need distinct stable keys.")
+        if any(not set(block.sources) <= source_ids for block in self.blocks):
+            raise ValueError("Explore cites an undeclared source.")
+        check_heading_levels(self.blocks)
+        return self
+
+
 class Unit(Frozen):
     key: Key
     path: tuple[Annotated[str, Field(min_length=1, max_length=150)], ...] = Field(
@@ -769,14 +805,17 @@ class Unit(Frozen):
     blocks: tuple[Block, ...] = Field(min_length=1, max_length=40)
     flashcards: tuple[Flashcard, ...] = Field(min_length=1, max_length=80)
     questions: tuple[Question, ...] = Field(min_length=1, max_length=80)
-    # Lecture Notes of the lectures this unit teaches, linked from the unit when prepared.
+    # Lecture of the lectures this unit teaches, linked from the unit when prepared.
     lectures: tuple[Key, ...] = Field(default=(), max_length=6)
+    explore: tuple[ExploreMaterial, ...] = Field(
+        default=(), max_length=20, exclude_if=lambda value: not value
+    )
 
     @model_validator(mode="after")
     def coverage(self) -> "Unit":
         source_ids = {source.key for source in self.sources}
         objectives = {objective.key for objective in self.objectives}
-        for items in (self.objectives, self.sources, self.flashcards, self.questions):
+        for items in (self.objectives, self.sources, self.flashcards, self.questions, self.explore):
             if len({item.key for item in items}) != len(items):
                 raise ValueError("Unit item keys must be unique within their collection.")
         cited = (*self.blocks, *self.flashcards, *self.questions)
@@ -786,6 +825,7 @@ class Unit(Frozen):
         keys = [block.key for block in self.blocks if block.key]
         if len(set(keys)) != len(keys):
             raise ValueError("Block keys must be unique within a unit.")
+        check_heading_levels(self.blocks)
         if any(item.objective not in objectives for item in (*self.flashcards, *self.questions)):
             raise ValueError("Assessment references an unknown learning objective.")
         if {question.objective for question in self.questions} != objectives:

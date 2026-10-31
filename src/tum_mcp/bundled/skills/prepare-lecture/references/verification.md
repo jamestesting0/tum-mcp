@@ -13,7 +13,7 @@ missing assets or customized-template conflicts without overwriting user work.
 Keep prior usable notes intact if a source cannot be refreshed.
 
 Open the real app locally (`tum-mcp study` in the project folder). Follow the
-Lecture Notes list, a lecture and a section deep link. Check:
+Lecture list, a lecture and a section deep link. Check:
 
 - Overview and takeaways help the student revisit the lecture; sections explain
   useful reasoning beyond the materials without duplicating a Study chapter.

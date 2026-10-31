@@ -2,6 +2,55 @@
 
 ## Unreleased
 
+- The managed block in a course project's `AGENTS.md` is now an agent guide. It tells the
+  agent that it works for a student of the course, which skill handles which kind of
+  request (and how to answer "what should I do now?" with a dated plan), how to read short
+  requests such as "this week" or "the exam", where each kind of course information lives,
+  and how to answer as a tutor. `study sync` and `study upgrade` replace an outdated guide
+  and keep the student's own text; an edited guide is kept and reported.
+- `tum-mcp study find PROJECT "words"` lists the pages of stored sources that mention every
+  word, with a snippet each, and names the sources it could not search. Without words it
+  lists every source with its key, title, file and status.
+- New course handbooks have a Conventions section for the textbook, notation, terms and
+  answer format the course expects.
+- Agents look at the slide and sheet pages they rely on instead of trusting extracted text,
+  which drops figures and scrambles tables and formulas. `study text --images` renders up to
+  12 pages to PNGs for hosts that cannot open PDFs (such as Codex), and `study find` and
+  `study text` name the PDF file so hosts that can (such as Claude Code) open the page
+  directly. The agent guide, the skills and the Moodle and Artemis read tools say so; the
+  unused PDF page reader in the extraction worker became this renderer.
+- One unreadable page no longer fails a whole PDF. When pypdf rejects a page (for example a
+  slide beyond its parsing limits) or the whole file (a damaged cross-reference table), PDFium
+  reads it instead; a page neither can read is listed as needing a visual check. This covers
+  `study text`, `study find`, `study import` and Moodle and Artemis material text. `study find`
+  also matches words printed with ligatures, so "first" finds "ﬁrst".
+- Course content can use heading levels 1 to 3 in Study, Exercises, Exam and Lecture.
+  A block without a title continues the section above it, so a table or answer frame
+  no longer needs a heading of its own. The page outline nests subsections.
+- A multi-part exercise shows one guide per part. The Guide, Solution and "Try another"
+  buttons share one row under the problem, and the redundant list of part numbers is gone.
+- `study report` flags a flat Study outline of four or more units, multi-part exercises that
+  share one guide, and exercise passages that set assumptions or sources apart.
+- review-course also scores organization and redundancy for each unit and exercise, and the
+  course as a whole: the order of its units and groups, what repeats across units and
+  workspaces, and, when Exercises, Exam or Lecture sit beside Study, how they
+  link to the passages that teach what they need (integration). `study report --section
+  structure` prints a course map and flags terms used before they are taught, odd groups,
+  repeated passages and practice, and missing links. Each lost point names its rubric
+  check, and the report counts the checks that fail most. An existing `review.json` still
+  loads and lists the dimensions it lacks.
+- PDF text extraction works for agents running in a macOS sandbox such as Codex's
+  `workspace-write`: its memory limit no longer needs to list every process on the machine,
+  which the sandbox forbids, so `study text` no longer fails on uncached PDFs there.
+- The skills group Study units by lecture, fold assumptions into the problem statement,
+  give verdicts with the source's definitions, cover every presented part of the chosen
+  sheet, and take the newest sheet stamped for the current semester when no release date
+  is shown.
+- Campus tools that only read from Moodle, Artemis or Zulip and save local files or
+  checkpoints (`moodle_download_material`, `moodle_refresh`, `artemis_get_attachment`,
+  `zulip_save_checkpoint`) are now marked read-only, so agents that ask before
+  non-read-only tools no longer prompt for downloads. Sign-in, sign-out and cache
+  clearing keep their warnings.
 - `tum-mcp doctor --live` saves each campus check with its time, and `doctor` and the
   `login` selector show that result for 12 hours instead of "Not verified". Signing in
   again or logging out clears it; only the result, its time and file metadata are stored.
@@ -38,7 +87,7 @@
 - Drawings keep 12 px text on a phone: graphs and UML diagrams shrink only that far and
   scroll sideways beyond it; plots redraw at their real width.
 - `tum-mcp study visuals PROJECT` measures every drawn visual of lessons, practice
-  questions, exercise steps and Exam Prep at 390, 600 and 1280 px (lines through nodes,
+  questions, exercise steps and Exam at 390, 600 and 1280 px (lines through nodes,
   clashing labels, small or clipped text, drawings that differ from their block), writes
   contact sheets to `.tum-mcp/visuals/` and records the result; `study report` gains a
   render section that lists missing, stale and failing checks.
@@ -77,8 +126,8 @@
   graph. **Compare** is now the only reveal: hints stop after the last one, a step
   without a check is compared too, and an explanation may not repeat its model answer.
 - **Review** beside a prerequisite opens that Study passage next to the exercise without
-  losing your place; a unit links its Lecture Notes, the exercises that build on it and
-  the Exam Prep patterns that cite it, and Lecture Notes link back. In the local
+  losing your place; a unit links its Lecture, the exercises that build on it and
+  the Exam patterns that cite it, and Lecture link back. In the local
   preview, a citation opens the stored course file at the cited page.
 - A new `review-course` skill scores each Study unit and exercise from 1 to 3 on
   correctness, clarity, cognitive load, representation, practice and coverage, saves the
@@ -111,11 +160,11 @@
 
 ## 0.11.0 — 2026-10-28
 
-- Add the base `prepare-exams` workflow and the local **Exam Prep** workspace: a
+- Add the base `prepare-exams` workflow and the local **Exam** workspace: a
   cheatsheet with a semester map you can pan, zoom and open full screen, exam patterns
   with solving workflows and a worked practice question each, guided past papers, and
   practice exams with a solution under every question. Statistics, map layout,
-  blueprint and novelty checks are derived by code. Exam Prep is never published.
+  blueprint and novelty checks are derived by code. Exam is never published.
 - Add `tum-mcp study exam-report`, `study text` (page text extracted once per file),
   `study import` (private local files such as past exams you hold) and
   `study duplicates` (identical and near-duplicate copies across Moodle, Artemis,
@@ -143,7 +192,7 @@
 - A page whose sections all cite the same sources shows one citation beside its title
   line, and a cheatsheet section whose entries share sources cites them once; exam
   pages mention past exams only when there are some. Lines that only described a page
-  or told students to compare (such as the Exam Prep summary) are gone, and the skills
+  or told students to compare (such as the Exam summary) are gone, and the skills
   ask for text that teaches.
 - A new `tree` block draws hierarchies such as file structures, object trees and call
   trees with icons, connector lines and optional notes.
@@ -202,9 +251,9 @@
 - Improve detail: readable graph edges, fitted phone diagram labels, word-wrapped
   boxes, no dark-mode flash, steady flashcard layout, labelled reset and in-app
   confirmation for deleting comments, and neutral page copy on published sites.
-- Lecture Notes: recording times open from the sources of each passage and figure
+- Lecture: recording times open from the sources of each passage and figure
   instead of appearing in the text, and the sidebar lists lectures only.
-- Add a Contents button to Study, Exercises and Lecture Notes. It lists the page's
+- Add a Contents button to Study, Exercises and Lecture. It lists the page's
   headings and follows your reading; wide screens can keep it docked beside the
   text. The home resume button shows a play icon with the topic name.
 - Keep queued Contents updates from a previous view from hiding the current
@@ -239,7 +288,7 @@
   `tum-mcp install studocu`. Preserve originals, course bindings and recovery
   history; supplementary personal-use sources are excluded from publication.
 - Add optional `tum-mcp install lecture` and Prepare Lecture for timestamped
-  Lecture Notes in the existing course app. Prefer transcripts and supplied
+  Lecture in the existing course app. Prefer transcripts and supplied
   materials, skip whole-silent recordings, preserve original-time coverage and
   request only critical video frames. Publication remains an explicit opt-in.
 - Support isolated, pinned CPU recognition on Windows x64, Intel Mac and supported

@@ -64,3 +64,65 @@ def test_an_official_solution_requires_its_declared_source() -> None:
     # When labeling it official, attribution is required.
     with pytest.raises(ValidationError):
         ExerciseContent.model_validate(payload)
+
+
+def _parted(step_parts: list[str | None]) -> dict:
+    payload = json.loads(FIXTURE.read_bytes())
+    exercise = payload["sets"][0]["exercises"][0]
+    exercise["parts"] = ["(a)", "(b)"]
+    answer = exercise["solution"]["answers"][0]
+    exercise["solution"]["answers"] = [{**answer, "label": "(a)"}, {**answer, "label": "(b)"}]
+    first = exercise["statement"][0]
+    first.update(key="cost", title="(a)")
+    exercise["statement"].append(
+        {
+            "kind": "text",
+            "key": "decision",
+            "title": "(b)",
+            "sources": first["sources"],
+            "paragraphs": ["Decide whether to replace the previous distance."],
+        }
+    )
+    if any(step_parts):
+        exercise["part_blocks"] = {"(a)": "cost", "(b)": "decision"}
+    for step, part in zip(exercise["steps"], step_parts, strict=True):
+        if part is None:
+            step.pop("part", None)
+        else:
+            step["part"] = part
+    return payload
+
+
+def test_each_part_of_a_multi_part_exercise_gets_its_own_guide() -> None:
+    # Steps grouped by part, in the order of the parts, give one guide per part.
+    ExerciseContent.model_validate(_parted(["(a)", "(a)", "(b)"]))
+    # Steps without parts keep one shared guide.
+    ExerciseContent.model_validate(_parted([None, None, None]))
+
+
+@pytest.mark.parametrize(
+    "step_parts",
+    [["(a)", None, "(b)"], ["(a)", "(a)", "(a)"], ["(b)", "(a)", "(a)"], ["(a)", "(b)", "(a)"]],
+)
+def test_part_guides_must_cover_every_part_in_order(step_parts: list[str | None]) -> None:
+    with pytest.raises(ValidationError):
+        ExerciseContent.model_validate(_parted(step_parts))
+
+
+@pytest.mark.parametrize("fault", ["missing", "unknown", "untitled", "reversed", "duplicate"])
+def test_part_guides_require_unambiguous_statement_anchors(fault: str) -> None:
+    payload = _parted(["(a)", "(a)", "(b)"])
+    exercise = payload["sets"][0]["exercises"][0]
+    match fault:
+        case "missing":
+            exercise["part_blocks"].pop("(b)")
+        case "unknown":
+            exercise["part_blocks"]["(a)"] = "absent"
+        case "untitled":
+            exercise["statement"][0].pop("title")
+        case "reversed":
+            exercise["part_blocks"] = {"(a)": "decision", "(b)": "cost"}
+        case "duplicate":
+            exercise["part_blocks"]["(b)"] = "cost"
+    with pytest.raises(ValidationError):
+        ExerciseContent.model_validate(payload)

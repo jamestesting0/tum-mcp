@@ -29,6 +29,9 @@ blocks. Do not invent custom HTML, a new page system or assessment fields. Inlin
 math uses `\( ... \)`; formula blocks retain validated LaTeX and explain symbols
 and conditions. The builder uses the existing safe math renderer.
 
+A section is the page's top level, so its blocks use `level` 1 to 3 one level below it;
+an untitled block continues the block above it ([headings](../../prepare-study/references/content.md#blocks)).
+
 Evidence kinds are subtitle, asr, frame or document. Timed evidence has the
 recording ID and original-time `interval: {start_s, end_s}` plus source key/SHA.
 Documents have an actual locator instead of a recording interval. Each teaching

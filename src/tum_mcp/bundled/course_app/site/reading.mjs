@@ -102,25 +102,47 @@ function codeBlock(block) {
   return append(node('div', 'code-walkthrough'), region, append(node('div', 'code-walk'), append(node('div', 'code-walk-controls'), prev, counter, next), note));
 }
 
-export function renderReading(unit) {
+// The heading element for a titled block: level 1 sits one below the enclosing heading.
+export const headingTag = (block, depth = 1) => `h${Math.min(6, (block.level || 1) + depth)}`;
+const continues = block => block.kind === 'definition' || !block.title;
+
+// A titled block opens a section at its level. A term or an untitled block continues the
+// section above, under that heading and its citation; one that opens the passage shares an
+// untitled section. `depth` shifts every level under an enclosing heading, such as a step's.
+export function renderReading(unit, { depth = 1, withVideo = true } = {}) {
   const root = node('div');
-  const video = videoPanel(unit);
+  const video = withVideo ? videoPanel(unit) : null;
   if (video) root.append(video);
   let material = null;
   for (const [index, block] of unit.blocks.entries()) {
-    // A term joins the passage it belongs to, under that passage's heading and citation;
-    // terms that open the lesson share one untitled section.
-    if (block.kind === 'definition' && material) {
-      const last = material.lastElementChild;
-      const list = last?.matches('dl.definitions') ? last : material.appendChild(node('dl', 'definitions'));
-      const item = definitionItem(block); item.dataset.blockIndex = String(index);
-      if (block.key) item.dataset.block = block.key;
-      list.append(item); continue;
+    if (material && continues(block)) {
+      if (block.kind === 'definition') {
+        const last = material.lastElementChild;
+        const list = last?.matches('dl.definitions') ? last : material.appendChild(node('dl', 'definitions'));
+        const item = definitionItem(block); item.dataset.blockIndex = String(index);
+        if (block.key) item.dataset.block = block.key;
+        list.append(item);
+      } else {
+        const body = renderBlockBody(block); body.dataset.blockIndex = String(index);
+        if (block.key) body.dataset.block = block.key;
+        material.append(body);
+      }
+      continue;
     }
     const section = node('section', 'read-section'); section.dataset.blockIndex = String(index);
+    section.dataset.level = String(block.title ? block.level || 1 : 1);
     if (block.key) section.dataset.block = block.key;
     material = node('div', 'reading-material'); material.dataset.commentTarget = 'content';
-    if (block.kind !== 'definition') material.append(append(node('div', 'section-heading'), studyText('h2', '', block.title), sourcesNote(block.sources, data.sources, data.course.synthetic, block.title, {}, block.pages)));
+    // The section cites everything it holds, so untitled blocks below share its citation.
+    const members = [block];
+    for (const next of unit.blocks.slice(index + 1)) { if (!continues(next)) break; members.push(next); }
+    const cited = [...new Set(members.flatMap(item => item.kind === 'definition' && item !== block ? [] : item.sources))];
+    if (block.kind !== 'definition') {
+      const heading = append(node('div', `section-heading${block.title ? '' : ' untitled'}`));
+      if (block.title) heading.append(studyText(headingTag(block, depth), '', block.title));
+      heading.append(sourcesNote(cited, data.sources, data.course.synthetic, block.title || unit.title || '', {}, block.pages));
+      material.append(heading);
+    }
     material.append(block.kind === 'definition' ? append(node('dl', 'definitions'), definitionItem(block)) : renderBlockBody(block));
     section.append(material); root.append(section);
   }
@@ -183,23 +205,24 @@ function treeBlock(block) {
     if (item.children.length) entry.append(append(node('ul'), ...item.children.map(branch)));
     return entry;
   };
-  const tree = append(node('ul', 'tree'), branch(block.root)); tree.setAttribute('aria-label', studyText('span', '', block.title).textContent);
+  const tree = append(node('ul', 'tree'), branch(block.root)); tree.setAttribute('aria-label', studyText('span', '', block.title || 'Tree').textContent);
   if (block.description) figure.append(studyText('figcaption', 'small', block.description));
   figure.append(tree);
   return figure;
 }
 
 // The direct answers of a solution, one labelled answer per original part, then any notes.
-export function renderAnswers(solution, target = element => element) {
+export function renderAnswers(solution, target = element => element, answerIndex = null) {
   const root = node('div', 'solution-answers');
   solution.answers.forEach((answer, index) => {
+    if (answerIndex !== null && index !== answerIndex) return;
     const item = node('section', 'solution-answer');
-    if (answer.label) item.append(studyText('h3', 'solution-label', answer.label));
+    if (answerIndex === null && answer.label) item.append(studyText('h3', 'solution-label', answer.label));
     item.append(target(append(node('div', 'reading-material'), ...answer.blocks.map(block => renderBlockBody(block))), `solution:${index}`));
     root.append(item);
   });
-  if (solution.notes?.length) {
-    const notes = renderReading({ blocks: solution.notes });
+  if (answerIndex === null && solution.notes?.length) {
+    const notes = renderReading({ blocks: solution.notes }, { depth: 2 });
     [...notes.querySelectorAll('.reading-material')].forEach((element, index) => target(element, `solution-note:${index}`));
     root.append(notes);
   }

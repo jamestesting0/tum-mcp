@@ -1,4 +1,4 @@
-# Verify Exam Prep
+# Verify Exam
 
 1. **Report**: after building, read `tum-mcp study exam-report PROJECT`. Resolve stale
    items, review low-confidence and out-of-scope questions, and decide every flagged

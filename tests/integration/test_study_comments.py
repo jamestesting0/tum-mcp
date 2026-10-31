@@ -196,3 +196,82 @@ def test_activity_targets_remain_filterable_and_legacy_content_notes_load(projec
     assert read_comments(project)["comments"][1]["anchor"]["view"] == "content"
     assert raw.read_bytes() == before
     assert saved["comments"][0]["anchor"]["view"] == "practice"
+
+
+def test_explore_comment_targets_reject_stale_content_and_keep_schema_version(
+    project: Path,
+) -> None:
+    from uuid import uuid4
+
+    from study_explore_fixture import add_explore
+
+    from tum_mcp.study_build import explore_revision, read_content
+    from tum_mcp.study_comment_models import ExploreAnchor
+
+    add_explore(project)
+    unit = next(unit for unit in read_content(project).units if unit.key == "bfs")
+    material = unit.explore[0]
+    current = read_comments(project)
+    anchor = ExploreAnchor(
+        unit_key=unit.key,
+        item_key=material.key,
+        block_key="history",
+        semantic_revision=explore_revision(material),
+        quote="A synthetic supporting passage.",
+    )
+    for changed in [
+        {"block_key": "unknown"},
+        {"semantic_revision": "0" * 64},
+        {"item_key": "unknown"},
+    ]:
+        with pytest.raises(CampusError):
+            change_comment(
+                project,
+                Create(
+                    op="create",
+                    id=uuid4(),
+                    course_identity=current["course_identity"],
+                    expected_revision=current["revision"],
+                    anchor=anchor.model_copy(update=changed),
+                    text="A note",
+                ),
+            )
+        assert read_comments(project) == current
+    operation = Create(
+        op="create",
+        id=uuid4(),
+        course_identity=current["course_identity"],
+        expected_revision=current["revision"],
+        anchor=anchor,
+        text="Supporting note",
+    )
+    saved = change_comment(project, operation)
+    assert saved["schema_version"] == 4
+    args = ["study", "comments", "list", str(project), "--view", "explore"]
+    listing = CliRunner().invoke(app, args)
+    assert listing.exit_code == 0, listing.output
+    assert json.loads(listing.output)["comments"][0]["content_state"] == "current"
+    path = project / "study/content.json"
+    payload = json.loads(path.read_bytes())
+    owner = next(item for item in payload["units"] if item["key"] == "bfs")
+    owner["explore"][0]["blocks"][0]["paragraphs"] = ["A changed supporting passage."]
+    path.write_text(json.dumps(payload))
+    listing = CliRunner().invoke(app, args)
+    assert listing.exit_code == 0, listing.output
+    assert json.loads(listing.output)["comments"][0]["content_state"] == "content_changed"
+    owner.pop("explore")
+    path.write_text(json.dumps(payload))
+    listing = CliRunner().invoke(app, args)
+    assert listing.exit_code == 0, listing.output
+    assert json.loads(listing.output)["comments"][0]["content_state"] == "missing_unit"
+    deleted = change_comment(
+        project,
+        Delete(
+            op="delete",
+            id=operation.id,
+            course_identity=current["course_identity"],
+            expected_revision=saved["revision"],
+        ),
+    )
+    assert deleted["schema_version"] == 4
+    assert deleted["comments"] == []

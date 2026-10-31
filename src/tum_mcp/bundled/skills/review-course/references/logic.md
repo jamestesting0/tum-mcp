@@ -20,8 +20,8 @@ Coverage.
 5. Compare each visual with the numbers in its text: a trace frame shows the state its
    caption claims; a plot's marked point lies where the text says.
 6. Coverage: every outcome the coverage ledger assigns to the unit is taught and then
-   practised; an exercise answers every part of the original; a prerequisite links to the
-   passage that teaches it.
+   practised; an exercise answers every part of the original. Whether an exercise links
+   the passage it needs is scored in the [course pass](course.md).
 
 ## Findings
 
@@ -34,3 +34,8 @@ the queue holds B, C; with alphabetical ties it holds C, B (page 12)."
 - Feedback that explains the right answer instead of the mistake that leads to the wrong one.
 - A convention stated only in the solution, after the student needed it.
 - A number copied from a slide of another edition.
+
+Review Explore claims, calculations and citations too. Optional status does not
+relax correctness. Confirm the core explanation and tasks remain sufficient with
+Explore closed; a true historical fact is not automatically optional. See
+[the classification rule](../../prepare-study/references/explore.md).

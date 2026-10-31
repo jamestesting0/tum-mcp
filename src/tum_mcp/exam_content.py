@@ -1,4 +1,4 @@
-"""Exam Prep content: a past-exam registry, cheatsheet concepts, patterns and practice exams.
+"""Exam content: a past-exam registry, cheatsheet concepts, patterns and practice exams.
 
 Agents author identities, classifications and teaching. Counts, rates, order and coverage
 are always derived by code (exam_data), so the schema has no count fields.
@@ -485,7 +485,7 @@ class ExamContent(Frozen):
     @model_validator(mode="after")
     def consistent(self) -> "ExamContent":
         if not (self.sittings or self.concepts or self.patterns or self.mocks):
-            raise ValueError("Exam Prep needs past exams, cheatsheet concepts, patterns or mocks.")
+            raise ValueError("Exam needs past exams, cheatsheet concepts, patterns or mocks.")
         self._unique()
         self._references()
         self._source_versions()

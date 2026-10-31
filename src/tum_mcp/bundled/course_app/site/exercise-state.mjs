@@ -18,7 +18,11 @@ export function exerciseState(read, write, prefix = exercisePrefix) {
           compared: previous.compared === true, skipped: previous.skipped === true,
           first: object(previous.first), latest: object(previous.latest) };
       }
-      cache.set(key, { key, revision: exercise.revision, steps,
+      const partSolutions = Object.fromEntries((exercise.parts || []).map(part => {
+        const previous = object(object(saved.partSolutions)[part]);
+        return [part, { open: previous.open === true, viewed: previous.viewed === true }];
+      }));
+      cache.set(key, { key, revision: exercise.revision, steps, partSolutions,
         helpOpen: saved.helpOpen === true, solutionOpen: saved.solutionOpen === true,
         solutionViewed: saved.solutionViewed === true, lastStep: saved.lastStep || exercise.steps[0].key });
     }
@@ -34,7 +38,9 @@ export function exerciseState(read, write, prefix = exercisePrefix) {
   }
   function attempt(exercise, step, correct = null) {
     const value = get(exercise), state = value.steps[step.key];
-    const summary = { value: state.draft, correct, hints: state.hints, solutionViewed: value.solutionViewed };
+    const viewed = step.part && exercise.part_blocks?.[step.part]
+      ? value.partSolutions[step.part].viewed : value.solutionViewed;
+    const summary = { value: state.draft, correct, hints: state.hints, solutionViewed: viewed };
     if (!Object.keys(state.first).length) state.first = summary;
     state.latest = summary; save(exercise);
   }

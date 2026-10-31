@@ -15,6 +15,7 @@ from tum_mcp.study_comment_models import (
     Create,
     Delete,
     Edit,
+    ExploreAnchor,
     LectureAnchor,
     Operation,
     SetStatus,
@@ -84,7 +85,32 @@ def change_comment(root: Path, operation: Operation) -> dict:
                     raise CampusError(Code.WORKSPACE_CONFLICT, "This comment is already saved.")
                 if len(items) >= 500:
                     raise CampusError(Code.ACTION_REQUIRED, "The project has reached 500 comments.")
-                if isinstance(operation.anchor, LectureAnchor):
+                if isinstance(operation.anchor, ExploreAnchor):
+                    from tum_mcp.study_build import explore_revision, read_content
+
+                    anchor = operation.anchor
+                    content = read_content(root)
+                    material = next(
+                        (
+                            item
+                            for unit in content.units
+                            if unit.key == anchor.unit_key
+                            for item in unit.explore
+                            if item.key == anchor.item_key
+                        ),
+                        None,
+                    )
+                    if material is None or not any(
+                        block.key == anchor.block_key for block in material.blocks
+                    ):
+                        raise CampusError(
+                            Code.SCOPE_DENIED, "This Explore passage no longer exists."
+                        )
+                    if explore_revision(material) != anchor.semantic_revision:
+                        raise CampusError(
+                            Code.STALE_RESULT, "Explore material changed. Reload before commenting."
+                        )
+                elif isinstance(operation.anchor, LectureAnchor):
                     from tum_mcp.lecture_data import read_lectures
 
                     content = read_lectures(root)
@@ -151,7 +177,11 @@ def change_comment(root: Path, operation: Operation) -> dict:
                 assert_never(unreachable)
         version = max(
             document.schema_version,
-            3 if any(isinstance(item.anchor, LectureAnchor) for item in items) else 2,
+            4
+            if any(isinstance(item.anchor, ExploreAnchor) for item in items)
+            else 3
+            if any(isinstance(item.anchor, LectureAnchor) for item in items)
+            else 2,
         )
         updated = document.model_copy(update={"schema_version": version, "comments": tuple(items)})
         after = updated.model_dump_json(indent=2).encode()

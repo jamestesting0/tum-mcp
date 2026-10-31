@@ -28,7 +28,7 @@ label these roles; the writing makes them clear):
 3. Bridge: the first section names the prerequisite and notation it builds on.
 4. Intuition: a concrete case or picture before the formal statement.
 5. Definitions: a `definition` block right after the passage that introduces each term
-   students must learn. It appears inside that passage as the term beside its meaning, so
+   students must learn. It appears inside that passage as the term above its meaning, so
    the prose does not restate it. Later mentions anywhere in the course are `{{term}}`.
 6. Mechanism as labelled `steps`, one action each, then a worked example in its own
    section: one computed value per step, or a trace.
@@ -43,8 +43,10 @@ or question that a student can genuinely get wrong.
 For each new or changed objective, cover the mechanism, its assumptions and a useful
 example, each in the shape it has ([representations](review.md#choose-the-representation)):
 
-- One idea per section, with at most 70 words of prose, structured as in
-  [writing](writing.md#structure-before-prose).
+- One idea per passage, with at most 70 words of prose, structured as in
+  [writing](writing.md#structure-before-prose). A passage is not automatically a
+  top-level section: group a method's cases, examples and limitations beneath that
+  method using the [heading hierarchy](content.md#blocks).
 - A procedure or hard argument: labelled steps. An algorithm's run: a trace whose frames
   carry its state ([traces](review.md#algorithm-traces)).
 - Parallel cases: points or a table. A rule with two inputs: a decision matrix.
@@ -54,12 +56,16 @@ example, each in the shape it has ([representations](review.md#choose-the-repres
 - Essential conditions and counterexamples stay visible; optional proof detail may sit in
   a disclosure, essential meaning never.
 
-Split independent goals and remove duplication. There are no diagram quotas and no equal
-word, card or question counts.
+Split independent goals and remove duplication. Teach each idea in one unit, its home;
+later units mark it `{{term}}` or build on it, and never explain it again. Order units so
+each uses only what earlier units teach. There are no diagram quotas and no equal word,
+card or question counts.
 
 ## Precision and language
 
-Define symbols and units, verify signs/indexing/edge cases, and check equations
+Define each term before a table, step or question uses it: a comparison table whose
+columns name properties the student has not met yet teaches nothing. Define symbols
+and units, verify signs/indexing/edge cases, and check equations
 against the original when OCR is uncertain. Keep prose, formulas, tables, cards
 and feedback consistent about the same assumption. Keep instructor facts apart from
 derived explanation, but do not label examples or narrate the source.
@@ -92,3 +98,10 @@ MCQ results and self-ratings do not establish mastery or official exam coverage.
 Recheck only affected teaching and dependent claims after a change, not the whole bank.
 
 Use [practice.md](practice.md) for question families, portable givens and repair feedback.
+
+## Supporting context
+
+Apply [Explore](explore.md) at source triage and review with Explore closed. Keep the
+motivation, definitions and examples needed for understanding in Content; retain
+independent context separately when the evidence supports that choice. Do not create
+cards or questions solely to test optional trivia.

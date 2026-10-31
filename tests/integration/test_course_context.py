@@ -3,10 +3,13 @@ from pathlib import Path
 
 import pytest
 import yaml
+from typer.testing import CliRunner
 
+from tum_mcp.cli import app
 from tum_mcp.course_context import context_review, context_status
 from tum_mcp.errors import CampusError
-from tum_mcp.study_store import load_state, upgrade_private
+from tum_mcp.study_status import project_status
+from tum_mcp.study_store import END, START, agent_pointer, digest, load_state, upgrade_private
 from tum_mcp.study_sync import sync
 
 
@@ -75,6 +78,34 @@ def test_explicit_private_upgrade_preserves_all_records_and_root_rules(project: 
         if relative.name != "state.json":
             assert (project / ".tum-mcp" / relative).read_bytes() == data
     upgrade_private(project)
+
+
+def test_upgrade_refreshes_an_outdated_agent_guide_and_keeps_student_text(project: Path) -> None:
+    agents, record = project / "AGENTS.md", project / ".tum-mcp/state.json"
+    text = agents.read_text()
+    current = text[text.index(START) : text.index(END) + len(END)]
+    assert current == agent_pointer(".tum-mcp")
+    old = START + "\n## TUM MCP course project\n\nOlder guide.\n" + END
+
+    def install(guide: str) -> None:
+        state = json.loads(record.read_bytes())
+        state["agents_block_sha256"] = digest(old.encode())
+        record.write_text(json.dumps(state))
+        agents.write_text("My rules.\n\n" + text.replace(current, guide) + "Exam on 3 March.\n")
+
+    install(old)
+    result = CliRunner().invoke(app, ["study", "upgrade", str(project)])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["agent_guide"] == "refreshed"
+    assert agents.read_text() == "My rules.\n\n" + text + "Exam on 3 March.\n"
+    assert load_state(project).agents_block_sha256 == digest(current.encode())
+    assert project_status(project).mode == "sync"
+    assert upgrade_private(project) is False
+    install(old.replace("Older guide.", "My edited guide."))
+    before = (agents.read_bytes(), record.read_bytes())
+    with pytest.raises(CampusError, match="Edited"):
+        upgrade_private(project)
+    assert (agents.read_bytes(), record.read_bytes()) == before
 
 
 def test_private_upgrade_refuses_two_folders_and_rolls_back_write_failure(

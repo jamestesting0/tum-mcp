@@ -1,4 +1,4 @@
-"""Read Exam Prep content, derive every statistic in code, and project it for the app."""
+"""Read Exam content, derive every statistic in code, and project it for the app."""
 
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -46,7 +46,7 @@ def read_exam(root: Path) -> ExamContent | None:
     if not path.exists():
         return None
     if not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
-        raise CampusError(Code.INVALID_RESPONSE, "Exam Prep content must be a file below 8 MiB.")
+        raise CampusError(Code.INVALID_RESPONSE, "Exam content must be a file below 8 MiB.")
     try:
         return ExamContent.model_validate_json(path.read_bytes())
     except ValidationError as error:
@@ -55,14 +55,14 @@ def read_exam(root: Path) -> ExamContent | None:
             for item in error.errors(include_input=False)
         ]
         raise CampusError(
-            Code.INVALID_RESPONSE, "Invalid Exam Prep content: " + "; ".join(problems[:5])
+            Code.INVALID_RESPONSE, "Invalid Exam content: " + "; ".join(problems[:5])
         ) from None
 
 
 def stale_exam(root: Path, state: StudyState, content: ExamContent) -> tuple[str, ...]:
     """Items whose cited sources changed; only these need review before the next build."""
     if state.course.key != content.course_key:
-        raise CampusError(Code.SCOPE_DENIED, "Exam Prep belongs to a different course.")
+        raise CampusError(Code.SCOPE_DENIED, "Exam belongs to a different course.")
     resources = {item.resource.key: item for item in state.resources}
     current: dict[tuple[str, str], bool] = {}
 
@@ -120,7 +120,7 @@ def check_unit_links(content: ExamContent, study: StudyContent | None) -> None:
     missing = sorted(linked - units)
     if missing:
         raise CampusError(
-            Code.INVALID_RESPONSE, "Exam Prep links to unknown Study topics: " + ", ".join(missing)
+            Code.INVALID_RESPONSE, "Exam links to unknown Study topics: " + ", ".join(missing)
         )
     blocks = {unit.key: {block.key for block in unit.blocks if block.key} for unit in study.units}
     for _, _, question in content.past_questions().values():
@@ -128,12 +128,12 @@ def check_unit_links(content: ExamContent, study: StudyContent | None) -> None:
             if prerequisite.block and prerequisite.block not in blocks[prerequisite.unit]:
                 raise CampusError(
                     Code.INVALID_RESPONSE,
-                    f"Exam Prep links to block {prerequisite.block}, which unit "
+                    f"Exam links to block {prerequisite.block}, which unit "
                     f"{prerequisite.unit} does not have.",
                 )
     from tum_mcp.exercise_data import check_terms
 
-    check_terms(content.model_dump(mode="json"), study, "Exam Prep")
+    check_terms(content.model_dump(mode="json"), study, "Exam")
 
 
 def _considered(content: ExamContent):
@@ -428,7 +428,7 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
 
 
 def exam_revisions(content: ExamContent) -> dict[str, str]:
-    """Revision of every commentable Exam Prep item, keyed as the app's comment anchors."""
+    """Revision of every commentable Exam item, keyed as the app's comment anchors."""
     revisions = {f"concept:{item.key}": concept_revision(item) for item in content.concepts}
     revisions |= {f"pattern:{item.key}": pattern_revision(item) for item in content.patterns}
     revisions |= {f"mock:{item.key}": mock_revision(item) for item in content.mocks}

@@ -423,3 +423,30 @@ def test_prune_keeps_rendering_runs_and_removes_abandoned_ones(
     with pytest.raises(CampusError, match="not a render run id"):
         project.recheck(course, STEM, "../plan")
     assert Storyboard.model_validate_json((course / f"videos/storyboards/{STEM}.json").read_bytes())
+
+
+def test_optional_reading_does_not_change_core_video_inputs(course: Path) -> None:
+    before = project.unit_locators(course, "bfs")
+    payload = content_json(course)
+    unit = next(unit for unit in payload["units"] if unit["key"] == "bfs")
+    unit["explore"] = [
+        {
+            "key": "history",
+            "title": "Supporting history",
+            "sources": unit["sources"],
+            "blocks": [
+                {
+                    "kind": "text",
+                    "key": "context",
+                    "sources": [unit["sources"][0]["key"]],
+                    "paragraphs": ["A synthetic optional historical detour."],
+                }
+            ],
+        }
+    ]
+    write_content(course, payload)
+    after = project.unit_locators(course, "bfs")
+    assert after["unit_hash"] == before["unit_hash"]
+    assert after["revision"] == before["revision"]
+    assert after["locators"] == before["locators"]
+    assert after["formulas"] == before["formulas"]

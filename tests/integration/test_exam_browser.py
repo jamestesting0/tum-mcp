@@ -23,6 +23,9 @@ def exam_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     root = exam_project(tmp_path_factory.mktemp("exam-browser"))
     (root / "app").mkdir()
     document = with_guided_paper(exam_document(root))
+    # Exam replay accepts labelled steps without the exercise-only part-block contract.
+    for step in document["sittings"][0]["variants"][0]["questions"][0]["guidance"]["steps"]:
+        step["part"] = "(a)"
     (root / "app/exam.json").write_text(json.dumps(document), encoding="utf-8")
     build(root, publish=False)
     with PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(root / "app"))) as server:
@@ -40,7 +43,7 @@ def open_page(browser: Browser, url: str, width: int, errors: list[str]) -> Page
     page = context.new_page()
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.goto(url + "#exam")
-    page.get_by_role("heading", name="Exam Prep", exact=True).wait_for()
+    page.get_by_role("heading", name="Exam", exact=True).wait_for()
     return page
 
 

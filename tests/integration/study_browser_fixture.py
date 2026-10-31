@@ -29,6 +29,13 @@ def structure_checks(page: Page, content: dict) -> None:
     )
     assert section.locator("dl.definitions dt").inner_text() == "Tentative distance"
     assert page.get_by_role("heading", name="Tentative distance", exact=True).count() == 0
+    term = section.locator(".definition-item dt").bounding_box()
+    meaning = section.locator(".definition-item dd").bounding_box()
+    item = section.locator(".definition-item").bounding_box()
+    assert term and meaning and item
+    assert meaning["y"] >= term["y"] + term["height"]
+    assert abs(meaning["x"] - term["x"]) <= 1
+    assert abs(meaning["width"] - item["width"]) <= 1
     assert section.locator("ol.steps > li").count() == 4
     # A step that opens with a short label shows the label in bold, before its own text.
     labels = section.locator("ol.steps > li > strong.item-label")
@@ -47,6 +54,7 @@ def study_website(browser: Browser) -> dict[str, object]:
     from tum_mcp.study_build import TEMPLATE_FILES, build
     from tum_mcp.study_comment_models import OPERATION
     from tum_mcp.study_comments import change_comment, read_comments
+    from tum_mcp.study_store import private_path
     from tum_mcp.study_sync import sync
 
     with tempfile.TemporaryDirectory(prefix="tum-study-browser-") as temporary:
@@ -60,8 +68,55 @@ def study_website(browser: Browser) -> dict[str, object]:
         )
         sync(project, fixture / "snapshot.json", course_input="Algorithms & Graphs")
         (site / "content.json").write_bytes((fixture / "content.json").read_bytes())
-        build(project, publish=False)
         content = json.loads((site / "content.json").read_bytes())
+        optional_unit = next(unit for unit in content["units"] if unit["key"] == "bfs")
+        optional_source = optional_unit["sources"][0]["key"]
+        optional_unit["explore"] = [
+            {
+                "key": "origins",
+                "title": "Synthetic background",
+                "sources": optional_unit["sources"],
+                "blocks": [
+                    {
+                        "key": "context",
+                        "kind": "text",
+                        "title": "A wider context",
+                        "sources": [optional_source],
+                        "paragraphs": ["Synthetic optional reading outside the core journey."],
+                    }
+                ],
+            }
+        ]
+        (site / "content.json").write_text(json.dumps(content), encoding="utf-8")
+        private_path(project, "coverage.json").write_text(
+            json.dumps(
+                {
+                    "course_key": content["course_key"],
+                    "sources": [
+                        {
+                            "source": optional_source,
+                            "status": {"checked_at": "2026-10-30"},
+                            "outcomes": [
+                                {
+                                    "key": "background",
+                                    "text": "Read wider context.",
+                                    "locator": "Synthetic fixture",
+                                    "status": "covered",
+                                    "role": "enrichment",
+                                    "classification": {
+                                        "basis": "reviewed_enrichment",
+                                        "reason": "The synthetic core tasks are self-contained.",
+                                    },
+                                    "explore": [{"unit": "bfs", "item": "origins"}],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        build(project, publish=False)
         errors = []
 
         def serve(route: Route) -> None:
@@ -129,6 +184,19 @@ def study_website(browser: Browser) -> dict[str, object]:
                 assert page.locator(".code-region code").inner_text() == code["code"]
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
                 assert page.locator(".sidebar").get_by_text("About", exact=True).count() == 0
+                page.get_by_role("tab", name="Explore", exact=True).click()
+                assert (
+                    page.locator("#panel-explore").get_by_text("Optional", exact=True).count() == 0
+                )
+                assert page.get_by_role("heading", name="A wider context", exact=True).is_visible()
+                assert page.locator("#panel-explore video").count() == 0
+                page.locator(".next-step a").click()
+                assert (
+                    page.get_by_role("tab", name="Content", exact=True).get_attribute(
+                        "aria-selected"
+                    )
+                    == "true"
+                )
                 if width == 390 and theme == "light":
                     comment_checks(page, project)
                     table_layout_checks(page, project)

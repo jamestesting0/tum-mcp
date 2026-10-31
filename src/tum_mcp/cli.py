@@ -389,8 +389,13 @@ def main() -> None:
     except (CampusError, MoodleError, BrowserSetupError) as error:
         typer.echo(str(error), err=True)
         raise SystemExit(2) from None
-    except OSError:
-        typer.echo("Local files could not be accessed. Check permissions and retry.", err=True)
+    except OSError as error:
+        reason = error.strerror or type(error).__name__
+        where = f" ({error.filename})" if error.filename else ""
+        typer.echo(
+            f"Local files could not be accessed: {reason}{where}. Check permissions and retry.",
+            err=True,
+        )
         raise SystemExit(2) from None
     except KeyboardInterrupt:
         typer.echo("Cancelled. Completed changes were preserved.", err=True)

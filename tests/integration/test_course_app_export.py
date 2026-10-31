@@ -6,6 +6,7 @@ import pytest
 from tum_mcp.errors import CampusError
 from tum_mcp.study_build import build
 from tum_mcp.study_models import Resource, ResourceState
+from tum_mcp.study_publish_projection import project as project_public_data
 from tum_mcp.study_publish_site import SITE_FILES, export_site
 from tum_mcp.study_store import digest, load_state
 
@@ -78,3 +79,47 @@ def test_excluded_exercises_leave_no_statement_hint_solution_math_or_source_cana
     assert payload["workspaces"] == ["exercises"]
     # A published citation names its source but never the stored local copy.
     assert all("file" not in source for source in payload["sources"].values())
+
+
+@pytest.mark.parametrize("include_exercises", [False, True])
+def test_hosted_preparation_does_not_disclose_unselected_source_inventory(
+    project: Path, include_exercises: bool
+) -> None:
+    # Given a local preparation queue containing both published and unselected sources.
+    payload = json.loads(
+        (project / "study/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
+    )
+    selected = payload["units"][0]["sources"][0]["key"]
+    public = {"source": selected, "title": "Published source", "outcomes": []}
+    private = {"source": "not-published", "title": "UNSELECTED_PRIVATE_TITLE", "outcomes": []}
+    authoring = public | {"title": "PRIVATE_AUTHORING_STATE"}
+    payload["studyPreparation"] = {
+        "pending": [public, private],
+        "unrecorded": [authoring],
+        "enrichmentPending": [authoring],
+    }
+    # When the same native publication projection selects public workspaces.
+    result = project_public_data(
+        ("export default " + json.dumps(payload) + ";\n").encode(),
+        include_exercises=include_exercises,
+        include_lectures=False,
+    )
+    # Then only preparation for the selected Study sources can leave the local project.
+    assert result["studyPreparation"] == {"pending": [public]}
+    assert "UNSELECTED_PRIVATE_TITLE" not in json.dumps(result)
+    assert "PRIVATE_AUTHORING_STATE" not in json.dumps(result)
+
+
+@pytest.mark.parametrize(
+    "path", ["figures/../private.png", "figures/private.json", "../private.png"]
+)
+def test_static_asset_allowlist_still_rejects_non_image_or_escaping_paths(
+    project: Path, path: str
+) -> None:
+    from tum_mcp.study_publish_models import course_identity
+    from tum_mcp.study_publish_site import preflight
+
+    output = export_site(project)
+    output[path] = b"PRIVATE"
+    with pytest.raises(CampusError, match="unmanaged"):
+        preflight(output, course_identity(load_state(project).course))

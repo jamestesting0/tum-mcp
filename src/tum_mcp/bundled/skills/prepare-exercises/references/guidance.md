@@ -11,6 +11,14 @@ such as “read the problem”; do not turn each algebraic manipulation into a s
 The app shows one step at a time with the statement still reachable, and the full
 solution is always available without passing steps.
 
+Review the reading order with every guide closed: shared context, part (a) with its
+supporting material, its Guide and Solution, then part (b) with its own controls. Use the explicit
+[`part_blocks` anchors](content.md) rather than adding numbered labels to a stack of
+guides at the bottom. Opening a guide must not separate the next question from its
+own figure or table. Inside it, step headings and rich blocks nest beneath that part.
+Open a Solution before touching its guide: it must reveal just that question's answer.
+Opening or closing one solution must leave the others and guide progress unchanged.
+
 An early hint points to a relevant relation or asks a smaller question. A later
 hint works the first operation; Compare completes it ([hint ladder](../../prepare-study/references/review.md#help-before-the-answer)).
 A step whose answer has many parts gets that middle hint or is split. Add only useful
@@ -30,6 +38,11 @@ pretend prose is automatically graded. Do not require typing, confidence forms, 
 or self-ratings. Every step stands on what the student has seen; see
 [content](content.md#give-the-student-everything-the-answer-uses).
 
+A part that asks who is right, which case applies or whether a claim holds gets a
+verdict: apply the source's own definition (cite it with `pages`), say which claim it
+supports, and correct the claim it refutes. "Both are partly right" is an answer only
+when the definition itself splits the case.
+
 State the conventions the answer depends on in the statement or step prompt. Review by
 attempting the task without looking at its solution, then pass the
 [review gate](../../prepare-study/references/review.md). Then simulate one
@@ -37,3 +50,8 @@ plausible miss and request only the next hint. It should help the student do the
 next inference. Check an altered case where a condition fails; merely renaming
 the original task is not a transfer check. Assistance and retries are not mastery
 estimates. Finishing an exercise only marks it completed in the outline.
+
+Prerequisites must resolve to core Study blocks. If solving a released task needs
+something currently in Explore, record the dependency and repair core teaching when
+Study is in scope; do not silently make optional reading mandatory. See
+[Explore](../../prepare-study/references/explore.md).

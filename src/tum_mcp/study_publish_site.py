@@ -15,6 +15,7 @@ from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_assets import ASSET
 from tum_mcp.settings import Frozen
 from tum_mcp.study_build import RETIRED_TEMPLATE_FILES, TEMPLATE_FILES
+from tum_mcp.study_figures import FIGURE_IMAGE
 from tum_mcp.study_github import Commit, GitHub, GitObject, Head, Response, Tree
 from tum_mcp.study_models import PRIVATE_PROVIDERS, Digest
 from tum_mcp.study_publish_models import GitSha, Publication, course_identity
@@ -25,6 +26,10 @@ MARKER: Final = "tum-mcp-site.json"
 SITE_FILES: Final = (*TEMPLATE_FILES, "data.mjs", ".nojekyll")
 # Markers from older exports may list retired files; the next commit removes them.
 KNOWN_SITE_FILES: Final = frozenset((*SITE_FILES, *RETIRED_TEMPLATE_FILES))
+
+
+def _asset_path(name: str) -> bool:
+    return ASSET.fullmatch(name) is not None or FIGURE_IMAGE.fullmatch(name) is not None
 
 
 class SiteMarker(Frozen):
@@ -51,7 +56,7 @@ def preflight(site: dict[str, bytes], identity: str) -> SiteMarker:
             Code.ACTION_REQUIRED,
             "The static export exceeds 100 managed files including its marker.",
         )
-    if any(name not in SITE_FILES and ASSET.fullmatch(name) is None for name in site):
+    if any(name not in SITE_FILES and not _asset_path(name) for name in site):
         raise CampusError(Code.SCOPE_DENIED, "The export contains an unmanaged site path.")
     marker = SiteMarker(
         course_identity=identity, files={name: blob_sha(value) for name, value in site.items()}
@@ -81,7 +86,7 @@ def export_site(
         else project(data, include_exercises=include_exercises, include_lectures=include_lectures)
     )
     if "exam" in payload or "exam" in payload.get("workspaces", ()):
-        raise CampusError(Code.SCOPE_DENIED, "Exam Prep stays local and is never published.")
+        raise CampusError(Code.SCOPE_DENIED, "Exam stays local and is never published.")
     original = json.loads(data.removeprefix(b"export default ").removesuffix(b";\n"))
     if payload != original:
         data = b"export default " + json.dumps(payload, ensure_ascii=True).encode() + b";\n"
@@ -203,7 +208,7 @@ def verify_marker(github: GitHub, publication: Publication, tree: Tree) -> SiteM
             Code.WORKSPACE_CONFLICT, "The remote study marker needs review."
         ) from None
     if value.course_identity != publication.course_identity or any(
-        name not in KNOWN_SITE_FILES and ASSET.fullmatch(name) is None for name in value.files
+        name not in KNOWN_SITE_FILES and not _asset_path(name) for name in value.files
     ):
         raise CampusError(
             Code.SCOPE_DENIED, "The remote repository is bound to another study site."

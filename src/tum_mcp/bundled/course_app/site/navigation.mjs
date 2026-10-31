@@ -34,6 +34,7 @@ export function iconButton(label, icon, handler) {
   return control;
 }
 const contentsKey = 'study-space:contents', wide = matchMedia('(min-width: 1200px)'), phone = matchMedia('(max-width: 799px)');
+const headingSelector = 'h2, h3, h4, h5, h6';
 let contentsSession = null;
 // Outlines the headings the reading column currently shows, in every workspace, and marks the one being read.
 // The Contents button shows or hides it: wide screens dock it beside the text and remember the choice;
@@ -80,7 +81,7 @@ export function contentsOutline(reading) {
     link.addEventListener('click', event => {
       if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault(); scrollReadingTo(heading);
-      if (heading.matches('h2, h3')) focusHeading(heading); else heading.focus({ preventScroll: true });
+      if (heading.matches(headingSelector)) focusHeading(heading); else heading.focus({ preventScroll: true });
       pinned = link; pinnedTop = scroller()?.scrollTop ?? 0; mark(link);
       if (!wide.matches) { overlay = false; apply(); }
     });
@@ -89,14 +90,20 @@ export function contentsOutline(reading) {
   function refresh() {
     if (signal.aborted) return;
     // Headings, plus sections a renderer marks with data-contents-entry (such as exercise disclosures).
-    const found = [...reading.querySelectorAll('h2, h3, [data-contents-entry]')].filter(heading => heading.getClientRects().length && heading.innerText.trim()
+    const found = [...reading.querySelectorAll(`${headingSelector}, [data-contents-entry]`)].filter(heading => heading.getClientRects().length && heading.innerText.trim()
       && !heading.closest('.feedback, .citation-panel, .visually-hidden, [data-comment-ui], dialog'));
     if (found.length === headings.length && found.every((heading, index) => heading === headings[index])) return;
     headings = found; links = []; pinned = null;
-    const list = node('ol'); let parent = null;
+    const list = node('ol'), parents = [];
     for (const heading of found) {
-      if (heading.tagName === 'H3' && parent) { parent.lastElementChild?.tagName === 'OL' || parent.append(node('ol')); parent.lastElementChild.append(entry(heading)); }
-      else { const item = entry(heading); list.append(item); parent = heading.tagName === 'H2' ? item : null; }
+      const level = heading.matches(headingSelector) ? Number(heading.tagName.slice(1)) : Number(heading.dataset.contentsLevel || 2);
+      while (parents.length && parents.at(-1).level >= level) parents.pop();
+      const item = entry(heading), parent = parents.at(-1)?.item;
+      if (parent) {
+        parent.lastElementChild?.tagName === 'OL' || parent.append(node('ol'));
+        parent.lastElementChild.append(item);
+      } else list.append(item);
+      parents.push({ level, item });
     }
     nav.replaceChildren(label, list); apply(); update();
   }
@@ -128,7 +135,7 @@ document.addEventListener('pointerdown', event => {
 });
 function workspacePicker(context) {
   closePicker();
-  const name = value => ({ study: 'Study', exercises: 'Exercises', lectures: 'Lecture Notes', exam: 'Exam Prep' })[value];
+  const name = value => ({ study: 'Study', exercises: 'Exercises', lectures: 'Lecture', exam: 'Exam' })[value];
   const label = node('span', 'workspace-name', name(context.workspace));
   const badge = node('span', 'workspace-badge'); badge.append(iconGlyph(({ study: 'book', exercises: 'pencil', lectures: 'lecture', exam: 'target' })[context.workspace]));
   if ((context.workspaces || ['study']).length < 2) {

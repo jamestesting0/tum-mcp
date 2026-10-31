@@ -1,0 +1,103 @@
+{
+  "course_key": "component-preview",
+  "sources": [
+    {
+      "source": "components",
+      "status": {
+        "availability": "released",
+        "checked_at": "2026-10-30"
+      },
+      "outcomes": [
+        {
+          "key": "components",
+          "text": "Inspect the reusable components.",
+          "locator": "Template",
+          "status": "covered",
+          "units": [
+            "components"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "explore-demo",
+      "status": {
+        "availability": "released",
+        "checked_at": "2026-10-30"
+      },
+      "outcomes": [
+        {
+          "key": "context",
+          "text": "Explore related background.",
+          "locator": "Optional template note",
+          "status": "covered",
+          "role": "enrichment",
+          "classification": {
+            "basis": "source_optional",
+            "reason": "The synthetic source labels this material optional; the core examples and questions do not depend on it."
+          },
+          "explore": [
+            {
+              "unit": "components",
+              "item": "background"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "pending-study-demo",
+      "status": {
+        "availability": "released",
+        "checked_at": "2026-10-30"
+      },
+      "outcomes": [
+        {
+          "key": "representations",
+          "text": "Compare adjacency lists and adjacency matrices.",
+          "locator": "Synthetic Study preparation example",
+          "status": "gap",
+          "note": "Synthetic example of a Study topic still awaiting preparation."
+        }
+      ]
+    },
+    {
+      "source": "pending-exercises-demo",
+      "status": {
+        "availability": "released",
+        "checked_at": "2026-10-30"
+      },
+      "items": [
+        {
+          "label": "Problem 1 \u00b7 Graph representations",
+          "status": "pending"
+        },
+        {
+          "label": "Problem 2 \u00b7 Breadth-first search",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "source": "pending-explore-demo",
+      "status": {
+        "availability": "released",
+        "checked_at": "2026-10-30"
+      },
+      "outcomes": [
+        {
+          "key": "origins",
+          "text": "Read about the origins of graph theory.",
+          "locator": "Synthetic Explore preparation example",
+          "status": "gap",
+          "role": "enrichment",
+          "classification": {
+            "basis": "source_optional",
+            "reason": "The synthetic source marks this background optional; the core examples and practice do not depend on it."
+          },
+          "note": "Synthetic example of supporting reading still awaiting preparation."
+        }
+      ]
+    }
+  ]
+}

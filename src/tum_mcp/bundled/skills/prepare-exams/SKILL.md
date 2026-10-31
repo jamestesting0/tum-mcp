@@ -1,18 +1,21 @@
 ---
 name: prepare-exams
-description: Prepare a local Exam Prep workspace for a TUM course from its past exams, exercises and materials - a cheatsheet with a semester map, recurring exam patterns with solving workflows, guided past papers and forecast practice exams. Lessons use prepare-study; weekly sheets use prepare-exercises.
+description: Prepare a local Exam workspace for a TUM course from its past exams, exercises and materials - a cheatsheet with a semester map, recurring exam patterns with solving workflows, guided past papers and forecast practice exams. Lessons use prepare-study; weekly sheets use prepare-exercises.
 ---
 
 For a bound local course, read `.tum-mcp/course.md` and the relevant source records
 first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is the
 discovery pointer and user's rules. The handbook's receipt describes local review,
 not live freshness; verify affected facts against sources. Reuse context already
-read in this request. Do not re-read the whole inventory for each authoring step.
+read in this request. Do not re-read the whole inventory for each authoring step. Look at
+every slide, sheet or exam page you rely on: `tum-mcp study text` finds and quotes it but
+drops figures and scrambles tables and formulas. Open the PDF page if your tools display
+PDFs; otherwise add `--images` and open the image.
 
 You author `app/exam.json` (`study schema exam`); `tum-mcp study build PROJECT`
-renders it as the Exam Prep workspace beside Study and Exercises. Code derives every
+renders it as the Exam workspace beside Study and Exercises. Code derives every
 count, rate, order, map position and blueprint; the schema has no count fields.
-Exam Prep stays local: it is never published and publish-course never includes it.
+Exam stays local: it is never published and publish-course never includes it.
 
 ## Workflow
 
@@ -22,9 +25,9 @@ Exam Prep stays local: it is never published and publish-course never includes i
    with `tum-mcp study import PROJECT --file F --kind exam --title T`. Prepare what
    the evidence supports; report the rest.
 2. **Evidence** ([sources](references/sources.md)). Weigh official rules and exams
-   above student copies; keep conflicts visible. Read text with
-   `tum-mcp study text PROJECT --key K --pages N-M`; view pages only for scans,
-   figures and formulas. Read each document once, even when several copies exist.
+   above student copies; keep conflicts visible. Find and quote with
+   `tum-mcp study text PROJECT --key K --pages N-M`, and look at each page a question
+   comes from. Read each document once, even when several copies exist.
 3. **Registry** ([patterns](references/patterns.md)). One sitting per real exam;
    attach every copy of it as roles of one variant. Extract every subquestion and
    classify it by transferable solving strategy, reusing existing patterns first.
@@ -47,6 +50,8 @@ Exam Prep stays local: it is never published and publish-course never includes i
    `tum-mcp study visuals PROJECT --exam` and fix what it reports, then check the app. Solutions
    answer each part once, labelled, in the form the part asks for. When a question needs
    knowledge Study lacks, record it in the [coverage ledger](../prepare-study/references/coverage.md).
+   When Study exists, run the [course pass](../review-course/references/course.md) of
+   review-course, which checks how Exam links to it.
 8. **Report** sittings, questions and their coverage, review items, kept outliers with
    reasons, gaps and checks actually run. Launch with `tum-mcp study`.
 
@@ -62,5 +67,5 @@ per sitting, acyclic prerequisites, truthful labels and consistent marking.
 Never call a forecast a prediction, a leak or official; frequencies are history.
 Student solutions are unverified; official labels need an official source. Solve every
 answer independently. Never start, submit or execute course code, read `.git/` or
-credentials, or copy campus or imported material anywhere public. Exam Prep never
+credentials, or copy campus or imported material anywhere public. Exam never
 replaces Study; link to its units when they exist.

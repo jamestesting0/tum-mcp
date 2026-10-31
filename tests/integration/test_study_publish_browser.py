@@ -11,9 +11,11 @@ from threading import Thread
 import pytest
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
+from study_explore_fixture import add_explore
 
 from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
 from tum_mcp.moodle.browsers import discover_browsers
+from tum_mcp.study_build import build
 from tum_mcp.study_preview import PreviewServer
 from tum_mcp.study_publish_site import export_site
 from tum_mcp.study_store import load_state
@@ -46,6 +48,8 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
     mimetypes.init()
     monkeypatch.setitem(mimetypes.types_map, ".mjs", "text/plain")
     # Given the exported renderer under a repository subpath with no backend.
+    add_explore(project)
+    build(project, publish=False)
     site = tmp_path / "host/course"
     site.mkdir(parents=True)
     for name, value in export_site(project).items():
@@ -89,6 +93,14 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
                         page.on("request", lambda request: requests.append(request.url))
                         base = f"http://127.0.0.1:{server.server_port}/course/"
                         states = [("home", "", course_title, None)]
+                        states.append(
+                            (
+                                "bfs-explore",
+                                "#bfs/explore",
+                                next(u["title"] for u in content["units"] if u["key"] == "bfs"),
+                                "explore",
+                            )
+                        )
                         baseline = width == 1440 and theme == "light"
                         if baseline:
                             # Every route once; repeat responsive formats, not all route logic.

@@ -620,9 +620,11 @@ def test_compare_is_the_one_place_a_step_reveals_its_reasoning(
         context.close()
 
 
-@pytest.mark.parametrize("width", [390, 1440])
+@pytest.mark.parametrize(
+    "width,theme", [(390, "light"), (390, "dark"), (1440, "light"), (1440, "dark")]
+)
 def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
-    course_browser: Browser, exercise_project: Path, exercise_url: str, width: int
+    course_browser: Browser, exercise_project: Path, exercise_url: str, width: int, theme: str
 ) -> None:
     # Given a Study definition the exercise names, a marked term in a step and two part answers.
     content_path = exercise_project / "study/content.json"
@@ -636,6 +638,10 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
             "sources": ["weighted"],
             "term": "Relaxation",
             "statement": "Replacing a distance estimate by a cheaper one found through a neighbor.",
+            "conditions": [
+                "A cheaper route replaces the stored estimate after comparing both costs. " * 5
+                for _ in range(6)
+            ],
         },
     )
     content_path.write_text(json.dumps(content))
@@ -649,7 +655,9 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
     exercise["solution"]["answers"] = [answer | {"label": "(a)"}, answer | {"label": "(b)"}]
     path.write_text(json.dumps(payload))
     build(exercise_project, publish=False)
-    context = course_browser.new_context(viewport={"width": width, "height": 900})
+    context = course_browser.new_context(
+        viewport={"width": width, "height": 900}, color_scheme=theme
+    )
     try:
         page = context.new_page()
         errors: list[str] = []
@@ -665,6 +673,20 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
         page.get_by_role("button", name="Review Relaxation", exact=True).click()
         panel = page.get_by_role("dialog", name="Relaxation")
         expect(panel).to_contain_text("through a neighbor")
+        if width < 1200:
+            bounds = panel.bounding_box()
+            assert bounds is not None
+            assert abs(bounds["x"]) <= 1 and abs(bounds["y"]) <= 1
+            assert abs(bounds["width"] - width) <= 1
+            assert abs(bounds["height"] - 900) <= 1
+            assert panel.evaluate("(dialog) => dialog.scrollHeight > dialog.clientHeight")
+            panel.evaluate("(dialog) => { dialog.scrollTop = dialog.scrollHeight; }")
+            close = panel.get_by_role("button", name="Close", exact=True).bounding_box()
+            assert close is not None and close["y"] >= 0
+        evidence = Path(os.environ.get("TUM_MCP_GUIDE_QA_PATH", str(exercise_project.parent)))
+        evidence.mkdir(parents=True, exist_ok=True)
+        page.evaluate("() => document.fonts.ready")
+        page.screenshot(path=str(evidence / f"reference-{width}-{theme}.png"))
         # Measured with the panel open: a click first scrolls its target into view.
         before = page.evaluate(scroll)
         expect(panel.get_by_role("link", name="Open in Study")).to_have_attribute(
@@ -680,6 +702,196 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
         page.locator(".reading").get_by_text("Solution", exact=True).click()
         labels = page.locator(".solution-label")
         expect(labels).to_have_text(["(a)", "(b)"])
+        assert errors == []
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize(
+    "width,theme", [(390, "light"), (390, "dark"), (1440, "light"), (1440, "dark")]
+)
+def test_guides_follow_their_parts_and_keep_nested_context(
+    course_browser: Browser, exercise_project: Path, exercise_url: str, width: int, theme: str
+) -> None:
+    path = exercise_project / "study/exercises.json"
+    payload = json.loads(path.read_bytes())
+    exercise = payload["sets"][0]["exercises"][0]
+    sources = exercise["statement"][0]["sources"]
+    exercise["parts"] = ["(a)", "(b)"]
+    exercise["part_blocks"] = {"(a)": "cost", "(b)": "decision"}
+    exercise["statement"] = [
+        {
+            "kind": "text",
+            "title": "Shared data",
+            "sources": sources,
+            "paragraphs": ["Use the same graph for both parts."],
+        },
+        {
+            "kind": "text",
+            "key": "cost",
+            "title": "Compute the cost",
+            "sources": sources,
+            "paragraphs": ["Find the cost through A."],
+        },
+        {
+            "kind": "table",
+            "sources": sources,
+            "caption": "Costs",
+            "columns": ["Current", "Candidate"],
+            "rows": [["5", "3"]],
+        },
+        {
+            "kind": "text",
+            "title": "Context for the second question",
+            "sources": sources,
+            "paragraphs": ["Use the candidate cost for the next comparison."],
+        },
+        {
+            "kind": "text",
+            "key": "decision",
+            "title": "Decide whether to replace",
+            "level": 2,
+            "sources": sources,
+            "paragraphs": ["Compare the routes."],
+        },
+        {
+            "kind": "text",
+            "title": "Which route is cheaper?",
+            "level": 3,
+            "sources": sources,
+            "paragraphs": ["Use the given costs."],
+        },
+        {
+            "kind": "text",
+            "title": "The tie case",
+            "level": 3,
+            "sources": sources,
+            "paragraphs": ["Consider equal costs too."],
+        },
+    ]
+    for step, part in zip(exercise["steps"], ["(a)", "(a)", "(b)"], strict=True):
+        step["part"] = part
+    answer = exercise["solution"]["answers"][0]
+    second_answer = answer | {
+        "label": "(b)",
+        "blocks": [{"kind": "text", "sources": sources, "paragraphs": ["Keep the cheaper route."]}],
+    }
+    exercise["solution"]["answers"] = [answer | {"label": "(a)"}, second_answer]
+    exercise["solution"]["notes"] = [
+        {"kind": "text", "sources": sources, "paragraphs": ["Edge costs stay fixed in both parts."]}
+    ]
+    path.write_text(json.dumps(payload))
+    build(exercise_project, publish=False)
+    context = course_browser.new_context(
+        viewport={"width": width, "height": 900}, color_scheme=theme
+    )
+    try:
+        page = context.new_page()
+        errors = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation")
+        parts = page.locator(".exercise-part")
+        expect(parts).to_have_count(2)
+        evidence = Path(os.environ.get("TUM_MCP_GUIDE_QA_PATH", str(exercise_project.parent)))
+        evidence.mkdir(parents=True, exist_ok=True)
+        page.evaluate("() => document.fonts.ready")
+        page.screenshot(path=str(evidence / f"parts-closed-{width}-{theme}.png"))
+        expect(parts.nth(0).get_by_role("region", name="Costs", exact=True)).to_be_visible()
+        expect(
+            parts.nth(0).get_by_role("heading", name="Context for the second question")
+        ).to_have_count(0)
+        for part, label in zip(parts.all(), ["(a)", "(b)"], strict=True):
+            expect(part.locator(".exercise-solution > summary")).to_have_text("Solution")
+            guide = part.locator(".exercise-guide")
+            expect(guide.locator(":scope > summary")).to_have_text(f"Guide · {label}")
+            assert part.evaluate("(part) => part.lastElementChild.matches('.exercise-part-help')")
+        solutions = parts.locator(".exercise-solution")
+        expect(solutions.locator(".solution-label")).to_have_count(0)
+        first_solution = solutions.nth(0)
+        first_solution.evaluate(
+            """details => {
+                window.solutionOpened = new Promise((resolve, reject) => {
+                    const timeout = setTimeout(
+                        () => reject(new Error('Solution did not open')), 5000);
+                    details.addEventListener('toggle', () => {
+                        clearTimeout(timeout); resolve(details.open);
+                    }, { once: true });
+                });
+            }"""
+        )
+        first_solution.locator(":scope > summary").click()
+        assert page.evaluate("() => window.solutionOpened")
+        expect(first_solution.locator('[data-field="solution:0"]')).to_be_visible()
+        expect(solutions.nth(1).locator('[data-field="solution:1"]')).to_be_hidden()
+        expect(page.locator('[data-field="solution-note:0"]')).to_be_hidden()
+        expect(parts.nth(1).get_by_role("heading", name="The tie case", level=4)).to_be_visible()
+        first = parts.nth(0).locator(".exercise-guide")
+        expect(first).not_to_have_attribute("open", "")
+        first.evaluate(
+            """guide => {
+                window.guideOpened = new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error('Guide did not open')), 5000);
+                    guide.addEventListener('toggle', () => {
+                        clearTimeout(timeout); resolve(guide.open);
+                    }, { once: true });
+                });
+            }"""
+        )
+        first.locator(":scope > summary").click()
+        assert page.evaluate("() => window.guideOpened")
+        page.reload()
+        expect(first).to_have_attribute("open", "")
+        expect(parts.nth(1).locator(".exercise-guide")).not_to_have_attribute("open", "")
+        expect(first_solution).to_have_attribute("open", "")
+        expect(solutions.nth(1)).not_to_have_attribute("open", "")
+        page.screenshot(path=str(evidence / f"parts-open-{width}-{theme}.png"))
+        expect(
+            first.get_by_role("heading", name=exercise["steps"][0]["prompt"], level=3)
+        ).to_be_visible()
+        first.get_by_role("button", name="Compare", exact=True).click()
+        first.get_by_role("button", name="Continue", exact=True).click()
+        expect(first.get_by_role("heading", name=exercise["steps"][1]["prompt"])).to_be_focused()
+        first.get_by_role("button", name="Compare", exact=True).click()
+        first.get_by_role("button", name="Continue", exact=True).click()
+        expect(
+            parts.nth(1).get_by_role("heading", name=exercise["steps"][2]["prompt"])
+        ).to_be_focused()
+        parts.nth(1).get_by_label(
+            exercise["steps"][2]["check"]["options"][0]["text"], exact=True
+        ).check()
+        parts.nth(1).get_by_role("button", name="Check answer", exact=True).click()
+        saved = page.evaluate(
+            """async () => {
+                const { default: data } = await import('./data.mjs');
+                const { exercisePrefix } = await import('./exercise-state.mjs');
+                const exercise = data.exercises.sets[0].exercises[0];
+                const key = `${exercisePrefix}${exercise.key}:${exercise.revision}`;
+                return JSON.parse(localStorage.getItem(key));
+            }"""
+        )
+        assert saved["steps"][exercise["steps"][0]["key"]]["first"]["solutionViewed"] is True
+        assert saved["steps"][exercise["steps"][2]["key"]]["first"]["solutionViewed"] is False
+        expect(
+            solutions.nth(1).get_by_text(second_answer["blocks"][0]["paragraphs"][0], exact=True)
+        ).to_be_hidden()
+        page.locator(".exercise-help").get_by_text("Solution notes", exact=True).click()
+        expect(page.locator('[data-field="solution-note:0"]')).to_be_visible()
+        if width < 1200:
+            page.get_by_role("button", name="Show contents", exact=True).click()
+        outline = page.locator(".page-outline")
+        guide_link = outline.get_by_role("link", name="Guide · (b)", exact=True)
+        assert guide_link.locator("xpath=ancestor::li").count() == 3
+        solution_link = outline.get_by_role("link", name="Solution", exact=True).nth(1)
+        assert solution_link.locator("xpath=ancestor::li").count() == 3
+        solution_link.click()
+        expect(solutions.nth(1).locator(":scope > summary")).to_be_focused()
+        page.keyboard.press("Enter")
+        expect(solutions.nth(1).locator('[data-field="solution:1"]')).to_be_visible()
+        expect(first_solution).to_have_attribute("open", "")
+        first_solution.locator(":scope > summary").click()
+        expect(solutions.nth(1)).to_have_attribute("open", "")
+        expect(parts.nth(1).get_by_role("button", name="Finish", exact=True)).to_be_enabled()
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         assert errors == []
     finally:
         context.close()
@@ -739,11 +951,124 @@ def test_outline_names_only_categories_that_add_information(
         expect(listing.get_by_role("heading", name="Tutorials", exact=True)).to_have_count(1)
         sheets = listing.locator(".exercise-sheet")
         expect(sheets).to_have_count(4)
-        borders = sheets.evaluate_all("els => els.map(el => getComputedStyle(el).borderTopStyle)")
-        # Groups are separated by spacing alone; no rule lines between sheets.
-        assert borders == ["none", "none", "none", "none"]
+        borders = sheets.evaluate_all(
+            "els => els.map(el => getComputedStyle(el).borderBottomStyle)"
+        )
+        # Each sheet has the same neutral row separator as the Study overview.
+        assert borders == ["solid", "solid", "solid", "solid"]
     finally:
         context.close()
+
+
+@pytest.mark.parametrize("width", [390, 1440])
+def test_study_overview_row_opens_from_the_status_area(
+    course_browser: Browser, exercise_url: str, width: int
+) -> None:
+    # Given a built course overview with a progress label outside the topic text.
+    with course_browser.new_context(viewport={"width": width, "height": 900}) as context:
+        page = context.new_page()
+        page.goto(exercise_url + "#home")
+        row = page.locator(".topic-row").first
+        link = row.get_by_role("link")
+        destination = link.get_attribute("href")
+        assert destination is not None
+        row.scroll_into_view_if_needed()
+        box = row.bounding_box()
+        assert box is not None
+        x, y = box["x"] + box["width"] - 6, box["y"] + box["height"] / 2
+        # When hovering the far edge, the whole link shows feedback and opens the topic.
+        page.mouse.move(x, y)
+        assert link.evaluate("el => getComputedStyle(el).backgroundColor") != "rgba(0, 0, 0, 0)"
+        page.mouse.click(x, y)
+        # Then the same destination opens as clicking the title itself.
+        expect(page).to_have_url(exercise_url + destination)
+
+
+@pytest.mark.parametrize("prepared", [False, True])
+def test_pending_sheets_remain_discoverable_without_prepared_exercises(
+    course_browser: Browser, exercise_url: str, exercise_project: Path, prepared: bool
+) -> None:
+    # Given synthetic pending sheets, with or without any prepared exercises.
+    path = exercise_project / "study/data.mjs"
+    payload = json.loads(path.read_text().removeprefix("export default ").removesuffix(";\n"))
+    payload["pending"] = [{"set": None, "source": "Sheet still to prepare", "labels": ["P1"]}]
+    if not prepared:
+        payload["exercises"]["sets"] = []
+    path.write_text("export default " + json.dumps(payload) + ";\n")
+    with course_browser.new_context() as context:
+        page = context.new_page()
+        page.goto(exercise_url + "#exercises")
+        pending = page.locator(".pending-sheets")
+        summary = pending.locator("summary")
+        expect(summary).to_be_visible()
+        expect(pending.get_by_text("Sheet still to prepare", exact=True)).not_to_be_visible()
+        # When the student expands the pending summary with the keyboard.
+        summary.focus()
+        summary.press("Space")
+        # Then the source and its unprepared problems are available even for an empty workspace.
+        expect(pending.get_by_text("Sheet still to prepare", exact=True)).to_be_visible()
+        expect(pending.get_by_text("P1", exact=True)).to_be_visible()
+        summary.press("Enter")
+        expect(pending.get_by_text("Sheet still to prepare", exact=True)).not_to_be_visible()
+
+
+@pytest.mark.parametrize("has_study", [False, True])
+@pytest.mark.parametrize("core_gap", [False, True])
+def test_study_overview_shows_only_core_preparation_gaps(
+    course_browser: Browser,
+    exercise_url: str,
+    exercise_project: Path,
+    has_study: bool,
+    core_gap: bool,
+) -> None:
+    # Legacy payloads may still include authoring-only preparation fields.
+    path = exercise_project / "study/data.mjs"
+    payload = json.loads(path.read_text().removeprefix("export default ").removesuffix(";\n"))
+    payload["studyPreparation"] = {
+        "pending": [
+            {
+                "source": "partial-source",
+                "title": "Partially covered lecture",
+                "outcomes": [
+                    {
+                        "key": "compare",
+                        "text": "Compare <img src=x onerror=alert(1)> algorithms",
+                        "status": "partial",
+                        "locator": "Slide 3",
+                    }
+                ],
+            }
+        ],
+        "unrecorded": [{"source": "unknown-source", "title": "Unreviewed lecture"}],
+        "enrichmentPending": [{"source": "optional-source", "title": "Optional backlog"}],
+    }
+    if not core_gap:
+        payload["studyPreparation"]["pending"] = []
+    if not has_study:
+        payload["units"] = []
+        payload["workspaces"] = ["exercises"]
+    path.write_text("export default " + json.dumps(payload) + ";\n")
+    with course_browser.new_context() as context:
+        page = context.new_page()
+        page.goto(exercise_url + "#home")
+        preparation = page.locator(".study-preparation")
+        known = preparation.locator("details").filter(has_text="Not prepared yet")
+        expect(preparation.locator("details")).to_have_count(1 if core_gap else 0)
+        expect(page.get_by_text("Coverage not recorded", exact=True)).to_have_count(0)
+        expect(page.get_by_text("Explore not prepared", exact=True)).to_have_count(0)
+        expect(page.get_by_text("Unreviewed lecture", exact=True)).to_have_count(0)
+        expect(page.get_by_text("Optional backlog", exact=True)).to_have_count(0)
+        if core_gap:
+            expect(known.locator("summary")).to_be_visible()
+            known.locator("summary").click()
+            expect(known).to_contain_text("Partly prepared")
+            expect(known).to_contain_text("Compare <img src=x onerror=alert(1)> algorithms")
+            expect(known.locator("img")).to_have_count(0)
+        else:
+            expect(preparation).not_to_be_visible()
+        expect(page.get_by_role("heading", name="Study", exact=True)).to_have_count(
+            0 if has_study else 1
+        )
 
 
 def test_distilled_code_practice_writes_code_and_checks_literal_code(

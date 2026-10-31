@@ -15,7 +15,7 @@ from tum_mcp.lecture_evidence import (
     merge_intervals,
 )
 from tum_mcp.settings import Frozen
-from tum_mcp.study_content import Block, SourceVersion, Text
+from tum_mcp.study_content import Block, SourceVersion, Text, check_heading_levels
 from tum_mcp.study_models import Digest, Key
 
 
@@ -25,6 +25,11 @@ class LectureSection(Frozen):
     blocks: tuple[Block, ...] = Field(min_length=1, max_length=80)
     evidence: tuple[Key, ...] = Field(min_length=1, max_length=100)
     figures: tuple[Figure, ...] = Field(default=(), max_length=50)
+
+    @model_validator(mode="after")
+    def outline(self) -> "LectureSection":
+        check_heading_levels(self.blocks)
+        return self
 
 
 class Lecture(Frozen):

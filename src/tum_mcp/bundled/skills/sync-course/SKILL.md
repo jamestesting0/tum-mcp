@@ -52,4 +52,4 @@ When the Lecture extension is installed and the user selects TUM-Live sources,
 retain the canonical course slug and numeric course ID as separate binding fields.
 Sync selected safe source receipts without copying signed media URLs or raw
 transcripts into the browser app. Source sync does not automatically author
-Lecture Notes; use prepare-lecture for that requested workspace.
+Lecture; use prepare-lecture for that requested workspace.

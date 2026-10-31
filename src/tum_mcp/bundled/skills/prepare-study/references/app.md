@@ -10,23 +10,32 @@ or styles, and do not restate the app's appearance in teaching text.
 To see every component with synthetic data, run `tum-mcp study demo PROJECT` in a
 separate directory and open it with `tum-mcp study serve PROJECT`. The demo shows
 formats; it is not a model of good teaching or question design.
+It also shows unprepared Study topics and exercise sheets. Unknown coverage and
+optional backlog are demonstrated in the private agent report.
 
 ## What students see
 
 - **Course home:** the course introduction, a Start or Continue link, topics in course
-  order with their progress, and a link to review missed items.
+  order with their progress, and a link to review missed items. Full rows are clickable.
+  The coverage ledger adds “Not prepared yet” for known core learning-outcome gaps,
+  separate from the student's progress. Unknown coverage and optional backlog stay
+  in private agent reports. Hosted queues include only sources referenced by the
+  published Study units.
 - **Units:** Content, Flashcards and Practice. A Next link leads through the three
-  views and on to the next unit; the last unit leads to Revision.
+  views and on to the next unit; the last unit leads to Revision. A conditional
+  **Explore** tab follows Practice only for units with authored supporting reading.
+  It opens directly on the reading, returns to Content, and does not affect
+  core minutes, progress, cards, questions or Start/Continue. See [Explore](explore.md).
 - **Revision:** cards and questions pooled from chosen topics (all topics until the
   student chooses), optionally only the cards marked Again and questions missed at the
   first attempt. A retry after seeing the answer does not clear a miss; a later correct
   answer from a fresh start does. Pooled items keep their original progress.
-- **Connections:** a unit's header links its Lecture Notes, the exercises whose
-  prerequisites name it and the Exam Prep patterns whose entries cite it. Marked terms
+- **Connections:** a unit's header links its Lecture, the exercises whose
+  prerequisites name it and the Exam patterns whose entries cite it. Marked terms
   open their definition in place; an exercise prerequisite opens its Study block beside
   the exercise. In the local preview, a citation opens the stored course file at its page.
-- **Exercises and Lecture Notes:** separate workspaces in the same app when prepared.
-  Lecture Notes lists lectures newest first. The sources of each passage and figure
+- **Exercises and Lecture:** separate workspaces in the same app when prepared.
+  Lecture lists lectures newest first. The sources of each passage and figure
   link to the recording at the measured time; the text itself carries no timestamps.
 - **Contents:** a button lists the current page's headings in every workspace; wide
   screens can keep the list beside the text. Clear, short block titles make it useful.
@@ -41,10 +50,10 @@ formats; it is not a model of good teaching or question design.
 | unit `path` and `label` | Outline groups and the unit's eyebrow line |
 | `title`, `minutes` | Outline, home topic list, unit header and Next link |
 | `summary`, `objectives` | The Content view's header |
-| block `title`, `sources` | A section heading with a sources icon |
+| block `title`, `level`, `sources` | A section, subsection or detail heading with a sources icon; an untitled block continues the current passage |
 | flashcard `front`, `back` | One card that flips; its sources appear after reveal |
 | question `prompt`, `blocks`, `options`, `explanation`, `hint` | Practice and Revision; the blocks sit between prompt and options, options appear in a stable shuffled order, the hint is one optional button before checking; after a check the app marks the chosen and correct options, shows the chosen option's feedback and the explanation, and keeps the other options' feedback on request |
-| `definition` block | The term in bold beside its meaning, inside the section before it; consecutive terms form one list; `{{term}}` mentions open it in place |
+| `definition` block | The term in bold above its full-width meaning, inside the section before it; consecutive terms form one list; `{{term}}` mentions open it in place |
 | text `steps` | A numbered sequence after the paragraphs, one action per step; a step or point opening with a short `Label: ` shows the label in bold |
 | `figure` block | The drawing or image at full width with its caption; the `alt` text names it for screen readers |
 

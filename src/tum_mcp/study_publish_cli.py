@@ -44,7 +44,7 @@ def setup(
         bool | None,
         typer.Option(
             "--include-lectures/--exclude-lectures",
-            help="Explicitly choose whether Lecture Notes and selected figures are public.",
+            help="Explicitly choose whether Lecture and selected figures are public.",
         ),
     ] = None,
     wait_seconds: Annotated[int, typer.Option(min=0, max=60)] = 60,

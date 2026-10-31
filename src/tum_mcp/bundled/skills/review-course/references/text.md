@@ -19,7 +19,8 @@ Clarity and Cognitive load; the rules come from prepare-study's
    that every symbol is set as mathematics; that a procedure is numbered steps and a
    worked calculation shows one value per step.
 5. Check every caption and question: a caption states the point of its picture; a
-   question asks one thing, fits one phone screen and repeats nothing its picture shows.
+   question asks one thing and fits one phone screen. What a passage, caption or prompt
+   repeats is scored in the [structure pass](structure.md).
 6. Mark lines that talk about the material ("The lecture groups…", "Authored example")
    or tell the student to work or compare; they teach nothing.
 

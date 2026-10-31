@@ -131,7 +131,7 @@ def _visuals(blocks: "tuple[Block, ...]", prefix: str) -> dict[str, JsonValue]:
 
 
 def _exam_visuals(exam: "ExamContent") -> dict[str, "Block"]:
-    """Every visual block of Exam Prep, keyed by where it sits (concepts/heaps/details/0)."""
+    """Every visual block of Exam, keyed by where it sits (concepts/heaps/details/0)."""
     from pydantic import BaseModel
 
     from tum_mcp.study_content import DiagramBlock, FigureBlock, PlotBlock, TableBlock, UmlBlock
@@ -163,6 +163,7 @@ def _visits(
     with_exam: bool = False,
 ) -> tuple[list[Visit], dict[str, str]]:
     """The page loads that show every visual of the selected items, and each item's revision."""
+    from tum_mcp.exercise_checks import SelfCheck
     from tum_mcp.study_content import render_blocks
 
     everything = not units and not tasks and not with_exam
@@ -183,7 +184,14 @@ def _visits(
         if questions:
             expected = {str(entry["id"]): entry["block"] for entry in questions}
             visits.append(Visit(item, route, expected=expected, inject=questions))
-        if lesson or questions:
+        optional = {
+            key: block
+            for material in unit.explore
+            for key, block in _visuals(material.blocks, f"explore:{material.key}").items()
+        }
+        if optional:
+            visits.append(Visit(item, f"#{unit.key}/explore", expected=optional))
+        if lesson or questions or optional:
             revisions[item] = _revision(unit)
     for group in exercises.sets if exercises else ():
         for exercise in group.exercises:
@@ -191,7 +199,13 @@ def _visits(
                 continue
             item = f"exercises/{group.key}/{exercise.key}"
             statement = _visuals(exercise.statement, "statement")
+            answers = _visuals(exercise.solution.blocks, "solution")
+            if exercise.transfer:
+                answers |= _visuals(exercise.transfer.answer, "transfer")
             for step in exercise.steps:
+                match step.check:
+                    case SelfCheck(model_answer=tuple(blocks)):
+                        answers |= _visuals(blocks, f"compare:{step.key}")
                 expected = _visuals(step.blocks, f"step:{step.key}")
                 drawn = step.check is not None and step.check.kind in ("graph", "plot")
                 if item not in revisions and statement:
@@ -200,8 +214,15 @@ def _visits(
                     route = f"#exercises/{group.key}/{exercise.key}/{step.key}"
                     visits.append(Visit(item, route, step.key, expected))
                     revisions[item] = _revision(exercise)
+            if answers:
+                route = f"#exercises/{group.key}/{exercise.key}"
+                shown = [
+                    {"id": key, "title": key, "block": block} for key, block in answers.items()
+                ]
+                visits.append(Visit(item, route, expected=answers, inject=shown))
+                revisions[item] = _revision(exercise)
     if exam is not None and (everything or with_exam) and (found := _exam_visuals(exam)):
-        # Exam Prep shows its blocks across many views; they are drawn in a lesson's column.
+        # Exam shows its blocks across many views; they are drawn in a lesson's column.
         host = f"#{content.units[0].key}/content" if content and content.units else "#home"
         shown: list[dict[str, JsonValue]] = [
             {"id": key, "title": block.title, "block": render_blocks((block,))[0]}

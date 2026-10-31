@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
+from contextlib import suppress
 from pathlib import Path
 
 import pypdfium2
@@ -34,22 +35,73 @@ def image_text(path: Path) -> str:
     return result.stdout.decode("utf-8", errors="replace").strip()
 
 
+class PdfText:
+    """Page text from pypdf, or from PDFium for a page or a whole file that pypdf cannot read.
+
+    pypdf keeps the math symbols of TeX fonts, which PDFium often loses. PDFium repairs damaged
+    cross-reference tables and reads content streams beyond pypdf's parsing limits.
+    """
+
+    def __init__(self, body: bytes, *, strict: bool = False) -> None:
+        self._body = body
+        self._pdfium: pypdfium2.PdfDocument | None = None
+        self.fallback: list[int] = []
+        self.reader: PdfReader | None
+        try:
+            self.reader = PdfReader(io.BytesIO(body), strict=strict)
+            self.count = len(self.reader.pages)
+        except Exception:  # pypdf raises many error types for damaged files
+            self.reader = None
+            self.count = len(self.pdfium)
+
+    @property
+    def encrypted(self) -> bool:
+        return self.reader is not None and self.reader.is_encrypted
+
+    @property
+    def pdfium(self) -> pypdfium2.PdfDocument:
+        if self._pdfium is None:
+            self._pdfium = pypdfium2.PdfDocument(self._body)
+        return self._pdfium
+
+    def text(self, index: int) -> str:
+        """Text of one page; empty when neither engine can read it."""
+        if self.reader is not None:
+            with suppress(Exception):  # pypdf rejects some readable pages; PDFium follows
+                return self.reader.pages[index].extract_text() or ""
+        self.fallback.append(index + 1)
+        try:
+            page = self.pdfium[index]
+            textpage = page.get_textpage()
+            try:
+                return textpage.get_text_range().replace("\r\n", "\n")
+            finally:
+                textpage.close()
+                page.close()
+        except pypdfium2.PdfiumError:
+            return ""
+
+    def close(self) -> None:
+        if self._pdfium is not None:
+            self._pdfium.close()
+
+
 def extract_pdf(body: bytes) -> Extracted:
-    reader = PdfReader(io.BytesIO(body))
-    if reader.is_encrypted:
+    pdf = PdfText(body)
+    if pdf.encrypted:
         raise MoodleError(
             ErrorCode.RESOURCE_UNSUPPORTED, "Password-protected PDFs are unsupported."
         )
-    if len(reader.pages) > 1500:
+    if pdf.count > 1500:
         raise MoodleError(ErrorCode.TOO_LARGE, "PDF exceeds the 1,500-page limit.")
     pages: list[TextPage] = []
     warnings: list[str] = []
     total = 0
-    for number, page in enumerate(reader.pages, 1):
-        text = page.extract_text() or ""
-        if len(text.strip()) < 10:
-            with pypdfium2.PdfDocument(body) as document:
-                bitmap = document[number - 1].render(scale=2)
+    try:
+        for number in range(1, pdf.count + 1):
+            text = pdf.text(number - 1)
+            if len(text.strip()) < 10:
+                bitmap = pdf.pdfium[number - 1].render(scale=2)
                 try:
                     with tempfile.TemporaryDirectory(prefix="tum-moodle-ocr-") as directory:
                         path = Path(directory) / "page.png"
@@ -57,14 +109,23 @@ def extract_pdf(body: bytes) -> Extracted:
                         text = image_text(path)
                 finally:
                     bitmap.close()
-            warnings.append(
-                f"Page {number} uses OCR; verify equations and diagrams in the original."
-            )
-        pages.append(TextPage(number=number, text=text[:200_000]))
-        total += len(text)
-        if total > 2_000_000:
-            warnings.append("Text limit reached; only the first part of this document is indexed.")
-            break
+                warnings.append(
+                    f"Page {number} uses OCR; verify equations and diagrams in the original."
+                )
+            pages.append(TextPage(number=number, text=text[:200_000]))
+            total += len(text)
+            if total > 2_000_000:
+                warnings.append(
+                    "Text limit reached; only the first part of this document is indexed."
+                )
+                break
+    finally:
+        pdf.close()
+    if pdf.fallback:
+        warnings.append(
+            f"{len(pdf.fallback)} page(s) were read with a second PDF reader; "
+            "verify formulas against the original."
+        )
     return Extracted(pages=pages, warnings=warnings)
 
 

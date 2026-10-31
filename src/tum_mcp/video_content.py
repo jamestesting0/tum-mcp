@@ -64,7 +64,7 @@ def _teaching(value: JsonValue) -> JsonValue:
 
 def semantic_hash(unit: Unit) -> str:
     value = unit.model_dump(
-        mode="json", exclude_none=True, exclude={"path", "label", "minutes", "sources"}
+        mode="json", exclude_none=True, exclude={"path", "label", "minutes", "sources", "explore"}
     )
     return sha256(canonical(_teaching(value)))
 

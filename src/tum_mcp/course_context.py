@@ -55,6 +55,10 @@ Not yet established: exam/assessment format, eligibility, registration, pass rul
 bonus thresholds, caps, conditions and their effect on the final result. Do not
 infer that bonus points or attendance requirements exist.
 
+## Conventions
+Not yet established: textbook and edition, notation, terminology and the answer format
+the course expects. Explanations and practice follow them.
+
 ## Communication and authoritative sources
 Not yet established: staff roles, office hours, announcement channels and which
 official source governs rules. Cite sources next to each verified claim; distinguish

@@ -1,7 +1,8 @@
 import data from './data.mjs';
-import { node, studyText, button, append, focusHeading, scrollReadingTo, confirmAction, shareCitations } from './dom.mjs';
+import { node, studyText, button, append, focusHeading, scrollReadingTo, confirmAction, shareCitations, SECTION_HEADING, preparationDisclosure } from './dom.mjs';
 import { renderCommentedView, stopComments } from './comments.mjs';
 import { renderReading } from './reading.mjs';
+import { renderExplore } from './explore.mjs';
 import { renderPractice } from './learning.mjs';
 import { renderFlashcards, flashcardShortcut } from './flashcards.mjs';
 import { renderSidebar, nextStep, contentsOutline, iconGlyph } from './navigation.mjs';
@@ -88,12 +89,12 @@ function stateFor(unit) {
   return states.get(key);
 }
 function activeUnit() { return revising ? revisionDeck(selectedTopics, reviewing ? needsReview : undefined) : data.units[currentIndex]; }
-function activeViews() { return revising ? views.slice(1) : views; }
+function activeViews() { return revising ? views.slice(1) : [...views, ...(activeUnit()?.explore?.length ? ['explore'] : [])]; }
 function viewHash(view) { return revising ? `#revision?view=${view}${reviewing ? '&mode=review' : ''}` : `#${data.units[currentIndex].key}/${view}`; }
 function remember() {
   if (unavailable) return;
   if (workspace === 'study' && !home) {
-    store(lastKey, revising ? 'revision' : `${data.units[currentIndex].key}/${currentView}`);
+    if (currentView !== 'explore') store(lastKey, revising ? 'revision' : `${data.units[currentIndex].key}/${currentView}`);
     store(`${positionKey}:lastWorkspace`, 'study');
   } else if (workspace !== 'study' && location.hash.split('/').length > 1) store(`${positionKey}:lastWorkspace`, workspace);
 }
@@ -128,6 +129,7 @@ function stepTarget(unit) {
   }
   if (currentView === 'content') return { href: viewHash('flashcards'), title: 'Flashcards', detail: plural(unit.flashcards.length, 'card'), activate: () => changeView('flashcards', true) };
   if (currentView === 'flashcards') return { href: viewHash('practice'), title: 'Practice', detail: plural(unit.questions.length, 'question'), activate: () => changeView('practice', true) };
+  if (currentView === 'explore') return { href: viewHash('content'), title: 'Back to Content', activate: () => changeView('content', true) };
   const following = data.units[currentIndex + 1];
   return following ? { href: `#${following.key}/content`, title: following.title, detail: `${following.minutes} min` }
     : { href: '#revision?view=flashcards', title: 'Revision', detail: 'Cards and questions across topics' };
@@ -142,14 +144,22 @@ function renderPanel() {
   ui.card = Math.min(ui.card, Math.max(0, unit.flashcards.length - 1));
   ui.question = Math.min(ui.question, Math.max(0, unit.questions.length - 1));
   for (const [view, tab] of tabButtons) {
-    tab.textContent = view === 'content' ? 'Content' : view === 'flashcards' ? `Flashcards · ${unit.flashcards.length}` : `Practice · ${unit.questions.length}`;
+    const label = { content: 'Content', flashcards: 'Flashcards', practice: 'Practice', explore: 'Explore' }[view];
+    const count = view === 'flashcards' ? ` · ${unit.flashcards.length}` : view === 'practice' ? ` · ${unit.questions.length}` : '';
+    tab.replaceChildren(node('span', '', label));
+    if (count) tab.append(node('span', 'tab-count', count));
+    tab.setAttribute('aria-label', label + count);
     tab.setAttribute('aria-selected', String(view === currentView)); tab.tabIndex = view === currentView ? 0 : -1;
   }
   for (const element of headerDetails) element.hidden = currentView !== 'content';
+  if (unitEyebrow) unitEyebrow.hidden = currentView === 'explore';
   for (const [view, element] of panels) element.hidden = view !== currentView;
   const panel = panels.get(currentView);
   if (revising && !unit[currentView === 'flashcards' ? 'flashcards' : 'questions'].length) {
     panel.replaceChildren(node('p', 'empty-state small', emptyMessage()));
+  } else if (currentView === 'explore') {
+    panel.replaceChildren(renderCommentedView(unit, 'explore', renderExplore(unit)).root);
+    unitEyebrow?.parentElement?.querySelector('.page-citation')?.remove();
   } else {
     const view = currentView;
     function activity() {
@@ -182,13 +192,13 @@ function renderPanel() {
 function relatedWork(unit) {
   const groups = [];
   const notes = (unit.lectures || []).map(key => data.lectures?.lectures.find(item => item.key === key)).filter(Boolean);
-  if (notes.length) groups.push(['Lecture Notes', notes.map(lecture => [lecture.title, `#lectures/${encodeURIComponent(lecture.key)}`])]);
+  if (notes.length) groups.push(['Lecture', notes.map(lecture => [lecture.title, `#lectures/${encodeURIComponent(lecture.key)}`])]);
   const work = (data.exercises?.sets || []).flatMap(group => group.exercises.filter(exercise => exercise.prerequisites.some(item => item.unit === unit.key))
     .map(exercise => [`${exercise.label} · ${exercise.title}`, `#exercises/${group.key}/${exercise.key}`]));
   if (work.length) groups.push(['Exercises', work]);
   const tested = new Set((data.exam?.concepts || []).filter(concept => (concept.units || []).includes(unit.key)).map(concept => concept.key));
   const patterns = (data.exam?.patterns || []).filter(pattern => pattern.concepts.some(key => tested.has(key)));
-  if (patterns.length) groups.push(['Exam Prep', patterns.map(pattern => [pattern.title, `#exam/patterns/${pattern.key}`])]);
+  if (patterns.length) groups.push(['Exam', patterns.map(pattern => [pattern.title, `#exam/patterns/${pattern.key}`])]);
   if (!groups.length) return null;
   const line = node('p', 'small related-work');
   groups.forEach(([name, links], index) => {
@@ -233,6 +243,16 @@ function resumeTarget() {
   return unit ? { href: `#${unit.key}/${views.includes(view) ? view : 'content'}`, action: 'Continue', label: unit.title }
     : { href: `#${data.units[0].key}/content`, action: 'Start', label: data.units[0].title };
 }
+function studyPreparation() {
+  const root = node('section', 'study-preparation');
+  root.setAttribute('aria-label', 'Study preparation');
+  const pending = data.studyPreparation?.pending || [];
+  if (pending.length) root.append(preparationDisclosure({ title: 'Not prepared yet', noun: 'source',
+    entries: pending.map(entry => ({ title: entry.title, labels: entry.outcomes.map(outcome =>
+      `${outcome.status === 'partial' ? 'Partly prepared · ' : ''}${outcome.text} · ${outcome.locator}`) })),
+  }));
+  return root;
+}
 function renderHome() {
   const header = node('div', 'unit-header');
   unitHeading = node('h1', '', data.course.title);
@@ -262,11 +282,12 @@ function renderHome() {
     if (result.rated) status.push(`Cards ${result.known}/${result.cards} known`);
     const row = node('li', 'topic-row'), link = node('a');
     link.href = `#${unit.key}/content`;
-    link.append(studyText('span', 'topic-title', unit.title), node('span', 'small', path ? `${unit.minutes} min` : `${unit.label} · ${unit.minutes} min`));
-    row.append(link, node('span', 'small topic-status', status.join(' · ') || 'Not started'));
+    link.append(append(node('span', 'topic-copy'), studyText('span', 'topic-title', unit.title), node('span', 'small', path ? `${unit.minutes} min` : `${unit.label} · ${unit.minutes} min`)),
+      node('span', 'small topic-status', status.join(' · ') || 'Not started'));
+    row.append(link);
     list.append(row);
   }
-  return [header, topics, resetButton()];
+  return [header, topics, studyPreparation(), resetButton()];
 }
 function modePicker() {
   const group = node('fieldset', 'mode-options');
@@ -314,15 +335,18 @@ function render() {
     if ((exercisePage && !exercisePage.current) || (examPage && !examPage.current)) reading.append(resetButton());
   } else if (unavailable) {
     unitHeading = node('h1', '', 'Study');
-    const first = workspaces[0];
-    const link = node('a', '', { lectures: 'Open Lecture Notes', exam: 'Open Exam Prep' }[first] || 'Open Exercises'); link.href = `#${first}`;
-    reading.append(unitHeading, node('p', '', 'Study has not been prepared for this course.'), link);
+    const first = workspaces.find(item => item !== 'study');
+    const link = node('a', '', { lectures: 'Open Lecture', exam: 'Open Exam' }[first] || 'Open Exercises'); link.href = `#${first}`;
+    reading.append(unitHeading, node('p', '', 'Study has not been prepared for this course.'));
+    if (first) reading.append(link);
+    reading.append(studyPreparation());
   } else if (home) {
     document.title = data.course.title;
     reading.append(...renderHome());
     if (routeMessage) reading.prepend(node('p', 'notice', routeMessage));
   } else {
     const unit = activeUnit(); document.title = `${unit.title} · ${data.course.title}`;
+    if (routeMessage) reading.append(node('p', 'notice', routeMessage));
     const heading = node('div', 'unit-header'); unitHeading = studyText('h1', '', unit.title);
     if (revising) {
       heading.append(unitHeading, topicPicker(selectedTopics, () => {
@@ -343,6 +367,7 @@ function render() {
     }
     const tabs = node('div', 'tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Study view');
     const available = activeViews();
+    tabs.classList.toggle('has-explore', available.includes('explore'));
     for (const view of available) {
       const tab = button('', () => changeView(view)); tab.id = `tab-${view}`;
       tab.setAttribute('role', 'tab'); tab.setAttribute('aria-controls', `panel-${view}`);
@@ -391,6 +416,10 @@ function route(initial = false) {
   routeMessage = workspace === 'study' && home && hash && hash !== 'home' ? 'That topic is no longer here. Choose a prepared topic below.' : '';
   currentIndex = Math.max(index, 0);
   currentView = home ? 'content' : activeViews().includes(view) ? view : activeViews()[0];
+  if (!home && workspace === 'study' && !revising && view === 'explore' && currentView !== 'explore') {
+    routeMessage = 'Explore is no longer available for this topic.';
+    history.replaceState(null, '', viewHash('content'));
+  }
   if (reviewing) { states.delete('$revision'); clearReviewAnswers(); }
   if (narrow.matches) navigationState.collapsed = true;
   remember(); render();
@@ -404,7 +433,7 @@ function route(initial = false) {
   if (!initial) focusHeading(unitHeading);
   if (workspace === 'lectures' && raw.split('/')[2] && !restore) {
     const target = main.querySelector('[data-lecture-active-section]');
-    if (target) { focusHeading(target.querySelector('h2')); scrollReadingTo(target); }
+    if (target) { focusHeading(target.querySelector(SECTION_HEADING) || target); scrollReadingTo(target); }
   }
   if (workspace === 'exercises' && raw.split('/')[3] && !restore) {
     focusHeading(unitHeading); scrollReadingTo(main.querySelector('.step-navigation') || unitHeading);
@@ -412,7 +441,11 @@ function route(initial = false) {
   // #unit/content/block opens the lesson at one keyed passage, as definitions and references link it.
   const passage = workspace === 'study' && !revising && currentView === 'content' && hash.split('/')[2];
   const section = passage && main.querySelector(`[data-block="${CSS.escape(passage)}"]`);
-  if (section) { scrollReadingTo(section); focusHeading(section.querySelector('h2') || section); }
+  if (section) { scrollReadingTo(section); focusHeading(section.querySelector(SECTION_HEADING) || section); }
+  if (workspace === 'study' && currentView === 'explore') {
+    const target = main.querySelector('[data-explore-target]');
+    if (target) { scrollReadingTo(target); focusHeading(target.querySelector(SECTION_HEADING) || target.querySelector('h2') || target); }
+  }
 }
 document.querySelector('.skip').addEventListener('click', event => { event.preventDefault(); main.focus(); });
 addEventListener('hashchange', () => route());

@@ -18,6 +18,8 @@ a private review note and is not shown. Prerequisites pair a Study unit key, and
 explanation so Exercises can be prepared first; the app opens that passage beside the
 exercise, and later Study builds validate links. Check that the passage really teaches
 what the task needs ([coverage](../../prepare-study/references/coverage.md#while-authoring)).
+Link that passage instead of explaining the idea again in the statement or steps, and
+use Study's terms (`{{term}}`), symbols and conventions.
 
 Steps contain purpose, prompt, optional rich blocks, sources/check, requested hints
 and reviewed explanation. Students answer on paper; the app shows no answer boxes
@@ -80,12 +82,19 @@ prompt or the starter, never only to the answer.
 ## Show the question, not only tell it
 
 A question students must picture from prose alone is harder than the subject. Every
-question you write (distilled practice, Exam Prep practice exams, worked practices
+question you write (distilled practice, Exam practice exams, worked practices
 and drills) pairs its text with at least one block that shows the situation; the
-build rejects text-only ones. A released statement keeps its wording but not its wall
+build rejects text-only ones. Give it a case Study does not work: the lesson's example with
+renamed variables tests recall, not the method. A released statement keeps its wording but not its wall
 of text: give each part its own block titled with its number, enumerations as points,
 givens (numbers, costs, scoring rules) as a table and the setting as a figure or diagram
-beside it. Do not repeat a given in the steps. When a statement relies on a slide or figure,
+beside it. The table replaces the sentence that listed the givens; keep the sentence's
+other words, not the numbers twice. A frame, table or figure that belongs to a part follows it untitled, so it
+sits under the part's heading ([headings](../../prepare-study/references/content.md#blocks)).
+State each assumption the answer depends on inside the part it constrains, as a point
+of its statement; do not add an assumptions or sources passage, because the citation
+button already carries the sources (`study report` flags both). Do not repeat a given
+in the steps. When a statement relies on a slide or figure,
 redraw what it needs beside the statement and cite it with `pages`. Choose the shape as
 in [representations](../../prepare-study/references/review.md#choose-the-representation):
 code or signatures for code, UML for designs and interactions, a diagram or state table
@@ -105,9 +114,24 @@ blocks accept `line_numbers: true` when a step refers to lines. Distilled practi
 `kind: distilled` and `distilled_from` (original exercise keys). All
 block/graph sources must be declared. The solution's `answers` give one short, direct
 answer per original part, in order and labelled ("(a)"), in the form the part asks for: a
-filled table, the graph, a formula, code. The working belongs in Guidance; assumptions
-and alternative valid methods go in `notes`. A step may omit a check. The direct solution
-is always available. Record whether a solution is authored or official (official requires
+filled table, the graph, a formula, code. The working belongs in Guidance. Keep a
+part-specific alternative with that answer; reserve shared `notes` for material that
+applies across the answers. Assumptions belong in the statement.
+
+`parts` lists the original parts' labels ("1.1.1", "(a)"); answers follow it in order.
+For separate guides, give the first statement block of each part a stable `key`, map
+the label to that key in `part_blocks` (for example `{"(a)": "cost", "(b)": "decision"}`),
+and name the part on every step. The build checks that these anchors are titled,
+distinct and in the original order. Each guide follows its part's whole statement,
+including untitled diagrams/tables and nested subsections. A new peer or parent heading
+ends the part, so shared context for a later question stays outside the preceding guide.
+Keep shared givens before the parts they serve. Split lettered sub-questions into their own
+blocks when each needs a guide; do not leave them in one list and collect their guides
+afterwards. The app uses explicit keys, never a guess from the title or problem number.
+Each anchored part has its own Guide and Solution controls. Its Solution reveals only
+the corresponding answer in `answers`, without requiring any guide steps or revealing
+another part. Shared solution notes appear once after the questions. A step may omit
+a check. Record whether a solution is authored or official (official requires
 a declared official_source) for provenance; the app shows every solution simply as the
 solution. Optional transfer contains a fresh prompt and comparison answer blocks. Set category, summary, week
 and due_at are optional and appear in the exercise list; date values include a timezone.

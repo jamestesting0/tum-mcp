@@ -30,7 +30,35 @@ scope) and link it as the prerequisite's `block`, or record the gap with its not
 
 ## Completion
 
+The report's `study_preparation.pending` and the generated Study overview derive the
+same known core gaps from the ledger. The private report also has `unrecorded` for
+current content sources without an outcome record. Missing records
+do not prove that a source is unprepared: inspect the source and existing units before
+recording outcomes. Never create placeholder lessons just to make the queue disappear.
+Exercise/exam items and withdrawn sources do not enter this Study queue.
+
+After each reviewed batch, update only the affected source outcomes and their stable
+unit references, retain remaining gaps with their reasons, run the coverage report and
+rebuild. Verify that newly covered outcomes leave the queue while unrelated pending
+and unknown work remains. Report scoped remaining work explicitly; do not silently
+mark it out of scope to claim completion. The queue describes authored preparation,
+not what the student has read or mastered.
+
 A request to cover a whole course or lecture range is complete only when the coverage report
 shows no `not_inspected` source, `gap` or `partial` outcome, or unprepared item in that scope.
 Otherwise report exactly what remains. A sync-only run records changed sources and pending
 work; it does not author content.
+
+## Optional preparation
+
+Follow [Explore](explore.md) for passage classification and enrichment references.
+`pending` and `outcome_gaps` stay core-only; `enrichmentPending` and `enrichment_gaps`
+track reviewed optional work separately. `core_complete` does not mean all sources
+are prepared; unqualified `complete` remains conservative. No ledger record means
+unknown, never evidence that a lecture is optional. Retain stable outcome keys and
+review the source-based reason before changing a core entry's role.
+
+Unknown coverage and optional backlog remain authoring state. The learner app and
+static export include only the core `pending` list, without panels for `unrecorded`
+or `enrichmentPending`. Removing those panels does not resolve any gaps or make
+unknown sources complete; use the local report when deciding what remains to prepare.

@@ -20,12 +20,12 @@ statements, hints and full solutions require explicit inclusion with
 `--include-exercises` on the publish command; explain that all of those will be
 public before including them. `--exclude-exercises` removes Exercises while keeping
 other included workspaces. An Exercises-only app needs explicit inclusion too.
-Lecture Notes and its selected figures separately require `--include-lectures`,
+Lecture and its selected figures separately require `--include-lectures`,
 including for old saved publications; explain that the notes and images become
 public. `--exclude-lectures` removes them and their previously managed images from
 subsequent eligible exports. Omitted flags preserve existing choices. An excluded
 notes-only app cannot produce an empty site; keep it local. Publication scope is an
-authoring decision, never a control in the student app. Exam Prep always stays local:
+authoring decision, never a control in the student app. Exam always stays local:
 it is never published, and no option includes it.
 
 ## First publication

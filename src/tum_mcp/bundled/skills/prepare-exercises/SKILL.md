@@ -8,7 +8,10 @@ first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is th
 discovery pointer and user's rules. Legacy `.study/` remains readable until explicit
 `study upgrade PROJECT`. The handbook's receipt describes local review, not live
 freshness; verify affected facts against sources. Reuse context already read in this
-request. Do not re-read the whole inventory for each authoring step.
+request. Do not re-read the whole inventory for each authoring step. Look at every slide
+or sheet page you rely on: `tum-mcp study text` finds and quotes it but drops figures and
+scrambles tables and formulas. Open the PDF page if your tools display PDFs; otherwise
+add `--images` and open the image.
 
 
 Use the course binding in AGENTS.md and `.tum-mcp/state.json`. Work in the same app
@@ -33,6 +36,9 @@ template, not necessarily a good model for teaching or question design.
    answer on paper and compare; do not impose typing or ratings.
 4. Write the affected objects in exercises.json using `tum-mcp study schema exercises`;
    read [content](references/content.md) for identities, checks and source links.
+   Anchor each part's guide with `part_blocks` and nest its supporting headings beneath
+    the part; verify statement, context, Guide and Solution appear together before the
+    next question. Each Solution reveals only its part's answer, independently of the guide.
    Preserve unrelated Study/Exercise objects and template assets. Use the existing
    builder; do not create another site, tutor service or framework.
 5. Review source meaning, assumptions and each changed answer/hint/rubric against the
@@ -41,9 +47,9 @@ template, not necessarily a good model for teaching or question design.
    run `tum-mcp study visuals PROJECT --exercise SET/KEY` for exercises with visuals.
    Record every problem of each sheet in the
    [coverage ledger](../prepare-study/references/coverage.md) as prepared, pending or
-   not inspected. Score the changed exercises with
-   [review-course](../review-course/SKILL.md) and fix what it finds until the report's
-   review and render sections pass. Resolve stale dependencies; never rebind a hash without reading its
+   not inspected. Score the changed exercises, and the course when sets or prerequisites
+   changed, with [review-course](../review-course/SKILL.md) and fix what it finds until
+   the report's review and render sections pass. Resolve stale dependencies; never rebind a hash without reading its
    changed source.
 6. Verify the generated student journey using [verification](references/verification.md).
    For passage feedback, list `study comments list PROJECT --view exercises`, review

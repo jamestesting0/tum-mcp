@@ -40,6 +40,17 @@ class Anchor(Frozen):
         return self
 
 
+class ExploreAnchor(Frozen):
+    view: Literal["explore"] = "explore"
+    unit_key: Key
+    item_key: Key
+    block_key: Key
+    semantic_revision: Digest
+    quote: str = Field(min_length=1, max_length=2000)
+    prefix: str = Field(default="", max_length=80)
+    suffix: str = Field(default="", max_length=80)
+
+
 class ExerciseAnchor(Frozen):
     workspace: Literal["exercises"] = "exercises"
     view: Literal["exercises"] = "exercises"
@@ -80,7 +91,7 @@ class LectureAnchor(Frozen):
 
 class Comment(Frozen):
     id: UUID
-    anchor: Anchor | ExerciseAnchor | ExamAnchor | LectureAnchor
+    anchor: Anchor | ExploreAnchor | ExerciseAnchor | ExamAnchor | LectureAnchor
     text: NoteText
     status: Literal["open", "resolved"] = "open"
     resolution: str = Field(default="", max_length=2000)
@@ -89,7 +100,7 @@ class Comment(Frozen):
 
 
 class Comments(Frozen):
-    schema_version: Literal[1, 2, 3] = 1
+    schema_version: Literal[1, 2, 3, 4] = 1
     course_identity: Digest
     comments: tuple[Comment, ...] = Field(default=(), max_length=500)
 
@@ -108,7 +119,7 @@ class Change(Frozen):
 class Create(Change):
     op: Literal["create"]
     id: UUID
-    anchor: Anchor | ExerciseAnchor | ExamAnchor | LectureAnchor
+    anchor: Anchor | ExploreAnchor | ExerciseAnchor | ExamAnchor | LectureAnchor
     text: NoteText
 
 

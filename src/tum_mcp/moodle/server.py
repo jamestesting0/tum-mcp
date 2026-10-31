@@ -20,7 +20,6 @@ from tum_mcp.moodle.service import Service
 
 server = StrictMCPServer("TUM Moodle")
 READ = ToolAnnotations(read_only_hint=True, open_world_hint=True)
-LOCAL_WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True)
 CourseId = Annotated[int, Field(gt=0)]
 Limit = Annotated[int, Field(ge=1, le=50)]
 MaxChars = Annotated[int, Field(ge=500, le=30000)]
@@ -102,7 +101,12 @@ def moodle_list_materials(
 
 
 @server.tool(
-    annotations=READ, description="Read bounded text with PDF page/slide numbers and source links."
+    annotations=READ,
+    description=(
+        "Read bounded text with PDF page/slide numbers and source links. Page text drops "
+        "figures and scrambles tables and formulas: look at a page before relying on it "
+        "(the course project's copy, or the file from moodle_download_material)."
+    ),
 )
 def moodle_read_material(
     material_id: str,
@@ -127,7 +131,7 @@ def moodle_read_material(
 
 
 @server.tool(
-    annotations=LOCAL_WRITE,
+    annotations=READ,
     description="Save a Moodle file in Downloads/TUM Moodle and return its persistent local path.",
 )
 def moodle_download_material(material_id: str) -> dict[str, JsonValue]:
@@ -187,7 +191,7 @@ def moodle_search_materials(
 
 
 @server.tool(
-    annotations=LOCAL_WRITE, description="Refresh metadata or index up to five materials per batch."
+    annotations=READ, description="Refresh metadata or index up to five materials per batch."
 )
 def moodle_refresh(
     course_id: CourseId,

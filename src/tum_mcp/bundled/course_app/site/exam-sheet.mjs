@@ -47,7 +47,7 @@ function entry(concept, cite) {
   }
   for (const [index, block] of (concept.details || []).entries()) {
     const section = node('div', 'exam-detail');
-    section.append(studyText('h3', '', block.title));
+    if (block.title) section.append(studyText('h3', '', block.title));
     section.append(annotateExam(renderBlockBody(block), `concept:${concept.key}`, concept.revision, `detail:${index}`));
     body.append(section);
   }
@@ -71,7 +71,7 @@ function entry(concept, cite) {
 export function renderSheet(focusKey) {
   const root = node('div', 'exam-sheet');
   const heading = node('h1', '', 'Cheatsheet');
-  const eyebrow = node('p', 'eyebrow', 'Exam Prep');
+  const eyebrow = node('p', 'eyebrow', 'Exam');
   root.append(append(node('div', 'unit-header'), eyebrow, heading));
   if (!exam.concepts.length) {
     root.append(node('p', '', 'The cheatsheet has not been prepared yet.'));

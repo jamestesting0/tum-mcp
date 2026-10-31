@@ -18,7 +18,8 @@ def list_comments(
     status: Annotated[Literal["open", "resolved", "all"], typer.Option()] = "open",
     unit: Annotated[str | None, typer.Option()] = None,
     view: Annotated[
-        Literal["content", "flashcards", "practice", "exercises", "lectures", "exam"] | None,
+        Literal["content", "flashcards", "practice", "explore", "exercises", "lectures", "exam"]
+        | None,
         typer.Option(),
     ] = None,
     exercise: Annotated[str | None, typer.Option()] = None,
@@ -31,7 +32,7 @@ def list_comments(
     from tum_mcp.exercise_content import exercise_revision
     from tum_mcp.exercise_data import read_exercises
     from tum_mcp.lecture_data import read_lectures
-    from tum_mcp.study_build import read_content, unit_revision
+    from tum_mcp.study_build import explore_revision, read_content, unit_revision
     from tum_mcp.study_comments import read_comments
 
     result = read_comments(project)
@@ -69,6 +70,16 @@ def list_comments(
             revision = current.semantic_revision if current else None
             previous = anchor["semantic_revision"]
             exists = current and any(s.key == anchor["section_key"] for s in current.sections)
+        elif anchor["view"] == "explore":
+            owner = units.get(anchor["unit_key"])
+            material = (
+                next((part for part in owner.explore if part.key == anchor["item_key"]), None)
+                if owner
+                else None
+            )
+            revision = explore_revision(material) if material else None
+            previous = anchor["semantic_revision"]
+            exists = material and any(b.key == anchor["block_key"] for b in material.blocks)
         elif anchor["view"] == "exam":
             revision = exam_items.get(anchor["item_key"])
             previous = anchor["item_revision"]

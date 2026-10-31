@@ -19,11 +19,21 @@ Units carry key, label, title, summary, minutes, objectives, sources, blocks,
 flashcards and questions. Sources pair an inventory resource key with its exact
 current SHA-256 from state, and every citation uses a declared key. Keep source
 titles short and locators precise; students see them in a compact sources list.
-For a single course, use no `path` or one category label (for example `["W00"]`)
-followed by the topics. Do not add a course-name folder inside its own site. The
-schema accepts deeper paths for legacy sites; flatten needless nesting when
-revising, and keep existing unit labels and keys so progress survives. Moving
-folders never changes progress.
+Group units with `path` so the outline folds them: one label per unit naming the
+lecture, week or topic of the course's `organization`, for example
+`["Lecture 2 · Intelligent agents"]` for every unit taught from lecture 2. Units of one
+lecture share the label; `study report` flags a flat list of four or more units. Use a
+second level only for a large group. Do not add a course-name folder inside its own
+site. Keep existing unit labels and keys so progress survives; moving folders never
+changes progress.
+
+## Explore
+
+Optional `explore` items use their own versioned sources and keyed reading blocks.
+Read [Explore](explore.md) for fields, classification, source scopes and review. Leave
+it absent/empty when the unit needs no supporting material; do not weaken core
+objectives or practice. Optional-only edits preserve core progress while invalidating
+changed optional reviews and comments.
 
 ## Notation
 
@@ -39,6 +49,9 @@ card faces, question options and feedback. JSON escapes the backslashes:
 - Calculations: the whole line, `\(1 + 0.5 \times 3 = 2.5\)`, so the student reads one
   expression. `study report` still recomputes it.
 - Sub- and superscripts: `\(V_0(S)\)`, `\(b^{*}\)`, `\(2^{2}\)`, never V₀ or b*.
+- Once a unit introduces a notation, write its formulas in it, not in words: `\(\neg P
+  \lor Q\)`, not "not P or Q"; `\(P(R \mid C)\)`, not "rain given cloud". `study report`
+  cannot see a formula spelled out in words.
 
 Convert complete mathematical tokens, never letters inside ordinary words, and reread
 the prose after notation edits. Long equations belong in formula blocks. Keep source
@@ -54,7 +67,28 @@ block for anything longer than one line.
 
 ## Blocks
 
-Every block has a title and sources. Optional `key` gives a block an address
+Every block has sources. Its `title` and `level` build the page outline:
+
+- A titled block opens a section at its `level`: 1 a section, 2 a subsection of the
+  section above, 3 one below that. Headings start at 1 and go one level deeper at a
+  time; the build rejects a skipped level. Use a subsection for one step of a bigger
+  idea (the cases of a definition, the parts of a worked example), not for every block.
+- An untitled block continues the section above it under that heading and citation:
+  the table, figure or answer frame that belongs to the passage before it. Title a
+  block only when it starts something the student would look for in the outline.
+- Exercises, Exam and Lecture use the same blocks and rules. In Lecture,
+  each section is already the top level, so its blocks sit one level below.
+
+Plan the outline before writing the blocks: a level-1 topic, level-2 cases or worked
+examples that belong to it, and level-3 detail only when that case needs another division.
+For example, "Propagation" (1), "Revise an arc" (2), "An empty domain" (3), then
+"Exploit structure" (1). Use that relationship, not font size, to choose levels.
+Flattening every short passage to level 1 hides which examples support which method.
+Do not use every level by quota, add empty parent headings or give definitions their own
+sections; an untitled figure or table often belongs directly under the existing heading.
+Apply this outline check in all four workspaces, including rich guide and solution blocks.
+
+Optional `key` gives a block an address
 (`#unit/content/key`) for definitions, exercise prerequisites and the coverage ledger;
 optional `pages` ("11" or "16-27") names the PDF pages of its first source it draws
 on; citations open there, and later pages can differ from the printed slide numbers.
@@ -62,7 +96,7 @@ on; citations open there, and later pages can differ from the printed slide numb
 | Block | Provide |
 | --- | --- |
 | text | Paragraphs, numbered `steps` and/or points; never an empty explanation. Paragraphs frame (one or two sentences); a procedure is steps and conditions are points. An item opening with a short `Label: ` shows the label in bold. |
-| definition | A `term`, the `statement` and optional `conditions`, placed right after the passage that introduces the term: it appears inside that section as the term beside its meaning, with no heading of its own. Give it a `key`. Write `{{term}}` in any later text, in every workspace, to let students open it in place; the build rejects unknown terms. |
+| definition | A `term`, the `statement` and optional `conditions`, placed right after the passage that introduces the term: it appears inside that section as the term above its full-width meaning, with no heading of its own. Give it a `key`. Write `{{term}}` in any later text, in every workspace, to let students open it in place; the build rejects unknown terms. |
 | formula | LaTeX without dollar delimiters (JSON-escaped, e.g. `"\\frac{a}{b}"`), a plain-language reading, symbol definitions and conditions. Unsupported macros, links and unsafe markup fail validation. Keep `mathml` only for legacy input; never supply both. |
 | table | Column labels, rectangular rows and a meaningful caption. |
 | code | Language, literal code and an explanation; the app highlights common languages. Label authored examples; never execute downloaded code. Add a `walkthrough` (stops of `lines` such as `"5-6"` and a short `note`) when the reader should follow the code part by part: one idea per stop, at most about six stops. |
@@ -80,7 +114,7 @@ explanation, an optional `hint` and sources. A question about a concept may stan
 A question that needs data shows it in its picture and keeps the prompt to the question;
 a one-row table that repeats the prompt is filler. Write four plausible options by
 default; the schema sets the accepted range. Every objective needs a question; counts
-follow learning needs, not quotas. A unit's optional `lectures` names the Lecture Notes
+follow learning needs, not quotas. A unit's optional `lectures` names the Lecture
 that cover it.
 
 ## Build
@@ -88,7 +122,7 @@ that cover it.
 Run `tum-mcp study build PROJECT` after a coherent batch. It blocks stale or
 conflicted sources and edited generated data. Review source meaning and locators
 before rebinding hashes; byte changes alone need not require rewriting valid
-teaching. A modified unit gets a new revision and a fresh progress namespace;
+teaching. A modified core unit gets a new revision and a fresh progress namespace;
 unchanged units keep theirs.
 
 Build preserves and reports customized app files and leaves unknown files untouched.
