@@ -93,9 +93,11 @@ For another Chromium build, set `TUM_MCP_BROWSER` to its executable path before
 running login. Compatible builds must allow Playwright automation. Safari and
 Firefox are not supported.
 
-After sign-in, Artemis and Zulip can read content available to your campus account.
+After sign-in, Moodle, Artemis and Zulip can read content available to your campus account.
 No local course/channel grants are required. Your agent uses MCP status/discovery and
-course metadata to find relevant current-semester material, then makes bounded reads.
+course metadata to prefer current-semester material for unspecified requests, then makes
+bounded reads. Moodle discovery includes all enrolled semesters; explicitly requested
+older courses remain readable while Moodle grants access.
 An account ID identifies a saved service connection; it is not your TUM login.
 TUMonline additionally has a local policy: `tum-mcp manage tumonline --show`
 shows it, `tum-mcp manage tumonline` changes its permissions,

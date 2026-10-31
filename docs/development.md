@@ -24,6 +24,17 @@ Python 3.13 is the managed runtime. Install Tesseract for OCR tests. Default tes
 use synthetic sources and credentials. No language-server installation is needed.
 Optional extensions are off by default; validate both selected and unselected skill
 packs.
+
+For Moodle semester/access changes, run:
+
+```sh
+uv run pytest -q tests/unit/test_parsing.py tests/integration/test_moodle_semesters.py
+```
+
+These use paginated synthetic enrollments, authorized older and unlisted course pages,
+and denied/revoked access through the real HTTP and MCP tool layers; no campus session
+is needed. Keep the existing transport, session, extraction and installed-client checks.
+
 Set `TUM_MOODLE_SYSTEM_KEYRING=1` for a unique synthetic native-store round trip.
 The ordinary campus runtime uses encrypted local files and owner-restricted keys.
 Set `TUM_MCP_BROWSER_INTEGRATION=1` to include the real HTTP static-export browser

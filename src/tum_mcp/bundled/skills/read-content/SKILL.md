@@ -25,7 +25,8 @@ local course/channel grant is needed. Older saved grant fields do not restrict r
 TUMonline additionally enforces its own account-specific local read policy.
 When the course is unspecified, prefer current-semester metadata and relevant active
 courses. Reuse the course binding and known IDs; inspect titles/dates before payloads.
-Keep explicitly requested older courses available and clarify genuinely ambiguous matches.
+Honor an explicitly requested course from any semester when the account can access it;
+current-semester preference is not a read restriction. Clarify genuinely ambiguous matches.
 
 Load only the requested provider's guide:
 - [Moodle](references/moodle.md): materials, pages, announcements and forums.

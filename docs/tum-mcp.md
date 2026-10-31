@@ -128,6 +128,17 @@ prefer relevant current-semester courses and channels, inspect metadata first, a
 page through only the content needed for the request. Explicit older-course requests
 remain supported. Server-denied content, staff-only material and remote writes stay unavailable.
 
+Moodle's `moodle_list_courses` returns enrolled courses from every semester, including
+courses hidden from the dashboard, paginated with current-semester matches first.
+Its `semester` field identifies that preferred term; it does not limit the returned
+courses. Unrecognized terms stay in `courses`
+and also appear in `unclassified`. For an explicit older course, use its course ID
+for material discovery, refresh and indexed search. Known course IDs absent from
+the enrollment list can also be read when Moodle permits access. Course reads and
+indexed search verify the live course page before returning material or cached text;
+HTTP denials, enrollment pages and error pages do not grant access. The integration
+does not enroll the user or change Moodle permissions.
+
 ### TUMonline permissions
 
 TUMonline has a separate, account-specific policy. New connections allow study

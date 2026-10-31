@@ -1,5 +1,12 @@
 # Changes
 
+## Unreleased
+
+- Moodle discovery includes enrolled courses from every semester, current semester
+  first. Explicit older and otherwise accessible known course IDs support material
+  reads and indexed search. Live Moodle course access is checked before returning
+  content, including cached text; enrollment prompts and denied courses stay blocked.
+
 ## 0.16.0 — 2026-10-31
 
 - TUMonline can now read your grades and progress, exams and semester fee status. Each is

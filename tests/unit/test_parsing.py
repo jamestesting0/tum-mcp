@@ -12,8 +12,9 @@ def test_semester_labels_override_stale_in_progress_dates() -> None:
         Course(id=3, fullname="Advising", enddate=0),
     ]
     selected, ambiguous = select_courses(courses, date(2026, 10, 20))
-    assert [course.id for course in selected] == [2]
+    assert [course.id for course in selected] == [2, 1, 3]
     assert [course.id for course in ambiguous] == [3]
+    assert select_courses(courses, date(2028, 10, 20))[0] == courses
     assert current_term(date(2027, 2, 1)) == "W26/27"
     assert current_term(date(2027, 5, 1)) == "S27"
 

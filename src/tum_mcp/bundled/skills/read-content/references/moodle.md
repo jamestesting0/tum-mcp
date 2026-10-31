@@ -1,5 +1,15 @@
 # Moodle
 
+`moodle_list_courses` lists enrolled courses across all semesters, including courses
+hidden from the dashboard, with current-semester matches first. Continue its cursor
+to find older courses; `semester` names the preferred current term, not a filter.
+Courses without a recognized term also appear in `courses`
+and are repeated in `unclassified` for clarification. Use an explicitly requested
+semester or known course ID instead of substituting a newer offering. A known ID may
+be readable even when absent from enrollment discovery: Moodle's course page decides
+access. Denied courses and enrollment prompts do not grant access; never enroll to
+complete a read request.
+
 Known material/discussion IDs go straight to the read tool. Discover missing IDs
 with `moodle_list_materials` in the known course; `moodle_list_courses` is only
 needed for course discovery. If an old ID is no longer indexed, rediscover its

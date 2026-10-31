@@ -12,6 +12,7 @@ from tum_mcp.moodle.config import Paths
 from tum_mcp.moodle.downloads import list_downloads
 from tum_mcp.moodle.errors import ErrorCode, MoodleError
 from tum_mcp.moodle.http_client import MoodleHTTP
+from tum_mcp.moodle.material_search import moodle_search_materials
 from tum_mcp.moodle.models import Post, TextPage
 from tum_mcp.moodle.pagination import excerpt, offset_of
 from tum_mcp.moodle.personal_records import PersonalRecords
@@ -74,7 +75,7 @@ def moodle_logout() -> dict[str, str]:
 
 @server.tool(
     annotations=READ,
-    description="List enrolled current-semester courses and ambiguous term matches.",
+    description="List enrolled courses from every semester, current semester first.",
 )
 def moodle_list_courses(cursor: str | None = None, limit: Limit = 20) -> dict[str, JsonValue]:
     result = Service().courses()
@@ -86,7 +87,10 @@ def moodle_list_courses(cursor: str | None = None, limit: Limit = 20) -> dict[st
     return result
 
 
-@server.tool(annotations=READ, description="Discover course sections, files, links and activities.")
+@server.tool(
+    annotations=READ,
+    description="Discover sections, files, links and activities in any accessible Moodle course.",
+)
 def moodle_list_materials(
     course_id: CourseId, cursor: str | None = None, limit: Limit = 50
 ) -> dict[str, JsonValue]:
@@ -151,43 +155,10 @@ def moodle_list_downloads(cursor: str | None = None, limit: Limit = 20) -> dict[
     }
 
 
-@server.tool(
-    annotations=READ, description="Search indexed course text or titles; always returns coverage."
-)
-def moodle_search_materials(
-    query: Annotated[str, Field(min_length=1, max_length=500)],
-    course_id: CourseId | None = None,
-    mode: Literal["text", "titles"] = "text",
-    limit: Limit = 20,
-    cursor: str | None = None,
-) -> dict[str, JsonValue]:
-    service = Service()
-    start = offset_of(cursor)
-    count = min(start + limit + 1, 1000)
-    _, courses, _ = service.moodle.courses()
-    ids = [course.id for course in courses if course_id is None or course.id == course_id]
-    hits: list[JsonValue] = []
-    coverage: dict[str, JsonValue] = {}
-    for identity in ids:
-        coverage[str(identity)] = service.library.coverage(identity)
-        if mode == "titles":
-            hits.extend(
-                item.model_dump(mode="json")
-                for item in service.library.materials(identity)
-                if not item.kind.startswith("private_")
-                and query.casefold() in item.title.casefold()
-            )
-        else:
-            hits.extend(
-                item.model_dump(mode="json")
-                for item in service.library.search(query, identity, count)
-            )
-    return {
-        "hits": hits[start : start + limit],
-        "next_cursor": str(start + limit) if start + limit < len(hits) else None,
-        "coverage": coverage,
-        "note": "Only indexed content was searched. Refresh to index missing materials.",
-    }
+server.tool(
+    annotations=READ,
+    description="Search indexed course text or titles; always returns coverage.",
+)(moodle_search_materials)
 
 
 @server.tool(
