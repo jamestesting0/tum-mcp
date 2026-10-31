@@ -21,8 +21,10 @@ Lecture list, a lecture and a section deep link. Check:
   selected destination and confirm the expected point. Do not infer seek behavior
   solely from the URL. A missing/unavailable player is a verification limitation.
 - Every chosen image loads, enlarges by keyboard and retains legible symbols,
-  caption, alt text and a sources link to its actual capture time. No need for a
-  frame quota.
+  caption, alt text and a sources link to its actual capture time or page. No need
+  for a frame quota. Each section whose explanation leans on a lecturer's figure
+  shows one; a text-only section is acceptable when a picture would add nothing.
+- A section's sources sit on its title row; titled passages keep their own.
 - The changed notes read well at phone and desktop widths, with no overflowing
   figures, formulas or tables and no visible provenance labels. Source/attribution
   review stays private; app behavior itself is covered by the package's tests.
@@ -37,6 +39,8 @@ Lecture list, a lecture and a section deep link. Check:
 
 A targeted edit needs targeted source/browser checks. Do not repeatedly acquire
 unchanged media, re-run inference or rebuild after every paragraph. Report what
-was prepared/reused, invalid and partial, the remaining coverage/material gaps,
+was prepared/reused, invalid and partial (each failed span's `failures` entry
+names its stage and reason; rerunning `lecture prepare` reuses verified media and
+chunks and retries only what failed), the remaining coverage/material gaps,
 actual validation and publication state. Synthetic demo success tests the product
 workflow; it does not establish real lecture accuracy or educational benefit.

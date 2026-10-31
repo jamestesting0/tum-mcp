@@ -35,7 +35,8 @@ new question; create a new one only when the first steps differ.
 - **Pitfalls**: where students actually lose points; **variations**: how the pattern
   changed across sittings (a new constraint, another representation, a reversed
   question).
-- **Worked practice** (required): one question, a past one with its stored statement
+- **Worked practice** (required; when it calculates, its solution is a `derivation`,
+  one transformation per line with the workflow step it applies as its reason): one question, a past one with its stored statement
   and solution or an authored one, solved through the workflow. Its `steps` apply
   every workflow step in order (several steps may apply one workflow step). Each
   step asks for exactly that move, may give a hint, and always shows the worked

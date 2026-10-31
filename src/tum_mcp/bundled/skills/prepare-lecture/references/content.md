@@ -53,7 +53,10 @@ caption and descriptive alt text. Stage chosen bytes in
 `.tum-mcp/lecture-assets/`. Real figures must match the processor's capture
 inventory, or a reproducible crop/resize with original-image provenance. Inspect
 the final asset: preserve critical notation legibly. Do not redraw it as evidence.
-A necessary new explanatory visual uses an ordinary diagram block instead.
+A necessary new explanatory visual uses an ordinary diagram block instead. A figure
+taken from the course material (a script or slide page) is an ordinary `figure` block
+whose `image` sits in the app's `figures/` folder, citing that document with `pages`;
+it is not frame evidence and never claims a capture time.
 
 The builder manages selected image copies; it does not delete edited/unmanaged
 files. Local asset limits differ from publication's 16 MiB/100-file whole-site

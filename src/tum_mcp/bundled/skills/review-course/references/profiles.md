@@ -59,6 +59,12 @@ and check the recording/transcript evidence before judging fidelity.
   recording coverage.
 - Judge structure and visuals with the shared checks. Do not require quizzes, flashcards,
   invented prediction prompts or a rearranged recording to satisfy Study's lesson shape.
+- Check visual value: where the lecturer's board, slide figure or demonstration carries
+  the explanation (a spatial picture, notation, a circuit, hardware), the section shows a
+  legible, source-backed visual near the passage: a course-material figure cited by page,
+  a captured frame, or a drawn diagram that is not presented as a capture. A text-only
+  section is fine when a picture would add nothing; a missing central visual is a
+  `representation.shape_fits` finding.
 
 Synthetic template examples can test whether a check is usable. They cannot validate
 recording fidelity, real-exam representativeness or learning outcomes.

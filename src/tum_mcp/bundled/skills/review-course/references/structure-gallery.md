@@ -44,6 +44,50 @@ details" (defines admissibility), "Notes".
 **recap-points** (item). A six-section unit ends with "Recall": three points that
 restate its key rules.
 
+The cases below come from two subjects and calibrate reinforcement against duplication
+and the first-encounter walk ([text](text.md), [structure](structure.md)).
+
+**prereq-reminder** (item, quantum computing). Unit 6 "Unitary gates" checks that
+\(H\) preserves length. Its section opens: "Recall the {{inner product}}
+\(\langle a \mid b\rangle = \sum_i a_i^* b_i\) from unit 3." and then uses it.
+
+**conjugate-retaught** (item, quantum computing). Unit 2 derives \(1/(a+bi)\) by the
+conjugate in `block:2`. `block:7` repeats the same three steps and sentences in full
+before dividing by \(1+2i\).
+
+**given-in-step** (item, search). Step 3 of an A* exercise says "With
+\(h(C) = 4\), the frontier value of \(C\) is \(g(C) + h(C)\)" and computes it.
+
+**every-step-givens** (item, search). Each of five guide steps of the same exercise
+opens by listing all six edge costs and all four heuristic values again.
+
+**second-heuristic** (item, search). After misplaced tiles, the admissibility section
+shows Manhattan distance on the same 8-puzzle state and why it never overestimates.
+
+**bloch-opening** (item, quantum computing). Unit "Bloch sphere and phase" opens: the
+normalized \(\lvert 0\rangle + \lvert 1\rangle\) and \(\lvert 0\rangle - \lvert
+1\rangle\) point in opposite equatorial directions, and a common phase leaves the
+direction unchanged. The next paragraph parameterizes the state with
+\(\gamma, \theta, \varphi\). The sphere's figure comes three sections later.
+
+**matrix-described** (item, quantum computing). "The diagonal matrix with entries 1, 0
+keeps \(\lvert 0\rangle\) and removes \(\lvert 1\rangle\)." No matrix is shown.
+
+**product-inner-compact** (item, quantum computing). "The tensor product states
+\(\lvert 0\rangle\otimes\lvert +\rangle\) and \(\lvert 1\rangle\otimes\lvert +\rangle\) are
+orthogonal: the first factors already have inner product zero. For product states,
+\((\langle a\rvert\otimes\langle b\rvert)(\lvert c\rangle\otimes\lvert d\rangle)=\langle
+a\mid c\rangle\langle b\mid d\rangle\). Extend the rule by linearity to sums."
+
+**chain-rule-unpacked** (item, probability). "Both events happen when \(B\) happens and
+then \(A\) happens given \(B\)." Points remind that \(P(A \mid B)\) is the probability
+of \(A\) once \(B\) is known; a table works \(P(B) = 0.5\), \(P(A \mid B) = 0.4\), product
+\(0.2\); then the formula block \(P(A \cap B) = P(A \mid B)\,P(B)\) with \(P(B) > 0\).
+
+**reciprocal-without-rule** (item, quantum computing). The unit divides by \(1+2i\)
+step by step and states \(z^*z = a^2+b^2\), but never gives
+\(1/(a+bi) = (a-bi)/(a^2+b^2)\) or its condition \(a^2+b^2 > 0\).
+
 ## Verdicts
 
 | Case | Score | Check | Why |
@@ -59,3 +103,13 @@ restate its key rules.
 | lecture-backbone | Course organization 3 | `organization.one_backbone` | Groups, dependencies and sheets follow one order. |
 | pitfall-first | Organization 2 | `organization.builds_up`, `organization.outline` | The pitfall precedes its method, and "Overview", "More details" and "Notes" do not say what they teach. |
 | recap-points | Redundancy 3 | `redundancy.said_once` | A closing recap of a few points supports recall; it is not repetition. |
+| prereq-reminder | Redundancy 3; Cognitive load 3 | `cognitive_load.reminder_at_use` | A one-line reminder with a link to its home spares a return trip three units back; reinforcement. |
+| conjugate-retaught | Redundancy 2 | `redundancy.said_once` | The same derivation in the same words twice; keep one home and remind in one line. |
+| given-in-step | Redundancy 3 | `redundancy.no_repeated_labels` | The step restates the one given it uses, so it reads without scrolling back. |
+| every-step-givens | Redundancy 2 | `redundancy.no_repeated_labels` | Every given in every step buries the new move; show the givens once and name the one each step uses. |
+| second-heuristic | Redundancy 3; Intuition 3 | `redundancy.said_once` | A second example shows admissibility from another side; it is not a repeat. |
+| bloch-opening | Cognitive load 2 | `cognitive_load.first_encounter` | Three new symbols and two new ideas before the student sees what the sphere depicts; orient first, picture early. |
+| matrix-described | Representation 2 | `representation.shown_not_described` | The student must build the matrix from words; show \(\begin{pmatrix}1&0\\0&0\end{pmatrix}\) and say what it keeps. |
+| product-inner-compact | Clarity 2 | `clarity.notation_unpacked` | The claim, four new symbols and the rule share two sentences; remind what a ket, \(\langle\cdot\mid\cdot\rangle\) and \(\otimes\) mean, work \(\langle 0\mid 1\rangle\langle +\mid +\rangle = 0\), then state the identity and its conjugate-linearity. |
+| chain-rule-unpacked | Clarity 3; Redundancy 3 | `clarity.notation_unpacked` | Words, a local reminder, a worked case and then the rule; the reminder repeats a definition on purpose. |
+| reciprocal-without-rule | Intuition 2 | `intuition.general_rule` | One worked number without its general formula and nonzero condition leaves the next case to guesswork. |
