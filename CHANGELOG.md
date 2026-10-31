@@ -1,5 +1,17 @@
 # Changes
 
+## 0.16.0 — 2026-10-31
+
+- TUMonline can now read your grades and progress, exams and semester fee status. Each is
+  off until you allow it in `tum-mcp manage tumonline`. New tools list your achievements
+  (grade, credits, semester, date), show module and exam progress per study, list the exams
+  you are registered for, search exam offers by course with dates, rooms and registration
+  windows, and show the current semester fee, payment deadline and bookings. Examiner names,
+  record IDs and the account holder are left out, and nothing registers for an exam.
+- The TUMonline permission selector lists only these four permissions, so the arrow keys
+  move between them. The Account, Other IT services and Miscellaneous rows are gone: they
+  hold credentials or link to outside services.
+
 ## 0.15.1 — 2026-10-31
 
 - The README's Get started section ends with setting up a course: create a folder, open an
