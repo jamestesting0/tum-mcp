@@ -81,6 +81,45 @@ def test_contents_reaches_nested_lecture_headings(
         context.close()
 
 
+@pytest.mark.parametrize("width", [390, 1440])
+def test_untitled_first_passage_cites_on_the_section_title_row(
+    course_browser: Browser, lecture_project: Path, lecture_url: str, width: int
+) -> None:
+    # Given a section whose first passage continues its title and whose second has its own.
+    path = lecture_project / "study/lectures.json"
+    notes = json.loads(path.read_bytes())
+    lecture = notes["lectures"][0]
+    section = lecture["sections"][0]
+    section["title"] = "Why first discovery gives a shortest path in every unweighted graph"
+    first = section["blocks"][0]
+    second = first | {"title": "A second titled passage", "paragraphs": ["More detail."]}
+    section["blocks"] = [{k: v for k, v in first.items() if k != "title"}, second]
+    path.write_text(json.dumps(notes))
+    build(lecture_project, publish=False)
+    context = course_browser.new_context(viewport={"width": width, "height": 900})
+    try:
+        page = context.new_page()
+        page.goto(lecture_url + "#lectures/" + lecture["key"])
+        topic = page.locator(".lecture-section").first
+        # Then the first passage's sources sit on the title's row, beside its first line.
+        row = topic.locator(".section-heading").first
+        expect(row.locator("h2")).to_have_count(1)
+        expect(row.locator(".citation")).to_have_count(1)
+        assert topic.locator(".section-heading.untitled").count() == 0
+        title, cite = row.locator("h2").bounding_box(), row.locator("summary").bounding_box()
+        assert title["y"] <= cite["y"] < title["y"] + title["height"] / 2
+        assert cite["x"] >= title["x"] + title["width"] - 1
+        # And the titled passage keeps its own sources, reachable by keyboard.
+        titled = topic.locator(".section-heading", has_text="A second titled passage")
+        expect(titled.locator(".citation")).to_have_count(1)
+        row.locator("summary").focus()
+        page.keyboard.press("Enter")
+        expect(row.locator(".citation[open] .lecture-time").first).to_be_visible()
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+    finally:
+        context.close()
+
+
 @pytest.mark.parametrize(
     "width,theme", [(390, "light"), (390, "dark"), (1440, "light"), (1440, "dark")]
 )
