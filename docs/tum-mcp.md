@@ -17,6 +17,15 @@ submission, start, deployment, rebuild or push workflows.
 Local downloads, source inventories, study-site builds and checkpoint storage
 are local operations; they do not post, submit or mark campus content as read.
 
+`artemis_list_courses` defaults to active courses. Set `include_past=true` for an
+explicit semester or full inventory; it adds the account's past courses, active
+first with each course ID listed once. The archive request is skipped by default.
+Each course returns an `active` flag and a `semester` label when available. Active
+status alone does not establish a semester. Explicit older course IDs use the same
+lecture, student attachment and released exercise statement tools, even when absent from
+discovery. Artemis still decides access and which old content it retains; the
+integration does not enroll, start an exercise or download staff archives.
+
 Artemis lecture reads use the student overview/detail endpoints, verify the
 selected course and omit unreleased units and personal completion records.
 `artemis_get_attachment` retrieves a bounded page range from the student PDF,
@@ -29,6 +38,11 @@ Lecture routes were checked against the
 and the
 [student file boundary](https://github.com/ls1intum/Artemis/blob/88824427f7ea38512606824c58b8858e539eb2eb/src/main/java/de/tum/cit/aet/artemis/core/web/FileResource.java).
 Synthetic fixtures are the default. Live checks remain private and relevant to the requested task.
+
+Past-course metadata uses Artemis's student
+[course archive listing](https://github.com/ls1intum/Artemis/blob/59b5ca340b79db2336a8b234bd41fe5289716ecd/src/main/java/de/tum/cit/aet/artemis/course/web/CourseArchiveResource.java#L179-L196),
+alongside its
+[active-course dropdown](https://github.com/ls1intum/Artemis/blob/59b5ca340b79db2336a8b234bd41fe5289716ecd/src/main/java/de/tum/cit/aet/artemis/course/web/CourseOverviewResource.java#L246-L259).
 
 ## Build and test the local package
 
@@ -99,6 +113,7 @@ browser onboarding. See [setup](setup.md) for browser choices and WSL.
 tum-mcp login
 tum-mcp doctor
 tum-mcp discover artemis ACCOUNT_ID
+tum-mcp discover artemis ACCOUNT_ID --include-past
 tum-mcp discover zulip ACCOUNT_ID
 tum-mcp --help
 tum-mcp study build --help
@@ -127,6 +142,23 @@ fields remain readable for compatibility and do not restrict read access. Agents
 prefer relevant current-semester courses and channels, inspect metadata first, and
 page through only the content needed for the request. Explicit older-course requests
 remain supported. Server-denied content, staff-only material and remote writes stay unavailable.
+
+Moodle's `moodle_list_courses` defaults to recognized current-semester courses.
+Set `include_past=true` for every enrolled semester, including dashboard-hidden
+courses, paginated with current matches first. Keep the same flag across cursors.
+`semester` identifies the current term; unrecognized terms appear in `unclassified`
+and, with expanded discovery, in `courses`. Moodle still retrieves enrollment
+metadata to classify semesters; the default reduces returned rows, not that fetch.
+Unscoped `moodle_search_materials` searches only current courses by default;
+`include_past=true` expands it to all enrolled semesters. A selected `course_id`
+avoids enrollment discovery and checks only that course, including older or unlisted
+IDs. Live course access is verified before cached content and indexed search results
+are returned; denied pages and enrollment prompts stay blocked.
+
+For “prepare Algorithms for WS23”, the skills enable historical discovery, match
+winter 2023/24 rather than a newer course with the same title, and save that semester
+and provider IDs in the project binding. Later syncs reuse the binding. Reads still
+depend on server permissions and retained content; ambiguous matches need clarification.
 
 ### TUMonline permissions
 
