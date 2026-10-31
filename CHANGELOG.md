@@ -6,6 +6,8 @@
   first. Explicit older and otherwise accessible known course IDs support material
   reads and indexed search. Live Moodle course access is checked before returning
   content, including cached text; enrollment prompts and denied courses stay blocked.
+- Ship timezone data so current-semester detection also works on Windows and other
+  hosts without a system IANA timezone database.
 
 ## 0.16.0 — 2026-10-31
 

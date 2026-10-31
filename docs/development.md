@@ -34,6 +34,8 @@ uv run pytest -q tests/unit/test_parsing.py tests/integration/test_moodle_semest
 These use paginated synthetic enrollments, authorized older and unlisted course pages,
 and denied/revoked access through the real HTTP and MCP tool layers; no campus session
 is needed. Keep the existing transport, session, extraction and installed-client checks.
+The package includes `tzdata` for hosts without an IANA timezone database. The semester
+regression disables system timezone paths in a subprocess to cover that Windows boundary.
 
 Set `TUM_MOODLE_SYSTEM_KEYRING=1` for a unique synthetic native-store round trip.
 The ordinary campus runtime uses encrypted local files and owner-restricted keys.

@@ -1,8 +1,26 @@
+import subprocess
+import sys
 from datetime import date
 
 from tum_mcp.moodle.course_scope import current_term, select_courses
 from tum_mcp.moodle.models import Course, Material
 from tum_mcp.moodle.parsing import discussions_from_html, materials_from_html
+
+
+def test_current_semester_works_without_system_timezone_data() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            "import zoneinfo; zoneinfo.reset_tzpath(()); "
+            "from tum_mcp.moodle.course_scope import current_term; print(current_term())",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == current_term()
 
 
 def test_semester_labels_override_stale_in_progress_dates() -> None:
