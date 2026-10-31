@@ -1,8 +1,10 @@
 """Read a course once and detect changes to the local evidence observed by a request."""
 
 import hashlib
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 
 from pydantic import BaseModel, JsonValue, ValidationError
 
@@ -121,9 +123,18 @@ class CourseInputs:
     ledger: CoverageLedger | None
     registry: KnowledgeRegistry | None
 
+    _resources: Mapping[str, ResourceState] = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "_resources",
+            MappingProxyType({item.resource.key: item for item in self.state.resources}),
+        )
+
     @property
-    def resources(self) -> dict[str, ResourceState]:
-        return {item.resource.key: item for item in self.state.resources}
+    def resources(self) -> Mapping[str, ResourceState]:
+        return self._resources
 
     @property
     def workspaces(self) -> tuple[str, ...]:

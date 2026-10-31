@@ -14,10 +14,10 @@ def node(ref, title="Topic", body="", workspace="study", payload=None):
     return Node(ref, workspace, "unit", title, "", body, payload or {})
 
 
-def test_word_matching_requires_all_terms_and_normalizes_unicode():
+def test_word_matching_prefers_titles_and_normalizes_unicode():
     value = node("study/unit/one", "Ｆｕｎｃｔｉｏｎ", "composition")
     assert lexical_score(value, "function COMPOSITION") == 5
-    assert lexical_score(value, "function missing") == 0
+    assert lexical_score(value, "function missing") == 4
     assert lexical_score(value, "funct") == 0
 
 
@@ -91,3 +91,46 @@ def test_oversized_minimum_envelope_is_an_error():
             {"items": [], "issues": [], "status": "ok", "truncation": {}, "private": "x" * 5000},
             2048,
         )
+
+
+def test_conversational_multi_concept_query_finds_existing_homes():
+    graph = Graph(None)
+    graph.add(
+        node("study/unit/vacuum", "Vacuum cleaner world", "Partially observable environment.")
+    )
+    graph.add(
+        node("study/unit/transitions", "Deterministic transitions", "A fixed transition rule.")
+    )
+    selected, ambiguous = seeds(
+        graph, "Explain the vacuum cleaner observability deterministic please"
+    )
+    assert set(selected) == {"study/unit/vacuum", "study/unit/transitions"}
+    assert not ambiguous
+    assert seeds(graph, "Please explain the quuxnebula") == ([], [])
+
+
+def test_polite_query_does_not_resolve_a_shared_alias_arbitrarily():
+    graph = Graph(None)
+    for key, title in (("observer", "Observer"), ("coupling", "Loose coupling")):
+        graph.add(
+            node(
+                f"concept/{key}",
+                title,
+                "Notification pattern",
+                "concept",
+                {"aliases": ["Notification pattern"]},
+            )
+        )
+    assert seeds(graph, "Please explain the notification pattern") == (
+        [],
+        ["concept/coupling", "concept/observer"],
+    )
+    assert seeds(graph, "notification pattern exam") == ([], [])
+    assert seeds(graph, "Observer notification pattern exam")[0] == ["concept/observer"]
+
+
+def test_partial_body_match_needs_distinct_terms_without_matching_a_substring():
+    value = node("study/unit/one", "Theory", "composition registration")
+    assert lexical_score(value, "composition missing") == 0
+    assert lexical_score(value, "composition registration missing") == 2
+    assert lexical_score(value, "composit") == 0

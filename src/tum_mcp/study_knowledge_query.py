@@ -23,14 +23,24 @@ def tokens(value: str) -> frozenset[str]:
     return frozenset(re.findall(r"[^\W_]+", normalized(value)))
 
 
-def lexical_score(node: Node, query: str) -> int:
-    wanted = tokens(query)
-    title, summary, body = (tokens(value) for value in (node.title, node.summary, node.body))
-    return (
-        4 * len(wanted & title) + 2 * len(wanted & summary) + len(wanted & body)
-        if wanted and wanted <= title | summary | body
-        else 0
+SCAFFOLD = frozenset(
+    "a an and are as at be by can could do does explain for from how i in is it me of on "
+    "or please show that the these this to was what when where which with would you".split()
+)
+
+
+def _lexical(node: Node, wanted: frozenset[str]) -> tuple[int, int]:
+    title, summary, body = (
+        tokens(value) & wanted for value in (node.title, node.summary, node.body)
     )
+    covered = title | summary | body
+    if not wanted or not (title or summary or len(body) >= min(2, len(wanted))):
+        return 0, 0
+    return 4 * len(title) + 2 * len(summary) + len(body), len(covered)
+
+
+def lexical_score(node: Node, query: str) -> int:
+    return _lexical(node, tokens(query) - SCAFFOLD)[0]
 
 
 def seeds(graph: Graph, query: str) -> tuple[list[str], list[str]]:
@@ -43,18 +53,18 @@ def seeds(graph: Graph, query: str) -> tuple[list[str], list[str]]:
     ]
     if exact:
         return sorted(exact)[:8], []
-    aliases = [
-        node.id
-        for node in graph.nodes.values()
-        if node.workspace == "concept"
-        and isinstance(node.payload, dict)
-        and value
-        in {normalized(node.title), *(normalized(a) for a in node.payload.get("aliases", []))}
-    ]
-    if len(aliases) > 1:
-        return [], sorted(aliases)
+    names: dict[str, list[str]] = {}
+    labels: dict[str, set[str]] = {}
+    for node in graph.nodes.values():
+        if node.workspace != "concept":
+            continue
+        aliases = node.payload.get("aliases", []) if isinstance(node.payload, dict) else []
+        labels[node.id] = {normalized(node.title), *(normalized(a) for a in aliases)}
+        for name in labels[node.id]:
+            names.setdefault(name, []).append(node.id)
+    aliases = names.get(value, [])
     if aliases:
-        return aliases, []
+        return ([], sorted(aliases)) if len(aliases) > 1 else (aliases, [])
     exact_titles = [
         node.id
         for node in graph.nodes.values()
@@ -62,14 +72,28 @@ def seeds(graph: Graph, query: str) -> tuple[list[str], list[str]]:
     ]
     if exact_titles:
         return sorted(exact_titles)[:8], []
-    scored = [
-        (lexical_score(node, query), node.id)
-        for node in graph.nodes.values()
-        if node.workspace in LEARNING | {"concept"}
-    ]
-    return [ref for score, ref in sorted(scored, key=lambda row: (-row[0], row[1])) if score][
-        :8
-    ], []
+    words = [word for word in re.findall(r"[^\W_]+", value) if word not in SCAFFOLD]
+    filtered = " ".join(words)
+    wanted = frozenset(words)
+    aliases = names.get(filtered, [])
+    if aliases:
+        return ([], sorted(aliases)) if len(aliases) > 1 else (aliases, [])
+    scored = []
+    for node in graph.nodes.values():
+        if node.workspace not in LEARNING | {"concept"}:
+            continue
+        if node.workspace == "concept":
+            collided = {name for name in labels[node.id] if len(names[name]) > 1}
+            alias_words = frozenset(word for name in collided for word in tokens(name))
+            unique_phrase = any(
+                len(names[name]) == 1 and f" {name} " in f" {filtered} " for name in labels[node.id]
+            )
+            if wanted & alias_words and not unique_phrase:
+                continue
+        score, coverage = _lexical(node, wanted)
+        if score:
+            scored.append((score, coverage, node.id))
+    return [ref for _, _, ref in sorted(scored, key=lambda row: (-row[0], -row[1], row[2]))][:8], []
 
 
 def _edge_order(edge: Edge) -> tuple:

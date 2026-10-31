@@ -31,3 +31,17 @@ def test_profile_course_memory(tmp_path: Path):
     assert output.is_relative_to(repo / ".omo/evidence/course-memory-optimization")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(profile(tmp_path), indent=2), encoding="utf-8")
+
+
+def test_resource_lookup_is_request_local_and_replaced_with_state(tmp_path: Path):
+    from dataclasses import replace
+
+    root = scaled_course(tmp_path, 14)
+    inputs = load_inputs(root)
+    resources = inputs.resources
+    assert resources is inputs.resources
+    with pytest.raises(TypeError):
+        resources["invented"] = next(iter(resources.values()))
+    state = inputs.state.model_copy(update={"resources": ()})
+    assert not replace(inputs, state=state).resources
+    assert resources and load_inputs(root).resources == resources
