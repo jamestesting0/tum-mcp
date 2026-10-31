@@ -32,11 +32,11 @@ class ArtemisSemesterSite:
             return httpx2.Response(200, json={"id": 7, "login": "synthetic"})
         if path == "/api/course/courses/for-dropdown":
             return httpx2.Response(
-                200, json=[{"id": 20, "title": "Active course"}] if self.active else []
+                200, json=[{"id": 20, "title": "Algorithms"}] if self.active else []
             )
         if path == "/api/course/courses/for-archive":
             courses = [
-                {"id": 9, "title": "Past winter", "semester": "WS2020/21", "staffOnly": "omit"},
+                {"id": 9, "title": "Algorithms", "semester": "WS2023/24", "staffOnly": "omit"},
                 {"id": 10, "title": "Past summer", "semester": "SS2020"},
                 {"id": 20, "title": "Stale duplicate", "semester": "WS2019/20"},
             ]

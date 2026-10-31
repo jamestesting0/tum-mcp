@@ -2,13 +2,17 @@
 
 ## Unreleased
 
-- Moodle discovery includes enrolled courses from every semester, current semester
-  first. Explicit older and otherwise accessible known course IDs support material
-  reads and indexed search. Live Moodle course access is checked before returning
-  content, including cached text; enrollment prompts and denied courses stay blocked.
-- Artemis discovery includes active and past courses, with active courses first and
-  semester labels for past courses when available. Past-course lectures, student slides
-  and released exercise statements use the same server permissions and read boundaries.
+- Moodle discovery defaults to current-semester courses; `include_past=true` lists
+  enrolled courses from every semester, current first. Explicit older and otherwise
+  accessible known course IDs support material reads and indexed search. Live Moodle
+  course access is checked before returning content, including cached text; enrollment prompts and denied courses stay blocked.
+- Artemis discovery defaults to active courses; `include_past=true` adds past courses
+  with semester labels when available. CLI discovery has `--include-past`. Past-course
+  lectures, student slides and released exercise statements use the same server
+  permissions and read boundaries.
+- Explicit semester requests such as WS23 select the older offering for course
+  preparation and keep its semester and provider IDs during later syncs. Unscoped
+  Moodle material search defaults to current courses; `include_past=true` expands it.
 - Ship timezone data so current-semester detection also works on Windows and other
   hosts without a system IANA timezone database.
 - Lecture preparation no longer fails on recordings whose AAC timestamps drift slightly:

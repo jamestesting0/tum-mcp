@@ -7,8 +7,9 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from tum_mcp.artemis import Artemis
+from tum_mcp.artemis.discovery import artemis_list_courses
 from tum_mcp.artemis.lecture_models import AttachmentView, LectureDirectory, LectureView
-from tum_mcp.artemis.models import CourseDirectory, ExerciseView, FeedbackView, Overview
+from tum_mcp.artemis.models import ExerciseView, FeedbackView, Overview
 from tum_mcp.checkpoints import Checkpoint
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import lecture_enabled, require_lecture
@@ -213,11 +214,7 @@ def zulip_save_checkpoint(account_id: str, channel_id: Id, message_id: Id) -> Ch
     )
 
 
-@server.tool(annotations=READ)
-def artemis_list_courses(account_id: str) -> CourseDirectory:
-    """List accessible active and past Artemis courses, with active courses first."""
-    courses = Artemis(API(find_account(account_id, Provider.ARTEMIS))).courses()
-    return CourseDirectory(account_id=account_id, courses=courses.root)
+server.tool(annotations=READ)(artemis_list_courses)
 
 
 @server.tool(annotations=READ)

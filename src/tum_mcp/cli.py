@@ -6,18 +6,18 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Annotated, assert_never
+from typing import Annotated
 
 import typer
 
 from tum_mcp import __version__
 from tum_mcp.cli_help import configure_help
 from tum_mcp.credentials import Vault
+from tum_mcp.discovery_cli import discover
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import (
     audio_notes_enabled,
     lecture_enabled,
-    require_lecture,
     video_notes_enabled,
 )
 from tum_mcp.moodle.browsers import BrowserSetupError
@@ -174,27 +174,7 @@ def connect() -> None:
 app.command("connect", hidden=True)(connect)
 
 
-@app.command()
-def discover(provider: Provider, account_id: str) -> None:
-    """Discover accessible channel/course metadata for focused reads."""
-    from tum_mcp.artemis import Artemis
-    from tum_mcp.transport import API
-    from tum_mcp.zulip import Zulip
-
-    if provider == Provider.TUM_LIVE:
-        require_lecture()
-    api = API(find_account(account_id, provider))
-    match provider:
-        case Provider.ZULIP:
-            typer.echo(Zulip(api).channels().model_dump_json(indent=2))
-        case Provider.ARTEMIS:
-            typer.echo(Artemis(api).courses().model_dump_json(indent=2))
-        case Provider.TUM_LIVE:
-            from tum_mcp.tum_live import TumLive
-
-            typer.echo(TumLive(api).courses().model_dump_json(indent=2))
-        case unreachable:
-            assert_never(unreachable)
+app.command()(discover)
 
 
 @app.command()

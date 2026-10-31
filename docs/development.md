@@ -30,11 +30,14 @@ For semester/access changes, run the affected provider's checks:
 ```sh
 uv run pytest -q tests/unit/test_parsing.py tests/integration/test_moodle_semesters.py
 uv run pytest -q tests/unit/test_artemis_boundaries.py tests/unit/test_artemis_lectures.py tests/integration/test_artemis_semesters.py
+uv run pytest -q tests/integration/test_semester_preparation.py
 ```
 
 These use paginated synthetic enrollments, active/archive listings, authorized older
 and unlisted courses, and denied/revoked access through the real HTTP and MCP tool
-layers; no campus session is needed. Keep the existing transport, session, extraction
+layers; no campus session is needed. They assert default versus expanded discovery,
+request counts, CLI flags and WS23 source-to-project binding when a newer offering
+has the same title. Keep the existing transport, session, extraction
 and installed-client checks.
 The package includes `tzdata` for hosts without an IANA timezone database. The semester
 regression disables system timezone paths in a subprocess to cover that Windows boundary.

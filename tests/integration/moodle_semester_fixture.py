@@ -20,6 +20,8 @@ class MoodleSite:
     """Mutable server state lets tests revoke access without changing the local cache."""
 
     denied: set[int] = field(default_factory=set)
+    course_reads: list[int] = field(default_factory=list)
+    inventory_reads: int = 0
 
     def respond(self, request: httpx2.Request) -> httpx2.Response:
         assert request.url.host == "www.moodle.tum.de"
@@ -31,13 +33,14 @@ class MoodleSite:
                 headers={"Content-Type": "text/html"},
             )
         if path == "/lib/ajax/service.php":
+            self.inventory_reads += 1
             payload = json.loads(request.content)[0]
             assert payload["methodname"] == (
                 "core_course_get_enrolled_courses_by_timeline_classification"
             )
             first = [
-                Course(id=1, fullname="Past winter", shortname="W00/01", enddate=0),
-                Course(id=2, fullname="Current", shortname=current_term()),
+                Course(id=1, fullname="Algorithms", shortname="W23/24", enddate=0),
+                Course(id=2, fullname="Algorithms", shortname=current_term()),
             ]
             second = [
                 Course(id=3, fullname="Past summer", shortname="S01"),
@@ -60,6 +63,7 @@ class MoodleSite:
             )
         if path == "/course/view.php":
             identity = int(request.url.params["id"])
+            self.course_reads.append(identity)
             if identity in self.denied or identity == 90:
                 return httpx2.Response(403)
             if identity == 91:

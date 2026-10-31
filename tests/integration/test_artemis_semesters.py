@@ -1,3 +1,4 @@
+import json
 from typing import Literal, assert_never
 
 import anyio
@@ -5,8 +6,10 @@ import pytest
 from artemis_semester_fixture import ArtemisSemesterSite, artemis_site
 from mcp import ClientSession
 from mcp.shared.memory import create_client_server_memory_streams
+from typer.testing import CliRunner
 
 from tum_mcp import server
+from tum_mcp.cli import app
 from tum_mcp.errors import CampusError
 from tum_mcp.transport import API
 
@@ -29,13 +32,13 @@ def test_discovery_includes_past_semesters_after_active_courses_without_duplicat
     expected: list[int],
 ) -> None:
     artemis_site.active, artemis_site.past = active, past
-    result = server.artemis_list_courses(artemis_site.account.id)
+    result = server.artemis_list_courses(artemis_site.account.id, include_past=True)
     assert [item.id for item in result.courses] == expected
     assert all(item.active == (active and item.id == 20) for item in result.courses)
     if past:
-        assert next(item for item in result.courses if item.id == 9).semester == "WS2020/21"
+        assert next(item for item in result.courses if item.id == 9).semester == "WS2023/24"
     if active:
-        assert result.courses[0].title == "Active course"
+        assert result.courses[0].title == "Algorithms"
     assert "staffOnly" not in result.model_dump_json()
 
 
@@ -78,7 +81,7 @@ def test_archive_denial_or_unavailability_is_not_reported_as_empty_history(
 ) -> None:
     artemis_site.archive_status = status
     with pytest.raises(CampusError, match=code):
-        server.artemis_list_courses(artemis_site.account.id)
+        server.artemis_list_courses(artemis_site.account.id, include_past=True)
 
 
 @pytest.mark.parametrize("kind", ["exercises", "exercise", "lecture", "slides"])
@@ -133,7 +136,12 @@ def test_real_mcp_client_discovers_and_reads_past_content_then_preserves_denial(
                 async with ClientSession(*client_streams) as client:
                     await client.initialize()
                     account = {"account_id": artemis_site.account.id}
-                    courses = await client.call_tool("artemis_list_courses", account)
+                    current = await client.call_tool("artemis_list_courses", account)
+                    assert [c["id"] for c in current.structured_content["courses"]] == [20]
+                    assert not any("for-archive" in path for path in artemis_site.calls)
+                    courses = await client.call_tool(
+                        "artemis_list_courses", {**account, "include_past": True}
+                    )
                     assert not courses.is_error, courses.content
                     assert [item["id"] for item in courses.structured_content["courses"]] == [
                         20,
@@ -166,3 +174,38 @@ def test_real_mcp_client_discovers_and_reads_past_content_then_preserves_denial(
                 group.cancel_scope.cancel()
 
     anyio.run(check)
+
+
+@pytest.mark.parametrize("active", [True, False])
+def test_default_discovery_skips_archive_even_if_history_is_denied(
+    artemis_site: ArtemisSemesterSite,
+    active: bool,
+) -> None:
+    artemis_site.active = active
+    artemis_site.archive_status = 403
+    result = server.artemis_list_courses(artemis_site.account.id)
+    assert [course.id for course in result.courses] == ([20] if active else [])
+    assert artemis_site.calls == [
+        "/api/core/public/account",
+        "/api/course/courses/for-dropdown",
+    ]
+
+
+@pytest.mark.parametrize("include_past", [False, True])
+def test_cli_history_flag_controls_archive_requests(
+    artemis_site: ArtemisSemesterSite,
+    include_past: bool,
+) -> None:
+    args = ["discover", "artemis", artemis_site.account.id]
+    if include_past:
+        args.append("--include-past")
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 0, result.output
+    assert [c["id"] for c in json.loads(result.output)] == ([20, 9, 10] if include_past else [20])
+    assert len(artemis_site.calls) == (3 if include_past else 2)
+
+
+def test_cli_rejects_history_flag_for_other_providers_before_access() -> None:
+    result = CliRunner().invoke(app, ["discover", "zulip", "missing", "--include-past"])
+    assert result.exit_code == 2
+    assert "applies to Artemis" in result.output

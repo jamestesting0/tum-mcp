@@ -3,7 +3,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from bs4 import BeautifulSoup
 
-from tum_mcp.moodle.course_scope import current_term, select_courses
+from tum_mcp.moodle.course_scope import current_term, select_courses, term_of
 from tum_mcp.moodle.errors import ErrorCode, MoodleError
 from tum_mcp.moodle.http_client import Download, MoodleHTTP
 from tum_mcp.moodle.models import Course, CoursePage, Material
@@ -38,8 +38,12 @@ class Moodle:
         preferred, ambiguous = select_courses(list(courses.values()))
         return current_term(), preferred, ambiguous
 
-    def courses(self) -> tuple[str, list[Course], list[Course]]:
-        return self._snapshot
+    def courses(self, include_past: bool = False) -> tuple[str, list[Course], list[Course]]:
+        term, courses, unclassified = self._snapshot
+        selected = (
+            courses if include_past else [course for course in courses if term_of(course) == term]
+        )
+        return term, selected, unclassified
 
     def require_course(self, course_id: int) -> Download:
         """Verify current Moodle access, including courses absent from enrollment discovery."""

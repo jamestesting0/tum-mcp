@@ -17,12 +17,13 @@ def moodle_search_materials(
     mode: Literal["text", "titles"] = "text",
     limit: Limit = 20,
     cursor: str | None = None,
+    include_past: bool = False,
 ) -> dict[str, JsonValue]:
     service = Service()
     start = offset_of(cursor)
     count = min(start + limit + 1, 1000)
     if course_id is None:
-        _, courses, _ = service.moodle.courses()
+        _, courses, _ = service.moodle.courses(include_past=include_past)
         ids = [course.id for course in courses]
     else:
         ids = [course_id]

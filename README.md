@@ -31,7 +31,9 @@ Ask your agent to explain course material, find announcements or catch up on a
 Zulip channel. Campus access is read-only and follows your account permissions;
 submissions, posting and exercise execution are unavailable.
 Course content in Moodle and Artemis remains readable across semesters while your
-account has access; unspecified requests prefer the current semester.
+account has access. Ask “prepare Algorithms for WS23” to select winter 2023/24;
+unspecified requests prefer the current semester. Discovery defaults stay narrow,
+with `include_past=true` available for explicit semester requests.
 
 | Workflow | Example request |
 | --- | --- |

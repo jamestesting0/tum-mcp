@@ -32,8 +32,8 @@ class Service:
         if self.generation != self.store.generation():
             raise MoodleError(ErrorCode.SESSION_EXPIRED, "The session was disconnected.")
 
-    def courses(self) -> dict[str, JsonValue]:
-        term, courses, ambiguous = self.moodle.courses()
+    def courses(self, include_past: bool = False) -> dict[str, JsonValue]:
+        term, courses, ambiguous = self.moodle.courses(include_past=include_past)
         return {
             "semester": term,
             "courses": [course.model_dump(mode="json") for course in courses],

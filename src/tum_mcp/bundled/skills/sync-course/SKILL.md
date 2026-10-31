@@ -17,7 +17,12 @@ verified identity, not title spelling; use a separate directory. Synthetic bindi
 stay separate from campus courses.
 Read access needs sign-in, not local course/channel grants. For a delegated course
 choice, prefer the current semester using available metadata; do not assume every
-active Artemis course belongs to that term. Reuse the bound semester during updates.
+active Artemis course belongs to that term. An explicit semester overrides that
+preference: for “prepare this course for WS23”, discover Moodle and Artemis with
+`include_past=true`, match the title and winter 2023/24 metadata, and bind the verified
+semester and provider IDs. Never substitute a newer offering with the same title;
+clarify ambiguous matches and report missing or denied sources. Reuse that binding
+during updates; known IDs need no repeated course discovery.
 
 Use read-content only for needed provider guidance, reusing IDs/results. Inventory
 before downloading: Moodle materials/forums/announcements, Artemis teaching units

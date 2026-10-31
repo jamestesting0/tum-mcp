@@ -22,9 +22,9 @@ __all__ = ["moodle_site"]
 def test_discovery_keeps_every_semester_and_prefers_current_across_pages(
     moodle_site: MoodleSite,
 ) -> None:
-    first = moodle_list_courses(limit=1)
+    first = moodle_list_courses(limit=1, include_past=True)
     assert [course["id"] for course in first["courses"]] == [2]
-    rest = moodle_list_courses(cursor=first["next_cursor"])
+    rest = moodle_list_courses(cursor=first["next_cursor"], include_past=True)
     assert [course["id"] for course in rest["courses"]] == [1, 3, 4, 6]
     assert [course["id"] for course in rest["unclassified"]] == [4]
     assert rest["next_cursor"] is None
@@ -78,7 +78,7 @@ def test_revoked_course_cannot_read_cached_materials_or_search(
             case "search":
                 moodle_search_materials("Past", course_id=1)
             case "search_all":
-                moodle_search_materials("Past")
+                moodle_search_materials("Past", include_past=True)
             case unreachable:
                 assert_never(unreachable)
 
@@ -88,7 +88,13 @@ def test_unscoped_search_keeps_past_hits_after_current_hits(moodle_site: MoodleS
     for course_id in (1, 2):
         resource = next(item for item in service.materials(course_id) if item.kind == "resource")
         service.read(resource.id)
+    moodle_site.course_reads.clear()
     found = moodle_search_materials("scheduling")
+    assert [hit["material_id"] for hit in found["hits"]] == ["module:200"]
+    assert moodle_site.course_reads == [2]
+    moodle_site.course_reads.clear()
+    found = moodle_search_materials("scheduling", include_past=True)
+    assert moodle_site.course_reads == [2, 1, 3, 4, 6]
     assert [hit["material_id"] for hit in found["hits"]] == ["module:200", "module:100"]
 
 
@@ -105,7 +111,9 @@ def test_mcp_tool_calls_discover_read_and_reject_denied_past_courses(
                 )
                 async with ClientSession(*client_streams) as client:
                     await client.initialize()
-                    listed = await client.call_tool("moodle_list_courses", {})
+                    current = await client.call_tool("moodle_list_courses", {})
+                    assert [c["id"] for c in current.structured_content["courses"]] == [2]
+                    listed = await client.call_tool("moodle_list_courses", {"include_past": True})
                     assert [c["id"] for c in listed.structured_content["courses"]] == [
                         2,
                         1,
@@ -125,3 +133,19 @@ def test_mcp_tool_calls_discover_read_and_reject_denied_past_courses(
                 group.cancel_scope.cancel()
 
     anyio.run(check)
+
+
+def test_default_discovery_returns_current_term_and_separate_unclassified(
+    moodle_site: MoodleSite,
+) -> None:
+    result = moodle_list_courses()
+    assert [course["id"] for course in result["courses"]] == [2]
+    assert [course["id"] for course in result["unclassified"]] == [4]
+    assert result["next_cursor"] is None
+
+
+def test_known_past_course_search_skips_enrollment_discovery(moodle_site: MoodleSite) -> None:
+    result = moodle_search_materials("lecture", course_id=1, mode="titles")
+    assert result["coverage"].keys() == {"1"}
+    assert moodle_site.course_reads == [1]
+    assert moodle_site.inventory_reads == 0

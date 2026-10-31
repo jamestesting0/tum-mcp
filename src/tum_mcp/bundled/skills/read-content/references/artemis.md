@@ -10,8 +10,11 @@ Choose the route needed; known IDs go directly to the read tool.
 | Own programming feedback | `artemis_get_feedback` with the exact full built commit and graded/practice mode from the user/record. |
 | Course inventory | List both lectures and exercises. Teaching units include text, slides, video/online links and embedded exercise references. |
 
-Use `artemis_list_courses` only for missing course metadata. It combines the account's
-active and past-course listings, with active courses first and duplicate IDs removed.
+Use `artemis_list_courses` only for missing course metadata. By default it reads only
+the active-course listing. For an explicit semester (for example WS23), an older
+course, or a full inventory, set `include_past=true` to add the past-course listing,
+active first with duplicate IDs removed. Match both title and requested semester;
+never replace a requested past offering with a current one of the same name.
 The `active` flag identifies the listing; past courses retain their `semester` label
 when supplied by Artemis. An active course is not necessarily from the current semester:
 match Moodle metadata or the course handbook when needed, rather than fetching every exercise.

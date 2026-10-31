@@ -17,11 +17,12 @@ submission, start, deployment, rebuild or push workflows.
 Local downloads, source inventories, study-site builds and checkpoint storage
 are local operations; they do not post, submit or mark campus content as read.
 
-`artemis_list_courses` combines active and past courses available to the account,
-with active courses first and each course ID listed once. It returns an `active`
-flag and the past course's `semester` label when available. Active status alone
-does not establish a semester. Explicit older course IDs use the same lecture,
-student attachment and released exercise statement tools, even when absent from
+`artemis_list_courses` defaults to active courses. Set `include_past=true` for an
+explicit semester or full inventory; it adds the account's past courses, active
+first with each course ID listed once. The archive request is skipped by default.
+Each course returns an `active` flag and a `semester` label when available. Active
+status alone does not establish a semester. Explicit older course IDs use the same
+lecture, student attachment and released exercise statement tools, even when absent from
 discovery. Artemis still decides access and which old content it retains; the
 integration does not enroll, start an exercise or download staff archives.
 
@@ -112,6 +113,7 @@ browser onboarding. See [setup](setup.md) for browser choices and WSL.
 tum-mcp login
 tum-mcp doctor
 tum-mcp discover artemis ACCOUNT_ID
+tum-mcp discover artemis ACCOUNT_ID --include-past
 tum-mcp discover zulip ACCOUNT_ID
 tum-mcp --help
 tum-mcp study build --help
@@ -141,16 +143,22 @@ prefer relevant current-semester courses and channels, inspect metadata first, a
 page through only the content needed for the request. Explicit older-course requests
 remain supported. Server-denied content, staff-only material and remote writes stay unavailable.
 
-Moodle's `moodle_list_courses` returns enrolled courses from every semester, including
-courses hidden from the dashboard, paginated with current-semester matches first.
-Its `semester` field identifies that preferred term; it does not limit the returned
-courses. Unrecognized terms stay in `courses`
-and also appear in `unclassified`. For an explicit older course, use its course ID
-for material discovery, refresh and indexed search. Known course IDs absent from
-the enrollment list can also be read when Moodle permits access. Course reads and
-indexed search verify the live course page before returning material or cached text;
-HTTP denials, enrollment pages and error pages do not grant access. The integration
-does not enroll the user or change Moodle permissions.
+Moodle's `moodle_list_courses` defaults to recognized current-semester courses.
+Set `include_past=true` for every enrolled semester, including dashboard-hidden
+courses, paginated with current matches first. Keep the same flag across cursors.
+`semester` identifies the current term; unrecognized terms appear in `unclassified`
+and, with expanded discovery, in `courses`. Moodle still retrieves enrollment
+metadata to classify semesters; the default reduces returned rows, not that fetch.
+Unscoped `moodle_search_materials` searches only current courses by default;
+`include_past=true` expands it to all enrolled semesters. A selected `course_id`
+avoids enrollment discovery and checks only that course, including older or unlisted
+IDs. Live course access is verified before cached content and indexed search results
+are returned; denied pages and enrollment prompts stay blocked.
+
+For “prepare Algorithms for WS23”, the skills enable historical discovery, match
+winter 2023/24 rather than a newer course with the same title, and save that semester
+and provider IDs in the project binding. Later syncs reuse the binding. Reads still
+depend on server permissions and retained content; ambiguous matches need clarification.
 
 ### TUMonline permissions
 

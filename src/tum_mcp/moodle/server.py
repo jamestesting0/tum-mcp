@@ -75,10 +75,12 @@ def moodle_logout() -> dict[str, str]:
 
 @server.tool(
     annotations=READ,
-    description="List enrolled courses from every semester, current semester first.",
+    description="List current-semester courses; include_past=true adds all enrolled semesters.",
 )
-def moodle_list_courses(cursor: str | None = None, limit: Limit = 20) -> dict[str, JsonValue]:
-    result = Service().courses()
+def moodle_list_courses(
+    cursor: str | None = None, limit: Limit = 20, include_past: bool = False
+) -> dict[str, JsonValue]:
+    result = Service().courses(include_past=include_past)
     courses = result["courses"]
     start = offset_of(cursor)
     if isinstance(courses, list):
@@ -157,7 +159,10 @@ def moodle_list_downloads(cursor: str | None = None, limit: Limit = 20) -> dict[
 
 server.tool(
     annotations=READ,
-    description="Search indexed course text or titles; always returns coverage.",
+    description=(
+        "Search indexed text/titles in one course, or current courses when no ID is given; "
+        "include_past=true expands unscoped search to all semesters. Returns coverage."
+    ),
 )(moodle_search_materials)
 
 
