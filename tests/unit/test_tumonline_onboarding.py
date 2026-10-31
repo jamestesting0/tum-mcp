@@ -63,9 +63,9 @@ def test_connect_context_verifies_same_identity_twice_and_discards_idp_cookies(
     ]
     calls = []
 
-    def refresh(cookies, transport=None, *, expected=None, read_studies=True):
+    def refresh(cookies, transport=None, *, expected=None):
         calls.append((cookies, expected))
-        return SESSION
+        return SESSION, None
 
     monkeypatch.setattr(auth, "resume_session", refresh)
     assert connect_context(context, begin_login()) == ACCOUNT

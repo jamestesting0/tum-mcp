@@ -67,10 +67,9 @@ def test_session_credentials_do_not_enter_http_debug_logs(caplog: pytest.LogCapt
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:
-            session = resume_session(
+            session, _ = resume_session(
                 (Cookie(name="session", value=cookie_value, domain="campus.tum.de"),),
                 LocalTransport(server.server_port),
-                read_studies=False,
             )
         finally:
             server.shutdown()

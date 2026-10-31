@@ -21,9 +21,14 @@ class Scope(StrEnum):
     ACADEMIC_PROGRESS = "academic_progress"
     EXAMS = "exams"
     ADMISSION = "admission"
-    ACCOUNT = "account"
-    OTHER_IT = "other_it"
-    MISCELLANEOUS = "miscellaneous"
+
+
+LABELS: Final = {
+    Scope.STUDIES_COURSES: "Studies and courses",
+    Scope.ACADEMIC_PROGRESS: "Grades and progress",
+    Scope.EXAMS: "Exams",
+    Scope.ADMISSION: "Admission",
+}
 
 
 class Policy(Frozen):
@@ -34,6 +39,13 @@ class Policy(Frozen):
 
     def allows(self, scope: Scope) -> bool:
         return scope in self.allowed
+
+    def require(self, scope: Scope) -> None:
+        if scope not in self.allowed:
+            raise CampusError(
+                Code.SCOPE_DENIED,
+                f'TUMonline "{LABELS[scope]}" is off; allow it with tum-mcp manage tumonline.',
+            )
 
 
 def updated_policy(policy: Policy, allowed: frozenset[Scope]) -> Policy:

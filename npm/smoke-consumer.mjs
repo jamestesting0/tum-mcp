@@ -153,7 +153,7 @@ async def check():
         await client.initialize()
         inventory=await client.list_tools()
         names={tool.name for tool in inventory.tools}
-        assert {'moodle_list_courses','zulip_search_messages','artemis_get_feedback','artemis_list_lectures','artemis_get_lecture','artemis_get_attachment','moodle_read_discussion','tumonline_status','tumonline_list_courses','tumonline_list_studies','tumonline_course_curriculum'} <= names
+        assert {'moodle_list_courses','zulip_search_messages','artemis_get_feedback','artemis_list_lectures','artemis_get_lecture','artemis_get_attachment','moodle_read_discussion','tumonline_status','tumonline_list_courses','tumonline_list_studies','tumonline_course_curriculum','tumonline_list_achievements','tumonline_study_progress','tumonline_list_registered_exams','tumonline_list_exam_offers','tumonline_fee_status'} <= names
         search=next(tool for tool in inventory.tools if tool.name=='tumonline_list_courses')
         assert 'query' in search.input_schema['properties']
         assert not {'artemis_submit','artemis_start_exercise','artemis_prepare_workspace','tum_run_tests','artemis_prepare_submission'} & names

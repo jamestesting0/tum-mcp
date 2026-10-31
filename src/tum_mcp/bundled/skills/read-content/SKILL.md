@@ -31,7 +31,7 @@ Load only the requested provider's guide:
 - [Moodle](references/moodle.md): materials, pages, announcements and forums.
 - [Artemis](references/artemis.md): lectures, student slides, statements and feedback.
 - [Zulip](references/zulip.md): course discussion search and catch-up.
-- [TUMonline](references/tumonline.md): study names and the public course catalog.
+- [TUMonline](references/tumonline.md): studies, course catalog, grades, exams and fees.
 
 Start with a narrow query/page range. Expand for missing context, contradictions
 or incomplete evidence. Stop when the request is supported; exhaust pagination

@@ -22,7 +22,7 @@ class CursorBinding(Frozen):
     account_id: str = Field(pattern=r"^[a-f0-9]{64}$")
     revision: int = Field(ge=0, strict=True)
     limit: int = Field(ge=1, le=100, strict=True)
-    operation: Literal["courses", "curriculum_positions"] = "courses"
+    operation: Literal["courses", "curriculum_positions", "exam_offers"] = "courses"
     course_id: int | None = Field(default=None, gt=0, strict=True)
     query_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 

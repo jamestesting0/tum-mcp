@@ -58,7 +58,5 @@ def connection_checks(*, live: bool = False) -> tuple[Check, ...]:
                 verify=verify_account,
                 verified_detail="Identity verified. Studies and courses allowed.",
             )
-        checks.append(
-            check.model_copy(update={"detail": check.detail + " Grades and progress unavailable."})
-        )
+        checks.append(check)
     return tuple(checks)

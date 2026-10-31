@@ -36,9 +36,9 @@ def test_refresh_verifies_server_identity_and_never_serializes_secrets() -> None
             )
         return httpx2.Response(200, json={"resource": []})
 
-    session = resume_session((COOKIE,), httpx2.MockTransport(handler))
+    session, _ = resume_session((COOKIE,), httpx2.MockTransport(handler))
     assert session.account == account_for_subject("synthetic-subject")
-    assert len(seen) == 3
+    assert len(seen) == 2
     assert "synthetic-token" not in repr(session)
     assert "synthetic-cookie" not in session.model_dump_json()
     assert "synthetic-subject" not in session.model_dump_json()
@@ -137,7 +137,7 @@ def test_rotated_service_cookie_is_kept_but_foreign_cookie_is_not() -> None:
             )
         return httpx2.Response(200, json={"resource": []})
 
-    session = resume_session((COOKIE,), httpx2.MockTransport(handler))
+    session, _ = resume_session((COOKIE,), httpx2.MockTransport(handler))
     assert any(cookie.value == "rotated-synthetic" for cookie in session.cookies)
     assert all(cookie.domain.lstrip(".") == "campus.tum.de" for cookie in session.cookies)
     assert "rotated-synthetic" not in session.model_dump_json()

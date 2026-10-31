@@ -2,8 +2,8 @@
 
 import logging
 import socket
-from collections.abc import Callable
-from typing import Final
+from collections.abc import Callable, Mapping
+from typing import Final, Protocol
 
 import httpx2
 from pydantic import ConfigDict, Field, SecretStr, ValidationError
@@ -18,7 +18,8 @@ ORIGIN: Final = "https://campus.tum.de"
 REFRESH: Final = "/tumonline/ee/rest/auth/token/refresh"
 PROFILE: Final = "/tumonline/ee/rest/brm.lib.dtop.home/v1/desktop/profile"
 STUDIES: Final = "/tumonline/ee/rest/slc.cm.cs/student/myStudies/chooser"
-MAX_RESPONSE: Final = 256 * 1024
+# A student's achievement list is about 10 KiB per record upstream.
+MAX_RESPONSE: Final = 4 * 1024 * 1024
 
 
 class Refresh(Frozen):
@@ -50,7 +51,12 @@ class ResumedSession(Frozen):
     account: AccountRef
     token: SecretStr = Field(repr=False, exclude=True)
     cookies: tuple[Cookie, ...] = Field(repr=False, exclude=True)
-    studies: bytes = Field(default=b"", repr=False, exclude=True)
+
+
+class Get(Protocol):
+    """Fetch one fixed-origin path with the verified session and return its bounded body."""
+
+    def __call__(self, path: str, params: Mapping[str, str] | None = None, /) -> bytes: ...
 
 
 class IdentityMismatch(CampusError):
@@ -89,16 +95,16 @@ def read_response(client: httpx2.Client, request: httpx2.Request, expected: int)
         return bytes(body)
 
 
-def resume_session(
+def resume_session[T](
     cookies: tuple[Cookie, ...],
     transport: httpx2.BaseTransport | None = None,
     *,
     expected: AccountRef | None = None,
     authorize: Callable[[], None] | None = None,
-    read_studies: bool = True,
+    read: Callable[[Get], T] | None = None,
     checkpoint_cookies: Callable[[tuple[Cookie, ...]], None] | None = None,
-) -> ResumedSession:
-    """Refresh service cookies and bind the account to the authenticated desktop identity."""
+) -> tuple[ResumedSession, T | None]:
+    """Refresh service cookies, bind the account to the desktop identity, then run `read`."""
     if not cookies or any(c.domain.lstrip(".") != "campus.tum.de" or not c.secure for c in cookies):
         raise CampusError(Code.SCOPE_DENIED, "TUMonline service cookies are invalid.")
     session = Session(generation="", cookies=list(cookies), verified_at=0)
@@ -167,20 +173,24 @@ def resume_session(
             )
             if expected is not None and account != expected:
                 raise IdentityMismatch()
-            studies = b""
-            if read_studies:
-                studies_request = client.build_request(
-                    "GET", ORIGIN + STUDIES, headers={"Authorization": "Bearer " + token}
+
+            def get(path: str, params: Mapping[str, str] | None = None, /) -> bytes:
+                request = client.build_request(
+                    "GET",
+                    ORIGIN + path,
+                    params=params,
+                    headers={"Authorization": "Bearer " + token},
                 )
                 if authorize is not None:
                     authorize()
-                studies = read_and_checkpoint(studies_request, 200)
+                return read_and_checkpoint(request, 200)
+
+            result = read(get) if read is not None else None
             retained = service_cookies()
             if not retained:
                 raise CampusError(Code.AUTH_REQUIRED, "TUMonline session cookies are unavailable.")
-            return ResumedSession(
-                account=account, token=refresh.accessToken, cookies=retained, studies=studies
-            )
+            session = ResumedSession(account=account, token=refresh.accessToken, cookies=retained)
+            return session, result
     except httpx2.HTTPError:
         raise CampusError(Code.OFFLINE, "TUMonline session check failed.") from None
     except ValidationError:

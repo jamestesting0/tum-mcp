@@ -12,6 +12,7 @@ class Wire(Frozen):
 
 
 class StudyWire(Wire):
+    studyId: int = Field(gt=0, strict=True)
     name: Text
     intendedDegree: Text
 

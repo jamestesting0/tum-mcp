@@ -8,7 +8,7 @@ from tum_mcp.errors import CampusError
 from tum_mcp.moodle.auth import Cookie
 from tum_mcp.tumonline.identity import account_for_subject
 from tum_mcp.tumonline.policy import PolicyStore, Scope
-from tum_mcp.tumonline.study_service import StudyService
+from tum_mcp.tumonline.study_service import StudyService, read_personal
 
 
 def setup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -88,6 +88,16 @@ def test_denied_study_scope_prevents_refresh(
     service = StudyService(httpx2.MockTransport(lambda _: pytest.fail("network called")))
     with pytest.raises(CampusError, match="SCOPE_DENIED"):
         service.list(account.id)
+
+
+@pytest.mark.parametrize("scope", [Scope.ACADEMIC_PROGRESS, Scope.EXAMS, Scope.ADMISSION])
+def test_personal_records_are_off_by_default_and_never_refresh(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, scope: Scope
+) -> None:
+    account, _, _ = setup(tmp_path, monkeypatch)
+    transport = httpx2.MockTransport(lambda _: pytest.fail("network called"))
+    with pytest.raises(CampusError, match="SCOPE_DENIED"):
+        read_personal(account.id, scope, lambda get: get("/tumonline/ee/rest/x"), transport)
 
 
 def test_diagnostic_identity_check_never_fetches_studies_or_grades(

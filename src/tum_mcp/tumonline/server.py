@@ -14,10 +14,19 @@ from tum_mcp.settings import Frozen
 from tum_mcp.tumonline.courses import Course, search_query
 from tum_mcp.tumonline.curriculum import CurriculumPosition, PublicCurriculum
 from tum_mcp.tumonline.cursor import CursorBinding, CursorCodec
+from tum_mcp.tumonline.exams import Exam, read_offers, read_registered
+from tum_mcp.tumonline.fees import FeeStatus, read_fees
+from tum_mcp.tumonline.grades import (
+    ACHIEVEMENTS,
+    Achievement,
+    StudyProgress,
+    project_achievements,
+    read_progress,
+)
 from tum_mcp.tumonline.identity import AccountRef
 from tum_mcp.tumonline.policy import Policy, PolicyStore, Scope
 from tum_mcp.tumonline.studies import Study
-from tum_mcp.tumonline.study_service import StudyService
+from tum_mcp.tumonline.study_service import StudyService, read_personal
 from tum_mcp.tumonline.transport import PublicCourses
 
 READ = ToolAnnotations(read_only_hint=True, destructive_hint=False, open_world_hint=True)
@@ -27,6 +36,7 @@ Limit = Annotated[int, Field(ge=1, le=100)]
 CourseId = Annotated[int, Field(gt=0, le=2147483647)]
 Cursor = Annotated[str | None, Field(max_length=512)]
 Search = Annotated[str | None, Field(max_length=80)]
+DESKTOP = "https://campus.tum.de/tumonline/ee/ui/ca2/app/desktop/"
 codec = CursorCodec()
 
 
@@ -40,7 +50,9 @@ class OnlineStatus(Frozen):
     public_courses: str = "available_when_connected_and_allowed"
     studies: str = "available_when_connected_and_allowed"
     curriculum: str = "public_course_positions_only"
-    academic_progress: str = "unavailable"
+    academic_progress: str = "available_when_connected_and_allowed"
+    exams: str = "available_when_connected_and_allowed"
+    admission: str = "fee_status_when_connected_and_allowed"
 
 
 class CourseResult(Frozen):
@@ -63,7 +75,44 @@ class CurriculumResult(Frozen):
     next_cursor: str | None
     coverage_status: Literal["partial"] = "partial"
     fetched_at: float
-    source_link: str = "https://campus.tum.de/tumonline/ee/ui/ca2/app/desktop/"
+    source_link: str = DESKTOP
+    untrusted_content: bool = True
+
+
+class AchievementResult(Frozen):
+    achievements: tuple[Achievement, ...]
+    fetched_at: float
+    source_link: str = DESKTOP
+    untrusted_content: bool = True
+
+
+class ProgressResult(Frozen):
+    studies: tuple[StudyProgress, ...]
+    fetched_at: float
+    source_link: str = DESKTOP
+    untrusted_content: bool = True
+
+
+class ExamResult(Frozen):
+    exams: tuple[Exam, ...]
+    fetched_at: float
+    source_link: str = DESKTOP
+    untrusted_content: bool = True
+
+
+class ExamOfferResult(Frozen):
+    exams: tuple[Exam, ...]
+    coverage_status: Literal["complete", "partial"]
+    next_cursor: str | None
+    fetched_at: float
+    source_link: str = DESKTOP
+    untrusted_content: bool = True
+
+
+class FeeResult(Frozen):
+    fees: FeeStatus
+    fetched_at: float
+    source_link: str = DESKTOP
     untrusted_content: bool = True
 
 
@@ -159,3 +208,69 @@ def tumonline_course_curriculum(
     return CurriculumResult(
         positions=page.positions, next_cursor=next_cursor, fetched_at=time.time()
     )
+
+
+@server.tool(annotations=READ)
+def tumonline_list_achievements(account_id: AccountId) -> AchievementResult:
+    """List the student's own achievements with grades and credits (grades and progress)."""
+    achievements = read_personal(
+        account_id, Scope.ACADEMIC_PROGRESS, lambda get: project_achievements(get(ACHIEVEMENTS))
+    )
+    return AchievementResult(achievements=achievements, fetched_at=time.time())
+
+
+@server.tool(annotations=READ)
+def tumonline_study_progress(account_id: AccountId) -> ProgressResult:
+    """Show module and exam progress per study as My Studies reports it (grades and progress)."""
+    studies = read_personal(account_id, Scope.ACADEMIC_PROGRESS, read_progress)
+    return ProgressResult(studies=studies, fetched_at=time.time())
+
+
+@server.tool(annotations=READ)
+def tumonline_list_registered_exams(account_id: AccountId) -> ExamResult:
+    """List exams the student is registered for, with dates, rooms and deadlines (exams)."""
+    exams = read_personal(account_id, Scope.EXAMS, read_registered)
+    return ExamResult(exams=exams, fetched_at=time.time())
+
+
+@server.tool(annotations=READ)
+def tumonline_list_exam_offers(
+    account_id: AccountId, cursor: Cursor = None, limit: Limit = 20, query: Search = None
+) -> ExamOfferResult:
+    """Search exam offers by course title or number with registration windows (exams)."""
+    policies = PolicyStore()
+    policy = policies.read(account_id)
+    policy.require(Scope.EXAMS)
+    query = search_query(query)
+    query_hash = hashlib.sha256(query.encode()).hexdigest() if query is not None else None
+    binding = CursorBinding(
+        account_id=account_id,
+        revision=policy.revision,
+        limit=limit,
+        operation="exam_offers",
+        query_hash=query_hash,
+    )
+    offset = codec.decode(cursor, binding) if cursor else 0
+    page = read_personal(
+        account_id,
+        Scope.EXAMS,
+        lambda get: read_offers(get, offset=offset, limit=limit, query=query),
+    )
+    if policies.read(account_id) != policy:
+        raise CampusError(Code.STALE_RESULT, "TUMonline permissions changed; retry.")
+    next_cursor = (
+        codec.encode(binding, offset=page.next_offset) if page.next_offset is not None else None
+    )
+    return ExamOfferResult(
+        exams=page.exams,
+        coverage_status=page.coverage_status,
+        next_cursor=next_cursor,
+        fetched_at=time.time(),
+    )
+
+
+@server.tool(annotations=READ)
+def tumonline_fee_status(account_id: AccountId) -> FeeResult:
+    """Show the current semester fee invoice, payment deadline and bookings (admission)."""
+    fees = read_personal(account_id, Scope.ADMISSION, read_fees)
+    return FeeResult(fees=fees, fetched_at=time.time())

@@ -157,3 +157,69 @@ def test_curriculum_continuation_is_bound_to_course_and_scope(
         assert calls == [(1, 0)]
 
     anyio.run(exercise)
+
+
+def test_personal_tools_follow_their_own_scope_and_bind_offer_cursors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import httpx2
+
+    from tum_mcp.tumonline import auth
+    from tum_mcp.tumonline import server as online
+    from tum_mcp.tumonline.identity import account_for_subject
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
+    account = account_for_subject("synthetic-student")
+    policies = PolicyStore()
+    policies.create(account.id)
+    Vault().save(
+        account,
+        Credential(
+            account_id=account.id,
+            authentication="browser_session",
+            cookies=(Cookie(name="session", value="synthetic-secret", domain="campus.tum.de"),),
+        ),
+    )
+    offers = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        if request.method == "POST":
+            return httpx2.Response(201, json={"accessToken": "synthetic-token"})
+        if request.url.path.endswith("/desktop/profile"):
+            subject = {"desktopProfileLibDto": {"obfuscatedId": "synthetic-student"}}
+            return httpx2.Response(200, json={"resource": [{"content": subject}]})
+        assert request.url.path.endswith("/exExamOffer")
+        offers.append(dict(request.url.params))
+        offer = {"courseName": {"value": "Synthetic Linear Algebra"}}
+        return httpx2.Response(200, json={"examOffers": [offer], "totalCount": 2})
+
+    monkeypatch.setattr(auth.httpx2, "HTTPTransport", lambda **_: httpx2.MockTransport(handler))
+
+    async def exercise() -> None:
+        with pytest.raises(ToolError):
+            await online.server.call_tool("tumonline_list_achievements", {"account_id": account.id})
+        with pytest.raises(ToolError):
+            await online.server.call_tool("tumonline_list_exam_offers", {"account_id": account.id})
+        assert offers == []
+        policies.set_scope(account.id, Scope.EXAMS, True)
+        request = {"account_id": account.id, "limit": 1, "query": "Linear"}
+        page = await online.server.call_tool("tumonline_list_exam_offers", request)
+        data = page.structured_content
+        assert data["exams"][0]["course"] == "Synthetic Linear Algebra"
+        assert data["coverage_status"] == "partial" and "synthetic-secret" not in str(data)
+        cursor = data["next_cursor"]
+        with pytest.raises(ToolError):
+            await online.server.call_tool(
+                "tumonline_list_exam_offers", {**request, "query": "Other", "cursor": cursor}
+            )
+        await online.server.call_tool("tumonline_list_exam_offers", {**request, "cursor": cursor})
+        assert [params["$skip"] for params in offers] == ["0", "1"]
+        policies.set_scope(account.id, Scope.EXAMS, False)
+        with pytest.raises(ToolError):
+            await online.server.call_tool(
+                "tumonline_list_exam_offers", {**request, "cursor": cursor}
+            )
+        assert len(offers) == 2
+
+    anyio.run(exercise)

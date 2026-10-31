@@ -3,14 +3,14 @@
 import json
 import os
 import sys
-from typing import Annotated
+from typing import Annotated, Final
 
 import questionary
 import typer
 from prompt_toolkit.output import ColorDepth
 
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.tumonline.policy import PolicyStore, Scope
+from tum_mcp.tumonline.policy import LABELS, PolicyStore, Scope
 from tum_mcp.ui import (
     State,
     heading,
@@ -21,34 +21,55 @@ from tum_mcp.ui import (
 )
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
+CATEGORIES: Final = (
+    (
+        Scope.STUDIES_COURSES,
+        LABELS[Scope.STUDIES_COURSES],
+        "Study names, public courses and course curriculum positions.",
+    ),
+    (
+        Scope.ACADEMIC_PROGRESS,
+        LABELS[Scope.ACADEMIC_PROGRESS],
+        "Your achievements with grades and credits, and progress per study.",
+    ),
+    (
+        Scope.EXAMS,
+        LABELS[Scope.EXAMS],
+        "Registered exams and exam offers with dates, rooms and registration windows.",
+    ),
+    (
+        Scope.ADMISSION,
+        LABELS[Scope.ADMISSION],
+        "Current semester fee invoice, payment deadline and bookings.",
+    ),
+)
 
 
 def interactive_terminal() -> bool:
     return sys.stdin.isatty()
 
 
-def choose_studies(current: bool) -> bool | None:
+def choose_scopes(current: frozenset[Scope]) -> frozenset[Scope] | None:
     console = terminal_console()
-    categories = (
-        "Studies and courses",
-        "Grades and progress",
-        "Exams",
-        "Admission",
-        "Account",
-        "Other IT services",
-        "Miscellaneous",
-    )
     if os.environ.get("TERM") == "dumb":
         console.print("TUMonline permissions")
-        console.print(f"1. {categories[0]} ({'allowed' if current else 'denied'})")
-        for category in categories[1:]:
-            console.print(f"   {category} (unavailable)")
-        console.print("Enter 1 to allow, none to deny, or press Enter to keep the current setting.")
+        for index, (scope, label, _) in enumerate(CATEGORIES, 1):
+            console.print(f"{index}. {label} ({'allowed' if scope in current else 'denied'})")
+        console.print(
+            "Enter the numbers to allow, separated by commas, none to deny all, "
+            "or press Enter to keep the current settings."
+        )
+        numbers = {str(index): scope for index, (scope, _, _) in enumerate(CATEGORIES, 1)}
         while True:
             answer = console.input("Permissions: ").strip().lower()
-            if answer in {"", "1", "none"}:
-                return current if not answer else answer == "1"
-            console.print("Choose 1, none, or Enter.")
+            if not answer:
+                return current
+            if answer == "none":
+                return frozenset()
+            chosen = [part.strip() for part in answer.split(",")]
+            if all(part in numbers for part in chosen):
+                return frozenset(numbers[part] for part in chosen)
+            console.print("Choose numbers from the list, none, or Enter.")
 
     console.print("Up/down: move · Space: select")
     console.print("Enter: save · Ctrl+C: cancel")
@@ -57,14 +78,11 @@ def choose_studies(current: bool) -> bool | None:
         "TUMonline permissions",
         choices=[
             questionary.Choice(
-                selection_label(categories[0], State.ENABLED if current else State.DISABLED),
-                value=Scope.STUDIES_COURSES.value,
-                checked=current,
-            ),
-            *[
-                questionary.Choice(selection_label(category, State.UNAVAILABLE), disabled=True)
-                for category in categories[1:]
-            ],
+                selection_label(label, State.ENABLED if scope in current else State.DISABLED),
+                value=scope.value,
+                checked=scope in current,
+            )
+            for scope, label, _ in CATEGORIES
         ],
         qmark="",
         pointer=">",
@@ -72,7 +90,7 @@ def choose_studies(current: bool) -> bool | None:
         instruction="",
         color_depth=ColorDepth.DEPTH_1_BIT if "NO_COLOR" in os.environ else None,
     ).unsafe_ask()
-    return None if selected is None else Scope.STUDIES_COURSES.value in selected
+    return None if selected is None else frozenset(Scope(value) for value in selected)
 
 
 @app.command("tumonline")
@@ -147,30 +165,13 @@ def tumonline(
         if json_output:
             typer.echo(policy.model_dump_json(indent=2))
             return
-        labels = (
-            "Studies and courses",
-            "Grades and progress",
-            "Exams",
-            "Admission",
-            "Account",
-            "Other IT services",
-            "Miscellaneous",
+        status_rows(
+            console,
+            [
+                (label, State.ENABLED if policy.allows(scope) else State.DISABLED, detail)
+                for scope, label, detail in CATEGORIES
+            ],
         )
-        rows = []
-        for scope, label in zip(Scope, labels, strict=True):
-            if scope == Scope.STUDIES_COURSES:
-                rows.append(
-                    (
-                        label,
-                        State.ENABLED if policy.allows(scope) else State.DISABLED,
-                        "Study names, public courses and course curriculum positions.",
-                    )
-                )
-            else:
-                rows.append(
-                    (label, State.UNAVAILABLE, "Reader not verified; access remains unavailable.")
-                )
-        status_rows(console, rows)
         console.print("Edit permissions: tum-mcp manage tumonline", markup=False)
         console.print(context[1], markup=False)
         console.print(context[2], markup=False)
@@ -180,20 +181,14 @@ def tumonline(
     console = terminal_console()
     for line in context[1:]:
         console.print(line, markup=False)
-    console.print(
-        "Studies and courses includes study names, public courses and curriculum positions."
-    )
-    if policy.allowed - {Scope.STUDIES_COURSES}:
-        console.print("Previously configured unavailable permissions are retained but inactive.")
+    for _, label, detail in CATEGORIES:
+        console.print(f"{label}: {detail}", markup=False)
     try:
-        selected = choose_studies(policy.allows(Scope.STUDIES_COURSES))
+        selected = choose_scopes(policy.allowed)
     except (EOFError, KeyboardInterrupt):
         selected = None
     if selected is None:
         typer.echo("Cancelled. Permissions were not changed.")
         return
-    scopes = policy.allowed - {Scope.STUDIES_COURSES}
-    if selected:
-        scopes |= {Scope.STUDIES_COURSES}
-    store.save_scopes(policy, scopes)
-    typer.echo("Saved. Unverified readers remain unavailable.")
+    store.save_scopes(policy, selected)
+    typer.echo("Saved.")

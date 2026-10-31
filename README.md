@@ -47,10 +47,10 @@ app. For your own resources, such as past exams from other websites, create a
 temporary folder, put them all there and ask the agent to sort them into the course.
 [Study guide and demo](docs/study.md).
 
-TUMonline currently provides study names/degrees, public course catalog metadata
-and partial course curriculum positions. The catalog does not show enrollments.
-Grades, exams, progress and full curricula are unavailable. Review its local
-account policy with `tum-mcp manage tumonline`.
+TUMonline provides study names/degrees, public course catalog metadata and partial
+course curriculum positions by default. Your grades and progress, exams and
+semester fee status are available once you allow them with `tum-mcp manage tumonline`.
+The catalog does not show enrollments, and full curricula are unavailable.
 [TUMonline permissions](docs/tum-mcp.md#tumonline-permissions).
 
 ## Optional extensions

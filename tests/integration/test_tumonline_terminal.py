@@ -60,7 +60,8 @@ def run_manager(
                 ready = (
                     b"Permissions: " in plain
                     if terminal == "dumb"
-                    else (b"Miscellaneous" in plain and b"\x1b[?25l" in captured)
+                    # The last row appears once in the category notes and once in the selector.
+                    else (plain.count(b"Admission") >= 2 and b"\x1b[?25l" in captured)
                 )
                 if not sent and ready:
                     if destination := os.environ.get("TUM_MCP_TERMINAL_QA"):
@@ -89,18 +90,31 @@ def run_manager(
 
 
 @pytest.mark.parametrize("enabled", [False, True])
-def test_checkbox_toggles_studies_and_leaves_other_categories_disabled(
+def test_checkbox_toggles_studies_and_leaves_other_categories_unchanged(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, enabled: bool
 ) -> None:
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path))
     policies = PolicyStore()
     policies.create(ACCOUNT)
     policies.set_scope(ACCOUNT, Scope.STUDIES_COURSES, enabled)
-    code, output = run_manager(tmp_path, b"\x1b[B \r")
+    code, output = run_manager(tmp_path, b" \r")
     assert code == 0, output
-    assert "Grades and progress" in output and "unavailable" in output
+    assert "Grades and progress" in output
     assert policies.read(ACCOUNT).allowed == (
         frozenset() if enabled else frozenset({Scope.STUDIES_COURSES})
+    )
+
+
+def test_arrow_keys_move_between_categories(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path))
+    policies = PolicyStore()
+    policies.create(ACCOUNT)
+    code, output = run_manager(tmp_path, b"\x1b[B\x1b[B\x1b[A \x1b[B\x1b[B \r")
+    assert code == 0, output
+    assert policies.read(ACCOUNT).allowed == frozenset(
+        {Scope.STUDIES_COURSES, Scope.ACADEMIC_PROGRESS, Scope.ADMISSION}
     )
 
 
@@ -115,25 +129,32 @@ def test_checkbox_cancellation_preserves_policy(
     assert policies.read(ACCOUNT) == original
 
 
-@pytest.mark.parametrize("keys, enabled", [(b"none\n", False), (b"\n", True)])
-def test_basic_terminal_accepts_revoke_or_keep(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, keys: bytes, enabled: bool
+@pytest.mark.parametrize(
+    "keys, allowed",
+    [
+        (b"none\n", frozenset()),
+        (b"\n", frozenset({Scope.STUDIES_COURSES})),
+        (b"2, 3\n", frozenset({Scope.ACADEMIC_PROGRESS, Scope.EXAMS})),
+    ],
+)
+def test_basic_terminal_accepts_numbered_selection_revoke_or_keep(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, keys: bytes, allowed: frozenset[Scope]
 ) -> None:
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path))
     policies = PolicyStore()
     policies.create(ACCOUNT)
     code, output = run_manager(tmp_path, keys, terminal="dumb")
     assert code == 0, output
-    assert "Exams (unavailable)" in output and "\x1b[" not in output
-    assert policies.read(ACCOUNT).allows(Scope.STUDIES_COURSES) is enabled
+    assert "Exams (denied)" in output and "\x1b[" not in output
+    assert policies.read(ACCOUNT).allowed == allowed
 
 
-def test_basic_terminal_rejects_an_unavailable_category(
+def test_basic_terminal_rejects_an_unknown_number(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path))
     policies = PolicyStore()
     policies.create(ACCOUNT)
-    code, output = run_manager(tmp_path, b"2\nnone\n", terminal="dumb")
+    code, output = run_manager(tmp_path, b"5\nnone\n", terminal="dumb")
     assert code == 0, output
     assert not policies.read(ACCOUNT).allowed

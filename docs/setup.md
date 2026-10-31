@@ -98,11 +98,12 @@ No local course/channel grants are required. Your agent uses MCP status/discover
 course metadata to find relevant current-semester material, then makes bounded reads.
 An account ID identifies a saved service connection; it is not your TUM login.
 TUMonline additionally has a local policy: `tum-mcp manage tumonline --show`
-shows it, `tum-mcp manage tumonline` changes the studies and courses permission,
+shows it, `tum-mcp manage tumonline` changes its permissions,
 and `tum-mcp manage tumonline --disconnect` removes its saved local session.
 Use `--account ACCOUNT_ID` if more than one TUMonline account is configured.
-Study names, public course metadata and public course curriculum positions are available by default; full curriculum and
-grades or progress are not yet available. [Details and limitations](tum-mcp.md#tumonline-permissions).
+Study names, public course metadata and public course curriculum positions are available by default;
+grades and progress, exams and fee status need your permission first, and the full
+curriculum is unavailable. [Details and limitations](tum-mcp.md#tumonline-permissions).
 `tum-mcp --help` lists commands; `tum-mcp study build --help` shows command options.
 
 ## WSL

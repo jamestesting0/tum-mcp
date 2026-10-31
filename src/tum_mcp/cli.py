@@ -131,7 +131,7 @@ def connect() -> None:
         if ServiceChoice.TUMONLINE in selected:
             console.print(
                 "TUMonline defaults to study names, public courses and curriculum positions. "
-                "Grades, progress, exams and other categories are unavailable."
+                "Grades and progress, exams and fee status stay off until you allow them."
             )
             console.print(
                 "All MCP clients sharing this configuration use the same permission; "

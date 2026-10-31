@@ -10,7 +10,7 @@ from tum_mcp.tumonline.policy import PolicyStore, Scope
 ACCOUNT = "a" * 64
 
 
-def test_manager_displays_default_permissions_and_unavailable_readers(
+def test_manager_displays_default_permissions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path))
@@ -19,7 +19,7 @@ def test_manager_displays_default_permissions_and_unavailable_readers(
     assert result.exit_code == 0, result.output
     assert "Studies and courses" in result.output
     assert "Grades and progress" in result.output
-    assert "Unavailable" in result.output
+    assert "Enabled" in result.output and "Disabled" in result.output
     assert "other providers" in result.output.lower()
 
 
@@ -50,7 +50,7 @@ def test_interactive_manager_can_revoke_studies_without_enabling_other_scopes(
     policies = PolicyStore()
     policies.create(ACCOUNT)
     monkeypatch.setattr(manage, "interactive_terminal", lambda: True)
-    monkeypatch.setattr(manage, "choose_studies", lambda current: False)
+    monkeypatch.setattr(manage, "choose_scopes", lambda current: frozenset())
     result = CliRunner().invoke(app, ["manage", "tumonline", "--account", ACCOUNT])
     assert result.exit_code == 0, result.output
     assert not policies.read(ACCOUNT).allowed
@@ -65,13 +65,13 @@ def test_cancelled_manager_leaves_policy_unchanged(
     policies = PolicyStore()
     original = policies.create(ACCOUNT)
     monkeypatch.setattr(manage, "interactive_terminal", lambda: True)
-    monkeypatch.setattr(manage, "choose_studies", lambda current: None)
+    monkeypatch.setattr(manage, "choose_scopes", lambda current: None)
     result = CliRunner().invoke(app, ["manage", "tumonline", "--account", ACCOUNT])
     assert result.exit_code == 0, result.output
     assert policies.read(ACCOUNT) == original
 
 
-def test_manager_preserves_previously_configured_unavailable_scopes(
+def test_manager_saves_exactly_the_selected_scopes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from tum_mcp.tumonline import manage
@@ -79,12 +79,16 @@ def test_manager_preserves_previously_configured_unavailable_scopes(
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path))
     policies = PolicyStore()
     policies.create(ACCOUNT)
-    policies.set_scope(ACCOUNT, Scope.EXAMS, True)
+    selected = frozenset({Scope.EXAMS, Scope.ADMISSION})
+    offered = []
     monkeypatch.setattr(manage, "interactive_terminal", lambda: True)
-    monkeypatch.setattr(manage, "choose_studies", lambda current: False)
+    monkeypatch.setattr(
+        manage, "choose_scopes", lambda current: offered.append(current) or selected
+    )
     result = CliRunner().invoke(app, ["manage", "tumonline"])
     assert result.exit_code == 0, result.output
-    assert policies.read(ACCOUNT).allowed == frozenset({Scope.EXAMS})
+    assert offered == [frozenset({Scope.STUDIES_COURSES})]
+    assert policies.read(ACCOUNT).allowed == selected
 
 
 def test_noninteractive_manager_cannot_modify_permissions(

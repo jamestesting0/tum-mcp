@@ -139,16 +139,26 @@ Course catalog searches accept a title or course number using 2–80 letters,
 numbers, spaces, dots, underscores, plus signs, slashes or hyphens; continue pages
 with the same query.
 Full curriculum structure is unavailable because its public API requires a separate
-service account. Grades and progress need
-separate consent, but their readers are not yet available; exams, admission,
-account, other IT and miscellaneous readers are also unavailable. No campus write
-operations are provided.
+service account.
+
+Three personal categories are off until you allow them:
+
+| Permission | Reads |
+| --- | --- |
+| Grades and progress | Your achievements (course, semester, date, grade, passed, credits, type, status, study) and the module and exam progress bars from My Studies. |
+| Exams | Exams you are registered for, and exam offers searched by course title or number, with dates, rooms, registration and deregistration windows and your registration state. Examiner names are dropped. |
+| Admission | The current semester's fee invoice, payment deadline, bookings and outstanding amount. The account holder and refund forms are dropped. |
+
+The fee reader parses TUMonline's English fee page because it has no JSON
+endpoint; a changed page fails with an error instead of guessing. Account
+settings, other IT services and miscellaneous portal apps are not offered: they
+hold credentials or link to external services rather than study records. No campus
+write operations are provided, and nothing registers for, or deregisters from, an exam.
 
 Run `tum-mcp manage tumonline --show` to inspect the policy and
-`tum-mcp manage tumonline` in a terminal to select permissions with Space and
-save with Enter. Studies and courses can be allowed or revoked; the remaining
-categories are shown as unavailable and cannot be selected. On basic terminals,
-the command offers a numbered text prompt instead.
+`tum-mcp manage tumonline` in a terminal to move with the arrow keys, select
+permissions with Space and save with Enter. On basic terminals, the command offers
+a numbered text prompt instead: enter the numbers to allow, separated by commas.
 When multiple accounts exist, add `--account ACCOUNT_ID`. Reconnecting preserves
 the policy. `tum-mcp manage tumonline --disconnect` removes the local TUMonline
 credential and retains the policy; it does not revoke remote sessions. An expired
@@ -159,11 +169,11 @@ session without resetting permissions or affecting other providers.
 The policy governs what these TUMonline tools return to all MCP clients sharing
 the same local configuration. A local program running as the same user can access
 local files independently, and this policy does not govern other providers' tools,
-including Moodle's own grades tools. Study names are personal and permitted results
-may be transmitted to your configured agent or its AI provider. TUMonline's study
-chooser can contain extra personal fields in its upstream response; the integration
-holds that bounded response only in memory, projects the permitted fields, and does
-not save the response body. Revoking a permission prevents subsequent reads, but
+including Moodle's own grades tools. Study names, grades, exams and fees are
+personal, and permitted results may be transmitted to your configured agent or its
+AI provider. TUMonline's upstream responses contain extra personal fields; the
+integration holds each bounded response only in memory, projects the listed fields,
+and does not save response bodies. Revoking a permission prevents subsequent reads, but
 cannot recall a response already delivered to a client.
 
 Settings live outside the installed package in `TUMMCP/config/preferences.json`.

@@ -88,8 +88,8 @@ def connect_context(context: BrowserContext, attempt: str) -> AccountRef | None:
     if not cookies:
         return None
     try:
-        initial = resume_session(cookies, read_studies=False)
-        verified = resume_session(initial.cookies, expected=initial.account, read_studies=False)
+        initial, _ = resume_session(cookies)
+        verified, _ = resume_session(initial.cookies, expected=initial.account)
     except CampusError as error:
         if error.code == Code.AUTH_REQUIRED:
             return None
