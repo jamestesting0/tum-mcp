@@ -71,4 +71,8 @@ def knowledge_revision(root: Path) -> str | None:
 
     if not private_path(root, "knowledge.json").exists():
         return None
-    return knowledge_report(root)["knowledge_revision"]
+    graph = project(load_inputs(root))
+    checks = AssertionChecks(graph, EvidenceChecks(graph.inputs, full=True))
+    revision = checks.semantic_revision()
+    graph.inputs.reader.verify()
+    return revision
