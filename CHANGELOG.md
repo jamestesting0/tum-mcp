@@ -1,5 +1,12 @@
 # Changes
 
+## 0.15.1 — 2026-10-31
+
+- The README's Get started section ends with setting up a course: create a folder, open an
+  agent chat in it and run `$sync-course` (Codex) or `/sync-course` (Claude Code). It
+  recommends GPT-6.1 Terra (xhigh) and Claude Opus 5.5 (medium) as starting models, and
+  says to collect your own resources in a temporary folder for the agent to sort.
+
 ## 0.15.0 — 2026-10-31
 
 - The managed block in a course project's `AGENTS.md` is now an agent guide. It tells the

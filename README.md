@@ -18,6 +18,13 @@ tum-mcp login
 tum-mcp doctor
 ```
 
+Then create a folder for one course, open an agent chat in it and run `$sync-course`
+(Codex) or `/sync-course` (Claude Code). You are all set: the agent collects the
+course's materials and you get your own learning harness for that course.
+
+Recommended models to start with: GPT-6.1 Terra at xhigh reasoning in Codex, or
+Claude Opus 5.5 at medium effort in Claude Code.
+
 ## Read and study
 
 Ask your agent to explain course material, find announcements or catch up on a
@@ -36,8 +43,9 @@ submissions, posting and exercise execution are unavailable.
 
 Each project holds one course. Run `tum-mcp study` in its folder to open the app.
 Ask the agent to refresh it when sources change or address comments left in the
-app. Add files you downloaded yourself, such as past exams from other websites, with
-`tum-mcp study import`. [Study guide and demo](docs/study.md).
+app. For your own resources, such as past exams from other websites, create a
+temporary folder, put them all there and ask the agent to sort them into the course.
+[Study guide and demo](docs/study.md).
 
 TUMonline currently provides study names/degrees, public course catalog metadata
 and partial course curriculum positions. The catalog does not show enrollments.
