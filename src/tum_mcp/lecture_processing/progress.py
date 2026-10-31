@@ -9,7 +9,7 @@ from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing.preparation_audio import AudioResult
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
-from tum_mcp.study_store import confined
+from tum_mcp.study_store import ReadObserver, confined
 
 
 class Progress(Frozen):
@@ -49,13 +49,18 @@ def write_progress(
     private_write(confined(directory, "progress.json"), progress.model_dump_json().encode())
 
 
-def read_progress(directory: Path) -> Progress | None:
+def read_progress(directory: Path, *, read_observer: ReadObserver | None = None) -> Progress | None:
     path = confined(directory, "progress.json")
     if not path.is_file():
+        if read_observer is not None:
+            read_observer(path, None)
         return None
     if path.stat().st_size > 1024**2:
         raise CampusError(Code.INVALID_RESPONSE, "Lecture progress exceeds its bound.")
     try:
-        return Progress.model_validate_json(path.read_bytes())
+        body = path.read_bytes()
+        if read_observer is not None:
+            read_observer(path, body)
+        return Progress.model_validate_json(body)
     except ValidationError:
         raise CampusError(Code.INVALID_RESPONSE, "Lecture progress is malformed.") from None

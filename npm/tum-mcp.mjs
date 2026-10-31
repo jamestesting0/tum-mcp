@@ -24,7 +24,7 @@ try {
         ['setup', 'Configure your coding client and managed runtime.'],
         ['login', 'Sign in to selected campus services.'],
         ['doctor', 'Show connections, extensions and relevant client/runtime health.'],
-        ['install', 'Choose optional Lecture, Audio Notes or Video Notes workflows.'],
+        ['install', 'Choose optional Lecture, Audio Notes, Video Notes or Course Memory workflows.'],
         ['uninstall', 'Choose extensions or All to remove TUM MCP.'],
         ['manage', 'Manage TUMonline permissions.'],
         ['skills', 'Inspect and validate workflow skills.'],
@@ -42,7 +42,7 @@ try {
   } else if (['--version', 'version'].includes(args[0])) {
     console.log(version);
   } else if (args[0] === 'install' && args.some(arg => ['--help', '-h'].includes(arg))) {
-    printHelp(version, 'Choose optional workflows to install, or provide their names.', 'tum-mcp install [lecture|audio-notes|video-notes]... [OPTIONS]', [
+    printHelp(version, 'Choose optional workflows to install, or provide their names.', 'tum-mcp install [lecture|audio-notes|video-notes|course-memory]... [OPTIONS]', [
       ['Options', [['--asr / --no-asr', 'Provision isolated lecture recognition; models load on demand.'], ['--json', 'Print machine-readable results.'], ['-h, --help', 'Show this help.']]],
     ]);
   } else if (['setup', 'update', 'uninstall'].includes(args[0]) && args.some(arg => ['--help', '-h'].includes(arg))) {
@@ -59,7 +59,7 @@ try {
       },
       uninstall: {
         description: 'Remove managed setup while retaining saved user data by default.',
-        usage: 'tum-mcp uninstall [lecture|audio-notes|video-notes]... [OPTIONS]',
+        usage: 'tum-mcp uninstall [lecture|audio-notes|video-notes|course-memory]... [OPTIONS]',
         options: [['(no arguments)', 'Choose extensions or All in the interactive picker.'], ['--client NAME', 'Remove one client registration.'], ['--host local|windows', 'Choose the client host.'], ['--purge-runtime', 'Remove verified runtimes when All is selected.'], ['--forget-credentials', 'Forget saved credentials when All is selected.']],
       },
     };
@@ -68,7 +68,7 @@ try {
       ['Options', [...selected.options, ['-h, --help', 'Show this help.']]],
     ]);
   } else {
-    const hasExtension = args.slice(1).some(arg => ['lecture', 'audio-notes', 'video-notes'].includes(arg));
+    const hasExtension = args.slice(1).some(arg => ['lecture', 'audio-notes', 'video-notes', 'course-memory'].includes(arg));
     let packageAction = args[0] === 'update';
     if (args[0] === 'update') {
       if (args.length > 2 || (args.length === 2 && args[1] !== '--local')) throw new Error('Usage: tum-mcp update [--local]. Use --help for details.');

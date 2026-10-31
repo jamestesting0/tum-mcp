@@ -1,0 +1,400 @@
+[
+  {
+    "id": "U1",
+    "request": "Set up this course.",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [],
+    "selector": {
+      "query": "Observer"
+    },
+    "expected_refs": [],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Orient to binding/handbook; leave unauthored teaching unknown."
+  },
+  {
+    "id": "U2",
+    "request": "Explain Observer in the course notation.",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "concept": "observer"
+    },
+    "expected_refs": [
+      "study/unit/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Teach the sourced definition, then offer its practice home."
+  },
+  {
+    "id": "U3",
+    "request": "I am stuck on the released Observer exercise.",
+    "student_information": {
+      "goal": "understand Observer",
+      "time_minutes": 20,
+      "attempt": "I registered the observer after changing the subject."
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "item": "exercises/set/sheet-1/exercise/observer-practice"
+    },
+    "expected_refs": [
+      "exercises/set/sheet-1/exercise/observer-practice"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Inspect the stated attempt and offer one registration hint."
+  },
+  {
+    "id": "U4",
+    "request": "I think every state change is a callback; is that correct?",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "concept": "observer"
+    },
+    "expected_refs": [
+      "study/unit/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Ask a focused check about registration and conditions; do not store a deficit."
+  },
+  {
+    "id": "U5",
+    "request": "Help me bridge the prerequisite for coupling.",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "concept": "coupling"
+    },
+    "expected_refs": [
+      "study/unit/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Show the foundation-to-dependent direction and a short bridge."
+  },
+  {
+    "id": "U6",
+    "request": "What should I study this week?",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "item": "study/unit/observer"
+    },
+    "expected_refs": [
+      "study/unit/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Use the handbook schedule and current date; no date is supplied by this packet."
+  },
+  {
+    "id": "U7",
+    "request": "Help me prioritize before the exam.",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "item": "exam/concept/observer"
+    },
+    "expected_refs": [
+      "exam/concept/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Use current core teaching and scoped historical evidence; no future-question promise."
+  },
+  {
+    "id": "U8",
+    "request": "Choose one practice item for my stated goal.",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "concept": "observer"
+    },
+    "expected_refs": [
+      "study/unit/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Choose the released exercise, label any synthetic alternative."
+  },
+  {
+    "id": "U9",
+    "request": "Add further durable study for Observer.",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "item": "study/unit/observer"
+    },
+    "expected_refs": [
+      "study/unit/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Reuse existing teaching/practice homes; author only in the requested scope."
+  },
+  {
+    "id": "U10",
+    "request": "New slides have been released; what needs review?",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "source": "slides"
+    },
+    "expected_refs": [],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Inspect changed pages and affected authored items before re-review."
+  },
+  {
+    "id": "U11",
+    "request": "Resume our study from last week.",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "item": "study/unit/observer"
+    },
+    "expected_refs": [
+      "study/unit/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Reuse explicit notes/preferences; earlier performance is unknown."
+  },
+  {
+    "id": "U12",
+    "request": "Explore optional notification variants.",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "item": "study/unit/observer/explore/observer-extra"
+    },
+    "expected_refs": [
+      "study/unit/observer/explore/observer-extra"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Offer the enrichment item as optional; keep the core prerequisite intact."
+  },
+  {
+    "id": "U13",
+    "request": "These explanations disagree; show their scope.",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "concept": "observer"
+    },
+    "expected_refs": [
+      "study/unit/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Present qualified contrasts and independent support groups; retain uncertainty."
+  },
+  {
+    "id": "U14",
+    "request": "How much course content is covered, and am I ready?",
+    "student_information": {
+      "goal": "course study",
+      "prior_mastery": "unknown"
+    },
+    "available_workspaces": [
+      "study",
+      "exercises",
+      "exam",
+      "lectures"
+    ],
+    "selector": {
+      "concept": "observer"
+    },
+    "expected_refs": [
+      "study/unit/observer"
+    ],
+    "forbidden_conclusions": [
+      "viewing proves mastery",
+      "graph centrality proves readiness",
+      "a missing date is a confirmed deadline"
+    ],
+    "permitted_side_effects": [
+      "read existing local files"
+    ],
+    "proposed_decision": "Separate authored coverage from unknown student readiness and offer a diagnostic."
+  }
+]

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add optional Course Memory, disabled by default, for source-checked relationships
+  across course workspaces. Install with `tum-mcp install course-memory`; local setup
+  happens on the next relevant request. Uninstall stops graph use and preserves its
+  files. Reinstall checks freshness before reuse. Native course review remains
+  independent of disabled memory, and no document pipeline or background index is added.
 - Lecture preparation no longer fails on recordings whose AAC timestamps drift slightly:
   a window decoded a few samples short now pads that jitter instead of rejecting every
   chunk. Each failed preflight sample or chunk is recorded in the receipt with its time,

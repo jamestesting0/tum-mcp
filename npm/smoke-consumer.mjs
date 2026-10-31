@@ -1,7 +1,7 @@
 import { lectureLifecycle } from './lecture-consumer.mjs';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, release } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -64,6 +64,7 @@ from tum_mcp.skills import bundled
 from tum_mcp.uninstall import uninstall_client
 def forbidden():
     raise AssertionError('Native credential storage must not be opened')
+assert (bundled()/'course-memory/references/knowledge.md').is_file()
 auth.system_keyring=forbidden
 root=Path(os.environ['TUM_MOODLE_DATA_DIR'])
 root.mkdir(parents=True,exist_ok=True)
@@ -102,6 +103,42 @@ for name in ('cursor','antigravity'):
   const boundStatus = status();
   assert.equal(boundStatus.mode, 'sync');
   assert.equal(boundStatus.course.synthetic, true);
+  const authored = JSON.parse(readFileSync(join(studyProject, 'app/content.json'), 'utf8'));
+  const nativeUnit = authored.units[0];
+  assert.equal(boundStatus.course_memory, false);
+  const denied = () => spawnSync(process.execPath, [launcher, 'study', 'context', studyProject, 'topic'], { env, encoding: 'utf8', shell: false, timeout: 60000 });
+  assert.notEqual(denied().status, 0);
+  run(process.execPath, [launcher, 'install', 'course-memory', '--json']);
+  assert.equal(status().course_memory, true);
+  const beforeKnowledge = readdirSync(studyProject, { recursive: true }).sort();
+  const knowledgeSchema = JSON.parse(run(process.execPath, [launcher, 'study', 'schema', 'knowledge']));
+  assert.equal(knowledgeSchema.properties.schema_version.const, 1);
+  const contextPacket = JSON.parse(run(process.execPath, [launcher, 'study', 'context', studyProject, '--item', `study/unit/${nativeUnit.key}`]));
+  assert.ok(contextPacket.items.some(item => item.id === `study/unit/${nativeUnit.key}`));
+  const narrowRaw = run(process.execPath, [launcher, 'study', 'context', studyProject, '--item', `study/unit/${nativeUnit.key}`, '--limit', '4', '--max-bytes', '8000']);
+  const narrowPacket = JSON.parse(narrowRaw);
+  assert.ok(narrowPacket.items.some(item => item.id === `study/unit/${nativeUnit.key}`));
+  assert.ok(narrowPacket.items.length <= 4);
+  assert.ok(Buffer.byteLength(narrowRaw, 'utf8') <= 8000);
+  const impactPacket = JSON.parse(run(process.execPath, [launcher, 'study', 'impact', studyProject, '--source', nativeUnit.sources[0].key]));
+  assert.ok(impactPacket.direct.length > 0);
+  assert.equal(impactPacket.source_status, 'current');
+  assert.ok(impactPacket.items.some(item => item.locators.some(locator => locator.source === nativeUnit.sources[0].key)));
+  assert.deepEqual(readdirSync(studyProject, { recursive: true }).sort(), beforeKnowledge);
+  const memoryPath = join(studyProject, '.tum-mcp/knowledge.json');
+  const memoryBytes = JSON.stringify({ schema_version: 1, course_key: boundStatus.course.key, semester: boundStatus.course.semester, concepts: [], assertions: [] });
+  writeFileSync(memoryPath, memoryBytes);
+  run(process.execPath, [launcher, 'update', '--local']);
+  assert.equal(status().course_memory, true);
+  run(process.execPath, [launcher, 'uninstall', 'course-memory', '--json']);
+  assert.equal(status().course_memory, false);
+  assert.notEqual(denied().status, 0);
+  assert.equal(readFileSync(memoryPath, 'utf8'), memoryBytes);
+  run(process.execPath, [launcher, 'install', 'course-memory', '--json']);
+  const restored = JSON.parse(run(process.execPath, [launcher, 'study', 'context', studyProject, '--item', `study/unit/${nativeUnit.key}`]));
+  assert.ok(restored.items.some(item => item.id === `study/unit/${nativeUnit.key}`));
+  assert.equal(readFileSync(memoryPath, 'utf8'), memoryBytes);
+  run(process.execPath, [launcher, 'uninstall', 'course-memory', '--json']);
   const lectureEvidence = lectureLifecycle(root, args => run(process.execPath, [launcher, ...args]));
   assert.equal(lectureEvidence.installed_skills, 8);
   const studyState = join(studyProject, '.tum-mcp/state.json');
@@ -177,5 +214,5 @@ anyio.run(check)
   const study = JSON.parse(run(process.execPath, [launcher, 'study', 'inspect', demoProject]));
   assert.equal(study.course.synthetic, true); assert.deepEqual(study.stale_units, []);
   assert.ok(readFileSync(join(demoProject, 'app', 'reading.mjs'), 'utf8').includes('renderReading'));
-  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: skills.checked_skills.length, studyStateRoutingPassed: true, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
+  console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: skills.checked_skills.length, studyStateRoutingPassed: true, courseMemoryLifecyclePassed: true, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
 } finally { rmSync(root, { recursive: true, force: true }); }

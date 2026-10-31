@@ -21,7 +21,9 @@ course Organization, course Redundancy and, when the report lists it, Integratio
 2. `--section review` lists `course.status`, the structure `revision` to save and the
    `dimensions` to score. The review turns stale when units, groups, titles, defined
    terms or links change, not when a passage is reworded; the flags are recomputed on
-   every report.
+   every report. When enabled Course Memory supplies `knowledge_revision`, review
+   those relationships and save that field alongside the native `revision`. Changes
+   stale the optional binding; disabling memory leaves native review unaffected.
 3. Read the item reviews you just saved: their Organization and Redundancy findings
    often repeat across units and point at a course-level cause.
 

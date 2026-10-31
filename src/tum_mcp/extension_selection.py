@@ -20,6 +20,7 @@ class ExtensionSelection(BaseModel):
     schema_version: Literal[1] = 1
     audio_notes: StrictBool = False
     video_notes: StrictBool = False
+    course_memory: StrictBool = False
 
     @model_validator(mode="after")
     def future_flags(self) -> "ExtensionSelection":
@@ -33,7 +34,7 @@ class ExtensionSelection(BaseModel):
 
     def serialized(self) -> bytes:
         # Older runtimes reject unknown keys, so the newest flag is written only when enabled.
-        exclude = None if self.video_notes else {"video_notes"}
+        exclude = {name for name in ("video_notes", "course_memory") if not getattr(self, name)}
         return self.model_dump_json(indent=2, exclude=exclude).encode()
 
 
@@ -66,11 +67,17 @@ def require_video_notes() -> None:
         )
 
 
-FIELDS = {"audio-notes": "audio_notes", "video-notes": "video_notes"}
-SKILLS = {"audio-notes": "audio-notes", "video-notes": "video-notes"}
+FIELDS = {
+    "audio-notes": "audio_notes",
+    "video-notes": "video_notes",
+    "course-memory": "course_memory",
+}
+SKILLS = {name: name for name in FIELDS}
 
 
-def set_extension(name: Literal["audio-notes", "video-notes"], enabled: bool) -> str:
+def set_extension(
+    name: Literal["audio-notes", "video-notes", "course-memory"], enabled: bool
+) -> str:
     """Enable only after all clients preflight; disable before trying to prune files."""
     from tum_mcp.client_config import client_config_path, read_client_config
     from tum_mcp.client_installs import Write, commit_writes, prune_removed_folders
@@ -133,3 +140,22 @@ def set_audio_notes(enabled: bool) -> str:
 
 def set_video_notes(enabled: bool) -> str:
     return set_extension("video-notes", enabled)
+
+
+def course_memory_enabled() -> bool:
+    try:
+        return selection().course_memory
+    except CampusError:
+        return False
+
+
+def require_course_memory() -> None:
+    if not course_memory_enabled():
+        raise CampusError(
+            Code.ACTION_REQUIRED,
+            "Install the optional Course Memory extension with tum-mcp install course-memory.",
+        )
+
+
+def set_course_memory(enabled: bool) -> str:
+    return set_extension("course-memory", enabled)

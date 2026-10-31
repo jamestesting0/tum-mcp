@@ -20,6 +20,18 @@ def study() -> dict:
     return json.loads((FIXTURES / "course_app/content.json").read_bytes())
 
 
+def test_optional_knowledge_revision_is_exactly_neutral_when_absent() -> None:
+    content = StudyContent.model_validate(study())
+    original = course_map(content, None, None, None)
+    assert original == course_map(content, None, None, None, knowledge_revision=None)
+    changed = course_map(content, None, None, None, knowledge_revision="reviewed-semantics")
+    assert changed["revision"] == original["revision"]
+    assert changed["knowledge_revision"] == "reviewed-semantics"
+    assert {k: v for k, v in changed.items() if k != "knowledge_revision"} == {
+        k: v for k, v in original.items() if k != "knowledge_revision"
+    }
+
+
 def exercises() -> dict:
     return json.loads((FIXTURES / "exercises.json").read_bytes())
 

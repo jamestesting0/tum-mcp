@@ -27,7 +27,12 @@ def install(
 ) -> None:
     """Choose optional workflows to install, or provide their names."""
     from tum_mcp.extension_management import LABELS, choose_extensions
-    from tum_mcp.extensions import install_lecture, set_audio_notes, set_video_notes
+    from tum_mcp.extensions import (
+        install_lecture,
+        set_audio_notes,
+        set_course_memory,
+        set_video_notes,
+    )
     from tum_mcp.ui import State, heading, status_rows, terminal_console
 
     selected = (
@@ -53,6 +58,9 @@ def install(
             case ExtensionName.VIDEO_NOTES:
                 report = {"extension": name, "state": set_video_notes(True)}
                 review = False
+            case ExtensionName.COURSE_MEMORY:
+                report = {"extension": name, "state": set_course_memory(True)}
+                review = False
             case unreachable:
                 assert_never(unreachable)
         reports.append(report)
@@ -73,13 +81,12 @@ def install(
     if json_output:
         typer.echo(json.dumps(reports[0] if len(reports) == 1 else reports, indent=2))
     else:
-        local = {ExtensionName.AUDIO_NOTES, ExtensionName.VIDEO_NOTES}
+        local = {ExtensionName.AUDIO_NOTES, ExtensionName.VIDEO_NOTES, ExtensionName.COURSE_MEMORY}
         if any(name not in local for name in selected):
             console.print("Use tum-mcp login to sign in to the selected services.")
         else:
             console.print(
-                "Audio and Video Notes use your prepared Study content; "
-                "no campus connection is needed."
+                "These workflows use local course content; no campus connection is needed."
             )
         if ExtensionName.VIDEO_NOTES in selected:
             console.print(

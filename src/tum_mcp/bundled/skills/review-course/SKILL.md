@@ -3,6 +3,11 @@ name: review-course
 description: Score how easy a local TUM course app is to learn from, unit by unit, exercise by exercise and as a whole course (organization, redundancy, and how Study, Exercises, Exam and Lecture connect), save the scores with evidence, and fix what falls below the bar. Use after prepare-study or prepare-exercises, or when asked to review, rate or improve course content, its structure, its diagrams or its plots.
 ---
 
+When `tum-mcp study status PROJECT` reports `course_memory: true`, use
+the installed `course-memory` skill for relationships and scoped source updates.
+When disabled, leave retained graph files unused and follow the ordinary workflow.
+
+
 Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. Study content
 lives in `app/content.json`, exercises in `app/exercises.json`. You score them in
 `.tum-mcp/review.json`; code ties each item score to the exact content it read and the
