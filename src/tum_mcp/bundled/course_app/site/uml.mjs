@@ -1,4 +1,4 @@
-import { node, svgNode, studyText } from './dom.mjs';
+import { node, svgNode, studyText, plainText } from './dom.mjs';
 import { drawUml } from './uml-layout.mjs';
 
 // UML class, sequence and state diagrams, laid out from their structure so authors never place
@@ -113,7 +113,7 @@ export function renderUml(block) {
   const region = node('div', 'uml-region'); region.tabIndex = 0;
   region.setAttribute('role', 'region');
   region.setAttribute('aria-label', block.diagram === 'flowchart' ? 'Flowchart' : `UML ${block.diagram} diagram`);
-  const name = studyText('span', '', block.description).textContent;
+  const name = plainText(block.description);
   if (block.diagram === 'sequence') {
     const svg = sequenceDiagram(block); svg.setAttribute('aria-label', name); region.append(svg);
     return region;

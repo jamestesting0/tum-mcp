@@ -211,13 +211,28 @@
                 ],
                 "model_answer": [
                   {
-                    "kind": "text",
+                    "kind": "derivation",
                     "title": "Model answer",
                     "sources": [
                       "components"
                     ],
-                    "paragraphs": [
-                      "Pair the first and last terms; every pair sums to n + 1. Account for the middle term when n is odd."
+                    "groups": [
+                      {
+                        "lines": [
+                          {
+                            "latex": "2S = (1 + n) + (2 + (n-1)) + \\cdots + (n + 1)",
+                            "reason": "Write the sum forwards and backwards and add the two term by term."
+                          },
+                          {
+                            "latex": "= n(n+1)",
+                            "reason": "Each of the \\(n\\) pairs sums to \\(n+1\\)."
+                          },
+                          {
+                            "latex": "S = \\frac{n(n+1)}{2}",
+                            "reason": "Divide by 2; the pairing needs no case split for odd \\(n\\)."
+                          }
+                        ]
+                      }
                     ]
                   }
                 ]
@@ -372,7 +387,7 @@
                 ]
               },
               {
-              "label": "Code and diagrams",
+                "label": "Code and diagrams",
                 "blocks": [
                   {
                     "kind": "code",
