@@ -199,31 +199,39 @@ def _collect(
         key=lambda ref: (
             graph.nodes[ref].workspace != purpose,
             graph.nodes[ref].scope.get("role") == "enrichment",
-            len(routes[ref][0]),
-            ref,
-        )
-    )
-    views = {ref: item_view(graph.nodes[ref], evidence) for ref in refs}
-    refs.sort(
-        key=lambda ref: (
-            views[ref]["evidence_status"] != "current",
-            graph.nodes[ref].workspace != purpose,
-            graph.nodes[ref].scope.get("role") == "enrichment",
             ref not in selected,
             not any(edge.origin == "reviewed" for edge, _ in routes[ref][0]),
             len(routes[ref][0]),
             ref,
         )
     )
-    # Reserve a useful current home per workspace before secondary passages crowd it out.
+    views: dict[str, dict] = {}
+
+    def current(ref: str) -> bool:
+        if ref not in views:
+            views[ref] = item_view(graph.nodes[ref], evidence)
+        return views[ref]["evidence_status"] == "current"
+
+    # Find a current home per workspace before filling remaining slots. Unchecked
+    # candidates cannot displace an already selected current item in this order.
     primary: list[str] = []
-    spaces: set[str] = set()
+    spaces = dict.fromkeys(graph.nodes[ref].workspace for ref in refs)
+    for space in spaces:
+        home = next(
+            (ref for ref in refs if graph.nodes[ref].workspace == space and current(ref)), None
+        )
+        if home is not None:
+            primary.append(home)
+    primary.sort(key=refs.index)
+    chosen = primary[:limit]
     for ref in refs:
-        space = graph.nodes[ref].workspace
-        if space not in spaces and views[ref]["evidence_status"] == "current":
-            primary.append(ref)
-            spaces.add(space)
-    chosen = (primary + [ref for ref in refs if ref not in primary])[:limit]
+        if len(chosen) >= limit:
+            break
+        if ref not in primary and current(ref):
+            chosen.append(ref)
+    if len(chosen) < limit:
+        # The scan exhausted every candidate: all remaining views are noncurrent.
+        chosen += [ref for ref in refs if ref not in chosen][: limit - len(chosen)]
     needed = {ref for target in chosen for ref in routes[target][1]}
     for ref in sorted(needed - views.keys()):
         views[ref] = item_view(graph.nodes[ref], evidence)

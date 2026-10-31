@@ -45,3 +45,56 @@ def test_resource_lookup_is_request_local_and_replaced_with_state(tmp_path: Path
     state = inputs.state.model_copy(update={"resources": ()})
     assert not replace(inputs, state=state).resources
     assert resources and load_inputs(root).resources == resources
+
+
+def test_small_packet_avoids_validating_discarded_native_candidates(tmp_path: Path):
+    from course_memory_profile import measured_context
+
+    root = scaled_course(tmp_path, 10, crowded=True)
+    result = measured_context(root)
+    assert result["ids"] == [
+        "study/unit/unit-000",
+        "exercises/set/sheet-1/exercise/observer-practice",
+        "study/unit/unit-001",
+        "study/unit/unit-002",
+    ]
+    assert result["status"] == "ok"
+    assert result["work"]["item_views"] <= 46  # At least 80% less than the frozen 232-view case.
+    assert result["work"]["initial_hash_calls"] <= 5
+
+
+@pytest.mark.parametrize("limit", [1, 4, 12])
+def test_selection_skips_stale_top_home_and_preserves_workspace_reservations(tmp_path: Path, limit):
+    from tum_mcp.study_knowledge_query import context
+
+    root = scaled_course(tmp_path, 10, crowded=True)
+    (root / "materials/content/material-source-000.md").write_text("Changed evidence.")
+    packet = context(root, item="exercises/set/sheet-1/exercise/observer-practice", limit=limit)
+    assert packet["items"][0]["id"] == "study/unit/unit-001"
+    assert all(item["evidence_status"] == "current" for item in packet["items"])
+    assert all("unit-000" not in item["id"] for item in packet["items"])
+    if limit >= 4:
+        assert {i["workspace"] for i in packet["items"]} == {"study", "exercises"}
+
+
+@pytest.mark.parametrize(
+    "case",
+    json.loads(
+        (Path(__file__).parents[1] / "fixtures/study_knowledge/efficiency-cases.json").read_bytes()
+    ),
+)
+def test_natural_query_quality_contract(tmp_path: Path, case):
+    from knowledge_annotations import annotation, write_registry
+    from knowledge_fixture import knowledge_project
+
+    from tum_mcp.study_knowledge_query import context
+
+    root = knowledge_project(tmp_path, workspaces=frozenset({"study"}))
+    write_registry(root, [annotation(root)], reviewed=True)
+    packet = context(root, case["query"])
+    if case.get("required"):
+        assert case["required"] in {i["id"] for i in packet["items"]}
+    if case.get("ambiguous"):
+        assert packet["status"] == "ambiguous" and not packet["items"]
+    if case.get("empty"):
+        assert packet["status"] == "empty" and not packet["items"]
