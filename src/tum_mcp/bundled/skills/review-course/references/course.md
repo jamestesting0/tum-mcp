@@ -39,8 +39,8 @@ course Organization, course Redundancy and, when the report lists it, Integratio
    item reviews found repeated, decide which unit is its home; every other place should
    link to it (`{{term}}` or a prerequisite block) or practise it in a new form. A
    cheatsheet line or concept detail that copies Study instead of compressing it is a
-   finding. Spaced practice, interleaving and a later unit that takes the idea further
-   are not.
+   finding. Spaced practice, interleaving, a later unit that takes the idea further and a
+   one-line reminder that links to the home are not: they are reinforcement.
 4. **Returning student.** Enter from three exercise steps and two Exam patterns spread
    over the course (those that exist), as a student who forgot the lesson. From each,
    reach the passage that teaches what it needs and come back: through the prerequisite

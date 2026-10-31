@@ -1,12 +1,12 @@
 import data from './data.mjs';
-import { node, studyText, button, append, sourcesNote, pageCitation, shareCitations } from './dom.mjs';
+import { node, studyText, button, append, sourcesNote, pageCitation, shareCitations, plainText } from './dom.mjs';
 import { renderBlockBody, renderAnswers } from './reading.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExam } from './anchors.mjs';
 import { codeReferences, filesIn } from './files.mjs';
 import { exam, patterns, concepts, pastQuestions, seen, sample, list, quietLink } from './exam-state.mjs';
 
-const plain = text => studyText('span', '', text || '').textContent;
+const plain = text => plainText(text || '');
 
 function section(title, ...children) {
   const element = node('section', 'exam-section');

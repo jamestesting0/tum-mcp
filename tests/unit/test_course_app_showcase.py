@@ -16,6 +16,7 @@ def test_distributed_preview_is_one_component_unit_and_one_exercise() -> None:
         "text",
         "definition",
         "formula",
+        "derivation",
         "table",
         "code",
         "diagram",

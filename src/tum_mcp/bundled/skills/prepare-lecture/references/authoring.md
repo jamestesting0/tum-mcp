@@ -30,6 +30,28 @@ Keep their attribution checks here; no visible AI-added labels. Do not write
 “The professor said/showed” unless the source actually supports it. A supporting
 diagram uses ordinary safe content blocks, never the captured-figure class.
 
+## Visuals
+
+After the topic map, ask of each selected section: would a student revisiting it
+understand faster with the lecturer's picture beside the text? Look for a figure on the
+slide or script page the section cites, transcript cues such as "as you can see", "this
+diagram" or "on the board", and ideas that have a spatial or notational shape (a Bloch
+sphere, a circuit, a matrix written out, hardware). When the answer is yes, show one or
+two visuals near that passage, in this order:
+
+1. **Course-material figure**: an image of the figure from the verified slide or script
+   page, cropped to the figure and stored under the app's `figures/` folder, as an
+   ordinary `figure` block with the document as its source and `pages` set. Its caption
+   says what to notice; its alt text describes what it shows.
+2. **Recording frame**: a targeted `--frame-at` capture of the board or demonstration,
+   in the section's `figures` with its frame evidence and measured capture time.
+3. **Explanatory diagram**: an ordinary diagram, plot or figure block that you draw, when
+   neither exists or neither is legible. It is never presented as a capture.
+
+Open the chosen image enlarged and check that its notation is legible and matches the
+text. A section that a picture would not help stays text-only; there is no quota. Record
+each choice and its reason in the private review map.
+
 Names and notation are high-impact recognition failure points. Resolve them from
 verified slides/materials or a carefully selected legible recording frame, not
 agreement between recognizers. Keep unresolved claims out of authoritative prose.

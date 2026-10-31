@@ -149,8 +149,11 @@ changing the topic selection never clears results, and it remembers your selecti
 for this course. A unit's header links the Lecture, exercises and Exam
 patterns that build on it. In the local preview, a citation opens the stored course
 file at the cited page. Formulas and inline
-notation such as `\(v_i\)` compile locally to native MathML; code and dollar signs
-stay literal. The app has light and dark themes and a phone layout.
+notation such as `\(v_i\)` are validated at build and typeset in the browser by the
+bundled KaTeX, as in Notion: TeX fonts and spacing, text-size inline vectors and
+matrices, and long inline math that wraps after its relations on a phone. Screen
+readers get KaTeX's MathML copy. Derivation blocks show working line by line, aligned
+on the relation, and can step through it. Code and dollar signs stay literal. The app has light and dark themes and a phone layout.
 
 Content lives in `app/content.json`; shared renderer modules and CSS keep the
 site extensible. Source hashes identify affected units. A stale source stops a

@@ -1,10 +1,10 @@
 import data from './data.mjs';
-import { node, studyText, append, sourcesNote, shareCitations } from './dom.mjs';
+import { node, studyText, append, sourcesNote, shareCitations, plainText } from './dom.mjs';
 import { renderBlockBody, renderAnswers } from './reading.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam } from './exam-state.mjs';
 
-const plain = text => studyText('span', '', text || '').textContent;
+const plain = text => plainText(text || '');
 
 // A paper is either a forecast practice exam or a replayed past variant, in one shape.
 export function paperFor(kind, key) {

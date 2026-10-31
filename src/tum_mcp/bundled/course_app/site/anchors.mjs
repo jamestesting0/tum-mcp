@@ -1,7 +1,8 @@
 // Quote selectors use literal text and context, never HTML or guessed fuzzy matches.
 import data from './data.mjs';
-import { studyText, SECTION_HEADING } from './dom.mjs';
-const excluded = 'button:not(.flashcard),input,textarea,select,svg,.source-note,.lecture-figure,.lecture-coverage,[data-comment-ui],[hidden],[aria-hidden="true"]';
+import { studyText, SECTION_HEADING, plainText } from './dom.mjs';
+// KaTeX's visible layer is aria-hidden (its MathML copy is spoken), yet it is what readers select.
+const excluded = 'button:not(.flashcard),input,textarea,select,svg:not(.katex *),.source-note,.lecture-figure,.lecture-coverage,[data-comment-ui],[hidden],[aria-hidden="true"]:not(.katex-html)';
 export function annotate(element, unit, item, view, field) {
   const owner = item.origin || unit;
   Object.assign(element.dataset, { commentTarget: view, unitKey: owner.key, unitRevision: owner.revision, itemKey: item.key, field });
@@ -30,7 +31,8 @@ function textIndex(material) {
   const walker = document.createTreeWalker(material, NodeFilter.SHOW_TEXT);
   const segments = []; let raw = '', current;
   while ((current = walker.nextNode())) {
-    if (current.parentElement.closest(excluded)) continue;
+    // KaTeX's MathML copy is for screen readers; a quote holds the mathematics as seen.
+    if (current.parentElement.closest(excluded) || current.parentElement.closest('.katex-mathml')) continue;
     segments.push({ node: current, start: raw.length, end: raw.length + current.length }); raw += current.data;
   }
   let text = ''; const starts = [], ends = [];
@@ -145,7 +147,7 @@ export function locatePassage(root, unit, anchor, indexes = new Map()) {
   } else {
     material = [...root.querySelectorAll('[data-comment-target]')].find(item => item.dataset.unitKey === anchor.unit_key && item.dataset.itemKey === anchor.item_key && item.dataset.field === anchor.field && !item.closest('[hidden],[aria-hidden="true"]'));
     const source = sourceText(anchor);
-    if (!source || offsets(studyText('span', '', source).textContent.replace(/\s+/g, ' '), anchor).length !== 1) return null;
+    if (!source || offsets(plainText(source).replace(/\s+/g, ' '), anchor).length !== 1) return null;
     if (!material) return { pending: true };
     section = material;
   }

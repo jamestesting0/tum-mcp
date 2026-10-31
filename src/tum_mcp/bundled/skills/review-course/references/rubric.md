@@ -34,6 +34,10 @@ where this table puts it:
 | No problem stated first; the rule before the example | Intuition |
 | A section placed far from the one it extends, or appended at the end | Organization |
 | Two new ideas in one section | Cognitive load |
+| A prerequisite the student must recall from far back, with no reminder or link where it is used | Cognitive load |
+| Text that spells out a matrix, vector, table or graph instead of showing it | Representation |
+| A full re-explanation of an idea taught elsewhere | Redundancy |
+| A worked calculation whose reusable rule is never stated | Intuition |
 | Lines about the material ("the lecture groups…") | Clarity |
 | An outcome taught but never practised | Coverage |
 
@@ -60,6 +64,9 @@ The student can read each passage once and know what it says.
 - `clarity.one_reading`: short, direct sentences; one idea per paragraph.
 - `clarity.terms_defined`: each term is defined where it is introduced and marked
   `{{term}}` later.
+- `clarity.notation_unpacked`: a notation-heavy statement says its claim in words, reminds
+  the reader in one line what each symbol means here, works a concrete case, and only then
+  states the general identity with its symbols and conditions.
 - `clarity.clear_task`: every prompt says what the student produces.
 - `clarity.no_meta`: no line about the material itself ("the lecture groups…",
   "Authored example:") or that tells the student to work
@@ -73,6 +80,12 @@ The student can read each passage once and know what it says.
 What the student has to hold in mind at once.
 
 - `cognitive_load.one_new_idea`: one new idea per section or step.
+- `cognitive_load.first_encounter`: walked in reading order by someone who knows only
+  what earlier sections and units taught, no section asks them to hold new symbols or
+  terms they cannot yet picture, and no line asks them to guess a missing step.
+- `cognitive_load.reminder_at_use`: a prerequisite taught far back (another unit, or many
+  sections earlier) gets a one-line reminder or a `{{term}}` link where it is used, so the
+  student need not navigate away. This is reinforcement, not redundancy.
 - `cognitive_load.short_prose`: no paragraph longer than two sentences or 45 words; a
   procedure comes as labelled steps and a worked example as one computed value per step.
 - `cognitive_load.math_set`: every symbol and formula is set as mathematics, not typed
@@ -93,6 +106,12 @@ Each idea is shown in the shape it has ([representations](../../prepare-study/re
 - `representation.shape_fits`: procedures are traces with their state, parallel cases
   tables or lists, two-input rules matrices, physical or spatial ideas drawn figures,
   symbols formulas with each symbol explained, structures diagrams or trees.
+- `representation.shown_not_described`: a matrix, vector, table, graph or state that the
+  text names is shown itself ("\(P = \begin{pmatrix}1&0\\0&0\end{pmatrix}\)"), and the
+  text says what to notice in it; prose never asks the student to picture an object from
+  a description of its entries ("the diagonal matrix with entries 1, 0").
+- `representation.working_shown`: a calculation the student should be able to redo is a
+  derivation, one transformation per line with its reason, not results in a sentence.
 - `representation.picture_carries_data`: a question's picture carries the data the
   question needs.
 - `representation.prose_points`: the text beside a picture tells the student what to look
@@ -150,6 +169,10 @@ The student leaves knowing why the idea works and when to use it, not only its s
   is revealed: in an exercise step or a practice question; a lesson does not ask for
   predictions.
 - `intuition.limits`: the item says where the idea stops working.
+- `intuition.general_rule`: a worked calculation that instantiates a reusable rule also
+  states the rule (a formula block with every symbol, its conditions and when to use it)
+  and applies it once more to a different case. A rule left to be inferred from one
+  example is a finding.
 
 2: correct and complete, but a rule arrives without its reason, the example comes only
 after the abstract definition, or a known misconception goes unaddressed.
@@ -178,9 +201,11 @@ derived, more than once.
 
 ## Redundancy
 
-Every fact on the page is said once, in the form that teaches it best.
+Every idea has one full explanation on the page, in the form that teaches it best.
+Repetition is judged by its effect on the student, not counted.
 
-- `redundancy.said_once`: no fact, rule or example is explained twice on the page.
+- `redundancy.said_once`: no fact, rule or example is explained in full twice, and no
+  passage repeats another in the same words.
 - `redundancy.text_restates_picture`: text and captions add to their picture, table or
   formula instead of repeating it.
 - `redundancy.prompt_restates_picture`: a question's prompt and its picture do not repeat
@@ -190,8 +215,14 @@ Every fact on the page is said once, in the form that teaches it best.
 - `redundancy.no_repeated_labels`: no repeated citation, label, assumption or
   instruction.
 
-Not redundancy: the closing recap of two to four points, a card that retrieves what the
-lesson taught, or a later question that asks for the same idea in a new situation.
+Not redundancy (purposeful reinforcement): the closing recap of two to four points; a
+one-line prerequisite reminder or `{{term}}` where an earlier idea is used; a recap in
+different words before a hard step; a second example or non-example that shows the idea
+from another side; a given restated inside the exercise step that uses it; a card that
+retrieves what the lesson taught; a later question that asks for the same idea in a new
+situation. Each must be short and point to the idea's home. Score the duplication, not the
+reinforcement: a reminder that grows into a second lesson, or two adjacent passages that
+say the same thing in the same form, is a finding.
 
 2: one restated passage or caption, or two near-duplicate questions.
 1: repetition doubles the length of a section or hides the new idea.
@@ -226,7 +257,8 @@ student find a topic.
 Each idea has one home where it is taught; everywhere else links to it or practises it
 in a new form.
 
-- `redundancy.one_home`: no idea is explained in full in two units.
+- `redundancy.one_home`: no idea is explained in full in two units. A short reminder
+  that links to the home is reinforcement, not a second home.
 - `redundancy.exercises_link`: exercises link the Study passage they need instead of
   teaching it again.
 - `redundancy.exam_compresses`: cheatsheet lines and concept details compress Study

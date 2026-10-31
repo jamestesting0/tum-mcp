@@ -6,6 +6,9 @@ from pathlib import Path
 from playwright.sync_api import Page, expect
 from study_comments_fixture import open_notes, select_passage
 
+# One typeset expression each, whether KaTeX or the MathML fallback rendered it.
+EXPRESSIONS = ".inline-math"
+
 
 def mobile_outline_checks(page: Page, content: dict) -> None:
     unit = content["units"][1]
@@ -62,15 +65,15 @@ def inline_math_checks(page: Page, project: Path, content: dict) -> None:
                 if view == "flashcards"
                 else ".practice-question legend"
             ).first
-            expect(target.locator("math.inline-math")).to_have_count(2)
+            expect(target.locator(EXPRESSIONS)).to_have_count(2)
             assert r"\(" not in target.text_content()
             assert not target.locator("img").count()
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
-        assert page.locator(".option math.inline-math").count() == 1
+        assert page.locator(f".option {EXPRESSIONS}").count() == 1
         option = unit["questions"][0]["options"][0]
         page.locator(f"input[value='{option['key']}']").check()
         page.get_by_role("button", name="Check answer", exact=True).click()
-        assert page.locator(".feedback [data-field='explanation'] math").count() == 2
+        assert page.locator(f".feedback [data-field='explanation'] :is({EXPRESSIONS})").count() == 2
         page.goto(f"https://study.invalid/#{unit['key']}/flashcards")
         select_passage(page, ".card-front .recall-prompt")
         page.get_by_role("button", name="Comment", exact=True).click()
@@ -85,7 +88,7 @@ def inline_math_checks(page: Page, project: Path, content: dict) -> None:
         page.get_by_role("button", name="Close comments", exact=True).click()
         page.evaluate("getSelection().removeAllRanges()")
         page.locator(".flashcard").click()
-        assert page.locator(".card-back math.inline-math").count() == 2
+        assert page.locator(f".card-back :is({EXPRESSIONS})").count() == 2
     finally:
         from tum_mcp.study_comment_models import Delete
         from tum_mcp.study_comments import change_comment, read_comments

@@ -67,7 +67,10 @@ Revision = Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]
 VisualKey = Annotated[
     str,
     Field(
-        pattern=r"^(block|statement|question:[a-z0-9][a-z0-9_.-]*|step:[a-z0-9][a-z0-9_.-]*):[0-9]+$"
+        pattern=(
+            r"^(block|statement|solution|transfer|"
+            r"(question|step|compare|explore):[a-z0-9][a-z0-9_.-]*):[0-9]+$"
+        )
     ),
 ]
 
@@ -279,7 +282,8 @@ def review_report(
             **({"kept": review.kept} if review.kept else {}),
         }
         for review in scored
-        if min(review.scores.values()) < 3
+        # An empty partial review has no low score; it is listed under unscored_dimensions.
+        if min(review.scores.values(), default=3) < 3
     ]
     blocking = [item for item in below if "kept" not in item or 1 in item["scores"].values()]
     fresh = [review for review in scored if review.revision == current[review.item][1]]

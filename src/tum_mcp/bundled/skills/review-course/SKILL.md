@@ -41,7 +41,7 @@ their text.
    | Pass | What it checks | Guide | Scores |
    | --- | --- | --- | --- |
    | Logic | Facts, numbers, answers and conventions against the source | [logic](references/logic.md) | correctness, coverage |
-   | Text | Every passage, read once as the student reads it | [text](references/text.md) | clarity, cognitive load |
+   | Text | Every passage, walked as a first encounter, then read once as the student reads it | [text](references/text.md) | clarity, cognitive load |
    | Visuals | Every drawn visual, from the contact sheets and the render findings | [visuals](references/visuals.md) | each visual, representation |
    | Interaction | The item worked in the app at phone and desktop width | [interaction](references/interaction.md) | practice |
    | Intuition | Whether the student learns why, not only what | [intuition](references/intuition.md) | intuition |

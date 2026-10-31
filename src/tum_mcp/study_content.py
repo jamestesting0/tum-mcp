@@ -652,10 +652,59 @@ class UmlBlock(Sourced):
         return self
 
 
+StepVisual = Annotated[
+    TableBlock | DiagramBlock | PlotBlock | FigureBlock, Field(discriminator="kind")
+]
+
+
+class DerivationLine(Frozen):
+    """One meaningful transformation; a line opening with a relation continues the one above."""
+
+    latex: Annotated[str, Field(min_length=1, max_length=2000)]
+    # Why this line follows: the rule, substitution or condition it uses.
+    reason: Text | None = None
+    # In a walkthrough, the state this line reaches, drawn beside it.
+    visual: StepVisual | None = None
+
+    @field_validator("latex")
+    @classmethod
+    def compiles(cls, value: str) -> str:
+        compile_latex(value)
+        return value
+
+
+class DerivationGroup(Frozen):
+    # The requested result this working computes, when one answer gives several.
+    label: Label | None = None
+    lines: tuple[DerivationLine, ...] = Field(min_length=1, max_length=24)
+
+
+class DerivationBlock(Sourced):
+    """Working shown line by line, aligned on its relations, each line with its reason."""
+
+    kind: Literal["derivation"]
+    groups: tuple[DerivationGroup, ...] = Field(min_length=1, max_length=8)
+    # A walkthrough reveals one line at a time with Previous and Next, and the reader can
+    # show every step at once; without it the whole working is shown.
+    walkthrough: bool = False
+
+    @model_validator(mode="after")
+    def stepped(self) -> "DerivationBlock":
+        lines = [line for group in self.groups for line in group.lines]
+        if self.walkthrough and len(lines) < 2:
+            raise ValueError("A walkthrough needs at least two lines to step through.")
+        if not self.walkthrough and any(line.visual for line in lines):
+            raise ValueError("Per-line visuals belong to a walkthrough; set walkthrough.")
+        if len(self.groups) > 1 and not all(group.label for group in self.groups):
+            raise ValueError("Label each group when one derivation works out several results.")
+        return self
+
+
 Block = Annotated[
     TextBlock
     | DefinitionBlock
     | FormulaBlock
+    | DerivationBlock
     | TableBlock
     | DiagramBlock
     | CodeBlock
@@ -671,10 +720,22 @@ Block = Annotated[
 # Authored questions pair their text with at least one of these, because prose alone
 # makes code, structures and calculations hard to picture.
 VISUAL_KINDS = frozenset(
-    {"formula", "table", "diagram", "code", "plot", "uml", "files", "tree", "figure"}
+    {
+        "formula",
+        "derivation",
+        "table",
+        "diagram",
+        "code",
+        "plot",
+        "uml",
+        "files",
+        "tree",
+        "figure",
+    }
 )
 VISUAL_RULE = (
-    "a figure, code snippet, diagram, UML diagram, tree, formula, table or plot beside its text"
+    "a figure, code snippet, diagram, UML diagram, tree, formula, derivation, table or plot "
+    "beside its text"
 )
 
 
@@ -704,6 +765,12 @@ def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
         match block:
             case FormulaBlock():
                 value["mathml"] = block.mathml or compile_latex(block.latex or "")
+            case DerivationBlock():
+                for group, authored in zip(value["groups"], block.groups, strict=True):
+                    for line, source in zip(group["lines"], authored.lines, strict=True):
+                        line["mathml"] = compile_latex(source.latex)
+                        if source.visual is not None:
+                            line["visual"] = render_blocks((source.visual,))[0]
             case PlotBlock():
                 for line, pieces in zip(value["series"], block.sampled(), strict=True):
                     if pieces:

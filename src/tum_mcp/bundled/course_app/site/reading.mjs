@@ -1,10 +1,11 @@
 import data from './data.mjs';
-import { node, studyText, append, sourcesNote } from './dom.mjs';
+import { node, studyText, append, sourcesNote, plainText } from './dom.mjs';
 import { iconButton } from './navigation.mjs';
 import { renderPlot } from './plot.mjs';
 import { renderCode, languageName, lineSet, markLines } from './code.mjs';
 import { renderFiles, fileIcon } from './files.mjs';
 import { renderFormula } from './formulas.mjs';
+import { renderDerivation } from './derivation.mjs';
 import { renderUml } from './uml.mjs';
 import { drawGraph } from './graph.mjs';
 import { videoPanel } from './video.mjs';
@@ -20,7 +21,7 @@ function labelledItem(text) {
 
 function table(block) {
   const region = node('div', 'table-region');
-  region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', studyText('span', '', block.caption).textContent);
+  region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', plainText(block.caption));
   const grid = node('table'); grid.append(studyText('caption', '', block.caption));
   const headings = node('tr');
   for (const label of block.columns) { const th = studyText('th', '', label); th.scope = 'col'; headings.append(th); }
@@ -37,7 +38,7 @@ function table(block) {
 export function diagram(block) {
   const box = node('div', 'surface diagram');
   const nodes = new Map(block.nodes.map(item => [item.key, item]));
-  const { graph, groups } = drawGraph(block, studyText('span', '', block.description).textContent);
+  const { graph, groups } = drawGraph(block, plainText(block.description));
   const description = studyText('p', 'small', block.description);
   const state = node('div', 'diagram-state'); state.setAttribute('aria-live', 'polite');
   const caption = node('p'), frontier = node('p', 'small'), rows = node('dl', 'frame-state');
@@ -174,7 +175,7 @@ function figureBlock(block) {
         if (value) element.setAttribute(name, value.replace('url(#', `url(#${prefix}`));
       }
     }
-    svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', studyText('span', '', block.alt).textContent);
+    svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', plainText(block.alt));
     // Never wider than drawn, so a 16-unit label reads as 16 px text and only shrinks on narrow screens.
     svg.style.maxWidth = `${svg.viewBox.baseVal.width}px`;
     figure.append(svg);
@@ -188,7 +189,7 @@ function figureBlock(block) {
     });
     crop.observe(svg);
   } else {
-    const image = node('img'); image.src = block.image; image.alt = studyText('span', '', block.alt).textContent; image.loading = 'lazy';
+    const image = node('img'); image.src = block.image; image.alt = plainText(block.alt); image.loading = 'lazy';
     figure.append(image);
   }
   if (block.caption) figure.append(studyText('figcaption', 'small', block.caption));
@@ -205,7 +206,7 @@ function treeBlock(block) {
     if (item.children.length) entry.append(append(node('ul'), ...item.children.map(branch)));
     return entry;
   };
-  const tree = append(node('ul', 'tree'), branch(block.root)); tree.setAttribute('aria-label', studyText('span', '', block.title || 'Tree').textContent);
+  const tree = append(node('ul', 'tree'), branch(block.root)); tree.setAttribute('aria-label', plainText(block.title || 'Tree'));
   if (block.description) figure.append(studyText('figcaption', 'small', block.description));
   figure.append(tree);
   return figure;
@@ -239,6 +240,7 @@ export function renderBlockBody(block, { term = true } = {}) {
         break;
       case 'definition': root.append(append(node('dl', 'definitions'), definitionItem(block, term))); break;
       case 'formula': root.append(renderFormula(block)); break;
+      case 'derivation': root.append(renderDerivation(block, visual => renderBlockBody(visual))); break;
       case 'table': root.append(table(block)); break;
       case 'diagram': root.append(diagram(block)); break;
       case 'uml': root.append(renderUml(block)); break;

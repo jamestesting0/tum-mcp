@@ -1,4 +1,4 @@
-import { node, svgNode, studyText, button, append } from './dom.mjs';
+import { node, svgNode, studyText, button, append, plainText } from './dom.mjs';
 import { exam, concepts, topics, conceptBadge, quietLink } from './exam-state.mjs';
 
 const kinds = { requires: 'needed for', derives: 'leads to', contrasts: 'contrasts with' };
@@ -79,7 +79,7 @@ export function renderMap(onOpen) {
   const defs = svgNode('defs'), marker = svgNode('marker', { id: 'exam-arrow', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' });
   marker.append(svgNode('path', { d: 'M0 0L10 5L0 10z', class: 'exam-arrow-head' })); defs.append(marker); svg.append(defs);
   for (const column of map.columns) {
-    const label = svgNode('text', { x: column.x, y: 24, class: 'exam-map-column' }); label.textContent = studyText('span', '', column.title).textContent;
+    const label = svgNode('text', { x: column.x, y: 24, class: 'exam-map-column' }); label.textContent = plainText(column.title);
     svg.append(label);
   }
   const position = new Map(map.nodes.map(item => [item.key, item]));

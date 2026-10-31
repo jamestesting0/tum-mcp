@@ -1,4 +1,4 @@
-import { node, studyText, append, svgNode, button } from './dom.mjs';
+import { node, studyText, append, svgNode, button, plainText } from './dom.mjs';
 
 // Plots keep one look: a framed area, a dotted grid, accent lines told apart by dash pattern,
 // and a legend below. The drawing is made at the width it is shown at (1 unit = 1 CSS pixel) and
@@ -83,11 +83,11 @@ export function renderPlot(block) {
     const integer = block.series.every(line => !line.function && line.points.every(p => Number.isInteger(p.x)));
     const xTicks = block.x_ticks?.length ? block.x_ticks : niceTicks(block.x_min, block.x_max, narrow ? 4 : 6, integer);
     const yTicks = block.y_ticks?.length ? block.y_ticks : log ? logTicks(block.y_min, block.y_max) : niceTicks(block.y_min, block.y_max, narrow ? 4 : 5);
-    const yTitle = studyText('span', '', block.y_label).textContent, xTitle = studyText('span', '', block.x_label).textContent;
+    const yTitle = plainText(block.y_label), xTitle = plainText(block.x_label);
     // A short axis symbol sits upright above the axis; a longer title turns along it.
     const upright = yTitle.length <= 3;
     const tickRoom = Math.max(...yTicks.map(value => textWidth(tickText(value), TICK)));
-    const directRoom = direct ? Math.max(...labelled.map(line => textWidth(studyText('span', '', line.label).textContent, TICK))) + 14 : 0;
+    const directRoom = direct ? Math.max(...labelled.map(line => textWidth(plainText(line.label), TICK))) + 14 : 0;
     Object.assign(area, { left: Math.ceil(tickRoom + 14 + (upright ? 0 : 26)), right: W - 12 - directRoom, top: upright ? 30 : 14, bottom: H - 56 });
     const lo = log ? Math.log10(block.y_min) : block.y_min, hi = log ? Math.log10(block.y_max) : block.y_max;
     X = value => area.left + (value - block.x_min) / (block.x_max - block.x_min) * (area.right - area.left);
@@ -150,7 +150,7 @@ export function renderPlot(block) {
     // An area's value sits inside it, halfway up, beside the y axis rather than across it.
     const axisX = block.x_min < 0 && block.x_max > 0 && !pointAtZero ? X(0) : null;
     for (const { shade, points } of areaLabels) {
-      const label = studyText('span', '', shade.label).textContent, w = textWidth(label, TICK) + 8;
+      const label = plainText(shade.label), w = textWidth(label, TICK) + 8;
       const spot = x => {
         const near = points.reduce((best, p) => Math.abs(p.x - x) < Math.abs(best.x - x) ? p : best), cx = X(x), cy = (Y(base) + Y(near.y)) / 2;
         return { cx, cy, box: { l: cx - w / 2, r: cx + w / 2, t: cy - 10, b: cy + 10 } };
@@ -164,7 +164,7 @@ export function renderPlot(block) {
     }
     for (const note of block.notes || []) {
       above.append(svgNode('circle', { cx: X(note.x), cy: Y(note.y), r: 4.5, class: 'plot-dot plot-mark' }));
-      const label = studyText('span', '', note.text).textContent, w = textWidth(label, TICK) + 6, cx = X(note.x), cy = Y(note.y);
+      const label = plainText(note.text), w = textWidth(label, TICK) + 6, cx = X(note.x), cy = Y(note.y);
       // Corners first, then beside the point, each a little further out until one is clear.
       const spots = [8, 18, 30].flatMap(gap => [[1, -1], [-1, 1], [1, 1], [-1, -1], [1, 0], [-1, 0]].map(([sx, sy]) => {
         const t = sy > 0 ? cy + gap - 2 : sy < 0 ? cy - gap - 16 : cy - 9;
@@ -182,7 +182,7 @@ export function renderPlot(block) {
       let ceiling = area.bottom - 2;
       for (const end of ends.sort((p, q) => Y(q.y) - Y(p.y))) {
         const placed = Math.min(Y(end.y) + 5, ceiling); ceiling = placed - 18;
-        text(studyText('span', '', end.line.label).textContent, { x: area.right + 8, y: placed }, 'plot-strong');
+        text(plainText(end.line.label), { x: area.right + 8, y: placed }, 'plot-strong');
       }
     }
     graph.append(series);

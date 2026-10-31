@@ -50,8 +50,6 @@
           "blocks": [
             {
               "kind": "text",
-              "title": "The layer invariant",
-              "level": 1,
               "sources": [
                 "lecture-demo"
               ],
@@ -62,7 +60,7 @@
             {
               "kind": "formula",
               "title": "Distance on first discovery",
-              "level": 2,
+              "level": 1,
               "sources": [
                 "lecture-demo"
               ],
@@ -87,12 +85,12 @@
             {
               "kind": "text",
               "title": "When this guarantee holds",
-              "level": 3,
+              "level": 2,
               "sources": [
                 "lecture-demo"
               ],
               "paragraphs": [
-                "For A\u2013B\u2013C, the distances from A are 0, 1 and 2. This argument counts edges; it does not establish minimum total cost for arbitrary weighted edges."
+                "For A–B–C, the distances from A are 0, 1 and 2. This argument counts edges; it does not establish minimum total cost for arbitrary weighted edges."
               ]
             }
           ],

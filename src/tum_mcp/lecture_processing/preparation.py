@@ -238,6 +238,7 @@ def _evidence(
         chunks_reused=audio.reused,
         inference_s=audio.inference_s,
         issues=tuple(sorted(set(issues + list(audio.issues)))),
+        failures=audio.failures,
     )
     private_write(confined(directory, "transcript.json"), transcript_bytes)
     if imported is not None:

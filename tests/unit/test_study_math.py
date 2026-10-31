@@ -57,3 +57,17 @@ def test_formula_accepts_latex_or_legacy_mathml_without_ambiguous_inputs() -> No
     for expression in ({}, {"latex": "x^2", "mathml": markup}):
         with pytest.raises(ValidationError):
             FormulaBlock.model_validate(base | expression)
+
+
+def test_delimiter_bars_keep_text_size_and_only_left_right_bars_stretch() -> None:
+    # \lvert and | stay text-size delimiters without operator space; \mid keeps its space.
+    ket = compile_latex(r"\tfrac{1}{2}\bigl(\lvert 0\rangle\bigr)")
+    assert '<mo stretchy="false" lspace="0" rspace="0">&#x0007C;</mo>' in ket
+    assert '<mo stretchy="false">&#x02223;</mo>' in compile_latex(r"P(A \mid B)")
+    assert 'stretchy="true"' in compile_latex(r"\left| \frac{1}{2} \right|")
+    # Bare bars, the inline slash and a ket's sign label take no operator space either.
+    pair = compile_latex(r"(|00\rangle + |11\rangle)/\sqrt{2}")
+    assert pair.count('lspace="0" rspace="0">&#x0007C;') == 2
+    assert '<mo lspace="0" rspace="0">&#x0002F;</mo>' in pair
+    assert "<mi>&#x0002B;</mi><mi>&#x027E9;</mi>" in compile_latex(r"|+\rangle")
+    assert "<mo>&#x0002B;</mo>" in pair

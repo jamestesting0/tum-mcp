@@ -8,6 +8,36 @@
   content, including cached text; enrollment prompts and denied courses stay blocked.
 - Ship timezone data so current-semester detection also works on Windows and other
   hosts without a system IANA timezone database.
+- Lecture preparation no longer fails on recordings whose AAC timestamps drift slightly:
+  a window decoded a few samples short now pads that jitter instead of rejecting every
+  chunk. Each failed preflight sample or chunk is recorded in the receipt with its time,
+  stage (acquire, cache, decode, analyze, recognize, validate) and reason, and identical
+  failures of every preflight sample stop before the full recording is downloaded.
+- New `derivation` block: working shown one transformation per line, aligned on its
+  relation, each line with its reason and one labelled group per requested result. With
+  `walkthrough` it steps through the lines with Previous and Next, keeps earlier lines,
+  draws the state each line reaches, and offers Show all steps. Usable in Study, exercise
+  Compare answers, Exam and Lecture.
+- Mathematics is typeset by the bundled KaTeX 0.19.1, as in Notion: TeX fonts, square
+  roots, kets and spacing, text-size inline vectors and matrices, and long inline math
+  that wraps after its relations on a phone. The build still validates every expression
+  and its MathML stays as the fallback, now without stray operator space around bars,
+  slashes and ket labels; `\left( \right)` fences now compile.
+- `study report` flags described objects (`described_object`), large inline matrices
+  (`tall_inline_math`), results computed inside one sentence in Compare
+  (`compressed_working`), openings that introduce several symbols before any example
+  (`dense_introduction`), worked cases without their general rule
+  (`example_without_rule`) and symbol-dense identities in prose (`unexplained_identity`).
+- review-course separates purposeful reinforcement from duplication, walks each item as
+  a first encounter, adds checks for reminders at the point of use, unpacked notation,
+  shown objects, explained working and general rules, and calibrates them on two subjects.
+  prepare-lecture adds a teaching-value pass for lecture visuals.
+- Diagrams, UML, plots and figures take the background of the card that holds them
+  instead of a darker inset.
+- A Lecture section's sources sit on its title row when its first passage is untitled.
+  Review scorecards accept the solution, transfer, Compare and Explore visual ids the
+  render check emits, and a review saved with no scores reports every dimension
+  unscored instead of failing.
 
 ## 0.16.0 — 2026-10-31
 

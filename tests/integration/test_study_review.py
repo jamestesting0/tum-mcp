@@ -140,6 +140,13 @@ def test_older_reviews_still_load_and_the_course_review_follows_the_outline(
     assert {tuple(entry["dimensions"]) for entry in first["unscored_dimensions"]} == {
         ("intuition", "organization", "redundancy")
     }
+    # A review saved with no scores at all lists every dimension instead of failing.
+    score(project, [reviews[0] | {"scores": {}}, *older[1:]])
+    empty = report(project)
+    assert empty["passed"] is False
+    assert {"item": reviews[0]["item"], "dimensions": list(DIMENSIONS)} in empty[
+        "unscored_dimensions"
+    ]
     # Study and Exercises are both prepared, so the course review also scores integration.
     course = first["course"]
     assert course["workspaces"] == ["study", "exercises"] and "integration" in course["dimensions"]
@@ -177,3 +184,70 @@ def test_older_reviews_still_load_and_the_course_review_follows_the_outline(
     content["units"][:2] = content["units"][1::-1]
     content_path.write_text(json.dumps(content), encoding="utf-8")
     assert report(project)["course"]["status"] == "stale"
+
+
+def test_every_solution_transfer_compare_and_explore_visual_id_can_be_scored() -> None:
+    from importlib.resources import files
+
+    from tum_mcp.exercise_checks import SelfCheck
+    from tum_mcp.exercise_content import ExerciseContent, SolutionAnswer, TransferTask
+    from tum_mcp.study_content import StudyContent, TableBlock
+    from tum_mcp.study_review import VisualReview
+    from tum_mcp.study_visuals import visual_ids
+
+    example = files("tum_mcp") / "bundled/course_app/example"
+    content = StudyContent.model_validate_json((example / "content.json").read_bytes())
+    exercises = ExerciseContent.model_validate_json((example / "exercises.json").read_bytes())
+    unit = next(unit for unit in content.units if unit.explore)
+    group = exercises.sets[0]
+    exercise = group.exercises[0]
+    table = TableBlock(
+        kind="table",
+        columns=("State", "Cost"),
+        rows=(("A", "0"),),
+        caption="Synthetic trace",
+        sources=(unit.explore[0].sources[0].key,),
+        pages="1",
+    )
+    content = content.model_copy(
+        update={
+            "units": tuple(
+                item.model_copy(
+                    update={"explore": (item.explore[0].model_copy(update={"blocks": (table,)}),)}
+                )
+                if item.key == unit.key
+                else item
+                for item in content.units
+            )
+        }
+    )
+    answer = table.model_copy(update={"sources": (exercise.sources[0].key,)})
+    exercise = exercise.model_copy(
+        update={
+            "solution": exercise.solution.model_copy(
+                update={"answers": (SolutionAnswer(blocks=(answer,)),)}
+            ),
+            "transfer": TransferTask(prompt="Change one edge cost.", answer=(answer,)),
+            "steps": (
+                exercise.steps[0].model_copy(
+                    update={
+                        "check": SelfCheck(
+                            kind="self_check",
+                            rubric=("Compare accumulated costs.",),
+                            model_answer=(answer,),
+                        )
+                    }
+                ),
+            ),
+        }
+    )
+    exercises = exercises.model_copy(
+        update={"sets": (group.model_copy(update={"exercises": (exercise,)}),)}
+    )
+    keys = {key for values in visual_ids(content, exercises).values() for key in values}
+    assert {"solution", "transfer", "compare", "explore"} <= {key.split(":")[0] for key in keys}
+    # Every emitted id is accepted unchanged, and a malformed one is still rejected.
+    scored = [VisualReview(visual=key, scores={name: 3 for name in CRITERIA}) for key in keys]
+    assert {item.visual for item in scored} == keys
+    with pytest.raises(ValueError):
+        VisualReview(visual="answer:2", scores={name: 3 for name in CRITERIA})

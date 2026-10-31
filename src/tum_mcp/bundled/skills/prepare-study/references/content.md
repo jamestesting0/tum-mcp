@@ -40,7 +40,7 @@ changed optional reviews and comments.
 Every symbol, variable, formula and calculation in teaching text is inline LaTeX in
 `\( ... \)`: paragraphs, steps, points, objectives, table cells, symbol definitions,
 card faces, question options and feedback. JSON escapes the backslashes:
-`"Use \\(v_i\\)."`. Build validates and compiles them locally to MathML.
+`"Use \\(v_i\\)."`. Build validates them; the app typesets them with KaTeX, as Notion does.
 
 - Greek letters, relations and operators: `\(\gamma\)`, `\(0 \le \gamma < 1\)`,
   `\(x \neq y\)`, `\(\forall x\, P(x)\)`, never γ, ≤, ≠ or ∀ as characters.
@@ -52,6 +52,16 @@ card faces, question options and feedback. JSON escapes the backslashes:
 - Once a unit introduces a notation, write its formulas in it, not in words: `\(\neg P
   \lor Q\)`, not "not P or Q"; `\(P(R \mid C)\)`, not "rain given cloud". `study report`
   cannot see a formula spelled out in words.
+
+Show the object, never describe it: write \(P = \begin{pmatrix}1 & 0\\ 0 & 0\end{pmatrix}\),
+not "the diagonal matrix with entries 1, 0"; a vector, table or graph likewise appears
+itself, and the sentence says what to notice in it. `study report` flags described objects
+as `described_object`. Inside a sentence, a column vector of up to three entries or a
+matrix up to 2x2 reads well: the line grows to fit it, and long inline math wraps after
+`=` or `+`. Write a ket as `\lvert 0\rangle` or `|0\rangle` and a square root as
+`\sqrt{2}`; KaTeX sets them as in TeX. Anything larger goes in a formula block (`tall_inline_math`).
+Use `\lvert`/`\rvert` and `\mid` for bars; `\left( ... \right)` stretches fences around
+a fraction.
 
 Convert complete mathematical tokens, never letters inside ordinary words, and reread
 the prose after notation edits. Long equations belong in formula blocks. Keep source
@@ -97,7 +107,8 @@ on; citations open there, and later pages can differ from the printed slide numb
 | --- | --- |
 | text | Paragraphs, numbered `steps` and/or points; never an empty explanation. Paragraphs frame (one or two sentences); a procedure is steps and conditions are points. An item opening with a short `Label: ` shows the label in bold. |
 | definition | A `term`, the `statement` and optional `conditions`, placed right after the passage that introduces the term: it appears inside that section as the term above its full-width meaning, with no heading of its own. Give it a `key`. Write `{{term}}` in any later text, in every workspace, to let students open it in place; the build rejects unknown terms. |
-| formula | LaTeX without dollar delimiters (JSON-escaped, e.g. `"\\frac{a}{b}"`), a plain-language reading, symbol definitions and conditions. Unsupported macros, links and unsafe markup fail validation. Keep `mathml` only for legacy input; never supply both. |
+| formula | LaTeX without dollar delimiters (JSON-escaped, e.g. `"\\frac{a}{b}"`), a plain-language reading, symbol definitions and conditions. A reusable rule states its domain (\(a^2+b^2 > 0\)) and when to reach for it in its `conditions`. Unsupported macros, links and unsafe markup fail validation. Keep `mathml` only for legacy input; never supply both. |
+| derivation | Working the student should be able to redo: `groups` of `lines`, each line one meaningful transformation as LaTeX (a line opening with `=` or another relation continues the line above, and the app aligns the lines on their relation) with a short `reason` saying which rule, substitution or condition makes it follow. When one answer gives several results, give each its own group with a `label` naming the result. Do not split a trivial result into ceremony. Set `walkthrough: true` to step through the lines with Previous and Next (earlier lines stay visible, "Show all steps" reads everything); in a walkthrough a line may carry a `visual` (a table, diagram, plot or figure block) drawing the state that line reaches, such as amplitudes or a vector on the Bloch sphere. Use a walkthrough when several dependent transformations or a changing state are the point; never as decoration. A walkthrough never asks the student to predict: prediction belongs in an exercise step. |
 | table | Column labels, rectangular rows and a meaningful caption. |
 | code | Language, literal code and an explanation; the app highlights common languages. Label authored examples; never execute downloaded code. Add a `walkthrough` (stops of `lines` such as `"5-6"` and a short `note`) when the reader should follow the code part by part: one idea per stop, at most about six stops. |
 | diagram | Nodes placed in lattice cells (`row` and `col`, 0 to 5, one node per cell), optional directed or labelled edges (self-loops and two-way pairs allowed) and frames; arrange them as in [diagrams](diagrams.md). The app sizes, spaces and routes everything. Circles hold up to four characters; use boxes for longer labels. Frames name active, frontier and visited nodes, highlight `edges`, and list up to six `state` rows (label and value, such as a queue or a domain) that the app shows beside the drawing, marking what changed; the caption says why the step happens. `state_labels: caption` omits traversal bookkeeping for concept maps. A single-frame diagram shows only its caption; the description becomes the image's accessible name. |

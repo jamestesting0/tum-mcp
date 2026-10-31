@@ -7,6 +7,20 @@ from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_validator
 from tum_mcp.lecture_evidence import Interval, Seconds
 from tum_mcp.settings import Frozen
 
+# Where a preflight sample or chunk failed: fetching media, reading a checkpoint, decoding
+# PCM, measuring audio quality, running the recognizer or checking what it returned.
+AudioStage = Literal["acquire", "cache", "decode", "analyze", "recognize", "validate"]
+
+
+class AudioFailure(Frozen):
+    """A failed span's stage and reason, from code-authored messages only (no media or text)."""
+
+    scope: str = Field(pattern=r"^(preflight|chunk_[0-9]+)$")
+    interval: Interval
+    stage: AudioStage
+    code: str = Field(pattern=r"^[a-z_]{1,40}$")
+    reason: str = Field(pattern=r"^[a-z_]{1,80}$")
+
 
 class SpeechWindow(Frozen):
     start_s: Seconds

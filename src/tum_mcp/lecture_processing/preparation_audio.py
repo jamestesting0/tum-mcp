@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 import tempfile
 import time
 from collections.abc import Callable
@@ -12,10 +13,10 @@ from pydantic import ValidationError
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_evidence import Interval, merge_intervals
 from tum_mcp.lecture_processing.audio import render_audio
-from tum_mcp.lecture_processing.chunk_store import Chunk, process_chunk
+from tum_mcp.lecture_processing.chunk_store import Chunk, StagedError, process_chunk, staged
 from tum_mcp.lecture_processing.media import AcquiredSegment
 from tum_mcp.lecture_processing.runtime import recognition_profile
-from tum_mcp.lecture_processing.transcript_models import Passage
+from tum_mcp.lecture_processing.transcript_models import AudioFailure, Passage
 from tum_mcp.lecture_processing.transcription import (
     chunks,
     deduplicate,
@@ -33,6 +34,7 @@ class AudioResult(Frozen):
     processed: tuple[Interval, ...] = ()
     uncertain: tuple[Interval, ...] = ()
     issues: tuple[str, ...] = ()
+    failures: tuple[AudioFailure, ...] = ()
     reused: int = 0
     inference_s: float = 0
 
@@ -64,19 +66,21 @@ def run_span(
     key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
     path = confined(directory, f"prepared-{key}.json")
     if path.is_file():
-        if path.stat().st_size > 8 * 1024**2:
-            raise CampusError(Code.INVALID_RESPONSE, "Audio checkpoint exceeds its bound.")
-        try:
-            previous = Chunk.model_validate_json(path.read_bytes())
-            if previous.interval == span:
-                return previous, True
-        except ValidationError:
-            raise CampusError(Code.INVALID_RESPONSE, "Audio checkpoint is malformed.") from None
+        previous = staged("cache", _checkpoint, path)
+        if previous.interval == span:
+            return previous, True
     with tempfile.TemporaryDirectory(prefix="audio-", dir=directory) as folder:
-        audio = render_audio(segments, span, Path(folder))
+        audio = staged("decode", render_audio, segments, span, Path(folder))
         try:
-            chunk, cached = process_chunk(
-                audio, span, validity, directory / "chunks", revision, language=language
+            chunk, cached = staged(
+                "recognize",
+                process_chunk,
+                audio,
+                span,
+                validity,
+                directory / "chunks",
+                revision,
+                language=language,
             )
         except CampusError as error:
             if error.code in {
@@ -94,6 +98,27 @@ def run_span(
     return chunk, cached
 
 
+def _checkpoint(path: Path) -> Chunk:
+    if path.stat().st_size > 8 * 1024**2:
+        raise CampusError(Code.INVALID_RESPONSE, "Audio checkpoint exceeds its bound.")
+    try:
+        return Chunk.model_validate_json(path.read_bytes())
+    except ValidationError:
+        raise CampusError(Code.INVALID_RESPONSE, "Audio checkpoint is malformed.") from None
+
+
+def failure(scope: str, span: Interval, error: CampusError) -> AudioFailure:
+    """Name a failed span's stage and reason from the code-authored message alone."""
+    words = re.findall(r"[a-z]+", error.message.split(".")[0].lower())[:8]
+    return AudioFailure(
+        scope=scope,
+        interval=span,
+        stage=error.stage if isinstance(error, StagedError) else "acquire",
+        code=error.code.value.lower(),
+        reason="_".join(words) or "unspecified",
+    )
+
+
 def prepare_audio(
     validity: Validity,
     directory: Path,
@@ -105,6 +130,7 @@ def prepare_audio(
 ) -> AudioResult:
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     issues: list[str] = []
+    failures: list[AudioFailure] = []
     result: list[Passage] = []
     processed: list[Interval] = []
     uncertain: list[Interval] = []
@@ -112,10 +138,12 @@ def prepare_audio(
     inference_s = 0.0
     detected: list[str] = []
     # Samples never invalidate a lecture. Their media is reused during the full scan.
-    for span in sample_spans(validity):
+    samples = sample_spans(validity)
+    for span in samples:
         try:
             started = time.monotonic()
-            sample, cached = run_span(validity, span, acquire(span), directory, revision, language)
+            segments = staged("acquire", acquire, span)
+            sample, cached = run_span(validity, span, segments, directory, revision, language)
             inference_s += time.monotonic() - started if not cached else 0
             reused += cached
             if not sample.quality.uncertain and sample.passages and not sample.issues:
@@ -125,13 +153,28 @@ def prepare_audio(
         except RecognizerUnavailable as error:
             return AudioResult(issues=(f"recognizer_{error.code.value.lower()}",))
         except CampusError as error:
-            issues.append(f"preflight_{error.code.value.lower()}")
+            failures.append(failure("preflight", span, error))
+            issues.append(f"preflight_{failures[-1].stage}_{failures[-1].code}")
+    # Every sample failing the same way is a shared cause (media, decoder or recognizer
+    # output), so the full scan would fail identically after downloading the whole lecture.
+    if (
+        len(samples) > 1
+        and len(failures) == len(samples)
+        and len({(item.stage, item.code, item.reason) for item in failures}) == 1
+    ):
+        return AudioResult(
+            issues=tuple(sorted({*issues, "stopped_after_preflight"})),
+            failures=tuple(failures),
+            reused=reused,
+            inference_s=inference_s,
+        )
     expected = language or (max(set(detected), key=detected.count) if detected else "")
     windows = chunks(validity)
     for index, span in enumerate(windows):
         try:
             started = time.monotonic()
-            chunk, cached = run_span(validity, span, acquire(span), directory, revision, expected)
+            segments = staged("acquire", acquire, span)
+            chunk, cached = run_span(validity, span, segments, directory, revision, expected)
             inference_s += time.monotonic() - started if not cached else 0
             reused += cached
             owned = Interval(
@@ -153,7 +196,8 @@ def prepare_audio(
             issues.append(f"recognizer_{error.code.value.lower()}")
             break
         except CampusError as error:
-            issues.append(f"chunk_{index}_{error.code.value.lower()}")
+            failures.append(failure(f"chunk_{index}", span, error))
+            issues.append(f"chunk_{index}_{failures[-1].stage}_{failures[-1].code}")
         if progress is not None:
             progress(
                 AudioResult(
@@ -167,6 +211,7 @@ def prepare_audio(
         processed=merge_intervals(tuple(processed)),
         uncertain=merge_intervals(tuple(uncertain)),
         issues=tuple(sorted(set(issues))),
+        failures=tuple(failures),
         reused=reused,
         inference_s=inference_s,
     )

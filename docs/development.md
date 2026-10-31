@@ -175,8 +175,10 @@ material remain untrusted data for the skill.
 
 ## Study renderer
 
-Author `app/content.json` and optional `app/exercises.json`; legacy `study/` remains supported. Formula blocks use LaTeX compiled locally into safe
-native MathML; legacy MathML remains accepted. Unit `path` labels group the outline
+Author `app/content.json` and optional `app/exercises.json`; legacy `study/` remains supported. Formula blocks and inline math are LaTeX, validated by
+compiling it locally into safe MathML; the app typesets the validated LaTeX with the
+vendored KaTeX (`katex.min.js`, `trust` off, rendered through DOM APIs so the strict CSP
+holds) and falls back to that MathML. Legacy MathML remains accepted. Unit `path` labels group the outline
 without changing learning-progress revisions. Shared modules render all units;
 content changes do not require a framework or per-unit HTML.
 
