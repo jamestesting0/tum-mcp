@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.15.0 — 2026-10-31
 
 - The managed block in a course project's `AGENTS.md` is now an agent guide. It tells the
   agent that it works for a student of the course, which skill handles which kind of
