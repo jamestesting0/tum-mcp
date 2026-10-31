@@ -28,15 +28,27 @@ scores Organization and Redundancy; the rules come from prepare-study's
    pitfall before its method, a definition far from the passage that needs it, or a
    recap in the middle is a finding.
 5. Exercises: the parts appear in the original order, every step names its `part`, and
-   each part's steps build on each other without repeating a given.
+   each part's steps build on each other. A step may restate the one given it uses, so it
+   can be read without scrolling back; restating every given in every step is a finding.
 6. Lay each passage beside the picture, table or formula it refers to. Text that
    restates what the picture shows, instead of saying why or what to look at, is a
    finding; so is a caption that lists the picture's content instead of its point.
 7. Compare the cards and questions of the item with each other: two that ask the same
    decision in the same form are a finding. A recap of two to four points and a card
    that retrieves a lesson's idea are not.
-8. Look for repeated labels: a citation in the text, an assumption stated twice, an
-   instruction the app already gives.
+8. Look for repeated labels: a citation in the text, an assumption stated twice in the
+   same place, an instruction the app already gives.
+9. Separate reinforcement from duplication before you score a repeat. Ask what the repeat
+   does for a student meeting the page for the first time:
+   - **Keep** a one-line reminder of a prerequisite where it is used, a recap in different
+     words before a hard step, a second example or non-example, or a revisit that takes the
+     idea further. It is short and points to the idea's home.
+   - **Fix** a passage that explains the same idea in full again, two adjacent passages in
+     the same form, or text that restates its picture.
+   Name what the repeat costs or gives: "`block:7` re-derives the conjugate trick from
+   `block:2` in full; replace it with one line and a link" versus "`block:7` reminds the
+   student that \(z^*z = |z|^2\) before using it: reinforcement, keep". The
+   [structure gallery](structure-gallery.md) has calibrated cases of both.
 
 ## Findings
 

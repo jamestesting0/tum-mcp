@@ -16,6 +16,8 @@ MATH_TAGS = set(
 )
 MATH_ATTRS = {
     "display",
+    # \left and \right mark their fences prefix and postfix.
+    "form",
     "mathvariant",
     "displaystyle",
     "stretchy",
@@ -109,7 +111,29 @@ def compile_latex(value: str) -> str:
         result = convert(value, display="block")
     except PARSE_ERRORS:
         raise ValueError("Cannot compile this LaTeX expression.") from None
-    return safe_mathml(result)
+    # \lvert, \vert, \| and \mid keep their text size, as in TeX and KaTeX; only \left and \right
+    # (which carry stretchy="true") grow. Browsers otherwise stretch them to a whole fraction.
+    # A bare bar is a delimiter (|0>, |a|, P(A|B)) and a slash divides inline, so neither takes
+    # operator space, as in TeX; \mid keeps its own. Browsers otherwise space "( | 00>".
+    result = DELIMITER_BAR.sub(r'<mo stretchy="false" lspace="0" rspace="0">\1</mo>', result)
+    result = SOLIDUS.sub('<mo lspace="0" rspace="0">&#x0002F;</mo>', result)
+    # A sign that labels a ket or bra (|+>, <-|) is part of the label, not an operator.
+    result = KET_SIGN.sub(r"\1<mi>\2</mi>\3", result)
+    result = BRA_SIGN.sub(r"\1<mi>\2</mi>\3", result)
+    return safe_mathml(RELATION_BAR.sub(r'<mo stretchy="false">\1</mo>', result))
+
+
+DELIMITER_BAR = re.compile(r'<mo(?: stretchy="false")?>(&#x0007C;|&#x02016;)</mo>')
+RELATION_BAR = re.compile(r"<mo>(&#x02223;|&#x02225;)</mo>")
+SOLIDUS = re.compile(r"<mo>&#x0002F;</mo>")
+KET_SIGN = re.compile(
+    r'(<mo stretchy="false" lspace="0" rspace="0">&#x0007C;</mo>)<mo>(&#x0002B;|&#x02212;)</mo>'
+    r"(<mi>&#x027E9;</mi>)"
+)
+BRA_SIGN = re.compile(
+    r"(<mi>&#x027E8;</mi>)<mo>(&#x0002B;|&#x02212;)</mo>"
+    r'(<mo stretchy="false" lspace="0" rspace="0">&#x0007C;</mo>)'
+)
 
 
 # Inline code `...` and inline math \( ... \), scanned left to right as the app does, so

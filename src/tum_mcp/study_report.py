@@ -46,6 +46,36 @@ PLAIN_MATH = re.compile(
     r"|\b[A-Z][A-Za-z]{0,2}\([^()\n]*[|=,][^()\n]*\)"
     r"|(?<![\w.])[A-Za-z]\*?(?:\([^()\n]{1,12}\))?\s*[=<>]\s*[-\w(]"
 )
+# Text that spells out an object the student should see: "the diagonal matrix with entries 1, 0",
+# "a vector whose components are ...", "the graph has edges ...".
+# Only a listing of the object's own values counts; "a graph with n vertices" states a size.
+DESCRIBED_OBJECT = re.compile(
+    r"\b(?:matrix|matrices|vectors?|tuple|table|graph|tree|grid|array)\b[^.;:]{0,30}?"
+    r"\b(?:with|whose|has|have|having|contains?)\b[^.;:]{0,25}?"
+    r"\b(?:entries|entry|components?|elements?|rows?|columns?|edges?|cells?|values)\b"
+    r"\s*(?:are|is|of|equal to|=|:)?\s*(?:\\\(|[-\u2212]?\d|[A-Z]\s*[-\u2013\u2192]\s*[A-Z]\b)",
+    re.IGNORECASE,
+)
+# Inline vectors and matrices read well up to a 2x2 or a short column; larger ones need a
+# display formula, as Notion's "turn into block equation".
+INLINE_MATRIX = re.compile(
+    r"\\begin\{([pbvBV]?matrix|smallmatrix|array)\}(.*?)\\end\{\1\}", re.DOTALL
+)
+# An identity over this many distinct symbols inside a sentence asks the reader to decode
+# notation and follow the claim at once: (<a| (x) <b|)(|c> (x) |d>) = <a|c><b|d>.
+IDENTITY_SYMBOLS = 4
+INLINE_MATRIX_ROWS = 3
+INLINE_MATRIX_COLUMNS = 2
+# Greek letters name quantities a newcomer must be told about before relying on them.
+GREEK = re.compile(
+    r"\\(?:var)?(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|"
+    r"rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|"
+    r"Omega)(?![A-Za-z])"
+)
+# A unit's opening may introduce a few new symbols and terms; more before any concrete case,
+# picture or example leaves a first-time reader holding names they cannot yet picture.
+OPENING_NEW_IDEAS = 3
+CONCRETE_KINDS = frozenset({"figure", "diagram", "plot", "table", "derivation", "code", "uml"})
 NON_PROSE = frozenset({"key", "sources", "pages", "kind", "image", "language", "course_key"})
 DRAWN = frozenset({"diagram", "plot", "figure", "code"})
 TITLE_CITATION = re.compile(r"\b(?:slides?|pages?|p\.)\s*\d", re.IGNORECASE)
@@ -146,7 +176,38 @@ def quality_flags(
             f"{len(units)} units in one flat list; give each a `path` such as its lecture, "
             "week or topic so the outline folds them into groups.",
         )
+    seen_symbols: set[str] = set()
+    seen_terms: set[str] = set()
     for unit in units:
+        opening, symbols, terms = _opening(unit.blocks, seen_symbols, seen_terms)
+        if len(opening) >= OPENING_NEW_IDEAS:
+            flag(
+                unit.key,
+                "dense_introduction",
+                f"The opening introduces {', '.join(opening[:6])} before any picture, example "
+                "or worked case. Say first what the idea describes and why it matters, tie it to "
+                "what the reader already knows, then name its parts one at a time.",
+            )
+        seen_symbols |= symbols
+        seen_terms |= terms
+        worked = any(
+            block.kind == "derivation"
+            or (
+                isinstance(block, TextBlock)
+                and any(
+                    "=" in step and re.search(r"\d", step) for step in (*block.steps, *block.points)
+                )
+            )
+            for block in unit.blocks
+        )
+        if worked and not any(block.kind == "formula" for block in unit.blocks):
+            flag(
+                unit.key,
+                "example_without_rule",
+                "The lesson works numbers through but states no general rule. Give the reusable "
+                "formula as a formula block with its symbols and conditions, link it to the "
+                "worked case, and apply it once more to different numbers.",
+            )
         if len(unit.blocks) < median / 2:
             flag(
                 unit.key,
@@ -376,6 +437,27 @@ def quality_flags(
                     targets = sum(c.kind != "given" for row in step.check.rows for c in row.cells)
                 if step.check and step.check.kind == "graph":
                     targets = len(step.check.answers[0])
+                # Compare answers that list several computed results in one running sentence
+                # leave the student nothing to compare their working against.
+                answer = (
+                    step.check.model_answer
+                    if step.check
+                    and step.check.kind == "self_check"
+                    and isinstance(step.check.model_answer, tuple)
+                    else ()
+                )
+                if any(
+                    isinstance(block, TextBlock)
+                    and any(part.count("=") >= 3 for part in (*block.paragraphs, *block.points))
+                    for block in (*step.blocks, *answer)
+                ):
+                    flag(
+                        item,
+                        "compressed_working",
+                        "Several results are computed inside one sentence; show the working as "
+                        "a derivation block, one transformation per line with its reason, and "
+                        "one labelled group per requested result.",
+                    )
                 if targets >= 6 and len(step.hints) <= 1:
                     flag(
                         item,
@@ -391,10 +473,51 @@ def quality_flags(
             for error in arithmetic_errors(text):
                 flag(f"{name}:{path}", "arithmetic", error)
         plain: dict[str, list[str]] = {}
+        identities: dict[str, list[str]] = {}
+        described: dict[str, list[str]] = {}
+        tall: dict[str, list[str]] = {}
         for item, text in _prose(value):
-            found = PLAIN_MATH.search(INLINE_SPANS.sub(" ", text))
+            prose = INLINE_SPANS.sub(" ", text)
+            found = PLAIN_MATH.search(prose)
             if found:
                 plain.setdefault(item, []).append(found[0])
+            if spelled := DESCRIBED_OBJECT.search(text):
+                described.setdefault(item, []).append(spelled[0])
+            for expression in INLINE_SPANS.finditer(text):
+                latex = expression[1] or ""
+                letters = set(re.findall(r"(?<![\\A-Za-z])[A-Za-z](?![A-Za-z])", latex))
+                if "=" in latex and len(letters) >= IDENTITY_SYMBOLS:
+                    identities.setdefault(item, []).append(latex[:60])
+                for matrix in INLINE_MATRIX.finditer(latex):
+                    rows = [row for row in re.split(r"\\\\", matrix[2]) if row.strip()]
+                    columns = max(row.count("&") + 1 for row in rows) if rows else 0
+                    if len(rows) > INLINE_MATRIX_ROWS or columns > INLINE_MATRIX_COLUMNS:
+                        tall.setdefault(item, []).append(f"{len(rows)}x{columns}")
+        for item, samples in identities.items():
+            flag(
+                item,
+                "unexplained_identity",
+                f"{len(samples)} general identity(ies) with several symbols inside a sentence, "
+                f"such as '\\({samples[0]}\\)'. Say what each symbol stands for where it is "
+                "used, show the worked case first, then give the identity as a formula block "
+                "with its symbols and conditions.",
+            )
+        for item, samples in described.items():
+            flag(
+                item,
+                "described_object",
+                f"{len(samples)} text(s) spell out an object instead of showing it, such as "
+                f"'{samples[0]}'. Show the matrix, vector, table or graph itself and let the "
+                "text say what to notice in it.",
+            )
+        for item, samples in tall.items():
+            flag(
+                item,
+                "tall_inline_math",
+                f"{len(samples)} inline matrix or vector(s) of size {samples[0]} inside a "
+                "sentence; set anything larger than a 2x2 matrix or a three-entry column as a "
+                "formula block.",
+            )
         for item, samples in plain.items():
             flag(
                 item,
@@ -404,6 +527,44 @@ def quality_flags(
                 r"\(P(A \mid B)\), \(\gamma\), \(V = 3\).",
             )
     return flags
+
+
+def _texts(block) -> Iterator[str]:
+    match block:
+        case TextBlock():
+            yield from (*block.paragraphs, *block.steps, *block.points)
+        case _ if block.kind == "definition":
+            yield block.statement
+        case _:
+            return
+
+
+def _opening(
+    blocks: tuple, seen_symbols: set[str], seen_terms: set[str]
+) -> tuple[list[str], set[str], set[str]]:
+    """New symbols and terms met before the unit's first concrete block, and all it introduces."""
+    opening: list[str] = []
+    symbols: set[str] = set()
+    terms: set[str] = set()
+    concrete = False
+    for block in blocks:
+        concrete = concrete or block.kind in CONCRETE_KINDS
+        found: list[str] = []
+        if block.kind == "definition":
+            found.append(f"'{block.term}'")
+            terms.add(block.term.casefold())
+        if block.kind == "formula":
+            for symbol in block.symbols:
+                symbols.update(GREEK.findall(symbol.symbol))
+        for text in _texts(block):
+            for expression in INLINE_SPANS.finditer(text):
+                for name in GREEK.findall(expression[1] or ""):
+                    if name not in seen_symbols and name not in symbols:
+                        found.append(rf"\(\{name}\)")
+                    symbols.add(name)
+        if not concrete:
+            opening += [item for item in found if item not in opening]
+    return opening, symbols, terms - seen_terms
 
 
 def _prose(value: JsonValue, item: str = "") -> Iterator[tuple[str, str]]:

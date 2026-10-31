@@ -36,9 +36,13 @@ when connecting, preparing missing evidence or choosing a critical frame.
    topic/time map. Compare it with supplied or verified slides/notes before
    selecting points. Do not call something absent from materials you could not
    inspect. Follow [authoring](references/authoring.md) for selection and reasoning.
-4. Resolve critical uncertainty from text and materials first. Request only the
-   few recording frames needed for live writing, notation or a demonstration.
-   No automatic preview download, frame-by-frame vision or screenshot quota.
+4. Resolve critical uncertainty from text and materials first. Then make the
+   teaching-value visual pass in [authoring](references/authoring.md#visuals): where
+   the lecturer's figure, board or demonstration carries a difficult explanation,
+   show it near the passage, preferring the course-material figure (cited by page),
+   then a targeted recording frame, then a drawn diagram. Request only the few frames
+   these two needs justify. No automatic preview download, frame-by-frame vision or
+   screenshot quota; a section that a picture would not help stays text-only.
    Added context/diagrams can explain a difficult point when needed. Keep their
    attribution checks private; the reading UI has no AI-added/provenance labels.
    Never attribute unsupported additions to the professor or present generated

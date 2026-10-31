@@ -114,10 +114,18 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
     assert "meta_reference" in {
         flag["flag"] for flag in quality_flags(None, ExerciseContent.model_validate(guided))
     }
+    # A Compare answer listing several computed results in one sentence asks for working.
+    step["check"]["model_answer"][0]["paragraphs"] = [
+        r"\(a+b = 5+3i\), \(ab = 10+5i\), \(1/a = (3-4i)/25\) and \(|a| = 5\)."
+    ]
+    assert "compressed_working" in {
+        flag["flag"] for flag in quality_flags(None, ExerciseContent.model_validate(guided))
+    }
     clean = quality_flags(
         StudyContent.model_validate(study()), ExerciseContent.model_validate(exercises())
     )
     assert not {flag["flag"] for flag in clean} & {
+        "compressed_working",
         "dense_paragraph",
         "unanswered_table",
         "arithmetic",
@@ -206,6 +214,27 @@ def test_mathematics_typed_as_plain_text_is_flagged_and_latex_passes() -> None:
     assert key not in {f["item"] for f in flags if f["flag"] == "plain_math"}
 
 
+def test_spelled_out_objects_and_large_inline_matrices_are_flagged() -> None:
+    # Given a lesson that describes a matrix in words and puts a 3x3 matrix inside a sentence.
+    content = study()
+    key = content["units"][0]["key"]
+    content["units"][0]["blocks"][0]["paragraphs"] = [
+        r"The diagonal matrix with entries \(1, 0\) keeps \(|0\rangle\).",
+        r"Here \(\begin{pmatrix}1&0&0\\0&1&0\\0&0&1\end{pmatrix}\) is the identity.",
+    ]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    found = {f["flag"] for f in flags if f["item"] == key}
+    assert {"described_object", "tall_inline_math"} <= found
+    # Then showing the matrix itself, a 2x2 inline matrix and a column vector pass.
+    content["units"][0]["blocks"][0]["paragraphs"] = [
+        r"\(P = \begin{pmatrix}1 & 0\\ 0 & 0\end{pmatrix}\) keeps \(|0\rangle\).",
+        r"The state \(\begin{pmatrix}1\\0\\0\end{pmatrix}\) is a basis vector.",
+    ]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    found = {f["flag"] for f in flags if f["item"] == key}
+    assert not {"described_object", "tall_inline_math"} & found
+
+
 def test_flags_a_flat_outline_a_shared_guide_and_assumption_asides() -> None:
     # Given a five-unit course without groups and a two-part exercise with one guide.
     content = study()
@@ -239,3 +268,68 @@ def test_flags_a_flat_outline_a_shared_guide_and_assumption_asides() -> None:
     assert not {"flat_outline", "shared_guide", "assumption_aside"} & {
         item["flag"] for item in grouped
     }
+
+
+def test_a_dense_opening_and_a_worked_case_without_its_rule_are_flagged() -> None:
+    # Given a unit that opens with three new symbols and a term before any picture.
+    content = study()
+    unit = content["units"][0]
+    key, sources = unit["key"], unit["blocks"][0]["sources"]
+    unit["blocks"][0]["paragraphs"] = [
+        r"A state uses angles \(\theta\) and \(\varphi\) and a phase \(\gamma\)."
+    ]
+    unit["blocks"].insert(
+        1,
+        {
+            "kind": "definition",
+            "term": "Relative phase",
+            "statement": "The angle.",
+            "sources": sources,
+        },
+    )
+    found = {
+        f["flag"]
+        for f in quality_flags(StudyContent.model_validate(content), None)
+        if f["item"] == key
+    }
+    assert "dense_introduction" in found
+    # Then the same notation after a concrete picture is not flagged as a dense opening.
+    figure = next(
+        b for u in study()["units"] for b in u["blocks"] if b["kind"] in {"table", "diagram"}
+    )
+    unit["blocks"].insert(0, figure | {"sources": sources, "title": "A first case"})
+    found = {
+        f["flag"]
+        for f in quality_flags(StudyContent.model_validate(content), None)
+        if f["item"] == key
+    }
+    assert "dense_introduction" not in found
+
+
+def test_a_worked_calculation_without_a_general_rule_is_flagged() -> None:
+    content = study()
+    unit = content["units"][0]
+    unit["blocks"] = [b for b in unit["blocks"] if b["kind"] != "formula"]
+    unit["blocks"].append(
+        {
+            "kind": "text",
+            "sources": unit["blocks"][0]["sources"],
+            "steps": [r"Multiply by the conjugate: \(1/(3+4i) = (3-4i)/25\)."],
+        }
+    )
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert ("example_without_rule", unit["key"]) in {(f["flag"], f["item"]) for f in flags}
+
+
+def test_a_symbol_dense_identity_in_a_sentence_is_flagged_and_a_formula_block_is_not() -> None:
+    content = study()
+    unit = content["units"][0]
+    unit["blocks"][0]["paragraphs"] = [
+        r"For product states, \((\langle a|\otimes\langle b|)(|c\rangle\otimes|d\rangle)"
+        r"=\langle a|c\rangle\langle b|d\rangle\)."
+    ]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert ("unexplained_identity", unit["key"]) in {(f["flag"], f["item"]) for f in flags}
+    unit["blocks"][0]["paragraphs"] = [r"The first factors give \(\langle 0|1\rangle = 0\)."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert ("unexplained_identity", unit["key"]) not in {(f["flag"], f["item"]) for f in flags}

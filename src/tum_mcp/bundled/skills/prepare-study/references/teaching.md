@@ -25,15 +25,27 @@ label these roles; the writing makes them clear):
 1. Summary: the problem the unit solves, in one or two sentences.
 2. Objectives: observable outcomes such as trace, explain, choose or compute, taken from
    the source's own outcomes in the coverage ledger.
-3. Bridge: the first section names the prerequisite and notation it builds on.
+3. Orientation and bridge: the first section says what the new object describes, why
+   it matters and which earlier idea it extends, with a one-line reminder of that idea.
+   Name the parts the student will meet (the sphere's poles and equator, the angle, the
+   phase) before any formula relies on them, one at a time. `study report` flags an
+   opening that introduces several new symbols or terms before any picture or example as
+   `dense_introduction`.
 4. Intuition: a concrete case or picture before the formal statement.
 5. Definitions: a `definition` block right after the passage that introduces each term
    students must learn. It appears inside that passage as the term above its meaning, so
    the prose does not restate it. Later mentions anywhere in the course are `{{term}}`.
 6. Mechanism as labelled `steps`, one action each, then a worked example in its own
-   section: one computed value per step, or a trace.
-7. Pitfall: the common misconception or limiting condition, where it applies.
-8. Recap: for units with more than three sections, a final text block with two to
+   section: one computed value per step, a `derivation`, or a trace. When a procedure
+   has several dependent transformations or a changing state, a derivation with
+   `walkthrough` lets the student step through it, with the state drawn beside each line.
+7. General rule: after the worked case, the reusable rule as a formula block (every
+   symbol defined, its conditions and domain, when to use it), then one application to
+   different numbers. Comparing the two cases is what lets the student abstract the rule;
+   a rule left to be inferred from one example is flagged as `example_without_rule`.
+   Skip it when the topic has no reusable rule; never list identities detached from use.
+8. Pitfall: the common misconception or limiting condition, where it applies.
+9. Recap: for units with more than three sections, a final text block with two to
    four points a student should recall without the page.
 
 Flashcards test recall of those points; practice tests application. Review mode
@@ -56,10 +68,37 @@ example, each in the shape it has ([representations](review.md#choose-the-repres
 - Essential conditions and counterexamples stay visible; optional proof detail may sit in
   a disclosure, essential meaning never.
 
-Split independent goals and remove duplication. Teach each idea in one unit, its home;
-later units mark it `{{term}}` or build on it, and never explain it again. Order units so
-each uses only what earlier units teach. There are no diagram quotas and no equal word,
-card or question counts.
+Split independent goals and remove duplication. Teach each idea in full in one unit, its
+home; later units mark it `{{term}}` or build on it. Reinforce on purpose where a
+first-time reader needs it: a one-line reminder of a prerequisite where it is used, a
+recap in different words before a hard step, a second example or non-example, a revisit
+after a gap that takes the idea further. Keep each reminder short and pointing home; a
+reminder that grows into a second lesson is duplication. Order units so each uses only
+what earlier units teach. There are no diagram quotas and no equal word, card or
+question counts.
+
+## Notation at the point of use
+
+A notation-heavy statement is read by someone who may not yet hold every symbol. Where
+it appears:
+
+1. Say the claim in words first, on a concrete case: "\(\lvert 0\rangle \otimes
+   \lvert + \rangle\) and \(\lvert 1\rangle \otimes \lvert + \rangle\) are orthogonal".
+2. Give a one-line local reminder of each symbol the claim needs, in this context: a ket
+   is a state vector, \(\langle a \mid c\rangle\) its inner product with another, \(\otimes\)
+   combines two systems, orthogonal means inner product zero. Mark the term `{{term}}`
+   for the full definition; do not send the reader away for every symbol.
+3. Work the case: first factors \(\langle 0 \mid 1\rangle = 0\), second factors
+   \(\langle + \mid + \rangle = 1\), product \(0\). Use a `derivation` when there are
+   several lines.
+4. Then the general identity as a formula block with every symbol and its conditions,
+   linked to the case ("the case above is \(a = 0, b = +, \dots\)"). State the condition
+   that changes a computation, such as conjugate-linearity in the first argument and
+   linearity in the second when extending to sums.
+
+`study report` flags an identity over four or more symbols inside a sentence as
+`unexplained_identity`. This applies to any notation: probability, logic, complexity,
+physics, not only quantum mechanics.
 
 ## Precision and language
 

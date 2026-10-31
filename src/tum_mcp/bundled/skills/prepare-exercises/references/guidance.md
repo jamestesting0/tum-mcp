@@ -19,6 +19,14 @@ own figure or table. Inside it, step headings and rich blocks nest beneath that 
 Open a Solution before touching its guide: it must reveal just that question's answer.
 Opening or closing one solution must leave the others and guide progress unchanged.
 
+Walk the exercise once as a student meeting it for the first time: which earlier
+definition each step needs, which new symbol appears, and where a step jumps. Put a
+one-line reminder of that definition in the step that needs it (with its `{{term}}` or
+prerequisite link); this is reinforcement, not redundancy. Sequence the steps so
+responsibility passes to the student: early steps may be worked more fully, later ones
+leave more to them. Keep every reminder and hint optional and never reveal the answer by
+default.
+
 An early hint points to a relevant relation or asks a smaller question. A later
 hint works the first operation; Compare completes it ([hint ladder](../../prepare-study/references/review.md#help-before-the-answer)).
 A step whose answer has many parts gets that middle hint or is split. Add only useful
@@ -28,7 +36,11 @@ and inline reminder can repair a gap without a separate prerequisite wizard.
 
 Students work on paper and compare. Give a short answer where one exists: a number
 with its unit, a filled table, a node/edge/path selection, plotted sample points, or
-four options when choosing is the learning goal. Use a rubric and model derivation for
+four options when choosing is the learning goal. When the answer is a calculation, the
+Compare answer is a `derivation`: each meaningful transformation on its own line with a
+short reason, so the student can find where their working diverged, and one labelled
+group per requested quantity. Check the labels against the task (seven results asked,
+seven shown). Several results in one sentence are flagged as `compressed_working`. Use a rubric and model derivation for
 proofs, code, design and other open work. For programming, a step asks the student to
 write the method or class from a starter skeleton and compare with a model answer,
 not to arrange or recognise given code. Every step does a real piece of the work; do

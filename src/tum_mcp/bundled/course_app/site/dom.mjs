@@ -1,5 +1,5 @@
 import data from './data.mjs';
-import { parseMath } from './mathml.mjs';
+import { texElement } from './mathml.mjs';
 
 export function node(tag, className = '', text = '') {
   const element = document.createElement(tag);
@@ -21,13 +21,22 @@ export function studyText(tag, className = '', text = '') {
     if (match[1] !== undefined) element.append(node('code', 'inline-code', match[1]));
     else if (match[3] !== undefined) element.append(termTip(match[3]));
     else {
-      const markup = Object.hasOwn(data.inlineMath || {}, match[2]) && data.inlineMath[match[2]], math = markup && parseMath(markup);
-      if (math) { math.setAttribute('display', 'inline'); math.classList.add('inline-math'); element.append(math); }
-      else element.append(match[0]);
+      // Only expressions the build validated are typeset; anything else stays literal text.
+      const markup = Object.hasOwn(data.inlineMath || {}, match[2]) && data.inlineMath[match[2]];
+      const math = markup && texElement(match[2], { mathml: markup });
+      if (math) math.classList.add('inline-math');
+      element.append(math || match[0]);
     }
     start = match.index + match[0].length;
   }
   element.append(text.slice(start)); return element;
+}
+// The text of authored passage text as a reader sees it, for labels and measurements:
+// KaTeX's hidden MathML copy would otherwise repeat every expression.
+export function plainText(text) {
+  const element = studyText('span', '', text);
+  for (const hidden of element.querySelectorAll('.katex-mathml')) hidden.remove();
+  return element.textContent;
 }
 // A defined term opens its definition in place (a toggletip): one click or Enter shows it,
 // Escape, a second click or moving on hides it. The bubble is built on demand, so the text
@@ -114,7 +123,7 @@ export function announce(message) {
 // carry the local file.
 export function sourcesNote(ids, sources, synthetic, title = '', locators = {}, pages = '') {
   const note = node('details', 'source-note citation');
-  const trigger = node('summary'); trigger.setAttribute('aria-label', title ? `Sources for ${studyText('span', '', title).textContent}` : 'Sources'); trigger.title = 'Sources';
+  const trigger = node('summary'); trigger.setAttribute('aria-label', title ? `Sources for ${plainText(title)}` : 'Sources'); trigger.title = 'Sources';
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
   const path = document.createElementNS(svg.namespaceURI, 'path');

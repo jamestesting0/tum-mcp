@@ -89,18 +89,24 @@ export function renderLectures(hash) {
     const title = studyText('h2', '', section.title);
     // The section's measured recording times open from each passage's sources instead of repeating in the text.
     const timed = section.citations.filter(cite => cite.key && !section.figures.some(figure => figure.evidence === cite.key)).sort((a, b) => a.start_s - b.start_s);
-    topic.append(append(node('div', 'section-heading'), title));
-    for (const block of section.blocks) {
+    const sectionHeading = append(node('div', 'section-heading'), title);
+    topic.append(sectionHeading);
+    section.blocks.forEach((block, index) => {
       const moments = {};
       for (const cite of timed) (moments[cite.source] ||= []).push(timeLink(cite.url, cite.start_s, cite.end_s));
       const material = node('div', 'reading-material lecture-material');
       const sources = sourcesNote([...new Set([...block.sources, ...Object.keys(moments)])], data.sources, data.course.synthetic, block.title || section.title, moments);
-      // Lecture sections are the page's level 1, so a block's own levels start one below.
-      const heading = append(node('div', `section-heading${block.title ? '' : ' untitled'}`));
-      if (block.title) heading.append(studyText(headingTag(block, 2), '', block.title));
-      material.append(append(heading, sources), renderBlockBody(block));
+      // An untitled first block continues the section title, so its sources sit on that row.
+      if (!index && !block.title) sectionHeading.append(sources);
+      else {
+        // Lecture sections are the page's level 1, so a block's own levels start one below.
+        const heading = append(node('div', `section-heading${block.title ? '' : ' untitled'}`));
+        if (block.title) heading.append(studyText(headingTag(block, 2), '', block.title));
+        material.append(append(heading, sources));
+      }
+      material.append(renderBlockBody(block));
       topic.append(material);
-    }
+    });
     for (const figure of section.figures) topic.append(figureView(figure, section.citations.find(cite => cite.key === figure.evidence).source));
     root.append(topic);
   }

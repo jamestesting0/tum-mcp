@@ -21,6 +21,12 @@ a time. Prose frames an idea in one or two sentences; everything else is structu
   table trace instead.
 - **Cases, conditions, comparisons**: points or a table, never a sentence joined by
   "and", "while" or "whereas".
+- **Calculation the student should redo**: a `derivation` block, one transformation per
+  line, each with the reason it follows; separate requested results get labelled groups.
+- **An object with a shape** (a matrix, vector, table, graph, state): show it. Text that
+  lists its entries ("the diagonal matrix with entries 1, 0", "the graph has edges A–B,
+  B–C") makes the student build the picture in their head; write the matrix or draw the
+  graph, then say what to notice in it.
 
 Every symbol and formula in that structure is inline LaTeX
 ([notation](content.md#notation)), so a step reads as one expression instead of typed
@@ -72,8 +78,9 @@ Cut or rewrite:
 Read each passage once as the student would. Remove every sentence the student does not
 need, and split every sentence they would read twice. Then run `tum-mcp study report
 PROJECT` and restructure, never justify, what it flags: `dense_paragraph` (a paragraph
-over 45 words, or three sentences over 30), `prose_calculation` (calculations chained in
-a sentence), `plain_math` (mathematics typed as characters) and `meta_reference`
+over 45 words, or three sentences over 30), `prose_calculation` and `compressed_working`
+(calculations chained in a sentence), `plain_math` (mathematics typed as characters),
+`described_object` (an object spelled out instead of shown) and `meta_reference`
 (narration of the source).
 
 ## Sources

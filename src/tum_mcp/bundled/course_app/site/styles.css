@@ -61,7 +61,12 @@ ul, ol { margin-block: var(--s3) 0; padding-inline-start: var(--s6); }
 li + li { margin-top: var(--s2); }
 .small, .eyebrow, .citation-eyebrow { font-size: var(--text-small); color: var(--muted); }
 .eyebrow, .citation-eyebrow { font-weight: 500; }
-.inline-math { font-size: 1em; white-space: nowrap; }
+/* Math is typeset by KaTeX at its usual 1.21em, as in Notion; long inline math wraps after its
+   relations. Native MathML is only the fallback. */
+math.inline-math { font-size: 1em; white-space: nowrap; }
+.tex .katex { text-rendering: auto; }
+.tex-equation { font-size: 1em; text-align: center; }
+.tex-equation .tex-display { display: inline; }
 .stack { display: flex; flex-direction: column; gap: var(--s4); }
 .cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 .notice { padding: var(--s4) var(--s6); margin-bottom: var(--s6); background: var(--warning); border-radius: var(--r1); font-size: var(--text-ui); }
@@ -191,7 +196,10 @@ a.course-title:hover, a.course-title[aria-current="page"] { color: var(--accent)
 .section-heading > h3 { font-size: var(--text-subsection); line-height: 1.4; }
 .section-heading > :is(h4, h5, h6) { font-size: var(--text-body); font-weight: 600; line-height: 1.5; }
 .read-section p + p { margin-top: var(--s4); }
-.surface { padding: var(--s6); border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); }
+/* Drawings take the background of the card that holds them (--panel), so a diagram, plot or
+   figure never sits on a darker inset; halos and knockouts use the same colour. */
+:root { --panel: var(--canvas); }
+.surface { --panel: var(--surface); padding: var(--s6); border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); }
 
 /* Sources: a book icon opens titles and locators. */
 .citation { position: relative; flex-shrink: 0; width: var(--target); margin: 0; margin-inline-start: auto; color: var(--muted); font-size: var(--text-small); }
@@ -236,6 +244,29 @@ button.contents-toggle:hover, button.contents-toggle[aria-expanded="true"] { bac
 .equation-line { width: max-content; margin-inline: auto; }
 .equation-line + .equation-line { margin-block-start: var(--s3); }
 .equation math { display: block; width: max-content; max-width: none; margin: 0; }
+/* Derivations: one transformation per line, aligned on its relation, its reason beside it
+   on wide screens and below it on phones. */
+.derivation { margin-block: var(--s6); }
+.derivation-label { margin: var(--s4) 0 var(--s2); font-weight: 600; }
+.derivation-lines { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr); gap: var(--s3) var(--s2); margin: 0; padding: 0; list-style: none; }
+.derivation-line { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: baseline; row-gap: var(--s1); }
+.derivation-math { display: contents; }
+.derivation-left { grid-column: 1; text-align: right; overflow-x: auto; }
+.derivation-relation { grid-column: 2; text-align: center; }
+.derivation-right { grid-column: 3; min-width: 0; overflow-x: auto; }
+.derivation-left :is(math, .katex), .derivation-relation :is(math, .katex) { display: inline-block; }
+.derivation-reason { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: var(--text-ui); }
+@media (min-width: 720px) {
+  .derivation-lines { grid-template-columns: max-content max-content minmax(0, 1fr) minmax(0, 0.9fr); }
+  .derivation-reason { grid-column: 4; padding-left: var(--s4); }
+}
+/* The newest line is marked by its background: WebKit does not repaint a MathML colour change. */
+.walkthrough .derivation-line { padding: var(--s2); border-radius: var(--r1); }
+.walkthrough .derivation-line.current { --panel: var(--wash); background: var(--wash); box-shadow: inset 3px 0 0 var(--accent); }
+.walkthrough .derivation-line.current .derivation-reason { color: var(--ink); }
+.derivation-visual { margin-block: var(--s4); }
+.derivation-controls { flex-wrap: wrap; margin-top: var(--s4); }
+@media print { .derivation-line[hidden] { display: grid !important; } .derivation-controls { display: none; } }
 .symbols { display: grid; grid-template-columns: fit-content(35%) minmax(0, 1fr); gap: var(--s2) var(--s4); margin: var(--s4) 0; font-size: var(--text-ui); }
 .symbols dt { font-weight: 600; }
 .symbols dd { margin: 0; }
@@ -245,7 +276,7 @@ caption { text-align: start; color: var(--muted); padding-bottom: var(--s3); }
 th, td { padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); vertical-align: top; text-align: start; overflow-wrap: normal; word-break: normal; }
 th { font-weight: 600; }
 thead th { background: var(--surface); }
-.code-region { overflow-x: auto; padding: var(--s4) var(--s6); background: var(--surface); border-radius: var(--r2); }
+.code-region { --panel: var(--surface); overflow-x: auto; padding: var(--s4) var(--s6); background: var(--surface); border-radius: var(--r2); }
 .code-region pre { font: var(--text-ui)/1.7 var(--font-mono); margin: var(--s2) 0 0; }
 .code-region code { font: inherit; }
 .practice-for { margin: var(--s1) 0 0; }
@@ -255,7 +286,7 @@ thead th { background: var(--surface); }
 .graph-region { overflow-x: auto; }
 /* Edges carry meaning, so they use the muted text color rather than the hairline rule. */
 .graph .edge, .graph .arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.graph circle, .graph rect { fill: var(--canvas); stroke: var(--muted); stroke-width: 1.5; }
+.graph circle, .graph rect { fill: var(--panel); stroke: var(--muted); stroke-width: 1.5; }
 .graph text { fill: var(--ink); font: 18px var(--font-ui); text-anchor: middle; dominant-baseline: central; }
 .graph .node-box text { font-size: 16px; }
 .graph .edge-label { font-size: 14px; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
@@ -275,7 +306,7 @@ thead th { background: var(--surface); }
 .figure svg, .figure img { display: block; width: 100%; max-width: 640px; height: auto; max-height: 460px; margin-inline: auto; }
 .figure svg { color: var(--ink); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; font-family: inherit; font-size: 16px; }
 /* An opaque halo in the page colour keeps every label off the strokes behind it. */
-.figure svg text, .figure svg tspan { fill: currentColor; stroke: var(--canvas) !important; stroke-width: 6px; paint-order: stroke; font-weight: 500; }
+.figure svg text, .figure svg tspan { fill: currentColor; stroke: var(--panel) !important; stroke-width: 6px; paint-order: stroke; font-weight: 500; }
 .figure svg .muted { stroke: var(--muted); color: var(--muted); }
 .figure svg .accent { stroke: var(--accent); color: var(--accent); }
 .figure svg text.muted { fill: var(--muted); }
@@ -284,7 +315,7 @@ thead th { background: var(--surface); }
 .figure svg .fill-muted { fill: var(--muted); }
 .figure svg .fill-accent { fill: var(--accent); }
 .figure svg .fill-surface { fill: var(--surface); }
-.figure svg .fill-canvas { fill: var(--canvas); }
+.figure svg .fill-canvas { fill: var(--panel); }
 .figure svg .dashed { stroke-dasharray: 6 5; }
 .figure svg .thin { stroke-width: 1; }
 .figure svg .thick { stroke-width: 3.5; }
@@ -348,17 +379,17 @@ button.reference-trigger { min-height: 0; padding: 0; border: 0; background: non
 .plot text { fill: var(--muted); font: 14px var(--font-ui); }
 .plot .plot-title { font-size: 15px; }
 .plot .plot-strong { fill: var(--ink); }
-.plot .plot-strong, .plot .plot-value { paint-order: stroke; stroke: var(--canvas); stroke-width: 4px; stroke-linejoin: round; }
+.plot .plot-strong, .plot .plot-value { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
 .plot .plot-value { font-size: 13px; }
 .plot-fill { fill: var(--accent); opacity: .14; }
-.plot .plot-knockout { fill: var(--canvas); }
+.plot .plot-knockout { fill: var(--panel); }
 .plot-dot { fill: var(--accent); }
-.plot-dot.plot-open { fill: var(--canvas); stroke: var(--accent); stroke-width: 2; }
+.plot-dot.plot-open { fill: var(--panel); stroke: var(--accent); stroke-width: 2; }
 .plot-dot.plot-mark { fill: var(--ink); }
 .plot-line.plot-guide { stroke-width: 1.5; }
 .plot-line.plot-stem { stroke-width: 2.5; }
 .plot > .small { margin-bottom: var(--s2); }
-.plot-area { fill: var(--canvas); stroke: var(--line); }
+.plot-area { fill: var(--panel); stroke: var(--line); }
 .plot-grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
 .plot-axis { stroke: var(--muted); stroke-width: 1; }
 .plot-line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
@@ -388,7 +419,7 @@ button.reference-trigger { min-height: 0; padding: 0; border: 0; background: non
 .page-citation .citation-panel { left: 0; right: auto; }
 .recall-prompt { display: block; font-size: var(--text-section); font-weight: 500; line-height: 1.4; text-wrap: balance; }
 .flashcard { display: block; width: 100%; padding: 0; perspective: 1200px; border-radius: var(--r2); text-align: center; user-select: text; }
-.flashcard, .flashcard[aria-pressed="true"] { color: var(--ink); border: 1px solid var(--line); background: var(--surface); }
+.flashcard, .flashcard[aria-pressed="true"] { --panel: var(--surface); color: var(--ink); border: 1px solid var(--line); background: var(--surface); }
 .flashcard:hover { background: var(--surface); border-color: var(--muted); }
 .card-turn { display: grid; transform-style: preserve-3d; transition: transform var(--flip) var(--ease); }
 .card-face { display: flex; flex-direction: column; justify-content: center; gap: var(--s6); grid-area: 1 / 1; min-width: 0; min-height: var(--card-min); padding: var(--s8); backface-visibility: hidden; overflow-wrap: anywhere; transition: visibility 0s linear calc(var(--flip) / 2); }
@@ -412,13 +443,13 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 legend { padding: 0; margin-bottom: var(--s6); font-size: var(--text-body); font-weight: 500; line-height: 1.5; }
 
 /* Choice rows, shared by practice questions, exercise checks and the review dialog. */
-.option { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s4); margin-block: var(--s2); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); cursor: pointer; font-size: var(--text-body); line-height: 1.5; }
+.option { --panel: var(--surface); display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s4); margin-block: var(--s2); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); cursor: pointer; font-size: var(--text-body); line-height: 1.5; }
 .option span { min-width: 0; overflow-wrap: anywhere; }
 /* A block, not a flex column: text, inline code and inline math must stay on one line;
    only the state badge takes its own row. */
 .option-body { display: block; flex: 1; min-width: 0; }
 .option:hover { border-color: var(--muted); }
-.option:has(input:checked) { background: var(--wash); border-color: var(--accent); }
+.option:has(input:checked) { --panel: var(--wash); background: var(--wash); border-color: var(--accent); }
 .option input { display: grid; place-content: center; flex: 0 0 20px; width: 20px; height: 20px; margin: var(--s1) 0 0; appearance: none; border: 1.5px solid var(--muted); border-radius: 50%; background: var(--canvas); }
 .option input::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); transform: scale(0); }
 .option input:checked { border-color: var(--accent); }
@@ -436,7 +467,7 @@ legend { padding: 0; margin-bottom: var(--s6); font-size: var(--text-body); font
 
 /* Feedback panel, shared by practice and exercise checks. */
 /* A verdict is a compact note: a badge and a word, then any explanation beneath. */
-.feedback { margin-top: var(--s4); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--r1); background: var(--wash); }
+.feedback { --panel: var(--wash); margin-top: var(--s4); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--r1); background: var(--wash); }
 .feedback.incorrect { border-left-color: var(--error); background: var(--surface); }
 .feedback > h3 { display: flex; align-items: center; gap: var(--s2); margin: 0; font-size: var(--text-ui); font-weight: 650; }
 .feedback > h3::before { content: '\2713'; content: '\2713' / ''; display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--canvas); font-size: 12px; font-weight: 800; }
@@ -644,9 +675,9 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 .graph-answer-bar { display: flex; align-items: center; gap: var(--s2); }
 .graph-selection { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 .selection-chip { padding-inline: var(--s2); background: var(--wash); border-radius: var(--r1); font-size: var(--text-ui); }
-.plot-handle { fill: var(--accent); stroke: var(--canvas); stroke-width: 2; cursor: ns-resize; }
+.plot-handle { fill: var(--accent); stroke: var(--panel); stroke-width: 2; cursor: ns-resize; }
 /* An unplaced point is not drawn as data; it appears only while focused for keyboard entry. */
-.plot-handle.unplaced { fill: var(--canvas); stroke: var(--muted); stroke-dasharray: 3 2; opacity: 0; }
+.plot-handle.unplaced { fill: var(--panel); stroke: var(--muted); stroke-dasharray: 3 2; opacity: 0; }
 .plot-handle.unplaced:focus-visible { opacity: 1; }
 .plot-handle:focus-visible { outline: none; stroke: var(--ink); stroke-width: 4; }
 .plot-values { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: var(--s3); }
@@ -834,11 +865,11 @@ button.exam-map-item { display: flex; justify-content: space-between; gap: var(-
 .uml-region { overflow-x: auto; margin: var(--s3) 0; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r1); }
 /* A diagram wider than the column scrolls; shadows at the edges show that more lies beyond. */
 .uml-region, .graph-region {
-  background: linear-gradient(to right, var(--canvas) 30%, transparent) left / 28px 100% no-repeat local,
-    linear-gradient(to left, var(--canvas) 30%, transparent) right / 28px 100% no-repeat local,
+  background: linear-gradient(to right, var(--panel) 30%, transparent) left / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--panel) 30%, transparent) right / 28px 100% no-repeat local,
     radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / .2), transparent) left / 12px 100% no-repeat scroll,
     radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / .2), transparent) right / 12px 100% no-repeat scroll,
-    var(--canvas);
+    var(--panel);
 }
 .uml-region:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 svg.uml { display: block; max-width: 100%; height: auto; margin-inline: auto; font-family: var(--font-ui); font-size: 13px; }
@@ -849,7 +880,7 @@ svg.uml .uml-class rect, svg.uml .uml-participant rect { fill: var(--surface); s
 svg.uml .uml-divider { stroke: var(--ink); stroke-width: 1; }
 svg.uml .uml-line { stroke: var(--ink); stroke-width: 1.3; fill: none; }
 svg.uml .uml-line.dashed { stroke-dasharray: 6 4; }
-svg.uml .uml-hollow { fill: var(--canvas); stroke: var(--ink); stroke-width: 1.3; stroke-linejoin: round; }
+svg.uml .uml-hollow { fill: var(--panel); stroke: var(--ink); stroke-width: 1.3; stroke-linejoin: round; }
 svg.uml .uml-filled { fill: var(--ink); stroke: var(--ink); stroke-width: 1; }
 svg.uml .uml-open { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
 svg.uml .uml-participant circle { fill: none; stroke: var(--ink); stroke-width: 1.3; }
@@ -972,7 +1003,7 @@ button.project-reset { min-height: 28px; padding: 0 var(--s2); font-size: 13px; 
   .project-tree { contain: none; min-height: 0; max-height: 260px; border-right: 0; border-bottom: 1px solid var(--line); }
 }
 svg.uml .uml-state rect { fill: var(--surface); stroke: var(--ink); stroke-width: 1.3; }
-svg.uml .uml-halo { paint-order: stroke; stroke: var(--canvas); stroke-width: 4px; stroke-linejoin: round; }
+svg.uml .uml-halo { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
 svg.uml[data-diagram="class"], svg.uml[data-diagram="state"], svg.uml[data-diagram="flowchart"] { font-size: 14px; }
 svg.uml[data-diagram="flowchart"], svg.uml[data-diagram="state"] { --uml-edge: var(--muted); }
 svg.uml[data-diagram="flowchart"] .uml-line, svg.uml[data-diagram="state"] .uml-line { stroke: var(--muted); stroke-width: 1.4; }
@@ -982,6 +1013,6 @@ svg.uml[data-diagram="flowchart"] text { font-size: 15px; }
 svg.uml[data-diagram="flowchart"] .uml-note { font-size: 14px; }
 svg.uml .uml-member { font-size: 13px; }
 svg.uml .uml-note { font-size: 13px; }
-svg.uml .uml-knockout { fill: var(--canvas); }
+svg.uml .uml-knockout { fill: var(--panel); }
 svg.uml .uml-action rect, svg.uml .uml-io path, svg.uml .uml-decision path, svg.uml .uml-terminal rect { fill: var(--surface); stroke: var(--ink); stroke-width: 1.3; }
 .uml-region.uml-pending { min-height: 160px; }

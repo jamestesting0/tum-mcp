@@ -1,5 +1,5 @@
 import data from './data.mjs';
-import { node, svgNode, studyText, append, sourcesNote, pageCitation } from './dom.mjs';
+import { node, svgNode, studyText, append, sourcesNote, pageCitation, plainText } from './dom.mjs';
 import { renderBlockBody } from './reading.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam, topics, formula, statusMarker, quietLink } from './exam-state.mjs';
@@ -53,7 +53,7 @@ function entry(concept, cite) {
   }
   const related = exam.patterns.filter(pattern => pattern.concepts.includes(concept.key));
   const links = node('p', 'small exam-entry-links');
-  for (const pattern of related) { if (links.childNodes.length) links.append(' · '); links.append(quietLink(studyText('span', '', pattern.title).textContent, `#exam/patterns/${pattern.key}`)); }
+  for (const pattern of related) { if (links.childNodes.length) links.append(' · '); links.append(quietLink(plainText(pattern.title), `#exam/patterns/${pattern.key}`)); }
   for (const key of concept.units || []) {
     const unit = data.units.find(item => item.key === key);
     if (unit) { if (links.childNodes.length) links.append(' · '); links.append(quietLink(`Study: ${unit.title}`, `#study/${unit.key}/content`)); }

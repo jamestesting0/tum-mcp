@@ -226,3 +226,61 @@ def test_titled_blocks_form_an_outline_and_untitled_blocks_continue_a_section() 
 def test_a_skipped_heading_level_is_rejected(levels: list[int | None]) -> None:
     with pytest.raises(ValidationError, match="one level deeper at a time"):
         StudyContent.model_validate(_headed(levels))
+
+
+def test_derivations_align_lines_label_results_and_walk_through_with_visuals() -> None:
+    from tum_mcp.study_content import DerivationBlock, render_blocks
+
+    line = {"latex": r"\frac{1}{3+4i} = \frac{3-4i}{25}", "reason": "Multiply by the conjugate."}
+    block = DerivationBlock.model_validate(
+        {"kind": "derivation", "sources": ["s"], "groups": [{"lines": [line]}]}
+    )
+    rendered = render_blocks((block,))[0]
+    assert rendered["groups"][0]["lines"][0]["mathml"].startswith("<math")
+    # Several requested results each carry a label, so the reader can find each one.
+    with pytest.raises(ValidationError, match="Label each group"):
+        DerivationBlock.model_validate(
+            {"kind": "derivation", "sources": ["s"], "groups": [{"lines": [line]}] * 2}
+        )
+    # A walkthrough steps through at least two lines; per-line pictures belong to one.
+    with pytest.raises(ValidationError, match="at least two lines"):
+        DerivationBlock.model_validate(
+            {
+                "kind": "derivation",
+                "sources": ["s"],
+                "walkthrough": True,
+                "groups": [{"lines": [line]}],
+            }
+        )
+    table = {
+        "kind": "table",
+        "sources": ["s"],
+        "columns": ["State", "Amplitude"],
+        "rows": [["0", "1"]],
+        "caption": "Amplitudes after this line",
+    }
+    with pytest.raises(ValidationError, match="belong to a walkthrough"):
+        DerivationBlock.model_validate(
+            {
+                "kind": "derivation",
+                "sources": ["s"],
+                "groups": [{"lines": [line | {"visual": table}]}],
+            }
+        )
+    stepped = DerivationBlock.model_validate(
+        {
+            "kind": "derivation",
+            "sources": ["s"],
+            "walkthrough": True,
+            "groups": [{"lines": [line | {"visual": table}, {"latex": "= 1"}]}],
+        }
+    )
+    assert render_blocks((stepped,))[0]["groups"][0]["lines"][0]["visual"]["kind"] == "table"
+    with pytest.raises(ValidationError):
+        DerivationBlock.model_validate(
+            {
+                "kind": "derivation",
+                "sources": ["s"],
+                "groups": [{"lines": [{"latex": r"\frac{1}"}]}],
+            }
+        )

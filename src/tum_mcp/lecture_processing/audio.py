@@ -13,6 +13,11 @@ from tum_mcp.lecture_processing.decoding import probe, run_decoder
 from tum_mcp.lecture_processing.media import AcquiredSegment
 from tum_mcp.study_store import confined
 
+# Encoders leave tiny gaps between AAC packet timestamps (TUM-Live: about 0.25 ms per 30 s),
+# so a timestamp-trimmed window decodes a few samples short; those are padded with silence.
+# One missing AAC frame is at least 21 ms (341 samples at 16 kHz) and still fails here.
+TIMESTAMP_JITTER = 160
+
 
 def render_audio(segments: tuple[AcquiredSegment, ...], span: Interval, directory: Path) -> Path:
     if span.end_s - span.start_s > 610:
@@ -112,7 +117,7 @@ def render_audio(segments: tuple[AcquiredSegment, ...], span: Interval, director
                         (start - span.start_s) * 16000
                     )
                     count = decoded.getnframes()
-                    if abs(count - expected) > 2:
+                    if abs(count - expected) > TIMESTAMP_JITTER:
                         raise CampusError(
                             Code.INVALID_RESPONSE,
                             "Decoded audio does not cover its declared original-time interval.",

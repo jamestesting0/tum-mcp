@@ -10,7 +10,7 @@ from pydantic import Field, TypeAdapter, ValidationError, model_validator
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_evidence import Interval, LectureCoverage, Recording, Seconds
 from tum_mcp.lecture_processing.progress import read_progress
-from tum_mcp.lecture_processing.transcript_models import Passage
+from tum_mcp.lecture_processing.transcript_models import AudioFailure, Passage
 from tum_mcp.lecture_processing.validity import Validity, require_content
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
@@ -54,6 +54,8 @@ class PreparedReceipt(Frozen):
     chunks_reused: int = Field(ge=0)
     inference_s: float = Field(ge=0)
     issues: tuple[str, ...] = ()
+    # Each failed preflight sample or chunk, so a partial result says where and why it failed.
+    failures: tuple[AudioFailure, ...] = ()
 
     @model_validator(mode="after")
     def consistent(self) -> "PreparedReceipt":
