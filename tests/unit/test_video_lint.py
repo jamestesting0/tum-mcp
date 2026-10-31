@@ -94,3 +94,25 @@ def test_syntax_errors_and_unused_items_are_reported() -> None:
     )
     assert report.ok
     assert "title" in report.warnings[0]
+
+
+@pytest.mark.parametrize("index", ["0", "2", "True", "index"])
+def test_cues_require_an_existing_literal_sentence(index: str) -> None:
+    source = GOOD.replace(
+        '            title = self.label("title")',
+        f'            with self.cue({index}):\n                title = self.label("title")',
+    )
+    assert any(error.startswith("cue ") for error in lint(source, BOARD).errors)
+
+
+def test_cues_are_allowed_only_inside_beats() -> None:
+    valid = GOOD.replace(
+        '            title = self.label("title")',
+        '            with self.cue(1):\n                title = self.label("title")',
+    )
+    assert lint(valid, BOARD).ok
+    invalid = GOOD.replace(
+        '        with self.beat("b01") as b:',
+        "        with self.cue(1) as b:",
+    )
+    assert any("enclosing beat" in error for error in lint(invalid, BOARD).errors)

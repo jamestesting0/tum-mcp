@@ -1,6 +1,6 @@
 ---
 name: audio-notes
-description: Create or update concise, easy-to-follow audio lessons, one file per category, from an existing prepared study website. Track missing and changed coverage; use prepare-study for course authoring. Excludes recording transcription and voice cloning.
+description: Create or update hands-free exam-revision audio from prepared Study, one track per category, with clear reasoning, chapter re-entry, conditions and checked coverage. Use prepare-study for source authoring. Excludes Exercises, recording transcription and voice cloning.
 ---
 
 This optional workflow is enabled with `tum-mcp install audio-notes`. Voice
@@ -9,13 +9,12 @@ or synthesize audio.
 
 For a bound local course, read `.tum-mcp/course.md` and the relevant source records
 first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is the
-discovery pointer and user's rules. Legacy `.study/` remains readable until explicit
-`study upgrade PROJECT`. The handbook's receipt describes local review, not live
+discovery pointer and user's rules. The handbook's receipt describes local review, not live
 freshness; verify affected facts against sources. Reuse context already read in this
 request. Do not re-read the whole inventory for each authoring step.
 
 
-Use the existing course's AGENTS.md and app/content.json (legacy study/content.json).
+Use the existing course's AGENTS.md and app/content.json.
 Audio reads prepared Study only; Exercises does not become an audio script.
 Audio is a spoken
 adaptation of the prepared course, not a second course-authoring workflow. Never
@@ -48,13 +47,14 @@ new, changed, removed, moved, missing and reusable material. Retain unchanged wo
 do not mark a script or an attempted generation as completed audio coverage.
 
 Apply [narration guidance](references/narration.md) when writing or revising speech.
-Translate bullets, tables, formulas, code and diagrams into connected explanations
-that work without a screen. Before synthesis, outline distinct ideas, draft compact
+Follow [revision design](references/revision-design.md): teach relationships,
+distinctions and conditions without a screen or required response. Before synthesis,
+outline distinct ideas, draft connected
 explanations and review coverage, clarity and repetition. Revise failed sections
 yourself within the requested scope; do not hand the first draft to TTS and wait
 for the user to identify teaching problems. Audit every learning objective and
 substantive concept against its source block and narration section. Preserve
-meaning when compressing and disclose unresolved limitations.
+meaning and useful reinforcement; disclose exact Study dependencies.
 
 Follow [voices and generation](references/voices.md). Prefer the requested free
 ElevenLabs route when it actually supports custom-text generation and downloads.
@@ -71,7 +71,11 @@ Generate resumable candidates, validate the affected category files, then publis
 them with their scripts and coverage receipts. Keep the previous usable version
 until replacements pass. Report created/updated/reused categories, remaining gaps,
 actual provider/voice, listening time, checks and absolute links under audio/.
-Do not claim complete coverage or successful listening checks without evidence.
+Use the typed `study schema audio-plan` and `study schema audio-manifest` contracts.
+Run `study report PROJECT --section review`: its separate `media` section checks
+actual artifacts and lists required evidence. Follow the
+[media review](../review-course/references/media.md). Signal checks and transcripts
+do not prove that a voice was heard; unavailable listening remains incomplete.
 
 When the same request also updates the website, reuse prepare-study's automatic
 publication report and use publish-course for pending deployment. Audio-only

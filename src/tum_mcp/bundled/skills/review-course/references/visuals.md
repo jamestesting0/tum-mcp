@@ -3,6 +3,9 @@
 Score every drawn visual (diagram, UML diagram, flowchart, plot, figure, table) the way the
 student sees it: from the contact sheets at phone and desktop width, with the render
 findings and the cited source page beside it. Never score a visual from its JSON.
+For Video Notes use [media evidence](media.md): entry/middle/exit samples plus
+complete playback, with each `cXX/bXX/key` visual scored on these six criteria.
+A right endpoint cannot repair an incorrect or missing intermediate construction.
 
 ## Evidence
 

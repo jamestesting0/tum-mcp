@@ -1,6 +1,6 @@
 interface:
   display_name: "Review Course"
-  short_description: "Score and improve course app content"
-  default_prompt: "Use $review-course to score my course app's lessons, exercises and overall structure for how easy they are to learn from, then fix what falls below the bar."
+  short_description: "Review course content, media and their source links"
+  default_prompt: "Use $review-course to score lessons, exercises, optional audio/videos and course structure from actual source and perception evidence, then fix findings and re-review. Keep media averages separate and unavailable listening/playback incomplete."
 policy:
   allow_implicit_invocation: true

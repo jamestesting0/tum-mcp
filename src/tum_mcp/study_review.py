@@ -13,17 +13,19 @@ from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import BaseModel, Field, JsonValue, ValidationError, model_validator
 
+from tum_mcp.audio_content import MediaFile
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.exercise_content import ExerciseContent
 from tum_mcp.settings import Frozen
 from tum_mcp.study_content import StudyContent, Text
 from tum_mcp.study_coverage import CoverageLedger
-from tum_mcp.study_models import Key, StudyState
+from tum_mcp.study_models import Digest, Key, StudyState
 from tum_mcp.study_store import private_path
 
 if TYPE_CHECKING:
     from tum_mcp.exam_content import ExamContent
     from tum_mcp.lecture_content import LectureContent
+    from tum_mcp.study_media import MediaInventory
 
 Dimension = Literal[
     "correctness",
@@ -148,7 +150,7 @@ class CourseReview(Frozen):
 
     revision: Revision
     reviewed_at: datetime.date
-    # Integration is scored only when the report lists two or more workspaces.
+    # Integration also covers media linked to a single prepared workspace.
     scores: dict[CourseDimension, Score]
     findings: tuple[CourseFinding, ...] = Field(default=(), max_length=40)
     kept: Text | None = None
@@ -159,10 +161,146 @@ class CourseReview(Frozen):
         return self
 
 
-def _found(scores: dict[str, int], findings: tuple[Finding | CourseFinding, ...]) -> None:
+def _found(
+    scores: dict[str, int], findings: tuple["Finding | CourseFinding | MediaFinding", ...]
+) -> None:
     found = {finding.dimension for finding in findings}
     if missing := [name for name, score in scores.items() if score < 3 and name not in found]:
         raise ValueError("A score below 3 names its finding: " + ", ".join(missing) + ".")
+
+
+MediaDimension = Literal[
+    "correctness",
+    "clarity",
+    "cognitive_load",
+    "coverage",
+    "intuition",
+    "organization",
+    "redundancy",
+    "delivery",
+    "representation",
+    "synchronization",
+]
+AUDIO_DIMENSIONS: tuple[MediaDimension, ...] = (
+    "correctness",
+    "clarity",
+    "cognitive_load",
+    "coverage",
+    "intuition",
+    "organization",
+    "redundancy",
+    "delivery",
+)
+VIDEO_DIMENSIONS: tuple[MediaDimension, ...] = (
+    *AUDIO_DIMENSIONS,
+    "representation",
+    "synchronization",
+)
+MediaKey = Annotated[
+    str,
+    Field(pattern=r"^(audio/[a-z0-9][a-z0-9_.-]{0,99}|video/\d{2,3}_[a-z0-9]+(?:-[a-z0-9]+)*)$"),
+]
+MediaVisualKey = Annotated[
+    str,
+    Field(pattern=r"^c\d{2}/b\d{2,3}/[a-z0-9][a-z0-9_.-]{0,99}$"),
+]
+
+
+class MediaInterval(Frozen):
+    start: float = Field(ge=0, allow_inf_nan=False)
+    end: float = Field(gt=0, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def bounded(self) -> "MediaInterval":
+        if self.end <= self.start:
+            raise ValueError("An inspected interval must have positive duration.")
+        return self
+
+
+class MediaEvidence(MediaFile):
+    kind: Literal["script", "signal", "listening", "frames", "playback"]
+    artifact_sha256: Digest
+    intervals: tuple[MediaInterval, ...] = Field(default=(), max_length=1000)
+    audio_perceived: bool = False
+    guidance_sha256: Digest | None = None
+
+    @model_validator(mode="after")
+    def private(self) -> "MediaEvidence":
+        if not self.path.startswith(
+            (
+                ".tum-mcp/media-review/",
+                "audio/.build/",
+                "videos/.build/",
+                "videos/reviews/",
+            )
+        ):
+            raise ValueError("Media evidence stays in private/build review roots.")
+        if self.kind in {"listening", "playback"} and not self.intervals:
+            raise ValueError("Perception evidence names the actual inspected intervals.")
+        if self.kind not in {"listening", "playback"} and self.intervals:
+            raise ValueError("Only perception evidence carries inspected intervals.")
+        if self.audio_perceived and self.kind != "playback":
+            raise ValueError("Only playback may also declare that its audio was perceived.")
+        if self.kind == "script" and self.guidance_sha256 is None:
+            raise ValueError("Script evidence records the current authoring guidance hash.")
+        return self
+
+
+class MediaFinding(Frozen):
+    dimension: MediaDimension
+    check: Check
+    note: Text
+    start: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    end: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    chapter: Key | None = None
+    beat: Key | None = None
+    source_locator: Annotated[str, Field(min_length=1, max_length=300)] | None = None
+
+    @model_validator(mode="after")
+    def precise(self) -> "MediaFinding":
+        _own_check(self.dimension, self.check)
+        if (self.start is None) != (self.end is None):
+            raise ValueError("A finding interval needs both start and end.")
+        if self.start is not None and self.end <= self.start:
+            raise ValueError("A finding interval must have positive duration.")
+        if self.start is None and not (self.chapter or self.beat or self.source_locator):
+            raise ValueError("Locate a media finding by interval, chapter/beat or source concept.")
+        return self
+
+
+class MediaVisualReview(VisualReview):
+    visual: MediaVisualKey
+
+
+class MediaReview(Frozen):
+    item: MediaKey
+    revision: Revision
+    reviewed_at: datetime.date
+    scores: dict[MediaDimension, Score]
+    findings: tuple[MediaFinding, ...] = Field(default=(), max_length=100)
+    visuals: tuple[MediaVisualReview, ...] = Field(default=(), max_length=780)
+    evidence: tuple[MediaEvidence, ...] = Field(default=(), max_length=200)
+    kept: Text | None = None
+
+    @model_validator(mode="after")
+    def explained(self) -> "MediaReview":
+        _found(self.scores, self.findings)
+        if any(self.scores.get(f.dimension) == 3 for f in self.findings):
+            raise ValueError("A media finding names a dimension scored below 3 or still unscored.")
+        if self.item.startswith("audio/") and (
+            self.visuals
+            or set(self.scores) - set(AUDIO_DIMENSIONS)
+            or any(f.dimension not in AUDIO_DIMENSIONS for f in self.findings)
+            or any(f.beat for f in self.findings)
+            or any(e.kind in {"frames", "playback"} for e in self.evidence)
+        ):
+            raise ValueError("Audio reviews use audio dimensions, chapters and listening evidence.")
+        if len({v.visual for v in self.visuals}) != len(self.visuals):
+            raise ValueError("Score each media visual once.")
+        weakest = min((min(v.scores.values()) for v in self.visuals), default=3)
+        if self.scores.get("representation", 1) > weakest:
+            raise ValueError("Representation scores no higher than the weakest video visual.")
+        return self
 
 
 class ReviewScorecard(Frozen):
@@ -170,11 +308,14 @@ class ReviewScorecard(Frozen):
     course_key: Key
     reviews: tuple[ItemReview, ...] = Field(max_length=1000)
     course: CourseReview | None = None
+    media: tuple[MediaReview, ...] = Field(default=(), max_length=1000)
 
     @model_validator(mode="after")
     def distinct(self) -> "ReviewScorecard":
         if len({review.item for review in self.reviews}) != len(self.reviews):
             raise ValueError("Review each item once.")
+        if len({review.item for review in self.media}) != len(self.media):
+            raise ValueError("Review each media item once.")
         return self
 
 
@@ -226,12 +367,18 @@ def review_report(
     lectures: "LectureContent | None" = None,
     *,
     ledger: CoverageLedger | None = None,
+    media_inventory: "MediaInventory | None" = None,
+    root: Path | None = None,
 ) -> dict[str, JsonValue]:
     """What still needs a review or a fix before the content is easy to learn from."""
+    from tum_mcp.study_media import MediaInventory
+    from tum_mcp.study_media_report import media_report
     from tum_mcp.study_visuals import visual_ids
 
     if scorecard and scorecard.course_key != state.course.key:
         raise CampusError(Code.SCOPE_DENIED, "The review scorecard belongs to another course.")
+    media_inventory = media_inventory if media_inventory is not None else MediaInventory()
+    media = media_report(root, media_inventory, scorecard.media if scorecard else ())
     current = reviewable(content, exercises)
     drawn = visual_ids(content, exercises)
     reviews = {review.item: review for review in scorecard.reviews} if scorecard else {}
@@ -294,7 +441,15 @@ def review_report(
     ]
     review = scorecard.course if scorecard else None
     course, course_blocks = (
-        _course_report(content, exercises, exam, lectures, review, ledger=ledger)
+        _course_report(
+            content,
+            exercises,
+            exam,
+            lectures,
+            review,
+            ledger=ledger,
+            media=media_inventory.structure,
+        )
         if current
         else (None, False)
     )
@@ -309,7 +464,13 @@ def review_report(
     return {
         "scorecard": scorecard is not None,
         "passed": not (
-            unreviewed or stale or unscored or unscored_dimensions or blocking or course_blocks
+            unreviewed
+            or stale
+            or unscored
+            or unscored_dimensions
+            or blocking
+            or course_blocks
+            or not media["passed"]
         ),
         "unreviewed": unreviewed,
         "stale": stale,
@@ -317,6 +478,7 @@ def review_report(
         "unscored_dimensions": unscored_dimensions,
         "below_bar": below,
         "course": course,
+        "media": media,
         "removed": sorted(set(reviews) - set(current)),
         "averages": {
             name: round(sum(values) / len(values), 2)
@@ -335,13 +497,22 @@ def _course_report(
     review: CourseReview | None,
     *,
     ledger: CoverageLedger | None = None,
+    media: list[dict[str, JsonValue]] | None = None,
 ) -> tuple[dict[str, JsonValue], bool]:
     """The course review's state, and whether it still keeps the review from passing."""
     from tum_mcp.study_structure import structure_revision, workspaces
 
     spaces = workspaces(content, exercises, exam, lectures)
-    dimensions = ["organization", "redundancy", *(["integration"] if len(spaces) > 1 else [])]
-    current = structure_revision(content, exercises, exam, lectures, ledger=ledger)
+    media_sources = {
+        target.split("/", 1)[0] for entry in (media or ()) for target in entry.get("targets", ())
+    }
+    integrated = (
+        len(spaces) > 1
+        or ("study" in media_sources and content is not None)
+        or ("exercises" in media_sources and exercises is not None)
+    )
+    dimensions = ["organization", "redundancy", *(["integration"] if integrated else [])]
+    current = structure_revision(content, exercises, exam, lectures, ledger=ledger, media=media)
     status = "unreviewed" if review is None else "stale" if review.revision != current else "fresh"
     report: dict[str, JsonValue] = {
         "status": status,

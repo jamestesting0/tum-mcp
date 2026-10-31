@@ -182,8 +182,8 @@
             {
               "key": "math",
               "part": "Numbers and choices",
-              "purpose": "Show long mathematical working without automatic grading.",
-              "prompt": "Write a short derivation on paper.",
+              "purpose": "Explore a step-by-step derivation without automatic grading.",
+              "prompt": "Derive the sum on paper, then compare your working with the walkthrough.",
               "blocks": [
                 {
                   "kind": "formula",
@@ -192,14 +192,14 @@
                     "components"
                   ],
                   "latex": "\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}",
-                  "plain": "The sum of the first n positive integers.",
+                  "plain": "The sum of the first \\(n\\) positive integers.",
                   "symbols": [
                     {
-                      "symbol": "n",
+                      "symbol": "\\(n\\)",
                       "meaning": "A positive integer."
                     }
                   ],
-                  "conditions": "Positive integer n."
+                  "conditions": "Positive integer \\(n\\)."
                 }
               ],
               "check": {
@@ -212,7 +212,8 @@
                 "model_answer": [
                   {
                     "kind": "derivation",
-                    "title": "Model answer",
+                    "title": "Derivation walkthrough",
+                    "walkthrough": true,
                     "sources": [
                       "components"
                     ],

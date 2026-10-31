@@ -62,3 +62,7 @@ template, not necessarily a good model for teaching or question design.
 Never start or submit exercises/quizzes, run downloaded course code, or infer an
 official solution. No live model, API key or automatic free-form grader belongs
 in the app. A completed mark records a student's action, not mastery or an assessment result.
+
+When a solution video is explicitly requested, finish and check the prepared
+exercise first, then use the optional `video-notes` skill with its exact
+set/exercise identity. Do not invent a Study unit or expose a walkthrough in Exam.

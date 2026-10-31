@@ -35,8 +35,10 @@ optional backlog are demonstrated in the private agent report.
   open their definition in place; an exercise prerequisite opens its Study block beside
   the exercise. In the local preview, a citation opens the stored course file at its page.
 - **Exercises and Lecture:** separate workspaces in the same app when prepared.
-  Lecture lists lectures newest first. The sources of each passage and figure
-  link to the recording at the measured time; the text itself carries no timestamps.
+  Lecture lists lectures newest first. Concise Notes precede watchable Highlights.
+  Note sources link to the supporting recording moment without prominent timestamps;
+  highlights show a range, duration and recording thumbnail. Notes may include a
+  meaningful frame. Either section may be absent.
 - **Contents:** a button lists the current page's headings in every workspace; wide
   screens can keep the list beside the text. Clear, short block titles make it useful.
 - **Progress** stays in the student's browser. Passage comments work in the local

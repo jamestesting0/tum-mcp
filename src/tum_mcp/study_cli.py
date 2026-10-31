@@ -218,6 +218,7 @@ def report(
     from tum_mcp.lecture_data import read_lectures
     from tum_mcp.study_build import read_content
     from tum_mcp.study_coverage import coverage_report, read_ledger
+    from tum_mcp.study_media import discover
     from tum_mcp.study_report import quality_flags
     from tum_mcp.study_review import read_scorecard, review_report
     from tum_mcp.study_store import load_state
@@ -231,12 +232,23 @@ def report(
     exam = cache(lambda: read_exam(root))
     lectures = cache(lambda: read_lectures(root))
     ledger = cache(lambda: read_ledger(root))
+    media = cache(lambda: discover(root, state, content))
     parts = {
         "quality": lambda: quality_flags(content, exercises),
-        "structure": lambda: course_map(content, exercises, exam(), lectures(), ledger=ledger()),
+        "structure": lambda: course_map(
+            content, exercises, exam(), lectures(), ledger=ledger(), media=media().structure
+        ),
         "coverage": lambda: coverage_report(state, content, exercises, ledger()),
         "review": lambda: review_report(
-            state, content, exercises, read_scorecard(root), exam(), lectures(), ledger=ledger()
+            state,
+            content,
+            exercises,
+            read_scorecard(root),
+            exam(),
+            lectures(),
+            ledger=ledger(),
+            media_inventory=media(),
+            root=root,
         ),
         "render": lambda: render_report(root, content, exercises, exam()),
     }
@@ -341,7 +353,17 @@ def build(
 
 @app.command()
 def schema(
-    kind: Literal["snapshot", "content", "exercises", "lectures", "exam", "coverage", "review"],
+    kind: Literal[
+        "snapshot",
+        "content",
+        "exercises",
+        "lectures",
+        "exam",
+        "coverage",
+        "review",
+        "audio-manifest",
+        "audio-plan",
+    ],
 ) -> None:
     """Print the machine-readable input schema for the calling agent."""
     from tum_mcp.study_content import StudyContent
@@ -368,6 +390,14 @@ def schema(
             from tum_mcp.study_review import ReviewScorecard
 
             result = ReviewScorecard.model_json_schema()
+        case "audio-manifest":
+            from tum_mcp.audio_content import AudioManifest
+
+            result = AudioManifest.model_json_schema()
+        case "audio-plan":
+            from tum_mcp.audio_content import AudioPlan
+
+            result = AudioPlan.model_json_schema()
         case "lectures":
             from tum_mcp.extensions import require_lecture
             from tum_mcp.lecture_content import LectureContent

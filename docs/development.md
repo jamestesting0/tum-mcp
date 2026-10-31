@@ -208,6 +208,30 @@ the synthetic media in `tests/fixtures/video/` (`generate.py` recreates them). S
 data directory and render, mix, check and publish a synthetic video; the browser
 playback tests also run WebKit when Playwright's WebKit is installed.
 
+Media source contracts live in `video_content.py`, `video_sources.py` and
+`audio_content.py`. Study and Exercise video are explicit variants, not fake units.
+`video-notes exercise PROJECT SET/KEY` prints exact permitted source locators.
+The worker shares narration timing and rendering; `self.cue(index)` uses measured
+sentence bounds. `video_style.py` stages effective app CSS colors; no worker palette
+is maintained separately. Contact sheets sample entry/middle/exit frames.
+
+`study_media.py` discovers optional manifests/plans read-only and verifies actual
+artifact hashes; `study_media_report.py` checks score/evidence contracts. Media
+averages are separate. Course structure includes source/chapter/coverage links,
+not codec bytes. Pruned render caches do not erase published source identities.
+Malformed optional media leaves ordinary Study diagnostics available.
+
+Focused checks are `tests/unit/test_study_media.py`,
+`tests/integration/test_study_review.py`, `test_video_pipeline.py` and
+`test_study_video_browser.py`; the latter uses
+`TUM_MCP_BROWSER_INTEGRATION=1`. Native render checks retain
+`TUM_MCP_VIDEO_RENDER_INTEGRATION=1`. Recreate the AAC codec fixture with
+`bash tests/fixtures/video/generate-audio.sh`. Calibration speech/video recipes
+ship beside `review-course/references/media-gallery/`; their binary assets must
+survive skill export and both distribution formats. Synthetic observer fixtures
+test contracts only. A real teaching-quality review needs complete listening and
+playback; unavailable perception remains an incomplete gate.
+
 ## Optional Lecture extension
 
 Base setup exposes six workflows and no `tum_live_*` tools. `install lecture`
@@ -216,8 +240,9 @@ recognizer only when requested/supported. `--no-asr` keeps captions/imported Web
 Heavy recognition dependencies and model weights stay outside the base environment
 and package artifacts. `lecture_processing/` owns bounded media/ASR evidence;
 `lecture_content.py`, `lecture_data.py`, `lecture_assets.py` and `lecture_thumbnails.py`
-validate the highlights and thumbnails used by the static app; `lecture_check.py`
-checks highlight boundaries against the cached transcript. See [the workflow guide](lecture-notes.md).
+validate notes, highlights and recording images used by the static app; `lecture_check.py`
+checks note speech evidence and highlight boundaries against the cached transcript.
+See [the workflow guide](lecture-notes.md).
 
 Use `skills validate --all` to check the packaged optional workflow without installing
 it; default validation checks the selected workflows. Activation statistics remain

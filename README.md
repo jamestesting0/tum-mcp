@@ -59,9 +59,9 @@ Run `tum-mcp install` to choose extensions, then reload your client.
 
 | Extension | Skill added | What it offers |
 | --- | --- | --- |
-| `lecture` | `prepare-lecture` | Lecture highlights: the stretches of a recording worth watching, each with its time range, what it teaches and a frame. Prefers transcripts and slides; local recognition is optional. |
-| `audio-notes` | `audio-notes` | Turn prepared Study lessons into concise audio tracks, with resumable generation and coverage tracking. Voice setup happens when used. |
-| `video-notes` | `video-notes` | Turn prepared Study topics into short narrated, animated explainers that play inside the local app, with checked sync, captions and layout. The render runtime installs when first used. |
+| `lecture` | `prepare-lecture` | Concise notes for useful remarks and highlights for worked explanations worth watching, each with a time range and frame. Prefers transcripts and slides; local recognition is optional. |
+| `audio-notes` | `audio-notes` | Turn prepared Study into hands-free revision tracks, with checked reasoning, chapter re-entry and coverage. Voice setup happens when used. |
+| `video-notes` | `video-notes` | Explain prepared Study concepts in depth or solve selected Exercises with intuitive visual walkthroughs in the local app. Check timing, captions and layout; install the render runtime when first used. |
 
 Use `tum-mcp doctor` to see installed workflows and `tum-mcp uninstall` to remove
 them.
@@ -82,7 +82,7 @@ course/
     exercises.json          Guided exercise content
     exam.json               Exam: cheatsheet, exam patterns, practice exams (local only)
     lectures.json           Optional: Lecture
-    lecture-assets/         Optional: lecture highlight thumbnails
+    lecture-assets/         Optional: highlight thumbnails and meaningful note images
   .tum-mcp/                 Private course state, comments and lecture evidence
   audio/                    Optional: scripts, tracks and chapters for Audio Notes
   videos/                   Optional: storyboards, scenes and explainer videos for Video Notes

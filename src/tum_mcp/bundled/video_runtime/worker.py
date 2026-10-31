@@ -216,8 +216,8 @@ def _narration(plan: list[dict], total: float):
     if measured is None:
         raise ValueError("Narration is silent or too short to measure.")
     buffer = buffer * 10 ** ((TARGET_LUFS - measured) / 20)
-    # Leave 1 dB for AAC inter-sample overshoot (about 0.75 dB measured on speech).
-    buffer = _limit(buffer, CEILING_DBTP - 1.0)
+    # Reserve 2 dB for reconstruction peaks observed on transient-rich speech.
+    buffer = _limit(buffer, CEILING_DBTP - 2.0)
     return np.clip(buffer, -1.0, 1.0)
 
 
@@ -244,9 +244,8 @@ def assemble(request: dict) -> dict:
             sound = container.add_stream("aac", rate=SAMPLE_RATE)
             sound.layout = "mono"
             sound.bit_rate = 128000
-            # FFmpeg's perceptual noise substitution injects full-scale bursts into
-            # synthetic speech; without it the decoded track tracks the mix.
-            sound.options = {"aac_pns": "0"}
+            # Both noise tools produced decoded overshoots on synthetic speech.
+            sound.options = {"aac_pns": "0", "aac_tns": "0"}
         written, sample_cursor = 0, 0
         for item in request["chapters"]:
             with av.open(item["file"]) as chapter:
