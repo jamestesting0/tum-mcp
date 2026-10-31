@@ -48,8 +48,8 @@ jobs:
       - name: Lint and format
         if: runner.os == 'Linux'
         run: |
-          uv run ruff check src tests scripts
-          uv run ruff format --check src tests scripts
+          uv run ruff check src tests scripts skill-lab
+          uv run ruff format --check src tests scripts skill-lab
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22.22.2'

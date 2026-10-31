@@ -1,0 +1,8 @@
+id: pick-course
+turns:
+  - say: "I connected my TUM account. Set up a study project in this folder for one of my courses this semester; pick the one with the most lecture material so far."
+    skills: [sync-course, read-content]
+  - say: "Build a lesson for its first lecture."
+    skills: [prepare-study]
+replies:
+  default: "Your choice, go ahead."

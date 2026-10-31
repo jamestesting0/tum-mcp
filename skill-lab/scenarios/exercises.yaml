@@ -1,0 +1,12 @@
+id: exercises
+turns:
+  - say: "I connected my TUM account. Set up a study project in this folder for my AI course this semester."
+    skills: [sync-course, read-content]
+  - say: "Add guided exercises from the latest released exercise sheet."
+    skills: [prepare-exercises]
+  - say: "Score the exercises and fix what is hard to learn from."
+    skills: [review-course, prepare-exercises]
+replies:
+  course: "The fundamentals of AI course, this semester."
+  sheet: "Use the newest sheet stamped for the current semester."
+  default: "Your choice, go ahead."

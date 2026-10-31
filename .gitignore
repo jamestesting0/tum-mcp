@@ -44,6 +44,7 @@ Desktop.ini
 
 # Machine-local agent instructions, settings and handoff notes.
 .omo/
+.senpi/
 /.agents/
 /.codex/
 /.claude/

@@ -1,0 +1,8 @@
+id: smoke
+turns:
+  - say: "I connected my TUM account. Which courses am I taking this semester? Only list them, do not set anything up."
+    skills: [read-content]
+  - say: "Which TUM tools and study workflows can you use here? Answer in three short lines."
+    skills: []
+replies:
+  default: "Just list them."

@@ -1,0 +1,14 @@
+id: setup-and-study
+turns:
+  - say: "I just connected my TUM account. Set up a study project in this folder for my AI course this semester and collect its materials."
+    skills: [sync-course, read-content]
+  - say: "Build lessons for the first two lectures."
+    skills: [prepare-study]
+  - say: "Add flashcards and practice questions for those lectures."
+    skills: [prepare-study]
+  - say: "Score my lessons and fix what is hard to learn from."
+    skills: [review-course, prepare-study]
+replies:
+  course: "The fundamentals of AI course, this semester."
+  semester: "The current semester."
+  default: "Your choice, go ahead."
