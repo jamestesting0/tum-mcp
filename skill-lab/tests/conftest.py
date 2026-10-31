@@ -1,4 +1,17 @@
+import sys
+from pathlib import Path
+
 import pytest
+
+
+def pytest_collection_modifyitems(items):
+    if sys.platform != "win32":
+        return
+    here = Path(__file__).parent
+    skip = pytest.mark.skip(reason="The skill lab isolates hosts by POSIX HOME; macOS and Linux.")
+    for item in items:
+        if here in item.path.parents:
+            item.add_marker(skip)
 
 
 @pytest.fixture

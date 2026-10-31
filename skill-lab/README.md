@@ -3,7 +3,7 @@
 Dev-only tooling that improves the bundled skills (`src/tum_mcp/bundled/skills/`) from
 simulated student runs. It lives in this repository and is never part of the npm package or
 the Python wheel. Method inspired by google-research/harness2 (Apache-2.0); prompts are
-paraphrased.
+paraphrased. It runs on macOS and Linux: host profiles are isolated through `HOME`.
 
 A trial is a simulated student: a connected TUM account, an empty folder and a scenario of
 student messages. The agent (Claude Code or Codex) discovers the course itself, sets up its

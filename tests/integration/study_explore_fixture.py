@@ -23,7 +23,8 @@ def add_explore(project: Path) -> None:
     )
     stored = ResourceState(resource=source, path=relative, sha256=digest(body), status="current")
     private_path(project, "state.json").write_text(
-        state.model_copy(update={"resources": (*state.resources, stored)}).model_dump_json()
+        state.model_copy(update={"resources": (*state.resources, stored)}).model_dump_json(),
+        encoding="utf-8",
     )
     path = project / "study/content.json"
     payload = json.loads(path.read_bytes())
@@ -72,5 +73,6 @@ def add_explore(project: Path) -> None:
                     }
                 ],
             }
-        )
+        ),
+        encoding="utf-8",
     )
