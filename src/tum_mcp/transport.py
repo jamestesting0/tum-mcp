@@ -26,7 +26,7 @@ READ_PATHS: Final = {
         r"users/me/\d+/topics|messages(?:/\d+)?)"
     ),
     Provider.ARTEMIS: re.compile(
-        r"/management/info|/api/core/public/account|/api/course/courses/for-dropdown|"
+        r"/management/info|/api/core/public/account|/api/course/courses/for-(?:dropdown|archive)|"
         r"/api/course/courses/\d+/(for-overview|exercises-for-overview)|"
         r"/api/lecture/courses/\d+/lectures-for-overview|"
         r"/api/lecture/lectures/\d+/details|"

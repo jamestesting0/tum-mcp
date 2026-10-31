@@ -33,7 +33,13 @@ class Artemis:
 
     def courses(self) -> Courses:
         self.identity()
-        return decode(Courses, self.api.get("/api/course/courses/for-dropdown"))
+        active = decode(Courses, self.api.get("/api/course/courses/for-dropdown"))
+        past = decode(Courses, self.api.get("/api/course/courses/for-archive"))
+        courses = {item.id: item.model_copy(update={"active": True}) for item in active.root}
+        for item in past.root:
+            if item.id not in courses:
+                courses[item.id] = item.model_copy(update={"active": False})
+        return Courses(tuple(courses.values()))
 
     def exercises(self, course_id: int) -> Overview:
         self.identity()

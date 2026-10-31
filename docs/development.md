@@ -25,15 +25,17 @@ use synthetic sources and credentials. No language-server installation is needed
 Optional extensions are off by default; validate both selected and unselected skill
 packs.
 
-For Moodle semester/access changes, run:
+For semester/access changes, run the affected provider's checks:
 
 ```sh
 uv run pytest -q tests/unit/test_parsing.py tests/integration/test_moodle_semesters.py
+uv run pytest -q tests/unit/test_artemis_boundaries.py tests/unit/test_artemis_lectures.py tests/integration/test_artemis_semesters.py
 ```
 
-These use paginated synthetic enrollments, authorized older and unlisted course pages,
-and denied/revoked access through the real HTTP and MCP tool layers; no campus session
-is needed. Keep the existing transport, session, extraction and installed-client checks.
+These use paginated synthetic enrollments, active/archive listings, authorized older
+and unlisted courses, and denied/revoked access through the real HTTP and MCP tool
+layers; no campus session is needed. Keep the existing transport, session, extraction
+and installed-client checks.
 The package includes `tzdata` for hosts without an IANA timezone database. The semester
 regression disables system timezone paths in a subprocess to cover that Windows boundary.
 

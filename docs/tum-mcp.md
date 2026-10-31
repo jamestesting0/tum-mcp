@@ -17,6 +17,14 @@ submission, start, deployment, rebuild or push workflows.
 Local downloads, source inventories, study-site builds and checkpoint storage
 are local operations; they do not post, submit or mark campus content as read.
 
+`artemis_list_courses` combines active and past courses available to the account,
+with active courses first and each course ID listed once. It returns an `active`
+flag and the past course's `semester` label when available. Active status alone
+does not establish a semester. Explicit older course IDs use the same lecture,
+student attachment and released exercise statement tools, even when absent from
+discovery. Artemis still decides access and which old content it retains; the
+integration does not enroll, start an exercise or download staff archives.
+
 Artemis lecture reads use the student overview/detail endpoints, verify the
 selected course and omit unreleased units and personal completion records.
 `artemis_get_attachment` retrieves a bounded page range from the student PDF,
@@ -29,6 +37,11 @@ Lecture routes were checked against the
 and the
 [student file boundary](https://github.com/ls1intum/Artemis/blob/88824427f7ea38512606824c58b8858e539eb2eb/src/main/java/de/tum/cit/aet/artemis/core/web/FileResource.java).
 Synthetic fixtures are the default. Live checks remain private and relevant to the requested task.
+
+Past-course metadata uses Artemis's student
+[course archive listing](https://github.com/ls1intum/Artemis/blob/59b5ca340b79db2336a8b234bd41fe5289716ecd/src/main/java/de/tum/cit/aet/artemis/course/web/CourseArchiveResource.java#L179-L196),
+alongside its
+[active-course dropdown](https://github.com/ls1intum/Artemis/blob/59b5ca340b79db2336a8b234bd41fe5289716ecd/src/main/java/de/tum/cit/aet/artemis/course/web/CourseOverviewResource.java#L246-L259).
 
 ## Build and test the local package
 

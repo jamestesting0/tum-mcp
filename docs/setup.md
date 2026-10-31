@@ -97,7 +97,9 @@ After sign-in, Moodle, Artemis and Zulip can read content available to your camp
 No local course/channel grants are required. Your agent uses MCP status/discovery and
 course metadata to prefer current-semester material for unspecified requests, then makes
 bounded reads. Moodle discovery includes all enrolled semesters; explicitly requested
-older courses remain readable while Moodle grants access.
+older courses remain readable while Moodle grants access. Artemis discovery includes
+both active and past courses; use an older course's ID to read its retained lectures,
+student slides and released exercise statements while Artemis grants access.
 An account ID identifies a saved service connection; it is not your TUM login.
 TUMonline additionally has a local policy: `tum-mcp manage tumonline --show`
 shows it, `tum-mcp manage tumonline` changes its permissions,

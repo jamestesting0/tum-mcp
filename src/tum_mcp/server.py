@@ -215,7 +215,7 @@ def zulip_save_checkpoint(account_id: str, channel_id: Id, message_id: Id) -> Ch
 
 @server.tool(annotations=READ)
 def artemis_list_courses(account_id: str) -> CourseDirectory:
-    """List active Artemis course metadata available to the connected account."""
+    """List accessible active and past Artemis courses, with active courses first."""
     courses = Artemis(API(find_account(account_id, Provider.ARTEMIS))).courses()
     return CourseDirectory(account_id=account_id, courses=courses.root)
 

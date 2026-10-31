@@ -10,9 +10,14 @@ Choose the route needed; known IDs go directly to the read tool.
 | Own programming feedback | `artemis_get_feedback` with the exact full built commit and graded/practice mode from the user/record. |
 | Course inventory | List both lectures and exercises. Teaching units include text, slides, video/online links and embedded exercise references. |
 
-Use `artemis_list_courses` only for missing course metadata. It lists active courses
-available to the account; titles alone may not establish a semester. Match current-term
-Moodle metadata or the course handbook when needed, rather than fetching every exercise.
+Use `artemis_list_courses` only for missing course metadata. It combines the account's
+active and past-course listings, with active courses first and duplicate IDs removed.
+The `active` flag identifies the listing; past courses retain their `semester` label
+when supplied by Artemis. An active course is not necessarily from the current semester:
+match Moodle metadata or the course handbook when needed, rather than fetching every exercise.
+For an explicitly requested older course, use its ID with the same lecture, attachment
+and exercise tools. Known accessible IDs need not appear in either listing. If the server
+denies access or no longer retains the content, report the restriction or missing source.
 Server permissions determine access. Lecture start dates do not hide released self-study units.
 Preserve lecture/unit order and distinguish teaching from assignments.
 
