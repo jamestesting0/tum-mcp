@@ -11,9 +11,11 @@ import typer
 from tum_mcp.course_app_paths import app_folder, app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.study_comment_cli import app as comments_app
+from tum_mcp.study_knowledge_cli import register as register_knowledge
 from tum_mcp.study_publish_cli import app as publish_app
 
 app = typer.Typer(invoke_without_command=True, pretty_exceptions_show_locals=False)
+register_knowledge(app)
 app.add_typer(comments_app, name="comments", help="Read and address local passage comments.")
 app.add_typer(
     publish_app, name="publish", help="Publish a study website in a private GitHub repository."
@@ -206,7 +208,7 @@ def exam_report_command(
 def report(
     project: Path,
     section: Annotated[
-        Literal["quality", "structure", "coverage", "review", "render"] | None,
+        Literal["quality", "structure", "coverage", "review", "render", "knowledge"] | None,
         typer.Option(help="Only this part."),
     ] = None,
 ) -> None:
@@ -225,18 +227,35 @@ def report(
     from tum_mcp.study_visuals import render_report
 
     root = project.expanduser().resolve()
+    if section == "knowledge":
+        from tum_mcp.study_knowledge_report import knowledge_report
+
+        typer.echo(json.dumps({"knowledge": knowledge_report(root)}, ensure_ascii=False, indent=2))
+        return
     state = load_state(root)
     content = read_content(root) if app_path(root, "content.json").is_file() else None
     exercises = read_exercises(root)
     exam = cache(lambda: read_exam(root))
     lectures = cache(lambda: read_lectures(root))
     ledger = cache(lambda: read_ledger(root))
+    from tum_mcp.study_knowledge_report import knowledge_revision
+
+    semantics = cache(lambda: knowledge_revision(root))
     parts = {
         "quality": lambda: quality_flags(content, exercises),
-        "structure": lambda: course_map(content, exercises, exam(), lectures(), ledger=ledger()),
+        "structure": lambda: course_map(
+            content, exercises, exam(), lectures(), ledger=ledger(), knowledge_revision=semantics()
+        ),
         "coverage": lambda: coverage_report(state, content, exercises, ledger()),
         "review": lambda: review_report(
-            state, content, exercises, read_scorecard(root), exam(), lectures(), ledger=ledger()
+            state,
+            content,
+            exercises,
+            read_scorecard(root),
+            exam(),
+            lectures(),
+            ledger=ledger(),
+            knowledge_revision=semantics(),
         ),
         "render": lambda: render_report(root, content, exercises, exam()),
     }
@@ -341,13 +360,19 @@ def build(
 
 @app.command()
 def schema(
-    kind: Literal["snapshot", "content", "exercises", "lectures", "exam", "coverage", "review"],
+    kind: Literal[
+        "snapshot", "content", "exercises", "lectures", "exam", "coverage", "review", "knowledge"
+    ],
 ) -> None:
     """Print the machine-readable input schema for the calling agent."""
     from tum_mcp.study_content import StudyContent
     from tum_mcp.study_models import Snapshot
 
     match kind:
+        case "knowledge":
+            from tum_mcp.study_knowledge_models import KnowledgeRegistry
+
+            result = KnowledgeRegistry.model_json_schema()
         case "snapshot":
             result = Snapshot.model_json_schema()
         case "content":

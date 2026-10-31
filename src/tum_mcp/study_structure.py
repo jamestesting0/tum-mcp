@@ -146,12 +146,15 @@ def course_map(
     lectures: LectureContent | None,
     *,
     ledger: CoverageLedger | None = None,
+    knowledge_revision: str | None = None,
 ) -> dict[str, JsonValue]:
     """Every workspace in course order with what each unit builds on and what links to it."""
     result: dict[str, JsonValue] = {
         "revision": structure_revision(content, exercises, exam, lectures, ledger=ledger),
         "workspaces": workspaces(content, exercises, exam, lectures),
     }
+    if knowledge_revision is not None:
+        result["knowledge_revision"] = knowledge_revision
     if content:
         result["study"] = _study_map(content, exercises, exam)
     if exercises:

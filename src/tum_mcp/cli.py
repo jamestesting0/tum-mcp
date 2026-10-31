@@ -16,6 +16,7 @@ from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import (
     audio_notes_enabled,
+    course_memory_enabled,
     lecture_enabled,
     require_lecture,
     video_notes_enabled,
@@ -100,6 +101,7 @@ def status(
                     "lecture": lecture_enabled(),
                     "audio-notes": audio_notes_enabled(),
                     "video-notes": video_notes_enabled(),
+                    "course-memory": course_memory_enabled(),
                 },
                 "registry": "not_checked",
                 "services": [item.model_dump(mode="json") for item in report.services],

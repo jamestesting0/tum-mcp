@@ -31,6 +31,8 @@ def legacy_inventory(project: Path) -> None:
 def test_explicit_upgrade_preserves_identity_backup_and_user_files(project: Path) -> None:
     (project / "study/personal.txt").write_text("My notes")
     (project / ".tum-mcp/comments.json").write_text("private comments")
+    registry = project / ".tum-mcp/knowledge.json"
+    registry.write_text('{"private_annotation":"PRESERVE_WITHOUT_LOADING"}')
     original = tree(project / "study")
     state = load_state(project)
     revisions = [unit_revision(unit) for unit in read_content(project).units]
@@ -47,6 +49,7 @@ def test_explicit_upgrade_preserves_identity_backup_and_user_files(project: Path
     assert "`app/`" in (project / "AGENTS.md").read_text()
     after = tree(project / "app")
     build(project, publish=False, upgrade_layout=True)
+    assert registry.read_text() == '{"private_annotation":"PRESERVE_WITHOUT_LOADING"}'
     assert tree(project / "app") == after
 
 

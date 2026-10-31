@@ -3,6 +3,11 @@ name: prepare-lecture
 description: Prepare or update the Lecture workspace in a local TUM course app, or address its passage comments, from selected recordings and timed transcripts compared with course materials. Focus on the professor's additional explanations, examples and caveats. General lessons and practice use prepare-study.
 ---
 
+When `tum-mcp study status PROJECT` reports `course_memory: true`, use
+the installed `course-memory` skill for relationships and scoped source updates.
+When disabled, leave retained graph files unused and follow the ordinary workflow.
+
+
 # Prepare Lecture
 
 Capture what is useful to revisit from the professor's teaching: reasoning,

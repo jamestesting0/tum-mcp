@@ -1,5 +1,13 @@
 # Changes
 
+## Unreleased
+
+- Add optional Course Memory, disabled by default, for source-checked relationships
+  across course workspaces. Install with `tum-mcp install course-memory`; local setup
+  happens on the next relevant request. Uninstall stops graph use and preserves its
+  files. Reinstall checks freshness before reuse. Native course review remains
+  independent of disabled memory, and no document pipeline or background index is added.
+
 ## 0.16.0 — 2026-10-31
 
 - TUMonline can now read your grades and progress, exams and semester fee status. Each is

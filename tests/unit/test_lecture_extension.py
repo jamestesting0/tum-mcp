@@ -127,6 +127,7 @@ def test_optional_extensions_have_coherent_status_and_symmetric_removal(isolated
         "lecture": True,
         "audio-notes": True,
         "video-notes": False,
+        "course-memory": False,
     }
     removed = runner.invoke(app, ["uninstall", "audio-notes"])
     assert removed.exit_code == 0, removed.output

@@ -56,6 +56,7 @@ def test_future_boolean_flags_load_and_survive_rewrites(config: Path) -> None:
         '{"schema_version":1,"future_tool":"yes"}',
         '{"schema_version":1,"Future-Tool":true}',
         '{"schema_version":1,"video_notes":1}',
+        '{"schema_version":1,"course_memory":1}',
         '{"schema_version":2}',
     ],
 )

@@ -10,6 +10,55 @@ from tum_mcp.study_review import CRITERIA, DIMENSIONS, read_scorecard, scorecard
 from tum_mcp.study_store import load_state
 
 
+def test_course_semantic_review_stales_without_resetting_native_progress(
+    tmp_path: Path, course_memory: Path
+) -> None:
+    from knowledge_annotations import annotation, write_registry
+    from knowledge_fixture import knowledge_project
+
+    from tum_mcp.course_app_paths import app_path
+    from tum_mcp.exam_content import concept_revision
+    from tum_mcp.exam_data import read_exam
+    from tum_mcp.study_store import private_path
+
+    root = knowledge_project(tmp_path)
+    native = report(root)["course"]["revision"]
+    write_registry(root, [annotation(root, "exam/concept/observer")])
+    assert report(root)["course"]["revision"] == native
+    write_registry(root, [annotation(root, "exam/concept/observer")], reviewed=True)
+    assert report(root)["course"]["revision"] == native
+    active = report(root)["course"]["knowledge_revision"]
+    score(root, [], whole(report(root)))
+    assert report(root)["course"]["status"] == "fresh"
+    progress = concept_revision(read_exam(root).concepts[0])
+    path = app_path(root, "exam.json")
+    value = json.loads(path.read_bytes())
+    value["concepts"][0]["details"][0]["title"] = "Revised meaning"
+    path.write_text(json.dumps(value))
+    assert report(root)["course"]["revision"] == native
+    stale = report(root)["course"]["knowledge_revision"]
+    assert stale != active
+    assert report(root)["course"]["status"] == "stale"
+    assert concept_revision(read_exam(root).concepts[0]) == progress
+    private_path(root, "knowledge.json").unlink()
+    assert report(root)["course"]["revision"] == native
+
+
+def test_malformed_sidecar_blocks_semantic_report_but_not_local_build(
+    tmp_path: Path, course_memory: Path
+) -> None:
+    from knowledge_fixture import knowledge_project
+
+    from tum_mcp.study_build import build
+    from tum_mcp.study_store import private_path
+
+    root = knowledge_project(tmp_path)
+    private_path(root, "knowledge.json").write_text("{PRIVATE_SENTINEL")
+    result = CliRunner().invoke(app, ["study", "report", str(root), "--section", "structure"])
+    assert result.exit_code != 0 and "PRIVATE_SENTINEL" not in str(result.exception)
+    build(root, publish=False)
+
+
 def report(project: Path) -> dict:
     result = CliRunner().invoke(app, ["study", "report", str(project), "--section", "review"])
     assert result.exit_code == 0, result.output
@@ -27,7 +76,11 @@ def whole(review: dict) -> dict:
     """A course review that scores every dimension the report lists at 3."""
     course = review["course"]
     scores = {name: 3 for name in course["dimensions"]}
-    return {"revision": course["revision"], "reviewed_at": "2026-10-30", "scores": scores}
+    return {"revision": course["revision"], "reviewed_at": "2026-10-30", "scores": scores} | (
+        {"knowledge_revision": course["knowledge_revision"]}
+        if "knowledge_revision" in course
+        else {}
+    )
 
 
 def reviewed(project: Path) -> list[dict]:
@@ -46,6 +99,69 @@ def reviewed(project: Path) -> list[dict]:
         }
         for entry in listed
     ]
+
+
+def test_every_native_solution_transfer_compare_and_explore_visual_can_be_scored(tmp_path: Path):
+    from knowledge_fixture import knowledge_project
+
+    from tum_mcp.exercise_checks import SelfCheck
+    from tum_mcp.exercise_content import SolutionAnswer, TransferTask
+    from tum_mcp.exercise_data import read_exercises
+    from tum_mcp.study_build import read_content
+    from tum_mcp.study_content import TableBlock
+    from tum_mcp.study_review import VisualReview
+    from tum_mcp.study_visuals import visual_ids
+
+    root = knowledge_project(tmp_path, workspaces=frozenset({"study", "exercises"}))
+    content, exercises = read_content(root), read_exercises(root)
+    unit, group = content.units[0], exercises.sets[0]
+    exercise = group.exercises[0]
+    table = TableBlock(
+        kind="table",
+        columns=("State", "Cost"),
+        rows=(("A", "0"),),
+        caption="Synthetic trace",
+        sources=(unit.sources[0].key,),
+        pages="1",
+    )
+    content = content.model_copy(
+        update={
+            "units": (
+                unit.model_copy(
+                    update={"explore": (unit.explore[0].model_copy(update={"blocks": (table,)}),)}
+                ),
+                *content.units[1:],
+            )
+        }
+    )
+    exercise = exercise.model_copy(
+        update={
+            "solution": exercise.solution.model_copy(
+                update={"answers": (SolutionAnswer(blocks=(table,)),)}
+            ),
+            "transfer": TransferTask(prompt="Change one edge cost.", answer=(table,)),
+            "steps": (
+                exercise.steps[0].model_copy(
+                    update={
+                        "check": SelfCheck(
+                            kind="self_check",
+                            rubric=("Compare accumulated costs.",),
+                            model_answer=(table,),
+                        )
+                    }
+                ),
+            ),
+        }
+    )
+    exercises = exercises.model_copy(
+        update={"sets": (group.model_copy(update={"exercises": (exercise,)}),)}
+    )
+    keys = {key for values in visual_ids(content, exercises).values() for key in values}
+    assert {"solution", "transfer", "compare", "explore"} <= {key.split(":")[0] for key in keys}
+
+    scored = [VisualReview(visual=key, scores={name: 3 for name in CRITERIA}) for key in keys]
+
+    assert {item.visual for item in scored} == keys
 
 
 def test_scores_follow_the_content_they_read_and_low_scores_need_a_fix(

@@ -17,7 +17,7 @@ from tum_mcp.lecture_processing.receipts import (
 from tum_mcp.lecture_processing.timeline import watch_link
 from tum_mcp.study_content import render_blocks
 from tum_mcp.study_models import StudyState
-from tum_mcp.study_store import confined, digest
+from tum_mcp.study_store import ReadObserver, confined, digest
 
 
 def read_lectures(root: Path) -> LectureContent | None:
@@ -38,7 +38,13 @@ def read_lectures(root: Path) -> LectureContent | None:
         ) from None
 
 
-def stale_lectures(root: Path, state: StudyState, content: LectureContent) -> tuple[str, ...]:
+def stale_lectures(
+    root: Path,
+    state: StudyState,
+    content: LectureContent,
+    *,
+    read_observer: ReadObserver | None = None,
+) -> tuple[str, ...]:
     if state.course.key != content.course_key:
         raise CampusError(Code.SCOPE_DENIED, "Lecture content belongs to a different course.")
     resources = {item.resource.key: item for item in state.resources}
@@ -61,7 +67,13 @@ def stale_lectures(root: Path, state: StudyState, content: LectureContent) -> tu
                 stale.add(lecture.key)
                 continue
             path = confined(root, relative)
-            if not path.is_file() or digest(path.read_bytes()) != source.sha256:
+            if not path.is_file():
+                stale.add(lecture.key)
+                continue
+            body = path.read_bytes()
+            if read_observer is not None:
+                read_observer(path, body)
+            if digest(body) != source.sha256:
                 stale.add(lecture.key)
         primary = {
             evidence[key].source_key
@@ -87,7 +99,7 @@ def stale_lectures(root: Path, state: StudyState, content: LectureContent) -> tu
                 )
         if not lecture.recording.synthetic:
             try:
-                receipt = usable_receipt(root, lecture.recording.key)
+                receipt = usable_receipt(root, lecture.recording.key, read_observer=read_observer)
             except CampusError as error:
                 if error.code == Code.SCOPE_DENIED:
                     raise
@@ -104,7 +116,7 @@ def stale_lectures(root: Path, state: StudyState, content: LectureContent) -> tu
                 or (lecture.coverage.status == "complete" and receipt.status != "prepared")
             ):
                 stale.add(lecture.key)
-            verify_figures(root, lecture)
+            verify_figures(root, lecture, read_observer=read_observer)
     return tuple(sorted(stale))
 
 

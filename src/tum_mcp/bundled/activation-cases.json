@@ -1198,5 +1198,21 @@
     "context": "bound_local_course",
     "partition": "held_out",
     "expected_skill": "prepare-study"
+  },
+  {
+    "id": "read-content-knowledge-bridge",
+    "target_skill": "read-content",
+    "prompt": "Explain how the prepared course concept connects to this released exercise; do not edit the app.",
+    "context": "initialized_study_project",
+    "partition": "development",
+    "expected_skill": "read-content"
+  },
+  {
+    "id": "prepare-study-knowledge-reuse",
+    "target_skill": "prepare-study",
+    "prompt": "Add a source-backed lesson for this course topic, reusing existing practice and lecture links.",
+    "context": "initialized_study_project",
+    "partition": "held_out",
+    "expected_skill": "prepare-study"
   }
 ]

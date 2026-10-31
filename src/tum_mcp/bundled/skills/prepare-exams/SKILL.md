@@ -3,6 +3,11 @@ name: prepare-exams
 description: Prepare a local Exam workspace for a TUM course from its past exams, exercises and materials - a cheatsheet with a semester map, recurring exam patterns with solving workflows, guided past papers and forecast practice exams. Lessons use prepare-study; weekly sheets use prepare-exercises.
 ---
 
+When `tum-mcp study status PROJECT` reports `course_memory: true`, use
+the installed `course-memory` skill for relationships and scoped source updates.
+When disabled, leave retained graph files unused and follow the ordinary workflow.
+
+
 For a bound local course, read `.tum-mcp/course.md` and the relevant source records
 first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is the
 discovery pointer and user's rules. The handbook's receipt describes local review,

@@ -235,6 +235,16 @@ def test_cancelled_install_picker_does_not_enable_any_workflow(tmp_path: Path) -
     assert state == {"lecture": False, "audio-notes": False}
 
 
+def test_install_picker_can_select_only_course_memory(tmp_path: Path) -> None:
+    code, output, state = run_removal(
+        tmp_path, b"\x1b[B\x1b[B\x1b[B \r", enabled=(), mode="install"
+    )
+    assert code == 0, output
+    selected = json.loads((tmp_path / "config/extensions.json").read_bytes())
+    assert selected["course_memory"] is True
+    assert state == {"lecture": False, "audio-notes": False}
+
+
 def test_setup_picker_configures_only_the_selected_client(tmp_path: Path) -> None:
     code, output, _ = run_removal(tmp_path, b"\x1b[B \r", mode="setup")
     assert code == 0, output

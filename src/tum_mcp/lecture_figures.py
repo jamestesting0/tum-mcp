@@ -10,16 +10,18 @@ from tum_mcp.lecture_content import Lecture
 from tum_mcp.lecture_processing.prepare_visuals import FrameInventory
 from tum_mcp.lecture_processing.receipts import evidence_bytes
 from tum_mcp.lecture_processing.visuals import app_frame
-from tum_mcp.study_store import digest, private_path
+from tum_mcp.study_store import ReadObserver, digest, private_path
 
 
-def verify_figures(root: Path, lecture: Lecture) -> None:
+def verify_figures(
+    root: Path, lecture: Lecture, *, read_observer: ReadObserver | None = None
+) -> None:
     figures = tuple(figure for section in lecture.sections for figure in section.figures)
     if lecture.recording.synthetic or not figures:
         return
     try:
         inventory = FrameInventory.model_validate_json(
-            evidence_bytes(root, lecture.recording.key, "frames.json")
+            evidence_bytes(root, lecture.recording.key, "frames.json", read_observer=read_observer)
         )
     except ValidationError:
         raise CampusError(Code.INVALID_RESPONSE, "Prepared frame inventory is malformed.") from None
@@ -29,11 +31,14 @@ def verify_figures(root: Path, lecture: Lecture) -> None:
             if frame.captured_at_s != figure.captured_at_s:
                 continue
             path = private_path(root, f"lectures/{lecture.recording.key}/frames/{frame.sha256}.png")
-            if (
-                not path.is_file()
-                or path.stat().st_size > 64 * 1024**2
-                or digest(path.read_bytes()) != frame.sha256
-            ):
+            if not path.is_file() or path.stat().st_size > 64 * 1024**2:
+                raise CampusError(
+                    Code.STALE_RESULT, "Prepared original frame is missing or changed."
+                )
+            body = path.read_bytes()
+            if read_observer is not None:
+                read_observer(path, body)
+            if digest(body) != frame.sha256:
                 raise CampusError(
                     Code.STALE_RESULT, "Prepared original frame is missing or changed."
                 )

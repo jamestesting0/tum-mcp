@@ -239,3 +239,34 @@ complete while removing private paths and classification reasons. Extend the exi
 installed browser journey, rather than adding a platform matrix. Focused regressions
 live in `test_study_explore.py` and `test_study_explore_browser.py`; run them plus affected
 study/course-app/exercise tests and installation/migration checks for integration.
+
+## Knowledge harness verification
+
+Course Memory is an opt-in selection in the shared extension registry. Disabled
+graph requests fail before loading course metadata; native structure/review reports
+ignore retained graph files. The course review stores its optional semantic binding
+separately from the native revision so disabling memory leaves native review intact.
+Graph fixtures opt in explicitly; base/default-off tests must remain unselected.
+`test_course_memory_extension.py` exercises setup, source sync, client update,
+conflict-safe removal, reinstall and stale evidence. The installed consumer runs
+the extension lifecycle through the packaged launcher. No model trials are needed.
+
+Knowledge projection is request-local: `study_knowledge_store` captures metadata and
+selected source observations; evidence checks reuse lecture receipts/figures through
+optional observers; projection preserves native schemas; assertions compute independent
+review fingerprints; query and packet modules enforce deterministic traversal and UTF-8
+output limits. No new runtime dependency or cache is required.
+
+Use `uv run pytest -q tests/unit/test_study_knowledge*
+ tests/integration/test_study_knowledge*` (on one shell line) for focused behavior, plus
+existing structure/review, lecture freshness, migration and export tests when those
+boundaries change. Installed consumer checks exercise schema/context/impact through the
+packaged launcher; retain all native installation, upgrade and lifecycle gates.
+
+Retrieval evaluation uses fixed synthetic typed-reference gold sets, separate authored
+lexical/native-map and raw-page finder baselines, the same packet budgets, and explicit
+cold extraction versus warm lookup timing. Projection and source verification are timed
+separately on 300 synthetic units without a wall-clock CI threshold. Agent effectiveness
+needs paired model trials in the dev-only skill lab, with exact model/revision/corpus
+identity, unsuccessful runs retained and quality, tokens, setup and update latency
+reported separately. Retrieval tests alone do not establish student learning gains.

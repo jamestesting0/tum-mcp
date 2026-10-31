@@ -67,7 +67,10 @@ Revision = Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]
 VisualKey = Annotated[
     str,
     Field(
-        pattern=r"^(block|statement|question:[a-z0-9][a-z0-9_.-]*|step:[a-z0-9][a-z0-9_.-]*):[0-9]+$"
+        pattern=(
+            r"^(block|statement|solution|transfer|"
+            r"(question|step|compare|explore):[a-z0-9][a-z0-9_.-]*):[0-9]+$"
+        )
     ),
 ]
 
@@ -144,6 +147,7 @@ class CourseReview(Frozen):
     """The course as a whole: order and categories, repetition, and links between workspaces."""
 
     revision: Revision
+    knowledge_revision: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")] | None = None
     reviewed_at: datetime.date
     # Integration is scored only when the report lists two or more workspaces.
     scores: dict[CourseDimension, Score]
@@ -223,6 +227,7 @@ def review_report(
     lectures: "LectureContent | None" = None,
     *,
     ledger: CoverageLedger | None = None,
+    knowledge_revision: str | None = None,
 ) -> dict[str, JsonValue]:
     """What still needs a review or a fix before the content is easy to learn from."""
     from tum_mcp.study_visuals import visual_ids
@@ -290,7 +295,15 @@ def review_report(
     ]
     review = scorecard.course if scorecard else None
     course, course_blocks = (
-        _course_report(content, exercises, exam, lectures, review, ledger=ledger)
+        _course_report(
+            content,
+            exercises,
+            exam,
+            lectures,
+            review,
+            ledger=ledger,
+            knowledge_revision=knowledge_revision,
+        )
         if current
         else (None, False)
     )
@@ -331,6 +344,7 @@ def _course_report(
     review: CourseReview | None,
     *,
     ledger: CoverageLedger | None = None,
+    knowledge_revision: str | None = None,
 ) -> tuple[dict[str, JsonValue], bool]:
     """The course review's state, and whether it still keeps the review from passing."""
     from tum_mcp.study_structure import structure_revision, workspaces
@@ -339,12 +353,17 @@ def _course_report(
     dimensions = ["organization", "redundancy", *(["integration"] if len(spaces) > 1 else [])]
     current = structure_revision(content, exercises, exam, lectures, ledger=ledger)
     status = "unreviewed" if review is None else "stale" if review.revision != current else "fresh"
+    if review is not None and knowledge_revision is not None:
+        if review.knowledge_revision != knowledge_revision:
+            status = "stale"
     report: dict[str, JsonValue] = {
         "status": status,
         "revision": current,
         "workspaces": list(spaces),
         "dimensions": list(dimensions),
     }
+    if knowledge_revision is not None:
+        report["knowledge_revision"] = knowledge_revision
     if review is None or status != "fresh":
         return report, True
     report["scores"] = {name: review.scores[name] for name in dimensions if name in review.scores}

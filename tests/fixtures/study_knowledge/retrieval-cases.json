@@ -1,0 +1,409 @@
+[
+  {
+    "id": "B01",
+    "group": "bridge",
+    "selector": {
+      "concept": "observer"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "B02",
+    "group": "bridge",
+    "selector": {
+      "item": "study/unit/observer"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "B03",
+    "group": "bridge",
+    "selector": {
+      "item": "exercises/set/sheet-1/exercise/observer-practice"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "B04",
+    "group": "bridge",
+    "selector": {
+      "item": "exam/concept/observer"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "B05",
+    "group": "bridge",
+    "selector": {
+      "item": "lectures/lecture/observer-lecture/section/registration"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "B06",
+    "group": "bridge",
+    "selector": {
+      "query": "Observer"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "B07",
+    "group": "bridge",
+    "selector": {
+      "query": "observer pattern"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "B08",
+    "group": "bridge",
+    "selector": {
+      "query": "registered observers"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "B09",
+    "group": "bridge",
+    "selector": {
+      "query": "notification mechanism"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "B10",
+    "group": "bridge",
+    "selector": {
+      "query": "subject notification"
+    },
+    "required": [
+      "study/unit/observer",
+      "exercises/set/sheet-1/exercise/observer-practice",
+      "exam/concept/observer",
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "F01",
+    "group": "freshness",
+    "selector": {
+      "concept": "observer"
+    },
+    "change": "bytes",
+    "forbid_trusted_assertion": "teaching"
+  },
+  {
+    "id": "F02",
+    "group": "freshness",
+    "selector": {
+      "concept": "observer"
+    },
+    "change": "missing_payload",
+    "forbid_trusted_assertion": "teaching"
+  },
+  {
+    "id": "F03",
+    "group": "freshness",
+    "selector": {
+      "concept": "observer"
+    },
+    "change": "withdrawn",
+    "forbid_trusted_assertion": "teaching"
+  },
+  {
+    "id": "F04",
+    "group": "freshness",
+    "selector": {
+      "concept": "observer"
+    },
+    "change": "candidate",
+    "forbid_trusted_assertion": "teaching"
+  },
+  {
+    "id": "F05",
+    "group": "freshness",
+    "selector": {
+      "concept": "observer"
+    },
+    "change": "rejected",
+    "forbid_trusted_assertion": "teaching"
+  },
+  {
+    "id": "F06",
+    "group": "freshness",
+    "selector": {
+      "concept": "observer"
+    },
+    "change": "missing_endpoint",
+    "forbid_trusted_assertion": "teaching"
+  },
+  {
+    "id": "F07",
+    "group": "freshness",
+    "selector": {
+      "concept": "observer"
+    },
+    "change": "uncertain",
+    "forbid_trusted_assertion": "lecture"
+  },
+  {
+    "id": "F08",
+    "group": "freshness",
+    "selector": {
+      "concept": "observer"
+    },
+    "change": "wrong_semester",
+    "forbid_trusted_assertion": "teaching"
+  },
+  {
+    "id": "A01",
+    "group": "scope",
+    "selector": {
+      "query": "Notification pattern"
+    },
+    "expected_status": "ambiguous"
+  },
+  {
+    "id": "A02",
+    "group": "scope",
+    "selector": {
+      "concept": "absent"
+    },
+    "expected_status": "error"
+  },
+  {
+    "id": "A03",
+    "group": "scope",
+    "selector": {
+      "item": "study/unit/absent"
+    },
+    "expected_status": "error"
+  },
+  {
+    "id": "A04",
+    "group": "scope",
+    "selector": {
+      "query": ""
+    },
+    "expected_status": "error"
+  },
+  {
+    "id": "A05",
+    "group": "scope",
+    "selector": {
+      "query": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+    },
+    "expected_status": "error"
+  },
+  {
+    "id": "A06",
+    "group": "scope",
+    "selector": {
+      "query": "unmatcheduniquetoken"
+    },
+    "expected_status": "empty"
+  },
+  {
+    "id": "A07",
+    "group": "scope",
+    "selector": {
+      "source": "unknown-source"
+    },
+    "expected_status": "unknown_source"
+  },
+  {
+    "id": "A08",
+    "group": "scope",
+    "selector": {
+      "query": "Notification pattern",
+      "max_bytes": 2048
+    },
+    "expected_status": "ambiguous"
+  },
+  {
+    "id": "R01",
+    "group": "role",
+    "selector": {
+      "item": "study/unit/observer/explore/observer-extra"
+    },
+    "required": [
+      "study/unit/observer/explore/observer-extra"
+    ]
+  },
+  {
+    "id": "R02",
+    "group": "role",
+    "selector": {
+      "item": "exercises/set/sheet-1/exercise/observer-practice"
+    },
+    "required": [
+      "exercises/set/sheet-1/exercise/observer-practice"
+    ]
+  },
+  {
+    "id": "R03",
+    "group": "role",
+    "selector": {
+      "item": "exam/concept/observer"
+    },
+    "required": [
+      "exam/concept/observer"
+    ]
+  },
+  {
+    "id": "R04",
+    "group": "role",
+    "selector": {
+      "item": "lectures/lecture/observer-lecture/section/registration"
+    },
+    "required": [
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  },
+  {
+    "id": "R05",
+    "group": "role",
+    "selector": {
+      "item": "study/unit/strategy"
+    },
+    "required": [
+      "study/unit/strategy"
+    ]
+  },
+  {
+    "id": "R06",
+    "group": "role",
+    "selector": {
+      "item": "exam/mock/forecast-1"
+    },
+    "required": [
+      "exam/mock/forecast-1"
+    ]
+  },
+  {
+    "id": "C01",
+    "group": "control",
+    "selector": {
+      "item": "study/unit/observer"
+    },
+    "required": [
+      "study/unit/observer"
+    ]
+  },
+  {
+    "id": "C02",
+    "group": "control",
+    "selector": {
+      "item": "study/unit/strategy"
+    },
+    "required": [
+      "study/unit/strategy"
+    ]
+  },
+  {
+    "id": "C03",
+    "group": "control",
+    "selector": {
+      "item": "exercises/set/sheet-1/exercise/observer-practice"
+    },
+    "required": [
+      "exercises/set/sheet-1/exercise/observer-practice"
+    ]
+  },
+  {
+    "id": "C04",
+    "group": "control",
+    "selector": {
+      "item": "exam/concept/observer"
+    },
+    "required": [
+      "exam/concept/observer"
+    ]
+  },
+  {
+    "id": "C05",
+    "group": "control",
+    "selector": {
+      "item": "lectures/lecture/observer-lecture"
+    },
+    "required": [
+      "lectures/lecture/observer-lecture"
+    ]
+  },
+  {
+    "id": "C06",
+    "group": "control",
+    "selector": {
+      "item": "study/unit/observer/block/observer-definition"
+    },
+    "required": [
+      "study/unit/observer/block/observer-definition"
+    ]
+  },
+  {
+    "id": "C07",
+    "group": "control",
+    "selector": {
+      "item": "study/unit/observer/explore/observer-extra"
+    },
+    "required": [
+      "study/unit/observer/explore/observer-extra"
+    ]
+  },
+  {
+    "id": "C08",
+    "group": "control",
+    "selector": {
+      "item": "lectures/lecture/observer-lecture/section/registration"
+    },
+    "required": [
+      "lectures/lecture/observer-lecture/section/registration"
+    ]
+  }
+]
