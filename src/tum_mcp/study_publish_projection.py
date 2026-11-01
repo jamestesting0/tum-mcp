@@ -1,94 +1,95 @@
-"""Choose public workspaces before deriving sources, math, figure and thumbnail bytes."""
+"""Public learning content, canonical recording links and referenced image bytes."""
 
-import json
 from pathlib import Path
 
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 
 from tum_mcp.course_app_paths import app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_assets import thumbnail_bytes
 from tum_mcp.lecture_content import NoteImage
-from tum_mcp.lecture_evidence import Thumbnail
+from tum_mcp.lecture_evidence import Recording, Thumbnail
+from tum_mcp.lecture_processing.timeline import watch_link
 from tum_mcp.study_build import _inline_math
 from tum_mcp.study_figures import figure_bytes as study_figure_bytes
 from tum_mcp.study_figures import figure_images
 
 
-def project(data: bytes, *, include_exercises: bool, include_lectures: bool) -> dict:
-    if not data.startswith(b"export default "):
-        raise CampusError(
-            Code.WORKSPACE_CONFLICT, "Rebuild generated study data before publishing."
-        )
-    try:
-        payload = json.loads(data.removeprefix(b"export default ").removesuffix(b";\n"))
-        if not include_exercises:
-            payload.pop("exercises", None)
-            payload.pop("pending", None)
-        if not include_lectures:
-            payload.pop("lectures", None)
-        # Exam reproduces past exams and private uploads: it is never published.
-        payload.pop("exam", None)
-        payload["workspaces"] = (
-            (["study"] if payload["units"] else [])
-            + (["exercises"] if payload.get("exercises") else [])
-            + (["lectures"] if payload.get("lectures") else [])
-        )
-        if not payload["workspaces"]:
-            raise CampusError(
-                Code.ACTION_REQUIRED,
-                "Explicitly include Exercises or Lecture to publish this app.",
-            )
-        study_references = {s["key"] for unit in payload["units"] for s in unit["sources"]}
-        study_references.update(
-            source["key"]
-            for unit in payload["units"]
-            for item in unit.get("explore", [])
-            for source in item["sources"]
-        )
-        references = set(study_references)
-        if "studyPreparation" in payload:
-            payload["studyPreparation"] = {
-                "pending": [
-                    entry
-                    for entry in payload["studyPreparation"].get("pending", [])
-                    if entry["source"] in study_references
-                ]
-            }
-        references.update(
-            s["key"]
-            for group in payload.get("exercises", {}).get("sets", [])
-            for exercise in group["exercises"]
-            for s in exercise["sources"]
-        )
-        references.update(
-            s["key"]
-            for lecture in payload.get("lectures", {}).get("lectures", [])
-            for s in lecture["sources"]
-        )
-        # Course files stay local: a published citation names its source but never its stored copy.
-        payload["sources"] = {
-            k: {field: value for field, value in v.items() if field != "file"}
-            for k, v in payload["sources"].items()
-            if k in references
+def project(payload: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Strip document provenance without removing internal learning references."""
+    recordings: dict[str, JsonValue] = {}
+    for lecture in payload.get("lectures", {}).get("lectures", []):
+        recording = Recording.model_validate(lecture["recording"])
+        url = watch_link(recording, 0).removesuffix("?t=0")
+        recordings[recording.key] = {"title": lecture["title"], "url": url}
+        lecture["source_link"] = url
+        for note in lecture["notes"]:
+            note["url"] = watch_link(recording, note["at_s"])
+            note["recording_source"] = recording.key
+        for highlight in lecture["highlights"]:
+            highlight["url"] = watch_link(recording, highlight["interval"]["start_s"])
+        lecture["recording"] = {
+            "recorded_on": recording.recorded_on.isoformat(),
+            "duration_s": recording.duration_s,
         }
-        payload["inlineMath"] = _inline_math(
-            [
-                payload["introduction"],
-                payload["units"],
-                payload.get("exercises"),
-                payload.get("lectures"),
-            ]
-        )
-    except (KeyError, TypeError, ValueError):
-        raise CampusError(Code.WORKSPACE_CONFLICT, "Rebuild the generated site data.") from None
-    return payload
+        lecture["coverage"] = {
+            name: lecture["coverage"][name] for name in ("status", "missing", "uncertain")
+        }
+    for name in (
+        "sources",
+        "inlineMath",
+        "generation",
+        "incompleteSources",
+        "studyPreparation",
+        "pending",
+    ):
+        payload.pop(name, None)
+    recording_keys = set(recordings)
+    public = {name: _public(value, recording_keys) for name, value in payload.items()}
+    public["sources"] = recordings
+    public["inlineMath"] = _inline_math(public)
+    return public
 
 
-def assets(root: Path, payload: dict) -> dict[str, bytes]:
+def _public(value: JsonValue, recordings: set[str]) -> JsonValue:
+    """Source fields have one meaning across the validated rich-content models."""
+    match value:
+        case list():
+            return [_public(item, recordings) for item in value]
+        case dict():
+            result = {}
+            for name, item in value.items():
+                if name in {
+                    "evidence",
+                    "sha256",
+                    "source_sha256",
+                    "official_source",
+                    "pages",
+                    "crop",
+                }:
+                    continue
+                if name == "sources":
+                    references = []
+                    for source in item:
+                        match source:
+                            case str() as key:
+                                if key in recordings:
+                                    references.append(key)
+                            case {"key": str() as key}:
+                                if key in recordings:
+                                    references.append({"key": key})
+                    result[name] = references
+                else:
+                    result[name] = _public(item, recordings)
+            return result
+        case _:
+            return value
+
+
+def assets(root: Path, payload: dict[str, JsonValue]) -> dict[str, bytes]:
+    """Validate image provenance before the public projection removes it."""
     result = {
-        image: study_figure_bytes(app_path(root, image))
-        for image in set(figure_images([payload.get("units"), payload.get("exercises")]))
+        image: study_figure_bytes(app_path(root, image)) for image in set(figure_images(payload))
     }
     try:
         for lecture in payload.get("lectures", {}).get("lectures", []):

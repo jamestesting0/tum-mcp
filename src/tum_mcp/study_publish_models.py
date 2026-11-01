@@ -35,12 +35,13 @@ class PublicationSetup(Frozen):
     course_identity: Digest
     repository: RepositoryName
     public_site: Literal[True]
-    include_exercises: bool = Field(default=False, strict=True)
-    include_lectures: bool = Field(default=False, strict=True)
+    # Read saved selective settings without treating them as full-app consent.
+    include_exercises: bool = Field(default=False, strict=True, exclude=True)
+    include_lectures: bool = Field(default=False, strict=True, exclude=True)
 
 
 class Publication(PublicationSetup):
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 1
     branch: str = Field(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_./-]+$")
     auto_sync: bool = True
     commit: GitSha

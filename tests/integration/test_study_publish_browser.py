@@ -9,10 +9,12 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
+from playwright.sync_api import Browser, expect, sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-from playwright.sync_api import sync_playwright
 from study_explore_fixture import add_explore
+from typer.testing import CliRunner
 
+from tum_mcp.cli import app
 from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
 from tum_mcp.moodle.browsers import discover_browsers
 from tum_mcp.study_build import build
@@ -185,7 +187,7 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
                             if item["key"] == question["correct"]
                         )
                         page.get_by_role("radio", name=option["text"], exact=True).check()
-                        page.get_by_role("button", name="Check answer", exact=True).click()
+                        page.get_by_role("button", name="Check", exact=True).click()
                         assert page.get_by_role("heading", name="Correct", exact=True).is_visible()
                         context.close()
             finally:
@@ -201,3 +203,150 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
     assert all(url.startswith(f"http://127.0.0.1:{server.server_port}/course/") for url in requests)
     if evidence:
         (evidence / "captures.json").write_text(json.dumps(captures, indent=2), encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "width,theme", [(390, "light"), (390, "dark"), (1440, "light"), (1440, "dark")]
+)
+def test_complete_public_app_keeps_learning_panels_and_lecture_timestamp_links(
+    course_browser: Browser, lecture_extension: Path, tmp_path: Path, width: int, theme: str
+) -> None:
+    root = tmp_path / "complete"
+    result = CliRunner().invoke(app, ["study", "demo", str(root), "--lectures"])
+    assert result.exit_code == 0, result.output
+    exported = export_site(root)
+    data = json.loads(
+        exported["data.mjs"].removeprefix(b"const data = ").split(b";\ndata.hosted")[0]
+    )
+    assert set(data["workspaces"]) == {"study", "exercises", "exam", "lectures"}
+    site = tmp_path / "host/course"
+    for name, content in exported.items():
+        path = site / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+    handler = partial(StaticHandler, directory=str(site.parent))
+    server = PreviewServer(("127.0.0.1", 0), handler)
+    worker = Thread(target=server.serve_forever, daemon=True)
+    worker.start()
+    context = course_browser.new_context(
+        viewport={"width": width, "height": 844},
+        color_scheme=theme,
+        is_mobile=width == 390,
+        has_touch=width == 390,
+        device_scale_factor=3 if width == 390 else 1,
+    )
+    context.route(
+        "https://example.invalid/**",
+        lambda route: route.fulfill(
+            status=200, content_type="text/html", body="<title>Synthetic recording</title>"
+        ),
+    )
+    page = context.new_page()
+    errors, requests, failed = [], [], []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.on("request", lambda request: requests.append(request.url))
+    page.on(
+        "response", lambda response: failed.append(response.url) if response.status >= 400 else None
+    )
+    base = f"http://127.0.0.1:{server.server_port}/course/"
+    evidence = Path(os.environ.get("TUM_MCP_HOSTED_QA_PATH", str(tmp_path))) / "complete"
+    evidence.mkdir(parents=True, exist_ok=True)
+    lecture = data["lectures"]["lectures"][0]
+    exercise = data["exercises"]["sets"][0]["exercises"][0]
+    pattern = data["exam"]["patterns"][0]
+    mock = data["exam"]["mocks"][0]
+    sitting = data["exam"]["sittings"][0]
+    variant = sitting["variants"][0]
+    authored_exam = json.loads((root / "app/exam.json").read_bytes())
+    linked_concept = next(item for item in authored_exam["concepts"] if item.get("passages"))
+    linked_pattern = next(
+        item for item in authored_exam["patterns"] if linked_concept["key"] in item["concepts"]
+    )
+    states = [
+        ("study", "#components/content", data["units"][0]["title"]),
+        ("exercises", "#exercises/preview/controls", exercise["title"]),
+        ("exam-sheet", "#exam/sheet", "Cheatsheet"),
+        ("exam-pattern", f"#exam/patterns/{pattern['key']}", pattern["title"]),
+        ("exam-paper", f"#exam/paper/{variant['key']}", sitting["label"]),
+        ("exam-mock", f"#exam/mock/{mock['key']}", mock["title"]),
+        ("lectures", f"#lectures/{lecture['key']}", lecture["title"]),
+    ]
+    try:
+        for name, route, heading in states:
+            page.goto(base + route)
+            expect(page.locator("main h1")).to_contain_text(heading)
+            page.evaluate("document.fonts.ready")
+            expect(page.locator(".source-note:visible")).to_have_count(
+                len(lecture["notes"]) if name == "lectures" else 0
+            )
+            assert not page.evaluate("document.documentElement.scrollWidth > innerWidth + 1")
+            page.screenshot(
+                path=str(evidence / f"{width}-{theme}-{name}.png"), animations="disabled"
+            )
+            if name == "study":
+                page.locator(".insight-trigger").first.click()
+                expect(page.locator(".insight-tip .term-bubble")).to_be_visible()
+                page.keyboard.press("Escape")
+            elif name == "exercises":
+                page.locator(".recall-chip").first.click()
+                page.get_by_role("button", name="Open lesson", exact=True).click()
+                expect(page.locator("dialog.reference-panel")).to_be_visible()
+                expect(page.locator("dialog.reference-panel .source-note:visible")).to_have_count(0)
+                page.screenshot(
+                    path=str(evidence / f"{width}-{theme}-recall.png"), animations="disabled"
+                )
+                page.get_by_role("button", name="Close", exact=True).click()
+                page.get_by_text("Guide", exact=True).first.click()
+                page.get_by_role("button", name="Compare", exact=True).first.click()
+                expect(page.locator(".feedback:visible")).not_to_have_count(0)
+            elif name == "exam-pattern":
+                page.locator(".recall-chip").first.click()
+                page.get_by_role("button", name="Open cheatsheet", exact=True).click()
+                expect(page.locator("dialog.reference-panel")).to_be_visible()
+                expect(page.locator("dialog.reference-panel .source-note:visible")).to_have_count(0)
+                page.screenshot(
+                    path=str(evidence / f"{width}-{theme}-exam-recall.png"), animations="disabled"
+                )
+                page.get_by_role("button", name="Close", exact=True).click()
+                page.goto(base + f"#exam/patterns/{linked_pattern['key']}")
+                expect(page.locator("main h1")).to_contain_text(linked_pattern["title"])
+                page.locator(".recall-chip", has_text=linked_concept["title"]).click()
+                page.get_by_role("button", name="Open lesson", exact=True).click()
+                passage = linked_concept["passages"][0]
+                expect(
+                    page.get_by_role("link", name="Open in Study", exact=True)
+                ).to_have_attribute("href", f"#{passage['unit']}/content/{passage['block']}")
+                page.get_by_role("button", name="Close", exact=True).click()
+            elif name == "exam-sheet":
+                page.locator(".exam-entry-row").first.click()
+                expect(page.locator(".exam-entry-body:visible")).not_to_have_count(0)
+            elif name == "lectures":
+                page.wait_for_function(
+                    "() => [...document.querySelectorAll('.lecture-thumb img')]"
+                    ".every(image => image.complete && image.naturalWidth > 0)"
+                )
+                first = page.locator(".lecture-highlight").first
+                expected = lecture["highlights"][0]["url"]
+                expect(first.locator(".lecture-time")).to_have_attribute("href", expected)
+                expect(first.locator(".lecture-thumb")).to_have_attribute("href", expected)
+                note = page.locator(".lecture-note").first
+                note.locator(".citation summary").click()
+                timestamp = note.locator(".lecture-time")
+                expect(timestamp).to_have_attribute("href", lecture["notes"][0]["url"])
+                with page.expect_popup() as opened:
+                    timestamp.click()
+                popup = opened.value
+                expect(popup).to_have_url(lecture["notes"][0]["url"])
+                popup.close()
+                page.keyboard.press("Escape")
+            assert errors == [] and failed == [], (errors, failed)
+        assert all(url.startswith(base) or url == lecture["notes"][0]["url"] for url in requests)
+        assert not any(
+            "/materials/" in url or "/videos/" in url or "/_study/" in url for url in requests
+        )
+    finally:
+        context.close()
+        server.shutdown()
+        worker.join(timeout=3)
+        server.server_close()
+        assert not worker.is_alive()

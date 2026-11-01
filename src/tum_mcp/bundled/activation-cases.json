@@ -842,9 +842,17 @@
   {
     "id": "publish-course-first",
     "target_skill": "publish-course",
-    "prompt": "Publish my prepared study website to GitHub Pages so I can open it on my phone.",
+    "prompt": "Publish the study app.",
     "context": "prepared_site_no_publication_config",
     "partition": "development",
+    "expected_skill": "publish-course"
+  },
+  {
+    "id": "publish-course-all-workspaces",
+    "target_skill": "publish-course",
+    "prompt": "Update my published course app with Exercises, Exam and Lecture, keeping the lecture timestamp links.",
+    "context": "bound_course_configured_publication_auto_sync",
+    "partition": "held_out",
     "expected_skill": "publish-course"
   },
   {

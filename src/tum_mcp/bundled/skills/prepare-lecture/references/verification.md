@@ -48,11 +48,11 @@ Lecture list, a lecture and a highlight deep link. Check:
   A note deep link focuses its item; a highlight deep link focuses its heading.
   Test a stale/ambiguous quote as unavailable; never attach it to a guessed substitute.
   Filter feedback with `study comments list PROJECT --view lectures --lecture KEY`.
-- Hosted export disables comments, fetches no campus content/model API and carries
-  only explicitly selected workspaces/assets. Lecture publication defaults false,
-  including old saved publications. Use publish-course with an explicit
-  `--include-lectures` decision; `--exclude-lectures` removes managed lecture images
-  from subsequent eligible exports. An excluded Lecture-only export is refused.
+- Hosted export disables comments and fetches no campus content/model API.
+  Public course-app publication includes all prepared workspaces and required
+  images. Canonical recording links and timestamps remain; local-document
+  citations and raw evidence do not. Use publish-course for the agent-executed
+  publication workflow, including explicit adoption of old selective settings.
 
 A targeted edit needs targeted source/browser checks. Do not repeatedly acquire
 unchanged media, re-run inference or rebuild after every highlight. Report what

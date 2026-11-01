@@ -285,11 +285,13 @@ scripts, voice settings, candidates and archives under the course's `audio/` roo
 Video Notes turns prepared topics into narrated explainer videos under `videos/`;
 `tum-mcp video-notes` validates storyboards, measures narration, renders with an
 optional pinned runtime and publishes checked videos for the local app only.
-Publish Course uses host GitHub CLI authentication to create a private repository
-and a public Pages website after explicit publication consent. It chooses a course
-and semester name, updates the same site after successful study builds, and shows
-the hosted URL alongside the local launcher URL. No tokens or original course
-downloads are uploaded. See [publishing](study.md#publish-a-study-website).
+Say "publish the study app" to have Publish Course handle host GitHub CLI
+authentication, a private repository and public Pages website, and exact-commit
+deployment verification. Public publication includes all prepared workspaces and
+required images, without local-document citations or private evidence. Canonical
+Lecture timestamp links remain. Successful study builds update the same site;
+the launcher shows its URL. No tokens, original downloads, audio or generated
+videos are uploaded. See [publishing](study.md#publish-a-study-website).
 Old seven-skill, three-site and separate init/update packs are retired only when
 managed copies remain unchanged. Personal overrides are preserved and require a deliberate merge into
 the consolidated workflows before export.

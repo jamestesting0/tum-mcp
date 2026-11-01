@@ -160,16 +160,19 @@ accuracy.
 
 ## Publication
 
-Lecture is excluded from publication by default, including old saved
-configurations. After reviewing public exposure, use the existing publish-course
-workflow with `--include-lectures`; Exercises has a separate choice. Exclusion
-removes lecture text, lecture-only sources/math and images from exports,
-and removes previously managed remote images while preserving unrelated files.
-Raw media/transcripts, comments and private review metadata are never exported.
+Say "publish the study app" to publish all prepared workspaces, including Lecture
+notes, highlights and their selected images. The agent handles setup, updates and
+deployment verification. Old selective settings need one explicit full-app request
+before automatic uploads can broaden.
+
+Canonical external recording links remain: note citations retain their timestamps,
+and highlight ranges and thumbnails open the original recording. Its access rules
+still apply. Local slide/PDF citations, raw evidence, media/transcripts, comments
+and private review metadata are not exported. Removed images leave subsequent
+managed exports without erasing unrelated remote files.
 The entire export, including its ownership marker, must fit 16 MiB and 100 files.
 Every highlight carries a thumbnail, so many lectures may not fit; thumbnails are not
-silently omitted or compressed. A Lecture-only app excluded from publication cannot
-produce an empty site.
+silently omitted or compressed. A prepared Lecture-only app can be published.
 
 ## Cross-workspace relationships
 

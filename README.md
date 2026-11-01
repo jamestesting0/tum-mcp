@@ -85,7 +85,7 @@ course/
   app/                      Study, Exercises, Exam and optional Lecture website
     content.json            Study lessons, flashcards and practice
     exercises.json          Guided exercise content
-    exam.json               Exam: cheatsheet, exam patterns, practice exams (local only)
+    exam.json               Exam: cheatsheet, exam patterns and practice exams
     lectures.json           Optional: Lecture
     lecture-assets/         Optional: highlight thumbnails and meaningful note images
   .tum-mcp/                 Private course state, comments and lecture evidence
@@ -98,7 +98,10 @@ course/
 Sessions are encrypted locally. Your agent uses your configured AI provider to
 process selected material. Publishing requires local GitHub CLI authentication
 and an eligible GitHub plan: **the repository is private; the website is public**.
-Review content before publishing. [Publishing details](docs/study.md#publish-a-study-website).
+Say "publish the study app" and the agent handles setup, all prepared workspaces,
+image export, updates and deployment verification. Local-document references are
+removed; external lecture timestamp links remain. Review content before publishing.
+[Publishing details](docs/study.md#publish-a-study-website).
 
 ```sh
 tum-mcp update    # Upgrade the package and refresh managed clients

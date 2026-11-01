@@ -1,9 +1,12 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from threading import Event
 from typing import Literal, assert_never
 
 import pytest
+from filelock import FileLock, Timeout
 from study_publish_fixture import GitHubFixture
 from typer.testing import CliRunner
 
@@ -50,32 +53,35 @@ def test_proposal_has_no_uploads_or_authentication(project: Path, github: GitHub
     assert github.requests == [] and not (project / ".tum-mcp/github.json").exists()
 
 
-def test_exercise_scope_is_explicit_and_keeps_the_existing_repository(
+def test_full_app_publication_requires_renewed_consent_for_selective_settings(
     exercise_project: Path, github: GitHubFixture
 ) -> None:
     root = exercise_project
     assert first_publish(root).exit_code == 0
     before = load_publication(root)
-    assert before.include_exercises is False
+    assert before.schema_version == 2
+    assert b"sample-relaxation" in github.files(before.repository)["data.mjs"]
     saved = root / ".tum-mcp/github.json"
     old = json.loads(saved.read_bytes())
-    old.pop("include_exercises")
+    old.update(schema_version=1, include_exercises=False, include_lectures=False)
     saved.write_text(json.dumps(old))
-    assert load_publication(root).include_exercises is False
-    arguments = ["study", "publish", "--project", str(root), "--wait-seconds", "0"]
-    included = CliRunner().invoke(app, [*arguments, "--include-exercises"])
-    assert included.exit_code == 0, included.output
+    requests = len(github.requests)
+    assert build(root).publication.status == "failed"
+    assert len(github.requests) == requests
+    unapproved = CliRunner().invoke(
+        app, ["study", "publish", "--project", str(root), "--wait-seconds", "0"]
+    )
+    assert unapproved.exit_code != 0
+    assert len(github.requests) == requests
+    assert first_publish(root).exit_code == 0
     after = load_publication(root)
-    assert after.include_exercises is True
+    assert after.schema_version == 2
     assert (after.repository, after.branch, after.hosted_url) == (
         before.repository,
         before.branch,
         before.hosted_url,
     )
     assert b"sample-relaxation" in github.files(after.repository)["data.mjs"]
-    excluded = CliRunner().invoke(app, [*arguments, "--exclude-exercises"])
-    assert excluded.exit_code == 0, excluded.output
-    assert b"sample-relaxation" not in github.files(after.repository)["data.mjs"]
     assert len(github.repositories) == 1
 
 
@@ -120,6 +126,49 @@ def test_build_updates_the_same_repository_and_unchanged_build_is_local(
     count = len(github.requests)
     repeated = build(project)
     assert repeated.publication.status == "unchanged" and len(github.requests) == count
+
+
+def test_concurrent_publish_cannot_restore_an_older_prepared_snapshot(
+    project: Path, github: GitHubFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp import study_publish
+
+    assert first_publish(project).exit_code == 0
+    repository = load_publication(project).repository
+    captured, release = Event(), Event()
+    prepare = study_publish.build_for_publication
+
+    def pause_first_snapshot(root: Path) -> dict[str, bytes]:
+        site = prepare(root)
+        if not captured.is_set():
+            captured.set()
+            assert release.wait(10), "The competing publisher did not release the first snapshot."
+        return site
+
+    def newer_publish():
+        try:
+            with FileLock(str(project / ".tum-mcp/publish.lock"), timeout=0):
+                pass
+        except Timeout:
+            release.set()
+        try:
+            return study_publish.publish(project, wait_seconds=0)
+        finally:
+            release.set()
+
+    monkeypatch.setattr(study_publish, "build_for_publication", pause_first_snapshot)
+    change_lesson(project)
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        older = workers.submit(first_publish, project)
+        assert captured.wait(10), "The first publisher did not prepare its snapshot."
+        path = project / "study/content.json"
+        content = json.loads(path.read_bytes())
+        content["introduction"] += " NEWEST_PUBLIC_CONTENT"
+        path.write_text(json.dumps(content))
+        newer = workers.submit(newer_publish)
+        assert older.result(timeout=20).exit_code == 0
+        assert newer.result(timeout=20).status == "deployed"
+    assert b"NEWEST_PUBLIC_CONTENT" in github.files(repository)["data.mjs"]
 
 
 def test_retired_template_files_leave_an_older_publication(

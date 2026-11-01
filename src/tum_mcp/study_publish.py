@@ -8,7 +8,6 @@ from filelock import FileLock
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.study_github import Account, GitHub, Head, Pages, Repository
-from tum_mcp.study_models import PRIVATE_PROVIDERS
 from tum_mcp.study_publish_checks import create_pages, deployed, verify_pages
 from tum_mcp.study_publish_models import (
     SETUP,
@@ -37,43 +36,24 @@ def configure(
     root: Path,
     *,
     repository: str | None = None,
-    include_exercises: bool | None = None,
-    include_lectures: bool | None = None,
+    site: dict[str, bytes] | None = None,
 ) -> Publication:
     """Create a private repository only after the caller explicitly requests a public site."""
     from pydantic import TypeAdapter, ValidationError
 
     root = root.expanduser().resolve()
-    with FileLock(str(private_path(root, "publish.lock"))):
+    with FileLock(str(private_path(root, "publish.lock")), is_singleton=True):
         previous = load_publication(root)
         if previous is not None:
             if repository is not None and repository.casefold() != previous.repository.casefold():
                 raise CampusError(
                     Code.WORKSPACE_CONFLICT, "This course already has a publishing repository."
                 )
-            changes = {
-                name: value
-                for name, value in (
-                    ("include_exercises", include_exercises),
-                    ("include_lectures", include_lectures),
-                )
-                if value is not None and value != getattr(previous, name)
-            }
-            if changes:
-                previous = previous.model_copy(update=changes)
+            if previous.schema_version != 2:
+                previous = previous.model_copy(update={"schema_version": 2})
                 save_publication(root, previous)
             return previous
         interrupted = load_setup(root)
-        exercise_scope = (
-            include_exercises
-            if include_exercises is not None
-            else (interrupted.include_exercises if interrupted else False)
-        )
-        lecture_scope = (
-            include_lectures
-            if include_lectures is not None
-            else (interrupted.include_lectures if interrupted else False)
-        )
         if (
             interrupted is not None
             and repository is not None
@@ -85,7 +65,8 @@ def configure(
             )
         with FileLock(str(private_path(root, "update.lock"))):
             course = load_state(root).course
-            export_site(root, include_exercises=exercise_scope, include_lectures=lecture_scope)
+            if site is None:
+                site = export_site(root)
         github = GitHub.discover()
         account = github.require("user", Account)
         chosen = (
@@ -116,8 +97,6 @@ def configure(
                 course_identity=course_identity(course),
                 repository=chosen,
                 public_site=True,
-                include_exercises=exercise_scope,
-                include_lectures=lecture_scope,
             )
             apply(
                 root,
@@ -153,13 +132,12 @@ def configure(
             f"repos/{remote.full_name}/git/ref/heads/{quote(remote.default_branch, safe='')}", Head
         )
         publication = Publication(
+            schema_version=2,
             course_identity=course_identity(course),
             repository=remote.full_name,
             branch=remote.default_branch,
             commit=head.object.sha,
             public_site=True,
-            include_exercises=exercise_scope,
-            include_lectures=lecture_scope,
         )
         # Save before uploading: an interrupted setup retries the same repository.
         save_publication(root, publication)
@@ -173,32 +151,28 @@ def publish(
     wait_seconds: int = 60,
     rebuild: bool = True,
     verify_unchanged: bool = False,
+    site: dict[str, bytes] | None = None,
 ) -> PublishReport:
     """Upload changed site assets and verify deployment for the exact resulting commit."""
     root = root.expanduser().resolve()
-    if rebuild:
+    with FileLock(str(private_path(root, "publish.lock")), is_singleton=True):
         publication = load_publication(root)
         if publication is None:
             raise CampusError(
                 Code.ACTION_REQUIRED, "Configure study publish with --public-site first."
             )
-        build_for_publication(
-            root,
-            include_exercises=publication.include_exercises,
-            include_lectures=publication.include_lectures,
-        )
-    with FileLock(str(private_path(root, "publish.lock"))):
-        publication = load_publication(root)
-        if publication is None:
+        if publication.schema_version != 2:
             raise CampusError(
-                Code.ACTION_REQUIRED, "Configure study publish with --public-site first."
+                Code.ACTION_REQUIRED,
+                "The saved selective publication needs explicit --public-site consent "
+                "for all prepared workspaces.",
             )
-        with FileLock(str(private_path(root, "update.lock"))):
-            site = export_site(
-                root,
-                include_exercises=publication.include_exercises,
-                include_lectures=publication.include_lectures,
-            )
+        if site is None:
+            if rebuild:
+                site = build_for_publication(root)
+            else:
+                with FileLock(str(private_path(root, "update.lock"))):
+                    site = export_site(root)
         fingerprint = site_digest(site)
         if (
             fingerprint == publication.site_digest
@@ -244,25 +218,13 @@ def publish(
         return PublishReport("deployed", publication.repository, publication.hosted_url, commit)
 
 
-def build_for_publication(
-    root: Path, *, include_exercises: bool, include_lectures: bool = False
-) -> None:
-    """Allow a current Study-only export when excluded exercises are stale."""
+def build_for_publication(root: Path) -> dict[str, bytes]:
+    """Build once, then capture one validated public export before network access."""
     from tum_mcp.study_build import build
 
-    try:
-        build(root, publish=False)
-    except CampusError as error:
-        if error.code != Code.STALE_RESULT:
-            raise
-        with FileLock(str(private_path(root, "update.lock"))):
-            state = load_state(root)
-            if not any(binding.provider in PRIVATE_PROVIDERS for binding in state.course.bindings):
-                raise
-            # This validates the retained Study payload and never reads excluded exercises.
-            export_site(
-                root, include_exercises=include_exercises, include_lectures=include_lectures
-            )
+    build(root, publish=False)
+    with FileLock(str(private_path(root, "update.lock"))):
+        return export_site(root)
 
 
 def after_build(root: Path) -> PublishReport | None:
