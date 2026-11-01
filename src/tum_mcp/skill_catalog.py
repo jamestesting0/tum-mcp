@@ -14,7 +14,7 @@ CURRENT_SKILLS: Final = (
     "review-course",
     "publish-course",
 )
-OPTIONAL_SKILLS: Final = ("prepare-lecture", "audio-notes", "video-notes")
+OPTIONAL_SKILLS: Final = ("prepare-lecture", "audio-notes", "video-notes", "course-memory")
 BUNDLED_SKILLS: Final = (*CURRENT_SKILLS, *OPTIONAL_SKILLS)
 
 
@@ -33,6 +33,8 @@ def active_skills(*, extensions: ExtensionSelection | None = None) -> tuple[str,
         active.append("audio-notes")
     if chosen.video_notes:
         active.append("video-notes")
+    if chosen.course_memory:
+        active.append("course-memory")
     return tuple(active)
 
 

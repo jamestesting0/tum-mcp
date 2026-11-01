@@ -3,6 +3,11 @@ name: review-course
 description: Review and improve prepared Study, Exercises, audio revision, concept videos, exercise walkthroughs and course structure. Save source-bound scores with actual evidence, fix findings and re-review. Media needs real listening/playback; source and media scores stay separate.
 ---
 
+When `tum-mcp study status PROJECT` reports `course_memory: true`, use
+the installed `course-memory` skill for relationships and scoped source updates.
+When disabled, leave retained graph files unused and follow the ordinary workflow.
+
+
 Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. Study content
 lives in `app/content.json`, exercises in `app/exercises.json`. You score them in
 `.tum-mcp/review.json`; code ties each item score to the exact content it read and the

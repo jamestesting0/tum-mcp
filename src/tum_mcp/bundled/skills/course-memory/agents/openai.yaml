@@ -1,0 +1,6 @@
+interface:
+  display_name: "Course Memory"
+  short_description: "Maintain source-backed links across course workspaces"
+  default_prompt: "Use $course-memory to connect this course's teaching, practice and assessment sources for my current study request."
+policy:
+  allow_implicit_invocation: true

@@ -131,6 +131,7 @@ def test_doctor_contains_extensions_without_duplicating_runtime_entries(
         "Lecture": "Disabled",
         "Audio Notes": "Enabled",
         "Video Notes": "Disabled",
+        "Course Memory": "Disabled",
     }
     assert all(check["label"] != "Audio Notes" for check in report["runtime"])
 
@@ -160,6 +161,7 @@ def test_status_alias_preserves_script_output_and_uses_doctor_for_people(profile
         "lecture": False,
         "audio-notes": False,
         "video-notes": False,
+        "course-memory": False,
     }
     human = runner.invoke(app, ["status"])
     assert human.exit_code == 0, human.output

@@ -15,7 +15,7 @@ from tum_mcp.lecture_processing.validity import Validity, require_content
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
 from tum_mcp.study_models import Coverage, Digest, Resource, Snapshot
-from tum_mcp.study_store import confined, digest, load_state, private_path
+from tum_mcp.study_store import ReadObserver, confined, digest, load_state, private_path
 
 
 class InvalidReceipt(Frozen):
@@ -104,14 +104,17 @@ def recording_dir(root: Path, key: str) -> Path:
     return private_path(root, f"lectures/{key}")
 
 
-def read_receipt(root: Path, key: str) -> Receipt:
+def read_receipt(root: Path, key: str, *, read_observer: ReadObserver | None = None) -> Receipt:
     path = recording_dir(root, key) / "receipt.json"
     if not path.is_file() or path.is_symlink() or path.stat().st_size > 1024**2:
         raise CampusError(
             Code.ACTION_REQUIRED, "Prepare this selected recording before reading evidence."
         )
     try:
-        result = RECEIPT.validate_json(path.read_bytes())
+        body = path.read_bytes()
+        if read_observer is not None:
+            read_observer(path, body)
+        result = RECEIPT.validate_json(body)
     except ValidationError:
         raise CampusError(
             Code.INVALID_RESPONSE, "Lecture receipt is invalid; preserve and inspect it."
@@ -136,12 +139,14 @@ def read_receipt(root: Path, key: str) -> Receipt:
     return result
 
 
-def usable_receipt(root: Path, key: str) -> PreparedReceipt:
-    receipt = read_receipt(root, key)
+def usable_receipt(
+    root: Path, key: str, *, read_observer: ReadObserver | None = None
+) -> PreparedReceipt:
+    receipt = read_receipt(root, key, read_observer=read_observer)
     if isinstance(receipt, InvalidReceipt):
         raise CampusError(Code.CAPABILITY_UNSUPPORTED, f"Recording invalid: {receipt.reason}.")
     require_content(receipt.validity)
-    progress = read_progress(recording_dir(root, key))
+    progress = read_progress(recording_dir(root, key), read_observer=read_observer)
     if progress is not None and progress.metadata_revision != receipt.metadata_revision:
         raise CampusError(
             Code.STALE_RESULT,
@@ -151,12 +156,20 @@ def usable_receipt(root: Path, key: str) -> PreparedReceipt:
     return receipt
 
 
-def evidence_bytes(root: Path, key: str, name: Literal["transcript.json", "frames.json"]) -> bytes:
-    receipt = usable_receipt(root, key)
+def evidence_bytes(
+    root: Path,
+    key: str,
+    name: Literal["transcript.json", "frames.json"],
+    *,
+    read_observer: ReadObserver | None = None,
+) -> bytes:
+    receipt = usable_receipt(root, key, read_observer=read_observer)
     path = private_path(root, f"lectures/{key}/{name}")
     if not path.is_file() or path.stat().st_size > 16 * 1024**2:
         raise CampusError(Code.INVALID_RESPONSE, "Cached lecture evidence is missing or oversized.")
     payload = path.read_bytes()
+    if read_observer is not None:
+        read_observer(path, payload)
     expected = receipt.transcript_sha256 if name == "transcript.json" else receipt.frames_sha256
     if digest(payload) != expected:
         raise CampusError(

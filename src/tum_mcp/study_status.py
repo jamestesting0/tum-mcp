@@ -3,7 +3,10 @@
 from pathlib import Path
 from typing import Literal
 
+from pydantic import Field
+
 from tum_mcp.errors import CampusError
+from tum_mcp.extension_selection import course_memory_enabled
 from tum_mcp.lecture_data import read_lectures
 from tum_mcp.settings import Frozen
 from tum_mcp.study_store import END, START, confined, load_state, private_path, replace_agents
@@ -23,6 +26,7 @@ class ProjectStatus(Frozen):
     course: CourseSummary | None = None
     generation: str | None = None
     resources: int = 0
+    course_memory: bool = Field(default_factory=course_memory_enabled)
     lecture_notes: Literal["absent", "authored", "invalid"] = "absent"
     lectures: int = 0
 

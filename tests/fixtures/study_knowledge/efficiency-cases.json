@@ -1,0 +1,6 @@
+[
+  {"query":"Explain the Observer registration please","required":"study/unit/observer"},
+  {"query":"How does Observer notification work?","required":"study/unit/observer"},
+  {"query":"Please explain notification pattern","ambiguous":true},
+  {"query":"Please explain the quuxnebula","empty":true}
+]

@@ -3,6 +3,11 @@ name: sync-course
 description: Initialize or refresh one TUM course project, its shared sources and source-backed course handbook. Chooses from local state; lesson or exercise authoring uses the preparation skills.
 ---
 
+When `tum-mcp study status PROJECT` reports `course_memory: true`, use
+the installed `course-memory` skill for relationships and scoped source updates.
+When disabled, leave retained graph files unused and follow the ordinary workflow.
+
+
 Run `tum-mcp study status PROJECT` once. Read AGENTS.md, `.tum-mcp/course.md`
 and relevant inventory records; reuse this check unless state changes. Status is local, not live freshness.
 

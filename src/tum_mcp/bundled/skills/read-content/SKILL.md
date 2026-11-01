@@ -3,6 +3,11 @@ name: read-content
 description: Find and explain TUM Moodle, Artemis, Zulip or TUMonline content with citations. Use for course questions and source retrieval; project/site changes use the study skills.
 ---
 
+When `tum-mcp study status PROJECT` reports `course_memory: true`, use
+the installed `course-memory` skill for relationships and scoped source updates.
+When disabled, leave retained graph files unused and follow the ordinary workflow.
+
+
 For a bound local course, read `.tum-mcp/course.md` and the relevant source records
 first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is the
 discovery pointer and user's rules. Legacy `.study/` remains readable until explicit

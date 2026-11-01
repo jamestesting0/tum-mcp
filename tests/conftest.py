@@ -49,6 +49,13 @@ def lecture_extension(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
+def course_memory(lecture_extension: Path) -> Path:
+    """Enable memory explicitly for graph fixtures, including their synthetic lecture."""
+    (lecture_extension / "extensions.json").write_text('{"schema_version":1,"course_memory":true}')
+    return lecture_extension
+
+
+@pytest.fixture
 def media_audio(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """One source-bound AAC codec fixture; it makes no actual speech-quality claim."""
     import hashlib

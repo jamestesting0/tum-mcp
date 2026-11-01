@@ -170,3 +170,17 @@ The entire export, including its ownership marker, must fit 16 MiB and 100 files
 Every highlight carries a thumbnail, so many lectures may not fit; thumbnails are not
 silently omitted or compressed. A Lecture-only app excluded from publication cannot
 produce an empty site.
+
+## Cross-workspace relationships
+
+The following graph commands require the optional Course Memory extension
+(`tum-mcp install course-memory`); Lecture installation alone does not enable it.
+
+`study context PROJECT --item lectures/lecture/KEY --purpose lectures` connects prepared
+notes with authored teaching/practice links. It reads only cached evidence and never
+starts recording processing or installs the optional lecture extension. Selected lectures
+reuse receipt, transcript, original-frame and derived-thumbnail validation. Unreviewed,
+uncertain or stale timed evidence cannot activate reviewed clarification assertions.
+`study report PROJECT --section knowledge` is an explicit full local semantic audit;
+ordinary bounded context checks at most four lectures. An explicit source refresh can
+be followed by `study impact PROJECT --source KEY`, then actual content review.

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -14,6 +15,7 @@ from tum_mcp.study_models import Course, Coverage, ResourceState, StudyState
 
 START = "<!-- tum-mcp:study:start -->"
 END = "<!-- tum-mcp:study:end -->"
+ReadObserver = Callable[[Path, bytes | None], None]
 
 
 def digest(data: bytes) -> str:
@@ -120,10 +122,10 @@ local state, choose the workflow below and finish it.
   `tum-mcp study report . --section coverage` and the stale items from `study inspect`
   into a short dated plan.
 
-A large request chains workflows in this order: sync-course (only when new upstream
-material is needed), prepare-study, prepare-exercises, prepare-exams. Each prepare skill
-reviews and builds its own work. Load a skill when its step starts, and read only the
-references that step needs.
+A large request chains the relevant workflows: sync-course only when new upstream
+material is needed, then the workspaces the request needs. Exercises may come first and
+missing workspaces need not be invented. Each prepare skill reviews and builds its own
+work. Load a skill when its step starts, and read only the references that step needs.
 
 ### Read vague requests
 - "This week" or "the current lecture": today's date against the course.md schedule;
@@ -147,6 +149,16 @@ references that step needs.
   plans and scratch files.
 - The website: run `tum-mcp study` in this folder.
 
+### Optional Course Memory
+- `tum-mcp study status .` reports `course_memory`. Only when true, use the installed
+  course-memory skill for relationship questions, prerequisites, practice choices and
+  source-impact work. Initialize and maintain only this course's task-relevant private
+  memory on the next relevant request; simple facts need no graph call.
+- When false, do not read, create, update or use retained knowledge.json or graph packets.
+  Disabled files remain for a later explicit reinstall; their presence is not activation.
+- Memory installation does not authorize campus refreshes, app edits, publication or
+  recording processing. Course content is not evidence of student mastery or readiness.
+
 ### Answer as a tutor
 - Prefer the course's sources over general knowledge. Use the lecturer's notation, terms
   and answer format, and cite the source key and page.
@@ -167,7 +179,7 @@ references that step needs.
   authored website content in `app/` (legacy `study/`).
 - When the student states a lasting preference (language, depth, exam date, focus
   topics), add it to this file below this block. Record course conventions you confirm
-  in course.md.
+  in course.md. Do not persist inferred ability, every conversation or an error profile.
 {END}"""
 
 

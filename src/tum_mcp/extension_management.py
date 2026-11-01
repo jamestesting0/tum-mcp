@@ -12,6 +12,7 @@ from tum_mcp.extensions import (
     lecture_installation,
     selection,
     set_audio_notes,
+    set_course_memory,
     set_video_notes,
     uninstall_lecture,
 )
@@ -22,6 +23,7 @@ class ExtensionName(StrEnum):
     LECTURE = "lecture"
     AUDIO_NOTES = "audio-notes"
     VIDEO_NOTES = "video-notes"
+    COURSE_MEMORY = "course-memory"
 
 
 EXTENSIONS = tuple(ExtensionName)
@@ -29,6 +31,7 @@ LABELS = {
     "lecture": "Lecture",
     "audio-notes": "Audio Notes",
     "video-notes": "Video Notes",
+    "course-memory": "Course Memory",
 }
 
 
@@ -37,6 +40,7 @@ def extension_rows() -> list[tuple[str, State, str]]:
         "lecture": "Prepare Lecture, transcripts and selected recording frames.",
         "audio-notes": "Create spoken lessons from prepared Study content.",
         "video-notes": "Create narrated, animated explainers from prepared Study content.",
+        "course-memory": "Connect course workspaces with optional, source-checked local memory.",
     }
     rows = []
     for name in EXTENSIONS:
@@ -49,6 +53,8 @@ def extension_rows() -> list[tuple[str, State, str]]:
                     enabled = selection().audio_notes
                 case ExtensionName.VIDEO_NOTES:
                     enabled = selection().video_notes
+                case ExtensionName.COURSE_MEMORY:
+                    enabled = selection().course_memory
                 case unreachable:
                     assert_never(unreachable)
             detail = descriptions[name]
@@ -91,6 +97,10 @@ def remove_extensions(
                 state = set_video_notes(False) if selection().video_notes else "disabled"
                 report = {"extension": name, "state": state}
                 review = state == "disabled_needs_review"
+            case ExtensionName.COURSE_MEMORY:
+                state = set_course_memory(False)
+                report = {"extension": name, "state": state}
+                review = state == "disabled_needs_review"
             case unreachable:
                 assert_never(unreachable)
         needs_review |= review
@@ -123,7 +133,8 @@ def choose_extensions(
     if json_output or not interactive_terminal():
         raise CampusError(
             Code.ACTION_REQUIRED,
-            "Use an interactive terminal or name lecture, audio-notes or video-notes.",
+            "Use an interactive terminal or name lecture, audio-notes, "
+            "video-notes or course-memory.",
         )
     rows = extension_rows()
     console = terminal_console()

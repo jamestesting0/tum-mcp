@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add optional Course Memory, disabled by default, for source-checked relationships
+  across course workspaces. Install with `tum-mcp install course-memory`; local setup
+  happens on the next relevant request. Uninstall stops graph use and preserves its
+  files. Reinstall checks freshness before reuse. Native course review remains
+  independent of disabled memory, and no document pipeline or background index is added.
 - Moodle discovery defaults to current-semester courses; `include_past=true` lists
   enrolled courses from every semester, current first. Explicit older and otherwise
   accessible known course IDs support material reads and indexed search. Live Moodle

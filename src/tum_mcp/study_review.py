@@ -149,6 +149,7 @@ class CourseReview(Frozen):
     """The course as a whole: order and categories, repetition, and links between workspaces."""
 
     revision: Revision
+    knowledge_revision: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")] | None = None
     reviewed_at: datetime.date
     # Integration also covers media linked to a single prepared workspace.
     scores: dict[CourseDimension, Score]
@@ -367,6 +368,7 @@ def review_report(
     lectures: "LectureContent | None" = None,
     *,
     ledger: CoverageLedger | None = None,
+    knowledge_revision: str | None = None,
     media_inventory: "MediaInventory | None" = None,
     root: Path | None = None,
 ) -> dict[str, JsonValue]:
@@ -448,6 +450,7 @@ def review_report(
             lectures,
             review,
             ledger=ledger,
+            knowledge_revision=knowledge_revision,
             media=media_inventory.structure,
         )
         if current
@@ -497,6 +500,7 @@ def _course_report(
     review: CourseReview | None,
     *,
     ledger: CoverageLedger | None = None,
+    knowledge_revision: str | None = None,
     media: list[dict[str, JsonValue]] | None = None,
 ) -> tuple[dict[str, JsonValue], bool]:
     """The course review's state, and whether it still keeps the review from passing."""
@@ -514,12 +518,17 @@ def _course_report(
     dimensions = ["organization", "redundancy", *(["integration"] if integrated else [])]
     current = structure_revision(content, exercises, exam, lectures, ledger=ledger, media=media)
     status = "unreviewed" if review is None else "stale" if review.revision != current else "fresh"
+    if review is not None and knowledge_revision is not None:
+        if review.knowledge_revision != knowledge_revision:
+            status = "stale"
     report: dict[str, JsonValue] = {
         "status": status,
         "revision": current,
         "workspaces": list(spaces),
         "dimensions": list(dimensions),
     }
+    if knowledge_revision is not None:
+        report["knowledge_revision"] = knowledge_revision
     if review is None or status != "fresh":
         return report, True
     report["scores"] = {name: review.scores[name] for name in dimensions if name in review.scores}

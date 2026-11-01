@@ -3,6 +3,11 @@ name: prepare-exercises
 description: Prepare or update guided weekly exercises in a local TUM course app, or address exercise passage comments, using released source statements and prepared hints, checks and solutions. Course lessons use prepare-study; exam preparation uses prepare-exams.
 ---
 
+When `tum-mcp study status PROJECT` reports `course_memory: true`, use
+the installed `course-memory` skill for relationships and scoped source updates.
+When disabled, leave retained graph files unused and follow the ordinary workflow.
+
+
 For a bound local course, read `.tum-mcp/course.md` and the relevant source records
 first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is the
 discovery pointer and user's rules. Legacy `.study/` remains readable until explicit
