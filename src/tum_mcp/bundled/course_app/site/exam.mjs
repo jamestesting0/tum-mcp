@@ -8,6 +8,8 @@ import { exam, examPrefix, variants, sample, quietLink } from './exam-state.mjs'
 import { renderSheet } from './exam-sheet.mjs';
 import { renderPattern } from './exam-patterns.mjs';
 import { renderPaper, paperFor } from './exam-mock.mjs';
+import { nextStep } from './navigation.mjs';
+import { examRecall } from './recall.mjs';
 
 const decode = value => { try { return decodeURIComponent(value || ''); } catch { return ''; } };
 let guided;
@@ -28,6 +30,19 @@ const replayable = () => variants.filter(({ variant }) => variant.replayable);
 const orderedPatterns = () => (exam.statistics.pattern_order || []).map(key => exam.patterns.find(item => item.key === key)).filter(Boolean);
 // The first practice paper: past papers before forecasts.
 const firstPaper = () => { const past = replayable()[0]; return past ? `#exam/paper/${past.variant.key}` : exam.mocks[0] ? `#exam/mock/${exam.mocks[0].key}` : ''; };
+// Exam pages in reading order, as the outline lists them: cheatsheet, patterns, then papers.
+function sequence() {
+  return [
+    ...(exam.concepts.length ? [{ href: '#exam/sheet', title: 'Cheatsheet', detail: `${exam.concepts.length} entries` }] : []),
+    ...orderedPatterns().map(pattern => ({ href: `#exam/patterns/${pattern.key}`, title: pattern.title, detail: 'Exam pattern' })),
+    ...replayable().map(({ variant }) => ({ href: `#exam/paper/${variant.key}`, title: paperFor('paper', variant.key).title, detail: 'Past paper' })),
+    ...exam.mocks.map(mock => ({ href: `#exam/mock/${mock.key}`, title: paperFor('mock', mock.key).title, detail: 'Practice exam' })),
+  ];
+}
+function onward(href) {
+  const pages = sequence(), index = pages.findIndex(page => page.href === href);
+  return index >= 0 && pages[index + 1] ? nextStep(pages[index + 1]) : null;
+}
 
 function home() {
   const { box, heading } = header('Exam', data.course.title);
@@ -45,15 +60,18 @@ function home() {
   }
   const stats = exam.statistics;
   // The evidence line only appears when past exams exist; without them there is nothing to report.
+  const years = stats.years?.length ? ` (${stats.years[0] === stats.years[1] ? stats.years[0] : `${stats.years[0]}–${stats.years[1]}`})` : '';
   if (stats.sittings_considered) root.append(node('p', 'small exam-evidence',
-    `${stats.sittings_considered} past exam${stats.sittings_considered === 1 ? '' : 's'}${stats.years?.length ? ` (${stats.years[0]}–${stats.years[1]})` : ''}${stats.sittings_outdated ? `; ${stats.sittings_outdated} older one${stats.sittings_outdated === 1 ? '' : 's'} not counted` : ''}`));
+    `${stats.sittings_considered} past exam${stats.sittings_considered === 1 ? '' : 's'}${years}${stats.sittings_outdated ? `; ${stats.sittings_outdated} older one${stats.sittings_outdated === 1 ? '' : 's'} not counted` : ''}`));
   const cards = node('ul', 'exam-cards');
   if (exam.concepts.length) cards.append(card('#exam/sheet', 'Cheatsheet', `${exam.concepts.length} entries${exam.map?.nodes?.length ? ' and a semester map' : ''}`));
   if (exam.patterns.length) cards.append(card(`#exam/patterns/${orderedPatterns()[0].key}`, 'Exam patterns', `${exam.patterns.length} recurring question types`, sample(stats.patterns[stats.pattern_order[0]])));
   const papers = replayable().length, mocks = exam.mocks.length;
   if (papers || mocks) cards.append(card(firstPaper(), 'Practice exams', [papers && `${papers} past paper${papers === 1 ? '' : 's'}`, mocks && `${mocks} practice exam${mocks === 1 ? '' : 's'}`].filter(Boolean).join(' · ')));
-  root.append(cards);
-  return { root, heading, title: 'Exam', items: [] };
+  const empty = !cards.children.length;
+  if (empty) root.append(node('p', '', 'Exam has not been prepared for this course.'));
+  else root.append(cards);
+  return { root, heading, title: 'Exam', items: [], empty };
 }
 
 function paperOverview(variantKey) {
@@ -62,8 +80,8 @@ function paperOverview(variantKey) {
   const { box, heading } = header(paper.title, 'Past paper');
   const root = node('div', 'exam-paper'); root.append(box);
   const modes = node('ul', 'exam-cards');
-  modes.append(card(`#exam/paper/${variantKey}/${paper.questions[0].key}`, 'Guided', 'One question at a time, with hints, checks and solutions'));
-  modes.append(card(`#exam/paper/${variantKey}/exam`, 'Whole paper', 'Every question on one page, each with its solution'));
+  modes.append(card(`#exam/paper/${variantKey}/${paper.questions[0].key}`, 'Guide', 'One question at a time'));
+  modes.append(card(`#exam/paper/${variantKey}/exam`, 'Whole paper', 'All questions on one page'));
   root.append(modes);
   const list = node('ol', 'exam-paper-questions');
   for (const question of paper.questions) {
@@ -76,7 +94,7 @@ function paperOverview(variantKey) {
 // A past question becomes an exercise: its guidance, or its solution as a single step.
 function guidedExercise(paper, question) {
   const steps = question.guidance?.steps?.length ? question.guidance.steps
-    : [{ key: 'solve', purpose: 'Solve', prompt: 'Solve the question.', hints: [], explanation: 'Compare your answer with the solution below.', check: question.check || null, blocks: [] }];
+    : [{ key: 'solve', purpose: 'Solve', prompt: 'Solve the question.', hints: [], explanation: 'The solution is below.', check: question.check || null, blocks: [] }];
   return {
     key: question.key, label: `Question ${question.number}`, title: `Question ${question.number}`,
     revision: paper.revision, statement: question.statement, parts: [], objectives: question.guidance?.objectives || [],
@@ -97,6 +115,8 @@ function guidedQuestion(variantKey, questionKey, stepKey) {
     link: step => `#exam/paper/${variantKey}/${question.key}/${step}`,
     annotate: (element, field, step) => annotateExam(element, `question:${question.key}`, paper.revision, step ? `${step}:${field}` : field),
     comment: root => renderCommentedView({ key: question.key, revision: paper.revision, title: exercise.title, items: [`question:${question.key}`] }, 'exam', root).root,
+    // Recall waits behind the full solution: recognising the pattern is what the paper practises.
+    afterSolution: examRecall(question.concepts || [], question.patterns || []),
     onward: following ? { href: `#exam/paper/${variantKey}/${following.key}`, title: `Question ${following.number}`, detail: paper.title }
       : { href: `#exam/paper/${variantKey}/exam`, title: 'See the whole paper', detail: paper.title },
   });
@@ -118,8 +138,11 @@ export function renderExam(hash, read, write) {
   }
   if (!page) {
     page = home();
-    page.root.prepend(node('p', 'notice', 'That page is no longer here. Choose a section below.'));
+    page.root.prepend(node('p', 'notice', 'That page is no longer here.'));
   }
+  const here = { sheet: '#exam/sheet', patterns: `#exam/patterns/${key || orderedPatterns()[0]?.key}`, mock: `#exam/mock/${key}`, paper: `#exam/paper/${key}` }[section];
+  const following = !page.navigateStep && here && onward(here);
+  if (following) page.root.append(following);
   const root = page.navigateStep ? page.root : renderCommentedView({ key: section || 'home', title: page.title, items: page.items || [] }, 'exam', page.root).root;
   return { ...page, root, current: section || '', currentKey: key || '' };
 }

@@ -68,6 +68,9 @@ def test_cheatsheet_scans_filters_flags_and_maps(
     expect(page.locator(".page-citation")).to_have_count(1)
     expect(page.locator(".exam-entry .citation")).to_have_count(0)
     expect(page.locator("#concept-observer .exam-cue.cue")).to_have_text("When you see")
+    # An opened formula entry lists what each variable means in general.
+    page.locator("#concept-cohesion .exam-entry-row").click()
+    expect(page.locator(".symbols dd", has_text="method pairs sharing no field")).to_be_visible()
     if width >= 720:
         node = page.locator('.exam-node[data-concept="loose-coupling"]')
         node.click()
@@ -120,17 +123,56 @@ def test_patterns_drills_and_worked_practice(
         ["Design an Observer", "Build a part-whole tree", "Swap an algorithm"]
     )
     expect(page.locator(".exam-instances tbody tr")).to_have_count(3)
-    drill = page.locator(".exam-drill-item")
+    # The decision step lists its cases; the pitfall shows its wrong and right lines.
+    expect(page.locator(".workflow-cases li")).to_have_count(2)
+    # What a step or case applies opens under it; the answer template is no separate section.
+    expect(page.get_by_role("heading", name="Answer template")).to_have_count(0)
+    applies = page.locator(".exam-workflow .workflow-apply")
+    expect(applies).to_have_count(3)
+    expect(applies.locator(".apply-panel").first).to_be_hidden()
+    for index in range(3):
+        applies.nth(index).locator("summary").click()
+    expect(applies.nth(0).locator(".apply-panel code.inline-code")).to_have_text("List<Observer>")
+    expect(page.locator(".workflow-cases .apply-panel")).to_contain_text("o.update(state)")
+    expect(applies.nth(2).locator(".apply-math .katex")).to_be_visible()
+    # An applied formula's variables open their meaning in this pattern.
+    applies.nth(2).locator(".apply-math [data-v]").first.click()
+    expect(page.locator(".symbol-bubble")).to_contain_text("update calls one notify makes")
+    page.keyboard.press("Escape")
+    pitfall = page.locator(".pitfall")
+    # The moment the mistake happens comes first, with its step.
+    expect(pitfall.locator(":scope > :first-child")).to_have_text(
+        "Step 3 Placing the notify call in the subject's state change."
+    )
+    expect(pitfall.locator(".pitfall-line")).to_have_text(
+        ["Incorrect: notify() inside update()", "Correct: notify() after the state changes"]
+    )
+    # Practice without steps: every item, short or full, opens the same Solution panel.
+    drill = page.locator(".exam-drill-item").first
     expect(drill.locator("code.inline-code")).to_have_text("List<Display>")
     expect(drill.get_by_label("Your answer")).to_have_count(0)
-    expect(drill.get_by_role("button", name="Check answer")).to_have_count(0)
-    drill.locator("summary", has_text="Compare").click()
+    expect(drill.get_by_role("button", name="Check")).to_have_count(0)
+    expect(page.locator(".exam-drill-item summary", has_text="Compare")).to_have_count(0)
+    drill.locator("summary", has_text="Solution").click()
     expect(drill.locator(".expected-value")).to_have_text("Subject")
-    expect(drill.locator(".exam-answer")).to_contain_text("The subject owns registrations")
-    practice = page.locator(".exam-guided-step")
+    expect(drill.locator(".disclosure-panel")).to_contain_text("The subject owns registrations")
+    full = page.locator(".exam-drill-item").nth(1)
+    full.locator("summary", has_text="Solution").click()
+    expect(full.locator(".disclosure-panel")).to_contain_text("update(Ship s)")
+    # One example at a time; the which-case question uses the workflow's cases.
+    practice = page.locator(".pattern-example:visible .exam-guided-step")
     expect(practice).to_have_count(3)
+    which = practice.nth(1)
+    expect(which.locator(".option")).to_have_count(2)
+    which.get_by_label("Observers need different fields").check()
+    which.get_by_role("button", name="Check").click()
+    expect(which.locator(".feedback")).to_contain_text("No display needs another field.")
     practice.nth(2).locator("summary", has_text="Compare").click()
     expect(practice.nth(2)).to_contain_text("Loop over displays.")
+    page.get_by_role("button", name="Example 2").click()
+    expect(practice.nth(0)).to_contain_text("Which object changes?")
+    page.get_by_role("button", name="Example 1").click()
+    expect(which.locator(".feedback")).to_contain_text("No display needs another field.")
     no_overflow(page)
     assert errors == []
 
@@ -160,12 +202,12 @@ def test_guided_past_paper_uses_exercise_steps(
     errors: list[str] = []
     page = open_page(course_browser, exam_url, width, errors)
     page.goto(exam_url + "#exam/paper/ws23-a")
-    page.locator(".exam-card", has_text="Guided").click()
+    page.locator(".exam-card", has_text="Guide").click()
     page.get_by_role("heading", name="Question 1", exact=True).first.wait_for()
-    page.locator("summary", has_text="Guidance").click()
+    page.locator("summary", has_text="Guide").click()
     page.get_by_role("button", name="Compare").click()
     expect(page.locator(".exercise-feedback .expected-value")).to_have_text("station")
-    page.get_by_role("button", name="Continue").click()
+    page.locator("button.primary", has_text="Next step").click()
     page.get_by_role("heading", name="Write notifyObservers().").wait_for()
     editor = page.get_by_label("Your code (Java)")
     expect(editor).to_have_value("public void notifyObservers() {\n    // your code\n}")
@@ -182,7 +224,7 @@ def test_practice_exam_shows_each_solution_on_demand(
     errors: list[str] = []
     page = open_page(course_browser, exam_url, width, errors)
     page.goto(exam_url + "#exam/mock/forecast-1")
-    expect(page.locator(".exam-mode .notice")).to_contain_text("not a past or leaked exam")
+    expect(page.locator(".exam-mode .notice")).to_contain_text("Not a past exam")
     expect(page.locator(".exam-question")).to_have_count(2)
     sequence = page.locator('.exam-question[data-question="f1-1"] svg.uml')
     expect(sequence.locator(".uml-participant")).to_have_count(3)

@@ -77,10 +77,7 @@ def test_unkeyed_and_repeated_passages_have_only_stable_owner_anchors(tmp_path: 
     assert any(issue.code == "missing_reference" for issue in graph.issues)
 
 
-@pytest.mark.parametrize("exercises,lectures", [(False, False), (True, True)])
-def test_registry_and_packets_never_enter_site_exports(
-    tmp_path: Path, lecture_extension: Path, exercises, lectures
-):
+def test_registry_and_packets_never_enter_site_exports(tmp_path: Path):
     from knowledge_annotations import annotation, write_registry
 
     from tum_mcp.study_build import build
@@ -94,7 +91,7 @@ def test_registry_and_packets_never_enter_site_exports(
     assert "PRIVATE_KNOWLEDGE_SENTINEL" in json.dumps(packet)
     private_path(root, "context.json").write_text(json.dumps(packet))
     build(root, publish=False)
-    output = export_site(root, include_exercises=exercises, include_lectures=lectures)
+    output = export_site(root)
     exported = b"".join(output.values())
     assert b"PRIVATE_KNOWLEDGE_SENTINEL" not in exported
     assert b"knowledge.json" not in exported

@@ -40,7 +40,7 @@ def feedback_style_checks(page: Page) -> None:
     )
     assert border["style"] != "none" and border["color"] not in ("transparent", "rgba(0, 0, 0, 0)")
     assert border["height"] >= 44
-    details = page.locator(".other-options")
+    details = page.locator(".option-explanations")
     was_open = details.get_attribute("open") is not None
     if not was_open:
         details.locator("summary").click()
@@ -59,7 +59,8 @@ def practice_navigation_checks(page: Page, question_count: int) -> None:
     """Controls stay together beside the position and retain answers across moves."""
     feedback_style_checks(page)
     previous = page.get_by_role("button", name="Previous question", exact=True)
-    following = page.get_by_role("button", name="Next question", exact=True)
+    # The arrow beside the position; after a check the answer's own Next question follows it.
+    following = page.get_by_role("button", name="Next question", exact=True).first
     assert previous.is_disabled()
     legend = page.locator(".practice-question legend")
     legend.scroll_into_view_if_needed()
@@ -84,7 +85,7 @@ def option_order_checks(page: Page, content: dict) -> None:
         page.goto(f"https://study.invalid/#{unit['key']}/practice")
         for index, question in enumerate(unit["questions"]):
             expect(page.locator(".practice-meta p.small").first).to_have_text(
-                re.compile(rf"^{index + 1} / ")
+                re.compile(rf"^Question {index + 1} of ")
             )
             radios = page.locator(".practice-question input[type=radio]")
             rendered = radios.evaluate_all("inputs => inputs.map(input => input.value)")
@@ -97,7 +98,7 @@ def option_order_checks(page: Page, content: dict) -> None:
                 again = radios.evaluate_all("inputs => inputs.map(input => input.value)")
                 assert again == rendered
             if index < len(unit["questions"]) - 1:
-                page.get_by_role("button", name="Next question", exact=True).click()
+                page.get_by_role("button", name="Next question", exact=True).first.click()
     assert moved
 
 
@@ -173,7 +174,7 @@ def revision_checks(page: Page, content: dict) -> None:
     question = units[0]["questions"][0]
     correct = next(o for o in question["options"] if o["key"] == question["correct"])
     page.get_by_role("radio", name=correct["text"], exact=True).check()
-    page.get_by_role("button", name="Check answer", exact=True).click()
+    page.get_by_role("button", name="Check", exact=True).click()
     practice_navigation_checks(page, questions)
     # The same answer remains checked in the original unit, including after retry.
     page.goto("https://study.invalid/#" + units[0]["key"] + "/practice")
@@ -181,7 +182,7 @@ def revision_checks(page: Page, content: dict) -> None:
     page.get_by_role("button", name="Try again", exact=True).click()
     assert page.evaluate("document.activeElement.matches('.practice-question legend')")
     page.goto("https://study.invalid/#revision?view=practice")
-    assert page.get_by_role("button", name="Check answer", exact=True).is_disabled()
+    assert page.get_by_role("button", name="Check", exact=True).is_disabled()
     page.get_by_role("tab", name="Flashcards", exact=False).click()
     # The earlier rating advanced the pooled deck; return to the rated first card.
     page.get_by_role("button", name="Previous card (Left arrow)", exact=True).click()
@@ -202,7 +203,7 @@ def revision_checks(page: Page, content: dict) -> None:
     page.locator(".revision-topics > summary").click()
     page.get_by_role("checkbox", name=units[0]["title"], exact=True).uncheck()
     assert page.locator(".flashcard").get_attribute("data-revealed") == "false"
-    assert page.locator("[data-flashcards] .recall-meta").inner_text().startswith("1 /")
+    assert page.locator("[data-flashcards] .recall-meta").inner_text().startswith("Card 1 of ")
     page.reload()
     page.get_by_role("heading", name="Revision", exact=True).wait_for()
     page.locator(".revision-topics > summary").click()
@@ -263,17 +264,17 @@ def learning_flow_checks(page: Page, content: dict) -> None:
             if (option["key"] == question["correct"]) == (index > 0)
         )
         page.get_by_role("radio", name=choice["text"], exact=True).check()
-        page.get_by_role("button", name="Check answer", exact=True).click()
-        assert page.get_by_role("button", name="Check answer", exact=True).count() == 0
+        page.get_by_role("button", name="Check", exact=True).click()
+        assert page.get_by_role("button", name="Check", exact=True).count() == 0
         if index == 0:
             # Retrying with the revealed answer is practice; the first miss stays for review.
             page.get_by_role("button", name="Try again", exact=True).click()
             right = next(o for o in question["options"] if o["key"] == question["correct"])
             page.get_by_role("radio", name=right["text"], exact=True).check()
-            page.get_by_role("button", name="Check answer", exact=True).click()
+            page.get_by_role("button", name="Check", exact=True).click()
             assert page.get_by_role("heading", name="Correct", exact=True).is_visible()
         if index < len(questions) - 1:
-            page.get_by_role("button", name="Continue", exact=True).click()
+            page.locator("button.primary", has_text="Next question").click()
             assert page.evaluate("document.activeElement.matches('.practice-question legend')")
     summary = page.locator(".practice-summary")
     correct = f"{len(questions) - 1} of {len(questions)} correct"
@@ -290,7 +291,11 @@ def learning_flow_checks(page: Page, content: dict) -> None:
     assert review.is_visible()
     # The list keeps the first miss; the dialog shows the corrected retry the student just made.
     assert review.get_by_text("Your answer · Correct", exact=True).is_visible()
-    assert page.locator(".practice-meta").inner_text().startswith(f"{len(questions)} /")
+    assert (
+        page.locator(".practice-meta")
+        .inner_text()
+        .startswith(f"Question {len(questions)} of {len(questions)}")
+    )
     assert page.url == before_url
     page.keyboard.press("Escape")
     assert not review.count()
@@ -302,7 +307,7 @@ def learning_flow_checks(page: Page, content: dict) -> None:
     assert page.get_by_role("radio", name="To review · 2", exact=True).is_checked()
     assert page.get_by_role("tab", name="Flashcards · 1", exact=True).is_visible()
     page.get_by_role("tab", name="Practice · 1", exact=True).click()
-    assert page.get_by_role("button", name="Check answer", exact=True).is_disabled()
+    assert page.get_by_role("button", name="Check", exact=True).is_disabled()
     page.get_by_text("All items", exact=True).click()
     pooled = sum(len(item["questions"]) for item in content["units"])
     assert page.get_by_role("tab", name=f"Practice · {pooled}", exact=True).is_visible()
@@ -325,13 +330,13 @@ def identity_checks(page: Page, units: list[dict]) -> None:
             == "true"
         )
         page.goto(f"https://study.invalid/#{unit['key']}/practice")
-        assert page.get_by_role("button", name="Check answer", exact=True).is_disabled()
+        assert page.get_by_role("button", name="Check", exact=True).is_disabled()
         question = unit["questions"][0]
         correct = next(o for o in question["options"] if o["key"] == question["correct"])
         page.get_by_role("radio", name=correct["text"], exact=True).check()
-        page.get_by_role("button", name="Check answer", exact=True).click()
+        page.get_by_role("button", name="Check", exact=True).click()
     page.goto("https://study.invalid/#revision?view=practice")
     assert page.get_by_role("heading", name="Correct", exact=True).is_visible()
     for _ in units[0]["questions"]:
-        page.get_by_role("button", name="Next question", exact=True).click()
+        page.get_by_role("button", name="Next question", exact=True).first.click()
     assert page.get_by_role("heading", name="Correct", exact=True).is_visible()

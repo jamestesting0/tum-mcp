@@ -1,6 +1,7 @@
 import data from './data.mjs';
-import { node, studyText, append, sourcesNote } from './dom.mjs';
+import { node, studyText, append, sourcesNote, topicRow } from './dom.mjs';
 import { renderCommentedView } from './comments.mjs';
+import { nextStep } from './navigation.mjs';
 
 const lectures = [...(data.lectures?.lectures || [])].sort((a, b) => b.recording.recorded_on.localeCompare(a.recording.recorded_on) || a.key.localeCompare(b.key));
 export const lectureLink = (lecture, highlight) => `#lectures/${encodeURIComponent(lecture.key)}${highlight ? `/${encodeURIComponent(highlight.key)}` : ''}`;
@@ -59,10 +60,11 @@ function highlightView(highlight, active) {
   if (highlight.sources.length) heading.append(sourcesNote(highlight.sources, data.sources, data.course.synthetic, highlight.title, {}, highlight.pages || ''));
   const { start_s: start, end_s: end } = highlight.interval;
   const body = append(node('div', 'lecture-highlight-body'), heading,
-    append(node('p', 'lecture-when small'), timeLink(highlight.url, start, end), ` · ${duration(end - start)}`),
-    studyText('p', 'lecture-teaches', highlight.teaches));
-  if (highlight.points.length) body.append(append(node('ul', 'lecture-points'), ...highlight.points.map(text => studyText('li', '', text))));
-  root.append(thumb, body);
+    append(node('p', 'lecture-when small'), timeLink(highlight.url, start, end), ` · ${duration(end - start)}`));
+  // The frame sits beside the title and time; what the passage teaches reads at full width below.
+  const text = append(node('div', 'lecture-highlight-text'), studyText('p', 'lecture-teaches', highlight.teaches));
+  if (highlight.points.length) text.append(append(node('ul', 'lecture-points'), ...highlight.points.map(item => studyText('li', '', item))));
+  root.append(thumb, body, text);
   return root;
 }
 export function renderLectures(hash) {
@@ -71,19 +73,18 @@ export function renderLectures(hash) {
   if (!lecture) {
     const heading = node('h1', '', 'Lecture');
     root.append(append(node('div', 'unit-header'), node('p', 'eyebrow', data.course.title), heading));
-    if (key) root.append(node('p', 'notice', 'That lecture is no longer here. Choose a prepared lecture below.'));
+    if (key) root.append(node('p', 'notice', 'That lecture is no longer here.'));
     if (!lectures.length) root.append(node('p', '', 'Lecture content has not been prepared for this course.'));
     const list = node('ul', 'topic-list');
     for (const item of lectures) {
-      const link = node('a'); link.href = lectureLink(item);
       const parts = [];
       if (item.notes.length) parts.push(`${item.notes.length} note${item.notes.length === 1 ? '' : 's'}`);
       if (item.highlights.length) parts.push(`${item.highlights.length} highlight${item.highlights.length === 1 ? '' : 's'}`, `${duration(watchTime(item))} of ${duration(item.recording.duration_s)}`);
       const count = parts.join(' · ') || 'No lecture additions';
-      link.append(append(node('span', 'topic-copy'), studyText('span', 'topic-title', item.title), node('span', 'small', date(item.recording.recorded_on)), studyText('span', 'small', item.summary), node('span', 'small lecture-count', count)));
-      list.append(append(node('li', 'topic-row'), link));
+      list.append(topicRow(lectureLink(item), item.title, [date(item.recording.recorded_on), item.summary, node('span', 'small lecture-count', count)]));
     }
-    root.append(list); return { root, heading, title: 'Lecture' };
+    if (lectures.length) root.append(list);
+    return { root, heading, title: 'Lecture' };
   }
   const heading = studyText('h1', '', lecture.title), header = node('div', 'unit-header');
   header.append(node('p', 'eyebrow', date(lecture.recording.recorded_on)), heading, studyText('p', 'unit-summary', lecture.summary));
@@ -118,7 +119,10 @@ export function renderLectures(hash) {
     for (const highlight of lecture.highlights) highlights.append(highlightView(highlight, highlight.key === active));
     root.append(highlights);
   }
-  if (!lecture.notes.length && !lecture.highlights.length) root.append(node('p', 'small', 'No additional notes or highlights were selected from this lecture.'));
+  if (!lecture.notes.length && !lecture.highlights.length) root.append(node('p', 'small', 'No notes or highlights for this lecture.'));
+  // The list shows the newest first; Next follows the course, from one lecture to the one after it.
+  const following = lectures[lectures.indexOf(lecture) - 1];
+  if (following) root.append(nextStep({ href: lectureLink(following), title: following.title, detail: date(following.recording.recorded_on) }));
   const comments = renderCommentedView(lecture, 'lectures', root);
   return { root: comments.root, heading, title: lecture.title, current: lecture.key, lecture };
 }

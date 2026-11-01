@@ -1,13 +1,9 @@
 # Teaching quality gate
 
-Use the course's objectives and prerequisite/notation map. Choose units by a
-coherent dependency or learning goal; keep an established course sequence when useful.
-Read relevant stored passages once and retain their locators for authoring/review.
-
-For each affected goal, keep a short private authoring note: what the student must
-do → prerequisite reasoning/notation → inference and its conditions → example or
-counterexample → independent practice demand → source locator. Reuse existing
-notes; this is a review aid, not a curriculum database or required student screen.
+Use the course's teaching profile, objectives and prerequisite/notation map. Choose units
+by a coherent dependency or learning goal; keep an established course sequence when useful.
+Read relevant stored passages once and retain their locators for authoring/review. Decide
+how each idea is taught in the unit's [teaching plan](planning.md) before writing blocks.
 Explain why the next operation helps and what makes it valid. A procedure without
 its reason leaves students unable to choose it in a new problem.
 
@@ -17,36 +13,47 @@ practice asks students to select and use the idea without its method in the titl
 Use these when they help; do not insert a question after every paragraph. Keep
 independent reading possible without obligatory forms or prerequisite quizzes.
 
-## Lesson shape
+## Teaching moves
 
-Each unit reads as one short lesson, built from ordinary blocks (the app does not
-label these roles; the writing makes them clear):
+Study is read by a student who meets the topic for the first time and knows the profile's
+prerequisites. After a unit they can say why each idea exists, use it on a new case and say
+when it fails. How to get there depends on the idea: choose moves by what makes it hard, and
+add none the content does not need. A forced move (a worked example of a one-line
+definition, a bridge between parallel cases, an analogy that adds nothing) costs attention
+like any filler.
 
-1. Summary: the problem the unit solves, in one or two sentences.
-2. Objectives: observable outcomes such as trace, explain, choose or compute, taken from
-   the source's own outcomes in the coverage ledger.
-3. Orientation and bridge: the first section says what the new object describes, why
-   it matters and which earlier idea it extends, with a one-line reminder of that idea.
-   Name the parts the student will meet (the sphere's poles and equator, the angle, the
-   phase) before any formula relies on them, one at a time. `study report` flags an
-   opening that introduces several new symbols or terms before any picture or example as
-   `dense_introduction`.
-4. Intuition: a concrete case or picture before the formal statement.
-5. Definitions: a `definition` block right after the passage that introduces each term
-   students must learn. It appears inside that passage as the term above its meaning, so
-   the prose does not restate it. Later mentions anywhere in the course are `{{term}}`.
-6. Mechanism as labelled `steps`, one action each, then a worked example in its own
-   section: one computed value per step, a `derivation`, or a trace. When a procedure
-   has several dependent transformations or a changing state, a derivation with
-   `walkthrough` lets the student step through it, with the state drawn beside each line.
-7. General rule: after the worked case, the reusable rule as a formula block (every
-   symbol defined, its conditions and domain, when to use it), then one application to
-   different numbers. Comparing the two cases is what lets the student abstract the rule;
-   a rule left to be inferred from one example is flagged as `example_without_rule`.
-   Skip it when the topic has no reusable rule; never list identities detached from use.
-8. Pitfall: the common misconception or limiting condition, where it applies.
-9. Recap: for units with more than three sections, a final text block with two to
-   four points a student should recall without the page.
+| Move | Use when | Skip when |
+| --- | --- | --- |
+| Start from a problem or limitation | The idea removes a limitation of an earlier method or answers a real question | A building block that its first use, just after, motivates; one of several parallel cases |
+| One-line reminder of a prerequisite | Taught in an earlier course (profile) or a distant unit | Taught in the previous section |
+| Concrete case before the rule | The idea is abstract or notation-heavy | A simple fact, or the case would be artificial |
+| Name the parts first | The mechanism has several new parts to track (poles, angle, phase) | One new term |
+| Labelled steps, then a worked example | A procedure or calculation with interacting steps: one computed value per step, a `derivation`, or a trace; a `walkthrough` when the state changes line by line | Definitions and single facts: practise them instead |
+| Running example | Several concepts act on one setting; keep its givens unchanged | Independent concepts, or a contrast needs another case |
+| Contrast, non-example or misconception | The idea is easily confused with a neighbour, or students hold a known wrong belief | Nothing nearby to confuse |
+| General rule after the case | A reusable rule exists: a formula block with every symbol, its conditions and when to use it, then one more application | Descriptive or one-off content |
+| Relation sentence | The next idea follows from, or contrasts with, this one and a first-time reader could not infer it | Parallel cases: a table or one framing line |
+| Recap of two to four points | Several ideas to retrieve | A short single-idea unit |
+| Insight (a titled block's `insight`, behind a light bulb) | Optional depth: an application, a deeper why, a link to later topics | Anything needed to follow the page or do the practice |
+
+Starting points by subject, which the profile and plan may override: mathematics shows the
+concrete object first, derives with reasons and contrasts cases; algorithms run one instance
+with its state and introduce each method by the limit of the previous one; programming and
+design go from problem and forces to design and consequences, code before abstraction;
+conceptual topics use cases, non-examples and decision matrices.
+
+Whatever the moves, every unit has:
+
+- A summary: the question it answers, in one or two sentences, never a copy of an objective.
+- Observable objectives (trace, explain, choose, compute) taken from the source's own
+  outcomes in the coverage ledger.
+- A `definition` block right after the passage that introduces each term students must
+  learn. It shows inside that passage as the term above its meaning, so the prose does not
+  restate it; later mentions anywhere in the course are `{{term}}`.
+
+`study report` flags `dense_introduction` (several new symbols or terms before any picture or
+example) and `example_without_rule` (numbers worked without a general rule); read them in
+place, since some topics have no reusable rule.
 
 Flashcards test recall of those points; practice tests application. Review mode
 reuses Again ratings and wrong answers, so every objective needs at least one card
@@ -55,8 +62,8 @@ or question that a student can genuinely get wrong.
 For each new or changed objective, cover the mechanism, its assumptions and a useful
 example, each in the shape it has ([representations](review.md#choose-the-representation)):
 
-- One idea per passage, with at most 70 words of prose, structured as in
-  [writing](writing.md#structure-before-prose). A passage is not automatically a
+- One idea per passage, structured as in [writing](writing.md#structure-before-prose);
+  split a passage that holds two ideas. A passage is not automatically a
   top-level section: group a method's cases, examples and limitations beneath that
   method using the [heading hierarchy](content.md#blocks).
 - A procedure or hard argument: labelled steps. An algorithm's run: a trace whose frames

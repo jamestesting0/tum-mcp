@@ -39,7 +39,9 @@ course Organization, course Redundancy and, when the report lists it, Integratio
 2. **First-time reader.** Walk Study in course order as a student who knows only what the
    earlier units taught. At every unit, look up its `builds_on` and the results, methods
    and symbols it uses; anything a later unit teaches is a finding. Check that the
-   introduction and the first unit tell the student where the course goes.
+   introduction and the first unit tell the student where the course goes, and that a
+   unit which resolves an earlier unit's limitation says so where it opens
+   (`.tum-mcp/plans/course.md` records the intended storyline).
 3. **One home per idea.** For every `near_duplicate_passage` flag, and for each idea the
    item reviews found repeated, decide which unit is its home; every other place should
    link to it (`{{term}}` or a prerequisite block) or practise it in a new form. A
@@ -48,8 +50,9 @@ course Organization, course Redundancy and, when the report lists it, Integratio
    one-line reminder that links to the home are not: they are reinforcement.
 4. **Returning student.** Enter from three exercise steps and two Exam patterns spread
    over the course (those that exist), as a student who forgot the lesson. From each,
-   reach the passage that teaches what it needs and come back: through the prerequisite
-   block, the concept's units or a marked term. A missing link, a link to a passage that does not
+   reach the passage that teaches what it needs and come back: through the Recall row, the
+   concept's units or a marked term. Exam re-teaching what Study teaches is a
+   `redundancy.exam_compresses` finding. A missing link, a link to a passage that does not
    teach what the step uses, or a different symbol or convention is a finding.
 5. **Climb.** For two outcomes, compare their Study question, exercise step and exam
    pattern. Each should ask for more transfer than the last; the same question in two

@@ -132,8 +132,11 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    # KaTeX sizes some drawn glyphs (the arrow of \\vec) with a style attribute; style
+    # attributes are allowed, style sheets and scripts stay same-origin only.
     content_policy: str | None = (
         "default-src 'self'; img-src 'self' data:; media-src 'self'; "
+        "style-src-attr 'unsafe-inline'; "
         "object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
     )
 

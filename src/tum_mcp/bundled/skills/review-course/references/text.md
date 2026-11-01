@@ -2,26 +2,29 @@
 
 Read every passage once, at reading speed, in the order the student meets it: lesson,
 definitions, captions, questions, options, hints, steps and solutions. This pass scores
-Clarity and Cognitive load; the rules come from prepare-study's
+Clarity, Cohesion and Cognitive load; the rules come from prepare-study's
 [writing guide](../../prepare-study/references/writing.md).
 
 ## Procedure
 
 1. Run `tum-mcp study report PROJECT --section quality`. Each flag is a finding until you
-   have read the place it points to. `long_section`, `dense_paragraph`,
-   `prose_calculation`, `compressed_working`, `plain_math`, `described_object`,
-   `meta_reference`, `restated_context` and `dense_statement` are always fixed by
-   restructuring, never kept. `dense_introduction`, `unexplained_identity` and
-   `tall_inline_math` are read first: fix them unless the passage already orients the
-   reader and unpacks its notation, or the object reads well inline.
+   have read the place it points to. This section's invariant flags (`arithmetic`, `plain_math`,
+   `described_object`, `meta_reference`, `dense_paragraph`, `prose_calculation`,
+   `compressed_working`, `summary_repeats_objective`) are always fixed, never kept, and the
+   dimension each costs cannot score 3 while one is open. Read every other flag in place:
+   fix it, or keep it when the passage already orients the reader and unpacks its notation,
+   the topic has no reusable rule or the object reads well inline.
 2. **Walk it as a first encounter.** Before judging sentences, read the item once as a
    student who knows only what earlier sections and units taught (the course map's
    `builds_on`) and may have forgotten a definition from weeks ago. Keep a ledger, section
    by section, in reading order:
 
-   | Section | Known so far | New terms | New symbols | Jumps | Likely sticking point |
-   | --- | --- | --- | --- | --- | --- |
+   | Section | Why here | Known so far | New terms | New symbols | Jumps | Likely sticking point |
+   | --- | --- | --- | --- | --- | --- | --- |
 
+   "Why here" is the question the section answers or how it relates to the one before;
+   one you cannot fill is a `cohesion.linked` finding. Where the host allows, let a
+   fresh session that has not seen the plan fill this column.
    A jump is a line or step whose result the student cannot get from the one before. The
    ledger finds where the student must absorb too much at once, recall something taught far
    back, guess a missing step or face a harder task too soon. For an exercise, run it across

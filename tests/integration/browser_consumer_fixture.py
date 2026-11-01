@@ -80,8 +80,7 @@ def study_smoke(browser: Browser, site: Path, unit: str) -> SmokeEvidence:
             page.goto(f"https://study.invalid/course/#{unit}/content")
             assert not missing, missing
             expect(page.locator(".unit-header h1")).to_be_visible()
-            page.get_by_role("tab", name="Content", exact=True).focus()
-            page.keyboard.press("ArrowRight")
+            page.get_by_role("tab", name="Flashcards", exact=False).click()
             expect(page.get_by_role("tab", name="Flashcards", exact=False)).to_have_attribute(
                 "aria-selected", "true"
             )
@@ -93,7 +92,7 @@ def study_smoke(browser: Browser, site: Path, unit: str) -> SmokeEvidence:
                 "aria-pressed", "true"
             )
             page.get_by_role("tab", name="Practice", exact=False).click()
-            expect(page.get_by_role("button", name="Check answer", exact=True)).to_be_visible()
+            expect(page.get_by_role("button", name="Check", exact=True)).to_be_visible()
             if width < 800:
                 page.get_by_role("button", name="Expand course outline", exact=True).click()
             page.get_by_role("button", name="Use dark theme", exact=True).click()

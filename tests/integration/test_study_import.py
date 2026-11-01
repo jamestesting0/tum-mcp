@@ -6,7 +6,7 @@ from material_fixture import material_project, minimal_unit, pdf_bytes
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.errors import CampusError, Code
+from tum_mcp.errors import CampusError
 from tum_mcp.study_build import build
 from tum_mcp.study_import import import_file
 from tum_mcp.study_publish_site import export_site
@@ -74,7 +74,9 @@ def test_campus_sync_keeps_local_files_or_refuses_safely(course: Path, tmp_path:
     )
 
 
-def test_local_sources_are_labelled_and_never_published(course: Path, tmp_path: Path) -> None:
+def test_local_sources_stay_private_while_prepared_content_can_publish(
+    course: Path, tmp_path: Path
+) -> None:
     notes = tmp_path / "notes.md"
     notes.write_text("# Notes", encoding="utf-8")
     report = import_file(course, notes, "other", "My notes")
@@ -95,6 +97,8 @@ def test_local_sources_are_labelled_and_never_published(course: Path, tmp_path: 
     build(course, publish=False)
     data = (course / "app/data.mjs").read_text(encoding="utf-8")
     assert "My notes (local file)" in data and '"url":""' in data
-    with pytest.raises(CampusError) as error:
-        export_site(course)
-    assert error.value.code == Code.SCOPE_DENIED
+    site = export_site(course)
+    assert b"My notes" not in site["data.mjs"]
+    assert report.path not in site
+    assert b'"sources":{}' in site["data.mjs"]
+    assert (course / report.path).read_bytes() == notes.read_bytes()

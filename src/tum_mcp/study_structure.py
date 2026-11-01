@@ -351,6 +351,16 @@ def _sections(blocks: tuple[Block, ...]) -> list[int]:
     return sections
 
 
+def forward_terms(content: StudyContent) -> list[dict[str, JsonValue]]:
+    """Only the `forward_term` flags, which the review gate treats as open defects."""
+    flags: list[dict[str, JsonValue]] = []
+    _forward_terms(
+        content,
+        lambda item, kind, detail: flags.append({"item": item, "flag": kind, "detail": detail}),
+    )
+    return flags
+
+
 def _forward_terms(content: StudyContent, flag: Flag) -> None:
     taught = {
         block.term.casefold(): (index, section, unit.title)

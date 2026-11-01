@@ -30,6 +30,7 @@ from tum_mcp.study_content import (
     StudyContent,
     Unit,
     compile_formulas,
+    resolve_meanings,
 )
 from tum_mcp.study_figures import figure_bytes, figure_images
 from tum_mcp.study_math import compile_latex, inline_math
@@ -99,6 +100,9 @@ TEMPLATE_FILES = (
     "question-review.mjs",
     "navigation.mjs",
     "completion.mjs",
+    "reference-panel.mjs",
+    "recall.mjs",
+    "symbols.mjs",
     "flashcards.mjs",
     "revision.mjs",
     "anchors.mjs",
@@ -136,6 +140,7 @@ class BuildReport:
     lectures: int = 0
     lecture_coverage: tuple[dict[str, JsonValue], ...] = ()
     exam: dict[str, int] = field(default_factory=dict)
+    comments_removed: int = 0
 
 
 def read_content(root: Path) -> StudyContent:
@@ -199,6 +204,7 @@ def _app_data(
         value["revision"] = unit_revision(unit)
         for item, rendered in zip(unit.explore, value.get("explore", []), strict=True):
             rendered["revision"] = explore_revision(item)
+        resolve_meanings(value)
         units.append(value)
     referenced = (
         {source.key for unit in content.units for source in unit.sources} if content else set()
@@ -277,17 +283,33 @@ def _app_data(
         from tum_mcp.exam_data import render_exam
 
         value = render_exam(exam)
+        for context in _exam_contexts(value):
+            resolve_meanings(context)
         payload["exam"] = value
         payload["workspaces"].append("exam")
         payload["inlineMath"] = {**payload["inlineMath"], **_inline_math(value)}
     if exercises:
         value = render_exercises(exercises)
+        for exercise_set in value.get("sets", []):
+            for exercise in exercise_set.get("exercises", []):
+                resolve_meanings(exercise)
         payload["exercises"] = value
         payload["inlineMath"] = {
             **payload["inlineMath"],
             **_inline_math(value),
         }
     return payload
+
+
+def _exam_contexts(value: dict) -> list[object]:
+    # Meanings stay within a pattern or one exam question.
+    questions = [
+        question
+        for sitting in value.get("sittings", [])
+        for variant in sitting.get("variants", [])
+        for question in variant.get("questions", [])
+    ] + [question for mock in value.get("mocks", []) for question in mock.get("questions", [])]
+    return [*value.get("patterns", []), *questions]
 
 
 def exam_source_keys(exam: ExamContent) -> set[str]:
@@ -503,6 +525,18 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
                 ) from None
         else:
             apply(root, tuple(writes))
+        from tum_mcp.study_comments import prune_comments
+
+        workspaces = (
+            ("content", content),
+            ("exercises", exercises),
+            ("lectures", lectures),
+            ("exam", exam),
+        )
+        removed = prune_comments(
+            root,
+            {name: value.model_dump(mode="json") if value else {} for name, value in workspaces},
+        )
         report = BuildReport(
             units=len(content.units) if content else 0,
             preserved_templates=tuple(preserved),
@@ -523,6 +557,7 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             }
             if exam
             else {},
+            comments_removed=removed,
         )
     if publish:
         from tum_mcp.study_publish import after_build
@@ -536,5 +571,6 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
             lectures=report.lectures,
             lecture_coverage=report.lecture_coverage,
             exam=report.exam,
+            comments_removed=report.comments_removed,
         )
     return report

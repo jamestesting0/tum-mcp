@@ -1,10 +1,11 @@
 import data from './data.mjs';
 import { node, studyText, button, append, sourcesNote, focusHeading, shuffled, announce } from './dom.mjs';
 import { renderBlockBody } from './reading.mjs';
-import { iconButton, iconGlyph } from './navigation.mjs';
+import { arrowPaging, iconButton, iconGlyph } from './navigation.mjs';
 import { itemKey } from './revision.mjs';
 import { annotate } from './anchors.mjs';
 import { reviewQuestion } from './question-review.mjs';
+import { optionExplanations } from './exercise-response.mjs';
 
 export function renderPractice(unit, ui, progress, persist) {
   const root = node('div');
@@ -13,7 +14,7 @@ export function renderPractice(unit, ui, progress, persist) {
   const last = ui.question === unit.questions.length - 1;
   const state = ui.answers.get(key) || { selected: null, checked: false };
   ui.answers.set(key, state);
-  const count = node('p', 'small', `${ui.question + 1} / ${unit.questions.length} · ${question.level === 'recall' ? 'Recall' : question.level === 'apply' ? 'Application' : 'Reasoning'}`);
+  const count = node('p', 'small', `Question ${ui.question + 1} of ${unit.questions.length} · ${question.level === 'recall' ? 'Recall' : question.level === 'apply' ? 'Application' : 'Reasoning'}`);
   const form = node('form', 'practice-question');
   const group = node('fieldset');
   group.append(annotate(studyText('legend', '', question.prompt), unit, question, 'practice', 'prompt'));
@@ -34,7 +35,7 @@ export function renderPractice(unit, ui, progress, persist) {
     });
     labels.set(option.key, label); group.append(label);
   }
-  const check = node('button', 'primary', 'Check answer');
+  const check = node('button', 'primary', 'Check');
   check.type = 'submit'; check.disabled = state.selected === null;
   const actions = append(node('div', 'card-actions'), check); actions.hidden = state.checked;
   const hint = studyText('p', 'question-hint', question.hint || ''); hint.hidden = !question.hint || !state.hint;
@@ -73,7 +74,7 @@ export function renderPractice(unit, ui, progress, persist) {
         const jump = button('', () => reviewQuestion({
           unit, question: result.item, answer: ui.answers.get(itemKey(unit, result.item)),
           answered: typeof result.value === 'boolean', trigger: jump,
-          position: `${result.index + 1}/${results.length}`,
+          position: `${result.index + 1} of ${results.length}`,
         }), 'summary-item');
         const copy = node('span', 'summary-copy');
         copy.append(studyText('span', 'summary-prompt', `${result.index + 1}. ${result.item.prompt}`), node('span', 'small', result.value === false ? 'Missed' : 'Not answered'));
@@ -98,11 +99,7 @@ export function renderPractice(unit, ui, progress, persist) {
       const answer = node('p', 'visually-hidden', 'Correct answer: '); answer.append(annotate(studyText('span', '', correctChoice.text), unit, question, 'practice', 'correct')); panel.append(answer);
     }
     panel.append(annotate(studyText('p', '', question.explanation), unit, question, 'practice', 'explanation'));
-    const alternatives = node('details', 'disclosure plain other-options source-note'); alternatives.append(node('summary', '', 'Other options'));
-    alternatives.append(append(node('ul'), ...order.filter(option => option.key !== state.selected).map(option => {
-      const item = node('li'); item.append(annotate(studyText('span', '', option.text), unit, question, 'practice', `option:${option.key}`), document.createTextNode(' — '), annotate(studyText('span', '', option.feedback), unit, question, 'practice', `feedback:${option.key}`)); return item;
-    })));
-    panel.append(alternatives);
+    panel.append(optionExplanations(order, question.correct, state.selected, (element, field) => annotate(element, unit, question, 'practice', field)));
     const next = node('div', 'cluster feedback-actions');
     // A retry after seeing the answer is practice, not new evidence: the first result stays
     // saved, so a miss remains in To review until a later fresh attempt gets it right.
@@ -110,7 +107,7 @@ export function renderPractice(unit, ui, progress, persist) {
       state.selected = null; state.checked = false; state.retry = true;
       replaceQuestion();
     }, 'secondary'));
-    if (!last) next.append(button('Continue', () => go(ui.question + 1), 'primary'));
+    if (!last) next.append(button('Next question', () => go(ui.question + 1), 'primary'));
     panel.append(next);
     feedback.replaceChildren(panel);
     sources.hidden = false;
@@ -145,5 +142,6 @@ export function renderPractice(unit, ui, progress, persist) {
   }
   navigation.append(prev, next); meta.append(position, append(node('div', 'item-actions'), sources, navigation));
   root.append(meta, form, feedback, ending);
+  arrowPaging(root, prev, next, { active: true });
   return root;
 }

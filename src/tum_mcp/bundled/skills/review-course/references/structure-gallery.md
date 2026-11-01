@@ -88,6 +88,91 @@ of \(A\) once \(B\) is known; a table works \(P(B) = 0.5\), \(P(A \mid B) = 0.4\
 step by step and states \(z^*z = a^2+b^2\), but never gives
 \(1/(a+bi) = (a-bi)/(a^2+b^2)\) or its condition \(a^2+b^2 > 0\).
 
+The cases below calibrate how ideas are connected, in both directions: a move missing where
+the content needs it, and a move forced where it does not ([teaching](../../prepare-study/references/teaching.md#teaching-moves)).
+
+**abrupt-hmm** (item, probability). "Belief over time" opens: "A stochastic process is a
+sequence of random variables over time." Stationarity and second-order chains follow before
+the hidden Markov model is defined. Later sections start new examples ("Suppose initial rain
+has probability 0.2"), and the filtering update uses a sensor likelihood of 0.8 where the
+joint example used 0.9.
+
+**related-hmm** (item, probability). The same unit opens: "You cannot see the weather, only
+whether the director carries an umbrella." One umbrella world carries every example. The
+filtering section opens: "Scoring one path is easy, but there are \(2^T\) of them, so keep one
+belief and update it." Smoothing opens from filtering's limit: it ignores later evidence.
+
+**signpost-filler** (item). "This section explains filtering. Moreover, filtering is very
+important in practice."
+
+**new-before-old** (item, quantum computing). "Towards the marked direction, by an angle
+\(\theta\), the state is turned by each Grover iteration. Measurement squares the amplitude
+it ends with, which is why the angle matters."
+
+**fake-connective** (item, search). "BFS takes the oldest node from the frontier. Moreover,
+DFS takes the newest. Furthermore, A* takes the one with the lowest estimate."
+
+**term-switch** (item, search). One section calls the discovered but unexpanded nodes "the
+frontier", the next paragraph "the open list" and its code comment "the queue".
+
+**forced-bridge** (item, search). Three parallel sections give the frontier rule of BFS, DFS
+and UCS; each opens "Now that we know the previous strategy, we need a new one."
+
+**needless-worked-definition** (item, agents). The definition of a percept is followed by a
+section "Worked example" with three numbered steps that apply it to a vacuum robot.
+
+**hidden-insight** (item, search). The admissibility section names the term; its light-bulb
+insight holds "it never overestimates the true remaining cost", which the practice needs.
+
+**exam-reteaches** (course, Exam). The pattern "Compute a filtering step" opens with four
+paragraphs that explain prediction and correction from scratch before its workflow.
+
+**master-cases** (item, Exam pattern). The workflow's step 3 "Solve the recurrence" lists
+three cases: \(d > \log_b a\) -> \(O(n^d)\), \(d = \log_b a\) -> \(O(n^d \log n)\),
+\(d < \log_b a\) -> \(O(n^{\log_b a})\). Each case only names the final result.
+
+**overlapping-limit-cases** (item, Exam pattern). A decision step on a limit lists "the
+substitution gives a fraction" -> simplify, and "the substitution gives \(0/0\)" ->
+L'Hopital. Every \(0/0\) example fits both cases.
+
+**correct-only-feedback** (item, Exam pattern). Example 2 asks which case applies to
+\(\lim_{x\to 1} \frac{x^2+1}{x-1}\); the feedback for the right case reads "Correct!" and
+for the others "Wrong case."
+
+**described-pitfall** (item, Exam pattern). Pitfalls: "Don't misuse L'Hopital." / "Use it
+correctly." / "It is a common mistake."
+
+**contextless-pitfall** (item, Exam pattern). Pitfall: "Step 2" / wrong \(P=\sin\varphi\) /
+right \(P=\sin^2\varphi\) / "Measurement uses the squared magnitude." Nothing says what is
+being computed when a student writes the wrong line.
+
+**degenerate-fork** (item, Exam pattern). An estimation pattern's first step splits on
+"the counts sum to more than zero" and "every count is zero"; no listed exam question has an
+all-zero sample, yet the second case gets its own example and Practise item.
+
+**merged-methods** (item, Exam pattern). A pattern's first step "Identify the requested
+output and choose the matching branch" lists four cases, each a different calculation (build a
+matrix from weights, expand a vector, reduce a joint state, apply a channel); step 2 reads
+"Apply the selected operation".
+
+**described-move** (item, Exam pattern). A decision step's case reads "the task asks for a
+channel output" with the move "check their completeness and sum their action on the input",
+and nothing opens under it; the completeness relation and the output formula appear only
+in a worked example further down the page.
+
+**bare-apply-formula** (item, Exam pattern). A workflow case opens to
+\(\mathcal E(\rho)=\sum_j K_j\rho K_j^\dagger\) with no variable meanings; the Kraus operators
+were defined two units earlier.
+
+**underlined-indices** (item, any). A derivation marks \(i\), \(j\), \(n\) and \(\pi\) with
+meanings such as "index" and "pi", next to an unexplained \(\rho_A\).
+
+**echoed-meaning** (item, any). An applied formula's text reads "\(p_i\) is the probability of
+the \(i\)-th state", and \(p_i\) in the formula opens the same meaning.
+
+**generic-meaning** (item, Exercise). In a guide derivation for a sixteen-record search,
+\(N\) opens "a number"; the task gives \(N=16\).
+
 ## Verdicts
 
 | Case | Score | Check | Why |
@@ -113,3 +198,25 @@ step by step and states \(z^*z = a^2+b^2\), but never gives
 | product-inner-compact | Clarity 2 | `clarity.notation_unpacked` | The claim, four new symbols and the rule share two sentences; remind what a ket, \(\langle\cdot\mid\cdot\rangle\) and \(\otimes\) mean, work \(\langle 0\mid 1\rangle\langle +\mid +\rangle = 0\), then state the identity and its conjugate-linearity. |
 | chain-rule-unpacked | Clarity 3; Redundancy 3 | `clarity.notation_unpacked` | Words, a local reminder, a worked case and then the rule; the reminder repeats a definition on purpose. |
 | reciprocal-without-rule | Intuition 2 | `intuition.general_rule` | One worked number without its general formula and nonzero condition leaves the next case to guesswork. |
+| abrupt-hmm | Intuition 2; Correctness 2 | `intuition.motivated`; `correctness.conventions` | Nothing says what problem the model solves, detours come before the model, and a given changes without notice. |
+| related-hmm | Cohesion 3; Intuition 3 | `cohesion.linked` | Each section opens from the previous one's limit, so the order explains itself. |
+| signpost-filler | Clarity 2 | `clarity.no_meta` | Both sentences talk about the page; neither says how filtering relates to anything. |
+| new-before-old | Cohesion 2 | `cohesion.familiar_first`, `cohesion.point_first` | Each sentence opens on what is new and the point comes last; start from the iteration: "Each Grover iteration turns the state by \(\theta\)." |
+| fake-connective | Cohesion 2 | `cohesion.honest_connectives` | The lines are parallel cases; "Moreover" fakes a relation. One table of frontier rules joins them. |
+| term-switch | Cohesion 2 | `cohesion.one_term` | Three names make a reader expect three sets; keep "frontier". |
+| forced-bridge | Cognitive load 2 | `cognitive_load.moves_fit` | Parallel cases do not follow from each other; a table or one framing line joins them. |
+| needless-worked-definition | Cognitive load 2 | `cognitive_load.moves_fit` | A one-line definition has no interacting steps to work; one example or non-example is enough. |
+| hidden-insight | Cognitive load 2 | `cognitive_load.moves_fit` | The defining condition is essential, so it belongs in the text, not behind a toggletip. |
+| exam-reteaches | Course redundancy 2 | `redundancy.exam_compresses` | Exam revises; it should compress to the workflow and reach the lesson through Recall. |
+| master-cases | Organization 2 | `organization.fork_placement` | The cases pick a final formula and change no move; the result table belongs in a cheatsheet entry reached through Recall, and the step says "compare \(d\) with \(\log_b a\)". |
+| overlapping-limit-cases | Correctness 1 | `correctness.cases_exclusive` | A student who finds \(0/0\) cannot tell which move to make; split the cases by what substitution gives. |
+| correct-only-feedback | Practice 2 | `practice.case_feedback` | The feedback never names the \(2/0\) that decides the case, so a wrong guess teaches nothing. |
+| described-pitfall | Representation 2; Intuition 2 | `representation.shown_not_described`; `intuition.reasons` | No wrong working is shown and no rule says why it fails; show the \(2/0\) case and name the \(0/0\) condition. |
+| contextless-pitfall | Representation 2 | `representation.shown_not_described` | A reader cannot tell when they would write \(\sin\varphi\); give the situation ("Turning the marked amplitude after \(k\) iterations into a success probability"). |
+| degenerate-fork | Cognitive load 2 | `cognitive_load.moves_fit`, `coverage.cases_complete` | No exam reaches the invented case, which doubles the examples and practice; drop the fork and keep the edge as a pitfall if it costs marks. |
+| merged-methods | Organization 2 | `organization.fork_placement` | The cases share no steps; they are four patterns behind one label, and "apply the selected operation" teaches no move. Split them and keep each workflow concrete. |
+| described-move | Representation 2 | `representation.shown_not_described` | The move names a formula the student must recall elsewhere; give the case an `apply` with \(\sum_j K_j^\dagger K_j=I\) and \(\mathcal E(\rho)=\sum_j K_j\rho K_j^\dagger\). |
+| bare-apply-formula | Clarity 2 | `clarity.symbols_recall` | A required meaning is missing where the student must recall the Kraus operators; give \(K_j\) its meaning in this pattern. |
+| underlined-indices | Cognitive load 2 | `clarity.symbols_recall` | Marks on obvious indices and constants hide the one variable that needed a meaning; mark \(\rho_A\) only. |
+| echoed-meaning | Redundancy 2 | `redundancy.said_once` | The meaning is said twice; drop it from the text and keep it on the formula. |
+| generic-meaning | Clarity 2 | `clarity.symbols_recall` | The meaning names no role or value; write "records in the database, 16 here". |

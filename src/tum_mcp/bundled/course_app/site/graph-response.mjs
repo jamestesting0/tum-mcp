@@ -27,7 +27,7 @@ export function graphResponse(check, draft, edit) {
   selected = selected.filter(key => options.some(item => item.key === key));
   const summary = node('p', 'graph-selection'); summary.setAttribute('aria-live', 'polite');
   const undo = iconButton('Undo', 'undo', () => { selected.pop(); change(); });
-  const clear = button('Clear', () => { selected = []; change(); }, 'secondary');
+  const clear = iconButton('Clear', 'reset', () => { selected = []; change(); });
   function choose(key) {
     if (check.mode === 'path') { if (selected.length >= 100) return; selected.push(key); }
     else selected = selected.includes(key) ? selected.filter(item => item !== key) : [...selected, key];
@@ -71,7 +71,9 @@ export function plotResponse(check, draft, edit) {
   const inputs = [], handles = [], line = svgNode('path', { class: 'plot-line answer-line' }); plot.series.append(line);
   plot.graph.setAttribute('role', 'group');
   const instruction = node('p', 'small', 'Tap the graph or enter y values. Arrow keys adjust focused points.');
-  root.append(instruction, plot.root);
+  // Clear sits at the end of the instruction row, as Reset does beside a code editor's label.
+  const clear = iconButton('Clear', 'reset', () => { values = []; paint(); edit(''); });
+  root.append(append(node('div', 'response-head'), instruction, clear), plot.root);
   const fields = node('div', 'plot-values');
   function change(index, value) { values[index] = value; paint(); edit(JSON.stringify(values)); }
   const valid = i => numeric(values[i]) && Number(values[i]) >= check.plot.y_min && Number(values[i]) <= check.plot.y_max;
@@ -110,10 +112,9 @@ export function plotResponse(check, draft, edit) {
     const value = Math.max(check.plot.y_min, Math.min(check.plot.y_max, check.plot.y_min + Math.round((raw-check.plot.y_min)/check.snap)*check.snap));
     change(closest, String(Math.max(check.plot.y_min, Math.min(check.plot.y_max, Number(value.toPrecision(15)))))); handles[closest].focus({ preventScroll: true });
   });
-  const clear = button('Clear', () => { values = []; paint(); edit(''); }, 'secondary');
   // The plot redraws at its shown width; its handles follow the new scale.
   plot.onResize(() => { check.x_values.forEach((x, i) => handles[i].setAttribute('cx', plot.x(x))); paint(); });
-  root.append(fields, clear); paint();
+  root.append(fields); paint();
   return { root, showResult: checked => inputs.forEach((input, i) => {
     if (checked && (!valid(i) || Math.abs(Number(values[i])-check.answer[i]) > check.tolerance)) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
   }), validate: () => ({ valid: check.x_values.every((_, i) => valid(i)), correct: check.x_values.every((_, i) => valid(i) && Math.abs(Number(values[i])-check.answer[i]) <= check.tolerance), repairs: [check.feedback] }) };

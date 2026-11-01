@@ -16,8 +16,17 @@ from tum_mcp.study_content import (
     StudyContent,
     TableBlock,
     TextBlock,
+    declared_meanings,
 )
-from tum_mcp.study_math import INLINE_SPANS
+from tum_mcp.study_math import (
+    INLINE_SPANS,
+    decorated_variants,
+    formula_parts,
+    normalize_symbol,
+    split_relation,
+    symbol_latex,
+    symbol_occurs,
+)
 
 # A prose paragraph frames an idea; anything longer becomes steps, points, a table or a figure.
 PARAGRAPH_WORDS = 45
@@ -29,6 +38,12 @@ STATEMENT_WORDS = 80
 QUESTION_WORDS = 80
 QUESTION_TABLE_ROWS = 6
 # Sentences about the material instead of the subject, such as "the lecture groups ...".
+# An action hidden in a noun: "perform the computation of", "carry out an evaluation of".
+NOMINALISATION = re.compile(
+    r"\b(?:perform|performs|performing|carry out|carries out|conduct|conducts|undertake|"
+    r"make|makes|achieve|achieves)\s+(?:a|an|the)?\s*\w+(?:tion|ment|sion|ance|ence)\s+of\b",
+    re.IGNORECASE,
+)
 META_REFERENCE = re.compile(
     r"\b(?:the|this|our) (?:lecture|course|slides?|lesson|section|page|unit|chapter|textbook) "
     r"(?:groups?|says?|states?|shows?|focus(?:es)?|lists?|defines?|describes?|covers?|calls?|"
@@ -45,6 +60,19 @@ PLAIN_MATH = re.compile(
     r"|(?:\d|\b[A-Za-z]\b|\))\s*−\s*[\w(]"
     r"|\b[A-Z][A-Za-z]{0,2}\([^()\n]*[|=,][^()\n]*\)"
     r"|(?<![\w.])[A-Za-z]\*?(?:\([^()\n]{1,12}\))?\s*[=<>]\s*[-\w(]"
+)
+# Mathematics read aloud in words ("theta over two", "lambda squared", "one over n"); names such
+# as "beta distribution" stay, because no operation follows them.
+SPOKEN_GREEK = (
+    r"(?:alpha|beta|gamma|delta|epsilon|zeta|eta|theta|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau"
+    r"|phi|varphi|chi|psi|omega)"
+)
+SPOKEN_TERM = rf"(?:{SPOKEN_GREEK}|one|two|three|four|five|six|eight|ten|[a-z])"
+SPOKEN_MATH = re.compile(
+    rf"\b{SPOKEN_GREEK}\s+(?:over|squared|cubed|times|plus|minus|divided by|to the power of)\b"
+    rf"|\b{SPOKEN_TERM}\s+over\s+{SPOKEN_TERM}\b"
+    rf"|\bsquare root of\s+{SPOKEN_TERM}\b",
+    re.IGNORECASE,
 )
 # Text that spells out an object the student should see: "the diagonal matrix with entries 1, 0",
 # "a vector whose components are ...", "the graph has edges ...".
@@ -134,6 +162,255 @@ def arithmetic_errors(text: str) -> list[str]:
     return errors
 
 
+_GREEK_NAMES = (
+    "alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|rho|sigma|tau"
+    "|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega"
+)
+# A variable a reader may not recall: a Greek letter (not pi) or a subscripted letter.
+CANDIDATE_VARIABLE = re.compile(
+    rf"\\(?:var)?(?:{_GREEK_NAMES})(?![A-Za-z])(?:_\{{[^{{}}]*\}}|_[A-Za-z0-9])?"
+    rf"|(?<![\\A-Za-z])[A-Za-z]_(?:\{{[^{{}}]*\}}|[A-Za-z0-9])"
+)
+_FILLER_WORDS = {"the", "a", "an", "symbol", "variable", "sub", "of", "is"}
+# In a task (an exercise, a pattern's examples and drill) a lone letter such as k is a quantity
+# the student is given or asked for; the imaginary unit, e, the identity and big-O are notation.
+_NOTATION_GROUP = re.compile(
+    r"\\(?:text[a-z]*|mathrm|operatorname|mbox|begin|end)\s*\{[^{}]*\}"
+    r"|\\math(?:bb|cal|frak|scr|bf|sf)\s*(?:\{[^{}]*\}|[A-Za-z])"
+)
+_SCRIPT_GROUP = re.compile(r"([_^])\{[^{}]*\}")
+_LONE_LETTER = re.compile(r"(?<![\\A-Za-z_^])[A-Za-z](?![A-Za-z_])")
+_NOTATION_LETTERS = {"i", "e", "I", "O"}
+# A meaning made only of these words says nothing about the variable ("Given quantities").
+_GENERIC_WORDS = {
+    "given", "known", "unknown", "supplied", "provided", "quantity", "quantities", "value",
+    "values", "number", "numbers", "parameter", "parameters", "input", "inputs", "result",
+    "constant", "constants", "term", "terms", "variables", "symbols", "and",
+}  # fmt: skip
+
+
+def unexplained_variables(context: JsonValue, task: bool = False) -> list[str]:
+    """Greek, subscripted or decorated variables in a context's derivations and applied formulas
+    that no meaning list and no inline mention in its text explains; in a task, lone letters
+    too."""
+    formulas: list[str] = []
+    spans: list[str] = []
+    known = {normalize_symbol(item["symbol"]) for item in declared_meanings(context)}
+
+    def visit(value: JsonValue) -> None:
+        if isinstance(value, dict):
+            if value.get("kind") == "derivation":
+                formulas.extend(
+                    line["latex"] for group in value["groups"] for line in group["lines"]
+                )
+            elif isinstance(value.get("math"), list):
+                formulas.extend(line for line in value["math"] if isinstance(line, str))
+            if "latex" in value and isinstance(value.get("symbols"), list):
+                known.update(normalize_symbol(item["symbol"]) for item in value["symbols"])
+            # A meaning list's own symbol is no mention in the text.
+            for key, item in value.items():
+                if key != "symbol":
+                    visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+        elif isinstance(value, str):
+            spans.extend(match[1] for match in INLINE_SPANS.finditer(value) if match[1])
+
+    visit(context)
+    found: list[str] = []
+    for latex in formulas:
+        tokens = [match[0] for match in CANDIDATE_VARIABLE.finditer(latex)]
+        tokens += decorated_variants(latex, sorted(known))
+        if task:
+            plain = _SCRIPT_GROUP.sub(r"\1", _NOTATION_GROUP.sub(" ", latex))
+            tokens += [m[0] for m in _LONE_LETTER.finditer(plain) if m[0] not in _NOTATION_LETTERS]
+        for token in map(normalize_symbol, tokens):
+            if token in known or token in found or any(symbol_occurs(s, token) for s in spans):
+                continue
+            found.append(token)
+    return found
+
+
+# A figure label that types mathematics instead of writing it as LaTeX: Greek, scripts, kets
+# or a letter run into its index ("x3"). The app typesets \\(x_3\\) like the text around it.
+_LABEL_TEXT = re.compile(r"<text\b[^>]*>(.*?)</text>", re.S)
+_TYPED_MATH = re.compile(
+    r"[\u0391-\u03a9\u03b1-\u03c9\u2080-\u2089\u2070-\u2079\u00b2\u00b3\u27e8\u27e9\u2032]"
+    r"|^[A-Za-z](?:_?[0-9]{1,2}|_[A-Za-z])$"
+)
+
+
+def typed_math_labels(context: JsonValue) -> list[str]:
+    """Figure labels that type mathematics as characters instead of inline LaTeX."""
+    found: list[str] = []
+
+    def visit(value: JsonValue) -> None:
+        if isinstance(value, dict):
+            if value.get("kind") == "figure" and isinstance(value.get("svg"), str):
+                for raw in _LABEL_TEXT.findall(value["svg"]):
+                    label = re.sub(r"<[^>]+>", "", raw).strip()
+                    if "\\(" not in label and _TYPED_MATH.search(label):
+                        found.append(label)
+            for item in value.values():
+                visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    visit(context)
+    return found
+
+
+def generic_meanings(context: JsonValue) -> list[str]:
+    """Meanings that say only that a variable is given or is a value ("Given quantities")."""
+    found: list[str] = []
+
+    def visit(value: JsonValue) -> None:
+        if isinstance(value, dict):
+            symbols = value.get("symbols")
+            for item in symbols if isinstance(symbols, list) else ():
+                words = re.sub(r"[^a-z ]", " ", str(item.get("meaning", "")).lower()).split()
+                if words and all(w in _GENERIC_WORDS or w in _FILLER_WORDS for w in words):
+                    found.append(str(item.get("symbol")))
+            for item in value.values():
+                visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    visit(context)
+    return found
+
+
+def renamed_meanings(context: JsonValue) -> list[str]:
+    """Meanings that only spell the variable's name ("rho", "p sub i")."""
+    found: list[str] = []
+
+    def visit(value: JsonValue) -> None:
+        if isinstance(value, dict):
+            symbols = value.get("symbols")
+            for item in symbols if isinstance(symbols, list) else ():
+                words = re.sub(r"[^a-z ]", " ", str(item.get("meaning", "")).lower()).split()
+                said = "".join(word for word in words if word not in _FILLER_WORDS)
+                latex = symbol_latex(str(item.get("symbol", ""))).lower().replace("\\var", "")
+                name = re.sub(r"[^a-z]", "", latex)
+                if said and said == name:
+                    found.append(str(item["symbol"]))
+            for item in value.values():
+                visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    visit(context)
+    return found
+
+
+def echoed_meanings(context: JsonValue) -> list[str]:
+    """Meanings that the text beside their formula (an applied formula's text, a line's
+    reason) already says."""
+    found: list[str] = []
+
+    def words(text: str) -> str:
+        return " ".join(re.sub(r"[^a-z0-9 ]", " ", INLINE_SPANS.sub(" ", text).lower()).split())
+
+    def visit(value: JsonValue) -> None:
+        if isinstance(value, dict):
+            symbols = value.get("symbols")
+            if isinstance(symbols, list) and (value.get("kind") == "derivation" or "math" in value):
+                beside = [str(value.get("text") or "")] + [
+                    str(line.get("reason") or "")
+                    for group in value.get("groups", [])
+                    for line in group.get("lines", [])
+                ]
+                said = words(" ".join(beside))
+                for item in symbols:
+                    meaning = words(str(item.get("meaning", "")))
+                    if len(meaning.split()) >= 3 and meaning in said:
+                        found.append(str(item["symbol"]))
+            for item in value.values():
+                visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    visit(context)
+    return found
+
+
+def redeclared_meanings(context: JsonValue) -> list[str]:
+    """Variables given the same meaning on several formulas of one context; one serves all."""
+    seen: dict[tuple[str, str], int] = {}
+    for item in declared_meanings(context):
+        key = (normalize_symbol(item["symbol"]), " ".join(item["meaning"].lower().split()))
+        seen[key] = seen.get(key, 0) + 1
+    return [symbol for (symbol, _), count in seen.items() if count > 1]
+
+
+def variable_flags(item: str, context: JsonValue, task: bool = False) -> list[dict[str, JsonValue]]:
+    flags: list[dict[str, JsonValue]] = []
+    if typed := typed_math_labels(context):
+        flags.append(
+            {
+                "item": item,
+                "flag": "typed_math_label",
+                "detail": f"{len(typed)} figure label(s) type mathematics as characters, such as "
+                f"'{typed[0]}'. Write the whole label as inline LaTeX (\\(x_3\\), "
+                "\\(|1\\rangle\\)) so the app typesets it like the text.",
+            }
+        )
+    if generic := generic_meanings(context):
+        flags.append(
+            {
+                "item": item,
+                "flag": "generic_meaning",
+                "detail": f"{len(generic)} meaning(s) say only that a variable is given or is a "
+                f"value, such as {generic[0]}. Say what each quantity is in this task, one "
+                "variable per entry.",
+            }
+        )
+    if repeated := redeclared_meanings(context):
+        flags.append(
+            {
+                "item": item,
+                "flag": "redeclared_meaning",
+                "detail": f"{len(repeated)} variable(s) carry the same meaning on several "
+                f"formulas, such as {repeated[0]}. Keep it on the first; the app reuses it in "
+                "this context.",
+            }
+        )
+    if missing := unexplained_variables(context, task):
+        flags.append(
+            {
+                "item": item,
+                "flag": "unexplained_symbol",
+                "detail": f"{len(missing)} variable(s) in displayed working have no meaning "
+                f"here, such as {', '.join(missing[:3])}. Give a meaning where a reviser would "
+                "stop to recall it (see the variables guide); leave obvious ones.",
+            }
+        )
+    if echoed := echoed_meanings(context):
+        flags.append(
+            {
+                "item": item,
+                "flag": "echoed_meaning",
+                "detail": f"{len(echoed)} meaning(s) are also said in the text beside the formula, "
+                f"such as {echoed[0]}. Keep the meaning on the formula and cut it from the text.",
+            }
+        )
+    if renamed := renamed_meanings(context):
+        flags.append(
+            {
+                "item": item,
+                "flag": "renamed_meaning",
+                "detail": f"{len(renamed)} meaning(s) only spell the variable's name, such as "
+                f"{renamed[0]}. Say what it is here.",
+            }
+        )
+    return flags
+
+
 def _strings(value: JsonValue, path: str = "") -> Iterator[tuple[str, str]]:
     match value:
         case str():
@@ -155,6 +432,10 @@ def _sentences(text: str) -> int:
 
 def _name(block) -> str:
     return block.title or block.kind
+
+
+def _normalized(text: str) -> str:
+    return " ".join(re.findall(r"\w+", text.lower()))
 
 
 def quality_flags(
@@ -179,14 +460,15 @@ def quality_flags(
     seen_symbols: set[str] = set()
     seen_terms: set[str] = set()
     for unit in units:
+        flags.extend(variable_flags(unit.key, unit.model_dump(mode="json")))
         opening, symbols, terms = _opening(unit.blocks, seen_symbols, seen_terms)
         if len(opening) >= OPENING_NEW_IDEAS:
             flag(
                 unit.key,
                 "dense_introduction",
                 f"The opening introduces {', '.join(opening[:6])} before any picture, example "
-                "or worked case. Say first what the idea describes and why it matters, tie it to "
-                "what the reader already knows, then name its parts one at a time.",
+                "or worked case. Check whether a first-time reader learns what the idea describes, "
+                "why it matters and how it ties to what they know before its parts are named.",
             )
         seen_symbols |= symbols
         seen_terms |= terms
@@ -204,9 +486,38 @@ def quality_flags(
             flag(
                 unit.key,
                 "example_without_rule",
-                "The lesson works numbers through but states no general rule. Give the reusable "
-                "formula as a formula block with its symbols and conditions, link it to the "
-                "worked case, and apply it once more to different numbers.",
+                "The lesson works numbers through but has no formula block. Check whether the "
+                "topic has a reusable rule; if so, state it with its symbols and conditions and "
+                "apply it once more to different numbers.",
+            )
+        derived = [
+            line.latex
+            for block in unit.blocks
+            if block.kind == "derivation"
+            for group in block.groups
+            for line in group.lines
+        ]
+        # A line listing several statements ("N=4,\quad M=1") is no transformation the app can
+        # align; a line without a top-level relation has nothing to align on.
+        listed = [latex for latex in derived if len(formula_parts(latex)) > 1]
+        unaligned = [
+            latex for latex in derived if latex not in listed and not split_relation(latex)[1]
+        ]
+        if unaligned:
+            flag(
+                unit.key,
+                "unaligned_line",
+                f"{len(unaligned)} derivation line(s) have no relation to align on, such as "
+                f"'{unaligned[0][:60]}'. Write the relation (\\(x = \\dots\\)) or join the line to "
+                "the one it continues.",
+            )
+        if listed:
+            flag(
+                unit.key,
+                "listed_derivation_line",
+                f"{len(listed)} derivation line(s) list several statements, such as "
+                f"'{listed[0][:60]}'. Give each line one transformation; put givens one per "
+                "line or in the text before the derivation.",
             )
         if len(unit.blocks) < median / 2:
             flag(
@@ -215,11 +526,24 @@ def quality_flags(
                 f"{len(unit.blocks)} sections against a course median of {median:g}; check "
                 "every outcome of its source is taught.",
             )
+        summary = _normalized(unit.summary)
+        if any(_normalized(objective.text) == summary for objective in unit.objectives):
+            flag(
+                unit.key,
+                "summary_repeats_objective",
+                "The summary repeats an objective word for word; let it state the question the "
+                "unit answers.",
+            )
         if not any(block.kind in VISUAL_KINDS for block in unit.blocks):
             flag(unit.key, "no_visual", "No diagram, table, formula, code or plot in the lesson.")
         definitions = sum(block.kind == "definition" for block in unit.blocks)
         if definitions > 5:
-            flag(unit.key, "many_terms", f"{definitions} definitions in one lesson; split it.")
+            flag(
+                unit.key,
+                "many_terms",
+                f"{definitions} definitions in one lesson; check whether it holds more than one "
+                "topic.",
+            )
         reading_blocks = (*unit.blocks, *(block for item in unit.explore for block in item.blocks))
         passages = [
             *((f"{unit.key}#{index}", block) for index, block in enumerate(unit.blocks)),
@@ -238,8 +562,8 @@ def quality_flags(
                     location,
                     "long_section",
                     f"'{_name(block)}': {words} words of prose in {len(block.paragraphs)} "
-                    "paragraph(s). Give one idea per section, and a hard idea as short numbered "
-                    "steps.",
+                    "paragraph(s). Check whether it holds more than one idea; a hard idea reads "
+                    "better as short numbered steps.",
                 )
             calculation = next((part for part in block.paragraphs if part.count("=") >= 2), None)
             if calculation is not None:
@@ -292,6 +616,21 @@ def quality_flags(
                 f"{len(narrated)} sentence(s) talk about the material instead of the subject, "
                 f"such as '{narrated[0][:90]}'; state the idea itself.",
             )
+        nominal = [
+            sentence
+            for block in reading_blocks
+            if isinstance(block, TextBlock)
+            for paragraph in (*block.paragraphs, *block.steps, *block.points)
+            for sentence in re.split(r"(?<=[.!?])\s+", paragraph)
+            if NOMINALISATION.search(sentence)
+        ]
+        if nominal:
+            flag(
+                unit.key,
+                "nominalisation",
+                f"{len(nominal)} sentence(s) hide the action in a noun, such as "
+                f"'{nominal[0][:90]}'; use the verb ('compute', not 'perform the computation of').",
+            )
         cited = [
             block.title
             for block in (*reading_blocks, *(b for q in unit.questions for b in q.blocks))
@@ -341,6 +680,7 @@ def quality_flags(
                     break
     for group in exercises.sets if exercises else ():
         for exercise in group.exercises:
+            flags.extend(variable_flags(exercise.key, exercise.model_dump(mode="json"), task=True))
             if len(exercise.parts) > 1 and not any(step.part for step in exercise.steps):
                 flag(
                     exercise.key,
@@ -478,7 +818,7 @@ def quality_flags(
         tall: dict[str, list[str]] = {}
         for item, text in _prose(value):
             prose = INLINE_SPANS.sub(" ", text)
-            found = PLAIN_MATH.search(prose)
+            found = PLAIN_MATH.search(prose) or SPOKEN_MATH.search(prose)
             if found:
                 plain.setdefault(item, []).append(found[0])
             if spelled := DESCRIBED_OBJECT.search(text):
@@ -522,8 +862,8 @@ def quality_flags(
             flag(
                 item,
                 "plain_math",
-                f"{len(samples)} text(s) type mathematics as plain characters, such as "
-                f"'{samples[0]}'. Write every symbol, variable and formula as inline LaTeX: "
+                f"{len(samples)} text(s) type mathematics as plain characters or words, such "
+                f"as '{samples[0]}'. Write every symbol, variable and formula as inline LaTeX: "
                 r"\(P(A \mid B)\), \(\gamma\), \(V = 3\).",
             )
     return flags

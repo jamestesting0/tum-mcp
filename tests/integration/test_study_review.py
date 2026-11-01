@@ -59,6 +59,25 @@ def test_malformed_sidecar_blocks_semantic_report_but_not_local_build(
     build(root, publish=False)
 
 
+def test_exam_patterns_are_reviewed_items_that_turn_stale_when_edited(
+    tmp_path: Path, course_memory: Path
+) -> None:
+    from knowledge_fixture import knowledge_project
+
+    from tum_mcp.course_app_paths import app_path
+
+    root = knowledge_project(tmp_path)
+    path = app_path(root, "exam.json")
+    value = json.loads(path.read_bytes())
+    keys = [f"exam/pattern/{pattern['key']}" for pattern in value["patterns"]]
+    assert set(keys) <= {entry["item"] for entry in report(root)["unreviewed"]}
+    score(root, reviewed(root), whole(report(root)))
+    assert not report(root)["stale"] and not report(root)["unreviewed"]
+    value["patterns"][0]["summary"] = "Revised summary."
+    path.write_text(json.dumps(value))
+    assert [entry["item"] for entry in report(root)["stale"]] == keys[:1]
+
+
 def report(project: Path) -> dict:
     result = CliRunner().invoke(app, ["study", "report", str(project), "--section", "review"])
     assert result.exit_code == 0, result.output
@@ -102,6 +121,7 @@ def reviewed(project: Path) -> list[dict]:
             "revision": entry["revision"],
             "reviewed_at": "2026-10-30",
             "scores": {name: 3 for name in DIMENSIONS},
+            "evidence": dict.fromkeys(DIMENSIONS, "The passage that earns the score."),
             "visuals": [
                 {"visual": key, "scores": {name: 3 for name in CRITERIA}}
                 for key in entry["visuals"]
@@ -421,8 +441,15 @@ def test_scores_follow_the_content_they_read_and_low_scores_need_a_fix(
     drawn = next(key for key, entry in listed.items() if entry["visuals"])
     sharp = {name: 3 for name in CRITERIA}
     good = {name: 3 for name in DIMENSIONS}
+    quoted = dict.fromkeys(DIMENSIONS, "The passage that earns the score.")
     reviews = [
-        {"item": key, "revision": value, "reviewed_at": "2026-10-29", "scores": good}
+        {
+            "item": key,
+            "revision": value,
+            "reviewed_at": "2026-10-29",
+            "scores": good,
+            "evidence": quoted,
+        }
         for key, value in items.items()
     ]
     score(project, reviews)
@@ -481,6 +508,46 @@ def test_scores_follow_the_content_they_read_and_low_scores_need_a_fix(
     content_path.write_text(json.dumps(content), encoding="utf-8")
     stale = report(project)
     assert [entry["item"] for entry in stale["stale"]] == [unit] and stale["passed"] is False
+
+
+def test_a_three_needs_its_evidence_and_no_open_invariant_flag(exercise_project: Path) -> None:
+    # QC's reviewer scored every item 3 without findings while the report showed open defects.
+    project = exercise_project
+    reviews = reviewed(project)
+    course = whole(report(project))
+    score(project, reviews, course)
+    assert report(project)["passed"] is True
+    unit = next(index for index, review in enumerate(reviews) if review["item"] == "study/graphs")
+    # A 3 without the passage that earns it keeps the review from passing.
+    reviews[unit]["evidence"] = {
+        name: text for name, text in reviews[unit]["evidence"].items() if name != "clarity"
+    }
+    score(project, reviews, course)
+    missing = report(project)
+    assert missing["unevidenced"] == [{"item": "study/graphs", "dimensions": ["clarity"]}]
+    assert missing["passed"] is False
+    reviews[unit]["evidence"]["clarity"] = "The passage that earns the score."
+    # An object spelled out in prose and a term used before its lesson are defects, so the
+    # dimension each costs cannot score 3.
+    content_path = project / "study/content.json"
+    content = json.loads(content_path.read_bytes())
+    target = next(u for u in content["units"] if u["key"] == "graphs")
+    later = content["units"][content["units"].index(target) + 1 :]
+    term = next(b["term"] for u in later for b in u["blocks"] if b["kind"] == "definition")
+    text = next(b for b in target["blocks"] if b["kind"] == "text" and b.get("paragraphs"))
+    text["paragraphs"] = [
+        "Take the diagonal matrix with entries 2 and 0.",
+        f"It returns in {{{{{term.casefold()}}}}}.",
+    ]
+    content_path.write_text(json.dumps(content), encoding="utf-8")
+    reviews[unit]["revision"] = report(project)["stale"][0]["revision"]
+    score(project, reviews, whole(report(project)))
+    flagged = report(project)
+    assert [(c["item"], c["flag"], c["dimension"]) for c in flagged["flag_conflicts"]] == [
+        ("study/graphs", "described_object", "representation"),
+        ("study/graphs", "forward_term", "organization"),
+    ]
+    assert flagged["passed"] is False
 
 
 def test_older_reviews_still_load_and_the_course_review_follows_the_outline(

@@ -1,6 +1,7 @@
 import data from './data.mjs';
 import { node, svgNode, button, append } from './dom.mjs';
 import { renderCode, codeEditor, languageName, lineSet } from './code.mjs';
+import { iconButton } from './navigation.mjs';
 
 // A light code project for a programming exercise: a file tree, tabs for open files,
 // read-only files with line numbers and editable files whose drafts stay in this browser.
@@ -118,7 +119,8 @@ export function renderFiles(block) {
     const side = node('span', 'project-meta', [languageName(file.language, file.path), file.editable ? 'editable' : 'read only'].filter(Boolean).join(' · '));
     pathBar.append(crumbs, side);
     if (file.editable && typeof drafts[file.path] === 'string' && drafts[file.path] !== file.code) {
-      pathBar.append(button('Reset file', () => { delete drafts[file.path]; save(); paint(); }, 'quiet project-reset'));
+      const reset = iconButton('Reset file', 'reset', () => { delete drafts[file.path]; save(); paint(); });
+      reset.classList.add('project-reset'); pathBar.append(reset);
     }
   }
   function paintPane(file) {

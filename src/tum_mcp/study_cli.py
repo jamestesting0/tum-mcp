@@ -224,7 +224,7 @@ def report(
     from tum_mcp.study_report import quality_flags
     from tum_mcp.study_review import read_scorecard, review_report
     from tum_mcp.study_store import load_state
-    from tum_mcp.study_structure import course_map
+    from tum_mcp.study_structure import course_map, forward_terms
     from tum_mcp.study_visuals import render_report
 
     root = project.expanduser().resolve()
@@ -243,8 +243,9 @@ def report(
 
     semantics = cache(lambda: knowledge_revision(root))
     media = cache(lambda: discover(root, state, content))
+    quality = cache(lambda: quality_flags(content, exercises))
     parts = {
-        "quality": lambda: quality_flags(content, exercises),
+        "quality": quality,
         "structure": lambda: course_map(
             content,
             exercises,
@@ -266,6 +267,7 @@ def report(
             knowledge_revision=semantics(),
             media_inventory=media(),
             root=root,
+            flags=[*quality(), *(forward_terms(content) if content else ())],
         ),
         "render": lambda: render_report(root, content, exercises, exam()),
     }

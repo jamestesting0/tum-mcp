@@ -43,7 +43,7 @@ pse-ws26/
   app/                      Shared Study, Exercises, Exam and optional Lecture website
     content.json            Optional source-backed Study content
     exercises.json          Optional prepared exercise guidance
-    exam.json               Optional Exam content (local only)
+    exam.json               Optional prepared Exam content
   audio/                    Optional category audio derived from the prepared website
   videos/                   Optional explainer videos derived from the prepared website
 ```
@@ -187,9 +187,8 @@ that are partly prepared. Unknown source coverage and optional reading backlog s
 in the local agent report. They do not create learner-facing panels or count as prepared.
 The core list updates on build after the agent reviews and updates the ledger; it does
 not track the student's progress. Exercises uses the same expandable presentation for
-pending sheets. Hosted Study queues include
-only sources referenced by the published Study units; the local coverage report keeps
-the full preparation inventory.
+pending sheets. Preparation queues and the full source inventory stay local;
+published sites contain prepared learning content, not authoring queues.
 
 `study visuals` opens every lesson, practice question, exercise step and Exam
 visual, including exercise Solution, Compare and transfer-answer blocks, in an installed
@@ -307,10 +306,12 @@ Imported files stay private and survive campus syncs. Copies of the same exam fr
 different places count once.
 
 - **Cheatsheet**: a semester map of the exam-relevant ideas and one-line entries with
-  formulas, triggers and pitfalls; open an entry for details. The map can be dragged,
+  formulas, triggers and pitfalls; open an entry for details, including what each
+  formula's variables mean. The map can be dragged,
   zoomed and opened full screen.
-- **Exam patterns**: recurring question types with recognition cues, a solving workflow,
-  answer template, marking points, a worked practice that applies each workflow step,
+- **Exam patterns**: recurring question types with recognition cues, a solving workflow
+  whose steps open to the exact formula, rule or code they apply (click a variable for
+  its meaning), marking points, a worked practice that applies each workflow step,
   and drills whose answers you can open at any time.
 - **Practice exams**: work through real past papers question by question with
   guidance, or read a whole paper and open each question's solution to check yourself;
@@ -319,8 +320,9 @@ different places count once.
 
 Right-click any entry in the sidebar, in any workspace, to mark it as completed.
 
-Statistics such as "seen in 4 of 6 exams" are history, never a prediction. Exam
-always stays local: it is never published.
+Statistics such as "seen in 4 of 6 exams" are history, never a prediction.
+Prepared Exam content is included in public course-app publication; its original
+documents and private source metadata stay local.
 
 Existing `study/` projects continue to work. New projects use `app/`. To upgrade a
 verified legacy layout explicitly, run `tum-mcp study build PROJECT --upgrade-layout`.
@@ -331,60 +333,55 @@ is a no-op. Do not create `app/` alongside an existing `study/` by hand.
 
 ## Publish a study website
 
-The `publish-course` skill makes a prepared site accessible from a phone
-or another computer. Its GitHub repository is private; the Pages website is
-public. An eligible paid GitHub plan is required for Pages from private repositories.
-This workflow does not provide private website access. Review lesson text,
-quotations and source links for the intended public audience before publishing.
+Say "publish the study app". The `publish-course` agent handles validation, the
+build, public export, GitHub setup, incremental uploads and deployment
+verification, then returns the website link. You do not need to run commands or
+choose workspace flags. If GitHub needs authentication, the agent starts sign-in
+and you complete account authorization.
 
-Install GitHub CLI on the execution host and run `gh auth login --hostname github.com`.
-`tum-mcp doctor` checks CLI availability without network access; `doctor --live`
-also verifies GitHub authentication. It does not publish anything, open sign-in
-automatically, extract tokens, or change Git credential settings.
-
-```sh
-# Preview the chosen name and hosting requirements without GitHub mutations.
-tum-mcp study publish --project PROJECT
-# After choosing public website content; the repository stays private.
-tum-mcp study publish --project PROJECT --public-site
-# Optional account/name override on first setup:
-tum-mcp study publish --project PROJECT --public-site --repository OWNER/NAME
-```
+The GitHub repository is private; the Pages website is public. An eligible paid
+GitHub plan is required for Pages from private repositories. This workflow does
+not provide private website access. All prepared Study, Exercises, Exam and
+Lecture content is included, with statements, hints, solutions and required
+images. Review that content for the intended public audience. Missing workspaces
+are not generated merely to publish.
 
 Names use `study-<course>-<semester>` in lowercase with hyphens. A collision gets
 a stable course suffix; existing repositories are never made public. Settings in
 `.tum-mcp/github.json` bind updates to that course, semester and repository. A
 failed setup retries the same saved repository rather than creating duplicates.
 
-Study is the default hosted workspace, including for old settings. Exercise
-statements, hints and full solutions need explicit `--include-exercises` on the
-publish command after reviewing their public exposure. `--exclude-exercises`
-removes Exercises from subsequent eligible exports, using the same repository and URL. An
-Exercises-only site also requires explicit inclusion. Lecture separately requires
-`--include-lectures`; old settings default to exclusion. `--exclude-lectures` also removes
-previously managed lecture images. A notes-only export with notes excluded is refused.
+Older selective publication settings do not silently expand on an automatic
+build. Ask to publish the complete app once to adopt the new contract, retaining
+the same repository, URL and automatic-upload preference.
 
-Only the selected generated website renderer and data are uploaded. Downloaded
-originals, credentials, AGENTS.md, study inventory, passage comments, progress,
-audio, videos and arbitrary files stay local. Git itself is not required: the publisher
-uses authenticated GitHub API calls through `gh`. Local publication settings do
-not contain credentials.
+The export removes local-document citations and their source metadata. Canonical
+external Lecture recording links remain: notes open their cited times, and
+highlight ranges and thumbnails open the original recording. The recording
+service may still require the visitor's campus login. Internal Recall panels,
+definitions and links between workspaces remain available.
+
+Only the generated renderer, sanitized learning data and required images are
+uploaded. Downloaded originals, raw lecture evidence, credentials, AGENTS.md,
+course inventory, Course Memory, authoring plans, passage comments, personal
+progress, audio, generated videos and arbitrary files stay local. Git itself is
+not required: the publisher uses authenticated GitHub API calls through the host's
+`gh` CLI. Publication settings contain no credentials.
 
 After setup, successful `tum-mcp study build PROJECT` commands update that same
 repository automatically. Unchanged verified exports require no network calls
 or commits. The study skills finish related edits in one build. Remote edits
 are preserved for review; the publisher never force-pushes.
 
-```sh
-tum-mcp study publish status PROJECT
-tum-mcp study publish sync PROJECT       # retry pending/failed deployment
-tum-mcp study publish pause PROJECT      # pause future automatic uploads
-tum-mcp study publish resume PROJECT
-tum-mcp study build PROJECT --local-only # skip uploading this build
-```
+Ask the agent to update, pause or resume the published app as needed. Internally,
+it uses `study publish status` once, `study publish --public-site` for first
+publication or full-app adoption, and `study publish sync` for updates/recovery.
+These are agent tools, not a checklist for the student. The existing pause/resume
+controls and `study build --local-only` remain available.
 
 Uploads are verified against the Pages build and GitHub checks for the exact
-commit. Pending deployment exits with code 2 and is resumable; a successful
+commit. Pending deployment exits with code 2 and is resumable; the agent keeps
+verifying instead of asking you to retry a command. A successful
 repository update alone is not a deployed site. Authentication, plan or network
 failures preserve the local build. Polling has a budget of at most 60 seconds,
 in addition to bounded API requests.
@@ -567,7 +564,9 @@ OpenGL dependencies publish no wheels there.
 
 Files from other websites are not downloaded for you. Save them yourself and add them
 with `tum-mcp study import PROJECT --file FILE --kind exam --title TITLE`.
-Imported files stay private: they are never published.
+Imported originals stay private and are never uploaded. Prepared app content
+derived from them can be published with the complete course app; its source
+metadata is removed from the public export.
 
 ## The course app
 

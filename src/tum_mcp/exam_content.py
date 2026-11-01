@@ -28,12 +28,15 @@ from tum_mcp.study_content import (
     Symbol,
     Text,
     check_code_refs,
+    check_meanings,
     check_target_file,
+    check_variants,
+    declared_meanings,
     has_visual,
     project_files,
     tree_nodes,
 )
-from tum_mcp.study_math import compile_latex
+from tum_mcp.study_math import compile_latex, symbol_occurs
 from tum_mcp.study_models import Digest, Key, PageRange
 from tum_mcp.study_store import digest
 
@@ -209,13 +212,23 @@ class Sitting(Frozen):
 class CompactFormula(Frozen):
     latex: Annotated[str, Field(min_length=1, max_length=5000)]
     plain: Text
-    symbols: tuple[Symbol, ...] = Field(default=(), max_length=20)
+    # Every variable with its general meaning, listed when the entry is opened.
+    symbols: tuple[Symbol, ...] = Field(min_length=1, max_length=20)
     conditions: Text | None = None
 
     @model_validator(mode="after")
     def compiles(self) -> "CompactFormula":
         compile_latex(self.latex)
+        check_meanings(self.symbols, [self.latex], "A cheatsheet formula")
+        check_variants([self.latex], [item.symbol for item in self.symbols], "A cheatsheet formula")
         return self
+
+
+class StudyPassage(Frozen):
+    """The keyed Study block that teaches a concept; Recall opens it beside the page."""
+
+    unit: Key
+    block: Key
 
 
 class Concept(Frozen):
@@ -240,6 +253,7 @@ class Concept(Frozen):
     basis: Literal["tested", "prerequisite", "emphasized", "untested_core"]
     on_map: bool = True
     units: tuple[Key, ...] = Field(default=(), max_length=20)
+    passages: tuple[StudyPassage, ...] = Field(default=(), max_length=10)
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=20)
     details: tuple[Block, ...] = Field(default=(), max_length=20)
 
@@ -248,6 +262,8 @@ class Concept(Frozen):
         keys = {item.key for item in self.sources}
         if any(not set(block.sources) <= keys for block in self.details):
             raise ValueError("Concept details cite only the concept's sources.")
+        if any(passage.unit not in self.units for passage in self.passages):
+            raise ValueError("A concept's passages come from the units it names.")
         return self
 
 
@@ -260,9 +276,72 @@ class Link(Frozen):
     note: Text | None = None
 
 
+class Apply(Frozen):
+    """What a workflow step or case applies: the rule in words, the formula, or the code."""
+
+    text: Text | None = None
+    math: tuple[Annotated[str, Field(min_length=1, max_length=2000)], ...] = Field(
+        default=(), max_length=4
+    )
+    code: Annotated[str, Field(min_length=1, max_length=4000)] | None = None
+    language: Annotated[str, Field(min_length=1, max_length=30)] | None = None
+    # What each variable in `math` means in this pattern; the student opens it in the formula.
+    symbols: tuple[Symbol, ...] = Field(default=(), max_length=12)
+
+    @model_validator(mode="after")
+    def shown(self) -> "Apply":
+        if not (self.text or self.math or self.code):
+            raise ValueError("An apply shows a rule, a formula or code.")
+        if (self.code is None) != (self.language is None):
+            raise ValueError("Applied code names its language, and only code does.")
+        for line in self.math:
+            compile_latex(line)
+        if self.symbols and not self.math:
+            raise ValueError("Only an applied formula lists variables.")
+        check_meanings(self.symbols, list(self.math), "An applied formula")
+        return self
+
+
+class Case(Frozen):
+    """One branch of a decision step: what the student sees, then the move it calls for."""
+
+    when: Text
+    then: Text
+    apply: Apply | None = None
+
+
 class PatternStep(Frozen):
     do: Text
     why: Text | None = None
+    apply: Apply | None = None
+    # A decision step: the method forks here, and each case names the next move.
+    cases: tuple[Case, ...] = Field(default=(), max_length=6)
+
+    @model_validator(mode="after")
+    def decision(self) -> "PatternStep":
+        if len(self.cases) == 1:
+            raise ValueError("A decision step lists at least two cases.")
+        return self
+
+
+class CaseRef(Frozen):
+    """A case of a decision step: workflow step `step` and its case `case` (both 1-based)."""
+
+    step: int = Field(ge=1, le=40)
+    case: int = Field(ge=1, le=6)
+
+
+class Pitfall(Frozen):
+    """A mistake that costs marks: the task moment it happens in, the wrong working, its
+    correction and the rule it breaks."""
+
+    # Where in a task the student meets it ("Turning the amplitude after k iterations into a
+    # probability"), so the wrong line reads as something they would write there.
+    situation: Text
+    wrong: Text
+    right: Text
+    why: Text
+    step: int | None = Field(default=None, ge=1, le=40)
 
 
 class DrillItem(Frozen):
@@ -271,6 +350,9 @@ class DrillItem(Frozen):
     blocks: tuple[Block, ...] = Field(default=(), max_length=20)
     check: Check | None = None
     explanation: Text
+    # A full problem shows its worked solution; the cases it practises are never shown.
+    solution: tuple[Block, ...] = Field(default=(), max_length=10)
+    cases: tuple[CaseRef, ...] = Field(default=(), max_length=6)
 
     @model_validator(mode="after")
     def shown(self) -> "DrillItem":
@@ -288,6 +370,19 @@ class GuidedStep(Frozen):
     code: tuple[CodeRef, ...] = Field(default=(), max_length=3)
     check: Check | None = None
     answer: tuple[Block, ...] = Field(min_length=1, max_length=10)
+    # The sub-question this step belongs to, when one example covers cases as parts.
+    part: Key | None = None
+    # On a decision step: the case that applies, and for every case why it does or does not.
+    case: int | None = Field(default=None, ge=1, le=6)
+    case_feedback: tuple[Text, ...] = Field(default=(), max_length=6)
+
+    @model_validator(mode="after")
+    def which_case(self) -> "GuidedStep":
+        if (self.case is None) != (not self.case_feedback):
+            raise ValueError("A which-case step gives its case and feedback for every case.")
+        if self.case is not None and self.check is not None:
+            raise ValueError("A which-case step asks only which case applies; it has no check.")
+        return self
 
 
 class PatternExample(Frozen):
@@ -324,37 +419,109 @@ class Pattern(Frozen):
     summary: Text
     cues: tuple[Text, ...] = Field(min_length=1, max_length=12)
     workflow: tuple[PatternStep, ...] = Field(min_length=1, max_length=40)
-    template: tuple[Block, ...] = Field(default=(), max_length=10)
     marking: tuple[Text, ...] = Field(default=(), max_length=20)
     marking_basis: Literal["official", "inferred"] | None = None
-    pitfalls: tuple[Text, ...] = Field(default=(), max_length=20)
+    pitfalls: tuple[Pitfall, ...] = Field(default=(), max_length=20)
     variations: tuple[Text, ...] = Field(default=(), max_length=20)
     concepts: tuple[Key, ...] = Field(min_length=1, max_length=30)
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=30)
-    example: PatternExample
-    drill: tuple[DrillItem, ...] = Field(default=(), max_length=10)
+    examples: tuple[PatternExample, ...] = Field(min_length=1, max_length=6)
+    drill: tuple[DrillItem, ...] = Field(min_length=1, max_length=10)
 
     @model_validator(mode="after")
     def cited(self) -> "Pattern":
         keys = {item.key for item in self.sources}
         blocks = (
-            *self.template,
-            *self.example.blocks_cited(),
-            *(block for item in self.drill for block in item.blocks),
+            *(block for example in self.examples for block in example.blocks_cited()),
+            *(block for item in self.drill for block in (*item.blocks, *item.solution)),
         )
         if any(not set(block.sources) <= keys for block in blocks):
             raise ValueError("Pattern content cites only the pattern's sources.")
-        applied = [item.step for item in self.example.steps]
-        if applied != sorted(applied) or set(applied) != set(range(1, len(self.workflow) + 1)):
-            raise ValueError(
-                "The worked practice applies every workflow step, in order "
-                f"(steps 1-{len(self.workflow)})."
-            )
         if bool(self.marking) != (self.marking_basis is not None):
             raise ValueError("Marking points declare whether they are official or inferred.")
         if len({item.key for item in self.drill}) != len(self.drill):
             raise ValueError("Drill keys repeat within a pattern.")
+        if any(p.step is not None and p.step > len(self.workflow) for p in self.pitfalls):
+            raise ValueError("A pitfall names a step of the workflow.")
+        self._cases_covered()
+        self._applied_formulas_explained()
         return self
+
+    def _applied_formulas_explained(self) -> None:
+        # A meaning given once in the pattern serves every formula that uses the variable.
+        meanings = [item["symbol"] for item in declared_meanings(self.model_dump(mode="json"))]
+        for number, step in enumerate(self.workflow, 1):
+            for apply in (step.apply, *(case.apply for case in step.cases)):
+                if (
+                    apply
+                    and apply.math
+                    and not any(
+                        symbol_occurs(line, symbol) for line in apply.math for symbol in meanings
+                    )
+                ):
+                    raise ValueError(
+                        f"Step {number}: an applied formula gives the meaning of its variables "
+                        "(`symbols`), on it or elsewhere in the pattern."
+                    )
+                if apply:
+                    check_variants(apply.math, meanings, f"Step {number}: an applied formula")
+
+    def decision_cases(self) -> set[tuple[int, int]]:
+        """Every (workflow step, case) a student must be able to tell apart, 1-based."""
+        return {
+            (number, case)
+            for number, step in enumerate(self.workflow, 1)
+            for case in range(1, len(step.cases) + 1)
+        }
+
+    def _cases_covered(self) -> None:
+        # Every case is worked once with steps (the examples) and once without (the drill).
+        workflow = list(range(1, len(self.workflow) + 1))
+        required = self.decision_cases()
+        guided: set[tuple[int, int]] = set()
+        for number, example in enumerate(self.examples, 1):
+            runs: dict[str | None, list[GuidedStep]] = {}
+            for step in example.steps:
+                if runs and step.part != list(runs)[-1] and step.part in runs:
+                    raise ValueError(f"Example {number}: each part's steps stay together.")
+                runs.setdefault(step.part, []).append(step)
+            if None in runs and len(runs) > 1:
+                raise ValueError(f"Example {number}: with parts, every step names its part.")
+            new = set()
+            for part, steps in runs.items():
+                where = f"Example {number}" + (f", part {part}" if part else "")
+                applied = [step.step for step in steps]
+                if applied != sorted(applied) or sorted(set(applied)) != workflow:
+                    raise ValueError(
+                        f"{where} applies every workflow step, in order "
+                        f"(steps 1-{len(self.workflow)})."
+                    )
+                for index, step in enumerate(steps):
+                    cases = self.workflow[step.step - 1].cases
+                    first = bool(cases) and step.step not in applied[:index]
+                    if not first and step.case is not None:
+                        raise ValueError(f"{where}: only a decision step asks which case applies.")
+                    if first and (step.case is None or step.case > len(cases)):
+                        raise ValueError(
+                            f"{where}: step {step.step} asks which of its {len(cases)} cases "
+                            "applies."
+                        )
+                    if first and len(step.case_feedback) != len(cases):
+                        raise ValueError(f"{where}: give feedback for every case.")
+                    if first:
+                        new.add((step.step, step.case))
+            if not required and number > 1:
+                raise ValueError("A pattern without a decision step has one example.")
+            if required and not new - guided:
+                raise ValueError(f"Example {number} covers no case an earlier example left open.")
+            guided |= new
+        practised = {(ref.step, ref.case) for item in self.drill for ref in item.cases}
+        if practised - required:
+            raise ValueError("A drill item names a case its workflow does not have.")
+        for label, covered in (("examples", guided), ("drill", practised)):
+            if missing := sorted(required - covered):
+                step, case = missing[0]
+                raise ValueError(f"Step {step} case {case} is missing from the {label}.")
 
 
 class MockQuestion(Frozen):
@@ -546,32 +713,8 @@ class ExamContent(Frozen):
         for pattern in self.patterns:
             if not set(pattern.concepts) <= concepts:
                 raise ValueError(f"Pattern {pattern.key} references an unknown concept.")
-            shown = (
-                past[pattern.example.question][2].statement
-                if pattern.example.question in past
-                else pattern.example.blocks
-            )
-            files = project_files(shown)
-            for step in pattern.example.steps:
-                check_code_refs(files, step.code)
-                if step.check and step.check.kind == "self_check" and step.check.file:
-                    check_target_file(files, step.check.file)
-            if pattern.example.question:
-                found = past.get(pattern.example.question)
-                if found is None or not (found[2].statement and found[2].solution):
-                    raise ValueError(
-                        f"Pattern {pattern.key} shows a past question without a stored statement "
-                        "and solution."
-                    )
-                if pattern.key not in found[2].patterns:
-                    raise ValueError(f"Pattern {pattern.key} shows a question of another pattern.")
-                # A printed question stays as printed; the worked steps add the picture.
-                answers = tuple(block for step in pattern.example.steps for block in step.answer)
-                if not has_visual(found[2].statement) and not has_visual(answers):
-                    raise ValueError(
-                        f"Pattern {pattern.key}: a worked step needs {VISUAL_RULE}, because "
-                        "the past question is text only."
-                    )
+            for example in pattern.examples:
+                self._check_example(pattern.key, example, past)
         for mock in self.mocks:
             for question in mock.questions:
                 if not set(question.patterns) <= patterns or not set(question.concepts) <= concepts:
@@ -586,6 +729,31 @@ class ExamContent(Frozen):
                             f"Practice question {question.key} must vary a past question of the "
                             "same pattern."
                         )
+
+    @staticmethod
+    def _check_example(pattern: str, example: PatternExample, past: dict) -> None:
+        shown = past[example.question][2].statement if example.question in past else example.blocks
+        files = project_files(shown)
+        for step in example.steps:
+            check_code_refs(files, step.code)
+            if step.check and step.check.kind == "self_check" and step.check.file:
+                check_target_file(files, step.check.file)
+        if example.question:
+            found = past.get(example.question)
+            if found is None or not (found[2].statement and found[2].solution):
+                raise ValueError(
+                    f"Pattern {pattern} shows a past question without a stored statement "
+                    "and solution."
+                )
+            if pattern not in found[2].patterns:
+                raise ValueError(f"Pattern {pattern} shows a question of another pattern.")
+            # A printed question stays as printed; the worked steps add the picture.
+            answers = tuple(block for step in example.steps for block in step.answer)
+            if not has_visual(found[2].statement) and not has_visual(answers):
+                raise ValueError(
+                    f"Pattern {pattern}: a worked step needs {VISUAL_RULE}, because "
+                    "the past question is text only."
+                )
 
     def _source_versions(self) -> None:
         versions: dict[str, str] = {}

@@ -3,6 +3,7 @@ import { graphResponse, plotResponse } from './graph-response.mjs';
 import { renderCode, codeEditor, languageName } from './code.mjs';
 import { openInWorkspace } from './files.mjs';
 import { renderBlockBody, diagram } from './reading.mjs';
+import { iconButton } from './navigation.mjs';
 
 // A code model answer stays code: highlighted, literal and labelled with its language.
 function modelAnswer(check) {
@@ -57,17 +58,26 @@ export function expectedAnswer(check) {
   return box;
 }
 
-// After a choice is checked: why every option is right or wrong, collapsed by default.
-export function optionExplanations(check, identity) {
-  const box = node('details', 'disclosure option-explanations');
-  box.append(node('summary', '', 'Show reasoning'));
+// After a choice is checked, in Practice, a Guide or an Exam pattern: why each other option
+// is right or wrong, collapsed inside the verdict. The verdict already gives the chosen
+// option's feedback, so the list leaves it out. `mark` anchors comments where the caller has them.
+// The small check or cross that marks a right or wrong line, read aloud as its word.
+export function answerMark(right) {
+  const badge = node('span', 'option-mark'), icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
+  icon.append(svgNode('path', { d: right ? 'M3.5 8.5 6.5 11.5 12.5 4.5' : 'M4.5 4.5l7 7M11.5 4.5l-7 7' }));
+  badge.append(icon, node('span', 'visually-hidden', right ? 'Correct: ' : 'Incorrect: '));
+  return badge;
+}
+
+export function optionExplanations(options, correct, chosen, mark = element => element) {
+  const box = node('details', 'disclosure plain option-explanations');
+  box.append(node('summary', '', 'Explain'));
   const list = node('ul', 'option-explanation-list');
-  for (const option of shuffled(check.options, identity)) {
-    const right = option.key === check.correct, item = node('li', right ? 'right' : 'wrong');
-    const mark = node('span', 'option-mark'), icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
-    icon.append(svgNode('path', { d: right ? 'M3.5 8.5 6.5 11.5 12.5 4.5' : 'M4.5 4.5l7 7M11.5 4.5l-7 7' }));
-    mark.append(icon, node('span', 'visually-hidden', right ? 'Correct: ' : 'Incorrect: '));
-    item.append(mark, append(node('div', 'option-explanation-body'), studyText('p', 'option-explanation-title', option.text), studyText('p', '', option.feedback)));
+  for (const option of options.filter(item => item.key !== chosen)) {
+    const right = option.key === correct, item = node('li', right ? 'right' : 'wrong');
+    item.append(answerMark(right), append(node('div', 'option-explanation-body'),
+      mark(studyText('p', 'option-explanation-title', option.text), `option:${option.key}`),
+      mark(studyText('p', '', option.feedback), `feedback:${option.key}`)));
     list.append(item);
   }
   box.append(list);
@@ -90,7 +100,7 @@ export function renderResponse(check, draft, edit, identity, shown = []) {
       input.addEventListener('change', () => { value = option.key; edit(option.key); }); label.append(input, studyText('span', 'option-body', option.text)); choices.append(label);
     }
     root.append(choices);
-    result.validate = () => ({ valid: check.options.some(option => option.key === value), correct: value === check.correct,
+    result.validate = () => ({ valid: check.options.some(option => option.key === value), correct: value === check.correct, chosen: value,
       repairs: [check.options.find(option => option.key === value)?.feedback || 'Choose an answer.'] });
     return result;
   }
@@ -105,17 +115,20 @@ export function renderResponse(check, draft, edit, identity, shown = []) {
     // A linked label, not a wrapping one, so the editor's highlighted copy stays out of its name.
     const input = node('textarea'), label = node('label', '', `Your code${check.language ? ` (${languageName(check.language)})` : ''}`);
     input.id = `code-${identity}`; label.htmlFor = input.id;
-    const wrapper = append(node('div', 'stack'), label);
+    // Reset sits beside the label, like Undo and Clear beside a graph answer.
+    const head = append(node('div', 'response-head'), label);
+    if (check.starter_code) head.append(iconButton('Reset to starter code', 'reset', () => { input.value = check.starter_code; input.dispatchEvent(new Event('input')); input.focus(); }));
+    const wrapper = append(node('div', 'stack'), head);
     input.value = draft || check.starter_code || ''; input.maxLength = 20000;
     input.addEventListener('input', () => edit(input.value));
     wrapper.append(codeEditor(input, check.language));
     root.append(wrapper, node('p', 'small code-editor-hint', 'Code is not run. Tab indents; Esc, then Tab, leaves the editor.'));
-    if (check.starter_code) root.append(append(node('div', 'cluster code-tools'), button('Reset to starter code', () => { input.value = check.starter_code; input.dispatchEvent(new Event('input')); input.focus(); }, 'quiet')));
     return result;
   }
   if (check.kind === 'table') {
     const region = node('div', 'table-region answer-table'); region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', check.caption);
-    const table = node('table'), header = node('tr'); table.append(studyText('caption', '', check.caption));
+    const table = node('table'), header = node('tr'); table.setAttribute('aria-label', check.caption);
+    region.append(studyText('p', 'table-caption', check.caption));
     const rowTitle = node('th'); rowTitle.scope = 'col'; rowTitle.append(node('span', 'visually-hidden', 'Row')); header.append(rowTitle);
     for (const title of check.columns) { const th = studyText('th', '', title); th.scope = 'col'; header.append(th); }
     table.append(append(node('thead'), header)); const body = node('tbody');

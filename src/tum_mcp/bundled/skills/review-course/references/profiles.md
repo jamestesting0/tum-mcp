@@ -6,14 +6,16 @@ across different artifacts do not establish equal difficulty or learning value.
 
 ## Study
 
-Use the nine item dimensions. Judge the explanation with Explore closed before reviewing
-optional teaching. Practice requires new application cases, not new wording for a worked
+Use the ten item dimensions. Read as a student meeting the topic for the first time who
+knows the teaching profile's prerequisites. Judge the explanation with Explore and
+insights closed before reviewing optional teaching. Practice requires new application cases, not new wording for a worked
 case; retrieval cards may recall definitions. Coverage follows assigned core outcomes,
-not every page of a source.
+not every page of a source. Judge derivation variable meanings by `clarity.symbols_recall`:
+meanings where a reader would stop to recall a variable, none on the obvious ones.
 
 ## Exercises
 
-Use the same nine dimensions, with these replacements for Study-specific checks:
+Use the same ten dimensions, with these replacements for Study-specific checks:
 
 | Dimension | Exercise evidence |
 | --- | --- |
@@ -22,8 +24,10 @@ Use the same nine dimensions, with these replacements for Study-specific checks:
 | Practice | Hints offer a next move without giving the result. Steps give the student increasing responsibility where the task permits it. Compare answers precisely the step's demand; an authored transfer changes a meaningful condition. |
 | Intuition | Judge the guide and solution: why each move is allowed, what choice it resolves and where its assumptions matter. Do not demand a lesson-style opening, a new worked example or a misconception for every released question. |
 | Organization | Preserve original part order and put each guide immediately after its part and supporting blocks, using `part_blocks`. Check this with guides closed and open. Use prerequisites for earlier teaching instead of adding a second lesson. |
+| Cohesion | Shared checks on the statement, each guide step and the solution: each step follows from the one before and says so where a student could not tell (`cohesion.linked`). |
+| Clarity | Shared checks, plus `clarity.symbols_recall` on the Guide's and Solution's derivations: a variable the student must recall from the lecture or an earlier part opens its meaning in this exercise, with its value when the task gives one. |
 
-Clarity, cognitive load, representation and redundancy retain their shared checks.
+Cognitive load, representation and redundancy retain their shared checks.
 Do not change a released case to satisfy `practice.new_case`: apply that check to authored
 transfer practice, not the original problem. Do not penalize the same missing answer in
 Practice and Coverage: a missing original demand belongs to Coverage; a Compare answer
@@ -36,14 +40,31 @@ automatic 3 because the Study check does not apply.
 
 ## Exam
 
-The current scorecard accepts Study and Exercises items, not Exam items. Use
-`study exam-report` as evidence and record artifact-specific findings in the course pass;
-do not invent item keys or fold these into Study averages.
+Exam patterns are scored items (`exam/pattern/<key>`) with the ten dimensions. The
+cheatsheet, past papers and practice exams are not: use `study exam-report` as evidence
+and record their findings in the course pass; do not invent item keys for them.
+
+Read as a revising student who has studied the material. Exam stays concise and never
+re-teaches: depth is one tap away through Recall, which must open the passage that
+teaches each concept. Past papers and practice exams show no Recall before the attempt,
+because recognising the pattern is the skill they practise.
 
 - Cheatsheet: compressed but sufficient conditions, readable formulas and useful retrieval
   cues; a correct entry need not introduce its concept with a worked example.
-- Pattern: cues distinguish when the method applies; workflow explains choices and limits;
-  its example and new-case practice exercise the same method without copying the case.
+- Pattern: score it with this table; the shared checks apply unless a row replaces them.
+
+  | Dimension | Pattern evidence |
+  | --- | --- |
+  | Correctness | Recompute every example, part and Practise answer; each case's move is valid for its condition; cases never overlap (`correctness.cases_exclusive`); pitfall lines are really wrong and right, and sourced. |
+  | Coverage | Every listed past instance and example needs only the listed cases (`coverage.cases_complete`). |
+  | Clarity | Cues name what the question shows, never the concept; each case reads as a visible condition and one move (`clarity.case_observable`); every applied formula's variables open their meaning in this pattern, and every cheatsheet formula lists its variables' general meanings (`clarity.symbols_recall`, strict). |
+  | Cohesion | Only `cohesion.one_term` and no unexplained jump between steps; no linking sentences. |
+  | Cognitive load | Workflow steps, cases and pitfall lines stay one line each; no case the exams do not need. |
+  | Representation | Every step or case whose move uses a formula, rule or code shows it under `apply`, written as the answer uses it; pitfalls show the wrong working or code itself, in the task moment where it happens (`representation.shown_not_described`). |
+  | Practice | Which-case feedback names what decides each case (`practice.case_feedback`); Practise items are new settings and neighbours need different cases (`practice.interleaved`). |
+  | Intuition | Each step and case says why its move fits; each pitfall names the rule its wrong line breaks; conditions are checked where the method has them (`intuition.reasons`, `intuition.limits`). |
+  | Organization | Lookups stay in the cheatsheet, forks are decision steps, different first moves are separate patterns (`organization.fork_placement`); examples are shaped like the exam's questions (`organization.example_shape`). |
+  | Redundancy | Cases, reasons and pitfalls do not restate each other or the cheatsheet (`redundancy.said_once`, `redundancy.exam_compresses`). |
 - Past paper or mock: every demand has an answer; points reconcile; official, authored
   and inferred marking remain distinct. Compare coverage with the available blueprint,
   recording missing evidence rather than presenting historical frequency as a prediction.
@@ -58,7 +79,7 @@ and check the recording/transcript evidence before judging fidelity.
 - Check processed and missing intervals; a complete-looking passage does not prove full
   recording coverage.
 - Judge structure and visuals with the shared checks. Do not require quizzes, flashcards,
-  invented prediction prompts or a rearranged recording to satisfy Study's lesson shape.
+  invented prediction prompts or a rearranged recording to satisfy Study's teaching moves.
 - Check visual value: where the lecturer's board, slide figure or demonstration carries
   the explanation (a spatial picture, notation, a circuit, hardware), the section shows a
   legible, source-backed visual near the passage: a course-material figure cited by page,

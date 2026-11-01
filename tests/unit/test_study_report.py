@@ -306,6 +306,18 @@ def test_a_dense_opening_and_a_worked_case_without_its_rule_are_flagged() -> Non
     assert "dense_introduction" not in found
 
 
+def test_a_summary_that_repeats_an_objective_is_flagged() -> None:
+    # QC's Bloch-sphere unit shipped with its only objective copied as the summary.
+    content = study()
+    unit = content["units"][0]
+    unit["summary"] = unit["objectives"][0]["text"].upper().rstrip(".")
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert ("summary_repeats_objective", unit["key"]) in {(f["flag"], f["item"]) for f in flags}
+    unit["summary"] = "Which direction does a qubit point in, and what does its phase change?"
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert ("summary_repeats_objective", unit["key"]) not in {(f["flag"], f["item"]) for f in flags}
+
+
 def test_a_worked_calculation_without_a_general_rule_is_flagged() -> None:
     content = study()
     unit = content["units"][0]
@@ -333,3 +345,44 @@ def test_a_symbol_dense_identity_in_a_sentence_is_flagged_and_a_formula_block_is
     unit["blocks"][0]["paragraphs"] = [r"The first factors give \(\langle 0|1\rangle = 0\)."]
     flags = quality_flags(StudyContent.model_validate(content), None)
     assert ("unexplained_identity", unit["key"]) not in {(f["flag"], f["item"]) for f in flags}
+
+
+def test_mathematics_read_aloud_in_words_is_flagged_but_names_are_not() -> None:
+    content = study()
+    key = content["units"][0]["key"]
+    content["units"][0]["blocks"][0]["paragraphs"] = ["Reflect at angle theta over two."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key in {f["item"] for f in flags if f["flag"] == "plain_math"}
+    content["units"][0]["blocks"][0]["paragraphs"] = ["A beta distribution spreads over two days."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key not in {f["item"] for f in flags if f["flag"] == "plain_math"}
+
+
+def test_a_derivation_line_listing_several_statements_is_flagged() -> None:
+    content = study()
+    unit = content["units"][0]
+    sources = unit["blocks"][0]["sources"]
+    line = {"latex": r"N=4,\quad M=1", "reason": "The givens."}
+    unit["blocks"].append(
+        {"kind": "derivation", "title": "Work", "sources": sources, "groups": [{"lines": [line]}]}
+    )
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert unit["key"] in {f["item"] for f in flags if f["flag"] == "listed_derivation_line"}
+    line["latex"] = r"N=4"
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert unit["key"] not in {f["item"] for f in flags if f["flag"] == "listed_derivation_line"}
+    assert unit["key"] not in {f["item"] for f in flags if f["flag"] == "unaligned_line"}
+    line["latex"] = r"\tfrac12(I+Z)"
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert unit["key"] in {f["item"] for f in flags if f["flag"] == "unaligned_line"}
+
+
+def test_an_action_hidden_in_a_noun_is_flagged() -> None:
+    content = study()
+    key = content["units"][0]["key"]
+    content["units"][0]["blocks"][0]["paragraphs"] = ["We perform the computation of the trace."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key in {f["item"] for f in flags if f["flag"] == "nominalisation"}
+    content["units"][0]["blocks"][0]["paragraphs"] = ["We compute the trace."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key not in {f["item"] for f in flags if f["flag"] == "nominalisation"}

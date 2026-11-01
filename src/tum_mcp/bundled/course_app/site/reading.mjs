@@ -1,10 +1,11 @@
 import data from './data.mjs';
-import { node, studyText, append, sourcesNote, plainText } from './dom.mjs';
-import { iconButton } from './navigation.mjs';
+import { node, studyText, append, sourcesNote, plainText, toggletip } from './dom.mjs';
+import { iconButton, iconGlyph } from './navigation.mjs';
 import { renderPlot } from './plot.mjs';
 import { renderCode, languageName, lineSet, markLines } from './code.mjs';
 import { renderFiles, fileIcon } from './files.mjs';
 import { renderFormula } from './formulas.mjs';
+import { typesetLabels } from './mathml.mjs';
 import { renderDerivation } from './derivation.mjs';
 import { renderUml } from './uml.mjs';
 import { drawGraph } from './graph.mjs';
@@ -22,7 +23,10 @@ function labelledItem(text) {
 function table(block) {
   const region = node('div', 'table-region');
   region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', plainText(block.caption));
-  const grid = node('table'); grid.append(studyText('caption', '', block.caption));
+  // The caption sits above the table, not in it, so it keeps its own line width when the
+  // table fits narrow columns.
+  const grid = node('table'); grid.setAttribute('aria-label', plainText(block.caption));
+  region.append(studyText('p', 'table-caption', block.caption));
   const headings = node('tr');
   for (const label of block.columns) { const th = studyText('th', '', label); th.scope = 'col'; headings.append(th); }
   grid.append(append(node('thead'), headings));
@@ -67,7 +71,7 @@ export function diagram(block) {
     rows.hidden = !frame.state?.length;
     frontier.hidden = Boolean(frame.state?.length) || block.state_labels === 'caption' || (block.frames.length === 1 && !frame.frontier.length && !frame.visited.length);
     frontier.textContent = `Frontier: ${frame.frontier.map(key => nodes.get(key).label).join(', ') || 'empty'} · Seen: ${frame.visited.map(key => nodes.get(key).label).join(', ') || 'none'}`;
-    counter.textContent = `${index + 1} / ${block.frames.length}`;
+    counter.textContent = `Step ${index + 1} of ${block.frames.length}`;
     prev.disabled = index === 0; next.disabled = index === block.frames.length - 1;
   }
   const region = node('div', 'graph-region');
@@ -93,7 +97,7 @@ function codeBlock(block) {
     at = index; const step = steps[at];
     markLines(pre, lineSet(step.lines));
     const [first, last = first] = step.lines.split('-');
-    counter.textContent = `${at + 1} / ${steps.length} · ${first === last ? `line ${first}` : `lines ${first}–${last}`}`;
+    counter.textContent = `Step ${at + 1} of ${steps.length} · ${first === last ? `line ${first}` : `lines ${first}–${last}`}`;
     note.replaceChildren(studyText('span', '', step.note));
     prev.disabled = at === 0; next.disabled = at === steps.length - 1;
     const marked = pre.querySelector('.code-line.marked');
@@ -141,6 +145,7 @@ export function renderReading(unit, { depth = 1, withVideo = true } = {}) {
     if (block.kind !== 'definition') {
       const heading = append(node('div', `section-heading${block.title ? '' : ' untitled'}`));
       if (block.title) heading.append(studyText(headingTag(block, depth), '', block.title));
+      if (block.insight) heading.append(insightTip(block));
       heading.append(sourcesNote(cited, data.sources, data.course.synthetic, block.title || unit.title || '', {}, block.pages));
       material.append(heading);
     }
@@ -148,6 +153,14 @@ export function renderReading(unit, { depth = 1, withVideo = true } = {}) {
     section.append(material); root.append(section);
   }
   return root;
+}
+
+// Optional depth beside a section title: a light bulb that opens a short note under the heading.
+function insightTip(block) {
+  const trigger = node('button', 'icon-button quiet insight-trigger');
+  trigger.setAttribute('aria-label', `Insight: ${plainText(block.title)}`); trigger.title = 'Insight';
+  trigger.append(iconGlyph('bulb'));
+  return toggletip(trigger, bubble => bubble.append(studyText('span', 'term-statement', block.insight)), 'insight-tip');
 }
 
 function definitionItem(block, term = true) {
@@ -181,8 +194,10 @@ function figureBlock(block) {
     figure.append(svg);
     // Crop to what is drawn, once it is on screen, so unused canvas never leaves empty space.
     const crop = new ResizeObserver(() => {
+      const drawn = svg.getBBox();
+      if (!drawn.width || !drawn.height) return;
+      typesetLabels(svg);
       const box = svg.getBBox();
-      if (!box.width || !box.height) return;
       svg.setAttribute('viewBox', `${box.x - 12} ${box.y - 12} ${box.width + 24} ${box.height + 24}`);
       svg.style.maxWidth = `${box.width + 24}px`;
       crop.disconnect();

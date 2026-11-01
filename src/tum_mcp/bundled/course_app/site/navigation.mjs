@@ -12,15 +12,23 @@ const paths = {
   forward: 'M5 12h14m-6-6 6 6-6 6',
   menu: 'M4 7h16M4 12h16M4 17h16',
   undo: 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+  reset: 'M3 12a9 9 0 1 0 2.64-6.36L3 8.3M3 3v5.3h5.3',
   contents: 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01',
   play: 'M8 5v14l11-7z',
   comment: 'M4 4h16v12H8l-4 4z',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7',
   close: 'm6 6 12 12M18 6 6 18',
   check: 'm5 12 4 4L19 6',
+  bulb: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   sun: 'M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   moon: 'M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14',
+  pause: 'M7 5h3v14H7zm7 0h3v14h-3z',
+  volume: 'M4 9v6h4l5 4V5L8 9zm12.5-.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12',
+  muted: 'M4 9v6h4l5 4V5L8 9zm13 0 5 6m0-6-5 6',
+  captions: 'M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2m6 5.3a2.5 2.5 0 1 0 0 3.4m6.5-3.4a2.5 2.5 0 1 0 0 3.4',
+  expand: 'M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5',
+  shrink: 'M9 4v5H4m16 0h-5V4m0 16v-5h5M4 15h5v5',
 };
 export function iconGlyph(icon) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -38,9 +46,11 @@ const headingSelector = 'h2, h3, h4, h5, h6';
 let contentsSession = null;
 // Outlines the headings the reading column currently shows, in every workspace, and marks the one being read.
 // The Contents button shows or hides it: wide screens dock it beside the text and remember the choice;
-// narrower screens open it over the page until a heading is chosen.
-export function contentsOutline(reading) {
+// narrower screens open it over the page until a heading is chosen. A workspace home lists its
+// items already, so it has no outline.
+export function contentsOutline(reading, enabled = true) {
   contentsSession?.abort(); contentsSession = new AbortController();
+  if (!enabled) { document.documentElement.dataset.contents = 'closed'; return; }
   const { signal } = contentsSession, layout = reading.parentElement;
   const nav = node('nav', 'page-outline'), label = node('p', 'small page-outline-title', 'On this page');
   nav.id = 'page-outline'; label.id = 'page-outline-title'; nav.setAttribute('aria-labelledby', label.id);
@@ -296,4 +306,43 @@ export function nextStep({ href, title, detail, activate }) {
     event.preventDefault(); activate();
   });
   nav.append(link); return nav;
+}
+
+// Left and right arrows page practice questions and guide steps. The pager holding focus
+// pages; with focus on the page itself or a tab, the practice or guide the student last
+// opened or used does, so no click is needed first. Fields keep their arrows; on a radio
+// button Up and Down still choose the option while Left and Right page.
+const pagers = new Map();
+let activePager = null;
+function pagerFor(target) {
+  for (const region of pagers.keys()) if (!region.isConnected) pagers.delete(region);
+  const holding = [...pagers.keys()].find(region => region.contains(target));
+  if (holding) return holding;
+  const shown = activePager?.isConnected && activePager.getClientRects().length && (activePager.localName !== 'details' || activePager.open);
+  // Focus on the page, a tab, or a heading or region the app focused (tabindex -1) is no
+  // control of its own, so the arrows go to the pager last used.
+  return (target === document.body || target.matches('[role="tab"], [tabindex="-1"]')) && shown ? activePager : null;
+}
+document.addEventListener('keydown', event => {
+  const target = event.target;
+  if (!['ArrowLeft', 'ArrowRight'].includes(event.key) || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  if (target.closest('textarea, select, [contenteditable], [role="slider"]') || (target.matches('input') && target.type !== 'radio')) return;
+  const region = pagerFor(target);
+  if (!region) return;
+  const { previous, next } = pagers.get(region), move = event.key === 'ArrowLeft' ? previous : next;
+  event.preventDefault();
+  const before = document.activeElement;
+  if (!move.disabled) move.click();
+  // Paging by key leaves focus where it was, so neither step button looks pressed.
+  if ([previous, next].includes(document.activeElement) && before !== document.activeElement) {
+    if (before?.isConnected && before !== document.body) before.focus({ preventScroll: true });
+    else document.activeElement.blur();
+  }
+});
+export function arrowPaging(region, previous, next, { active = false } = {}) {
+  pagers.set(region, { previous, next });
+  const use = () => { activePager = region; };
+  if (active) use();
+  region.addEventListener('focusin', use); region.addEventListener('pointerdown', use);
+  if (region.localName === 'details') region.addEventListener('toggle', () => { if (region.open) use(); });
 }

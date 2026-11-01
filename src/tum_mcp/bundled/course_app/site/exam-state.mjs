@@ -24,7 +24,7 @@ export function conceptBadge(concept) {
   if (concept.basis === 'untested_core') return 'Untested';
   if (concept.basis === 'emphasized') return 'Emphasized in the course';
   if (concept.basis === 'prerequisite') return 'Needed for tested ideas';
-  return total ? `Seen ${stats?.sittings_seen || 0}/${total}` : 'Tested';
+  return total ? `Seen ${stats?.sittings_seen || 0} of ${total}` : 'Tested';
 }
 // Status as a compact pill: an icon carries the kind, a short label the meaning.
 const statusIcons = {

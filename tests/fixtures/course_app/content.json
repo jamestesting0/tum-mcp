@@ -1478,7 +1478,7 @@
           "kind": "text",
           "paragraphs": [
             "Use the graph from Topic 02. An alphabetical recursive DFS can discover C along A–B–D–F–E–C. That tree path has five edges.",
-            "The graph also contains the direct edge A–C. It has one edge. The first DFS discovery path is therefore not necessarily shortest."
+            "A direct edge also joins A and C, a path of one edge. The first DFS discovery path is therefore not necessarily shortest."
           ],
           "points": []
         },

@@ -1,8 +1,11 @@
+import json
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
 from tum_mcp.study_content import FormulaBlock
-from tum_mcp.study_math import compile_latex, safe_mathml
+from tum_mcp.study_math import compile_latex, formula_parts, safe_mathml, split_relation
 
 
 @pytest.mark.parametrize(
@@ -71,3 +74,14 @@ def test_delimiter_bars_keep_text_size_and_only_left_right_bars_stretch() -> Non
     assert '<mo lspace="0" rspace="0">&#x0002F;</mo>' in pair
     assert "<mi>&#x0002B;</mi><mi>&#x027E9;</mi>" in compile_latex(r"|+\rangle")
     assert "<mo>&#x0002B;</mo>" in pair
+
+
+SCAN = json.loads((Path(__file__).parents[1] / "fixtures/latex_scan.json").read_text())
+
+
+@pytest.mark.parametrize("case", SCAN, ids=[case["latex"][:30] for case in SCAN])
+def test_formula_scanner_matches_the_app(case: dict[str, object]) -> None:
+    # The app reads the same table (test_course_app_math_browser); a bra \langle 0| must not
+    # hide the relation after it, as it did in derivation alignment.
+    assert formula_parts(case["latex"]) == case["parts"]
+    assert list(split_relation(case["latex"])) == case["split"]

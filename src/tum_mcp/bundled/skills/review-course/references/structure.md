@@ -2,7 +2,7 @@
 
 Read the item as an outline first, then compare its parts with each other. This pass
 scores Organization and Redundancy; the rules come from prepare-study's
-[lesson shape](../../prepare-study/references/teaching.md#lesson-shape) and
+[teaching moves](../../prepare-study/references/teaching.md#teaching-moves), the unit's plan and
 [headings](../../prepare-study/references/content.md#blocks).
 
 ## Procedure
@@ -10,7 +10,8 @@ scores Organization and Redundancy; the rules come from prepare-study's
 1. Run `tum-mcp study report PROJECT --section structure`. Each flag on this item
    (`forward_term`, `source_order`, `flat_sections`, `duplicate_title`, `near_duplicate_passage`,
    `near_duplicate_practice`), and `restated_context` from `--section quality`, is a
-   finding until you have read the place it points to. `source_order` marks a section
+   finding until you have read the place it points to. `forward_term` is always fixed,
+   never kept, and Organization cannot score 3 while one is open. `source_order` marks a section
    that returns to much earlier source pages: usually one appended after the lesson was
    written, away from the section it extends.
 2. Read only the Contents list: the titles and their levels. Predict what each section
@@ -23,10 +24,10 @@ scores Organization and Redundancy; the rules come from prepare-study's
 3. Read the sections in order. For each, note what it uses: terms, symbols, results and
    earlier examples. Anything used before the section or unit that teaches it is a
    finding, even when the term is not marked.
-4. Check that each section extends the one before, in the lesson shape: the problem, a
-   concrete case, the rule, the procedure, a worked example, the pitfall, the recap. A
-   pitfall before its method, a definition far from the passage that needs it, or a
-   recap in the middle is a finding.
+4. Check that a first-time reader can tell how each section relates to the one before, and
+   that the order is the one the plan decided (`organization.plan_followed`). A pitfall
+   before its method, a definition far from the passage that needs it, a recap in the
+   middle or a section whose reason for being there you cannot state is a finding.
 5. Exercises: the parts appear in the original order, every step names its `part`, and
    each part's steps build on each other. A step may restate the one given it uses, so it
    can be read without scrolling back; restating every given in every step is a finding.

@@ -1,5 +1,5 @@
 import data from './data.mjs';
-import { node, studyText, button, append, focusHeading, scrollReadingTo, confirmAction, shareCitations, SECTION_HEADING, preparationDisclosure } from './dom.mjs';
+import { node, studyText, button, append, focusHeading, scrollReadingTo, confirmAction, shareCitations, SECTION_HEADING, preparationDisclosure, topicRow } from './dom.mjs';
 import { renderCommentedView, stopComments } from './comments.mjs';
 import { renderReading } from './reading.mjs';
 import { renderExplore } from './explore.mjs';
@@ -62,7 +62,7 @@ function unitProgress(unit) {
   };
 }
 function practiceLabel(result) {
-  return result.answered === result.total ? `${result.correct}/${result.total} correct` : `${result.answered}/${result.total} answered`;
+  return result.answered === result.total ? `${result.correct} of ${result.total} correct` : `${result.answered} of ${result.total} answered`;
 }
 // Review mode pools only items the student marked Again or answered incorrectly.
 function needsReview(kind, key) { return progress[kind === 'flashcards' ? 'cards' : 'questions'][key] === false; }
@@ -149,7 +149,7 @@ function renderPanel() {
     tab.replaceChildren(node('span', '', label));
     if (count) tab.append(node('span', 'tab-count', count));
     tab.setAttribute('aria-label', label + count);
-    tab.setAttribute('aria-selected', String(view === currentView)); tab.tabIndex = view === currentView ? 0 : -1;
+    tab.setAttribute('aria-selected', String(view === currentView));
   }
   for (const element of headerDetails) element.hidden = currentView !== 'content';
   if (unitEyebrow) unitEyebrow.hidden = currentView === 'explore';
@@ -279,13 +279,8 @@ function renderHome() {
     }
     const result = unitProgress(unit), status = [];
     if (result.answered) status.push(`Practice ${practiceLabel(result)}`);
-    if (result.rated) status.push(`Cards ${result.known}/${result.cards} known`);
-    const row = node('li', 'topic-row'), link = node('a');
-    link.href = `#${unit.key}/content`;
-    link.append(append(node('span', 'topic-copy'), studyText('span', 'topic-title', unit.title), node('span', 'small', path ? `${unit.minutes} min` : `${unit.label} · ${unit.minutes} min`)),
-      node('span', 'small topic-status', status.join(' · ') || 'Not started'));
-    row.append(link);
-    list.append(row);
+    if (result.rated) status.push(`Cards ${result.known} of ${result.cards} known`);
+    list.append(topicRow(`#${unit.key}/content`, unit.title, [path ? `${unit.minutes} min` : `${unit.label} · ${unit.minutes} min`], status.join(' · ') || 'Not started'));
   }
   return [header, topics, studyPreparation(), resetButton()];
 }
@@ -313,9 +308,10 @@ function render() {
   const examPage = workspace === 'exam' ? renderExam(location.hash.slice(1) || 'exam', readStored, store) : null;
   const notesPage = exercisePage || lecturePage || examPage;
   exercisePageView = exercisePage || (examPage?.navigateStep ? examPage : null);
-  navigationState.location = notesPage ? workspace : home ? 'home' : revising ? 'revision' : currentIndex;
+  // A workspace's own home marks the course title as the current page, as the Study home does.
+  navigationState.location = notesPage ? (notesPage.current ? workspace : 'home') : home ? 'home' : revising ? 'revision' : currentIndex;
   navigationState.context = notesPage ? notesPage.title : unavailable ? 'Course' : home ? data.course.title : revising ? 'Revision' : data.units[currentIndex].title;
-  navigationState.outline = examPage ? () => examOutline(examPage.current, examPage.currentKey) : lecturePage ? () => lectureOutline(lecturePage.current) : exercisePage ? () => exerciseOutline(exercisePage.current, true) : unavailable ? () => node('div') : null;
+  navigationState.outline = examPage ? () => examOutline(examPage.current, examPage.currentKey) : lecturePage ? () => lectureOutline(lecturePage.current) : exercisePage ? () => exerciseOutline(exercisePage.current) : unavailable ? () => node('div') : null;
   navigationState.homeHref = workspace === 'study' ? '#home' : `#${workspace}`;
   navigationState.showRevision = workspace === 'study' && !unavailable;
   navigationState.workspace = workspace;
@@ -332,7 +328,7 @@ function render() {
   if (notesPage) {
     unitHeading = notesPage.heading; document.title = `${notesPage.title} · ${data.course.title}`;
     reading.append(notesPage.root);
-    if ((exercisePage && !exercisePage.current) || (examPage && !examPage.current)) reading.append(resetButton());
+    if (((exercisePage && !exercisePage.current) || (examPage && !examPage.current)) && !notesPage.empty) reading.append(resetButton());
   } else if (unavailable) {
     unitHeading = node('h1', '', 'Study');
     const first = workspaces.find(item => item !== 'study');
@@ -349,14 +345,16 @@ function render() {
     if (routeMessage) reading.append(node('p', 'notice', routeMessage));
     const heading = node('div', 'unit-header'); unitHeading = studyText('h1', '', unit.title);
     if (revising) {
-      heading.append(unitHeading, topicPicker(selectedTopics, () => {
+      heading.append(node('p', 'eyebrow', data.course.title), unitHeading, topicPicker(selectedTopics, () => {
         states.delete('$revision');
         try { localStorage.setItem(selectionKey, JSON.stringify([...selectedTopics])); } catch { memoryOnly = true; }
         renderPanel(); persist();
       }));
     } else {
       const ancestry = unit.path || [];
-      const breadcrumb = [...ancestry, ...(ancestry.includes(unit.label) ? [] : [unit.label])].join(' · ');
+      // A group label such as "Lecture 4 · Informed search" often already names the unit's label.
+      const named = ancestry.some(part => part.split(' · ').includes(unit.label));
+      const breadcrumb = [...ancestry, ...(named ? [] : [unit.label])].join(' · ');
       const summary = studyText('p', 'unit-summary', unit.summary), objectives = node('div', 'objectives');
       objectives.append(node('p', 'small objectives-label', 'Objectives'), append(node('ul'), ...unit.objectives.map(item => studyText('li', '', item.text))));
       unitEyebrow = node('p', 'eyebrow', `${breadcrumb} · ${unit.minutes} min`);
@@ -371,11 +369,8 @@ function render() {
     for (const view of available) {
       const tab = button('', () => changeView(view)); tab.id = `tab-${view}`;
       tab.setAttribute('role', 'tab'); tab.setAttribute('aria-controls', `panel-${view}`);
-      tab.addEventListener('keydown', event => {
-        const index = available.indexOf(view);
-        const next = event.key === 'ArrowRight' ? (index + 1) % available.length : event.key === 'ArrowLeft' ? (index + available.length - 1) % available.length : event.key === 'Home' ? 0 : event.key === 'End' ? available.length - 1 : null;
-        if (next === null) return; event.preventDefault(); changeView(available[next]); tabButtons.get(currentView).focus();
-      });
+      // The arrow keys belong to the view's own content (turning flashcards), so the tabs are
+      // plain buttons in the Tab order rather than an arrow-key tablist.
       tabButtons.set(view, tab); tabs.append(tab);
     }
     for (const view of available) {
@@ -390,7 +385,7 @@ function render() {
   document.querySelector('#app').replaceChildren(shell);
   sidebar.restoreOutline();
   if (!notesPage && !unavailable && !home) renderPanel();
-  contentsOutline(reading);
+  contentsOutline(reading, !(home || unavailable || (notesPage && !notesPage.current)));
   persist();
 }
 function route(initial = false) {
@@ -413,7 +408,7 @@ function route(initial = false) {
   const [key, view] = revising ? ['', params.get('view')] : hash.split('/');
   const index = data.units.findIndex(unit => unit.key === key);
   home = workspace === 'study' && !revising && index < 0; reviewing = revising && params.get('mode') === 'review';
-  routeMessage = workspace === 'study' && home && hash && hash !== 'home' ? 'That topic is no longer here. Choose a prepared topic below.' : '';
+  routeMessage = workspace === 'study' && home && hash && hash !== 'home' ? 'That topic is no longer here.' : '';
   currentIndex = Math.max(index, 0);
   currentView = home ? 'content' : activeViews().includes(view) ? view : activeViews()[0];
   if (!home && workspace === 'study' && !revising && view === 'explore' && currentView !== 'explore') {

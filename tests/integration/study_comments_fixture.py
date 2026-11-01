@@ -179,7 +179,8 @@ def comment_checks(page: Page, project: Path) -> None:
     dialog.get_by_role("button", name="Use latest", exact=True).click()
     assert dialog.get_by_label("Comment", exact=True).input_value() == "Latest note"
     dialog.get_by_role("button", name="Cancel", exact=True).click()
-    # A missing quote stays recorded instead of being attached to a different passage.
+    # A quote gone from its passage is deleted, never attached to a different passage or kept
+    # as unavailable.
     source = project / "study/content.json"
     original = source.read_bytes()
     value = json.loads(original)
@@ -189,15 +190,28 @@ def comment_checks(page: Page, project: Path) -> None:
     try:
         source.write_text(json.dumps(value), encoding="utf-8")
         build(project)
-        page.reload()
-        open_notes(page)
-        page.get_by_text("Passage unavailable.", exact=True).wait_for()
-        assert page.get_by_role("button", name="Show passage", exact=True).is_disabled()
-        assert page.locator(".comment-note .comment-excerpt").is_visible()
-        assert read_comments(project)["comments"][0]["anchor"]["quote"] == quote
+        with page.expect_response(
+            lambda response: note["id"] in (response.request.post_data or "")
+        ):
+            page.reload()
+        assert note["id"] not in [item["id"] for item in read_comments(project)["comments"]]
     finally:
         source.write_bytes(original)
         build(project)
+    current = read_comments(project)
+    change_comment(
+        project,
+        Create(
+            id=uuid4(),
+            op="create",
+            course_identity=current["course_identity"],
+            expected_revision=current["revision"],
+            anchor=note["anchor"],
+            text="Latest note",
+        ),
+    )
+    page.reload()
+    open_notes(page)
     page.get_by_label("More actions", exact=True).click()
     page.get_by_role("button", name="Delete", exact=True).click()
     page.get_by_role("dialog", name="Delete comment?", exact=True).get_by_role(

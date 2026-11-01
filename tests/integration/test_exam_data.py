@@ -46,7 +46,8 @@ def test_report_flags_targets_and_review_items_without_enforcing_them(content: E
     assert ("mock:forecast-1", "estimated minutes vs duration") in flags
     assert ("mock:forecast-1", "points vs the real exam") in flags
     assert ("mock:forecast-1", "topic share gap (behavioral)") in flags
-    assert report["uncovered_core"] == ["cohesion", "composite", "strategy"]
+    # Every pattern now has practice, so only the unpatterned concept stays uncovered.
+    assert report["uncovered_core"] == ["cohesion"]
     assert {item["question"] for item in report["review"]} == {"ws22-2", "ss19-1"}
     mock = report["blueprint"]["mocks"][0]
     assert mock["points"] == 18 and mock["novelty"] == {"variant": 1, "untested": 1}

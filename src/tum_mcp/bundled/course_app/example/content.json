@@ -91,6 +91,7 @@
           "kind": "text",
           "title": "Steps",
           "level": 1,
+          "insight": "Optional depth opens here, beside its section title; the text never depends on it.",
           "sources": [
             "components"
           ],
@@ -305,6 +306,12 @@
                   }
                 }
               ]
+            }
+          ],
+          "symbols": [
+            {
+              "symbol": "\\(H\\)",
+              "meaning": "the Hadamard gate, applied to one qubit"
             }
           ]
         },

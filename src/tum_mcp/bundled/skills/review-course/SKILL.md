@@ -1,6 +1,6 @@
 ---
 name: review-course
-description: Review and improve prepared Study, Exercises, audio revision, concept videos, exercise walkthroughs and course structure. Save source-bound scores with actual evidence, fix findings and re-review. Media needs real listening/playback; source and media scores stay separate.
+description: Review and improve prepared Study, Exercises, Exam patterns, audio revision, concept videos, exercise walkthroughs and course structure. Save source-bound scores with actual evidence, fix findings and re-review. Media needs real listening/playback; source and media scores stay separate.
 ---
 
 When `tum-mcp study status PROJECT` reports `course_memory: true`, use
@@ -9,11 +9,11 @@ When disabled, leave retained graph files unused and follow the ordinary workflo
 
 
 Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. Study content
-lives in `app/content.json`, exercises in `app/exercises.json`. You score them in
-`.tum-mcp/review.json`; code ties each item score to the exact content it read and the
-course score to the course's structure, so edited content needs a fresh review. Exam
-items keep their own `study exam-report` review; the course pass reads Exam
-for how it connects to the rest.
+lives in `app/content.json`, exercises in `app/exercises.json`, Exam patterns in
+`app/exam.json`. You score them in `.tum-mcp/review.json`; code ties each item score to
+the exact content it read and the course score to the course's structure, so edited
+content needs a fresh review. The cheatsheet, past papers and practice exams keep
+`study exam-report` as evidence; the course pass reads them for how Exam connects to the rest.
 
 Score as the student meets the content, not from what you meant to write. When the host
 can run a separate session or agent, let it score what you authored, because a judge
@@ -30,7 +30,7 @@ their text.
    `structure` and `coverage` sections are evidence for the scores, not a substitute.
    `review.media` discovers optional published/pending/broken media and required
    evidence. Apply [media](references/media.md) for audio and both video sources,
-   not the nine-dimension page rubric or a Practice requirement.
+   not the ten-dimension page rubric or a Practice requirement.
 2. **Render.** Run `tum-mcp study visuals PROJECT` (or `--unit KEY`, `--exercise SET/KEY`).
    It opens every lesson, practice question and exercise step at phone, narrow and
    desktop width, measures each drawn visual and writes contact sheets to
@@ -39,19 +39,21 @@ their text.
 3. **Calibrate.** Before the first item of a session, score three pictures of the
    [visual gallery](references/visual-gallery.json) on the
    [visual rubric](references/visuals.md#rubric) (`tum-mcp study visuals PROJECT --gallery`
-   draws them), and three cases of the [structure gallery](references/structure-gallery.md),
-   before reading their verdicts. On any disagreement, re-read the criterion or check
-   before you score real content.
+   draws them), and three cases of the [structure gallery](references/structure-gallery.md)
+   (two of its Exam pattern cases before you score patterns), before reading their
+   verdicts. On any disagreement, re-read the criterion or check before you score real
+   content.
    For media, use the actual [media pairs](references/media-gallery.md); missing
    sound/video perception remains an incomplete review, never a perfect score.
 4. **Review each item in six passes.** Read its [workspace profile](references/profiles.md)
-   first: an exercise guide is not a second Study lesson. Each pass reads the item for one
-   thing, so nothing hides behind another:
+   first: an exercise guide is not a second Study lesson. Read the course's teaching profile
+   and the unit's plan in `.tum-mcp/plans/` too; their decisions are the item's own
+   checklist. Each pass reads the item for one thing, so nothing hides behind another:
 
    | Pass | What it checks | Guide | Scores |
    | --- | --- | --- | --- |
    | Logic | Facts, numbers, answers and conventions against the source | [logic](references/logic.md) | correctness, coverage |
-   | Text | Every passage, walked as a first encounter, then read once as the student reads it | [text](references/text.md) | clarity, cognitive load |
+   | Text | Every passage, walked as a first encounter, then read once as the student reads it | [text](references/text.md) | clarity, cohesion, cognitive load |
    | Visuals | Every drawn visual, from the contact sheets and the render findings | [visuals](references/visuals.md) | each visual, representation |
    | Interaction | The item worked in the app at phone and desktop width | [interaction](references/interaction.md) | practice |
    | Intuition | Whether the student learns why, not only what | [intuition](references/intuition.md) | intuition |
@@ -62,7 +64,20 @@ their text.
    and, when listed, integration ([course](references/course.md)).
 6. **Score.** Give each dimension 1, 2 or 3 by its checks in the
    [rubric](references/rubric.md), and each listed visual the six criteria of the visual
-   rubric. A 3 means every check holds and you checked it; when unsure, score lower.
+   rubric. A 3 means every check holds and you checked it; quote the passage that shows it
+   under `evidence`. When unsure, score lower. Score every dimension even when a render or
+   browser check cannot run: judge from the data and the build, cap the affected dimension
+   at 2 and name the check you could not run.
+   For an Exam pattern, answer before scoring: does a listed exam question need each
+   decision step and each case (`cognitive_load.moves_fit`)? Do the cases share the steps
+   around them, or is each a different method that needs its own pattern
+   (`organization.fork_placement`)? Does every which-case feedback
+   name the given that decides it (`practice.case_feedback`)? Does each step or case that
+   uses a formula, rule or code show it under `apply`, and is each pitfall the actual wrong
+   working in the task moment where it happens, with its rule
+   (`representation.shown_not_described`)? Does every applied formula
+   open its variables' meanings in this pattern, without the text restating them
+   (`clarity.symbols_recall`)?
    Every score below 3 gets a finding with its check id that names what the student meets
    and where (block title, visual key such as `block:3`, question or step key, unit or
    exercise), precisely enough to fix. Score each problem once, under the dimension the
@@ -78,8 +93,10 @@ their text.
    before you move anything; keep unit keys so progress survives. Build, render and report
    again. Edited items and a changed structure turn stale: re-read and re-score them,
    never copy the old score. Repeat until the report's `review.passed` and
-   `render.passed` are true. A 1 is always fixed. A 2 may stay with `kept` only when the
-   content cannot fix it (for example, the source gives no smaller example); say why.
+   `render.passed` are true; a 3 without evidence or with an open invariant flag
+   (`unevidenced`, `flag_conflicts`) keeps it from passing. A 1 is always fixed. A 2 may
+   stay with `kept` only when the content cannot fix it (for example, the source gives no
+   smaller example); say why.
 9. **Report.** Give the averages, the course scores, the most failed checks
    (`failed_checks`), what you changed, what you kept and why, and any items you could
    not read. Scores describe this review, not mastery or exam readiness.

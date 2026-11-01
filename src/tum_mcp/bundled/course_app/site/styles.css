@@ -10,6 +10,9 @@
   --accent: #3070b3; --wash: #eaf2fa; --error: #9b3d37; --warning: #f5eddd; --warning-ink: #855400;
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px;
   --s6: 24px; --s8: 32px; --s12: 48px; --s16: 64px;
+  /* Spacing by relationship (docs: app.md, Spacing and alignment): a control to the panel it
+     opens, content to its own control (Guide, Solution, Hint), sibling items, sections. */
+  --space-inside: var(--s2); --space-related: var(--s4); --space-between: var(--s6); --space-section: var(--s12);
   --r1: 6px; --r2: 12px; --measure: 36em; --outline: 256px;
   --text-small: 14px; --text-ui: 15px; --text-body: 18px; --text-subsection: 20px; --text-section: 24px;
   --font-ui: 'Atkinson Hyperlegible Next', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
@@ -65,6 +68,20 @@ li + li { margin-top: var(--s2); }
    relations. Native MathML is only the fallback. */
 math.inline-math { font-size: 1em; white-space: nowrap; }
 .tex .katex { text-rendering: auto; }
+/* A formula never breaks inside one of its parts; lines break only at the gaps between them. */
+.tex-part { white-space: nowrap; }
+/* A variable with a meaning: a click opens it. KaTeX draws inline blocks, which take no text
+   decoration, so the cue is a border on the marked box. */
+.has-meanings [data-v] { cursor: pointer; border-bottom: 1.5px dotted var(--accent); }
+.has-meanings [data-v]:hover, .has-meanings [data-v][data-open] { color: var(--accent); }
+.has-meanings:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--r1); }
+.term-bubble.symbol-bubble { position: fixed; z-index: 40; top: 0; left: 0; width: max-content; max-width: min(340px, calc(100vw - 16px)); }
+.symbol-row { display: flex; align-items: baseline; gap: var(--s3); margin: 0; }
+.symbol-name { flex: none; font-weight: 650; }
+[data-flashcards]:focus, [data-flashcards]:focus-visible { outline: none; }
+.tex-gap { white-space: normal; }
+.tex-gap.quad { word-spacing: .75em; }
+.tex-gap.qquad { word-spacing: 1.75em; }
 .tex-equation { font-size: 1em; text-align: center; }
 .tex-equation .tex-display { display: inline; }
 .stack { display: flex; flex-direction: column; gap: var(--s4); }
@@ -103,6 +120,8 @@ button.danger:hover { background: var(--surface); }
 .disclosure > summary { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); font-size: var(--text-ui); font-weight: 500; }
 .disclosure > summary:hover { background: var(--wash); }
 .disclosure > summary::before { margin-inline-end: var(--s1); }
+/* A control sits one related step after the content it opens on, wherever it appears. */
+:where(:not(.disclosure) + .disclosure) { margin-top: var(--space-related); }
 .disclosure.plain > summary { padding-inline: 0; border-color: transparent; background: transparent; color: var(--muted); }
 .disclosure.plain > summary:hover { background: transparent; color: var(--ink); }
 
@@ -185,10 +204,64 @@ a.course-title:hover, a.course-title[aria-current="page"] { color: var(--accent)
 .read-section { position: relative; margin-bottom: var(--s8); }
 .video-note { margin-bottom: var(--s8); }
 .video-note .section-heading { align-items: baseline; }
-.video-note video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--aside); border-radius: var(--r1); }
-.video-chapters { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); margin: var(--s3) 0 0; padding: 0; list-style: none; }
-.video-chapters li + li { margin-top: 0; }
-.video-chapters button { min-height: var(--target); font-variant-numeric: tabular-nums; }
+/* The player: the picture, a seek bar split at the chapters and one row of controls over a soft
+   shade. It is dark in both themes, like the video it frames. */
+.player { --player-accent: #8cbffa; position: relative; overflow: hidden; border-radius: var(--r1); background: #000; color: #fff; container-type: inline-size; outline: none; }
+.player video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+.player:fullscreen { display: grid; place-items: center; border-radius: 0; }
+.player:fullscreen video { width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; }
+.player-controls { position: absolute; inset: auto 0 0; padding: var(--s8) var(--s3) var(--s1); background: linear-gradient(transparent, rgb(0 0 0 / .7)); pointer-events: none; transition: opacity 200ms var(--ease); }
+/* The shade passes taps through to the picture and the centre Play button; only the controls take them. */
+.player-controls > * { pointer-events: auto; }
+.player[data-playing][data-idle]:not(:has(:focus-visible)) { cursor: none; }
+.player[data-playing][data-idle]:not(:has(:focus-visible)) .player-controls { opacity: 0; }
+.player[data-playing][data-idle]:not(:has(:focus-visible)) .player-controls > * { pointer-events: none; }
+.player-seek { position: relative; display: flex; align-items: center; height: 18px; cursor: pointer; touch-action: none; }
+.player-seek:focus-visible { outline-color: #fff; outline-offset: 0; border-radius: 2px; }
+.player-track { display: flex; gap: 3px; width: 100%; }
+.player-segment { position: relative; flex: 1 1 0; height: 4px; overflow: hidden; background: rgb(255 255 255 / .28); transition: transform var(--fast) var(--ease); }
+.player-segment::before, .player-segment::after { content: ''; position: absolute; inset: 0; transform-origin: left; }
+.player-segment::before { background: rgb(255 255 255 / .4); transform: scaleX(clamp(0, (var(--buffered, 0) - var(--a)) / (var(--b) - var(--a)), 1)); }
+.player-segment::after { background: var(--player-accent); transform: scaleX(clamp(0, (var(--played, 0) - var(--a)) / (var(--b) - var(--a)), 1)); }
+.player-seek[data-hover] .player-segment { transform: scaleY(1.5); }
+.player-seek[data-hover] .player-segment.hovered { transform: scaleY(2.25); }
+.player-thumb { position: absolute; top: 50%; left: -6px; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: var(--player-accent); opacity: 0; transition: opacity var(--fast) var(--ease); pointer-events: none; }
+.player-seek[data-hover] .player-thumb, .player-seek:focus-visible .player-thumb { opacity: 1; }
+.player-tip { position: absolute; bottom: calc(100% + var(--s2)); left: 0; display: grid; justify-items: center; max-width: min(320px, 80%); padding: var(--s1) var(--s2); border-radius: var(--r1); background: rgb(0 0 0 / .8); font-size: 13px; line-height: 1.35; white-space: nowrap; opacity: 0; pointer-events: none; }
+.player-seek[data-hover] .player-tip { opacity: 1; }
+.player-tip-title { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.player-tip-title:empty { display: none; }
+.player-tip-time { font-variant-numeric: tabular-nums; color: rgb(255 255 255 / .85); }
+.player-bar { display: flex; align-items: center; gap: 2px; }
+button.player-button { position: relative; display: inline-grid; place-items: center; flex: none; width: 40px; min-height: 40px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #fff; }
+button.player-button:hover { background: rgb(255 255 255 / .14); }
+button.player-button:focus-visible { outline-color: #fff; outline-offset: -2px; }
+.player-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.player-play svg, .player-big svg { fill: currentColor; }
+button.player-speed { width: auto; min-width: 40px; padding: 0 var(--s2); border-radius: 999px; font: 600 13px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
+button.player-captions[aria-pressed="true"] { color: #fff; background: transparent; }
+button.player-captions[aria-pressed="true"]::after { content: ''; position: absolute; right: 10px; bottom: 6px; left: 10px; height: 2px; border-radius: 1px; background: var(--player-accent); }
+.player-time { flex: none; padding: 0 var(--s2); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.player-chapter { min-width: 0; overflow: hidden; font-size: 13px; color: rgb(255 255 255 / .85); text-overflow: ellipsis; white-space: nowrap; }
+.player-chapter:not(:empty)::before { content: '·'; margin-inline-end: var(--s2); }
+.player-gap { flex: 1; }
+button.player-big { position: absolute; inset: 0; width: 68px; min-height: 68px; height: 68px; margin: auto; background: rgb(0 0 0 / .55); }
+button.player-big:hover { background: var(--player-accent); color: #000; }
+.player-big svg { width: 30px; height: 30px; margin-left: 3px; }
+.player[data-started] .player-big { display: none; }
+.player-caption { position: absolute; right: 5%; bottom: var(--s3); left: 5%; display: grid; justify-items: center; gap: 2px; text-align: center; pointer-events: none; transition: transform 200ms var(--ease); }
+.player:is(:not([data-playing]), :not([data-idle])) .player-caption { transform: translateY(-64px); }
+.player-caption > span { padding: 2px var(--s2); border-radius: 4px; background: rgb(0 0 0 / .75); font-size: clamp(14px, 3.4cqi, 26px); line-height: 1.4; white-space: pre-line; }
+.player-spinner { position: absolute; inset: 0; display: none; width: 44px; height: 44px; margin: auto; border: 3px solid rgb(255 255 255 / .25); border-top-color: #fff; border-radius: 50%; animation: player-spin .8s linear infinite; pointer-events: none; }
+.player[data-waiting] .player-spinner { display: block; }
+@keyframes player-spin { to { transform: rotate(360deg); } }
+@container (max-width: 480px) {
+  button.player-mute { display: none; }
+  .player-bar { gap: 0; }
+  button.player-button { width: 36px; min-height: 36px; }
+  button.player-speed { min-width: 36px; padding: 0 var(--s1); }
+  .player-time { padding: 0 var(--s1); }
+}
 .video-links { margin-top: var(--s2); }
 .section-heading { display: flex; align-items: flex-start; gap: var(--s2); margin-bottom: var(--s3); }
 .section-heading > :is(h2, h3, h4, h5, h6) { flex: 1; min-width: 0; padding-block: var(--s1); }
@@ -242,24 +315,40 @@ button.contents-toggle:hover, button.contents-toggle[aria-expanded="true"] { bac
 /* Blocks: formula, table, code, diagram and line graph */
 .equation { display: block; min-width: 0; margin-block: var(--s6); overflow-x: auto; padding: var(--s4); text-align: center; font-size: var(--math-max); }
 .equation-line { width: max-content; margin-inline: auto; }
+/* In a formula card the card's padding is the space; the equation adds none above it. */
+.surface > .equation { margin-block: 0 var(--s4); padding: var(--s2) 2px; }
 .equation-line + .equation-line { margin-block-start: var(--s3); }
 .equation math { display: block; width: max-content; max-width: none; margin: 0; }
 /* Derivations: one transformation per line, aligned on its relation, its reason beside it
    on wide screens and below it on phones. */
 .derivation { margin-block: var(--s6); }
 .derivation-label { margin: var(--s4) 0 var(--s2); font-weight: 600; }
-.derivation-lines { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr); gap: var(--s3) var(--s2); margin: 0; padding: 0; list-style: none; }
+.derivation-lines { display: grid; grid-template-columns: minmax(0, max-content) max-content minmax(0, 1fr); gap: var(--s3) var(--s2); margin: 0; padding: 0; list-style: none; }
 .derivation-line { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: baseline; row-gap: var(--s1); }
 .derivation-math { display: contents; }
 .derivation-left { grid-column: 1; text-align: right; overflow-x: auto; }
 .derivation-relation { grid-column: 2; text-align: center; }
 .derivation-right { grid-column: 3; min-width: 0; overflow-x: auto; }
+/* A listed line takes the width the aligned lines set, instead of widening their columns. */
+.derivation-whole { grid-column: 1 / 4; contain: inline-size; }
 .derivation-left :is(math, .katex), .derivation-relation :is(math, .katex) { display: inline-block; }
+/* A cell scrolls sideways only. KaTeX's fractions, sums and accents reach a few pixels past
+   their line, and an x-scroller would otherwise scroll by those pixels vertically; the padding
+   holds them, the negative margin keeps the layout, and the y axis never scrolls. */
+.derivation-left, .derivation-right, .apply-math { padding: .4em 2px; margin-block: -.4em; overflow-y: hidden; }
 .derivation-reason { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: var(--text-ui); }
-@media (min-width: 720px) {
-  .derivation-lines { grid-template-columns: max-content max-content minmax(0, 1fr) minmax(0, 0.9fr); }
-  .derivation-reason { grid-column: 4; padding-left: var(--s4); }
-}
+/* Reasons sit beside the working only when every line fits there at full size (derivation.mjs
+   decides); otherwise they sit under their lines and the working keeps the whole width. */
+.derivation-lines.beside { grid-template-columns: max-content max-content max-content minmax(12em, 1fr); }
+/* With its reason under it, each line is a centred row: the formula, then what it says. */
+.derivation-lines:not(.beside) { grid-template-columns: minmax(0, 1fr); }
+.derivation-lines:not(.beside) .derivation-math { display: flex; justify-content: center; align-items: baseline; column-gap: var(--s2); min-width: 0; }
+.derivation-lines:not(.beside) :is(.derivation-left, .derivation-relation, .derivation-right, .derivation-whole) { grid-column: auto; }
+.derivation-lines:not(.beside) .derivation-left { flex: 0 1 auto; min-width: 0; }
+.derivation-lines:not(.beside) .derivation-left:empty { display: none; }
+.derivation-lines:not(.beside) :is(.derivation-right, .derivation-whole) { flex: 0 1 auto; min-width: 0; }
+.derivation-lines:not(.beside) .derivation-reason { grid-column: 1; text-align: center; }
+.derivation-lines.beside .derivation-reason { grid-column: 4; padding-left: var(--s4); }
 /* The newest line is marked by its background: WebKit does not repaint a MathML colour change. */
 .walkthrough .derivation-line { padding: var(--s2); border-radius: var(--r1); }
 .walkthrough .derivation-line.current { --panel: var(--wash); background: var(--wash); box-shadow: inset 3px 0 0 var(--accent); }
@@ -270,12 +359,21 @@ button.contents-toggle:hover, button.contents-toggle[aria-expanded="true"] { bac
 .symbols { display: grid; grid-template-columns: fit-content(35%) minmax(0, 1fr); gap: var(--s2) var(--s4); margin: var(--s4) 0; font-size: var(--text-ui); }
 .symbols dt { font-weight: 600; }
 .symbols dd { margin: 0; }
-.table-region { min-inline-size: 0; max-inline-size: 100%; overflow-x: auto; margin-top: var(--s4); }
-table { width: 100%; table-layout: auto; border-collapse: collapse; font-size: var(--text-ui); text-align: start; }
-caption { text-align: start; color: var(--muted); padding-bottom: var(--s3); }
-th, td { padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); vertical-align: top; text-align: start; overflow-wrap: normal; word-break: normal; }
+/* A table fits its content, so short columns stay close, and draws a full grid. Its rules and
+   header tint mix the text colour, so they keep their contrast on the page, in a panel and
+   inside an answer box. */
+.table-region { width: fit-content; min-inline-size: 0; max-inline-size: 100%; overflow-x: auto; margin-top: var(--s4); }
+table { --rule: color-mix(in srgb, currentColor 28%, transparent); table-layout: auto; border-collapse: separate; border-spacing: 0; border: 1px solid var(--rule); border-radius: var(--r1); font-size: var(--text-ui); font-variant-numeric: tabular-nums; text-align: start; }
+.table-region > .table-caption { margin: 0 0 var(--s3); color: var(--muted); font-size: var(--text-ui); }
+th, td { padding: var(--s3) var(--s4); border: 0 solid var(--rule); border-width: 0 1px 1px 0; vertical-align: top; text-align: start; overflow-wrap: normal; word-break: normal; }
+tr > :last-child { border-right-width: 0; }
+table > :last-child > tr:last-child > *, table > tr:last-child > * { border-bottom-width: 0; }
 th { font-weight: 600; }
-thead th { background: var(--surface); }
+thead th { background: color-mix(in srgb, currentColor 7%, transparent); }
+thead tr:first-child > :first-child { border-start-start-radius: calc(var(--r1) - 1px); }
+thead tr:first-child > :last-child { border-start-end-radius: calc(var(--r1) - 1px); }
+table > :last-child > tr:last-child > :first-child { border-end-start-radius: calc(var(--r1) - 1px); }
+table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(var(--r1) - 1px); }
 .code-region { --panel: var(--surface); overflow-x: auto; padding: var(--s4) var(--s6); background: var(--surface); border-radius: var(--r2); }
 .code-region pre { font: var(--text-ui)/1.7 var(--font-mono); margin: var(--s2) 0 0; }
 .code-region code { font: inherit; }
@@ -322,6 +420,8 @@ thead th { background: var(--surface); }
 .figure svg .small { font-size: 14px; }
 .figure svg .bold { font-weight: 650; }
 .figure img { border-radius: var(--r1); }
+/* A white scan or photo would glare on the dark page; drawn SVG figures follow the theme already. */
+[data-theme="dark"] .figure img { filter: brightness(.86); }
 .figure figcaption { margin-top: var(--s2); color: var(--muted); }
 .graph .edge.active, .graph .arrow.active { stroke: var(--accent); stroke-width: 4; }
 .frame-state { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s1) var(--s4); margin: var(--s2) 0 0; font-size: var(--text-ui); }
@@ -346,6 +446,24 @@ button.term[aria-expanded="true"] { color: var(--accent); }
 .term-name { font-weight: 650; }
 .term-condition { color: var(--muted); }
 .term-more { font-size: var(--text-small); }
+button.term-more { align-self: flex-start; min-height: 0; padding: 0; border: 0; background: none; color: var(--accent); text-decoration: underline; text-underline-offset: var(--s1); }
+
+/* Recall: the ideas a task builds on, as chips whose names cue the idea before it opens. */
+.recall-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: var(--s3) 0 var(--s4); }
+.recall-label { color: var(--muted); font-weight: 600; }
+.recall-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 2px var(--s3); border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: var(--text-small); font-weight: 500; line-height: 1.4; text-decoration: none; }
+.recall-chip:is(:hover, :focus-visible, [aria-expanded="true"]) { border-color: var(--accent); color: var(--accent); }
+
+/* An insight opens under its section heading, across the column, without moving the text. */
+.section-heading { position: relative; }
+/* The light bulb follows the title; the sources icon keeps the far end of the row. */
+.section-heading > :is(h2, h3, h4, h5, h6):has(+ .insight-tip) { flex: 0 1 auto; }
+.section-heading > .insight-tip + .source-note { margin-inline-start: auto; }
+.insight-tip { position: static; padding-block: var(--s1); }
+.insight-tip .term-bubble { left: 0; right: 0; width: auto; max-width: 62ch; }
+.insight-trigger { display: inline-flex; width: 32px; min-height: 32px; padding: var(--s1); color: var(--muted); }
+.insight-trigger svg { width: 18px; height: 18px; }
+.insight-trigger:is(:hover, [aria-expanded="true"]) { color: var(--accent); }
 
 /* One labelled answer per original part. */
 .solution-answers { display: flex; flex-direction: column; gap: var(--s6); }
@@ -359,7 +477,6 @@ button.term[aria-expanded="true"] { color: var(--accent); }
 .reference-panel-header h2 { margin: 0; font-size: var(--text-section); line-height: 1.3; }
 .reference-panel-header p { margin: 0; }
 .reference-panel-more { margin-top: var(--s6); }
-button.reference-trigger { min-height: 0; padding: 0; border: 0; background: none; color: var(--accent); font-size: inherit; text-decoration: underline; text-underline-offset: var(--s1); }
 .reference-panel-header .page-eyebrow { display: flex; align-items: center; gap: var(--s2); }
 .related-work { margin: var(--s3) 0 0; color: var(--muted); }
 .exercise-list .pending { margin: var(--s1) 0 var(--s2); color: var(--muted); }
@@ -437,7 +554,11 @@ button.reference-trigger { min-height: 0; padding: 0; border: 0; background: non
 .card-actions { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s6); }
 .question-context { margin: 0 0 var(--s6); }
 .question-context > .block-body + .block-body { margin-top: var(--s4); }
-.question-hint { margin: var(--s4) 0 0; padding: var(--s3) var(--s4); border-inline-start: 2px solid var(--line); color: var(--ink); }
+/* A hint reads the same in Practice, a Guide and an Exam pattern: a quiet rule beside the text. */
+.question-hint, .exercise-hints > p, .exam-guided-step > .disclosure.plain > p { padding: var(--s2) var(--s4); border-inline-start: 2px solid var(--line); color: var(--ink); }
+.question-hint { margin: var(--s4) 0 0; }
+.exercise-hints > p { margin: 0; }
+.exam-guided-step > .disclosure.plain > p { margin: var(--s2) 0 0; font-size: var(--text-ui); }
 .exercise-sheet.group-start { margin-top: var(--s2); }
 fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 legend { padding: 0; margin-bottom: var(--s6); font-size: var(--text-body); font-weight: 500; line-height: 1.5; }
@@ -479,9 +600,9 @@ legend { padding: 0; margin-bottom: var(--s6); font-size: var(--text-body); font
 /* Inline code, written between backticks in any prepared text. */
 code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); font-family: var(--font-mono); font-size: .88em; overflow-wrap: anywhere; }
 .feedback code.inline-code, .notice code.inline-code { background: var(--canvas); }
-.feedback-actions { margin-top: var(--s6); }
-.other-options { margin-top: var(--s4); font-size: var(--text-small); }
-.other-options > ul { margin-top: 0; }
+.feedback-actions { margin-top: var(--s4); }
+/* A worked-practice answer is a stem elsewhere; inside a verdict or an Answer box it reads as plain text. */
+.feedback .exam-stem > .block-body:first-child > :first-child { margin-top: var(--s2); }
 .practice-summary { margin-top: var(--s8); padding-top: var(--s6); border-top: 1px solid var(--line); }
 .summary-list { margin: var(--s3) 0 0; padding: 0; list-style: none; }
 .topic-list li + li { margin-top: 0; }
@@ -564,6 +685,9 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 .comment-popover .comment-note:last-child { border-bottom: 0; }
 .comment-marker { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; min-width: var(--target); height: var(--target); padding: 0; border: 0; background: transparent; vertical-align: middle; font: 600 12px/1 var(--font-ui); }
 .comment-marker:hover { background: transparent; }
+.figure-math { display: inline-block; white-space: nowrap; line-height: 1.2; }
+.figure-baseline { display: inline-block; width: 0; height: 0; }
+h1 > .comment-marker { margin-inline-start: var(--s2); }
 .comment-marker-face { display: inline-flex; align-items: center; justify-content: center; gap: var(--s1); height: 28px; min-width: 44px; padding-inline: var(--s2); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); color: var(--muted); }
 .comment-marker:hover .comment-marker-face, .comment-marker[aria-expanded="true"] .comment-marker-face { background: var(--wash); color: var(--accent); }
 .comment-marker svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -603,25 +727,23 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 .sidebar .exercise-sheet .unit-link { border: 0; border-radius: var(--r1); padding-block: var(--s2); }
 .sidebar .exercise-sheet { margin-block: 0; }
 .sidebar .exercise-sheet.group-start { margin-top: var(--s2); }
-.exercise-list > .exercise-sheet { margin-block: 0; border-bottom: 1px solid var(--line); }
-.exercise-list > .exercise-sheet:first-child { border-top: 1px solid var(--line); }
-.exercise-list > .topic-group + .exercise-sheet { margin-top: var(--s2); border-top: 1px solid var(--line); }
-.exercise-list > .exercise-sheet > summary { gap: var(--s4); padding: var(--s3); border-radius: 0; font-size: var(--text-body); }
-.exercise-list > .exercise-sheet > summary::before { order: 1; margin-inline-start: auto; margin-inline-end: var(--s1); }
-.exercise-list > .exercise-sheet > summary:is(:hover, :focus-visible) { background: var(--wash); }
-.sheet-copy { display: flex; flex-direction: column; gap: var(--s1); min-width: 0; }
-.sheet-copy > .small, .pending-count { font-weight: 400; }
-.exercise-list > .exercise-sheet > div { padding: 0 var(--s3) var(--s3); }
-.exercise-list .exercise-sheet .unit-link { padding: var(--s3); border: 0; border-radius: var(--r1); }
-.exercise-list .exercise-sheet .unit-link:hover { background: var(--wash); }
-.exercise-list .sheet-summary { padding: var(--s2) var(--s3); }
+.pending-count { font-weight: 400; }
+.exercise-list .sheet-meta { margin: var(--s1) 0 0; color: var(--muted); }
+.exercise-list .sheet-summary { margin: var(--s1) 0 0; padding: 0; }
+/* Guide, Solution and every other opened section hold their content in one contained panel. */
+.disclosure-panel { margin-top: var(--space-inside); padding: var(--s4) var(--s5); border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); }
+.disclosure-panel > :first-child, .disclosure-panel .solution-answer:first-child .block-body > :first-child { margin-top: 0; }
+.disclosure-panel > :last-child { margin-bottom: 0; }
+.disclosure-panel .solution-answers { gap: var(--s5); }
+.disclosure-panel > .recall-row { margin-top: var(--s4); }
+.exam-marking-label { margin: var(--s4) 0 0; color: var(--muted); }
+@media (max-width: 599px) { .disclosure-panel { padding: var(--s3) var(--s4); } }
 .pending-sheets { margin-top: var(--s8); background: var(--surface); border-radius: var(--r1); }
 .pending-sheets:first-child { margin-top: 0; }
 .pending-sheets > summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); min-height: var(--target); padding: var(--s3); border: 0; border-radius: var(--r1); font-size: var(--text-body); }
 .pending-sheets > summary::before { order: 1; margin-inline-start: var(--s1); margin-inline-end: var(--s1); color: var(--muted); }
 .pending-sheets > summary:is(:hover, :focus-visible) { background: var(--wash); }
 .pending-count { margin-inline-start: auto; }
-.pending-description { padding: var(--s2) var(--s3) var(--s3); }
 .pending-sheet-list { list-style: none; margin: 0; padding: 0 var(--s3) var(--s3); }
 .pending-sheet-list > li { display: flex; flex-direction: column; gap: var(--s1); padding-block: var(--s3); border-top: 1px solid var(--line); }
 .pending-sheet-list > li + li { margin-top: 0; }
@@ -632,29 +754,30 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 .sheet-summary { margin: 0 0 var(--s2); padding-inline-start: calc(2 * var(--s2) + 6px); color: var(--muted); font-size: var(--text-small); }
 .exercise-goals { margin-bottom: var(--s4); font-size: var(--text-ui); }
 .exercise-goals ul { margin-top: var(--s1); }
-.exercise-help { display: grid; gap: var(--s2); margin-top: var(--s5); }
+.exercise-help { display: grid; gap: var(--space-inside); margin-top: var(--space-related); }
 .exercise-help:empty { display: none; }
+.exercise-help > .disclosure[open]:not(:last-child) { margin-bottom: var(--s2); }
 .exercise-part { margin-bottom: var(--s8); }
 .exercise-part > .read-section:last-of-type { margin-bottom: var(--s4); }
 .exercise-part-help { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s2); }
 .exercise-part-help > .exercise-disclosure[open] { flex-basis: 100%; }
 .exercise-disclosure { min-width: 0; }
-.exercise-disclosure[open] > summary { margin-bottom: var(--s3); }
 .section-heading.untitled { justify-content: flex-end; margin-bottom: 0; }
 .read-section:has(+ .read-section:is([data-level="2"], [data-level="3"])) { margin-bottom: var(--s5); }
 .reading-material .block-body + .block-body { margin-top: var(--s4); }
-.exercise-step { padding-block: var(--s2); }
 .exercise-step .step-body > .section-heading :is(h2, h3, h4, h5, h6) { font-size: var(--text-subsection); line-height: 1.4; }
-.step-navigation { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3); padding-block: var(--s2); background: var(--canvas); font-size: var(--text-small); }
+.step-navigation { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3); padding-block: var(--s2); background: var(--surface); font-size: var(--text-small); }
 .step-navigation p { flex: 1; }
-.exercise-response, .exercise-actions { margin-top: var(--s4); }
+.exercise-response, .exercise-actions { margin-top: var(--space-related); }
 .exercise-hints:not(:empty) { margin-top: var(--s4); }
+/* A step worked on paper has no answer control; its empty slot must not add space. */
+.exercise-response:empty { display: none; }
 .exercise-response > * + * { margin-top: var(--s3); }
 .exercise-response label { font-size: var(--text-ui); gap: var(--s2); }
 .exercise-response input[type="text"], .exercise-response textarea { width: 100%; min-height: var(--target); padding: var(--s3); font: inherit; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-radius: var(--r1); }
 .exercise-response textarea { min-height: calc(3 * var(--target)); resize: vertical; }
-.code-tools { justify-content: flex-end; margin-top: var(--s1); }
-.code-tools button { min-height: 36px; font-size: var(--text-small); color: var(--muted); }
+.response-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.response-head > p { margin: 0; }
 .expected-answer { margin-top: var(--s2); }
 .answer-table td.blank-cell { min-width: 5em; background: var(--canvas); }
 .expected-value { margin: 0; font-weight: 650; }
@@ -693,16 +816,19 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 .lecture-note-row { display: flex; align-items: flex-start; gap: var(--s2); }
 .lecture-note-row > p { flex: 1; min-width: 0; margin: 0; }
 .lecture-note-image { display: block; width: 100%; max-width: 28rem; height: auto; margin-top: var(--s3); border-radius: var(--r1); }
-.lecture-highlight { display: grid; gap: var(--s4); }
+.lecture-highlight { display: grid; gap: var(--s3) var(--s4); }
 .lecture-thumb { display: block; aspect-ratio: 16 / 9; border-radius: var(--r1); overflow: hidden; background: var(--aside); }
 .lecture-thumb img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .lecture-highlight-body { min-width: 0; }
 .lecture-highlight-body > .section-heading { margin-bottom: 0; }
 .lecture-highlight-body p.lecture-when { margin-top: 0; }
-.lecture-highlight-body p.lecture-teaches { margin-top: var(--s2); }
+.lecture-highlight-text { min-width: 0; }
+.lecture-highlight-text p.lecture-teaches { margin-top: 0; }
 @media (min-width: 600px) {
-  .lecture-highlight { grid-template-columns: 12rem minmax(0, 1fr); align-items: start; }
+  .lecture-highlight { grid-template-columns: 12rem minmax(0, 1fr); align-items: center; }
+  .lecture-highlight-text { grid-column: 1 / -1; }
 }
+.exam-entry-panel .exam-entry-head { margin: 0 0 var(--s3); }
 
 /* Phone and tablet: one document scroll with a sticky outline bar. */
 @media (max-width: 799px) {
@@ -778,7 +904,8 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 .exam-map-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .exam-map-svg { display: block; width: 100%; height: 100%; font-family: var(--font-ui); }
 .exam-map.expanded { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; gap: var(--s2); margin: 0; padding: var(--s4); background: var(--canvas); }
-.exam-map.expanded .exam-map-frame { flex: 1; display: flex; }
+/* min-height 0 lets the frame shrink to the screen, so the legend at its foot stays visible. */
+.exam-map.expanded .exam-map-frame { flex: 1; display: flex; min-height: 0; }
 .exam-map.expanded .exam-map-scroll { flex: 1; height: auto; max-height: none; aspect-ratio: auto !important; }
 .exam-map.expanded .exam-map-overview { display: none; }
 .exam-map.expanded .exam-map-card { position: absolute; right: calc(var(--s4) + var(--s3)); bottom: calc(var(--s4) + var(--s3)); max-width: min(380px, calc(100% - 2 * var(--s6))); margin: 0; box-shadow: 0 8px 24px rgb(0 0 0 / .2); }
@@ -793,6 +920,8 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 .exam-edge.contrasts { stroke-dasharray: 5 4; }
 .exam-edge.related { stroke: var(--accent); stroke-width: 2.4; opacity: 1; }
 .exam-arrow-head { fill: var(--muted); }
+.exam-arrow-head.related { fill: var(--accent); }
+.exam-edge.related:not(.contrasts) { marker-end: url(#exam-arrow-related); }
 .exam-map-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
 .exam-map-frame { position: relative; }
 .exam-map-tools { position: absolute; top: var(--s2); right: var(--s2); display: flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r1); background: var(--canvas); }
@@ -823,18 +952,22 @@ button.exam-map-item { display: flex; justify-content: space-between; gap: var(-
 .exam-entry-footer > .exam-entry-links { margin: 0; }
 .exam-detail .section-heading { margin-top: var(--s4); }
 .exam-detail h3 { margin: 0; font-size: var(--text-ui); }
-.exam-section > .exam-guided + .disclosure, .exam-section > .exam-stem + .exam-guided { margin-top: var(--s5); }
+.pattern-example > .exam-stem + .exam-guided { margin-top: var(--s5); }
+.pattern-example > .exam-guided + .example-part { margin-top: var(--s6); }
 .exam-guided { list-style: none; padding: 0; margin: var(--s4) 0 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
 .exam-guided-step { padding: var(--s5); border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); }
 .exam-guided-step > .exercise-response:first-of-type { margin-top: var(--s3); }
-.exam-guided-step .exercise-actions, .exam-drill-item .exercise-actions { margin-top: var(--s3); }
-.exam-answer { margin-top: var(--s3); }
-.exam-answer > summary { min-height: 36px; padding: var(--s1) 0; border-color: transparent; background: transparent; color: var(--accent); font-weight: 600; }
-.exam-answer > summary:hover { background: transparent; text-decoration: underline; }
-.exam-answer[open] > :not(summary) { margin-top: var(--s2); padding: var(--s3) var(--s4); border-left: 3px solid var(--line); border-radius: 0 var(--r1) var(--r1) 0; background: var(--canvas); }
-.exam-answer[open] > :not(summary) > :first-child, .exam-answer[open] .block-body > :first-child { margin-top: 0; }
+.exam-guided-step .exercise-actions, .exam-drill-item .exercise-actions { margin-top: var(--space-related); }
+/* Compare and Hint look and read as they do in Exercises: Compare primary, Hint secondary. */
+.answer-reveal > summary { border-color: var(--ink); background: var(--ink); color: var(--canvas); }
+.answer-reveal > summary:hover { background: var(--ink); opacity: .88; }
+.answer-reveal > .feedback { margin-top: var(--space-inside); }
+.exam-guided-step > .disclosure.plain > summary { padding-inline: var(--s3); border-color: var(--muted); color: var(--ink); }
+.exam-guided-step > .disclosure.plain > summary:hover { background: var(--surface); }
+.answer-reveal > summary::before, .exam-guided-step > .disclosure.plain > summary::before { display: none; }
 .exam-guided-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2); margin: 0 0 var(--s2); font-size: var(--text-small); color: var(--muted); }
-.exam-guided-number { padding: 1px 8px; border-radius: 999px; background: var(--wash); color: var(--accent); font-weight: 600; }
+/* A step's position reads the same in Exercises and Exam patterns. */
+.exam-guided-number, .step-count, .pitfall-step { padding: 1px 8px; border-radius: 999px; background: var(--wash); color: var(--accent); font-weight: 600; }
 .exam-guided-prompt { margin: 0 0 var(--s3); font-weight: 600; }
 .exam-guided-prompt:focus { outline: none; }
 .exam-entry-row { display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: var(--s3); row-gap: var(--s1); min-height: var(--target); padding: var(--s4) 0; cursor: pointer; list-style: none; line-height: 1.5; }
@@ -854,13 +987,69 @@ button.exam-map-item { display: flex; justify-content: space-between; gap: var(-
 .exam-detail h3 { margin: var(--s3) 0 var(--s1); font-size: var(--text-ui); }
 .exam-pattern-list { padding-inline-start: var(--s6); }
 .exam-pattern-list .unit-link { display: grid; gap: var(--s1); }
-.exam-cues li, .exam-workflow li { margin-block: var(--s2); }
-.exam-workflow details { margin-top: var(--s1); }
-.exam-instances { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
-.exam-instances th, .exam-instances td { padding: var(--s2) var(--s3); border-bottom: 1px solid var(--line); text-align: start; }
-.exam-stem { padding: var(--s4); border-radius: var(--r2); background: var(--surface); }
-.exam-drill-item { margin-block: var(--s6); }
+.exam-cues li { margin-block: var(--s2); }
+/* The workflow is a procedure: numbered markers joined by a line, each reason beneath its step. */
+.exam-workflow { counter-reset: workflow; margin: var(--s3) 0 0; padding: 0; list-style: none; }
+.exam-workflow > li { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: var(--s3); margin: 0; padding-bottom: var(--s4); counter-increment: workflow; }
+.exam-workflow > li:last-child { padding-bottom: 0; }
+.exam-workflow > li::before { content: counter(workflow); display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--accent); font: 600 var(--text-small)/1 var(--font-ui); font-variant-numeric: tabular-nums; }
+.exam-workflow > li:not(:last-child)::after { content: ''; position: absolute; top: 32px; bottom: var(--s1); left: 13.5px; width: 1px; background: var(--line); }
+.workflow-body { grid-column: 2; }
+.workflow-do { margin: 0; }
+.workflow-why { margin: var(--s1) 0 0; color: var(--muted); font-size: var(--text-ui); }
+/* A decision step forks: a line runs down from the step and curves into each case, which
+   reads top to bottom as what the student sees, then the move it calls for. */
+.workflow-cases { --fork: 1.5px solid var(--line); margin: var(--s2) 0 0; padding: 0; list-style: none; font-size: var(--text-ui); line-height: 1.5; }
+.workflow-cases > li { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); margin: 0; padding: var(--s1) 0 var(--s2) 30px; }
+.workflow-cases > li:first-child::before { top: calc(-1 * var(--s2)); height: calc(var(--s2) + var(--s1) + 0.75em); }
+.workflow-cases > li:first-child::after { top: calc(-1 * var(--s2)); }
+.workflow-cases > li::before { content: ''; position: absolute; top: 0; left: 6px; width: 16px; height: calc(var(--s1) + 0.75em); border-bottom: var(--fork); border-left: var(--fork); border-bottom-left-radius: 10px; }
+.workflow-cases > li:not(:last-child)::after { content: ''; position: absolute; top: 0; bottom: 0; left: 6px; border-left: var(--fork); }
+.case-when { grid-column: 1 / -1; position: relative; font-weight: 600; }
+.case-when::before { content: ''; position: absolute; top: calc(0.75em - 4px); left: -9px; border: 4px solid transparent; border-left: 5px solid var(--line); }
+.case-arrow { margin-inline-end: var(--s2); color: var(--muted); }
+.case-then { color: var(--ink); }
+/* A step or case with something to apply opens on a click; its own text is the control. */
+.workflow-apply > summary { display: inline; list-style: none; cursor: pointer; border-radius: 2px; }
+.workflow-apply > summary::-webkit-details-marker { display: none; }
+.apply-tail { white-space: nowrap; }
+.apply-chevron { display: inline-block; width: 6px; height: 6px; margin-inline: .55em .15em; border-top: 1.5px solid var(--accent); border-right: 1.5px solid var(--accent); transform: translateY(-.2em) rotate(135deg); }
+.workflow-apply[open] > summary > .apply-chevron { transform: translateY(.05em) rotate(-45deg); }
+.workflow-apply > summary:hover > span { text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: .2em; }
+.apply-panel { margin-top: var(--s2); }
+.apply-panel > * + * { margin-top: var(--s3); }
+.apply-text { margin: 0; }
+.apply-math { overflow-x: auto; font-size: 1.15em; }
+.apply-code { padding: 0; background: none; }
+.apply-code pre { margin: 0; }
+/* A pitfall: the moment it happens, the wrong working, its correction, then why it fails. */
+.pitfalls { display: grid; gap: var(--s5); margin: var(--s3) 0 0; padding: 0; list-style: none; }
+.pitfalls > li { margin: 0; }
+.pitfall-situation { margin: 0; }
+.pitfall-step { display: inline-block; margin-right: var(--s1); font-size: 13px; vertical-align: 1px; }
+.pitfall-line { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: var(--s3); align-items: start; margin: var(--s1) 0 0; }
+.pitfall-line .option-mark { margin-top: 0.3em; }
+.pitfall-line.wrong .option-mark { background: var(--error); color: var(--canvas); }
+.pitfall-line.right .option-mark { background: var(--accent); color: var(--canvas); }
+.pitfall-line.wrong > :last-child { color: var(--muted); }
+.pitfall-why { margin: var(--s1) 0 0 calc(18px + var(--s3)); color: var(--muted); font-size: var(--text-ui); }
+/* Several worked examples: one at a time behind neutral labels. */
+/* A block, so its margins meet the heading above and the example below evenly. */
+.example-switch { display: flex; flex-wrap: wrap; gap: 2px; width: fit-content; margin: var(--s3) 0 var(--s4); padding: 3px; border: 1px solid var(--line); border-radius: 999px; }
+.example-switch button { min-height: 38px; padding: 0 var(--s4); border: 0; border-radius: 999px; background: transparent; color: var(--muted); }
+.example-switch button:hover { background: var(--wash); }
+.example-switch button[aria-pressed="true"] { border: 0; background: var(--wash); color: var(--accent); }
+.example-part { margin: var(--s5) 0 0; font-weight: 600; }
+.example-part + .exam-guided { margin-top: var(--s2); }
+.exam-instances { font-size: var(--text-small); }
+.exam-instances th, .exam-instances td { padding: var(--s2) var(--s3); }
+.exam-section > .exam-stem, .pattern-example > .exam-stem, .exam-drill-item > .exam-stem { margin-top: var(--s3); }
+.exam-stem > .block-body:first-child > :first-child { margin-top: 0; }
+.exam-stem > .block-body + .block-body { margin-top: var(--s4); }
+.exam-drill-item { margin-block: var(--space-between); }
 .exam-question { padding-bottom: var(--s6); border-bottom: 1px solid var(--line); }
+/* The Next link draws its own rule; a second one above it would double the divider. */
+.exam-question:has(+ .next-step) { border-bottom: 0; }
 .exam-solution { margin-top: var(--s4); }
 .exam-marking { margin: var(--s2) 0 0; }
 .done-mark { display: inline-flex; vertical-align: -2px; margin-inline-start: 6px; color: var(--accent); }
@@ -893,14 +1082,16 @@ svg.uml .uml-open { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-li
 svg.uml .uml-participant circle { fill: none; stroke: var(--ink); stroke-width: 1.3; }
 svg.uml .uml-fragment rect { fill: none; stroke: var(--muted); stroke-width: 1.2; }
 svg.uml .uml-tag { fill: var(--surface); stroke: var(--muted); stroke-width: 1.2; }
+/* Explain: one compact row per other option inside the verdict: its mark, the option, then why. */
 .option-explanations { margin-top: var(--s3); }
-.option-explanation-list { margin: var(--s2) 0 0; padding: 0; list-style: none; display: grid; gap: var(--s2); }
-.option-explanation-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: var(--s3); align-items: start; padding: var(--s3) var(--s4); border-radius: var(--r1); background: var(--surface); }
-.option-mark { display: grid; place-items: center; width: 22px; height: 22px; margin-top: 3px; border-radius: 50%; background: var(--line); color: var(--muted); }
-.option-mark svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.option-explanations > summary { min-height: 32px; padding-block: var(--s1); font-size: var(--text-ui); }
+.option-explanation-list { display: grid; gap: var(--s3); margin: var(--s2) 0 0; padding: 0; list-style: none; font-size: var(--text-ui); line-height: 1.5; }
+.option-explanation-list > li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: var(--s2) var(--s3); align-items: start; margin: 0; }
+.option-mark { display: grid; place-items: center; width: 18px; height: 18px; margin-top: 2px; border-radius: 50%; background: var(--line); color: var(--muted); }
+.option-mark svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .option-explanation-list li.right .option-mark { background: var(--accent); color: var(--canvas); }
-.option-explanation-body p { margin: 0; }
-.option-explanation-body p + p { margin-top: var(--s1); color: var(--muted); }
+.option-explanation-list .option-explanation-body p { margin: 0; }
+.option-explanation-list .option-explanation-body p + p { margin-top: 2px; color: var(--muted); font-size: var(--text-small); }
 .option-explanation-title { font-weight: 600; }
 @media print {
   .shell > :not(main), .exam-map, .contents-toggle, .home-footer, .comment-marker { display: none !important; }
@@ -1001,7 +1192,7 @@ button.project-tree-toggle { min-width: 42px; min-height: 38px; border: 0; borde
 .project-folders { opacity: .75; }
 .project-current { color: var(--ink); font-weight: 600; }
 .project-meta { flex: none; white-space: nowrap; }
-button.project-reset { min-height: 28px; padding: 0 var(--s2); font-size: 13px; }
+button.project-reset { min-height: 28px; min-width: 28px; padding: 0; }
 .project-pane { max-height: min(70vh, 640px); overflow: auto; }
 .project-pane > .code-pre { margin: 0; padding: var(--s3) 0; }
 .project-pane .code-editor { border: 0; border-radius: 0; box-shadow: none; }

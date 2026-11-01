@@ -35,6 +35,23 @@ def mock_question(value: dict, index: int = 0) -> dict:
     return value["mocks"][0]["questions"][index]
 
 
+def cohesion(value: dict) -> dict:
+    return next(c for c in value["concepts"] if c["key"] == "cohesion")["formula"]
+
+
+def decision(value: dict) -> dict:
+    return value["patterns"][0]["workflow"][1]
+
+
+def which_case(value: dict, example: int) -> dict:
+    return value["patterns"][0]["examples"][example]["steps"][1]
+
+
+def parts(value: dict, *names: str) -> None:
+    for step, name in zip(value["patterns"][0]["examples"][1]["steps"], names, strict=True):
+        step["part"] = name
+
+
 @pytest.mark.parametrize(
     ("mutate", "message"),
     [
@@ -79,14 +96,57 @@ def mock_question(value: dict, index: int = 0) -> dict:
         ),
         (lambda v: sitting(v, "ss19").pop("relevance_note"), "Explain partial or outdated"),
         (
-            lambda v: v["patterns"][0]["example"].update(question="ws23-b-1"),
+            lambda v: v["patterns"][0]["examples"][0].update(question="ws23-b-1"),
             "without a stored statement",
         ),
         (
-            lambda v: v["patterns"][0]["example"]["steps"].pop(1),
+            lambda v: v["patterns"][0]["examples"][0]["steps"].pop(1),
             "applies every workflow step, in order",
         ),
         (lambda v: v["concepts"][0].update(topic="missing"), "declared topic"),
+        (
+            lambda v: v["patterns"][0]["workflow"][2]["apply"].pop("symbols"),
+            "gives the meaning of its variables",
+        ),
+        (lambda v: cohesion(v).update(symbols=[]), "at least 1 item"),
+        (
+            lambda v: cohesion(v).update(symbols=[{"symbol": "R", "meaning": "a ratio"}]),
+            "does not appear in its formula",
+        ),
+        (
+            lambda v: v["patterns"][0]["workflow"][0].update(apply={}),
+            "shows a rule, a formula or code",
+        ),
+        (
+            lambda v: decision(v)["cases"][0].update(apply={"code": "push(x)"}),
+            "names its language",
+        ),
+        (lambda v: decision(v)["cases"].pop(), "at least two cases"),
+        (
+            lambda v: v["patterns"][0]["examples"].pop(),
+            "Step 2 case 2 is missing from the examples",
+        ),
+        (lambda v: which_case(v, 1).update(case=1), "covers no case an earlier example left open"),
+        (lambda v: v["patterns"][0]["drill"][1].update(cases=[]), "missing from the drill"),
+        (
+            lambda v: v["patterns"][0]["drill"][1].update(cases=[{"step": 1, "case": 1}]),
+            "does not have",
+        ),
+        (lambda v: which_case(v, 0)["case_feedback"].pop(), "feedback for every case"),
+        (
+            lambda v: which_case(v, 0).update(
+                check={"kind": "text", "answer": "x", "feedback": "y"}
+            ),
+            "has no check",
+        ),
+        (lambda v: parts(v, "a", "a", "b"), "part a applies every workflow step"),
+        (lambda v: parts(v, "a", "b", "a"), "each part's steps stay together"),
+        (lambda v: v["patterns"][0]["pitfalls"][0].update(step=9), "names a step of the workflow"),
+        (
+            lambda v: v["patterns"][1]["examples"].append(v["patterns"][1]["examples"][0]),
+            "without a decision step has one example",
+        ),
+        (lambda v: v["patterns"][1].update(drill=[]), "at least 1 item"),
         (lambda v: v.update(count=3), "Extra inputs are not permitted"),
         (lambda v: mock_question(v)["statement"].pop(), "needs a figure, code snippet, diagram"),
         (
@@ -94,11 +154,11 @@ def mock_question(value: dict, index: int = 0) -> dict:
             "Drill d1 needs a figure, code snippet",
         ),
         (
-            lambda v: v["patterns"][1]["example"]["blocks"].pop(),
+            lambda v: v["patterns"][1]["examples"][0]["blocks"].pop(),
             "worked practice question needs a figure, code snippet",
         ),
         (
-            lambda v: v["patterns"][0]["example"]["steps"][1].update(
+            lambda v: v["patterns"][0]["examples"][0]["steps"][1].update(
                 answer=[{"kind": "text", "title": "I", "sources": ["slides"], "paragraphs": ["x"]}]
             ),
             "the past question is text only",

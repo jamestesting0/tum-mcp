@@ -24,7 +24,9 @@ Use tier `core` for what every student must know and `supporting` for the rest. 
 
 - **line** (about 240 characters): the fact, rule or definition itself, with its key
   condition. Readable without opening the entry.
-- **formula**: LaTeX with plain-text reading, symbols and conditions; the line says when
+- **formula**: LaTeX with plain-text reading, symbols and conditions; `symbols` lists every
+  variable with its general meaning, shown when the entry opens
+  ([variable meanings](../../prepare-study/references/variables.md)); the line says when
   it applies.
 - **trigger**: the question feature that should bring this entry to mind.
 - **pitfall**: the one mistake that costs points.
@@ -33,7 +35,9 @@ Use tier `core` for what every student must know and `supporting` for the rest. 
 
 Use the course's notation and language. Each fact appears once; link instead of
 repeating it in another entry. When Study exists, every concept names in `units` the
-units that teach it; its line and details compress that lesson, never copy it.
+units that teach it; its line and details compress that lesson, never copy it. When one
+Study block teaches the concept, name it in `passages` (`unit` and `block`): the Recall row
+on patterns and solutions opens that passage beside the page.
 
 ## Draw the map
 

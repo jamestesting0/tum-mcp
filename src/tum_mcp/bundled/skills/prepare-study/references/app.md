@@ -32,8 +32,9 @@ optional backlog are demonstrated in the private agent report.
   answer from a fresh start does. Pooled items keep their original progress.
 - **Connections:** a unit's header links its Lecture, the exercises whose
   prerequisites name it and the Exam patterns whose entries cite it. Marked terms
-  open their definition in place; an exercise prerequisite opens its Study block beside
-  the exercise. In the local preview, a citation opens the stored course file at its page.
+  open their definition in place. Exercises and Exam items name the ideas they build on
+  in a Recall row: each chip opens a one-line reminder, and from it the Study passage
+  (and, in Exam, the cheatsheet entry) beside the page. In the local preview, a citation opens the stored course file at its page.
 - **Exercises and Lecture:** separate workspaces in the same app when prepared.
   Lecture lists lectures newest first. Concise Notes precede watchable Highlights.
   Note sources link to the supporting recording moment without prominent timestamps;
@@ -53,6 +54,7 @@ optional backlog are demonstrated in the private agent report.
 | `title`, `minutes` | Outline, home topic list, unit header and Next link |
 | `summary`, `objectives` | The Content view's header |
 | block `title`, `level`, `sources` | A section, subsection or detail heading with a sources icon; an untitled block continues the current passage |
+| block `insight` | A light bulb after a titled block's heading that opens the optional text in place; the page must read fully without it |
 | flashcard `front`, `back` | One card that flips; its sources appear after reveal |
 | question `prompt`, `blocks`, `options`, `explanation`, `hint` | Practice and Revision; the blocks sit between prompt and options, options appear in a stable shuffled order, the hint is one optional button before checking; after a check the app marks the chosen and correct options, shows the chosen option's feedback and the explanation, and keeps the other options' feedback on request |
 | `definition` block | The term in bold above its full-width meaning, inside the section before it; consecutive terms form one list; `{{term}}` mentions open it in place |

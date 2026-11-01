@@ -5,8 +5,12 @@
    target: revise it or keep it with a reason in your report.
 2. **Content**: re-solve every changed answer, drill and forecast question; compare each
    cheatsheet line with its source; confirm every pattern workflow solves each listed
-   instance. Read each answer next to only what its question has shown so far; anything
-   it names must be in the question, a prompt or the starter code.
+   instance, each instance falls under exactly one case of a decision step, and every
+   case is worked once in the examples and practised again in the drill. Every variable
+   meaning names what the variable is in this pattern (or, on the cheatsheet, in general)
+   and no meaning only renames it. Read each
+   answer next to only what its question has shown so far; anything it names must be in
+   the question, a prompt or the starter code.
 3. **App**: open the changed views with `tum-mcp study` at a phone width (about 390px)
    and a desktop width. Check that cheatsheet lines read clearly without opening them,
    the map labels are legible, a guided past question works through its steps, and every

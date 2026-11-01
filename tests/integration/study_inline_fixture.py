@@ -72,7 +72,7 @@ def inline_math_checks(page: Page, project: Path, content: dict) -> None:
         assert page.locator(f".option {EXPRESSIONS}").count() == 1
         option = unit["questions"][0]["options"][0]
         page.locator(f"input[value='{option['key']}']").check()
-        page.get_by_role("button", name="Check answer", exact=True).click()
+        page.get_by_role("button", name="Check", exact=True).click()
         assert page.locator(f".feedback [data-field='explanation'] :is({EXPRESSIONS})").count() == 2
         page.goto(f"https://study.invalid/#{unit['key']}/flashcards")
         select_passage(page, ".card-front .recall-prompt")

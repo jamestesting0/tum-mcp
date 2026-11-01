@@ -93,7 +93,7 @@ def test_reject_foreign_or_stale_lecture_anchor_before_saving(
 @pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Explicit browser QA."
 )
-def test_select_save_reload_locate_and_ambiguous_passage_stays_unavailable(
+def test_select_save_reload_locate_ambiguous_stays_and_gone_passage_is_deleted(
     course_browser: Browser, lecture_url: str, lecture_project: Path, tmp_path: Path
 ) -> None:
     change_comment(lecture_project, create(lecture_project))
@@ -145,9 +145,16 @@ def test_select_save_reload_locate_and_ambiguous_passage_stays_unavailable(
         from tum_mcp.study_build import build
 
         build(lecture_project, publish=False)
-        page.reload()
-        page.locator(".comment-marker").click()
-        expect(page.get_by_text("Passage unavailable.", exact=True).first).to_be_visible()
+        # The quote is gone from its section, so the app deletes the note on load.
+        note = next(
+            item["id"]
+            for item in read_comments(lecture_project)["comments"]
+            if item["text"] == "Show the queue before the next discovery."
+        )
+        with page.expect_response(lambda response: note in (response.request.post_data or "")):
+            page.reload()
+        texts = [item["text"] for item in read_comments(lecture_project)["comments"]]
+        assert "Show the queue before the next discovery." not in texts
         # Time, source and thumbnail controls cannot become selected prose anchors.
         assert page.locator(".citation-panel [data-comment-target]").count() == 0
         assert page.locator(".lecture-thumb [data-comment-target]").count() == 0
@@ -158,7 +165,7 @@ def test_select_save_reload_locate_and_ambiguous_passage_stays_unavailable(
 @pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Explicit browser QA."
 )
-def test_note_selection_comment_relocates_and_text_edit_makes_it_stale(
+def test_note_selection_comment_relocates_and_text_edit_deletes_it(
     course_browser: Browser,
     lecture_url: str,
     lecture_project: Path,
@@ -193,9 +200,12 @@ def test_note_selection_comment_relocates_and_text_edit_makes_it_stale(
             app, ["study", "comments", "list", str(lecture_project), "--view", "lectures"]
         )
         assert json.loads(stale.output)["comments"][0]["content_state"] == "content_changed"
-        page.reload()
-        page.locator(".comment-marker").click()
-        expect(page.get_by_text("Passage unavailable.", exact=True).first).to_be_visible()
+        # The note text no longer holds the quote, so the app deletes the comment on load.
+        with page.expect_response(
+            lambda response: saved["id"] in (response.request.post_data or "")
+        ):
+            page.reload()
+        assert read_comments(lecture_project)["comments"] == []
         with pytest.raises(CampusError) as caught:
             change_comment(
                 lecture_project,

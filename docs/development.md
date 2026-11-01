@@ -161,7 +161,7 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/client_*.py` | Host-specific configuration and managed skill installation |
 | `src/tum_mcp/study_*.py` | Course snapshots, teaching, build, preview and project-local passage comments |
 | `src/tum_mcp/bundled/skills/` | Canonical versioned source of reading, study, audio and video skills and their references/assets |
-| `src/tum_mcp/exam_*.py` | Exam contracts, derived statistics, report and map layout; never published |
+| `src/tum_mcp/exam_*.py` | Exam contracts, derived statistics, report and map layout; prepared content is publishable |
 | `src/tum_mcp/study_text.py`, `study_import.py`, `study_duplicates.py` | Page-text cache, private local imports and cross-provider duplicate reports |
 | `src/tum_mcp/video_*.py`, `bundled/video_runtime/` | Video Notes contracts, lint, media checks, orchestration and the isolated render worker |
 | `npm/` | Private-runtime installation, updates, integrity and cleanup |
@@ -190,7 +190,12 @@ content changes do not require a framework or per-unit HTML.
 Shared renderer assets live in `src/tum_mcp/bundled/course_app/site/`; they are the
 source of truth for layout, styling and interaction. Design tokens sit at the top of
 `styles.css`, and the owned-browser fixtures in `tests/integration/` hold the UI
-regressions. The preparation skills describe content and point to the app instead
+regressions. Vertical spacing follows four relationships, each one token: a control to
+the panel it opens (`--space-inside`), content to its own control such as Guide,
+Solution or Hint (`--space-related`, applied by one shared rule), sibling items
+(`--space-between`) and sections (`--space-section`). A new component takes these
+instead of its own margins; `test_course_app_spacing_browser.py` fails when one
+relationship shows two values. The preparation skills describe content and point to the app instead
 of restating its styling, so app changes need no skill edits unless an authored field
 or its meaning changes. Remove a template file by moving it to
 `RETIRED_TEMPLATE_FILES`: builds then delete unedited copies and publication removes

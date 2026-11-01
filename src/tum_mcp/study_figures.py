@@ -16,6 +16,7 @@ from defusedxml.ElementTree import fromstring
 from pydantic import JsonValue
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.study_math import validate_inline
 
 FIGURE_IMAGE = re.compile(r"figures/[a-z0-9][a-z0-9-]{0,80}\.(png|jpg|jpeg|webp)\Z")
 IMAGE_BYTES = 2 * 1024**2
@@ -122,6 +123,9 @@ Box = tuple[float, float, float, float]
 Point = tuple[float, float]
 
 
+MATH_LABEL = re.compile(r"\\\((.+)\\\)", re.S)
+
+
 def _local(name: str) -> str:
     return name.rsplit("}", 1)[-1]
 
@@ -146,6 +150,15 @@ def safe_svg(markup: str) -> str:
         tag = _local(element.tag)
         if tag not in SVG_ELEMENTS:
             raise ValueError(f"A figure's SVG may not use <{tag}>.")
+        label = "".join(element.itertext()).strip() if tag == "text" else ""
+        if "\\(" in label:
+            # The app typesets a label written wholly as inline LaTeX, like the text around it.
+            if not MATH_LABEL.fullmatch(label):
+                raise ValueError(
+                    f'Write the math label "{label}" wholly as inline LaTeX, such as '
+                    "\\(\\theta_1 = 90^\\circ\\)."
+                )
+            validate_inline(label)
         for raw, value in element.attrib.items():
             name = _local(raw)
             if name not in SVG_ATTRIBUTES:
@@ -256,10 +269,19 @@ def _number(element: Element, name: str) -> float:
     return float(found[0]) if found else 0.0
 
 
+def _shown(text: str) -> str:
+    """A math label as it reads once typeset: one glyph per command, no braces or scripts."""
+    math = MATH_LABEL.fullmatch(text)
+    if math is None:
+        return text
+    shown = re.sub(r"\\(?:mathrm|text|operatorname|mathbf)\s*\{([^{}]*)\}", r"\1", math[1])
+    return re.sub(r"[{}_^\s]", "", re.sub(r"\\[A-Za-z]+|\\.", "M", shown))
+
+
 def _label_box(element: Element, text: str, dx: float, dy: float, size: float, bold: bool) -> Box:
     x = _number(element, "x") + _number(element, "dx") + dx
     y = _number(element, "y") + _number(element, "dy") + dy
-    width = len(text) * size * GLYPH_EM[bold]
+    width = len(_shown(text)) * size * GLYPH_EM[bold]
     start = {"middle": x - width / 2, "end": x - width}.get(element.get("text-anchor", ""), x)
     if element.get("dominant-baseline", "") in {"middle", "central"}:
         return (start, y - 0.45 * size, start + width, y + 0.45 * size)

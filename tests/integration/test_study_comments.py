@@ -275,3 +275,21 @@ def test_explore_comment_targets_reject_stale_content_and_keep_schema_version(
     )
     assert deleted["schema_version"] == 4
     assert deleted["comments"] == []
+
+
+def test_build_deletes_comments_whose_unit_is_gone(project: Path) -> None:
+    from tum_mcp.study_build import build
+
+    kept = operation(project)
+    saved = change_comment(project, kept)
+    gone = operation(project).model_copy(
+        update={
+            "anchor": kept.anchor.model_copy(update={"unit_key": "retired-unit"}),
+            "expected_revision": saved["revision"],
+        }
+    )
+    change_comment(project, gone)
+    report = build(project, publish=False)
+    assert report.comments_removed == 1
+    assert [item["id"] for item in read_comments(project)["comments"]] == [str(kept.id)]
+    assert build(project, publish=False).comments_removed == 0

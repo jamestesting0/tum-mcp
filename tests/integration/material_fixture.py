@@ -371,7 +371,10 @@ def exam_document(root: Path) -> dict:
                 "formula": {
                     "latex": "LCOM = |P| - |Q|",
                     "plain": "LCOM equals P minus Q",
-                    "symbols": [{"symbol": "P", "meaning": "pairs sharing no field"}],
+                    "symbols": [
+                        {"symbol": "\\(P\\)", "meaning": "method pairs sharing no field"},
+                        {"symbol": "\\(Q\\)", "meaning": "method pairs sharing a field"},
+                    ],
                 },
                 "basis": "emphasized",
                 "on_map": False,
@@ -396,46 +399,126 @@ def exam_document(root: Path) -> dict:
                 "summary": "Model one-to-many update notification.",
                 "cues": ["Several displays update after one change", "New listeners added later"],
                 "workflow": [
-                    {"do": "Name the subject and observers", "why": "Roles fix dependencies."},
-                    {"do": "Define the observer interface"},
-                    {"do": "Register, unregister and notify"},
+                    {
+                        "do": "Name the subject and observers",
+                        "why": "Roles fix dependencies.",
+                        "apply": {"text": "The subject keeps a `List<Observer>`."},
+                    },
+                    {
+                        "do": "Choose how the state reaches observers",
+                        "cases": [
+                            {
+                                "when": "Every observer needs the same value",
+                                "then": "Push it",
+                                "apply": {"code": "o.update(state)", "language": "java"},
+                            },
+                            {"when": "Observers need different fields", "then": "Let them pull"},
+                        ],
+                    },
+                    {
+                        "do": "Register, unregister and notify",
+                        "apply": {
+                            "math": ["n_{\\text{calls}}=|\\mathrm{observers}|"],
+                            "symbols": [
+                                {
+                                    "symbol": "\\(n_{\\text{calls}}\\)",
+                                    "meaning": "update calls one notify makes",
+                                }
+                            ],
+                        },
+                    },
                 ],
                 "marking": ["Interface defined", "Notify loop"],
                 "marking_basis": "official",
+                "pitfalls": [
+                    {
+                        "situation": "Placing the notify call in the subject's state change.",
+                        "wrong": "`notify()` inside `update()`",
+                        "right": "`notify()` after the state changes",
+                        "why": "Each update would notify again, without end.",
+                        "step": 3,
+                    }
+                ],
                 "concepts": ["observer", "loose-coupling"],
                 "sources": [ref("slides")],
-                "example": {
-                    "question": "ws23-a-1",
-                    "steps": [
-                        {
-                            "step": 1,
-                            "prompt": "Which object changes, and which objects react?",
-                            "check": {
-                                "kind": "text",
-                                "answer": "station",
-                                "feedback": "The object whose state changes is the subject.",
+                "examples": [
+                    {
+                        "question": "ws23-a-1",
+                        "steps": [
+                            {
+                                "step": 1,
+                                "prompt": "Which object changes, and which objects react?",
+                                "check": {
+                                    "kind": "text",
+                                    "answer": "station",
+                                    "feedback": "The object whose state changes is the subject.",
+                                },
+                                "answer": [text("Roles", "slides", "The station is the subject.")],
                             },
-                            "answer": [text("Roles", "slides", "The station is the subject.")],
+                            {
+                                "step": 2,
+                                "prompt": "Which case applies to the displays?",
+                                "hint": "What does each display show?",
+                                "case": 1,
+                                "case_feedback": [
+                                    "Yes: every display shows the temperature.",
+                                    "No display needs another field.",
+                                ],
+                                "answer": [
+                                    code(
+                                        "Interface",
+                                        "slides",
+                                        "interface Display { void update(double t); }",
+                                    )
+                                ],
+                            },
+                            {
+                                "step": 3,
+                                "prompt": "How does a new measurement reach every display?",
+                                "answer": [text("Notify", "slides", "Loop over displays.")],
+                            },
+                        ],
+                    },
+                    {
+                        "blocks": [
+                            text("Task", "slides", "A dashboard shows speed; a log records fuel."),
+                            code("Car", "slides", "class Car { double speed; double fuel; }"),
+                        ],
+                        "solution": {
+                            "answers": [
+                                {"blocks": [text("Solution", "slides", "Pass the car; pull.")]}
+                            ]
                         },
-                        {
-                            "step": 2,
-                            "prompt": "Write the observer interface.",
-                            "hint": "One method the station calls on every display.",
-                            "answer": [
-                                code(
-                                    "Interface",
-                                    "slides",
-                                    "interface Display { void update(double t); }",
-                                )
-                            ],
-                        },
-                        {
-                            "step": 3,
-                            "prompt": "How does a new measurement reach every display?",
-                            "answer": [text("Notify", "slides", "Loop over displays.")],
-                        },
-                    ],
-                },
+                        "steps": [
+                            {
+                                "step": 1,
+                                "prompt": "Which object changes?",
+                                "answer": [text("Roles", "slides", "The car is the subject.")],
+                            },
+                            {
+                                "step": 2,
+                                "prompt": "Which case applies to the dashboard and the log?",
+                                "case": 2,
+                                "case_feedback": [
+                                    "They read different fields.",
+                                    "Yes: speed for one, fuel for the other.",
+                                ],
+                                "answer": [
+                                    code(
+                                        "Interface",
+                                        "slides",
+                                        "interface View { void update(Car c); }",
+                                    )
+                                ],
+                            },
+                            {
+                                "step": 3,
+                                "prompt": "Who calls `update`?",
+                                "answer": [text("Notify", "slides", "The car, after a change.")],
+                            },
+                        ],
+                    },
+                ],
                 "drill": [
                     {
                         "key": "d1",
@@ -449,7 +532,19 @@ def exam_document(root: Path) -> dict:
                         "blocks": [
                             code("Classes", "slides", "class Station { List<Display> displays; }")
                         ],
-                    }
+                        "cases": [{"step": 2, "case": 1}],
+                    },
+                    {
+                        "key": "d2",
+                        "prompt": "A map view needs position, a gauge needs speed. Push or pull?",
+                        "check": {"kind": "text", "answer": "pull", "feedback": "Two fields."},
+                        "explanation": "Different fields: pass the subject.",
+                        "blocks": [code("Ship", "slides", "class Ship { Point pos; double v; }")],
+                        "solution": [
+                            code("Interface", "slides", "interface View { void update(Ship s); }")
+                        ],
+                        "cases": [{"step": 2, "case": 2}],
+                    },
                 ],
             },
             {
@@ -461,22 +556,36 @@ def exam_document(root: Path) -> dict:
                 "workflow": [{"do": "Extract a strategy interface"}],
                 "concepts": ["strategy"],
                 "sources": [ref("slides")],
-                "example": {
-                    "blocks": [
-                        text("Task", "slides", "Export switches on a format flag."),
-                        code("Export", "slides", 'if (format.equals("csv")) csv(); else pdf();'),
-                    ],
-                    "solution": {
-                        "answers": [{"blocks": [text("Solution", "slides", "One Exporter each.")]}]
-                    },
-                    "steps": [
-                        {
-                            "step": 1,
-                            "prompt": "Name the interface the formats share.",
-                            "answer": [text("Interface", "slides", "Exporter.export().")],
-                        }
-                    ],
-                },
+                "examples": [
+                    {
+                        "blocks": [
+                            text("Task", "slides", "Export switches on a format flag."),
+                            code(
+                                "Export", "slides", 'if (format.equals("csv")) csv(); else pdf();'
+                            ),
+                        ],
+                        "solution": {
+                            "answers": [
+                                {"blocks": [text("Solution", "slides", "One Exporter each.")]}
+                            ]
+                        },
+                        "steps": [
+                            {
+                                "step": 1,
+                                "prompt": "Name the interface the formats share.",
+                                "answer": [text("Interface", "slides", "Exporter.export().")],
+                            }
+                        ],
+                    }
+                ],
+                "drill": [
+                    {
+                        "key": "s1",
+                        "prompt": "Name the strategy interface.",
+                        "explanation": "One interface per varying behaviour.",
+                        "blocks": [code("Sort", "slides", "if (fast) quick(); else merge();")],
+                    }
+                ],
             },
             {
                 "key": "composite-tree",
@@ -487,26 +596,38 @@ def exam_document(root: Path) -> dict:
                 "workflow": [{"do": "Give leaves and composites one component interface"}],
                 "concepts": ["composite"],
                 "sources": [ref("slides")],
-                "example": {
-                    "blocks": [
-                        text("Task", "slides", "Folders hold files and folders."),
-                        code(
-                            "Types",
-                            "slides",
-                            "class File { long size; }\nclass Folder { List<?> items; }",
-                        ),
-                    ],
-                    "solution": {
-                        "answers": [{"blocks": [text("Solution", "slides", "Node: File, Folder.")]}]
-                    },
-                    "steps": [
-                        {
-                            "step": 1,
-                            "prompt": "What do files and folders share?",
-                            "answer": [text("Component", "slides", "A Node with size().")],
-                        }
-                    ],
-                },
+                "examples": [
+                    {
+                        "blocks": [
+                            text("Task", "slides", "Folders hold files and folders."),
+                            code(
+                                "Types",
+                                "slides",
+                                "class File { long size; }\nclass Folder { List<?> items; }",
+                            ),
+                        ],
+                        "solution": {
+                            "answers": [
+                                {"blocks": [text("Solution", "slides", "Node: File, Folder.")]}
+                            ]
+                        },
+                        "steps": [
+                            {
+                                "step": 1,
+                                "prompt": "What do files and folders share?",
+                                "answer": [text("Component", "slides", "A Node with size().")],
+                            }
+                        ],
+                    }
+                ],
+                "drill": [
+                    {
+                        "key": "c1",
+                        "prompt": "What do menus and menu items share?",
+                        "explanation": "One component interface.",
+                        "blocks": [code("Menu", "slides", "class Menu { List<Item> items; }")],
+                    }
+                ],
             },
         ],
         "mocks": [

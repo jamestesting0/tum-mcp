@@ -59,6 +59,13 @@ infer that bonus points or attendance requirements exist.
 Not yet established: textbook and edition, notation, terminology and the answer format
 the course expects. Explanations and practice follow them.
 
+## Teaching profile
+Not yet established: prior courses and what students can be assumed to know; what
+understanding means here (compute, trace, prove, design, write code, argue); the
+subject's character and natural representations; common difficulties. Study assumes
+each topic is new; Exam assumes Study. Record the student's own stated background
+when they give it.
+
 ## Communication and authoritative sources
 Not yet established: staff roles, office hours, announcement channels and which
 official source governs rules. Cite sources next to each verified claim; distinguish

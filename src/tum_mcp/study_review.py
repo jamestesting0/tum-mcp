@@ -7,7 +7,9 @@ follows the course's structure. The report lists what is unreviewed, stale or be
 
 import datetime
 import hashlib
+import re
 from collections import Counter
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
@@ -30,6 +32,7 @@ if TYPE_CHECKING:
 Dimension = Literal[
     "correctness",
     "clarity",
+    "cohesion",
     "cognitive_load",
     "representation",
     "practice",
@@ -41,6 +44,7 @@ Dimension = Literal[
 DIMENSIONS: tuple[Dimension, ...] = (
     "correctness",
     "clarity",
+    "cohesion",
     "cognitive_load",
     "representation",
     "practice",
@@ -63,7 +67,10 @@ CRITERIA: tuple[Criterion, ...] = (
 )
 # 1 blocks learning, 2 works with friction, 3 easy to learn from.
 Score = Literal[1, 2, 3]
-ItemKey = Annotated[str, Field(pattern=r"^(study/[a-z0-9-]+|exercises/[a-z0-9-]+/[a-z0-9-]+)$")]
+ItemKey = Annotated[
+    str,
+    Field(pattern=r"^(study/[a-z0-9-]+|exercises/[a-z0-9-]+/[a-z0-9-]+|exam/pattern/[a-z0-9-]+)$"),
+]
 Revision = Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]
 # The visual's address on the render check's contact sheets, such as block:3 or step:trace:0.
 VisualKey = Annotated[
@@ -131,6 +138,8 @@ class ItemReview(Frozen):
     scores: dict[Dimension, Score]
     findings: tuple[Finding, ...] = Field(default=(), max_length=30)
     visuals: tuple[VisualReview, ...] = Field(default=(), max_length=80)
+    # The passage that earns each 3, quoted from the item; the report lists 3s without one.
+    evidence: dict[Dimension, Text] = Field(default_factory=dict)
     kept: Text | None = None
 
     @model_validator(mode="after")
@@ -341,14 +350,53 @@ def read_scorecard(root: Path) -> ReviewScorecard | None:
         ) from None
 
 
+# Flags that always mean a defect, and the dimension that cannot score 3 while one is open.
+INVARIANT_FLAGS: dict[str, Dimension] = {
+    "arithmetic": "correctness",
+    "forward_term": "organization",
+    "plain_math": "cognitive_load",
+    "dense_paragraph": "cognitive_load",
+    "described_object": "representation",
+    "prose_calculation": "representation",
+    "compressed_working": "representation",
+    "meta_reference": "clarity",
+    "summary_repeats_objective": "redundancy",
+}
+
+
+def _flagged_items(
+    item: str, content: StudyContent | None, exercises: ExerciseContent | None
+) -> list[str]:
+    """The review items a quality flag points into: a unit or exercise key, a block or step
+    under it, or the JSON path of an arithmetic error."""
+    if item.startswith("study/"):
+        return [item]
+    if found := re.match(r"study:units\[(\d+)\]", item):
+        return [f"study/{content.units[int(found[1])].key}"] if content else []
+    if found := re.match(r"exercises:sets\[(\d+)\]\.exercises\[(\d+)\]", item):
+        group = exercises.sets[int(found[1])] if exercises else None
+        return [f"exercises/{group.key}/{group.exercises[int(found[2])].key}"] if group else []
+    key = re.split(r"[#/]", item, maxsplit=1)[0]
+    units = [f"study/{unit.key}" for unit in (content.units if content else ()) if unit.key == key]
+    return units + [
+        f"exercises/{group.key}/{exercise.key}"
+        for group in (exercises.sets if exercises else ())
+        for exercise in group.exercises
+        if exercise.key == key
+    ]
+
+
 def revision(item: BaseModel) -> str:
     return hashlib.sha256(item.model_dump_json().encode()).hexdigest()[:16]
 
 
 def reviewable(
-    content: StudyContent | None, exercises: ExerciseContent | None
+    content: StudyContent | None,
+    exercises: ExerciseContent | None,
+    exam: "ExamContent | None" = None,
 ) -> dict[str, tuple[str, str]]:
-    """Every unit and exercise a student works through, with its title and current revision."""
+    """Every unit, exercise and Exam pattern a student works through, with its title and
+    current revision."""
     items = {
         f"study/{unit.key}": (unit.title, revision(unit))
         for unit in (content.units if content else ())
@@ -356,6 +404,8 @@ def reviewable(
     for group in exercises.sets if exercises else ():
         for exercise in group.exercises:
             items[f"exercises/{group.key}/{exercise.key}"] = (exercise.title, revision(exercise))
+    for pattern in exam.patterns if exam else ():
+        items[f"exam/pattern/{pattern.key}"] = (pattern.title, revision(pattern))
     return items
 
 
@@ -371,6 +421,7 @@ def review_report(
     knowledge_revision: str | None = None,
     media_inventory: "MediaInventory | None" = None,
     root: Path | None = None,
+    flags: Sequence[dict[str, JsonValue]] = (),
 ) -> dict[str, JsonValue]:
     """What still needs a review or a fix before the content is easy to learn from."""
     from tum_mcp.study_media import MediaInventory
@@ -381,7 +432,7 @@ def review_report(
         raise CampusError(Code.SCOPE_DENIED, "The review scorecard belongs to another course.")
     media_inventory = media_inventory if media_inventory is not None else MediaInventory()
     media = media_report(root, media_inventory, scorecard.media if scorecard else ())
-    current = reviewable(content, exercises)
+    current = reviewable(content, exercises, exam)
     drawn = visual_ids(content, exercises)
     reviews = {review.item: review for review in scorecard.reviews} if scorecard else {}
     unreviewed = [
@@ -441,6 +492,25 @@ def review_report(
         for review in fresh
         if (missing := [name for name in DIMENSIONS if name not in review.scores])
     ]
+    unevidenced = [
+        {"item": review.item, "dimensions": missing}
+        for review in fresh
+        if (
+            missing := [
+                name
+                for name, score in review.scores.items()
+                if score == 3 and name not in review.evidence
+            ]
+        )
+    ]
+    by_item = {review.item: review for review in fresh}
+    conflicts = [
+        {"item": key, "flag": flag["flag"], "dimension": dimension, "detail": flag["detail"]}
+        for flag in flags
+        if (dimension := INVARIANT_FLAGS.get(str(flag["flag"])))
+        for key in _flagged_items(str(flag["item"]), content, exercises)
+        if key in by_item and by_item[key].scores.get(dimension) == 3
+    ]
     review = scorecard.course if scorecard else None
     course, course_blocks = (
         _course_report(
@@ -471,6 +541,8 @@ def review_report(
             or stale
             or unscored
             or unscored_dimensions
+            or unevidenced
+            or conflicts
             or blocking
             or course_blocks
             or not media["passed"]
@@ -479,6 +551,8 @@ def review_report(
         "stale": stale,
         "unscored_visuals": unscored,
         "unscored_dimensions": unscored_dimensions,
+        "unevidenced": unevidenced,
+        "flag_conflicts": conflicts,
         "below_bar": below,
         "course": course,
         "media": media,

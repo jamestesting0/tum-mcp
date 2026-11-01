@@ -20,7 +20,8 @@ PDFs; otherwise add `--images` and open the image.
 You author `app/exam.json` (`study schema exam`); `tum-mcp study build PROJECT`
 renders it as the Exam workspace beside Study and Exercises. Code derives every
 count, rate, order, map position and blueprint; the schema has no count fields.
-Exam stays local: it is never published and publish-course never includes it.
+Publishing the course app includes prepared Exam content; original documents and
+source citations stay local. Use publish-course for a publication request.
 
 ## Workflow
 
@@ -28,7 +29,9 @@ Exam stays local: it is never published and publish-course never includes it.
    `tum-mcp study exam-report PROJECT`. A missing binding goes through sync-course.
    If past exams are missing, ask once: the user may sync them, import files they hold
    with `tum-mcp study import PROJECT --file F --kind exam --title T`. Prepare what
-   the evidence supports; report the rest.
+   the evidence supports; report the rest. Exam serves students who have studied the
+   material: keep it concise and never re-teach. Depth stays in Study, one tap away through
+   the Recall row that patterns and solutions show for their concepts.
 2. **Evidence** ([sources](references/sources.md)). Weigh official rules and exams
    above student copies; keep conflicts visible. Find and quote with
    `tum-mcp study text PROJECT --key K --pages N-M`, and look at each page a question
@@ -39,9 +42,12 @@ Exam stays local: it is never published and publish-course never includes it.
 4. **Cheatsheet** ([cheatsheet](references/cheatsheet.md)). Keep only what earns
    exam points; write the one line first, put the rest behind Expand, and link the
    ideas that genuinely depend on or contrast with each other.
-5. **Patterns.** A short workflow that solves every member, recognition cues from the
-   question text, an answer template, marking points, pitfalls, a worked practice
-   that applies every workflow step in turn, and a drill. Programming tasks follow
+5. **Patterns.** A short workflow that solves every member, with a decision step where
+   the method forks; recognition cues from the question text, the formula, rule or code
+   each step and case applies,
+   marking points, pitfalls shown in their situation as wrong/right/why, worked practice that applies every
+   workflow step and covers each case once, and a drill that practises every case again
+   without steps. Programming tasks follow
    [coding](../prepare-exercises/references/coding.md).
 6. **Practice** ([forecast](references/forecast.md)). Make chosen past papers
    replayable with guidance; write forecast exams to the real exam's blueprint from

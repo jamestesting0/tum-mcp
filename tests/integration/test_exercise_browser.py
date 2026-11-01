@@ -20,6 +20,8 @@ pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1",
     reason="Owned browser checks require TUM_MCP_BROWSER_INTEGRATION=1.",
 )
+# The fixture's second step names \(d(B)\); a heading's accessible name omits its math.
+REASON_STEP = re.compile(r"^Why does this replace .*\? You can work on paper\.$")
 
 
 def switch_workspace(page: Page, name: str) -> None:
@@ -70,7 +72,7 @@ def test_optional_guidance_and_workspace_round_trip(
             visible=True
         ).first.click()
         expect(page.get_by_role("heading", name="The problem", exact=True)).to_be_visible()
-        page.locator(".reading").get_by_text("Guidance", exact=True).click()
+        page.locator(".reading summary", has_text="Guide").click()
         # Students answer on paper: a compared step offers no answer box.
         expect(page.get_by_label("Your answer", exact=True)).to_have_count(0)
         page.get_by_role("button", name="Hint", exact=True).click()
@@ -83,10 +85,8 @@ def test_optional_guidance_and_workspace_round_trip(
         compared = page.locator(".exercise-feedback .feedback")
         expect(compared.locator(".expected-value")).to_have_text("3")
         expect(compared).to_contain_text("If yours differs: Include the cost of reaching A")
-        page.get_by_role("button", name="Continue", exact=True).click()
-        prompt = page.get_by_role(
-            "heading", name="Why does this replace d(B)? You can work on paper.", exact=True
-        )
+        page.locator("button.primary", has_text="Next step").click()
+        prompt = page.get_by_role("heading", name=REASON_STEP)
         expect(prompt).to_be_focused()
         position = prompt.bounding_box()
         assert position is not None and 0 <= position["y"] < 900
@@ -123,12 +123,12 @@ def test_repeat_clicks_and_reload_keep_one_comparison(
         prompt = page.get_by_role("heading", name="What is the cost through A?", exact=True)
         # When Compare is activated twice, it compares once and does not advance.
         page.get_by_role("button", name="Compare", exact=True).dblclick()
-        expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
+        expect(page.get_by_role("heading", name="Answer", exact=True)).to_be_visible()
         expect(prompt).to_be_visible()
         expect(page.get_by_text("Correct", exact=True)).not_to_be_visible()
         # Then the comparison survives a real reload.
         page.reload()
-        expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
+        expect(page.get_by_role("heading", name="Answer", exact=True)).to_be_visible()
     finally:
         context.close()
 
@@ -149,7 +149,7 @@ def test_paper_only_review_and_direct_solution_do_not_require_a_form(
                 "Take the first unsettled vertex", exact=False
             )
         ).to_be_visible()
-        page.locator(".reading").get_by_text("Guidance", exact=True).click()
+        page.locator(".reading summary", has_text="Guide").click()
         page.get_by_role("button", name="Compare", exact=True).click()
         # Then comparison is available with no typed response or automatic correctness claim.
         expect(page.get_by_label("Your answer", exact=True)).not_to_be_visible()
@@ -176,7 +176,7 @@ def test_choice_feedback_revision_recovery_and_workspace_reset(
         page.locator('[data-card-action="got"]').click()
         page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/transfer-choice")
         page.get_by_label("Replace with 6", exact=True).check()
-        page.get_by_role("button", name="Check answer", exact=True).click()
+        page.get_by_role("button", name="Check", exact=True).click()
         verdict = page.locator(".exercise-feedback > .feedback")
         expect(verdict).to_contain_text("Include the cost of reaching the neighbor")
         explanations = page.locator(".option-explanations")
@@ -185,7 +185,7 @@ def test_choice_feedback_revision_recovery_and_workspace_reset(
         expect(explanations.locator("li.right")).to_contain_text("Keep 8")
         page.get_by_label("Keep 8", exact=True).check()
         expect(page.get_by_text("Not quite", exact=True)).not_to_be_visible()
-        page.get_by_role("button", name="Check answer", exact=True).click()
+        page.get_by_role("button", name="Check", exact=True).click()
         page.get_by_role("button", name="Finish", exact=True).click()
         path = exercise_project / "study/exercises.json"
         payload = json.loads(path.read_bytes())
@@ -267,11 +267,11 @@ def test_blocked_storage_keeps_the_current_session_usable(
         page = context.new_page()
         page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation/candidate")
         page.get_by_role("button", name="Compare", exact=True).click()
-        expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
+        expect(page.get_by_role("heading", name="Answer", exact=True)).to_be_visible()
         expect(page.get_by_text("Progress cannot be saved", exact=False)).to_be_visible()
         switch_workspace(page, "Study")
         switch_workspace(page, "Exercises")
-        expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
+        expect(page.get_by_role("heading", name="Answer", exact=True)).to_be_visible()
     finally:
         context.close()
 
@@ -327,7 +327,7 @@ def test_static_exercises_under_a_project_prefix(
     host = tmp_path / "host"
     site = host / "course"
     site.mkdir(parents=True)
-    for name, value in export_site(exercise_project, include_exercises=True).items():
+    for name, value in export_site(exercise_project).items():
         (site / name).write_bytes(value)
     context = course_browser.new_context(
         viewport={"width": 1440 if exercise_only else 390, "height": 900}
@@ -358,9 +358,9 @@ def test_static_exercises_under_a_project_prefix(
                 page.goto(base + "#exercises/sheet-1/sample-relaxation/candidate")
                 page.get_by_role("button", name="Compare", exact=True).wait_for()
                 page.get_by_role("button", name="Compare", exact=True).click()
-                expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
+                expect(page.get_by_role("heading", name="Answer", exact=True)).to_be_visible()
                 page.reload()
-                expect(page.get_by_text("Compare with your work", exact=True)).to_be_visible()
+                expect(page.get_by_role("heading", name="Answer", exact=True)).to_be_visible()
                 assert errors == []
                 assert all(url.startswith(base) for url in requests)
                 assert not any("/_study/comments" in url for url in requests)
@@ -402,11 +402,11 @@ def test_table_math_code_and_graph_work_survives_edits_reload_and_navigation(
         expect(expected.locator("tbody tr").first).to_contain_text("4")
         page.reload()
         expect(expected).to_be_visible()
-        page.get_by_role("button", name="Continue", exact=True).click()
+        page.locator("button.primary", has_text="Next step").click()
         expect(page.locator(".exercise-response textarea")).to_have_count(0)
         page.get_by_role("button", name="Compare", exact=True).click()
         expect(page.get_by_text("Correct", exact=True)).not_to_be_visible()
-        page.get_by_role("button", name="Continue", exact=True).click()
+        page.locator("button.primary", has_text="Next step").click()
         code = page.get_by_label("Your code (Python)", exact=True)
         expect(code).to_have_value("def add(a, b):\n    # Return the sum.\n    pass\n")
         code.fill("def add(a, b):\n    return a + b\n")
@@ -417,7 +417,7 @@ def test_table_math_code_and_graph_work_survives_edits_reload_and_navigation(
             "def add(a, b):\n    return a + b\n"
         )
         page.get_by_role("button", name="Compare", exact=True).click()
-        page.get_by_role("button", name="Continue", exact=True).click()
+        page.locator("button.primary", has_text="Next step").click()
         for name in ("A", "C"):
             page.get_by_role("button", name=name, exact=True).click()
         page.get_by_role("button", name="Undo", exact=True).click()
@@ -496,7 +496,7 @@ def test_line_graph_tap_keyboard_coordinates_and_saved_comparison(
         left, middle, right = [page.get_by_label(f"y at x = {x}", exact=True) for x in (-1, 0, 1)]
         left.fill("0")
         right.fill("2")
-        graph = page.locator(".plot-response svg")
+        graph = page.locator(".plot-response svg[role=group]")
         box = graph.bounding_box()
         assert box
         # The actual chart maps x=0,y=1 to (324,158) in its 600x360 viewBox.
@@ -615,7 +615,7 @@ def test_compare_is_the_one_place_a_step_reveals_its_reasoning(
         # A step without a check is compared too, and shows its reasoning once.
         page.get_by_role("button", name="Compare", exact=True).click()
         expect(explanation).to_have_count(1)
-        expect(page.get_by_role("button", name="Continue", exact=True)).to_be_enabled()
+        expect(page.locator("button.primary", has_text="Next step")).to_be_enabled()
     finally:
         context.close()
 
@@ -670,7 +670,10 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
         page.get_by_role("button", name="relaxation", exact=True).click()
         expect(page.get_by_role("status").filter(has_text="cheaper one")).to_be_visible()
         page.keyboard.press("Escape")
-        page.get_by_role("button", name="Review Relaxation", exact=True).click()
+        # The Recall chip names the idea; its reminder leads on to the whole passage.
+        chip = page.locator(".recall-chip", has_text="Relaxation")
+        chip.click()
+        page.get_by_role("button", name="Open lesson", exact=True).click()
         panel = page.get_by_role("dialog", name="Relaxation")
         expect(panel).to_contain_text("through a neighbor")
         if width < 1200:
@@ -695,7 +698,7 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
         panel.get_by_role("button", name="Close", exact=True).click()
         # Then the same step, focus point and scroll position remain, and nothing navigated.
         expect(panel).to_have_count(0)
-        expect(page.get_by_role("button", name="Review Relaxation")).to_be_focused()
+        expect(chip).to_be_focused()
         assert page.url.endswith("#exercises/sheet-1/sample-relaxation/reason")
         assert abs(page.evaluate(scroll) - before) <= 2
         # And the solution answers each original part under its own label.
@@ -800,10 +803,10 @@ def test_guides_follow_their_parts_and_keep_nested_context(
         expect(
             parts.nth(0).get_by_role("heading", name="Context for the second question")
         ).to_have_count(0)
-        for part, label in zip(parts.all(), ["(a)", "(b)"], strict=True):
+        for part in parts.all():
             expect(part.locator(".exercise-solution > summary")).to_have_text("Solution")
             guide = part.locator(".exercise-guide")
-            expect(guide.locator(":scope > summary")).to_have_text(f"Guide · {label}")
+            expect(guide.locator(":scope > summary")).to_have_text("Guide")
             assert part.evaluate("(part) => part.lastElementChild.matches('.exercise-part-help')")
         solutions = parts.locator(".exercise-solution")
         expect(solutions.locator(".solution-label")).to_have_count(0)
@@ -849,17 +852,17 @@ def test_guides_follow_their_parts_and_keep_nested_context(
             first.get_by_role("heading", name=exercise["steps"][0]["prompt"], level=3)
         ).to_be_visible()
         first.get_by_role("button", name="Compare", exact=True).click()
-        first.get_by_role("button", name="Continue", exact=True).click()
-        expect(first.get_by_role("heading", name=exercise["steps"][1]["prompt"])).to_be_focused()
+        first.locator("button.primary", has_text="Next step").click()
+        expect(first.get_by_role("heading", name=REASON_STEP)).to_be_focused()
         first.get_by_role("button", name="Compare", exact=True).click()
-        first.get_by_role("button", name="Continue", exact=True).click()
+        first.locator("button.primary", has_text="Next step").click()
         expect(
             parts.nth(1).get_by_role("heading", name=exercise["steps"][2]["prompt"])
         ).to_be_focused()
         parts.nth(1).get_by_label(
             exercise["steps"][2]["check"]["options"][0]["text"], exact=True
         ).check()
-        parts.nth(1).get_by_role("button", name="Check answer", exact=True).click()
+        parts.nth(1).get_by_role("button", name="Check", exact=True).click()
         saved = page.evaluate(
             """async () => {
                 const { default: data } = await import('./data.mjs');
@@ -879,7 +882,7 @@ def test_guides_follow_their_parts_and_keep_nested_context(
         if width < 1200:
             page.get_by_role("button", name="Show contents", exact=True).click()
         outline = page.locator(".page-outline")
-        guide_link = outline.get_by_role("link", name="Guide · (b)", exact=True)
+        guide_link = outline.get_by_role("link", name="Guide", exact=True).nth(1)
         assert guide_link.locator("xpath=ancestor::li").count() == 3
         solution_link = outline.get_by_role("link", name="Solution", exact=True).nth(1)
         assert solution_link.locator("xpath=ancestor::li").count() == 3
@@ -946,16 +949,12 @@ def test_outline_names_only_categories_that_add_information(
         page = context.new_page()
         page.goto(exercise_url + "#exercises")
         listing = page.locator(".exercise-list")
-        # "Exercise 2" only repeats its set's title, so a thin rule marks the new group.
+        # "Exercise 2" only repeats its set's title, so it gets no heading of its own.
         expect(listing.get_by_text("Exercise 2", exact=True)).to_have_count(0)
         expect(listing.get_by_role("heading", name="Tutorials", exact=True)).to_have_count(1)
-        sheets = listing.locator(".exercise-sheet")
-        expect(sheets).to_have_count(4)
-        borders = sheets.evaluate_all(
-            "els => els.map(el => getComputedStyle(el).borderBottomStyle)"
-        )
-        # Each sheet has the same neutral row separator as the Study overview.
-        assert borders == ["solid", "solid", "solid", "solid"]
+        # Each sheet heads its own problem rows, as a topic group does on the Study home.
+        expect(listing.get_by_role("heading", level=3)).to_have_count(4)
+        expect(listing.locator(".topic-row")).to_have_count(4 * len(first["exercises"]))
     finally:
         context.close()
 
@@ -1146,7 +1145,7 @@ def test_distilled_code_practice_writes_code_and_checks_literal_code(
         page.goto(exercise_url + "#exercises/sheet-1/copy-drill")
         expect(page.locator(".practice-for")).to_contain_text(original["title"])
         expect(page.locator(".code-region .code-line")).to_have_count(3)
-        page.locator(".reading").get_by_text("Guidance", exact=True).click()
+        page.locator(".reading summary", has_text="Guide").click()
         editor = page.get_by_label("Your code (Java)", exact=True)
         expect(editor).to_have_value(starter)
         editor.evaluate(
@@ -1166,7 +1165,7 @@ def test_distilled_code_practice_writes_code_and_checks_literal_code(
         expect(editor).to_have_value(re.compile(r"\{\n    return copy;"))
         page.get_by_role("button", name="Compare", exact=True).click()
         expect(page.locator(".model-code")).to_contain_text("copy.sort(null);")
-        page.get_by_role("button", name="Continue", exact=True).click()
+        page.locator("button.primary", has_text="Next step").click()
         expect(page.get_by_label("java answer", exact=True)).to_have_count(0)
         page.get_by_role("button", name="Compare", exact=True).click()
         expect(page.get_by_text("Return the copy, not the input.", exact=False)).to_be_visible()
@@ -1282,7 +1281,7 @@ def test_steps_never_leave_empty_space_to_scroll_into(
     try:
         page = context.new_page()
         page.goto(exercise_url + "#exercises/responses/response-controls/choice")
-        page.get_by_role("button", name="Check answer").wait_for()
+        page.get_by_role("button", name="Check").wait_for()
         # Hidden labels far down the reading pane must not make the whole page scroll.
         assert page.evaluate("document.scrollingElement.scrollHeight <= innerHeight")
         page.goto(exercise_url + "#exercises/responses/response-controls/number")

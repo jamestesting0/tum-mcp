@@ -128,6 +128,8 @@ browser_only = pytest.mark.skipif(
 
 
 def check_page(page, server: str) -> None:  # noqa: ANN001 - Playwright page
+    from playwright.sync_api import expect
+
     errors: list[str] = []
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.goto(server + "/#components")
@@ -137,15 +139,26 @@ def check_page(page, server: str) -> None:  # noqa: ANN001 - Playwright page
     entry = page.locator(".page-outline a", has_text="Video explainer")
     entry.wait_for(state="attached")
     assert entry.count() == 1
-    chapters = panel.locator(".video-chapters button")
-    assert chapters.count() == 2
     page.evaluate("document.querySelector('.video-note video').muted = true")
-    chapters.nth(1).click()
+    # The seek bar is split at the chapters; Page Up jumps to the next one.
+    seek = panel.get_by_role("slider", name="Seek")
+    assert seek.locator(".player-segment").count() == 2
+    seek.focus()
+    page.keyboard.press("PageUp")
+    panel.get_by_role("button", name="Play").first.click()
     page.wait_for_function(
         "() => { const v = document.querySelector('.video-note video');"
         " return v.readyState >= 2 && v.currentTime >= 13 && !v.error; }",
         timeout=15000,
     )
+    # The control row names the current chapter.
+    expect(panel.locator(".player-chapter")).to_have_text("The mean")
+    seek.focus()
+    page.keyboard.press("Home")
+    expect(panel.locator(".player-chapter")).to_have_text("A two-node trace")
+    # Captions are drawn by the app, so turning them on must show the current cue.
+    panel.get_by_role("button", name="Captions").click()
+    panel.locator(".player-caption span").first.wait_for()
     cues = page.evaluate(
         "() => new Promise(resolve => { const track = document.querySelector('.video-note track');"
         " track.track.mode = 'hidden';"
@@ -200,7 +213,7 @@ def test_stale_videos_warn_and_hosted_sites_never_ask(
     context = course_browser.new_context(viewport={"width": 1440, "height": 900})
     page = context.new_page()
     page.goto(server + "/#components")
-    page.get_by_text("made for an earlier version of this topic").wait_for()
+    page.get_by_text("made for an earlier version").wait_for()
     context.close()
     data = demo / "app/data.mjs"
     original = data.read_bytes()
@@ -340,7 +353,9 @@ def test_walkthrough_disclosure_never_autoplays_or_reveals_written_parts(
       window.walkthroughSeek = new Promise(resolve =>
         v.addEventListener('seeked', resolve, {once:true}));
     }""")
-    disclosure.locator(".video-chapters button").nth(1).click()
+    disclosure.get_by_role("slider", name="Seek").focus()
+    page.keyboard.press("PageUp")
+    disclosure.get_by_role("button", name="Play").first.click()
     page.evaluate("() => window.walkthroughSeek.then(() => true)")
     assert video.evaluate("(v) => v.currentTime >= 13 && !v.error")
     captions = page.evaluate("""() => new Promise(resolve => {
@@ -429,7 +444,7 @@ def test_exam_guided_solution_never_requests_video_index(
             requests = []
             page.on("request", lambda request: requests.append(request.url))
             page.goto(f"http://127.0.0.1:{running.server_port}/#exam/paper/ws23-a")
-            page.locator(".exam-card", has_text="Guided").click()
+            page.locator(".exam-card", has_text="Guide").click()
             page.get_by_role("heading", name="Question 1", exact=True).first.wait_for()
             page.locator("summary", has_text="Solution").last.click()
             assert page.locator(".video-note").count() == 0

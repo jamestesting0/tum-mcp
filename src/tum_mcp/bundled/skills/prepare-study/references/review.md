@@ -19,24 +19,27 @@ with this gate.
    one unit; elsewhere mark it `{{term}}` or link its block, add a one-line reminder where a
    first-time reader would otherwise have to go back, and revisit it to take it further or
    to practise it in a new situation. Give a worked case once, as steps, a derivation or a
-   table, not twice. Insert a section where it belongs in the
-   lesson shape; a section appended on a later pass leaves the lesson out of order
+   table, not twice. Insert a section where it belongs in the unit's
+   plan and reading order; a section appended on a later pass leaves the lesson out of order
    (`study report` flags it as `source_order`).
 6. Review the last batch to the same depth as the first, against the source's own outcomes.
-7. Resolve or justify every flag from `study report`. Restructure, never justify,
-   `long_section`, `dense_paragraph`, `prose_calculation`, `plain_math`,
-   `meta_reference`, `restated_context`, `dense_statement`, `forward_term`,
-   `compressed_working` and `described_object`: each means a wall of text, mathematics typed
-   as characters, a sentence about the material, a fact said twice, a term used before it
-   is taught, results without their working or an object described instead of shown.
-   Read `dense_introduction`, `unexplained_identity`, `example_without_rule` and
-   `tall_inline_math` in place and fix them unless the passage already orients the reader
-   and unpacks its notation ([teaching](teaching.md#notation-at-the-point-of-use)), the
-   topic has no reusable rule or the object reads well inline. Write as in [writing](writing.md).
+7. Fix every invariant flag from `study report`; never keep one: `arithmetic`,
+   `forward_term`, `plain_math`, `described_object`, `meta_reference`, `dense_paragraph`,
+   `prose_calculation`, `compressed_working` and `summary_repeats_objective`. Each means a
+   wrong number, a term used before it is taught, mathematics typed as characters, an object
+   described instead of shown, a sentence about the material, a wall of text, results
+   without their working or a summary that repeats an objective. Read every other flag in
+   place (`long_section`, `dense_introduction`, `unexplained_identity`,
+   `example_without_rule`, `restated_context`, `dense_statement`, `tall_inline_math`,
+   `thin_unit`, `many_terms`, `flat_sections`, `source_order` and the rest): fix it, or keep
+   it and say why the content needs it, for example a passage that already unpacks its
+   notation ([teaching](teaching.md#notation-at-the-point-of-use)) or a topic with no
+   reusable rule. Write as in [writing](writing.md).
 8. Walk each new or changed lesson and its exercise once as a first-time reader, as in
    review-course's [text pass](../../review-course/references/text.md): what the reader
-   knows so far, which new terms and symbols each section adds, where a step is missing
-   and where a reminder would spare a return trip.
+   knows so far, which new terms and symbols each section adds, where a step is missing,
+   where a reminder would spare a return trip and why each section is here: the question
+   it answers or how it relates to the one before.
 9. After the build, run `tum-mcp study visuals PROJECT` and fix every defect it reports in
    the content (an edge through a node, clashing labels, text under 12 px, a drawing that
    differs from its block). Open the contact sheets in `.tum-mcp/visuals/` and look at each

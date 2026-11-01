@@ -10,11 +10,14 @@ from pydantic import ValidationError
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.study_comment_models import (
+    Anchor,
     Comment,
     Comments,
     Create,
     Delete,
     Edit,
+    ExamAnchor,
+    ExerciseAnchor,
     ExploreAnchor,
     LectureAnchor,
     Operation,
@@ -190,3 +193,58 @@ def change_comment(root: Path, operation: Operation) -> dict:
             raise CampusError(Code.ACTION_REQUIRED, "Comments exceed the local storage limit.")
         apply(root, (Write(private_name(root, "comments.json"), before, after),))
         return updated.model_dump(mode="json") | {"revision": digest(after)}
+
+
+def _keyed(value: object, key: str) -> dict | None:
+    """The first object in the data whose `key` is `key`."""
+    if isinstance(value, dict):
+        if value.get("key") == key:
+            return value
+        value = list(value.values())
+    if isinstance(value, list):
+        for item in value:
+            if (found := _keyed(item, key)) is not None:
+                return found
+    return None
+
+
+def _exists(anchor: object, data: dict[str, dict]) -> bool:
+    """Whether the item a comment is anchored to is still in the course."""
+    match anchor:
+        case ExploreAnchor():
+            unit = _keyed(data["content"].get("units", []), anchor.unit_key)
+            item = _keyed((unit or {}).get("explore", []), anchor.item_key)
+            return _keyed((item or {}).get("blocks", []), anchor.block_key) is not None
+        case LectureAnchor():
+            lecture = _keyed(data["lectures"].get("lectures", []), anchor.lecture_key)
+            return _keyed(list((lecture or {}).values()), anchor.section_key) is not None
+        case ExerciseAnchor():
+            group = _keyed(data["exercises"].get("sets", []), anchor.set_key)
+            return _keyed((group or {}).get("exercises", []), anchor.exercise_key) is not None
+        case ExamAnchor():
+            return _keyed(data["exam"], anchor.item_key.partition(":")[2]) is not None
+        case Anchor():
+            unit = _keyed(data["content"].get("units", []), anchor.unit_key)
+            return unit is not None and (
+                anchor.item_key is None or _keyed(unit, anchor.item_key) is not None
+            )
+    return True
+
+
+def prune_comments(root: Path, data: dict[str, dict]) -> int:
+    """Deletes comments whose unit, exercise, exam item, lecture section or Explore passage
+    no longer exists; returns how many. `data` holds each workspace's JSON (empty if absent).
+    A comment file the preview cannot read is left for the preview to report."""
+    if not private_path(root, "comments.json").exists():
+        return 0
+    with FileLock(str(private_path(root, "comments.lock"))):
+        try:
+            document, before = _read(root)
+        except CampusError:
+            return 0
+        kept = tuple(item for item in document.comments if _exists(item.anchor, data))
+        if len(kept) == len(document.comments):
+            return 0
+        after = document.model_copy(update={"comments": kept}).model_dump_json(indent=2).encode()
+        apply(root, (Write(private_name(root, "comments.json"), before, after),))
+        return len(document.comments) - len(kept)

@@ -28,7 +28,7 @@ def test_explore_preserves_legacy_core_progress_but_changes_teaching_review() ->
     assert (
         unit_revision(before) == "3c3f0059e28219e78082801a80a63cc0e63d05e9372bbdd27a17f703df1d42b5"
     )
-    assert revision(before) == "f15badad09e4ed7e"
+    assert revision(before) == "f15643aee4957479"
     material = {
         "key": "origin",
         "title": "Where the idea came from",
@@ -220,6 +220,17 @@ def test_titled_blocks_form_an_outline_and_untitled_blocks_continue_a_section() 
     StudyContent.model_validate(_headed([1, None, 2, 3, None, 2, 1]))
     # A lesson may open with an untitled passage before its first heading.
     StudyContent.model_validate(_headed([None, 1, 2]))
+
+
+def test_an_insight_needs_the_section_title_it_opens_from() -> None:
+    content = _headed([1, None])
+    blocks = content["units"][0]["blocks"]
+    blocks[0]["insight"] = "Used again in later topics."
+    StudyContent.model_validate(content)
+    # The app draws the light bulb after a heading; an untitled block has none to show it.
+    blocks[1]["insight"] = "Hidden with nowhere to open."
+    with pytest.raises(ValidationError, match="give the block a title"):
+        StudyContent.model_validate(content)
 
 
 @pytest.mark.parametrize("levels", [[2], [1, 3], [1, None, 3]])

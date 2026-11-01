@@ -13,7 +13,6 @@ from tum_mcp.exam_data import exam_revisions
 from tum_mcp.study_build import build
 from tum_mcp.study_comment_models import OPERATION
 from tum_mcp.study_comments import change_comment, read_comments
-from tum_mcp.study_publish_projection import project
 from tum_mcp.study_publish_site import export_site
 from tum_mcp.study_store import load_state
 
@@ -54,13 +53,31 @@ def test_changed_sources_block_the_build_and_name_only_stale_items(course: Path)
     assert "concept:observer" in error.value.message and "variant:" not in error.value.message
 
 
-def test_exam_prep_is_never_published(course: Path) -> None:
+def test_exam_prep_exports_alone_and_with_study_without_document_references(course: Path) -> None:
+    from PIL import Image
+
+    image = course / "app/figures/exam-only.png"
+    image.parent.mkdir()
+    Image.new("RGB", (16, 16), "white").save(image)
+    authored = course / "app/exam.json"
+    exam = json.loads(authored.read_bytes())
+    exam["concepts"][0].setdefault("details", []).append(
+        {
+            "kind": "figure",
+            "sources": ["slides"],
+            "alt": "An exam-only synthetic white square.",
+            "image": "figures/exam-only.png",
+        }
+    )
+    authored.write_text(json.dumps(exam))
     build(course, publish=False)
-    with pytest.raises(CampusError) as error:
-        project(
-            (course / "app/data.mjs").read_bytes(), include_exercises=True, include_lectures=True
-        )
-    assert error.value.code == Code.ACTION_REQUIRED
+    exported = export_site(course)
+    assert exported["figures/exam-only.png"] == image.read_bytes()
+    site = exported["data.mjs"]
+    published = json.loads(site.removeprefix(b"const data = ").split(b";\ndata.hosted")[0])
+    assert published["workspaces"] == ["exam"]
+    assert published["sources"] == {}
+    assert published["exam"]["statistics"] == payload(course)["exam"]["statistics"]
     slides = next(
         item for item in load_state(course).resources if item.resource.key == "slides"
     ).sha256
@@ -74,11 +91,12 @@ def test_exam_prep_is_never_published(course: Path) -> None:
     }
     (course / "app/content.json").write_text(json.dumps(study), encoding="utf-8")
     build(course, publish=False)
-    data = (course / "app/data.mjs").read_bytes()
-    published = project(data, include_exercises=True, include_lectures=True)
-    assert "exam" not in published and published["workspaces"] == ["study"]
-    site = export_site(course, include_exercises=True)["data.mjs"].decode()
-    assert '"exam"' not in site and "Endterm" not in site
+    site = export_site(course)["data.mjs"]
+    published = json.loads(site.removeprefix(b"const data = ").split(b";\ndata.hosted")[0])
+    assert published["workspaces"] == ["study", "exam"]
+    assert published["sources"] == {}
+    assert published["exam"]["sittings"] and b"Endterm" in site
+    assert b"materials/" not in site and b"www.moodle.tum.de" not in site
 
 
 def test_cli_schema_report_and_inspect(course: Path) -> None:
@@ -193,3 +211,13 @@ def test_exam_guidance_cannot_use_an_optional_only_study_block(course: Path) -> 
     ]
     with pytest.raises(CampusError, match="does not have"):
         check_unit_links(ExamContent.model_validate(raw), study)
+    # A concept's Recall passage is held to the same rule: a core block of its own units.
+    first["guidance"]["prerequisites"] = []
+    concept = raw["concepts"][0]
+    concept["units"] = sorted({*concept["units"], "observer"})
+    concept["passages"] = [{"unit": "observer", "block": "origin"}]
+    with pytest.raises(CampusError, match="does not have"):
+        check_unit_links(ExamContent.model_validate(raw), study)
+    concept["passages"] = [{"unit": "elsewhere", "block": "origin"}]
+    with pytest.raises(ValueError, match="passages come from the units it names"):
+        ExamContent.model_validate(raw)

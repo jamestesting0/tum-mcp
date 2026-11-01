@@ -30,7 +30,7 @@ def test_optional_source_edits_require_review_without_resetting_core_progress(
     assert payload["sources"]["explore-source"]["title"] == "Context and origins"
     exported = export_site(project)["data.mjs"]
     assert b"Where the idea came from" in exported
-    assert b"https://example.invalid/explore" in exported
+    assert b"https://example.invalid/explore" not in exported
     assert b"Core tasks do not depend" not in exported
     assert b"materials/content/material-explore-source.md" not in exported
     # A changed optional file must be reviewed just as a changed core source is.

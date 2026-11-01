@@ -25,7 +25,7 @@
                 "weighted"
               ],
               "paragraphs": [
-                "A directed graph has d(A)=2, d(B)=5 and edge A to B with weight 1. Calculate the candidate distance to B and explain whether to keep its old distance."
+                "A directed graph has \\(d(A)=2\\), \\(d(B)=5\\) and edge A to B with weight 1. Calculate the candidate distance to B and explain whether to keep its old distance."
               ]
             }
           ],
@@ -57,7 +57,7 @@
             {
               "key": "reason",
               "purpose": "Explain why a discovered distance can still improve.",
-              "prompt": "Why does this replace d(B)? You can work on paper.",
+              "prompt": "Why does this replace \\(d(B)\\)? You can work on paper.",
               "check": {
                 "kind": "self_check",
                 "rubric": [
@@ -130,7 +130,7 @@
                       "weighted"
                     ],
                     "paragraphs": [
-                      "The candidate distance is d(A)+w(A,B)=2+1=3. Since 3 is less than 5, replace d(B) with 3."
+                      "The candidate distance is \\(d(A)+w(A,B)=2+1=3\\). Since 3 is less than 5, replace \\(d(B)\\) with 3."
                     ]
                   }
                 ]
@@ -225,7 +225,7 @@
                       "weighted"
                     ],
                     "paragraphs": [
-                      "Take the first unsettled vertex Y on a hypothetical cheaper path to X. Its predecessor is settled, so its outgoing edge has been relaxed and d(Y) is no greater than that path prefix. Since all suffix weights are nonnegative, the prefix costs no more than the whole path. Choosing minimum tentative X gives d(X) ≤ d(Y) ≤ prefix cost ≤ whole path cost, contradicting a path cheaper than d(X)."
+                      "Take the first unsettled vertex Y on a hypothetical cheaper path to X. Its predecessor is settled, so its outgoing edge has been relaxed and \\(d(Y)\\) is no greater than that path prefix. Since all suffix weights are nonnegative, the prefix costs no more than the whole path. Choosing minimum tentative X gives \\(d(X) \\le d(Y) \\le\\) prefix cost \\(\\le\\) whole path cost, contradicting a path cheaper than \\(d(X)\\)."
                     ]
                   }
                 ]

@@ -66,7 +66,7 @@ export function renderMap(onOpen) {
       studyText('p', '', concept.line),
     );
     if (concept.trigger) card.append(append(node('p', 'small'), node('span', 'exam-label', 'When you see: '), studyText('span', '', concept.trigger)));
-    card.append(quietLink('Open in the cheatsheet', `#exam/sheet/${concept.key}`));
+    card.append(quietLink('Open in Cheatsheet', `#exam/sheet/${concept.key}`));
     card.hidden = false;
     if (focus) elements.get(key).focus();
   }
@@ -76,25 +76,70 @@ export function renderMap(onOpen) {
   scroller.setAttribute('aria-label', 'Semester map canvas. Arrow keys move it, plus and minus zoom, 0 fits it.');
   scroller.title = 'Drag to move · pinch or Ctrl/⌘ + scroll to zoom';
   const svg = svgNode('svg', { viewBox: `0 0 ${map.width} ${map.height}`, class: 'exam-map-svg', role: 'group', 'aria-label': 'Semester map of exam-relevant ideas' });
-  const defs = svgNode('defs'), marker = svgNode('marker', { id: 'exam-arrow', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' });
-  marker.append(svgNode('path', { d: 'M0 0L10 5L0 10z', class: 'exam-arrow-head' })); defs.append(marker); svg.append(defs);
+  // Arrowheads keep one size at every line width and take the colour of their line: the line
+  // stops where the head begins, and the last stretch runs straight into it.
+  const head = 9, stub = 10, defs = svgNode('defs');
+  for (const [id, className] of [['exam-arrow', 'exam-arrow-head'], ['exam-arrow-related', 'exam-arrow-head related']]) {
+    const marker = svgNode('marker', { id, viewBox: '0 0 10 10', refX: 0, refY: 5, markerWidth: head, markerHeight: head, markerUnits: 'userSpaceOnUse', orient: 'auto' });
+    marker.append(svgNode('path', { d: 'M0 0L10 5L0 10z', class: className })); defs.append(marker);
+  }
+  svg.append(defs);
   for (const column of map.columns) {
     const label = svgNode('text', { x: column.x, y: 24, class: 'exam-map-column' }); label.textContent = plainText(column.title);
     svg.append(label);
   }
   const position = new Map(map.nodes.map(item => [item.key, item]));
   const width = map.node_width, height = map.node_height;
+  // A line never crosses a card other than its own two. It takes the simplest route that stays
+  // clear: one smooth curve, else two rounded corners through a gap between card columns, else
+  // four corners through the gap beside the target's row.
+  const cards = map.nodes.map(item => [item.x, item.y, item.x + width, item.y + height, item.key]);
+  const ys = [...new Set(map.nodes.map(item => item.y))].sort((p, q) => p - q);
+  const rowGap = Math.max(16, Math.min(48, ...ys.slice(1).map((y, i) => y - ys[i] - height).filter(gap => gap > 0)));
+  const crosses = (points, own) => points.some(([x, y]) => cards.some(([l, t, r, low, key]) => !own.includes(key) && x > l - 4 && x < r + 4 && y > t - 4 && y < low + 4));
+  const lefts = [...new Set(map.nodes.map(item => item.x))].sort((p, q) => p - q);
+  const channels = lefts.slice(1).map((x, i) => [lefts[i] + width, x]).filter(([l, r]) => r - l > 12).map(([l, r]) => (l + r) / 2);
+  const along = points => points.slice(1).flatMap(([x, y], i) => {
+    const [px, py] = points[i], steps = Math.max(1, Math.ceil(Math.hypot(x - px, y - py) / 6));
+    return Array.from({ length: steps }, (_, k) => [px + (x - px) * (k + 1) / steps, py + (y - py) * (k + 1) / steps]);
+  });
+  const sampled = (p0, p1, p2, p3) => Array.from({ length: 24 }, (_, i) => {
+    const t = (i + 1) / 25, u = 1 - t;
+    return [0, 1].map(k => u * u * u * p0[k] + 3 * u * u * t * p1[k] + 3 * u * t * t * p2[k] + t * t * t * p3[k]);
+  });
+  const rounded = (points, radius = 10) => points.map(([x, y], i) => {
+    if (i === 0) return `M${x} ${y}`;
+    if (i === points.length - 1) return `L${x} ${y}`;
+    const [px, py] = points[i - 1], [nx, ny] = points[i + 1];
+    const before = Math.hypot(x - px, y - py) || 1, after = Math.hypot(nx - x, ny - y) || 1;
+    const k1 = Math.min(radius, before / 2), k2 = Math.min(radius, after / 2);
+    return `L${x - (x - px) / before * k1} ${y - (y - py) / before * k1}Q${x} ${y} ${x + (nx - x) / after * k2} ${y + (ny - y) / after * k2}`;
+  }).join('');
   for (const edge of map.edges) {
     const a = position.get(edge.start), b = position.get(edge.end);
     let path;
     if (edge.kind === 'contrasts') path = `M${a.x + width / 2} ${a.y + height / 2}L${b.x + width / 2} ${b.y + height / 2}`;
     else if (a.column !== b.column) {
-      const forward = b.column > a.column, x1 = forward ? a.x + width : a.x, x2 = forward ? b.x : b.x + width;
-      const y1 = a.y + height / 2, y2 = b.y + height / 2, bend = (x2 - x1) / 2;
-      path = `M${x1} ${y1}C${x1 + bend} ${y1} ${x2 - bend} ${y2} ${x2} ${y2}`;
+      const forward = b.column > a.column, side = forward ? 1 : -1, x1 = forward ? a.x + width : a.x;
+      const x2 = (forward ? b.x : b.x + width) - side * head, y1 = a.y + height / 2, y2 = b.y + height / 2;
+      const x3 = x2 - side * stub, bend = (x3 - x1) / 2;
+      if (!crosses(sampled([x1, y1], [x1 + bend, y1], [x3 - bend, y2], [x3, y2]), [edge.start, edge.end])) {
+        path = `M${x1} ${y1}C${x1 + bend} ${y1} ${x3 - bend} ${y2} ${x3} ${y2}L${x2} ${y2}`;
+      } else {
+        const own = [edge.start, edge.end], out = x1 + side * 14, into = x3 - side * 14;
+        // Two corners: across at the source's height, along a column gap, then into the target.
+        const turns = [...channels.filter(x => (x - out) * side > 0 && (into - x) * side > 0)
+          .sort((p, q) => Math.abs(p - (x1 + x3) / 2) - Math.abs(q - (x1 + x3) / 2)), into, out]
+          .map(x => [[x1, y1], [x, y1], [x, y2], [x2, y2]]).find(points => !crosses(along(points), own));
+        const gap = y2 < y1 ? b.y + height + rowGap / 2 : y2 > y1 ? b.y - rowGap / 2 : a.y + height + rowGap / 2;
+        path = rounded(turns || [[x1, y1], [out, y1], [out, gap], [into, gap], [into, y2], [x2, y2]]);
+      }
+    } else if (b.y > a.y + height) {
+      const x1 = a.x + width / 2, y1 = a.y + height, x2 = b.x + width / 2, y2 = b.y - head, y3 = y2 - stub, middle = (y1 + y3) / 2;
+      path = `M${x1} ${y1}C${x1} ${middle} ${x2} ${middle} ${x2} ${y3}L${x2} ${y2}`;
     } else {
-      const x1 = a.x + width / 2, y1 = a.y + height, x2 = b.x + width / 2, y2 = b.y, middle = (y1 + y2) / 2;
-      path = y2 > y1 ? `M${x1} ${y1}C${x1} ${middle} ${x2} ${middle} ${x2} ${y2}` : `M${a.x + width} ${a.y + height / 2}L${b.x} ${b.y + height / 2}`;
+      const x1 = a.x + width, y1 = a.y + height / 2, x2 = b.x, y2 = b.y + height / 2, length = Math.hypot(x2 - x1, y2 - y1) || 1;
+      path = `M${x1} ${y1}L${x2 - (x2 - x1) * head / length} ${y2 - (y2 - y1) * head / length}`;
     }
     const line = svgNode('path', { d: path, class: `exam-edge ${edge.kind}`, 'data-edge': '', 'data-start': edge.start, 'data-end': edge.end, 'aria-hidden': 'true' });
     if (edge.kind !== 'contrasts') line.setAttribute('marker-end', 'url(#exam-arrow)');

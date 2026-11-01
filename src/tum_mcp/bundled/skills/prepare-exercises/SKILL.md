@@ -42,8 +42,8 @@ template, not necessarily a good model for teaching or question design.
 4. Write the affected objects in exercises.json using `tum-mcp study schema exercises`;
    read [content](references/content.md) for identities, checks and source links.
    Anchor each part's guide with `part_blocks` and nest its supporting headings beneath
-    the part; verify statement, context, Guide and Solution appear together before the
-    next question. Each Solution reveals only its part's answer, independently of the guide.
+    the part; verify statement, context, Guide and Solution appear together before
+    the next question. Each Solution reveals only its part's answer, independently of the guide.
    Preserve unrelated Study/Exercise objects and template assets. Use the existing
    builder; do not create another site, tutor service or framework.
 5. Review source meaning, assumptions and each changed answer/hint/rubric against the

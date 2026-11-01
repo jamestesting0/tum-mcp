@@ -13,7 +13,7 @@ exercise step of the course in the browser, where text revealed only on interact
 
 ## Procedure
 
-1. Practice questions: answer before Check answer. Pick a wrong option first; its
+1. Practice questions: answer before Check. Pick a wrong option first; its
    feedback must name the mistake that leads there. The hint recalls the idea without
    naming the option. Then expand the explanation of every other option.
 2. Traces: step through every frame. Each caption says why its step happens, and the
@@ -25,7 +25,11 @@ exercise step of the course in the browser, where text revealed only on interact
 4. Code steps: the skeleton runs as given; the model answer does what its explanation
    claims.
 5. Flashcards: the front asks one thing and the back answers exactly that.
-6. Navigation: every control is reachable by keyboard and visible at phone width, the
+6. Exam patterns: in every example (switch between them) and part, pick a wrong case first;
+   its feedback must name what in this question rules it out. Read every case at phone
+   width, and every pitfall's situation, wrong line, correction and reason. Work each Practise item
+   before its Compare or Solution.
+7. Navigation: every control is reachable by keyboard and visible at phone width, the
    page never scrolls sideways, and returning to a step keeps the student's work.
 
 ## Findings

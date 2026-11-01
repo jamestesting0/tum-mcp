@@ -12,11 +12,12 @@ and reviewed SHA256 values. Statements and solutions reuse the safe Study block
 types (text, code, table, formula, diagram, UML diagram and line graph); no embedded HTML or executed code.
 Declare every used source. Use optional parts for original subparts and objectives
 for observable reasoning goals; the app lists objectives as goals when a student
-opens Guidance, so phrase them without giving away the method. A step's purpose is
+opens its Guide, so phrase them without giving away the method. A step's purpose is
 a private review note and is not shown. Prerequisites pair a Study unit key, and the
 `block` key of the passage that teaches the idea when there is one, with an inline
-explanation so Exercises can be prepared first; the app opens that passage beside the
-exercise, and later Study builds validate links. Check that the passage really teaches
+explanation so Exercises can be prepared first; the app shows each prerequisite as a
+Recall chip above the exercise that opens the explanation and, from it, that passage beside
+the exercise. Later Study builds validate links. Check that the passage really teaches
 what the task needs ([coverage](../../prepare-study/references/coverage.md#while-authoring)).
 Link that passage instead of explaining the idea again in the statement or steps, and
 use Study's terms (`{{term}}`), symbols and conventions.
@@ -114,7 +115,7 @@ blocks accept `line_numbers: true` when a step refers to lines. Distilled practi
 `kind: distilled` and `distilled_from` (original exercise keys). All
 block/graph sources must be declared. The solution's `answers` give one short, direct
 answer per original part, in order and labelled ("(a)"), in the form the part asks for: a
-filled table, the graph, a formula, code. The working belongs in Guidance. Keep a
+filled table, the graph, a formula, code. The working belongs in the guided steps. Keep a
 part-specific alternative with that answer; reserve shared `notes` for material that
 applies across the answers. Assumptions belong in the statement.
 

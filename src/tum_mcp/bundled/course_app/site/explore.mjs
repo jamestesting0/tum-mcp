@@ -9,7 +9,7 @@ export function renderExplore(unit) {
   const itemKey = decode(parts[2]), blockKey = decode(parts[3]);
   const requested = unit.explore.find(item => item.key === itemKey);
   if (itemKey && (!requested || (blockKey && !requested.blocks.some(block => block.key === blockKey)))) {
-    root.append(node('p', 'notice', 'That supporting passage is no longer here. Choose from the material below.'));
+    root.append(node('p', 'notice', 'That supporting passage is no longer here.'));
   }
   for (const item of unit.explore) {
     const section = node('section', 'explore-item'); section.dataset.exploreKey = item.key;

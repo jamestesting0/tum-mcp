@@ -24,14 +24,14 @@ export function topicPicker(selected, change) {
   group.append(node('legend', 'visually-hidden', 'Revision topics'));
   const inputs = [], folders = new Map();
   function sync() {
-    summary.textContent = `Topics · ${selected.size} / ${data.units.length}`;
+    summary.textContent = `Topics · ${selected.size} of ${data.units.length}`;
     for (const { input, keys } of inputs) {
       const count = [...keys].filter(key => selected.has(key)).length;
       input.checked = count === keys.size;
       input.indeterminate = count > 0 && count < keys.size;
     }
     for (const { keys, counter } of folders.values()) {
-      counter.textContent = `${[...keys].filter(key => selected.has(key)).length} / ${keys.size}`;
+      counter.textContent = `${[...keys].filter(key => selected.has(key)).length} of ${keys.size}`;
     }
   }
   function changed() { sync(); change(); }

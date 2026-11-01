@@ -43,14 +43,17 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
    infer preparation from a unit count or the student's browser progress.
    Choose one lecture, week or topic organization that follows course
    dependencies, with one category level (a second only for a large group); use a flat
-   list when sufficient. Each unit uses only what earlier units teach.
-3. **Author.** Shape each unit as a short lesson ([teaching](references/teaching.md))
-   using the block types the schema offers ([content](references/content.md)). Draft
-   the heading outline first: major topics, their cases/examples, and any necessary
-   detail. Set levels by those relationships rather than making every passage a
-   level-1 section. On a
-   new site, prove one unit with the hardest required formats, then author the rest
-   in batches. Never fill gaps with invented course facts.
+   list when sufficient. Each unit uses only what earlier units teach. Study teaches a
+   student who meets the topic for the first time: write or update the course's
+   teaching profile, then a teaching plan for each new or restructured unit, and check
+   it before writing ([planning](references/planning.md)).
+3. **Author.** Teach each unit as its plan decided, with the moves that fit each idea
+   ([teaching](references/teaching.md)) and the block types the schema offers
+   ([content](references/content.md)). Draft the heading outline first: major topics,
+   their cases/examples, and any necessary detail. Set levels by those relationships
+   rather than making every passage a level-1 section. On a new site, prove one unit
+   with the hardest required formats, then author the rest in batches. Record changed
+   decisions in the plan. Never fill gaps with invented course facts.
 4. **Review.** Check every changed explanation, answer and assumption against its
    source, run `tum-mcp study report PROJECT` and `tum-mcp study visuals PROJECT`, and pass
    the [review gate](references/review.md) for each batch. Review the core path with
@@ -78,6 +81,7 @@ Read only what the change needs.
 
 | Need | Read |
 | --- | --- |
+| Teaching profile, unit plans and the plan check | [Planning](references/planning.md) |
 | New or changed explanations, cards or questions | [Teaching](references/teaching.md) |
 | New or changed practice demands, options or feedback | [Practice](references/practice.md) |
 | Fields, notation, block types or validation failures | [Content and build](references/content.md) |
@@ -86,6 +90,7 @@ Read only what the change needs.
 | Choosing checks | [Verification](references/verification.md) |
 | Reviewing a batch, choosing a representation, tracing an algorithm | [Review gate](references/review.md) |
 | Wording of any explanation, card, question or feedback | [Writing](references/writing.md) |
+| Which variables in a derivation get a clickable meaning | [Variable meanings](references/variables.md) |
 | Drawing a graph, UML diagram or flowchart | [Diagrams](references/diagrams.md) |
 | Drawing a plot | [Plots](references/plots.md) |
 | Drawing a figure | [Figures](references/figures.md) |

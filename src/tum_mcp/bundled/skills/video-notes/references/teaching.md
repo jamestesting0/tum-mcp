@@ -41,7 +41,10 @@ contract. Planning keeps existing video numbers and never renumbers.
   substantive beat names its `point`: a specific knowledge point supported by its
   prepared locators. Several beats may develop the same point. Keep its objects
   and useful intermediate results visible; explain why the next section follows.
-  There is no chapter, knowledge-point count or video duration target.
+  There is no chapter, knowledge-point count or video duration target. A chapter
+  title labels the player's seek bar and chapter list: name what the section does
+  in a few words ("Bayes' rule on the test result", not "Part 2"), so a student
+  can find it again.
 - **R9 Optional retrieval.** A `question` beat may reuse an existing practice question
   when it helps this explanation. Show its givens and answer from prepared feedback.
   No quota, invented question or mandatory prediction/pause.

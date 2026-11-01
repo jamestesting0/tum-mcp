@@ -38,36 +38,50 @@ export function plainText(text) {
   for (const hidden of element.querySelectorAll('.katex-mathml')) hidden.remove();
   return element.textContent;
 }
-// A defined term opens its definition in place (a toggletip): one click or Enter shows it,
-// Escape, a second click or moving on hides it. The bubble is built on demand, so the text
-// a term contributes elsewhere (labels, outlines) is the term alone.
-let openTerm = null;
-document.addEventListener('pointerdown', event => { if (openTerm && !openTerm.wrap.contains(event.target)) openTerm.close(); });
-function termTip(text) {
-  const entry = data.definitions?.[text.trim().toLowerCase()];
-  if (!entry) return document.createTextNode(text);
-  const wrap = node('span', 'term-tip'), trigger = node('button', 'term', text);
+// A small bubble beside its trigger (a toggletip): one click or Enter shows it, Escape, a
+// second click or moving on hides it. Terms, Recall chips and insights share it. The bubble
+// is built on demand, so the text a trigger contributes elsewhere (labels, outlines) is its own.
+let openTip = null;
+document.addEventListener('pointerdown', event => { if (openTip && !openTip.wrap.contains(event.target)) openTip.close(); });
+export function toggletip(trigger, fill, className = '') {
+  const wrap = node('span', `term-tip${className ? ` ${className}` : ''}`);
   trigger.type = 'button'; trigger.setAttribute('aria-expanded', 'false');
   const tip = { wrap, close() {
     wrap.querySelector('.term-bubble')?.remove(); trigger.setAttribute('aria-expanded', 'false');
-    if (openTerm === tip) openTerm = null;
+    if (openTip === tip) openTip = null;
   } };
   trigger.addEventListener('click', event => {
     event.preventDefault(); event.stopPropagation();
-    if (openTerm === tip) { tip.close(); return; }
-    openTerm?.close();
+    if (openTip === tip) { tip.close(); return; }
+    openTip?.close();
     const bubble = node('span', 'term-bubble'); bubble.setAttribute('role', 'status');
-    bubble.append(append(node('span', 'term-name'), entry.term), studyText('span', 'term-statement', entry.statement));
-    for (const condition of entry.conditions) bubble.append(studyText('span', 'term-condition', condition));
-    const more = node('a', 'term-more', 'Read in Study'); more.href = `#${entry.unit}/content${entry.block ? `/${entry.block}` : ''}`;
-    bubble.append(more); wrap.append(bubble);
-    trigger.setAttribute('aria-expanded', 'true'); openTerm = tip;
+    fill(bubble); wrap.append(bubble);
+    trigger.setAttribute('aria-expanded', 'true'); openTip = tip;
   });
   wrap.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && openTerm === tip) { event.preventDefault(); event.stopPropagation(); tip.close(); trigger.focus(); }
+    if (event.key === 'Escape' && openTip === tip) { event.preventDefault(); event.stopPropagation(); tip.close(); trigger.focus(); }
   });
-  wrap.addEventListener('focusout', event => { if (openTerm === tip && !wrap.contains(event.relatedTarget)) tip.close(); });
+  wrap.addEventListener('focusout', event => { if (openTip === tip && !wrap.contains(event.relatedTarget)) tip.close(); });
   wrap.append(trigger); return wrap;
+}
+function termTip(text) {
+  const entry = data.definitions?.[text.trim().toLowerCase()];
+  if (!entry) return document.createTextNode(text);
+  return toggletip(node('button', 'term', text), bubble => {
+    bubble.append(append(node('span', 'term-name'), entry.term), studyText('span', 'term-statement', entry.statement));
+    for (const condition of entry.conditions) bubble.append(studyText('span', 'term-condition', condition));
+    const more = node('a', 'term-more', 'Open in Study'); more.href = `#${entry.unit}/content${entry.block ? `/${entry.block}` : ''}`;
+    bubble.append(more);
+  });
+}
+// One row of a workspace home's list: the item, its detail lines and, where progress is kept,
+// its status. Study, Exercises and Lecture list their items the same way.
+export function topicRow(href, title, details = [], status = '') {
+  const link = node('a'); link.href = href;
+  link.append(append(node('span', 'topic-copy'), studyText('span', 'topic-title', title),
+    ...details.map(detail => typeof detail === 'string' ? studyText('span', 'small', detail) : detail)));
+  if (status) link.append(node('span', 'small topic-status', status));
+  return append(node('li', 'topic-row'), link);
 }
 export function button(label, handler, className = '') {
   const element = node('button', className, label);
@@ -76,11 +90,10 @@ export function button(label, handler, className = '') {
   return element;
 }
 export function append(parent, ...children) { parent.append(...children); return parent; }
-export function preparationDisclosure({ title, entries, noun, description }) {
+export function preparationDisclosure({ title, entries, noun }) {
   const more = node('details', 'disclosure pending-sheets');
   const count = `${entries.length} ${noun}${entries.length === 1 ? '' : 's'}`;
   more.append(append(node('summary'), node('span', 'topic-title', title), node('span', 'small pending-count', count)));
-  if (description) more.append(node('p', 'small pending-description', description));
   more.append(append(node('ul', 'pending-sheet-list'), ...entries.map(entry => append(node('li'),
       node('span', 'pending-source', entry.title), ...entry.labels.map(label => node('span', 'small', label))))));
   return more;
@@ -170,6 +183,7 @@ export function shareCitations(root, eyebrow) {
   for (const note of notes()) if (note.dataset.sources === root.dataset.citations) note.hidden = true;
 }
 export function pageCitation(note, eyebrow) {
+  if (note.hidden) return;
   let row = eyebrow.parentElement;
   if (!row?.classList.contains('page-eyebrow')) { row = node('div', 'page-eyebrow'); eyebrow.replaceWith(row); row.append(eyebrow); }
   row.querySelector('.page-citation')?.remove();

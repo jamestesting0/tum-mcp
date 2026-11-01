@@ -4,11 +4,26 @@ import re
 from collections.abc import Iterator
 from typing import Annotated, Literal, assert_never
 
-from pydantic import AfterValidator, Field, FiniteFloat, JsonValue, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    Field,
+    FiniteFloat,
+    JsonValue,
+    field_validator,
+    model_validator,
+)
 
 from tum_mcp.settings import Frozen
 from tum_mcp.study_figures import FIGURE_IMAGE, safe_svg
-from tum_mcp.study_math import INLINE_SPANS, compile_latex, safe_mathml, validate_inline
+from tum_mcp.study_math import (
+    INLINE_SPANS,
+    compile_latex,
+    decorated_variants,
+    normalize_symbol,
+    safe_mathml,
+    symbol_occurs,
+    validate_inline,
+)
 from tum_mcp.study_models import Digest, Key, PageRange
 from tum_mcp.study_plot import compile_expression, sample
 
@@ -31,6 +46,17 @@ class Sourced(Frozen):
     key: Key | None = None
     # The pages or slides of the cited material that this block draws on.
     pages: PageRange | None = None
+    # Optional depth beside the section title (an application, a deeper why). What a student
+    # needs to follow the page stays in the text, never here.
+    insight: (
+        Annotated[str, Field(min_length=1, max_length=400), AfterValidator(validate_inline)] | None
+    ) = None
+
+    @model_validator(mode="after")
+    def titled_insight(self) -> "Sourced":
+        if self.insight and not self.title:
+            raise ValueError("An insight sits beside a section title; give the block a title.")
+        return self
 
 
 class TextBlock(Sourced):
@@ -52,6 +78,83 @@ class Symbol(Frozen):
     meaning: Text
 
 
+def declared_meanings(value: object) -> list[dict[str, str]]:
+    """The variable meanings a context (a unit, an exercise, a pattern) declares, in document
+    order: those of derivations and applied formulas. Formula blocks and cheatsheet formulas
+    keep their own visible lists and do not count."""
+    found: list[dict[str, str]] = []
+    if isinstance(value, dict):
+        if value.get("symbols") and (value.get("kind") == "derivation" or "math" in value):
+            found.extend(value["symbols"])
+        for item in value.values():
+            found.extend(declared_meanings(item))
+    elif isinstance(value, list | tuple):
+        for item in value:
+            found.extend(declared_meanings(item))
+    return found
+
+
+def resolve_meanings(context: object) -> None:
+    """Give every derivation and applied formula of one context the declared meanings of the
+    variables it contains, so a meaning is written once; a formula's own meaning wins."""
+    declared: dict[str, dict[str, str]] = {}
+    for item in declared_meanings(context):
+        declared.setdefault(normalize_symbol(item["symbol"]), item)
+    if not declared:
+        return
+
+    def visit(value: object) -> None:
+        if isinstance(value, dict):
+            formulas: list[str] = []
+            if value.get("kind") == "derivation":
+                formulas = [line["latex"] for group in value["groups"] for line in group["lines"]]
+            elif isinstance(value.get("math"), list):
+                formulas = [line for line in value["math"] if isinstance(line, str)]
+            if formulas:
+                own = list(value.get("symbols") or [])
+                keys = {normalize_symbol(item["symbol"]) for item in own}
+                own += [
+                    item
+                    for key, item in declared.items()
+                    if key not in keys and any(symbol_occurs(f, item["symbol"]) for f in formulas)
+                ]
+                if own:
+                    value["symbols"] = own
+            for item in value.values():
+                visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    visit(context)
+
+
+def check_meanings(symbols: tuple[Symbol, ...], formulas: list[str], where: str) -> None:
+    """Each listed variable appears in its formula as written, once per list."""
+    seen: set[str] = set()
+    for item in symbols:
+        key = normalize_symbol(item.symbol)
+        if key in seen:
+            raise ValueError(f"{where} lists {item.symbol} twice.")
+        seen.add(key)
+        if not any(symbol_occurs(latex, item.symbol) for latex in formulas):
+            raise ValueError(
+                f"{where}: {item.symbol} does not appear in its formula; write the variable "
+                "exactly as the formula spells it."
+            )
+
+
+def check_variants(formulas: list[str] | tuple[str, ...], symbols: list[str], where: str) -> None:
+    """A decorated form of a listed variable (K_j^\\dagger beside K_j) needs its own meaning; the
+    app never shows the plain variable's meaning for it."""
+    for latex in formulas:
+        if variants := decorated_variants(latex, symbols):
+            raise ValueError(
+                f"{where}: {variants[0]} has no meaning of its own; list it with what it means "
+                "here."
+            )
+
+
 class DefinitionBlock(Sourced):
     """A term students must learn, set apart from explanation; its title defaults to the term."""
 
@@ -67,7 +170,8 @@ class FormulaBlock(Sourced):
     latex: Annotated[str, Field(min_length=1, max_length=5000)] | None = None
     plain: Text
     symbols: tuple[Symbol, ...] = Field(min_length=1, max_length=30)
-    conditions: Text
+    # When the formula holds, only where that is not obvious.
+    conditions: Text | None = None
 
     @field_validator("mathml")
     @classmethod
@@ -687,6 +791,8 @@ class DerivationBlock(Sourced):
     # A walkthrough reveals one line at a time with Previous and Next, and the reader can
     # show every step at once; without it the whole working is shown.
     walkthrough: bool = False
+    # Variables a reader may need to recall here; each opens its meaning in the formula.
+    symbols: tuple[Symbol, ...] = Field(default=(), max_length=12)
 
     @model_validator(mode="after")
     def stepped(self) -> "DerivationBlock":
@@ -697,6 +803,7 @@ class DerivationBlock(Sourced):
             raise ValueError("Per-line visuals belong to a walkthrough; set walkthrough.")
         if len(self.groups) > 1 and not all(group.label for group in self.groups):
             raise ValueError("Label each group when one derivation works out several results.")
+        check_meanings(self.symbols, [line.latex for line in lines], "A derivation")
         return self
 
 

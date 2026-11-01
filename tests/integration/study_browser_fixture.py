@@ -202,9 +202,12 @@ def study_website(browser: Browser) -> dict[str, object]:
                     table_layout_checks(page, project)
                 page.get_by_role("button", name="Next step", exact=True).click()
                 page.get_by_role("button", name="Previous step", exact=True).click()
+                # The arrow keys never switch views; they belong to the view's own content.
                 content_tab = page.get_by_role("tab", name="Content", exact=True)
                 content_tab.focus()
                 page.keyboard.press("ArrowRight")
+                assert content_tab.get_attribute("aria-selected") == "true"
+                page.get_by_role("tab", name="Flashcards", exact=False).click()
                 page.locator(".flashcard").click()
                 page.locator('[data-card-action="got"]').click()
                 page.reload()
@@ -219,7 +222,7 @@ def study_website(browser: Browser) -> dict[str, object]:
                     option for option in question["options"] if option["key"] == question["correct"]
                 )
                 page.get_by_role("radio", name=option["text"], exact=True).check()
-                page.get_by_role("button", name="Check answer", exact=True).click()
+                page.get_by_role("button", name="Check", exact=True).click()
                 assert page.get_by_role("heading", name="Correct", exact=True).is_visible()
                 assert page.get_by_text(option["feedback"], exact=True).is_visible()
                 practice_navigation_checks(page, len(unit["questions"]))
@@ -252,9 +255,10 @@ def study_website(browser: Browser) -> dict[str, object]:
                 # A rating saves and advances to the next unrevealed card.
                 page.keyboard.press("1")
                 position = page.locator("[data-flashcards] .recall-meta")
-                assert position.inner_text().startswith("2 /")
+                assert position.inner_text().startswith("Card 2 of ")
                 assert page.locator(".flashcard").get_attribute("data-revealed") == "false"
-                assert page.evaluate("document.activeElement.classList.contains('flashcard')")
+                # The next card does not take focus, so it is never painted as selected.
+                assert page.evaluate("document.activeElement.matches('[data-flashcards]')")
                 page.keyboard.press("ArrowLeft")
                 page.keyboard.press("Space")
                 assert (
@@ -264,7 +268,7 @@ def study_website(browser: Browser) -> dict[str, object]:
                 # Space on a focused rating activates that rating instead of flipping.
                 page.get_by_role("button", name="Again", exact=True).focus()
                 page.keyboard.press("Space")
-                assert position.inner_text().startswith("2 /")
+                assert position.inner_text().startswith("Card 2 of ")
                 assert page.locator(".flashcard").get_attribute("data-revealed") == "false"
                 page.keyboard.press("ArrowRight")
                 assert page.locator(".flashcard").get_attribute("data-revealed") == "false"
@@ -272,7 +276,7 @@ def study_website(browser: Browser) -> dict[str, object]:
                 page.keyboard.press("ArrowLeft")
                 page.keyboard.press("ArrowLeft")
                 assert page.locator('[data-card-action="previous"]').is_disabled()
-                assert page.evaluate("document.activeElement.classList.contains('flashcard')")
+                assert page.evaluate("document.activeElement.matches('[data-flashcards]')")
                 page.keyboard.down("Space")
                 page.keyboard.down("Space")
                 page.keyboard.up("Space")

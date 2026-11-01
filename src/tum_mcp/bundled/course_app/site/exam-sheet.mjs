@@ -4,6 +4,7 @@ import { renderBlockBody } from './reading.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam, topics, formula, statusMarker, quietLink } from './exam-state.mjs';
 import { renderMap } from './exam-map.mjs';
+import { openPanel } from './reference-panel.mjs';
 
 
 const cueIcons = {
@@ -26,31 +27,7 @@ function entry(concept, cite) {
   if (concept.tier === 'supporting') head.append(node('span', 'exam-tier', 'Supportive'));
   summary.append(head, line);
   details.append(summary);
-  const body = node('div', 'exam-entry-body');
-  // Recognition cue and pitfall read as two labelled rows; the label sits in a side column.
-  const cues = node('dl', 'exam-entry-cues');
-  for (const [field, label, tone] of [['trigger', 'When you see', 'cue'], ['pitfall', 'Watch out', 'pitfall']]) {
-    if (!concept[field]) continue;
-    const icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
-    icon.append(svgNode('path', { d: cueIcons[tone], 'fill-rule': 'evenodd' }));
-    cues.append(append(node('dt', `exam-cue ${tone}`), icon, node('span', '', label)),
-      annotateExam(studyText('dd', '', concept[field]), `concept:${concept.key}`, concept.revision, field));
-  }
-  if (cues.childNodes.length) body.append(cues);
-  if (concept.formula) {
-    if (concept.formula.symbols?.length) {
-      const symbols = node('dl', 'symbols');
-      for (const item of concept.formula.symbols) symbols.append(studyText('dt', '', item.symbol), studyText('dd', '', item.meaning));
-      body.append(symbols);
-    }
-    if (concept.formula.conditions) body.append(studyText('p', 'small', concept.formula.conditions));
-  }
-  for (const [index, block] of (concept.details || []).entries()) {
-    const section = node('div', 'exam-detail');
-    if (block.title) section.append(studyText('h3', '', block.title));
-    section.append(annotateExam(renderBlockBody(block), `concept:${concept.key}`, concept.revision, `detail:${index}`));
-    body.append(section);
-  }
+  const body = entryBody(concept, (element, field) => annotateExam(element, `concept:${concept.key}`, concept.revision, field));
   const related = exam.patterns.filter(pattern => pattern.concepts.includes(concept.key));
   const links = node('p', 'small exam-entry-links');
   for (const pattern of related) { if (links.childNodes.length) links.append(' · '); links.append(quietLink(plainText(pattern.title), `#exam/patterns/${pattern.key}`)); }
@@ -66,6 +43,48 @@ function entry(concept, cite) {
   details.append(body);
   article.append(details);
   return { article, details };
+}
+
+// What an entry shows when opened: cue, pitfall, symbols, conditions and details.
+function entryBody(concept, mark = element => element) {
+  const body = node('div', 'exam-entry-body');
+  // Recognition cue and pitfall read as two labelled rows; the label sits in a side column.
+  const cues = node('dl', 'exam-entry-cues');
+  for (const [field, label, tone] of [['trigger', 'When you see', 'cue'], ['pitfall', 'Watch out', 'pitfall']]) {
+    if (!concept[field]) continue;
+    const icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
+    icon.append(svgNode('path', { d: cueIcons[tone], 'fill-rule': 'evenodd' }));
+    cues.append(append(node('dt', `exam-cue ${tone}`), icon, node('span', '', label)), mark(studyText('dd', '', concept[field]), field));
+  }
+  if (cues.childNodes.length) body.append(cues);
+  if (concept.formula) {
+    if (concept.formula.symbols?.length) {
+      const symbols = node('dl', 'symbols');
+      for (const item of concept.formula.symbols) symbols.append(studyText('dt', '', item.symbol), studyText('dd', '', item.meaning));
+      body.append(symbols);
+    }
+    if (concept.formula.conditions) body.append(studyText('p', 'small', concept.formula.conditions));
+  }
+  for (const [index, block] of (concept.details || []).entries()) {
+    const section = node('div', 'exam-detail');
+    if (block.title) section.append(studyText('h3', '', block.title));
+    section.append(mark(renderBlockBody(block), `detail:${index}`));
+    body.append(section);
+  }
+  return body;
+}
+
+// A cheatsheet entry beside the page, as a Study passage opens, so the question stays in place.
+export function openConcept(concept, trigger) {
+  const body = node('div', 'exam-entry exam-entry-panel');
+  const head = append(node('p', 'exam-entry-head'), studyText('span', 'exam-entry-line', concept.line));
+  const math = formula(concept.formula); if (math) head.prepend(math, ' ');
+  body.append(head, entryBody(concept));
+  openPanel({
+    eyebrow: 'Cheatsheet', title: concept.title, body,
+    sources: sourcesNote(citedBy(concept), data.sources, data.course.synthetic, concept.title),
+    more: { label: 'Open in Cheatsheet', href: `#exam/sheet/${concept.key}` },
+  }, trigger);
 }
 
 export function renderSheet(focusKey) {

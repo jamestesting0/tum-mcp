@@ -19,6 +19,7 @@ export function renderCommentedView(unit, view, activity, activate) {
   const message = node('p', 'comment-message small'); message.setAttribute('role', 'status');
   const failure = node('p', 'comment-error small'); failure.setAttribute('role', 'status');
   let showResolved = false, locations = new Map(), groups = new Map(), activeHost, selectedId, savedId;
+  const removing = new Set();
   let signature, selectionTimer, syncTimer;
   const resolved = button('Resolved', () => { showResolved = !showResolved; paintList(); }, 'quiet'); resolved.hidden = true;
   const list = createCommentsList({
@@ -95,6 +96,8 @@ export function renderCommentedView(unit, view, activity, activate) {
     const state = [...groups.values()].find(group => group.items.some(value => value.id === item.id)); if (!state) return;
     activeHost = state.host; selectedId = item.id; showResolved = item.status === 'resolved' || !state.items.some(value => value.status === 'open');
     const found = locate(item);
+    // A passage inside a closed Solution, Guide or formula panel opens with it.
+    for (let panel = found?.range?.startContainer.parentElement?.closest('details:not([open])'); panel; panel = panel.parentElement?.closest('details:not([open])')) panel.open = true;
     message.textContent = found?.pending && view === 'practice' ? 'Check an answer first.' : '';
     // A passage not shown yet anchors the popup to the marker, which must then be on screen.
     const anchor = found?.range ? found.range.startContainer.parentElement : state.marker;
@@ -145,6 +148,11 @@ export function renderCommentedView(unit, view, activity, activate) {
     if (signal.aborted) return;
     const items = (store.value?.comments || []).filter(relevant); signature = JSON.stringify(items);
     const indexes = new Map(); locations = new Map(items.map(item => [item.id, locatePassage(reading, unit, item.anchor, indexes)]));
+    // A comment whose passage text is gone from its field is stale: it is deleted, not left as
+    // "Passage unavailable".
+    const gone = items.filter(item => locations.get(item.id)?.gone && !removing.has(item.id));
+    for (const item of gone) { locations.set(item.id, null); removing.add(item.id); }
+    if (gone.length) queueMicrotask(async () => { for (const item of gone) await mutate({ op: 'delete', id: item.id }, item); });
     const next = new Map();
     for (const item of items) {
       const host = hostFor(item); if (!host) continue;
@@ -165,9 +173,10 @@ export function renderCommentedView(unit, view, activity, activate) {
         else if (isReading || isExercise || isLecture) host.after(state.marker);
         else { host.classList.add('comment-position'); host.firstElementChild.after(state.marker); }
       }
-      const count = state.items.filter(item => item.status === 'open').length;
-      state.marker.dataset.openCount = String(count); state.marker.dataset.count = String(count || state.items.length);
-      const label = `${count || state.items.length} ${count ? '' : 'resolved '}${(count || state.items.length) === 1 ? 'comment' : 'comments'} on ${isLecture ? 'this section' : isExam || view === 'explore' ? 'this passage' : isExercise ? 'this exercise' : view === 'content' ? state.items[0].anchor.block_title : view === 'flashcards' ? 'this card' : 'this question'}`;
+      // The marker counts every comment; its colour says whether any is still open.
+      const count = state.items.filter(item => item.status === 'open').length, total = state.items.length;
+      state.marker.dataset.openCount = String(count); state.marker.dataset.count = String(total);
+      const label = `${total} ${total === 1 ? 'comment' : 'comments'}${count && count < total ? ` (${count} open)` : count ? '' : ' (resolved)'} on ${isLecture ? 'this section' : isExam || view === 'explore' ? 'this passage' : isExercise ? 'this exercise' : view === 'content' ? state.items[0].anchor.block_title : view === 'flashcards' ? 'this card' : 'this question'}`;
       state.marker.setAttribute('aria-label', label); state.marker.title = label;
       const number = state.marker.querySelector('.comment-count'); if (number.textContent !== state.marker.dataset.count) number.textContent = state.marker.dataset.count;
     }

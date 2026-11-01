@@ -12,6 +12,7 @@ const completed = (() => {
 const save = () => { try { localStorage.setItem(storageKey, JSON.stringify(completed)); } catch { /* storage blocked: marks last for this visit */ } };
 const target = link => link.getAttribute('href');
 const isDone = link => completed[target(link)] === true;
+export const isCompleted = href => completed[href] === true;
 let menu = null;
 
 function paint(link) {

@@ -1,0 +1,184 @@
+[
+  {
+    "latex": "|0\\rangle\\langle0|+|1\\rangle\\langle1| = |+\\rangle\\langle+|+|-\\rangle\\langle-|",
+    "split": [
+      "|0\\rangle\\langle0|+|1\\rangle\\langle1| ",
+      "=",
+      " |+\\rangle\\langle+|+|-\\rangle\\langle-|"
+    ],
+    "parts": [
+      "|0\\rangle\\langle0|+|1\\rangle\\langle1| = |+\\rangle\\langle+|+|-\\rangle\\langle-|"
+    ]
+  },
+  {
+    "latex": "\\langle u,v\\rangle=0",
+    "split": [
+      "\\langle u,v\\rangle",
+      "=",
+      "0"
+    ],
+    "parts": [
+      "\\langle u,v\\rangle=0"
+    ]
+  },
+  {
+    "latex": "\\langle\\psi_i|\\rho|\\psi_i\\rangle\\ge0",
+    "split": [
+      "\\langle\\psi_i|\\rho|\\psi_i\\rangle",
+      "\\ge",
+      "0"
+    ],
+    "parts": [
+      "\\langle\\psi_i|\\rho|\\psi_i\\rangle\\ge0"
+    ]
+  },
+  {
+    "latex": "a=\\frac{1}{2}(x,y),\\qquad \\langle u,v\\rangle=0,",
+    "split": [
+      "a",
+      "=",
+      "\\frac{1}{2}(x,y),\\qquad \\langle u,v\\rangle=0,"
+    ],
+    "parts": [
+      "a=\\frac{1}{2}(x,y),",
+      "\\langle u,v\\rangle=0,"
+    ]
+  },
+  {
+    "latex": "x\\le 1\\iff y\\ge 2",
+    "split": [
+      "x",
+      "\\le",
+      " 1\\iff y\\ge 2"
+    ],
+    "parts": [
+      "x\\le 1",
+      "\\iff y\\ge 2"
+    ]
+  },
+  {
+    "latex": "N=16,\\quad M=4,\\quad k=1",
+    "split": [
+      "N",
+      "=",
+      "16,\\quad M=4,\\quad k=1"
+    ],
+    "parts": [
+      "N=16,",
+      "M=4,",
+      "k=1"
+    ]
+  },
+  {
+    "latex": "=\\begin{pmatrix}1&0\\\\0&1\\end{pmatrix}",
+    "split": [
+      "",
+      "=",
+      "\\begin{pmatrix}1&0\\\\0&1\\end{pmatrix}"
+    ],
+    "parts": [
+      "=\\begin{pmatrix}1&0\\\\0&1\\end{pmatrix}"
+    ]
+  },
+  {
+    "latex": "\\left.f\\right|_{x=0}=1",
+    "split": [
+      "\\left.f\\right|_{x=0}",
+      "=",
+      "1"
+    ],
+    "parts": [
+      "\\left.f\\right|_{x=0}=1"
+    ]
+  },
+  {
+    "latex": "\\{x\\mid x>0\\}\\subseteq\\mathbb R",
+    "split": [
+      "\\{x\\mid x>0\\}",
+      "\\subseteq",
+      "\\mathbb R"
+    ],
+    "parts": [
+      "\\{x\\mid x>0\\}\\subseteq\\mathbb R"
+    ]
+  },
+  {
+    "latex": "G\\begin{pmatrix}\\cos\\phi\\\\\\sin\\phi\\end{pmatrix}=\\begin{pmatrix}\\cos(\\phi+\\theta)\\\\\\sin(\\phi+\\theta)\\end{pmatrix}",
+    "split": [
+      "G\\begin{pmatrix}\\cos\\phi\\\\\\sin\\phi\\end{pmatrix}",
+      "=",
+      "\\begin{pmatrix}\\cos(\\phi+\\theta)\\\\\\sin(\\phi+\\theta)\\end{pmatrix}"
+    ],
+    "parts": [
+      "G\\begin{pmatrix}\\cos\\phi\\\\\\sin\\phi\\end{pmatrix}=\\begin{pmatrix}\\cos(\\phi+\\theta)\\\\\\sin(\\phi+\\theta)\\end{pmatrix}"
+    ]
+  },
+  {
+    "latex": "\\rho_{AB}\\mapsto\\rho_A=\\operatorname{Tr}_B\\rho_{AB}",
+    "split": [
+      "\\rho_{AB}",
+      "\\mapsto",
+      "\\rho_A=\\operatorname{Tr}_B\\rho_{AB}"
+    ],
+    "parts": [
+      "\\rho_{AB}\\mapsto\\rho_A=\\operatorname{Tr}_B\\rho_{AB}"
+    ]
+  },
+  {
+    "latex": "P_k=\\sin^2((k+\\tfrac12)\\theta)",
+    "split": [
+      "P_k",
+      "=",
+      "\\sin^2((k+\\tfrac12)\\theta)"
+    ],
+    "parts": [
+      "P_k=\\sin^2((k+\\tfrac12)\\theta)"
+    ]
+  },
+  {
+    "latex": "|a,b\\rangle\\mapsto|a,a\\oplus b\\rangle",
+    "split": [
+      "|a,b\\rangle",
+      "\\mapsto",
+      "|a,a\\oplus b\\rangle"
+    ],
+    "parts": [
+      "|a,b\\rangle\\mapsto|a,a\\oplus b\\rangle"
+    ]
+  },
+  {
+    "latex": "\\langle a,b|\\psi\\rangle",
+    "split": [
+      "",
+      "",
+      "\\langle a,b|\\psi\\rangle"
+    ],
+    "parts": [
+      "\\langle a,b|\\psi\\rangle"
+    ]
+  },
+  {
+    "latex": "|x|,\\ y>0",
+    "split": [
+      "|x|,\\ y",
+      ">",
+      "0"
+    ],
+    "parts": [
+      "|x|,",
+      "y>0"
+    ]
+  },
+  {
+    "latex": "\\left|\\psi\\right\\rangle=|0\\rangle,\\quad|1\\rangle",
+    "split": [
+      "\\left|\\psi\\right\\rangle",
+      "=",
+      "|0\\rangle,\\quad|1\\rangle"
+    ],
+    "parts": [
+      "\\left|\\psi\\right\\rangle=|0\\rangle,",
+      "|1\\rangle"
+    ]
+  }
+]

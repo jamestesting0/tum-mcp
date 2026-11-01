@@ -1,5 +1,5 @@
 import { node, studyText, plainText } from './dom.mjs';
-import { parseMath, texElement } from './mathml.mjs';
+import { fitMath, parseMath, texElement } from './mathml.mjs';
 
 const namespace = 'http://www.w3.org/1998/Math/MathML';
 const relations = new Set(['=', '≈', '≠', '≤', '≥', '<', '>', '⇒', '⇔', '←']);
@@ -98,18 +98,18 @@ customElements.define('study-equation', StudyEquation);
 
 export function renderFormula(block) {
   const box = node('div', 'surface');
-  // KaTeX typesets authored LaTeX and wraps a long formula after its relations on a phone;
-  // legacy MathML-only formulas keep the fitted native equation.
+  // KaTeX typesets authored LaTeX; legacy MathML-only formulas keep the fitted native equation.
   const typeset = block.latex && globalThis.katex && texElement(block.latex, { display: true });
   const expression = typeset ? node('div', 'equation tex-equation') : node('study-equation', 'equation');
   expression.tabIndex = 0; expression.setAttribute('role', 'region');
   expression.setAttribute('aria-label', `Equation: ${plainText(block.plain)}`);
   const math = typeset || parseMath(block.mathml);
   if (math) expression.append(math);
+  if (typeset) fitMath(expression, 0.75);
   else expression.append(node('p', '', block.plain));
   box.append(expression, studyText('p', '', block.plain));
   const glossary = node('dl', 'symbols');
   for (const symbol of block.symbols) glossary.append(studyText('dt', '', symbol.symbol), studyText('dd', '', symbol.meaning));
-  box.append(glossary, studyText('p', 'small', block.conditions));
+  box.append(glossary, ...(block.conditions ? [studyText('p', 'small', block.conditions)] : []));
   return box;
 }

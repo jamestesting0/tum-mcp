@@ -3,6 +3,7 @@ import { node, studyText, button, sourcesNote, append, shuffled } from './dom.mj
 import { iconButton, iconGlyph } from './navigation.mjs';
 import { renderBlockBody } from './reading.mjs';
 import { itemKey } from './revision.mjs';
+import { optionExplanations } from './exercise-response.mjs';
 
 export function reviewQuestion(context) {
   const { unit, question, answer, trigger, position } = context;
@@ -36,7 +37,9 @@ export function reviewQuestion(context) {
     if (show) {
       const chosen = answer?.checked && question.options.find(option => option.key === answer.selected);
       if (chosen && chosen.key !== question.correct) explanation.append(studyText('p', '', chosen.feedback));
-      explanation.append(studyText('p', '', question.explanation), sourcesNote(question.sources, data.sources, data.course.synthetic));
+      // The other options explain themselves as they do after a check.
+      explanation.append(studyText('p', '', question.explanation), optionExplanations(order, question.correct, chosen?.key),
+        sourcesNote(question.sources, data.sources, data.course.synthetic));
     } else explanation.append(button('Show answer', () => { reveal(true); explanation.focus(); }, 'quiet'));
   }
   explanation.tabIndex = -1;

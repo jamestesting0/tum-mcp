@@ -22,6 +22,14 @@ from tum_mcp.exam_content import (
 )
 from tum_mcp.study_content import StudyContent, compile_formulas, has_visual
 from tum_mcp.study_models import StudyState
+from tum_mcp.study_report import (
+    echoed_meanings,
+    generic_meanings,
+    redeclared_meanings,
+    renamed_meanings,
+    typed_math_labels,
+    unexplained_variables,
+)
 from tum_mcp.study_store import confined, digest
 
 # Ordering weights (sitting occurrence, points share, recent occurrence); missing parts
@@ -123,14 +131,20 @@ def check_unit_links(content: ExamContent, study: StudyContent | None) -> None:
             Code.INVALID_RESPONSE, "Exam links to unknown Study topics: " + ", ".join(missing)
         )
     blocks = {unit.key: {block.key for block in unit.blocks if block.key} for unit in study.units}
-    for _, _, question in content.past_questions().values():
-        for prerequisite in question.guidance.prerequisites if question.guidance else ():
-            if prerequisite.block and prerequisite.block not in blocks[prerequisite.unit]:
-                raise CampusError(
-                    Code.INVALID_RESPONSE,
-                    f"Exam links to block {prerequisite.block}, which unit "
-                    f"{prerequisite.unit} does not have.",
-                )
+    links = [
+        *(
+            prerequisite
+            for _, _, question in content.past_questions().values()
+            for prerequisite in (question.guidance.prerequisites if question.guidance else ())
+        ),
+        *(passage for concept in content.concepts for passage in concept.passages),
+    ]
+    for link in links:
+        if link.block and link.block not in blocks[link.unit]:
+            raise CampusError(
+                Code.INVALID_RESPONSE,
+                f"Exam links to block {link.block}, which unit {link.unit} does not have.",
+            )
     from tum_mcp.exercise_data import check_terms
 
     check_terms(content.model_dump(mode="json"), study, "Exam")
@@ -291,6 +305,10 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
         targets.append({"item": item, "measure": measure, "value": value, "target": target})
 
     for concept in content.concepts:
+        if renamed := renamed_meanings(concept.model_dump(mode="json")):
+            flag(f"concept:{concept.key}", "meanings that only rename", renamed[:5], [])
+        if generic := generic_meanings(concept.model_dump(mode="json")):
+            flag(f"concept:{concept.key}", "meanings that say only 'given'", generic[:5], [])
         if len(concept.line) > TARGETS["concept_line"]:
             flag(
                 f"concept:{concept.key}",
@@ -311,6 +329,19 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
             )
         if len(pattern.cues) > TARGETS["cues"]:
             flag(f"pattern:{pattern.key}", "cues", len(pattern.cues), TARGETS["cues"])
+        value = pattern.model_dump(mode="json")
+        if missing := unexplained_variables(value, task=True):
+            flag(f"pattern:{pattern.key}", "variables without a meaning", missing[:5], [])
+        if generic := generic_meanings(value):
+            flag(f"pattern:{pattern.key}", "meanings that say only 'given'", generic[:5], [])
+        if typed := typed_math_labels(value):
+            flag(f"pattern:{pattern.key}", "figure labels typing math", typed[:5], [])
+        if renamed := renamed_meanings(value):
+            flag(f"pattern:{pattern.key}", "meanings that only rename", renamed[:5], [])
+        if repeated := redeclared_meanings(value):
+            flag(f"pattern:{pattern.key}", "meanings declared more than once", repeated[:5], [])
+        if echoed := echoed_meanings(value):
+            flag(f"pattern:{pattern.key}", "meanings repeated beside the formula", echoed[:5], [])
     mocks: list[dict[str, JsonValue]] = []
     profile = content.profile
     for mock in content.mocks:

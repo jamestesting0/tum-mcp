@@ -126,14 +126,14 @@ export function locatePassage(root, unit, anchor, indexes = new Map()) {
   } else if (view === 'exam') {
     material = [...root.querySelectorAll('[data-comment-target="exam"]')].find(item =>
       item.dataset.examItem === anchor.item_key && item.dataset.field === anchor.field &&
-      !item.closest('[hidden],[aria-hidden="true"],details:not([open])'));
+      !item.closest('[hidden],[aria-hidden="true"]'));
     if (!material) return null;
     section = material;
   } else if (view === 'exercises') {
     material = [...root.querySelectorAll('[data-comment-target="exercises"]')].find(item =>
       item.dataset.exerciseKey === anchor.exercise_key && item.dataset.setKey === anchor.set_key &&
       (item.dataset.stepKey || null) === anchor.step_key && item.dataset.field === anchor.field &&
-      !item.closest('[hidden],[aria-hidden="true"],details:not([open])'));
+      !item.closest('[hidden],[aria-hidden="true"]'));
     if (!material) return null;
     section = material;
   } else if (view === 'content') {
@@ -153,6 +153,9 @@ export function locatePassage(root, unit, anchor, indexes = new Map()) {
   }
   if (!indexes.has(material)) indexes.set(material, textIndex(material));
   const index = indexes.get(material), matches = offsets(index.text, anchor);
+  // The field is shown but its text no longer holds the quote: the passage is gone.
+  const words = text => text.replace(/\s+/g, ' ').trim();
+  if (!matches.length && !words(index.text).includes(words(anchor.quote))) return { gone: true };
   if (matches.length !== 1) return null;
   const start = index.starts[matches[0]], end = index.ends[matches[0] + anchor.quote.length - 1];
   const a = index.segments.find(item => item.start <= start && start < item.end);

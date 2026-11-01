@@ -2,6 +2,98 @@
 
 ## Unreleased
 
+- "Publish the study app" publishes all prepared Study, Exercises, Exam and Lecture
+  workspaces and required images through the existing incremental publisher.
+  Public exports remove document citations and private evidence while retaining
+  canonical lecture recording links and timestamps. Existing selective publications
+  require renewed full-app consent; generated audio and videos remain local.
+- Study teaches students meeting a topic for the first time; Exam stays concise revision.
+  The course context gains a Teaching profile, and `prepare-study` plans each unit by
+  choosing teaching moves (a problem to start from, a concrete case, labelled steps, a
+  contrast, relation sentences) that fit each idea, instead of applying one fixed lesson shape.
+  `review-course` scores motivation, plan fit and cognitive load. A score of 3 now needs
+  quoted evidence and no open check flag, so existing reviews must be redone.
+- The four app workspaces share one page anatomy: homes list rows with status, every item
+  ends with a Next link, and counters read "Question 2 of 5", "Step 1 of 4" and
+  "Card 3 of 10". Controls use short labels: "Guide", "Solution", "Check", "Explain",
+  "Next step" and "Next question"; an Exercises step shows the same "Step 2 of 5" chip as
+  an Exam pattern, and code, graph and file resets are icons inside their component.
+  Practice, a Guide, an Exam pattern and the practice review share one compact Explain list
+  for the other options of a multiple-choice question, and one hint style. Guide, Solution
+  and every other opened section show their content in the same contained panel, and an
+  Exam pattern's Compare reveals the same Answer box as an Exercises step. A
+  Recall row names the ideas an exercise or exam item builds on; each chip opens a
+  one-line reminder, and from it the Study passage or the cheatsheet entry beside the
+  page. A titled Study block may add an optional `insight` behind a light bulb, and exam
+  concepts may name the Study `passages` that teach them. Lecture highlights put the
+  description under the frame and title. The full-screen semester map keeps its legend. Its arrowheads end on the card edge and take
+  the colour of a highlighted line, and a line that would cross another card goes around it
+  with as few corners as possible.
+  An Exam pattern's workflow reads as a numbered procedure with each reason under its
+  step. Where the method forks, a decision step lists its cases (what the student sees and
+  the move it calls for). A step or case opens on a click to the formula, rule or code it
+  applies (`apply`), replacing the separate answer template. The worked practice covers every case once, as parts of one
+  question or as separate examples behind an Example switcher, and asks which case applies;
+  Practise covers every case again without steps, and the build checks both; every Practise
+  item opens the same Solution panel. Pitfalls show
+  the wrong working, its correction and why it fails. `exam.json` patterns now use
+  `examples` and structured `pitfalls`, and every pattern has Practise. review-course scores
+  Exam patterns as items with pattern checks and calibration cases. Question statements in
+  Exam read like Exercises, without a box. Tables fit their content and draw a full grid
+  whose lines keep their contrast on the page, in panels and in the Answer box; the caption
+  sits above the table. Formulas break only between their parts (at a top-level comma,
+  \quad or \qquad), never inside an equation; a part too wide for a phone shrinks a little,
+  then scrolls. Inline math stays on one line in the same way. Derivation lines also align
+  on arrows such as \mapsto and \longrightarrow, and the working takes its full width before
+  the reasons. `study report` flags mathematics read aloud in words ("theta over two").
+  A derivation line that lists several statements runs flush left (`listed_derivation_line`
+  flags it), formulas also break before \iff or \Rightarrow, and math never scrolls
+  vertically. The left and right arrows turn flashcards and no longer switch the Content,
+  Flashcards and Practice tabs, and a turned card is not painted as selected.
+  Variables in displayed formulas can open their meaning: a click on a marked variable, or
+  Enter on the focused formula, shows what it is in that context. Exam pattern applied
+  formulas must give their variables' meanings, cheatsheet formulas list every variable's
+  general meaning when the entry opens, and Study and Exercise derivations add meanings
+  where a reader would stop to recall a variable (`symbols`; a meaning written once serves
+  its whole unit, exercise or pattern). The build rejects a meaning for a variable its
+  formula does not spell. `study report` adds `unexplained_symbol`, `renamed_meaning` and
+  `echoed_meaning`; prepare-study, prepare-exercises and prepare-exams share a variables
+  guide, and review-course scores `clarity.symbols_recall`.
+  The local preview no longer hides the arrow KaTeX draws for \vec (its security policy now
+  allows style attributes).
+  A clicked variable's popup shows only its meaning; Enter on a formula lists every meaning
+  with its variable. The build rejects LaTeX holding a control character (a single-backslash
+  JSON escape such as \theta), and `study report` flags `redeclared_meaning`.
+- Derivations: line breaking, alignment and variable marking read one LaTeX scanner (mirrored
+  in Python with a shared case table), so a bra such as \langle 0| no longer hides the `=` a
+  line aligns on, and a ket such as |a, b\rangle is never cut; an inline formula never breaks.
+  Reasons sit beside the working, with lines aligned on their relation, only when every line
+  fits there; otherwise each line and its reason are centred rows, and a derivation never runs
+  past its section. `study report` flags `unaligned_line`.
+- Arrow keys page Study practice questions and exercise guide steps while focus is inside them,
+  and leave radio buttons and fields alone.
+- Variable meanings: a variable is underlined once per block. A decorated form (K_j^\dagger,
+  x^*, x', \bar a) is its own variable and never shows the plain meaning; applied and
+  cheatsheet formulas need its meaning. In exercises and pattern examples lone letters such as
+  k count as task quantities. Formula `conditions` are optional, and `generic_meaning` flags
+  meanings such as "Given quantities".
+- Exam pattern pitfalls need a `situation`, the task moment the mistake happens in, shown first.
+- Spacing follows four relationship tokens with one rule for a control after its content
+  (Guide, Solution, Hint); a browser test fails when a relationship shows two values.
+- Comments: the marker counts every comment and sits apart from a title. A build deletes
+  comments whose unit, exercise, exam item or lecture section is gone, and the app deletes a
+  comment whose field no longer holds its quote; passages inside closed panels are found.
+- Figures: a label written as inline LaTeX is typeset by KaTeX; `typed_math_label` flags labels
+  typing mathematics as characters.
+- Writing and review: the writing guide adds cohesion (familiar before new, point first, honest
+  connectives) and verbs over nominalisations (`nominalisation` prompt); review-course scores
+  Cohesion as a tenth item dimension.
+  Video Notes play in the app's own minimal player: a seek bar split at the chapters
+  with the chapter and time on hover, the current chapter beside the time, captions,
+  speed, full screen and YouTube's keyboard keys.
+  Fixed app text drops sentences that repeat what the page already shows, and the
+  writing guide explains which words to cut and which links to keep.
+
 - Add optional Course Memory, disabled by default, for source-checked relationships
   across course workspaces. Install with `tum-mcp install course-memory`; local setup
   happens on the next relevant request. Uninstall stops graph use and preserves its

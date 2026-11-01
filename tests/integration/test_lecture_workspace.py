@@ -180,9 +180,7 @@ def test_notes_only_highlights_only_and_empty_selection(
             expect(page.locator(".lecture-note")).to_be_focused()
         elif kind == "empty":
             expect(
-                page.get_by_text(
-                    "No additional notes or highlights were selected from this lecture.", exact=True
-                )
+                page.get_by_text("No notes or highlights for this lecture.", exact=True)
             ).to_be_visible()
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         folder = Path(os.environ.get("TUM_MCP_LECTURE_QA_PATH", str(tmp_path)))

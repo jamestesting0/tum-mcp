@@ -3,6 +3,7 @@ import { node, studyText, append, sourcesNote, shareCitations, plainText } from 
 import { renderBlockBody, renderAnswers } from './reading.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam } from './exam-state.mjs';
+import { examRecall } from './recall.mjs';
 
 const plain = text => plainText(text || '');
 
@@ -32,13 +33,13 @@ function statementBody(blocks, mark = () => {}) {
 // The whole paper on one page; each solution opens when the student wants to check.
 export function renderPaper(paper) {
   const root = node('div', 'exam-mode'), heading = node('h1', '', paper.title);
-  const eyebrow = node('p', 'eyebrow', paper.forecast ? 'Practice exam' : 'Past exam');
+  const eyebrow = node('p', 'eyebrow', paper.forecast ? 'Practice exam' : 'Past paper');
   const header = append(node('div', 'unit-header'), eyebrow, heading);
   root.append(header);
   const total = paper.questions.reduce((sum, question) => sum + (question.points || 0), 0);
   const facts = [paper.minutes && `${paper.minutes} minutes`, total && `${total} points`, exam.profile?.allowed_aids].filter(Boolean);
   if (facts.length) header.append(studyText('p', 'small', facts.join(' · ')));
-  if (paper.forecast) header.append(node('p', 'notice', 'AI-written practice exam built from past patterns and course material. It is not a past or leaked exam, and topics can differ in the real exam.'));
+  if (paper.forecast) header.append(node('p', 'notice', 'AI-written from past patterns and course material. Not a past exam; the real exam can differ.'));
   if (paper.instructions) header.append(studyText('p', '', paper.instructions));
   for (const question of paper.questions) {
     const section = node('section', 'exam-section exam-question'); section.dataset.question = question.key;
@@ -49,12 +50,15 @@ export function renderPaper(paper) {
     section.append(append(node('div', 'section-heading'), node('h2', '', title), sourcesNote(cited, data.sources, data.course.synthetic, title)));
     section.append(statementBody(question.statement, (element, index) => annotateExam(element, questionItem(paper, question), paper.revision, `${question.key}:statement:${index}`)));
     if (question.parts?.length) section.append(append(node('ol', 'exam-parts'), ...question.parts.map(text => studyText('li', '', text))));
-    const solution = node('details', 'disclosure exam-solution');
-    solution.append(node('summary', '', 'Solution'), renderAnswers(question.solution));
+    const solution = node('details', 'disclosure exam-solution'), body = append(node('div', 'disclosure-panel'), renderAnswers(question.solution));
     if (question.marking?.length) {
-      solution.append(node('p', 'small', question.marking_basis === 'official' ? 'Official marking' : 'Where the marks are'),
+      body.append(node('p', 'small exam-marking-label', question.marking_basis === 'official' ? 'Official marking' : 'Where the marks are'),
         append(node('ul', 'exam-marking'), ...question.marking.map(item => studyText('li', '', `${item.text} (${item.points})`))));
     }
+    // Recall waits behind the solution: recognising the pattern is what the paper practises.
+    const recall = examRecall(question.concepts || [], question.patterns || []);
+    if (recall) body.append(recall);
+    solution.append(node('summary', '', 'Solution'), body);
     section.append(solution);
     root.append(section);
   }

@@ -1,10 +1,11 @@
 import data from './data.mjs';
-import { node, studyText, button, append, announce, sourcesNote, shareCitations, focusHeading, scrollReadingTo, preparationDisclosure } from './dom.mjs';
+import { node, studyText, button, append, announce, sourcesNote, shareCitations, focusHeading, scrollReadingTo, preparationDisclosure, topicRow, shuffled } from './dom.mjs';
 import { renderReading, renderBlockBody, renderAnswers } from './reading.mjs';
-import { iconButton, nextStep } from './navigation.mjs';
+import { arrowPaging, iconButton, iconGlyph, nextStep } from './navigation.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExercise } from './anchors.mjs';
-import { markCompleted } from './completion.mjs';
+import { markCompleted, isCompleted } from './completion.mjs';
+import { recallRow } from './recall.mjs';
 import { codeReferences, filesIn } from './files.mjs';
 import { renderCommentedView } from './comments.mjs';
 import { exerciseVideo } from './video.mjs';
@@ -18,36 +19,27 @@ function due(group) {
     ? `Due ${new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)}` : '';
 }
 
-export function exerciseOutline(current = '', compact = false) {
-  const root = node(compact ? 'nav' : 'section', compact ? 'unit-list' : 'exercise-list');
+// A category is named only when it groups several sets and says more than their titles.
+function categoryLabel(group) {
+  const category = group.category || '', members = sets.filter(item => (item.category || '') === category);
+  return category && members.length > 1 && !members.every(item => item.title.startsWith(category)) ? category : '';
+}
+
+export function exerciseOutline(current = '') {
+  const root = node('nav', 'unit-list');
   root.setAttribute('aria-label', 'Course exercises');
-  // Problems not prepared yet, so a partial workspace never looks complete.
-  const pending = data.pending || [], unstarted = pending.filter(item => !item.set);
   let category = null;
   for (const group of sets) {
-    // A category is named only when it groups several sets and says more than their titles;
-    // otherwise a thin rule marks where the next group starts.
+    // Otherwise a thin rule marks where the next group starts.
     let starts = false;
     if ((group.category || '') !== category) {
       starts = category !== null; category = group.category || '';
-      const members = sets.filter(item => (item.category || '') === category);
-      if (category && members.length > 1 && !members.every(item => item.title.startsWith(category))) {
-        root.append(studyText(compact ? 'p' : 'h2', compact ? 'small' : 'topic-group', category)); starts = false;
-      }
+      if (categoryLabel(group)) { root.append(studyText('p', 'small', category)); starts = false; }
     }
     const sheet = node('details', `unit-group exercise-sheet${starts ? ' group-start' : ''}`);
     sheet.open = group.exercises.some(item => item.key === current) || group === sets[0];
-    const summary = node('summary');
-    if (compact) summary.append(studyText('span', '', group.title));
-    else {
-      const count = group.exercises.length;
-      const meta = [`${count} ${count === 1 ? 'problem' : 'problems'}`, group.week, due(group)].filter(Boolean).join(' · ');
-      summary.append(append(node('span', 'sheet-copy'), studyText('span', 'topic-title', group.title), node('span', 'small', meta)));
-    }
-    sheet.append(summary);
-    const list = node('div', compact ? 'group-children' : '');
-    if (!compact && group.summary) list.append(studyText('p', 'sheet-summary', group.summary));
-    if (!compact) for (const entry of pending.filter(item => item.set === group.key)) list.append(studyText('p', 'small pending', `Not prepared yet: ${entry.labels.join(', ')}`));
+    sheet.append(append(node('summary'), studyText('span', '', group.title)));
+    const list = node('div', 'group-children');
     for (const exercise of group.exercises) {
       const link = node('a', 'unit-link'); link.href = exerciseLink(group, exercise);
       if (exercise.key === current) link.setAttribute('aria-current', 'page');
@@ -56,9 +48,49 @@ export function exerciseOutline(current = '', compact = false) {
     }
     sheet.append(list); root.append(sheet);
   }
-  if (!compact && unstarted.length) {
+  return root;
+}
+
+function exerciseStatus(group, exercise, state) {
+  if (isCompleted(exerciseLink(group, exercise))) return 'Done';
+  const value = state.get(exercise);
+  const started = value.solutionViewed || Object.values(value.partSolutions).some(part => part.viewed)
+    || Object.values(value.steps).some(step => step.draft || step.hints || step.compared || step.skipped || step.checked !== null);
+  return started ? 'In progress' : 'Not started';
+}
+// As on the Study home: continue the first problem in progress, or start the first one not started.
+function resumeLink(state) {
+  const rows = sets.flatMap(group => group.exercises.map(exercise => ({ group, exercise, status: exerciseStatus(group, exercise, state) })));
+  const row = rows.find(item => item.status === 'In progress') || rows.find(item => item.status === 'Not started');
+  if (!row) return null;
+  const go = node('a', 'button primary resume'); go.href = exerciseLink(row.group, row.exercise);
+  go.append(iconGlyph('play'), node('span', 'visually-hidden', `${row.status === 'In progress' ? 'Continue' : 'Start'}: `),
+    studyText('span', '', `${row.exercise.label} · ${row.exercise.title}`));
+  return go;
+}
+// The Exercises home lists sheets the way the Study home lists topics: a group heading, then
+// one row per problem with its status.
+function exerciseList(state) {
+  const root = node('section', 'home-topics exercise-list');
+  root.setAttribute('aria-label', 'Course exercises');
+  // Problems not prepared yet, so a partial workspace never looks complete.
+  const pending = data.pending || [], unstarted = pending.filter(item => !item.set);
+  let category = null;
+  for (const group of sets) {
+    if ((group.category || '') !== category) {
+      category = group.category || '';
+      if (categoryLabel(group)) root.append(studyText('h2', 'topic-group', category));
+    }
+    root.append(studyText('h3', 'topic-group', group.title));
+    const meta = [group.week, due(group)].filter(Boolean).join(' · ');
+    if (meta) root.append(node('p', 'small sheet-meta', meta));
+    if (group.summary) root.append(studyText('p', 'sheet-summary', group.summary));
+    for (const entry of pending.filter(item => item.set === group.key)) root.append(studyText('p', 'small pending', `Not prepared yet: ${entry.labels.join(', ')}`));
+    root.append(append(node('ul', 'topic-list'), ...group.exercises.map(exercise =>
+      topicRow(exerciseLink(group, exercise), `${exercise.label} · ${exercise.title}`, [], exerciseStatus(group, exercise, state)))));
+  }
+  if (unstarted.length) {
     root.append(preparationDisclosure({ title: 'Not prepared yet', noun: 'sheet',
-      description: 'These sheets do not have prepared exercises yet.',
       entries: unstarted.map(entry => ({ title: entry.source, labels: [entry.labels.join(', ')] })),
     }));
   }
@@ -69,42 +101,12 @@ function disclosure(label, content, opened, onToggle) {
   const details = node('details', 'disclosure exercise-disclosure'); details.open = opened;
   // Exercise sections are disclosures rather than headings; mark them so the contents outline lists them.
   const summary = node('summary', '', label); summary.dataset.contentsEntry = '';
+  // Guide, Solution and every other exercise section open into the same contained panel.
+  content.classList.add('disclosure-panel');
   details.append(summary, content);
   details.addEventListener('toggle', () => onToggle(details.open)); return details;
 }
 function quietLink(label, href) { const link = node('a', '', label); link.href = href; return link; }
-
-// The Study passage a prerequisite names, opened beside the exercise instead of in its place,
-// so the step, drafts and scroll position stay where the student left them.
-const wide = matchMedia('(min-width: 1200px)');
-function openReference(unit, block, trigger) {
-  document.querySelector('dialog.reference-panel')?.close();
-  const panel = node('dialog', 'reference-panel'), title = studyText('h2', '', block ? block.title || block.term : unit.title);
-  title.id = 'reference-panel-title'; panel.setAttribute('aria-labelledby', title.id);
-  const close = iconButton('Close', 'close', () => panel.close());
-  const eyebrow = append(node('div', 'page-eyebrow'), node('p', 'small', unit.title));
-  if (block) eyebrow.append(sourcesNote(block.sources, data.sources, data.course.synthetic, block.title || block.term, {}, block.pages));
-  const heading = append(node('div', ''), eyebrow, title);
-  const header = append(node('div', 'reference-panel-header'), heading, close);
-  // One passage under the panel's own title; a whole unit keeps its section titles.
-  const body = block ? append(node('div', 'reading-material'), renderBlockBody(block, { term: false })) : renderReading({ blocks: unit.blocks });
-  const more = quietLink('Open in Study', `#${unit.key}/content${block?.key ? `/${block.key}` : ''}`);
-  panel.append(header, body, append(node('p', 'small reference-panel-more'), more));
-  // Returning focus can scroll the page; the student comes back to exactly where they were.
-  const scroller = trigger.closest('main')?.scrollHeight > trigger.closest('main')?.clientHeight ? trigger.closest('main') : document.scrollingElement;
-  const top = scroller.scrollTop;
-  panel.addEventListener('close', () => {
-    panel.remove(); delete document.documentElement.dataset.reference;
-    if (trigger.isConnected) trigger.focus({ preventScroll: true });
-    scroller.scrollTop = top;
-  });
-  panel.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); panel.close(); } });
-  addEventListener('hashchange', () => panel.close(), { once: true });
-  document.body.append(panel);
-  // Wide screens keep the exercise readable beside the panel; narrower ones give the panel the screen.
-  if (wide.matches) { document.documentElement.dataset.reference = 'open'; panel.show(); } else panel.showModal();
-  close.focus();
-}
 
 export function renderExercises(hash, state) {
   const root = node('div', 'exercise-workspace'), [, setKey, exerciseKey, stepKey] = hash.split('/');
@@ -115,15 +117,18 @@ export function renderExercises(hash, state) {
     exercise = group?.exercises.find(item => item.key === exerciseKey);
   }
   if (!exercise) {
-    const heading = node('h1', '', 'Exercises');
-    root.append(append(node('div', 'unit-header'), node('p', 'eyebrow', data.course.title), heading));
-    if (exerciseKey) root.append(node('p', 'notice', 'That exercise is no longer here. Choose a prepared exercise below.'));
-    if (sets.length || data.pending?.some(item => !item.set)) root.append(exerciseOutline());
+    const heading = node('h1', '', 'Exercises'), header = append(node('div', 'unit-header'), node('p', 'eyebrow', data.course.title), heading);
+    root.append(header);
+    if (exerciseKey) root.append(node('p', 'notice', 'That exercise is no longer here.'));
+    const empty = !sets.length && !data.pending?.some(item => !item.set);
+    const resume = resumeLink(state);
+    if (resume) header.append(append(node('div', 'cluster home-actions'), resume));
+    if (!empty) root.append(exerciseList(state));
     else {
       root.append(node('p', '', 'Exercises have not been prepared for this course.'));
       if (data.units.length) root.append(quietLink('Open Study', '#home'));
     }
-    return { root, heading, title: 'Exercises' };
+    return { root, heading, title: 'Exercises', empty };
   }
   const following = ordered[ordered.findIndex(item => item.exercise === exercise) + 1];
   return exercisePage(exercise, {
@@ -178,16 +183,14 @@ export function exercisePage(exercise, options) {
     if (partSection) partSection.append(section);
   }
   root.append(statement);
-  for (const prerequisite of exercise.prerequisites) {
-    const note = studyText('p', 'small prerequisite', prerequisite.explanation);
+  const recall = recallRow(exercise.prerequisites.map(prerequisite => {
     const unit = data.units.find(item => item.key === prerequisite.unit);
     const block = unit?.blocks.find(item => prerequisite.block && item.key === prerequisite.block);
-    if (unit) {
-      const review = button(`Review ${block ? block.title || block.term : unit.title}`, () => openReference(unit, block, review), 'quiet reference-trigger');
-      note.append(' ', review);
-    }
-    root.insertBefore(note, statement);
-  }
+    // Before Study is prepared, the explanation itself is the reminder.
+    if (!unit) return { label: prerequisite.explanation };
+    return { label: block ? block.title || block.term : unit.title, line: prerequisite.explanation, unit: prerequisite.unit, block: prerequisite.block };
+  }));
+  if (recall) root.insertBefore(recall, statement);
   // One guide per original part, as each part is its own problem; a single-part exercise has one.
   const groups = [];
   for (const step of exercise.steps) {
@@ -216,7 +219,7 @@ export function exercisePage(exercise, options) {
     }
     const owns = key => steps.some(item => item.key === key);
     const opened = Boolean(stepKey) ? owns(stepKey) : value.helpOpen && (owns(value.lastStep) || (!multi));
-    const label = multi ? `Guide · ${group.part}` : 'Guidance';
+    const label = 'Guide';
     const details = disclosure(label, panel, opened, isOpen => {
       value.helpOpen = isOpen;
       if (isOpen) value.lastStep = steps[index].key;
@@ -226,7 +229,7 @@ export function exercisePage(exercise, options) {
     details.querySelector('summary').dataset.contentsLevel = String(Math.min(6, guideLevel));
     let index = steps.findIndex(item => item.key === (stepKey || value.lastStep));
     if (index < 0) index = 0;
-    const navigation = node('div', 'step-navigation'), counter = node('p', 'small');
+    const navigation = node('div', 'step-navigation'), counter = node('span', 'step-count');
     const prev = iconButton('Previous step', 'left', event => { event.currentTarget.focus({ preventScroll: true }); location.hash = options.link(steps[index - 1].key); });
     const next = iconButton('Next step', 'right', event => {
       event.currentTarget.focus({ preventScroll: true });
@@ -235,12 +238,13 @@ export function exercisePage(exercise, options) {
       state.save(exercise);
       location.hash = options.link(steps[index + 1].key);
     });
-    navigation.append(counter, prev, next);
+    navigation.append(append(node('p', 'small'), counter), prev, next);
     const body = node('div', 'step-body'); panel.append(navigation, body);
+    arrowPaging(details, prev, next);
     function paint() {
       const step = steps[index], saved = value.steps[step.key];
       value.lastStep = step.key; body.replaceChildren();
-      counter.textContent = `Step ${index + 1} / ${steps.length}`;
+      counter.textContent = `Step ${index + 1} of ${steps.length}`;
       prev.disabled = index === 0; next.disabled = index === steps.length - 1;
       const title = target(studyText(`h${Math.min(6, guideLevel)}`, '', step.prompt), 'prompt', step.key);
       title.dataset.stepPrompt = '';
@@ -290,23 +294,27 @@ export function exercisePage(exercise, options) {
         response.showResult(!compares && checked);
         if (compares && saved.compared) {
           const section = node('section', 'feedback compare');
-          section.append(node('h3', '', 'Compare with your work'));
+          section.append(node('h3', '', 'Answer'));
           if (check) section.append(expectedAnswer(check));
           section.append(studyText('p', '', step.explanation));
           if (check?.feedback) section.append(append(node('p', 'small'), node('strong', '', 'If yours differs: '), studyText('span', '', check.feedback)));
           feedback.append(section);
         } else if (checked && result.valid) {
-          feedback.append(result.correct ? verdict(true, studyText('p', '', step.explanation)) : verdict(false, ...result.repairs.map(repair => studyText('p', '', repair))));
-          if (check.kind === 'choice') feedback.append(optionExplanations(check, `exercise-${exercise.key}-${step.key}`));
+          // A choice opens with the chosen option's feedback, as in Practice; Explain covers the rest.
+          const choice = check.kind === 'choice', said = (choice || !result.correct ? result.repairs : []).map(repair => studyText('p', '', repair));
+          const section = verdict(result.correct, ...said, ...(result.correct ? [studyText('p', '', step.explanation)] : []));
+          if (choice) section.append(optionExplanations(shuffled(check.options, `exercise-${exercise.key}-${step.key}`), check.correct, result.chosen));
+          feedback.append(section);
         }
         const ready = compares ? saved.compared : checked && result.correct;
-        primary.textContent = ready ? (finishes ? 'Finish' : 'Continue') : compares ? 'Compare' : 'Check answer';
+        primary.textContent = ready ? (finishes ? 'Finish' : 'Next step') : compares ? 'Compare' : 'Check';
         primary.disabled = Boolean(check && !compares && !result.valid);
-        hint.textContent = saved.hints ? 'Next hint' : 'Hint';
+        hint.textContent = 'Hint';
         hint.hidden = ready || saved.hints >= step.hints.length;
       }
+      // The answer appears before the button that moves on, so the student reads it first.
       const actions = append(node('div', 'cluster exercise-actions'), primary, hint);
-      body.append(response.root, actions, feedback, hints);
+      body.append(response.root, hints, feedback, actions);
       paintHelp();
       function advance() {
         if (index < steps.length - 1) { location.hash = options.link(steps[index + 1].key); return; }
@@ -354,6 +362,7 @@ export function exercisePage(exercise, options) {
     const details = disclosure('Solution', solution, value.solutionOpen, opened => {
       value.solutionOpen = opened; value.solutionViewed ||= opened; state.save(exercise); activityChanged();
     });
+    if (options.afterSolution) solution.append(options.afterSolution);
     help.append(details);
     if (options.video) {
       if (exercise.parts?.length > 1) help.append(exerciseVideo(exercise, options.video));
@@ -361,8 +370,9 @@ export function exercisePage(exercise, options) {
     }
   }
   if (exercise.transfer) {
-    const answer = node('details', 'disclosure plain');
-    answer.append(node('summary', '', 'Compare'), target(append(node('div', 'reading-material'), ...exercise.transfer.answer.map(block => renderBlockBody(block))), 'transfer-answer'));
+    const answer = node('details', 'disclosure answer-reveal');
+    answer.append(node('summary', '', 'Compare'), append(node('section', 'feedback compare'), node('h3', '', 'Answer'),
+      target(append(node('div', 'reading-material'), ...exercise.transfer.answer.map(block => renderBlockBody(block))), 'transfer-answer')));
     answer.addEventListener('toggle', activityChanged);
     help.append(disclosure('Try another', append(node('div', 'stack'), target(studyText('p', '', exercise.transfer.prompt), 'transfer-prompt'), answer), false, activityChanged));
   }
@@ -370,7 +380,8 @@ export function exercisePage(exercise, options) {
   shareCitations(root, eyebrow);
   return { root: options.comment(root),
     heading: stepKey ? active.panel.querySelector('[data-step-prompt]') : heading,
-    title: `${exercise.label} · ${exercise.title}`, current: exercise.key,
+    // A guided past question is labelled and titled "Question N"; the header names it once.
+    title: [...new Set([exercise.label, exercise.title])].join(' · '), current: exercise.key,
     navigateStep(key) {
       const guide = guides.find(item => item.owns(key));
       if (!guide) return false;

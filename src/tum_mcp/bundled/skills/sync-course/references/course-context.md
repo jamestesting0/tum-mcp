@@ -27,6 +27,11 @@ Record the course's actual structure, in these sections as needed:
 - Conventions: textbook and edition, notation, terminology and the answer format the
   course expects, so explanations and practice match lectures and exams. Add them as
   sources confirm them; the agent guide in AGENTS.md tells other workflows to do the same.
+- Teaching profile: prior courses and what students can be assumed to know, what
+  understanding means in this subject, its natural representations and common
+  difficulties. prepare-study writes it when it first authors Study and keeps it
+  current; sync-course leaves it as scaffolded. Study assumes each topic is new; Exam
+  assumes Study.
 - Staff/office hours and announcement/help channels. Identify the authoritative
   source for each kind of rule. A student message does not establish an official rule.
 - Preparation map: which material groups feed Study, Exercises and exam preparation;

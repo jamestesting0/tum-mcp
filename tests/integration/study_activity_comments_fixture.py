@@ -22,7 +22,7 @@ def activity_comment_checks(
                 "button",
                 name="Next card (Right arrow)" if view == "flashcards" else "Next question",
                 exact=True,
-            ).click()
+            ).first.click()
     else:
         page.goto(f"https://study.invalid/#{owner['key']}/{view}")
     selector = (
@@ -73,7 +73,7 @@ def activity_comment_checks(
         "button",
         name="Next card (Right arrow)" if view == "flashcards" else "Next question",
         exact=True,
-    ).click()
+    ).first.click()
     assert page.locator(".comment-marker").count() == 0
     page.get_by_role(
         "button",
@@ -97,7 +97,7 @@ def activity_comment_checks(
             option for option in question["options"] if option["key"] == question["correct"]
         )
         page.get_by_role("radio", name=correct["text"], exact=True).check()
-        page.get_by_role("button", name="Check answer", exact=True).click()
+        page.get_by_role("button", name="Check", exact=True).click()
         quote = select_passage(page, '[data-field="explanation"]')
     page.get_by_role("button", name="Comment", exact=True).click()
     dialog.get_by_label("Comment", exact=True).fill("Explain the answer.")
@@ -121,7 +121,7 @@ def activity_comment_checks(
             "aria-describedby"
         )
         assert page.locator(".option input:checked").count() == 0
-        assert page.get_by_role("button", name="Check answer", exact=True).is_disabled()
+        assert page.get_by_role("button", name="Check", exact=True).is_disabled()
     current = read_comments(project)
     for item in current["comments"]:
         current = change_comment(

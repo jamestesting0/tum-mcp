@@ -51,9 +51,12 @@ def test_explore_is_a_conditional_keyboard_accessible_detour(
         page.goto(explore_url + "#bfs/content")
         expect(page.get_by_role("tab")).to_have_count(4)
         explore = page.get_by_role("tab", name="Explore", exact=True)
+        # Every view tab is in the Tab order and opens with Enter; arrow keys do not switch views.
         page.get_by_role("tab", name="Content", exact=True).focus()
-        page.keyboard.press("End")
+        for _ in range(3):
+            page.keyboard.press("Tab")
         expect(explore).to_be_focused()
+        page.keyboard.press("Enter")
         expect(explore).to_have_attribute("aria-selected", "true")
         expect(page.locator("#panel-explore").get_by_text("Optional", exact=True)).to_have_count(0)
         expect(page.get_by_role("tab", name="Practice", exact=False)).not_to_contain_text(
@@ -202,13 +205,11 @@ def test_duplicate_quotes_and_untitled_continuations_keep_their_optional_owner(
         refs[:] = [{"unit": "bfs", "item": "other"}]
         path.write_text(json.dumps(payload))
         ledger_path.write_text(json.dumps(ledger))
-        build(project, publish=False)
+        # The build deletes a note whose item is gone instead of keeping it unavailable.
+        assert build(project, publish=False).comments_removed == 1
         page.reload()
-        expect(page.locator('[data-explore-key="other"] .comment-marker')).to_have_count(0)
-        page.locator(".comment-marker").click()
-        page.get_by_role("button", name="Resolved", exact=True).click()
-        expect(page.get_by_text("Passage unavailable.", exact=True)).to_be_visible()
-        assert read_comments(project)["comments"][0]["text"] == "Edited optional note."
+        expect(page.locator(".comment-marker")).to_have_count(0)
+        assert read_comments(project)["comments"] == []
 
 
 def test_matching_video_key_never_attaches_a_core_player_to_explore(
@@ -287,7 +288,7 @@ def test_optional_only_edits_and_removal_preserve_saved_core_ratings(
         page.goto(explore_url + "#bfs/explore/missing/missing")
         expect(
             page.get_by_text(
-                "That supporting passage is no longer here. Choose from the material below.",
+                "That supporting passage is no longer here.",
                 exact=True,
             )
         ).to_be_visible()

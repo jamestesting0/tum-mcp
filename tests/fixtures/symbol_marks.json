@@ -1,0 +1,225 @@
+[
+ {
+  "latex": "\\rho=\\sum_i p_i\\,|\\psi_i\\rangle\\langle\\psi_i|",
+  "symbols": [
+   "\\rho",
+   "p_i",
+   "|\\psi_i\\rangle"
+  ],
+  "marks": [
+   [
+    "\\rho",
+    0
+   ],
+   [
+    "p_i",
+    1
+   ],
+   [
+    "|\\psi_i\\rangle",
+    2
+   ]
+  ]
+ },
+ {
+  "latex": "\\sum_j K_j^\\dagger K_j=I",
+  "symbols": [
+   "K_j"
+  ],
+  "marks": [
+   [
+    "K_j",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "\\sin\\theta + i",
+  "symbols": [
+   "i",
+   "\\theta"
+  ],
+  "marks": [
+   [
+    "\\theta",
+    1
+   ],
+   [
+    "i",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "\\varphi+\\phi",
+  "symbols": [
+   "\\phi"
+  ],
+  "marks": [
+   [
+    "\\phi",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "\\text{for every } v",
+  "symbols": [
+   "v",
+   "e"
+  ],
+  "marks": [
+   [
+    "v",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "p_{i} q",
+  "symbols": [
+   "p_i"
+  ],
+  "marks": [
+   [
+    "p_{i}",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "\\left|\\psi\\right\\rangle + |\\psi\\rangle",
+  "symbols": [
+   "|\\psi\\rangle"
+  ],
+  "marks": [
+   [
+    "|\\psi\\rangle",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "\\rho_A=\\operatorname{Tr}_B\\rho",
+  "symbols": [
+   "\\rho_A",
+   "\\rho"
+  ],
+  "marks": [
+   [
+    "\\rho_A",
+    0
+   ],
+   [
+    "\\rho",
+    1
+   ]
+  ]
+ },
+ {
+  "latex": "\\alpha x",
+  "symbols": [
+   "\\alpha x"
+  ],
+  "marks": [
+   [
+    "\\alpha x",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "\\sum_j K_j^\\dagger K_j=I",
+  "symbols": [
+   "K_j",
+   "K_j^\\dagger"
+  ],
+  "marks": [
+   [
+    "K_j^\\dagger",
+    1
+   ],
+   [
+    "K_j",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "K_j^{\\dagger}\\rho K_j",
+  "symbols": [
+   "K_j^\\dagger",
+   "K_j"
+  ],
+  "marks": [
+   [
+    "K_j^{\\dagger}",
+    0
+   ],
+   [
+    "K_j",
+    1
+   ]
+  ]
+ },
+ {
+  "latex": "x^2+x^*+x'+x^T",
+  "symbols": [
+   "x"
+  ],
+  "marks": [
+   [
+    "x",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "\\bar a+a+\\bar{a}",
+  "symbols": [
+   "a"
+  ],
+  "marks": [
+   [
+    "a",
+    0
+   ]
+  ]
+ },
+ {
+  "latex": "\\bar{a}+a",
+  "symbols": [
+   "\\bar a",
+   "a"
+  ],
+  "marks": [
+   [
+    "\\bar{a}",
+    0
+   ],
+   [
+    "a",
+    1
+   ]
+  ]
+ },
+ {
+  "latex": "\\hat H|\\psi\\rangle",
+  "symbols": [
+   "H"
+  ],
+  "marks": []
+ },
+ {
+  "latex": "x_{ij}+x_i",
+  "symbols": [
+   "x_i"
+  ],
+  "marks": [
+   [
+    "x_i",
+    0
+   ]
+  ]
+ }
+]

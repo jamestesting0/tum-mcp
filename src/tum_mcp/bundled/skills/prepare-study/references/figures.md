@@ -10,7 +10,7 @@ Shapes come first and labels last: placing both at once makes every move break s
 else.
 
 1. **Message and label list.** Write the message in one sentence. List every label; each
-   names a part or gives a concrete value ("Dirty", "θ₁ = 90°", "(0, 2)"). A label such
+   names a part or gives a concrete value ("Dirty", `\(\theta_1 = 90^\circ\)`, "(0, 2)"). A label such
    as "clean or dirty?" says nothing: show one state and name it.
 2. **Shapes.** Draw on a canvas 320 to 400 units wide (480 at most). Read the figure left
    to right or top to bottom. Give lines that run side by side at least 12 units of space
@@ -25,6 +25,9 @@ else.
      or circle if it clears the outline.
    - Labels are 16 units, notes 14 units. Prefer a direct label to a legend; use the
      caption for anything that needs a key.
+   - Write a mathematical label wholly as inline LaTeX, `<text ...>\(x_3\)</text>` or
+     `\(|1\rangle\)`: the app typesets it like the text around the figure. Unicode
+     subscripts, kets or `x3` for \(x_3\) read as different symbols (`typed_math_label`).
 4. **Style.** Use the theme classes only: `ink` for the subject, `accent` for the one
    thing to notice, `muted` for context, `dashed` for planned or hidden paths. Do not add
    decoration.

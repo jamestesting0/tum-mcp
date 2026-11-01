@@ -6,17 +6,19 @@ you choose the score. Score by the weakest place: one wrong answer makes correct
 even if the rest is right. A finding names the check it fails (`"check":
 "redundancy.text_restates_picture"`), so the report can count which checks fail most.
 
-Items (each unit and exercise) score nine dimensions; the course scores three:
+Items (each unit, exercise and Exam pattern) score ten dimensions; the course scores three:
 Optional audio/videos use the separate [media rubric](media.md), not these item
 requirements. They do not need interactive practice or a duration target.
 
 Apply the [workspace profile](profiles.md) before these checks. It replaces Study-specific
-demands for exercises and defines the evidence for Exam and Lecture course findings.
+demands for exercises and defines the evidence for Exam and Lecture course findings. The
+unit's plan in `.tum-mcp/plans/` adds its own decisions to these checks. Each 3 needs the
+passage that earns it under `evidence`.
 
 | Pass | Dimensions |
 | --- | --- |
 | [Logic](logic.md) | Correctness, Coverage |
-| [Text](text.md) | Clarity, Cognitive load |
+| [Text](text.md) | Clarity, Cohesion, Cognitive load |
 | [Visuals](visuals.md) | Representation, plus a score per drawn visual |
 | [Interaction](interaction.md) | Practice |
 | [Intuition](intuition.md) | Intuition |
@@ -33,8 +35,15 @@ where this table puts it:
 | Text, a caption or a question's table that repeats its picture or prompt | Redundancy |
 | A term or result used before the page or course teaches it | Organization |
 | An exercise without a link to the passage it needs, or a link to the wrong one | Integration (course) |
-| No problem stated first; the rule before the example | Intuition |
+| An idea with no visible reason for coming where it does; the rule before a needed example | Intuition |
 | A section placed far from the one it extends, or appended at the end | Organization |
+| A section whose relation to the one before a first-time reader cannot tell | Cohesion |
+| A sentence that opens on new information, or a paragraph whose point comes last | Cohesion |
+| One concept under two names; a "this" that could mean two things; stacked "Moreover" | Cohesion |
+| An action hidden in a noun ("perform the computation of") | Clarity |
+| A teaching move the content does not need (a forced bridge, a worked example of a definition, an essential condition hidden in an insight) | Cognitive load |
+| Study pitched above or below the teaching profile; Exam re-teaching what Study teaches | Cognitive load |
+| A running example whose givens change without notice | Correctness |
 | Two new ideas in one section | Cognitive load |
 | A prerequisite the student must recall from far back, with no reminder or link where it is used | Cognitive load |
 | Text that spells out a matrix, vector, table or graph instead of showing it | Representation |
@@ -42,6 +51,16 @@ where this table puts it:
 | A worked calculation whose reusable rule is never stated | Intuition |
 | Lines about the material ("the lecture groups…") | Clarity |
 | An outcome taught but never practised | Coverage |
+| A formula lookup written as a decision step, or two first moves in one pattern | Organization |
+| Two cases of a decision step that overlap | Correctness |
+| A past instance or example that no case fits | Coverage |
+| Which-case feedback that only says right or wrong | Practice |
+| A pitfall that describes the mistake instead of showing it | Representation |
+| A pitfall without the task moment it happens in | Representation |
+| A pitfall without the rule its wrong line breaks | Intuition |
+| A displayed formula whose variable the reader must recall from elsewhere, with no meaning on it | Clarity |
+| Every index and constant of a formula marked with a meaning | Cognitive load |
+| A variable meaning repeated in the sentence beside its formula | Redundancy |
 
 ## Correctness
 
@@ -53,8 +72,11 @@ Facts, notation, numbers and conventions match the cited source and edition.
 - `correctness.answer_key`: every answer, explanation and option feedback agrees with
   your own solution.
 - `correctness.conventions`: the conventions an answer depends on (tie-breaks, order,
-  indexing, rounding) are stated before the task, or every valid alternative is accepted.
+  indexing, rounding) are stated before the task, or every valid alternative is accepted;
+  a running example keeps its givens unless the text says they change.
 - `correctness.citations`: each citation opens the page that says it.
+- `correctness.cases_exclusive` (Exam pattern): a decision step's cases never overlap, and
+  every listed past instance, example and part falls under exactly one of them.
 
 2: correct, but a convention is left implicit or a citation points at the wrong page.
 1: a wrong fact, number, answer or trace step.
@@ -69,13 +91,45 @@ The student can read each passage once and know what it says.
 - `clarity.notation_unpacked`: a notation-heavy statement says its claim in words, reminds
   the reader in one line what each symbol means here, works a concrete case, and only then
   states the general identity with its symbols and conditions.
+- `clarity.symbols_recall`: in displayed formulas, the variables a reader would stop to
+  recall (defined elsewhere, compound or easily confused, shifting meaning, a formula used as
+  a tool) open a meaning that says what each is here, in about twelve words; obvious indices,
+  constants and just-defined variables are not marked; no meaning only renames its variable.
+  Strict for Exam pattern applied formulas and cheatsheet formulas, judged for Study and
+  Exercises ([variable meanings](../../prepare-study/references/variables.md)).
 - `clarity.clear_task`: every prompt says what the student produces.
+- `clarity.case_observable` (Exam pattern): a case's `when` names something the student
+  can see in their working at that step, and its `then` names one move.
 - `clarity.no_meta`: no line about the material itself ("the lecture groups…",
   "Authored example:") or that tells the student to work
   ([writing](../../prepare-study/references/writing.md)).
 
 2: a dense paragraph, an undefined term or an ambiguous instruction.
 1: the main idea cannot be understood from the text and its pictures.
+
+## Cohesion
+
+The student never has to reach the end of a sentence, paragraph or section to make sense of
+its start ([writing](../../prepare-study/references/writing.md)).
+
+- `cohesion.familiar_first`: sentences start from what the reader has (the topic, the
+  result just reached, the term the last sentence ended on) and end on what is new.
+- `cohesion.point_first`: each paragraph and block opens with its point; the opening
+  sentences of a section alone tell its argument.
+- `cohesion.linked`: a first-time reader can tell how each section and block relates to
+  the one before (follows from it, contrasts with it, specializes it, a parallel case), and
+  the text states the relation where they could not infer it.
+- `cohesion.honest_connectives`: a connective marks a real turn ("so", "but", "because");
+  none is stacked for flow.
+- `cohesion.one_term`: one term per concept and one notation per quantity across the item;
+  every "this" and "it" has one possible referent.
+
+All checks for Study units and Exercise guides and solutions, which first-time readers meet;
+Exam keeps `cohesion.one_term` and no unexplained jump, because its reader has studied the
+ideas and linking sentences there are redundancy.
+
+2: one abrupt jump, a term switch, or a paragraph whose point comes last.
+1: the reader cannot follow how the ideas connect without rereading.
 
 ## Cognitive load
 
@@ -96,6 +150,12 @@ What the student has to hold in mind at once.
 - `cognitive_load.together`: text and the picture it refers to sit together.
 - `cognitive_load.fits_phone`: a question fits one phone screen; a large step has a middle
   hint.
+- `cognitive_load.fits_student`: Study can be followed by a first-time reader who knows
+  the teaching profile's prerequisites, without over-explaining what they already know;
+  Exam stays concise and reaches depth through Recall instead of re-teaching.
+- `cognitive_load.moves_fit`: every teaching move earns its place for this content; a
+  worked example of a one-line definition, a bridge between parallel cases, an analogy that
+  adds nothing or an essential idea hidden in an insight is a finding.
 
 2: two new ideas in one step, a long question, or a trace the student has to follow
 without its state.
@@ -140,6 +200,10 @@ Cards, questions and exercise steps make the student use the outcomes.
 - `practice.hint_ladder`: hints go from a pointer to the first operation to Compare and
   never give the answer.
 - `practice.complete_answer`: Compare and the solution answer everything that was asked.
+- `practice.case_feedback` (Exam pattern): which-case feedback names what in this question
+  decides each case, never only right or wrong.
+- `practice.interleaved` (Exam pattern): Practise items change the setting of the worked
+  examples, and neighbouring items need different cases.
 
 2: a question re-asks a worked case or is answered by its own stem, a distractor is
 implausible, or a hint gives the answer.
@@ -154,6 +218,8 @@ The item teaches what its sources say students should learn.
 - `coverage.ledger_outcomes`: every outcome the coverage ledger assigns to the unit is
   taught and practised.
 - `coverage.all_parts`: an exercise answers every part of the original.
+- `coverage.cases_complete` (Exam pattern): every listed past instance and example needs
+  only the listed cases; a case the exams never need is a `cognitive_load.moves_fit` finding.
 
 2: an outcome is taught but not practised.
 1: an assigned outcome or an original part is missing.
@@ -162,11 +228,15 @@ The item teaches what its sources say students should learn.
 
 The student leaves knowing why the idea works and when to use it, not only its steps.
 
-- `intuition.problem_first`: each new idea starts from the problem it solves or a
-  concrete case.
-- `intuition.concrete_first`: a worked example or picture comes before the general rule.
+- `intuition.motivated`: a first-time reader can tell why each new idea comes where it
+  does: the problem it solves, the limit of the previous idea, a concrete case, or its use
+  just after. The means fits the idea; a forced motivation is a `cognitive_load.moves_fit`
+  finding.
+- `intuition.concrete_first`: where the idea is abstract or notation-heavy, a worked example
+  or picture comes before the general rule.
 - `intuition.reasons`: every step of a procedure says why it is allowed.
-- `intuition.misconception`: the misconception students bring is named and shown to fail.
+- `intuition.misconception`: where students hold a known wrong belief, it is named and shown
+  to fail.
 - `intuition.prediction`: where the item asks for one, the student predicts before a result
   is revealed: in an exercise step or a practice question; a lesson does not ask for
   predictions.
@@ -191,11 +261,19 @@ The page reads in the order its ideas depend on each other, and its outline help
   heading levels nest, titles are short, distinct and parallel, and each says what the
   section teaches. Examples and supporting arguments nest under their topic instead of
   appearing as unrelated peers; genuinely parallel topics stay at the same level.
-- `organization.builds_up`: each section extends the one before; nothing is said out of
-  place (a pitfall before its method, a recap in the middle).
+- `organization.builds_up`: each section comes once what it builds on is in place;
+  nothing is said out of place (a pitfall before its method, a recap in the middle). How a
+  section relates to the one before is `cohesion.linked`.
+- `organization.plan_followed`: where the unit has a teaching plan, the item does what the
+  plan decided, or the plan records why it changed.
 - `organization.parts_in_order`: an exercise presents its parts in the original order,
   each followed by its own guide after all its supporting blocks, and each step builds
   on the previous one.
+- `organization.fork_placement` (Exam pattern): a fork that only picks a final formula is a
+  cheatsheet entry reached through Recall, a fork that changes the next move is a decision
+  step, and different first moves are separate patterns.
+- `organization.example_shape` (Exam pattern): cases that past papers ask together are
+  parts of one example; a case that needs its own setting has its own example.
 
 2: one section out of order, a vague or repeated title, or a skipped level.
 1: the page cannot be followed in reading order: results are used before they are
@@ -207,7 +285,8 @@ Every idea has one full explanation on the page, in the form that teaches it bes
 Repetition is judged by its effect on the student, not counted.
 
 - `redundancy.said_once`: no fact, rule or example is explained in full twice, and no
-  passage repeats another in the same words.
+  passage repeats another in the same words. A variable meaning shown on demand is the one
+  explanation for its context; repeating it in the text beside the formula is the repeat.
 - `redundancy.text_restates_picture`: text and captions add to their picture, table or
   formula instead of repeating it.
 - `redundancy.prompt_restates_picture`: a question's prompt and its picture do not repeat

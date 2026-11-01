@@ -3,24 +3,28 @@
 Ask of each item: after it, could the student explain why the method works, predict what
 it does on a new case, and say when it fails? Correct steps without their reason leave
 the student unable to choose the method on a new problem. This pass scores Intuition,
-against prepare-study's [lesson shape](../../prepare-study/references/teaching.md#lesson-shape).
+against prepare-study's [teaching moves](../../prepare-study/references/teaching.md#teaching-moves)
+and the unit's plan: the moves differ by idea, so check that each chosen move fits.
 For exercises, use the [profile](profiles.md#exercises): read the reasons in the guide
 and solution, without requiring the released statement to become a lesson.
 
 ## Procedure
 
-1. **Problem first.** The unit opens with the problem the idea solves or a concrete case,
-   not with its definition.
-2. **Concrete before abstract.** A worked example, trace or picture comes before the
-   general rule, and the rule then names what the example showed.
+1. **Motivated.** A first-time reader can tell why each idea comes where it does: the
+   problem it solves, the limit of the previous idea, a concrete case or its use just after.
+2. **Concrete before abstract.** Where the idea is abstract or notation-heavy, a worked
+   example, trace or picture comes before the general rule, and the rule then names what
+   the example showed.
 3. **Reasons.** Each step of a procedure, and each frame of a trace, says why it is
    allowed or chosen.
-4. **Misconceptions.** The wrong belief students bring is named and refuted with a case
-   where it fails.
-5. **Prediction.** Where a practice question or exercise step asks for a prediction,
+4. **Misconceptions.** Where students hold a known wrong belief, it is named and refuted
+   with a case where it fails.
+5. **No forced moves.** A worked example of a one-line definition, a bridge between
+   parallel cases or an analogy that adds nothing is a `cognitive_load.moves_fit` finding.
+6. **Prediction.** Where a practice question or exercise step asks for a prediction,
    the result stays hidden until the student can make it. Do not add prediction prompts
    to the lesson itself.
-6. **Connections and limits.** The idea links to an earlier unit or an everyday case; an
+7. **Connections and limits.** The idea links to an earlier unit or an everyday case; an
    analogy says where it breaks; the item says when the method does not apply.
 
 ## Findings

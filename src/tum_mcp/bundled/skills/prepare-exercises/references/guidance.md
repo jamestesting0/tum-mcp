@@ -1,8 +1,9 @@
 # Help with the next inference
 
-Use the goal/prerequisite/inference/source worksheet in
-[Study teaching](../../prepare-study/references/teaching.md) and the distinct
-demands in [practice](../../prepare-study/references/practice.md).
+Use the course's teaching profile, the moves in
+[Study teaching](../../prepare-study/references/teaching.md#teaching-moves) and the distinct
+demands in [practice](../../prepare-study/references/practice.md). A step may assume the
+profile's prerequisites and what earlier units teach; it reminds the rest in one line.
 
 Keep the original problem first and useful on its own. Each step's purpose names
 the reasoning difficulty it addresses: choosing a premise, interpreting a symbol,
@@ -40,7 +41,9 @@ four options when choosing is the learning goal. When the answer is a calculatio
 Compare answer is a `derivation`: each meaningful transformation on its own line with a
 short reason, so the student can find where their working diverged, and one labelled
 group per requested quantity. Check the labels against the task (seven results asked,
-seven shown). Several results in one sentence are flagged as `compressed_working`. Use a rubric and model derivation for
+seven shown). Several results in one sentence are flagged as `compressed_working`. A
+derivation in a step or the Solution may give `symbols` for the variables a student would
+stop to recall ([variable meanings](../../prepare-study/references/variables.md)). Use a rubric and model derivation for
 proofs, code, design and other open work. For programming, a step asks the student to
 write the method or class from a starter skeleton and compare with a model answer,
 not to arrange or recognise given code. Every step does a real piece of the work; do

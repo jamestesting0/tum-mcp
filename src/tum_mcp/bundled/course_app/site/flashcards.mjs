@@ -8,9 +8,12 @@ export function flashcardShortcut(event) {
   if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
   if (!(event.target instanceof Element)) return;
   const root = document.querySelector('[data-flashcards]');
-  if (!root || event.target.closest('[data-comment-ui],input,textarea,select,[contenteditable],a,[role="tab"],summary')) return;
-  const control = event.target.closest('button');
-  if (control && (!root.contains(control) || (event.key === ' ' && control.dataset.cardAction !== 'flip'))) return;
+  if (!root || event.target.closest('[data-comment-ui],input,textarea,select,[contenteditable],a,summary')) return;
+  // The left and right arrows turn cards even while a view tab has focus.
+  const control = event.target.closest('button'), arrow = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
+  if (control && !(arrow && control.getAttribute('role') === 'tab')) {
+    if (!root.contains(control) || (event.key === ' ' && control.dataset.cardAction !== 'flip')) return;
+  }
   const action = { ArrowLeft: 'previous', ArrowRight: 'next', ' ': 'flip', '1': 'again', '2': 'got' }[event.key];
   const target = action && root.querySelector(`[data-card-action="${action}"]`);
   if (!target || target.disabled || target.closest('[hidden],[inert]')) return;
@@ -23,7 +26,7 @@ export function renderFlashcards(unit, ui, progress, persist) {
   const last = ui.card === unit.flashcards.length - 1;
   const meta = node('div', 'recall-meta');
   const position = node('div');
-  position.append(node('p', 'small', `${ui.card + 1} / ${unit.flashcards.length}`));
+  position.append(node('p', 'small', `Card ${ui.card + 1} of ${unit.flashcards.length}`));
   if (card.origin) position.append(node('p', 'small', card.origin.title));
   meta.append(position);
   const arrows = node('div', 'item-actions');
@@ -82,7 +85,13 @@ export function renderFlashcards(unit, ui, progress, persist) {
     if (index < 0 || index >= unit.flashcards.length) return;
     ui.card = index; ui.revealed = false;
     const replacement = renderFlashcards(unit, ui, progress, persist);
-    root.replaceWith(replacement); replacement.dispatchEvent(new CustomEvent('study-activity-change', { bubbles: true })); replacement.querySelector('.flashcard').focus({ preventScroll: true });
+    const action = document.activeElement?.closest?.('[data-card-action="previous"],[data-card-action="next"]')?.dataset.cardAction;
+    root.replaceWith(replacement); replacement.dispatchEvent(new CustomEvent('study-activity-change', { bubbles: true }));
+    // Focus stays on a focused arrow button; otherwise it rests on the deck, which draws no
+    // ring, so turning a card never paints it as selected. Space and the arrows still work.
+    const same = action && replacement.querySelector(`[data-card-action="${action}"]`);
+    if (same && !same.disabled) same.focus({ preventScroll: true });
+    else { replacement.tabIndex = -1; replacement.focus({ preventScroll: true }); }
   }
   update(); root.append(meta, surface, ratings, end);
   return root;
