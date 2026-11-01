@@ -24,6 +24,24 @@ Python 3.13 is the managed runtime. Install Tesseract for OCR tests. Default tes
 use synthetic sources and credentials. No language-server installation is needed.
 Optional extensions are off by default; validate both selected and unselected skill
 packs.
+
+For semester/access changes, run the affected provider's checks:
+
+```sh
+uv run pytest -q tests/unit/test_parsing.py tests/integration/test_moodle_semesters.py
+uv run pytest -q tests/unit/test_artemis_boundaries.py tests/unit/test_artemis_lectures.py tests/integration/test_artemis_semesters.py
+uv run pytest -q tests/integration/test_semester_preparation.py
+```
+
+These use paginated synthetic enrollments, active/archive listings, authorized older
+and unlisted courses, and denied/revoked access through the real HTTP and MCP tool
+layers; no campus session is needed. They assert default versus expanded discovery,
+request counts, CLI flags and WS23 source-to-project binding when a newer offering
+has the same title. Keep the existing transport, session, extraction
+and installed-client checks.
+The package includes `tzdata` for hosts without an IANA timezone database. The semester
+regression disables system timezone paths in a subprocess to cover that Windows boundary.
+
 Set `TUM_MOODLE_SYSTEM_KEYRING=1` for a unique synthetic native-store round trip.
 The ordinary campus runtime uses encrypted local files and owner-restricted keys.
 Set `TUM_MCP_BROWSER_INTEGRATION=1` to include the real HTTP static-export browser
@@ -208,6 +226,30 @@ the synthetic media in `tests/fixtures/video/` (`generate.py` recreates them). S
 data directory and render, mix, check and publish a synthetic video; the browser
 playback tests also run WebKit when Playwright's WebKit is installed.
 
+Media source contracts live in `video_content.py`, `video_sources.py` and
+`audio_content.py`. Study and Exercise video are explicit variants, not fake units.
+`video-notes exercise PROJECT SET/KEY` prints exact permitted source locators.
+The worker shares narration timing and rendering; `self.cue(index)` uses measured
+sentence bounds. `video_style.py` stages effective app CSS colors; no worker palette
+is maintained separately. Contact sheets sample entry/middle/exit frames.
+
+`study_media.py` discovers optional manifests/plans read-only and verifies actual
+artifact hashes; `study_media_report.py` checks score/evidence contracts. Media
+averages are separate. Course structure includes source/chapter/coverage links,
+not codec bytes. Pruned render caches do not erase published source identities.
+Malformed optional media leaves ordinary Study diagnostics available.
+
+Focused checks are `tests/unit/test_study_media.py`,
+`tests/integration/test_study_review.py`, `test_video_pipeline.py` and
+`test_study_video_browser.py`; the latter uses
+`TUM_MCP_BROWSER_INTEGRATION=1`. Native render checks retain
+`TUM_MCP_VIDEO_RENDER_INTEGRATION=1`. Recreate the AAC codec fixture with
+`bash tests/fixtures/video/generate-audio.sh`. Calibration speech/video recipes
+ship beside `review-course/references/media-gallery/`; their binary assets must
+survive skill export and both distribution formats. Synthetic observer fixtures
+test contracts only. A real teaching-quality review needs complete listening and
+playback; unavailable perception remains an incomplete gate.
+
 ## Optional Lecture extension
 
 Base setup exposes six workflows and no `tum_live_*` tools. `install lecture`
@@ -215,8 +257,10 @@ records explicit selection, refreshes managed clients and provisions the optiona
 recognizer only when requested/supported. `--no-asr` keeps captions/imported WebVTT.
 Heavy recognition dependencies and model weights stay outside the base environment
 and package artifacts. `lecture_processing/` owns bounded media/ASR evidence;
-`lecture_content.py`, `lecture_data.py` and `lecture_assets.py` validate the notes
-and figures used by the static app. See [the workflow guide](lecture-notes.md).
+`lecture_content.py`, `lecture_data.py`, `lecture_assets.py` and `lecture_thumbnails.py`
+validate notes, highlights and recording images used by the static app; `lecture_check.py`
+checks note speech evidence and highlight boundaries against the cached transcript.
+See [the workflow guide](lecture-notes.md).
 
 Use `skills validate --all` to check the packaged optional workflow without installing
 it; default validation checks the selected workflows. Activation statistics remain

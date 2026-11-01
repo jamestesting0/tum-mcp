@@ -686,16 +686,23 @@ code.inline-code { padding: .08em .38em; border: 1px solid var(--line); border-r
 /* Lecture */
 .lecture-meta { margin-top: var(--s3); }
 .lecture-coverage { margin-top: 0; }
-.lecture-takeaways { margin-bottom: var(--s12); }
 .reading :is(h2, h3, h4, h5, h6, [data-contents-entry]) { scroll-margin-top: var(--s6); }
 .lecture-time { display: inline-flex; align-items: center; min-height: var(--target); }
-.lecture-material + .lecture-material { margin-top: var(--s6); }
-.lecture-material .section-heading { margin-bottom: var(--s3); }
-.lecture-figure { margin: var(--s6) 0; }
-.lecture-image { display: block; border-radius: var(--r1); overflow: hidden; }
-.lecture-image img { display: block; width: 100%; height: auto; }
-.lecture-figure figcaption { display: flex; align-items: flex-start; gap: var(--s2); margin-top: var(--s2); }
-.lecture-figure figcaption > span { flex: 1; min-width: 0; padding-block: var(--s2); }
+.lecture-note-list { padding-inline-start: var(--s6); }
+.lecture-note-list > li + li { margin-top: var(--s4); }
+.lecture-note-row { display: flex; align-items: flex-start; gap: var(--s2); }
+.lecture-note-row > p { flex: 1; min-width: 0; margin: 0; }
+.lecture-note-image { display: block; width: 100%; max-width: 28rem; height: auto; margin-top: var(--s3); border-radius: var(--r1); }
+.lecture-highlight { display: grid; gap: var(--s4); }
+.lecture-thumb { display: block; aspect-ratio: 16 / 9; border-radius: var(--r1); overflow: hidden; background: var(--aside); }
+.lecture-thumb img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.lecture-highlight-body { min-width: 0; }
+.lecture-highlight-body > .section-heading { margin-bottom: 0; }
+.lecture-highlight-body p.lecture-when { margin-top: 0; }
+.lecture-highlight-body p.lecture-teaches { margin-top: var(--s2); }
+@media (min-width: 600px) {
+  .lecture-highlight { grid-template-columns: 12rem minmax(0, 1fr); align-items: start; }
+}
 
 /* Phone and tablet: one document scroll with a sticky outline bar. */
 @media (max-width: 799px) {

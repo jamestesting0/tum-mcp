@@ -279,8 +279,8 @@ def test_lecture_snapshot_checks_original_frames_and_verified_crops(
     else:
         path = app_path(root, "lectures.json")
         value = json.loads(path.read_bytes())
-        figure = value["lectures"][0]["sections"][0]["figures"][0]
-        figure["sha256"] = "f" * 64
-        figure["asset"] = "lecture-assets/" + "f" * 64 + ".png"
+        thumbnail = value["lectures"][0]["highlights"][0]["thumbnail"]
+        thumbnail["sha256"] = "f" * 64
+        thumbnail["asset"] = "lecture-assets/" + "f" * 64 + ".png"
         path.write_text(json.dumps(value), encoding="utf-8")
     assert not EvidenceChecks(load_inputs(root)).lecture("observer-lecture").current

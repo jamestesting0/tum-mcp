@@ -27,13 +27,12 @@ def real_cached_lecture(tmp_path: Path, *, with_frame: bool = False) -> Path:
     cache = private_path(root, f"lectures/{recording.key}")
     cache.mkdir(parents=True, exist_ok=True)
     frames_payload = b"{}"
-    figure = None
+    thumbnail = None
     if with_frame:
         fixtures = Path(__file__).parents[1] / "fixtures/course_app"
-        figure = json.loads((fixtures / "lectures.json").read_bytes())["lectures"][0]["sections"][
-            0
-        ]["figures"][0]
-        body = (fixtures / figure["asset"]).read_bytes()
+        example = json.loads((fixtures / "lectures.json").read_bytes())
+        thumbnail = example["lectures"][0]["highlights"][0]["thumbnail"]
+        body = (fixtures / thumbnail["asset"]).read_bytes()
         frame_path = cache / "frames" / f"{digest(body)}.png"
         frame_path.parent.mkdir()
         frame_path.write_bytes(body)
@@ -57,7 +56,7 @@ def real_cached_lecture(tmp_path: Path, *, with_frame: bool = False) -> Path:
             original_sha256=frame.sha256,
         )
         derived = app_frame(frame, root / ".tum-mcp/lecture-assets", crop)
-        figure.update(
+        thumbnail.update(
             sha256=derived.sha256,
             asset=derived.path.relative_to(root / ".tum-mcp").as_posix(),
             width=derived.width,
@@ -108,10 +107,28 @@ def real_cached_lecture(tmp_path: Path, *, with_frame: bool = False) -> Path:
         recording=recording.model_dump(mode="json"),
         sources=[{"key": "slides", "sha256": digest(payload)}],
     )
-    if figure is not None:
-        content["lectures"][0]["sections"][0]["figures"] = [figure]
+    if thumbnail is not None:
+        content["lectures"][0]["notes"] = []
+        content["lectures"][0]["highlights"] = [
+            {
+                "key": "registration",
+                "title": "The notification contract",
+                "interval": {"start_s": 20, "end_s": 60},
+                "teaches": "The subject invokes registered observer interfaces.",
+                "sources": ["slides"],
+                "evidence": ["speech", "board"],
+                "thumbnail": thumbnail,
+            }
+        ]
+        content["evidence"].append(
+            next(item for item in example["evidence"] if item["key"] == thumbnail["evidence"])
+        )
     for item in content["evidence"]:
-        item.update(source_sha256=digest(payload), recording_id=recording.recording_id)
+        item.update(
+            source_key="slides",
+            source_sha256=digest(payload),
+            recording_id=recording.recording_id,
+        )
     path.write_text(json.dumps(content), encoding="utf-8")
     cache = private_path(root, f"lectures/{recording.key}")
     cache.mkdir(parents=True, exist_ok=True)

@@ -123,8 +123,16 @@ def unit(project: Path, key: str) -> None:
 
 
 @app.command()
+def exercise(project: Path, key: str) -> None:
+    """Print prepared SET/EXERCISE source, answers and exact walkthrough locators."""
+    from tum_mcp.video_project import exercise_locators
+
+    _emit(exercise_locators(_project(project), key))
+
+
+@app.command()
 def plan(project: Path, selection: Annotated[Path, typer.Option(help="Selection JSON.")]) -> None:
-    """Record which units get videos; keeps existing video numbers."""
+    """Select Study units or Exercises for videos; keep existing video numbers."""
     require_video_notes()
     from tum_mcp.video_project import plan as run
 

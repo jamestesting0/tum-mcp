@@ -1,45 +1,10 @@
-"""Video Notes design tokens, derived from the course app palette. No Manim import."""
+"""Video Notes geometry and contrast helpers. Colors arrive in staged style.json."""
 
 FRAME_WIDTH = 14.222222222222221
 FRAME_HEIGHT = 8.0
 SAFE_MARGIN = 0.3
 CAPTION_BAND = 0.12 * FRAME_HEIGHT
 GRID = 6
-
-THEMES = {
-    "dark": {
-        "background": "#101A28",
-        "ink": "#E9EEF5",
-        "muted": "#AABBD0",
-        "line": "#5B6B7F",
-        "accent": "#8CBFFA",
-        "wash": "#203B55",
-        "active": "#8CBFFA",
-        "active_ink": "#101A28",
-        "visited": "#203B55",
-        "frontier": "#F2C46D",
-        "emphasis": "#F2C46D",
-        "positive": "#8FD4A6",
-        "negative": "#F2A0A8",
-        "palette": ("#8CBFFA", "#F2C46D", "#C3A6F2", "#8FD4A6", "#F2A0A8", "#7FD6D2"),
-    },
-    "light": {
-        "background": "#FFFFFF",
-        "ink": "#072140",
-        "muted": "#526477",
-        "line": "#8796A8",
-        "accent": "#3070B3",
-        "wash": "#EAF2FA",
-        "active": "#3070B3",
-        "active_ink": "#FFFFFF",
-        "visited": "#EAF2FA",
-        "frontier": "#9A6A00",
-        "emphasis": "#9A6A00",
-        "positive": "#2E7D4F",
-        "negative": "#B23A48",
-        "palette": ("#3070B3", "#9A6A00", "#6A4FB3", "#2E7D4F", "#B23A48", "#1F7A75"),
-    },
-}
 
 TEXT_TOKENS = ("ink", "muted", "accent", "emphasis", "positive", "negative", "frontier")
 MIN_FONT = {"label": 24, "math": 30, "number": 24, "code": 20}

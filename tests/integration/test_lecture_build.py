@@ -80,9 +80,13 @@ def test_all_seven_workspace_subsets_build_without_forced_assessments(
     assert report.lectures == (1 if "lectures" in selected else 0)
     if "lectures" in selected:
         notes = data["lectures"]["lectures"][0]
-        assert notes["sections"][0]["citations"][0]["url"].endswith("?t=20")
-        assert notes["sections"][0]["figures"][0]["url"].endswith("?t=37")
+        assert [item["url"].rsplit("?", 1)[1] for item in notes["highlights"]] == [
+            "t=20",
+            "t=120",
+        ]
         assert notes["revision"] == read_lectures(root).lectures[0].semantic_revision
+        assert notes["notes"][0]["url"].endswith("?t=300")
+        assert notes["notes"][0]["recording_source"] == "graphs"
     before = bytes_tree(root)
     build(root, publish=False)
     assert bytes_tree(root) == before
@@ -94,7 +98,8 @@ def test_notes_schema_inspect_and_status_report_authored_lectures(lecture_projec
     schema = runner.invoke(app, ["study", "schema", "lectures"])
     inspected = runner.invoke(app, ["study", "inspect", str(lecture_project)])
     assert schema.exit_code == inspected.exit_code == 0
-    assert "LectureSection" in json.loads(schema.output)["$defs"]
+    definitions = json.loads(schema.output)["$defs"]
+    assert "Highlight" in definitions and "LectureSection" not in definitions
     assert json.loads(inspected.output)["lectures"] == 1
     assert project_status(lecture_project).lecture_notes == "authored"
 
@@ -119,7 +124,8 @@ def test_invalid_lecture_inputs_preserve_the_previous_app_and_authored_bytes(
     build(root, publish=False)
     notes_path = root / "study/lectures.json"
     notes = json.loads(notes_path.read_text())
-    figure = notes["lectures"][0]["sections"][0]["figures"][0]
+    highlights = notes["lectures"][0]["highlights"]
+    figure = highlights[0]["thumbnail"]
     asset = root / ".tum-mcp" / figure["asset"]
     if failure == "changed_source":
         source = next(item for item in load_state(root).resources if item.resource.key == "graphs")
@@ -131,8 +137,9 @@ def test_invalid_lecture_inputs_preserve_the_previous_app_and_authored_bytes(
     elif failure == "dimensions":
         figure["width"] -= 1
     elif failure == "conflicting_dimensions":
-        wrong = dict(figure, width=figure["width"] - 1)
-        notes["lectures"][0]["sections"][0]["figures"].insert(0, wrong)
+        highlights[1]["thumbnail"].update(
+            sha256=figure["sha256"], asset=figure["asset"], width=figure["width"] - 1
+        )
     elif failure == "unsafe_path":
         figure["asset"] = "../personal.png"
     elif failure == "symbolic":
@@ -148,18 +155,28 @@ def test_invalid_lecture_inputs_preserve_the_previous_app_and_authored_bytes(
     assert bytes_tree(root) == before
 
 
-def test_removing_a_figure_deletes_only_its_managed_copy(lecture_project: Path) -> None:
+def remove_second_highlight(notes: dict) -> None:
+    lecture = notes["lectures"][0]
+    removed = lecture["highlights"].pop()
+    notes["evidence"] = [
+        item for item in notes["evidence"] if item["key"] not in removed["evidence"]
+    ]
+
+
+def test_removing_a_highlight_deletes_only_its_managed_thumbnail(lecture_project: Path) -> None:
     root = lecture_project
     build(root, publish=False)
     path = root / "study/lectures.json"
     notes = json.loads(path.read_text())
-    asset = root / "study" / notes["lectures"][0]["sections"][0]["figures"][0]["asset"]
+    kept, removed = (
+        root / "study" / item["thumbnail"]["asset"] for item in notes["lectures"][0]["highlights"]
+    )
     custom = root / "study/lecture-assets/my-diagram.png"
     custom.write_bytes(b"user image")
-    notes["lectures"][0]["sections"][0]["figures"] = []
+    remove_second_highlight(notes)
     path.write_text(json.dumps(notes))
     build(root, publish=False)
-    assert not asset.exists() and custom.read_bytes() == b"user image"
+    assert kept.exists() and not removed.exists() and custom.read_bytes() == b"user image"
 
 
 def test_failure_after_managed_figure_deletion_restores_the_previous_app(
@@ -171,7 +188,7 @@ def test_failure_after_managed_figure_deletion_restores_the_previous_app(
     build(root, publish=False)
     path = root / "study/lectures.json"
     notes = json.loads(path.read_text())
-    notes["lectures"][0]["sections"][0]["figures"] = []
+    remove_second_highlight(notes)
     path.write_text(json.dumps(notes))
     before = bytes_tree(root)
     original = study_store.private_write

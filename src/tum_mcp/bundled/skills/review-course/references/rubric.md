@@ -7,6 +7,8 @@ even if the rest is right. A finding names the check it fails (`"check":
 "redundancy.text_restates_picture"`), so the report can count which checks fail most.
 
 Items (each unit and exercise) score nine dimensions; the course scores three:
+Optional audio/videos use the separate [media rubric](media.md), not these item
+requirements. They do not need interactive practice or a duration target.
 
 Apply the [workspace profile](profiles.md) before these checks. It replaces Study-specific
 demands for exercises and defines the evidence for Exam and Lecture course findings.
@@ -276,7 +278,8 @@ the same form.
 ## Integration
 
 Scored only when the report's `course.dimensions` lists it: when two or more workspaces
-(Study, Exercises, Exam, Lecture) are prepared. They aim at the same outcomes
+(Study, Exercises, Exam, Lecture) are prepared, or media links to a prepared workspace.
+They aim at the same outcomes
 and send the student to each other.
 
 - `integration.prerequisite_links`: every exercise names the unit and block it needs,
@@ -287,6 +290,9 @@ and send the student to each other.
   workspace, and marked terms open the Study definition.
 - `integration.difficulty_climbs`: Study practice, exercises and exam patterns each
   ask more transfer than the last; none repeats another's question unchanged.
+- `integration.media_links`: media follows its exact Study/Exercise target and
+  actual prerequisites, with consistent notation and disclosed modality limits.
+  Alternative access is not a second competing home for the idea.
 
 2: a link to a weaker block, one notation or convention that differs, or a workspace
 that repeats another's question without extending it.

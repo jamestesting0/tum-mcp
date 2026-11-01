@@ -31,6 +31,18 @@ def test_memory_bound_measures_the_worker_where_a_sandbox_hides_other_processes(
     assert extract_worker._tree_memory(psutil.Process()) > 0
 
 
+def test_memory_bound_survives_a_child_that_exits_while_it_is_listed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given a child that exits while Windows lists the worker's process tree.
+    def vanished(self: psutil.Process, recursive: bool = False) -> list[psutil.Process]:
+        raise psutil.NoSuchProcess(4040)
+
+    monkeypatch.setattr(psutil.Process, "children", vanished)
+    # Then this poll measures the worker itself; the next poll lists the tree again.
+    assert extract_worker._tree_memory(psutil.Process()) > 0
+
+
 def test_a_page_beyond_pypdf_parsing_limits_is_read_with_pdfium() -> None:
     # Given slides that pypdf reads normally.
     body = pdf_bytes(["A* uses f(n) = g(n) + h(n)", "Monte Carlo localization"])

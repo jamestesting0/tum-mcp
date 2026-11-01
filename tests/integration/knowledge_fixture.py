@@ -200,21 +200,19 @@ def knowledge_project(
         lecture.update(
             key="observer-lecture",
             title="Observer clarification",
-            overview="Registration separates the subject from display implementations.",
-            takeaways=["Notify registered interfaces."],
+            summary="Registration separates the subject from display implementations.",
             sources=[{"key": "slides", "sha256": source.sha256}],
-        )
-        section = lecture["sections"][0]
-        section.update(
-            key="registration",
-            title="The notification contract",
-            blocks=[
-                text(
-                    "Registration", "slides", "The subject invokes registered observer interfaces."
-                )
+            notes=[
+                {
+                    "key": "registration",
+                    "text": "The subject invokes registered observer interfaces.",
+                    "sources": ["slides"],
+                    "evidence": [payload["evidence"][0]["key"]],
+                }
             ],
-            figures=[],
+            highlights=[],
         )
+        payload["evidence"] = payload["evidence"][:1]
         for evidence in payload["evidence"]:
             evidence.update(source_key="slides", source_sha256=source.sha256)
         (app / "lectures.json").write_text(json.dumps(payload), encoding="utf-8")

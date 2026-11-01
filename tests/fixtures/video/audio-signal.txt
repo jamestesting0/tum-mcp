@@ -1,0 +1,39 @@
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'audio.m4a':
+  Metadata:
+    major_brand     : M4A
+    minor_version   : 512
+    compatible_brands: M4A isomiso2
+    encoder         : Lavf62.3.100
+  Duration: 00:00:02.00, start: 0.000000, bitrate: 127 kb/s
+  Stream #0:0[0x1](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, mono, fltp, 121 kb/s (default)
+    Metadata:
+      handler_name    : SoundHandler
+      vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:0 -> #0:0 (aac (native) -> pcm_s16le (native))
+Output #0, null, to 'pipe:':
+  Metadata:
+    major_brand     : M4A
+    minor_version   : 512
+    compatible_brands: M4A isomiso2
+    encoder         : Lavf62.3.100
+  Stream #0:0(und): Audio: pcm_s16le, 192000 Hz, mono, s16, 3072 kb/s (default)
+    Metadata:
+      encoder         : Lavc62.11.100 pcm_s16le
+      handler_name    : SoundHandler
+      vendor_id       : [0][0][0][0]
+[Parsed_loudnorm_0 @ 0x600000a203c0]
+{
+	"input_i" : "-16.04",
+	"input_tp" : "-7.47",
+	"input_lra" : "0.00",
+	"input_thresh" : "-26.04",
+	"output_i" : "-15.95",
+	"output_tp" : "-7.43",
+	"output_lra" : "0.00",
+	"output_thresh" : "-25.95",
+	"normalization_type" : "linear",
+	"target_offset" : "-0.05"
+}
+[out#0/null @ 0x600000a24000] video:0KiB audio:758KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown
+size=N/A time=00:00:02.02 bitrate=N/A speed= 139x elapsed=0:00:00.01

@@ -12,7 +12,7 @@ from PIL import Image, ImageChops, UnidentifiedImageError
 from pydantic import FiniteFloat
 
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Crop, Seconds
+from tum_mcp.lecture_evidence import THUMBNAIL_EDGE, Crop, Seconds
 from tum_mcp.lecture_processing.decoding import local_input, probe, run_decoder
 from tum_mcp.lecture_processing.media import AcquiredSegment
 from tum_mcp.lecture_processing.timeline import MapPiece, Timeline
@@ -198,7 +198,7 @@ def app_frame(frame: SourceFrame, directory: Path, crop: Crop | None = None) -> 
     if hashlib.sha256(payload).hexdigest() != frame.sha256:
         raise CampusError(Code.INVALID_RESPONSE, "Source frame changed before derivation.")
     if directory.is_symlink() or directory.is_junction():
-        raise CampusError(Code.WORKSPACE_CONFLICT, "Figure folder cannot be symbolic.")
+        raise CampusError(Code.WORKSPACE_CONFLICT, "Thumbnail folder cannot be symbolic.")
     with raster(payload) as original:
         if crop is not None and (
             frame.sha256 != frame.original_sha256
@@ -214,7 +214,7 @@ def app_frame(frame: SourceFrame, directory: Path, crop: Crop | None = None) -> 
             else original.copy()
         )
         with selected:
-            selected.thumbnail((2048, 16000), Image.Resampling.LANCZOS)
+            selected.thumbnail((THUMBNAIL_EDGE, THUMBNAIL_EDGE), Image.Resampling.LANCZOS)
             width, height = selected.size
             buffer = io.BytesIO()
             selected.save(buffer, format="PNG")

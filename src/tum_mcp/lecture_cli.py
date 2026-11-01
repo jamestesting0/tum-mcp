@@ -5,9 +5,11 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from pydantic import ValidationError
 
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import require_lecture
+from tum_mcp.lecture_evidence import Crop, merge_intervals
 from tum_mcp.lecture_processing.prepare_visuals import FrameInventory
 from tum_mcp.lecture_processing.progress import read_progress
 from tum_mcp.lecture_processing.receipts import (
@@ -16,6 +18,7 @@ from tum_mcp.lecture_processing.receipts import (
     export_snapshot,
     read_receipt,
     recording_dir,
+    source_text,
     usable_receipt,
 )
 from tum_mcp.study_store import confined, digest, load_state, private_path
@@ -265,6 +268,124 @@ def read_frames(
             indent=2,
         )
     )
+
+
+@app.command(name="thumbnail")
+def stage_thumbnail(
+    project: Path,
+    recording: Annotated[str, typer.Option(help="Prepared recording key from inspect.")],
+    at: Annotated[
+        float,
+        typer.Option(min=0, max=28800, help="Requested --frame-at time of a captured frame."),
+    ],
+    crop: Annotated[
+        str, typer.Option(help="Optional X,Y,WIDTH,HEIGHT in original frame pixels.")
+    ] = "",
+) -> None:
+    """Stage a captured frame as a highlight thumbnail; prints thumbnail and frame evidence."""
+    require_lecture()
+    from tum_mcp.lecture_processing.visuals import app_frame
+
+    root = project.expanduser().resolve()
+    receipt = usable_receipt(root, recording)
+    inventory = FrameInventory.model_validate_json(evidence_bytes(root, recording, "frames.json"))
+    near = [item for item in inventory.captured if abs(item.captured_at_s - at) <= 0.5]
+    frame = next(
+        (item for item in inventory.captured if item.requested_at_s == at),
+        min(near, key=lambda item: abs(item.captured_at_s - at), default=None),
+    )
+    if frame is None:
+        raise CampusError(
+            Code.ACTION_REQUIRED,
+            "Capture this time first with lecture prepare PROJECT --recording URL "
+            f"--frame-at {at:g}.",
+        )
+    path = private_path(root, f"lectures/{recording}/frames/{frame.sha256}.png")
+    if (
+        not path.is_file()
+        or path.stat().st_size > 64 * 1024**2
+        or digest(path.read_bytes()) != frame.sha256
+    ):
+        raise CampusError(Code.STALE_RESULT, "Prepared original frame is missing or changed.")
+    span = next(
+        (
+            item
+            for item in merge_intervals(receipt.processed)
+            if item.start_s <= frame.captured_at_s < item.end_s
+        ),
+        None,
+    )
+    if span is None:
+        raise CampusError(Code.SCOPE_DENIED, "This frame lies outside processed recording time.")
+    region = None
+    if crop:
+        try:
+            x, y, width, height = (int(value) for value in crop.split(","))
+            region = Crop(
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+                original_width=frame.width,
+                original_height=frame.height,
+                original_sha256=frame.sha256,
+            )
+        except (ValueError, ValidationError):
+            raise CampusError(
+                Code.SCOPE_DENIED, "Use --crop X,Y,WIDTH,HEIGHT inside the original frame."
+            ) from None
+    staged = app_frame(
+        frame.model_copy(update={"path": path}), private_path(root, "lecture-assets"), region
+    )
+    moment = frame.captured_at_s
+    typer.echo(
+        json.dumps(
+            {
+                "thumbnail": {
+                    "evidence": "",
+                    "sha256": staged.sha256,
+                    "asset": f"lecture-assets/{staged.sha256}.png",
+                    "width": staged.width,
+                    "height": staged.height,
+                    "captured_at_s": moment,
+                    "crop": region.model_dump(mode="json") if region else None,
+                },
+                "evidence": {
+                    "key": "",
+                    "source_key": receipt.key,
+                    "source_sha256": digest(source_text(receipt).encode()),
+                    "kind": "frame",
+                    "recording_id": receipt.recording.recording_id,
+                    "interval": {
+                        "start_s": max(span.start_s, moment - 0.1),
+                        "end_s": min(span.end_s, moment + 0.1),
+                    },
+                    "reviewed": False,
+                },
+            },
+            indent=2,
+        )
+    )
+
+
+@app.command(name="check")
+def check(
+    project: Path,
+    lecture: Annotated[str | None, typer.Option(help="Only this authored lecture key.")] = None,
+) -> None:
+    """Check note speech and highlight boundaries against cached transcripts."""
+    require_lecture()
+    from tum_mcp.lecture_check import check_highlights
+    from tum_mcp.lecture_data import read_lectures
+
+    root = project.expanduser().resolve()
+    content = read_lectures(root)
+    if content is None:
+        raise CampusError(Code.ACTION_REQUIRED, "Author app/lectures.json first.")
+    report = check_highlights(root, content, lecture)
+    typer.echo(json.dumps(report, indent=2, ensure_ascii=False))
+    if report["errors"]:
+        raise typer.Exit(1)
 
 
 @app.command(name="export-snapshot")

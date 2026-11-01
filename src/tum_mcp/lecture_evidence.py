@@ -6,10 +6,12 @@ from typing import Annotated, Literal
 from pydantic import Field, FiniteFloat, model_validator
 
 from tum_mcp.settings import Frozen
-from tum_mcp.study_content import Text
 from tum_mcp.study_models import Digest, Key
 
 Seconds = Annotated[FiniteFloat, Field(ge=0, le=28800)]
+# Longest edge of a highlight thumbnail: legible slide titles at card size, small enough
+# that a thumbnail on every highlight still fits a hosted export.
+THUMBNAIL_EDGE = 960
 
 
 class SilenceMarker(Frozen):
@@ -96,27 +98,11 @@ class Evidence(Frozen):
     key: Key
     source_key: Key
     source_sha256: Digest
-    kind: Literal["subtitle", "asr", "frame", "document"]
-    recording_id: int | None = Field(default=None, gt=0)
-    interval: Interval | None = None
-    locator: str = Field(default="", max_length=500)
+    kind: Literal["subtitle", "asr", "frame"]
+    recording_id: int = Field(gt=0)
+    interval: Interval
     reviewed: bool = False
     uncertainty: str = Field(default="", max_length=1000)
-
-    @model_validator(mode="after")
-    def location(self) -> "Evidence":
-        if self.kind == "document":
-            if (
-                not self.locator.strip()
-                or self.interval is not None
-                or self.recording_id is not None
-            ):
-                raise ValueError("Supporting documents need a locator, not recording time.")
-        elif self.interval is None or self.recording_id is None:
-            raise ValueError(
-                "Recording evidence needs its recording identity and original interval."
-            )
-        return self
 
 
 class Crop(Frozen):
@@ -139,22 +125,19 @@ class Crop(Frozen):
         return self
 
 
-class Figure(Frozen):
+class Thumbnail(Frozen):
+    """A measured recording frame beside its highlight; decorative, so no alt or caption."""
+
     evidence: Key
     sha256: Digest
     asset: Annotated[str, Field(pattern=r"^lecture-assets/[a-f0-9]{64}\.(jpg|png|webp)$")]
-    width: int = Field(gt=0, le=2048)
-    height: int = Field(gt=0, le=16000)
+    width: int = Field(gt=0, le=THUMBNAIL_EDGE)
+    height: int = Field(gt=0, le=THUMBNAIL_EDGE)
     captured_at_s: Seconds
-    caption: Text
-    alt: Text
     crop: Crop | None = None
 
     @model_validator(mode="after")
-    def safe_asset(self) -> "Figure":
-        if (
-            self.asset.split("/")[-1].split(".")[0] != self.sha256
-            or self.width * self.height > 16_000_000
-        ):
-            raise ValueError("Figure path/hash or pixel budget does not match.")
+    def safe_asset(self) -> "Thumbnail":
+        if self.asset.split("/")[-1].split(".")[0] != self.sha256:
+            raise ValueError("Thumbnail path and hash do not match.")
         return self

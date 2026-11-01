@@ -23,12 +23,16 @@ from tum_mcp.study_content import StudyContent, Unit
 from tum_mcp.study_store import confined
 from tum_mcp.video_content import (
     ChapterBound,
+    ExerciseChapterBound,
+    ExerciseReceipt,
+    ExerciseStoryboard,
     FileReceipt,
     Locator,
     Manifest,
     Receipt,
     SelectionFile,
     Storyboard,
+    StoryboardFile,
     StoryboardReport,
     StyleProfile,
     Timing,
@@ -44,6 +48,7 @@ from tum_mcp.video_content import (
     now,
     semantic_hash,
     sha256,
+    source_key,
     transcript,
     unit_revision,
     voice_tag,
@@ -58,6 +63,8 @@ from tum_mcp.video_media import (
     chapters,
     check_media,
 )
+from tum_mcp.video_sources import VideoSource, VideoSources, check_exercise, read_sources
+from tum_mcp.video_style import staged_bytes
 
 ROOT = "videos"
 AUDIO_EXTENSIONS = ("wav", "mp3", "m4a", "flac", "ogg")
@@ -131,11 +138,12 @@ def load_voice(root: Path) -> VoiceFile:
     return _read(videos(root, "voice.json"), VoiceFile) or VoiceFile()
 
 
-def stored_storyboard(root: Path, stem: str) -> tuple[Storyboard, bytes]:
+def stored_storyboard(root: Path, stem: str) -> tuple[Storyboard | ExerciseStoryboard, bytes]:
     path = videos(root, f"storyboards/{stem}.json")
-    model = _read(path, Storyboard, limit=2 * 1024**2)
-    if model is None:
+    record = _read(path, StoryboardFile, limit=2 * 1024**2)
+    if record is None:
         raise CampusError(Code.ACTION_REQUIRED, f"Write videos/storyboards/{stem}.json first.")
+    model = record.root
     if model.video != stem:
         raise CampusError(Code.WORKSPACE_CONFLICT, f"Storyboard video must be '{stem}'.")
     return model, path.read_bytes()
@@ -146,7 +154,7 @@ def _planned(root: Path, stem: str) -> str:
     entry = next((item for item in plan.videos if item.stem == stem), None) if plan else None
     if entry is None:
         raise CampusError(Code.ACTION_REQUIRED, f"'{stem}' is not a planned video; run plan.")
-    return entry.unit
+    return source_key(entry)
 
 
 def work(root: Path, stem: str, relative: str = "") -> Path:
@@ -238,21 +246,35 @@ def plan(root: Path, selection_file: Path) -> VideoPlan:
     selection = _read(selection_file, SelectionFile, limit=1024**2)
     if selection is None:
         raise CampusError(Code.ACTION_REQUIRED, "The selection file does not exist.")
-    content, content_hash = _content(root)
+    sources = read_sources(root)
+    for item in (*selection.units, *selection.exercises):
+        sources.get(source_key(item))
     with locked(root):
         _scaffold(root)
         previous = load_plan(root)
-        if previous is not None and previous.course_key != content.course_key:
+        if previous is not None and previous.course_key != sources.course_key:
             raise CampusError(Code.SCOPE_DENIED, "videos/plan.json belongs to another course.")
         manifest = load_manifest(root)
+        if manifest is not None and manifest.course_key != sources.course_key:
+            raise CampusError(Code.SCOPE_DENIED, "videos/manifest.json belongs to another course.")
         receipts = manifest.videos if manifest else {}
-        published = {receipt.unit: stem for stem, receipt in receipts.items()}
+        published = {source_key(receipt): stem for stem, receipt in receipts.items()}
         try:
-            entries = allocate(previous, selection.units, content, frozenset(receipts), published)
+            entries = allocate(
+                previous,
+                (*selection.units, *selection.exercises),
+                sources.study,
+                frozenset(receipts),
+                published,
+                sources.exercises,
+            )
         except ValueError as error:
             raise CampusError(Code.INVALID_RESPONSE, str(error)) from None
         result = VideoPlan(
-            course_key=content.course_key, content_sha256=content_hash, videos=entries
+            course_key=sources.course_key,
+            content_sha256=sources.content_sha256,
+            exercises_sha256=sources.exercises_sha256,
+            videos=entries,
         )
         _write_json(videos(root, "plan.json"), result)
         _write_documents(root)
@@ -260,13 +282,23 @@ def plan(root: Path, selection_file: Path) -> VideoPlan:
 
 
 def check(root: Path, stem: str) -> StoryboardReport:
-    unit_key = _planned(root, stem)
+    identity = _planned(root, stem)
     storyboard, _ = stored_storyboard(root, stem)
-    content, _ = _content(root)
-    report = check_storyboard(storyboard, content)
+    sources = read_sources(root)
+    source = sources.get(identity)
+    plan_ = load_plan(root)
+    if plan_ is not None and plan_.course_key != sources.course_key:
+        raise CampusError(Code.SCOPE_DENIED, "Video plan belongs to another course.")
+    match storyboard:
+        case Storyboard():
+            if sources.study is None:
+                raise CampusError(Code.ACTION_REQUIRED, "Prepare the selected Study unit first.")
+            report = check_storyboard(storyboard, sources.study)
+        case ExerciseStoryboard():
+            report = check_exercise(storyboard, source)
     errors = list(report.errors)
-    if storyboard.unit != unit_key:
-        errors.insert(0, f"plan.unit: the plan assigns '{stem}' to unit '{unit_key}'")
+    if source_key(storyboard) != identity:
+        errors.insert(0, f"plan.source: the plan assigns '{stem}' to '{identity}'")
     report = report.model_copy(update={"errors": tuple(errors)})
     if not report.errors:
         with locked(root):
@@ -313,15 +345,47 @@ def unit_locators(root: Path, unit_key: str) -> dict:
     }
 
 
-def _ready_storyboard(root: Path, stem: str) -> tuple[Storyboard, bytes, StudyContent]:
+def exercise_locators(root: Path, key: str) -> dict:
+    from tum_mcp.exercise_content import Exercise
+
+    source = read_sources(root).get(f"exercises/{key}")
+    match source.data:
+        case Exercise() as exercise:
+            locators = source.locators()
+            formulas = []
+            for locator in locators:
+                value = source.resolve(locator)
+                blocks = value.blocks if locator.kind == "answer" else (value,)
+                for block in blocks:
+                    if getattr(block, "kind", None) == "formula":
+                        formulas.append({"ref": locator.ref, "latex": block.latex})
+            return {
+                "exercise": source.exercise.model_dump(mode="json"),
+                "title": exercise.title,
+                "exercise_hash": source.teaching_hash,
+                "revision": source.revision,
+                "parts": exercise.parts,
+                "answers": [a.model_dump(mode="json") for a in locators if a.kind == "answer"],
+                "origin": exercise.solution.origin,
+                "source_references": [s.model_dump(mode="json") for s in exercise.sources],
+                "locators": [a.model_dump(mode="json") for a in locators],
+                "formulas": formulas,
+            }
+        case Unit():
+            raise CampusError(Code.INVALID_RESPONSE, "Expected an Exercise source.")
+
+
+def _ready_storyboard(
+    root: Path,
+    stem: str,
+) -> tuple[Storyboard | ExerciseStoryboard, bytes, VideoSources]:
     report = check(root, stem)
     if report.errors:
         raise CampusError(
             Code.INVALID_RESPONSE, "Fix the storyboard first: " + "; ".join(report.errors[:5])
         )
     storyboard, data = stored_storyboard(root, stem)
-    content, _ = _content(root)
-    return storyboard, data, content
+    return storyboard, data, read_sources(root)
 
 
 def narration(root: Path, stem: str, profile: str) -> list[dict]:
@@ -430,6 +494,11 @@ def load_timing(root: Path, stem: str, storyboard_bytes: bytes) -> Timing:
         raise CampusError(Code.ACTION_REQUIRED, "Run timing for this video first.")
     if value.storyboard_sha256 != sha256(storyboard_bytes):
         raise CampusError(Code.STALE_RESULT, "The storyboard changed; run timing again.")
+    if not value.silent:
+        key = value.voice.split("@", 1)[0]
+        profile = load_voice(root).profiles.get(key)
+        if profile is None or voice_tag(key, profile) != value.voice:
+            raise CampusError(Code.STALE_RESULT, "The voice profile changed; run timing again.")
     return value
 
 
@@ -446,15 +515,25 @@ def _class_sources(source: str) -> tuple[str, dict[str, str]]:
     return "\n".join(shared), classes
 
 
-def _asset_digest(root: Path) -> str:
-    folder = videos(root, "assets")
-    if not folder.is_dir():
-        return sha256(b"")
-    items = sorted(
-        (path.name, _hash_file(path))
-        for path in folder.iterdir()
-        if path.is_file() and path.suffix == ".svg" and not path.is_symlink()
-    )
+def _asset_digest(root: Path, source: str) -> str:
+    names = {
+        node.args[0].value
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "self"
+        and node.func.attr == "asset"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and isinstance(node.args[0].value, str)
+    }
+    items = []
+    for name in sorted(names):
+        path = videos(root, f"assets/{name}")
+        if not path.is_file():
+            raise CampusError(Code.ACTION_REQUIRED, f"Missing referenced video asset '{name}'.")
+        items.append((name, _hash_file(path)))
     return sha256(canonical(items))
 
 
@@ -502,7 +581,7 @@ def render(
             "warnings": list(report.warnings),
         }
     style = load_style(root)
-    style_bytes = style.model_dump_json().encode()
+    style_bytes = staged_bytes(style)
     runtime_profile = render_profile()
     inputs = {
         "storyboard": sha256(story_bytes),
@@ -510,7 +589,7 @@ def render(
         "style": sha256(style_bytes),
         "timing": sha256(timings.model_dump_json().encode()),
         "voice": sha256(timings.voice.encode()),
-        "assets": _asset_digest(root),
+        "assets": _asset_digest(root, source),
         "profile": runtime_profile,
         "quality": quality,
     }
@@ -555,7 +634,7 @@ def render(
 def _render_run(
     root: Path,
     stem: str,
-    storyboard: Storyboard,
+    storyboard: Storyboard | ExerciseStoryboard,
     timings: Timing,
     source: str,
     report: LintReport,
@@ -693,6 +772,11 @@ def _render_run(
         if cue.audio
     ]
     first = timings.beats[0]
+    poster_at = first.start + first.duration - 0.1
+    if isinstance(storyboard, ExerciseStoryboard) and first.cues:
+        # The first sentence establishes the problem; later work may reveal its answer.
+        cue = first.cues[0]
+        poster_at = cue.start + min(0.8, (cue.end - cue.start) / 2)
     assembled = call_worker(
         {
             "action": "assemble",
@@ -704,7 +788,7 @@ def _render_run(
             "audio": [] if timings.silent else audio_plan,
             "output": str(folder / "track.mp4"),
             "poster": str(folder / "poster.jpg"),
-            "poster_at": max(0.0, min(first.start + first.duration - 0.1, clock / fps - 0.1)),
+            "poster_at": max(0.0, min(poster_at, clock / fps - 0.1)),
         },
         executable=executable,
         timeout=3600,
@@ -726,7 +810,7 @@ def _render_run(
     )
     private_write(folder / "transcript.txt", transcript(storyboard).encode())
     private_write(folder / "probe.json", probe.model_dump_json(indent=2).encode())
-    sheets = _sheets(folder, storyboard, timings, bounds, executable)
+    sheets = _sheets(folder, storyboard, timings, bounds, executable, fps)
     result = _check_run(folder, quality, timings, probe, layout)
     current = _pending(folder) or {}
     current.update(
@@ -764,7 +848,7 @@ def _display(root: Path, path: Path) -> str:
 def _stage_run(
     root: Path,
     folder: Path,
-    storyboard: Storyboard,
+    storyboard: Storyboard | ExerciseStoryboard,
     story_bytes: bytes,
     timings: Timing,
     style_bytes: bytes,
@@ -802,10 +886,11 @@ def _save_pending(folder: Path, value: dict) -> None:
 
 def _sheets(
     folder: Path,
-    storyboard: Storyboard,
+    storyboard: Storyboard | ExerciseStoryboard,
     timings: Timing,
     bounds: list[ChapterBound],
     executable: Path,
+    fps: float,
 ) -> list[Path]:
     from tum_mcp.video_runtime import call_worker
 
@@ -814,21 +899,40 @@ def _sheets(
     for chapter, bound in zip(storyboard.chapters, bounds, strict=True):
         beats = [beat for beat in timings.beats if beat.chapter == chapter.key]
         offset = bound.start - beats[0].start
-        times = [max(bound.start, b.start + b.duration + offset - 0.1) for b in beats]
-        sheet = folder / "sheets" / f"{chapter.key}.png"
-        result = call_worker(
-            {
-                "action": "frames",
-                "file": str(folder / "track.mp4"),
-                "times": times,
-                "labels": [f"{chapter.key} {b.key}" for b in beats],
-                "output": str(sheet),
-            },
-            executable=executable,
-            timeout=600,
-        )
-        if result.get("ok") and sheet.is_file():
-            output.append(sheet)
+        by_frame: dict[int, list[str]] = {}
+        last_frame = max(round(bound.start * fps), round(bound.end * fps) - 1)
+        for beat in beats:
+            first = min(
+                last_frame, max(round(bound.start * fps), round((beat.start + offset) * fps))
+            )
+            last = min(
+                last_frame, max(first, round((beat.start + beat.duration + offset) * fps) - 1)
+            )
+            seen: set[int] = set()
+            for phase, frame in (("entry", first), ("middle", (first + last) // 2), ("exit", last)):
+                if frame not in seen:
+                    seen.add(frame)
+                    moment = frame / fps
+                    by_frame.setdefault(frame, []).append(
+                        f"{chapter.key} {beat.key} {moment:.3f}s {phase}"
+                    )
+        samples = [(frame / fps, "; ".join(labels)) for frame, labels in sorted(by_frame.items())]
+        for page, start in enumerate(range(0, len(samples), 12), 1):
+            group = samples[start : start + 12]
+            sheet = folder / "sheets" / f"{chapter.key}-{page:02d}.png"
+            result = call_worker(
+                {
+                    "action": "frames",
+                    "file": str(folder / "track.mp4"),
+                    "times": [moment for moment, _ in group],
+                    "labels": [label for _, label in group],
+                    "output": str(sheet),
+                },
+                executable=executable,
+                timeout=600,
+            )
+            if result.get("ok") and sheet.is_file():
+                output.append(sheet)
     return output
 
 
@@ -900,10 +1004,10 @@ def _current_inputs(root: Path, stem: str) -> dict[str, str]:
     return {
         "storyboard": sha256(story_bytes),
         "scene": sha256(scene),
-        "style": sha256(load_style(root).model_dump_json().encode()),
+        "style": sha256(staged_bytes(load_style(root))),
         "timing": sha256(timings.model_dump_json().encode()),
         "voice": sha256(timings.voice.encode()),
-        "assets": _asset_digest(root),
+        "assets": _asset_digest(root, scene.decode("utf-8")),
     }
 
 
@@ -936,10 +1040,12 @@ def _recover(root: Path) -> None:
 
 def publish(
     root: Path, stem: str, run: str, *, teaching_review: Path, visual_review: str
-) -> Receipt:
-    unit_key = _planned(root, stem)
-    storyboard, _, content = _ready_storyboard(root, stem)
-    unit = _unit(content, unit_key)
+) -> Receipt | ExerciseReceipt:
+    from tum_mcp.media_projection import guidance_hash
+
+    identity = _planned(root, stem)
+    storyboard, _, sources_ = _ready_storyboard(root, stem)
+    source_ = sources_.get(identity)
     if teaching_review.is_symlink() or not teaching_review.is_file():
         raise CampusError(Code.ACTION_REQUIRED, "Pass the teaching review file you recorded.")
     review = teaching_review.read_bytes()
@@ -995,7 +1101,9 @@ def publish(
                 journal_files.append({"path": relative, "backup": backup})
             else:
                 journal_files.append({"path": relative, "backup": None})
-        manifest = load_manifest(root) or Manifest(course_key=content.course_key)
+        manifest = load_manifest(root) or Manifest(course_key=sources_.course_key)
+        if manifest.course_key != sources_.course_key:
+            raise CampusError(Code.SCOPE_DENIED, "Video manifest belongs to another course.")
         if stem in manifest.videos:
             previous = videos(root, f"{archive}/receipt.json")
             previous.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -1015,30 +1123,67 @@ def publish(
         review_target = videos(root, review_path)
         review_target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         private_write(review_target, review)
-        receipt = Receipt(
+        fields = dict(
             stem=stem,
-            unit=unit.key,
             title=storyboard.title,
             language=storyboard.language,
-            made_for_revision=unit_revision(unit),
-            unit_hash=semantic_hash(unit),
+            made_for_revision=source_.revision,
             inputs={
                 key: current[key] for key in ("storyboard", "scene", "style", "timing", "voice")
             },
             render_profile=current["profile"],
             narrated=True,
             duration=probe.video_duration,
-            chapters=bounds,
             files=files,
-            objectives=storyboard.objectives,
             checks=result.passed,
             teaching_review=review_path,
             visual_review="performed" if visual_review == "performed" else "not_performed",
             run=run,
             published_at=now(),
+            voice_profile_key=timings.voice.split("@", 1)[0],
+            voice_profile=load_voice(root).profiles[timings.voice.split("@", 1)[0]],
+            assets_sha256=current["assets"],
+            source_references=source_.source_references,
+            beats=timings.beats,
+            visuals=tuple(
+                f"{chapter.key}/{beat.key}/{key}"
+                for chapter in storyboard.chapters
+                for beat in chapter.beats
+                for key in (tuple(item.key for item in beat.on_screen) or ("scene",))
+            ),
+            guidance_sha256=guidance_hash("video"),
+            teaching_review_sha256=sha256(review),
         )
+        match storyboard:
+            case Storyboard():
+                receipt = Receipt(
+                    **fields,
+                    unit=storyboard.unit,
+                    unit_hash=source_.teaching_hash,
+                    chapters=bounds,
+                    objectives=storyboard.objectives,
+                )
+            case ExerciseStoryboard():
+                used = {
+                    locator.ref: locator
+                    for beat in storyboard.beats()
+                    for locator in beat.locators
+                    if locator.kind == "prerequisite"
+                }
+                receipt = ExerciseReceipt(
+                    **fields,
+                    exercise=storyboard.exercise,
+                    exercise_hash=source_.teaching_hash,
+                    answers=storyboard.answers,
+                    prerequisites=tuple(used.values()),
+                    solution_origin=source_.data.solution.origin,
+                    chapters=tuple(
+                        ExerciseChapterBound(**bound.model_dump(), answer=chapter.answer)
+                        for bound, chapter in zip(bounds, storyboard.chapters, strict=True)
+                    ),
+                )
         videos_map = {
-            key: value for key, value in manifest.videos.items() if value.unit != unit.key
+            key: value for key, value in manifest.videos.items() if source_key(value) != identity
         }
         videos_map[stem] = receipt
         updated = manifest.model_copy(update={"videos": videos_map})
@@ -1050,8 +1195,8 @@ def publish(
         return receipt
 
 
-def acknowledge(root: Path, stem: str, review_file: Path) -> Receipt:
-    content, _ = _content(root)
+def acknowledge(root: Path, stem: str, review_file: Path) -> Receipt | ExerciseReceipt:
+    sources = read_sources(root)
     review = review_file.read_bytes() if review_file.is_file() else b""
     if not review.strip() or len(review) > 256 * 1024:
         raise CampusError(Code.ACTION_REQUIRED, "Pass a non-empty coverage review file.")
@@ -1060,25 +1205,44 @@ def acknowledge(root: Path, stem: str, review_file: Path) -> Receipt:
         if manifest is None or stem not in manifest.videos:
             raise CampusError(Code.ACTION_REQUIRED, f"'{stem}' has no published video.")
         receipt = manifest.videos[stem]
-        unit = _unit(content, receipt.unit)
+        if manifest.course_key != sources.course_key:
+            raise CampusError(Code.SCOPE_DENIED, "Video manifest belongs to another course.")
+        source = sources.get(source_key(receipt))
         storyboard, story_bytes = stored_storyboard(root, stem)
+        if source_key(storyboard) != source.identity:
+            raise CampusError(Code.STALE_RESULT, "The storyboard source changed; render instead.")
         if sha256(story_bytes) != receipt.inputs["storyboard"]:
             raise CampusError(
                 Code.STALE_RESULT, "The storyboard changed since publication; render instead."
             )
-        changed = [
-            f"{beat.key} {locator.kind} {locator.ref}"
-            for beat in storyboard.beats()
-            for locator in beat.locators
-            if locator_fingerprint(unit, locator) != locator.fingerprint
-        ]
-        if changed or any(o not in {x.key for x in unit.objectives} for o in storyboard.objectives):
+        match storyboard:
+            case Storyboard():
+                unit = _unit(sources.study, storyboard.unit)
+                changed = [
+                    f"{beat.key} {locator.kind} {locator.ref}"
+                    for beat in storyboard.beats()
+                    for locator in beat.locators
+                    if locator_fingerprint(unit, locator) != locator.fingerprint
+                ]
+                if any(o not in {x.key for x in unit.objectives} for o in storyboard.objectives):
+                    changed.append("objectives changed")
+                identity_update = {"unit_hash": source.teaching_hash}
+                receipt_update = identity_update
+            case ExerciseStoryboard():
+                changed = list(check_exercise(storyboard, source).errors)
+                identity_update = {"exercise_hash": source.teaching_hash}
+                receipt_update = {
+                    **identity_update,
+                    "source_references": source.source_references,
+                    "solution_origin": source.data.solution.origin,
+                }
+        if changed:
             raise CampusError(
                 Code.STALE_RESULT,
                 "Teaching used by this video changed (" + ", ".join(changed[:5]) + "); "
                 "revise the storyboard and render again.",
             )
-        refreshed = storyboard.model_copy(update={"unit_hash": semantic_hash(unit)})
+        refreshed = storyboard.model_copy(update=identity_update)
         refreshed_bytes = _write_json(videos(root, f"storyboards/{stem}.json"), refreshed)
         timing_path = work(root, stem, "timing.json")
         timings = _read(timing_path, Timing)
@@ -1094,8 +1258,8 @@ def acknowledge(root: Path, stem: str, review_file: Path) -> Receipt:
         private_write(target, review)
         updated = receipt.model_copy(
             update={
-                "made_for_revision": unit_revision(unit),
-                "unit_hash": semantic_hash(unit),
+                "made_for_revision": source.revision,
+                **receipt_update,
                 "inputs": inputs,
                 "reviews": (*receipt.reviews, review_path),
             }
@@ -1112,48 +1276,82 @@ def acknowledge(root: Path, stem: str, review_file: Path) -> Receipt:
 def inspect(root: Path, *, stem: str | None = None, verify: bool = False) -> dict:
     from tum_mcp.video_runtime import python_path, render_profile
 
-    content, content_hash = _content(root)
+    sources = read_sources(root)
     plan_ = load_plan(root)
     manifest = load_manifest(root)
+    if any(
+        record is not None and record.course_key != sources.course_key
+        for record in (plan_, manifest)
+    ):
+        raise CampusError(Code.SCOPE_DENIED, "Video records belong to another course.")
     receipts = manifest.videos if manifest else {}
     rows = []
-    entries = {item.unit: item for item in plan_.videos} if plan_ else {}
-    for unit in content.units:
-        entry = entries.get(unit.key)
-        name = entry.stem if entry else None
+    exercise_rows = []
+    entries = {source_key(item): item for item in plan_.videos} if plan_ else {}
+    by_source = {source_key(receipt): receipt for receipt in receipts.values()}
+    for identity, source in sources.items.items():
+        entry = entries.get(identity)
+        receipt = by_source.get(identity)
+        name = entry.stem if entry else receipt.stem if receipt else None
         if stem is not None and name != stem:
             continue
         row: dict = {
-            "unit": unit.key,
-            "title": unit.title,
+            **(
+                {"exercise": source.exercise.model_dump(mode="json")}
+                if source.exercise
+                else {"unit": source.data.key}
+            ),
+            "source": identity,
+            "title": source.data.title,
             "decision": entry.decision if entry else "unplanned",
             "stem": name,
         }
         if entry and entry.decision == "text-first":
             row["reason"] = entry.reason
         if name:
-            row.update(_video_state(root, name, unit, receipts.get(name), verify))
-        rows.append(row)
-    known = {unit.key for unit in content.units}
+            row.update(_video_state(root, name, source, receipts.get(name), verify))
+        (exercise_rows if source.exercise else rows).append(row)
+    known = set(sources.items)
     orphans = sorted(
-        {item.unit for item in (plan_.videos if plan_ else ()) if item.unit not in known}
-        | {r.unit for r in receipts.values() if r.unit not in known}
+        {
+            source_key(item)
+            for item in (plan_.videos if plan_ else ())
+            if source_key(item) not in known
+        }
+        | {source_key(r) for r in receipts.values() if source_key(r) not in known}
     )
     return {
-        "course_key": content.course_key,
-        "content_sha256": content_hash,
-        "plan_current": bool(plan_ and plan_.content_sha256 == content_hash),
+        "course_key": sources.course_key,
+        "content_sha256": sources.content_sha256,
+        "exercises_sha256": sources.exercises_sha256,
+        "plan_current": bool(
+            plan_
+            and plan_.content_sha256 == sources.content_sha256
+            and plan_.exercises_sha256 == sources.exercises_sha256
+        ),
         "unrecognized_videos_folder": unrecognized(root),
         "interrupted_publication": _journal(root).exists() if videos(root).exists() else False,
         "runtime": {"profile": render_profile(), "present": python_path().is_file()},
         "build_bytes": _size(videos(root, ".build")) if videos(root).exists() else 0,
         "build_budget_bytes": BUILD_BUDGET,
         "units": rows,
-        "orphaned_units": orphans,
+        "exercises": exercise_rows,
+        "orphaned_units": [
+            key.removeprefix("study/") for key in orphans if key.startswith("study/")
+        ],
+        "orphaned_exercises": [
+            key.removeprefix("exercises/") for key in orphans if key.startswith("exercises/")
+        ],
     }
 
 
-def _video_state(root: Path, stem: str, unit: Unit, receipt: Receipt | None, verify: bool) -> dict:
+def _video_state(
+    root: Path,
+    stem: str,
+    source: VideoSource,
+    receipt: Receipt | ExerciseReceipt | None,
+    verify: bool,
+) -> dict:
     state: dict = {}
     path = videos(root, f"storyboards/{stem}.json")
     story_bytes = path.read_bytes() if path.is_file() else None
@@ -1161,9 +1359,19 @@ def _video_state(root: Path, stem: str, unit: Unit, receipt: Receipt | None, ver
         state["storyboard"] = "missing"
     else:
         try:
-            storyboard = Storyboard.model_validate_json(story_bytes)
+            storyboard = StoryboardFile.model_validate_json(story_bytes).root
+            match storyboard:
+                case Storyboard():
+                    content_hash = storyboard.unit_hash
+                case ExerciseStoryboard():
+                    content_hash = storyboard.exercise_hash
             state["storyboard"] = (
-                "current" if storyboard.unit_hash == semantic_hash(unit) else "stale"
+                "current"
+                if (
+                    source_key(storyboard) == source.identity
+                    and content_hash == source.teaching_hash
+                )
+                else "stale"
             )
         except ValidationError:
             state["storyboard"] = "invalid"
@@ -1210,11 +1418,28 @@ def _video_state(root: Path, stem: str, unit: Unit, receipt: Receipt | None, ver
     scene = videos(root, f"scenes/{stem}/chapters.py")
     if scene.is_file() and sha256(scene.read_bytes()) != receipt.inputs["scene"]:
         edited = True
+    match receipt:
+        case Receipt():
+            teaching_changed = receipt.unit_hash != source.teaching_hash
+            provenance_changed = False
+        case ExerciseReceipt():
+            teaching_changed = receipt.exercise_hash != source.teaching_hash or any(
+                source.locator_hash(locator) != locator.fingerprint
+                for locator in receipt.prerequisites
+            )
+            provenance_changed = (
+                receipt.source_references != source.source_references
+                or receipt.solution_origin != source.data.solution.origin
+            )
     if not files_ok:
         state["published"] = "missing_or_changed_files"
-    elif receipt.unit_hash != semantic_hash(unit):
+    elif teaching_changed:
         state["published"] = "teaching_changed"
-    elif receipt.made_for_revision != unit_revision(unit):
+    elif source.stale or provenance_changed:
+        state["published"] = "source_changed"
+    elif receipt.inputs["style"] != sha256(staged_bytes(load_style(root))):
+        state["published"] = "style_changed"
+    elif receipt.made_for_revision != source.revision:
         state["published"] = "revision_changed_acknowledge_or_render"
     else:
         state["published"] = "current"
@@ -1270,20 +1495,21 @@ def _managed(path: Path, block: str) -> None:
 
 
 def _write_documents(root: Path) -> None:
-    content, content_hash = _content(root)
+    inventory = read_sources(root)
     plan_ = load_plan(root)
     manifest = load_manifest(root)
     receipts = manifest.videos if manifest else {}
     voice = load_voice(root)
-    order = {unit.key: index for index, unit in enumerate(content.units)}
-    published = sorted(receipts.values(), key=lambda r: order.get(r.unit, 10**6))
+    order = {identity: index for index, identity in enumerate(inventory.items)}
+    published = sorted(receipts.values(), key=lambda r: order.get(source_key(r), 10**6))
     total = sum(r.duration for r in published)
     readme = [
         "# Video Notes",
         "",
-        "Narrated explainer videos made from this course's prepared Study content. They stay",
-        "local: open the course app with `tum-mcp study` (each topic's Content view shows its",
-        "video), or play the files in `tracks/` directly. Hosted study sites never include them.",
+        "Narrated videos adapt prepared Study concepts or solve selected prepared Exercises.",
+        "Open the local course app with `tum-mcp study`: concept videos are in Content;",
+        "walkthroughs stay inside Solution disclosures. Hosted sites never include media.",
+        "Each MP4 has a fixed theme; it does not switch with the app's theme.",
         "",
         f"Published videos: {len(published)}, total {total / 60:.1f} min.",
         "",
@@ -1308,38 +1534,43 @@ def _write_documents(root: Path) -> None:
     ]
     _managed(videos(root, "README.md"), "\n".join(readme))
     coverage = ["# Coverage", ""]
-    entries = {item.unit: item for item in plan_.videos} if plan_ else {}
-    by_unit = {r.unit: r for r in receipts.values()}
-    for unit in content.units:
-        entry = entries.get(unit.key)
-        receipt = by_unit.get(unit.key)
+    entries = {source_key(item): item for item in plan_.videos} if plan_ else {}
+    by_source = {source_key(r): r for r in receipts.values()}
+    for identity, source in inventory.items.items():
+        entry = entries.get(identity)
+        receipt = by_source.get(identity)
+        title = source.data.title
         if entry is None:
-            coverage.append(f"- {unit.title}: not planned")
+            coverage.append(f"- {title}: not planned")
         elif entry.decision == "text-first":
-            coverage.append(f"- {unit.title}: text-first ({entry.reason})")
+            coverage.append(f"- {title}: text-first ({entry.reason})")
         elif receipt is None:
-            coverage.append(f"- {unit.title}: planned as `{entry.stem}`, not yet published")
+            coverage.append(f"- {title}: planned as `{entry.stem}`, not yet published")
         else:
-            missing = [o.key for o in unit.objectives if o.key not in receipt.objectives]
-            status = "current" if receipt.unit_hash == semantic_hash(unit) else "teaching changed"
+            state = _video_state(root, receipt.stem, source, receipt, False)
+            match receipt:
+                case Receipt():
+                    covered = f"objectives in video: {', '.join(receipt.objectives)}"
+                case ExerciseReceipt():
+                    covered = f"answers in video: {', '.join(a.ref for a in receipt.answers)}"
             coverage.append(
-                f"- {unit.title}: `{receipt.stem}` ({status}); objectives in video: "
-                f"{', '.join(receipt.objectives)}"
-                + (f"; practice-only: {', '.join(missing)}" if missing else "")
+                f"- {title}: `{receipt.stem}` ({state['published']}); {covered}"
                 + ("; visual review not performed" if receipt.visual_review != "performed" else "")
             )
     _managed(videos(root, "COVERAGE.md"), "\n".join(coverage))
     sources = [
         "# Sources",
         "",
-        f"Prepared content: `{content.course_key}`, app content SHA-256 `{content_hash}`.",
+        f"Prepared course: `{inventory.course_key}`.",
+        f"Study SHA-256: `{inventory.content_sha256}`; "
+        f"Exercises SHA-256: `{inventory.exercises_sha256}`.",
         "",
     ]
     for receipt in published:
-        unit = next((u for u in content.units if u.key == receipt.unit), None)
-        if unit is not None:
-            cited = ", ".join(f"{s.key} ({s.sha256[:12]})" for s in unit.sources)
-            sources.append(f"- `{receipt.stem}` <- unit `{unit.key}`: {cited}")
+        source = inventory.items.get(source_key(receipt))
+        if source is not None:
+            cited = ", ".join(f"{s.key} ({s.sha256[:12]})" for s in source.source_references)
+            sources.append(f"- `{receipt.stem}` <- `{source.identity}`: {cited}")
     _managed(videos(root, "SOURCES.md"), "\n".join(sources))
     playlist = ["#EXTM3U"]
     for receipt in published:
@@ -1359,9 +1590,13 @@ def preview_index(root: Path) -> dict:
     """Published videos whose files are present, for the local app only. Never raises."""
     try:
         manifest = _read(videos(root, "manifest.json"), Manifest, limit=1024**2)
+        inventory = read_sources(root) if manifest else None
+        if manifest is not None and manifest.course_key != inventory.course_key:
+            raise CampusError(Code.SCOPE_DENIED, "Video manifest belongs to another course.")
     except (CampusError, OSError):
-        return {"videos": {}}
+        return {"videos": {}, "exercises": {}}
     entries: dict[str, dict] = {}
+    exercise_entries: dict[str, dict] = {}
     for receipt in manifest.videos.values() if manifest else ():
         try:
             present = all(
@@ -1374,7 +1609,7 @@ def preview_index(root: Path) -> dict:
             present = False
         if not present:
             continue
-        entries[receipt.unit] = {
+        entry = {
             "title": receipt.title,
             "language": receipt.language,
             "duration": receipt.duration,
@@ -1388,7 +1623,21 @@ def preview_index(root: Path) -> dict:
                 {"title": bound.title, "start": bound.start} for bound in receipt.chapters
             ],
         }
-    return {"videos": entries}
+        match receipt:
+            case Receipt():
+                entries[receipt.unit] = entry
+            case ExerciseReceipt():
+                source = inventory.items.get(source_key(receipt))
+                entry["sourceStale"] = (
+                    source is None
+                    or source.stale
+                    or source.teaching_hash != receipt.exercise_hash
+                    or any(source.locator_hash(p) != p.fingerprint for p in receipt.prerequisites)
+                    or source.source_references != receipt.source_references
+                    or source.data.solution.origin != receipt.solution_origin
+                )
+                exercise_entries[receipt.exercise.key] = entry
+    return {"videos": entries, "exercises": exercise_entries}
 
 
 def install_demo(root: Path, example: Path) -> Receipt:
@@ -1451,7 +1700,7 @@ def install_demo(root: Path, example: Path) -> Receipt:
 
 def schemas() -> dict[str, type[BaseModel]]:
     return {
-        "storyboard": Storyboard,
+        "storyboard": StoryboardFile,
         "selection": SelectionFile,
         "style": StyleProfile,
         "voice": VoiceFile,

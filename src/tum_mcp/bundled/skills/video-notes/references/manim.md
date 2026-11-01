@@ -9,6 +9,9 @@ fixed by the pipeline; scene code never touches `config`.
 `videos/scenes/STEM/chapters.py` holds one class per chapter, named after the
 chapter key in upper case (`c01` → `C01`), extending `NotesScene`. Module level may
 hold imports, constants and small helper functions only.
+Keep chapter-specific drawing helpers as methods on that chapter class.
+Module-level helpers are shared cache inputs: changing one invalidates every
+chapter that shares the scene file, even if its own construction did not change.
 
 ```python
 from manim import *
@@ -38,11 +41,18 @@ one frame past the budget fails with "animations run Ns past the narration": sho
 `run_time` values or split the beat. Leave a little slack; Manim rounds each
 animation up to whole frames.
 
+Use `with self.cue(1) as cue:` inside a beat to start at its first measured
+sentence; indices are one-based. `cue.duration`, `cue.share(f)` and `cue.remaining`
+use that sentence's budget. The context pads to its end; do not also wait manually.
+Cues must increase, cannot nest, and cannot start after their measured time.
+Place each reveal/highlight in the cue that actually names it, not at the beat's
+beginning because the whole beat mentions it eventually.
+
 ## Helpers
 
 | Call | Returns |
 | --- | --- |
-| `self.label(key, size=32, color=None)` | Plain-text label from the storyboard, in the house font. |
+| `self.label(key, size=32, color=None, width=None)` | Plain-text label in the house font; an explicit scene width wraps without shrinking. |
 | `self.math(key, size=40, color=None)` | Typst math (LaTeX only if the course style opts in). |
 | `self.number(key, size=32, color=None)` | Formatted storyboard number with its unit. |
 | `self.value(key)` | The number as a float, for geometry or `tracker.set_value(self.value("k"))`. |

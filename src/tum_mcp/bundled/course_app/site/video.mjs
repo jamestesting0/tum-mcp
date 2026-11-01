@@ -4,11 +4,17 @@ import { node, append, button } from './dom.mjs';
 // Videos are a local-preview feature: hosted sites never request the index. The index loads
 // beside the app rather than holding it back, so a busy server only delays the video panel.
 let videos = null;
-const index = (data.hosted ? Promise.resolve({}) : fetch('videos/index.json', { cache: 'no-store', signal: AbortSignal.timeout(30000) })
-  .then(response => (response.ok ? response.json() : {}))
-  .then(value => (value && typeof value.videos === 'object' && value.videos ? value.videos : {}))
-  .catch(() => ({})))
-  .then(value => { videos = value; return value; });
+let index = null;
+function loadIndex() {
+  if (!index) index = (data.hosted ? Promise.resolve({}) : fetch('videos/index.json', { cache: 'no-store', signal: AbortSignal.timeout(30000) })
+    .then(response => (response.ok ? response.json() : {}))
+    .catch(() => ({})))
+    .then(value => {
+      videos = { videos: value?.videos || {}, exercises: value?.exercises || {} };
+      return videos;
+    });
+  return index;
+}
 
 function clock(seconds) {
   // Floor like media players and the generated README, so the same time reads the same.
@@ -20,24 +26,57 @@ function clock(seconds) {
 export function videoPanel(unit) {
   if (videos) return panel(unit);
   const slot = node('div', 'video-slot');
-  index.then(() => { const made = panel(unit); if (made) slot.replaceWith(made); else slot.remove(); });
+  loadIndex().then(() => { const made = panel(unit); if (made) slot.replaceWith(made); else slot.remove(); });
   return slot;
 }
 
 function panel(unit) {
-  const entry = videos[unit.key];
+  const entry = videos.videos[unit.key];
   if (!entry) return null;
+  return player(entry, unit, 'Video explainer');
+}
+
+// A walkthrough is mounted only inside an opened Solution, never into the Exam caller.
+export function exerciseVideo(exercise, identity, solution = null) {
+  const slot = node('div', 'video-slot');
+  if (solution) solution.append(slot);
+  loadIndex().then(() => {
+    const entry = videos.exercises[identity];
+    if (!entry) { slot.remove(); return; }
+    const details = solution || node('details', 'disclosure exercise-disclosure');
+    if (!solution) {
+      const summary = node('summary', '', 'Video solution (all parts)');
+      summary.dataset.contentsEntry = '';
+      details.append(summary);
+      slot.append(details);
+    }
+    let made = null;
+    function toggle() {
+      if (details.open && !made) {
+        made = player(entry, { ...exercise, revision: exercise.videoRevision }, solution ? 'Video solution' : null);
+        (solution ? slot : details).append(made);
+      } else if (!details.open && made) made.querySelector('video').pause();
+    }
+    details.addEventListener('toggle', toggle);
+    toggle();
+  });
+  return slot;
+}
+
+function player(entry, item, title) {
   const section = node('section', 'video-note');
-  const heading = node('h2', '', 'Video explainer');
-  heading.id = `video-${unit.key}`;
-  section.setAttribute('aria-labelledby', heading.id);
-  section.append(append(node('div', 'section-heading'), heading, node('span', 'small video-length', clock(entry.duration))));
-  if (entry.madeForRevision !== unit.revision) {
-    section.append(node('p', 'notice', 'This video was made for an earlier version of this topic. The text below is current.'));
+  if (title) {
+    const heading = node('h2', '', title);
+    heading.id = `video-${item.key}`;
+    section.setAttribute('aria-labelledby', heading.id);
+    section.append(append(node('div', 'section-heading'), heading, node('span', 'small video-length', clock(entry.duration))));
+  }
+  if (entry.sourceStale || entry.madeForRevision !== item.revision) {
+    section.append(node('p', 'notice', 'This video was made for an earlier version of this topic or problem. The prepared text is current.'));
   }
   const video = node('video');
   Object.assign(video, { controls: true, preload: 'none', playsInline: true, poster: entry.poster });
-  video.setAttribute('aria-label', `Video explainer: ${entry.title}`);
+  video.setAttribute('aria-label', `${title || 'Video solution'}: ${entry.title}`);
   const source = node('source'); source.src = entry.track; source.type = 'video/mp4';
   const track = node('track');
   Object.assign(track, { kind: 'captions', src: entry.captions, srclang: entry.language, label: 'Captions' });

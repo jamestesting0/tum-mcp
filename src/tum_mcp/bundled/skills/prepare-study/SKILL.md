@@ -28,8 +28,8 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
 
 ## Workflow
 
-1. **Scope.** A missing binding goes through sync-course with a course choice. Work
-   from local sources and fetch only missing material through read-content. Run
+1. **Scope.** A missing binding goes through sync-course with the requested course
+   and semester. Work from local sources and fetch only missing material through read-content. Run
    sync-course once, and only when fresh upstream content was requested.
 2. **Plan units.** Inspect the app folder and the affected source and unit IDs. Keep
    notes, edits, labels and stable IDs of unchanged units. Record each source's stated
@@ -104,6 +104,6 @@ external speech generation. Explainer videos work the same way through the optio
 video-notes workflow (`tum-mcp install video-notes`): finish content first, pass the
 changed unit IDs, and keep videos under videos/.
 
-For timestamped notes about the professor's additional explanations beyond slides,
-use the optional prepare-lecture workflow when installed. Preserve existing
+For concise lecture notes and highlights of substantial explanations worth watching, use
+the optional prepare-lecture workflow when installed. Preserve existing
 Lecture while updating Study; do not duplicate or automatically author it.

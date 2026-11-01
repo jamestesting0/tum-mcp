@@ -246,7 +246,7 @@ def _app_data(
         if content
         else "Course exercises with prepared guidance."
         if exercises
-        else "Lecture notes from course recordings."
+        else "Lecture highlights from course recordings."
         if lectures
         else "Exam preparation from past exams and course materials.",
         "organization": content.organization if content else "topics",

@@ -14,18 +14,23 @@ class Reference(Wire):
     title: str = ""
 
 
+class CourseSummary(Reference):
+    semester: str | None = None
+    active: bool = True
+
+
 class Identity(Wire):
     id: PositiveId
     login: str
 
 
-class Courses(RootModel[tuple[Reference, ...]]):
+class Courses(RootModel[tuple[CourseSummary, ...]]):
     pass
 
 
 class CourseDirectory(Frozen):
     account_id: str
-    courses: tuple[Reference, ...]
+    courses: tuple[CourseSummary, ...]
 
 
 class Feedback(Wire):

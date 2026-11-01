@@ -90,7 +90,7 @@ class PersonalRecords:
                 "coverage": "Only this page of accessible conversations was searched.",
             }
         if course_id is None:
-            raise MoodleError(ErrorCode.ACCESS_DENIED, "Choose a current-semester course.")
+            raise MoodleError(ErrorCode.ACCESS_DENIED, "Choose a Moodle course you can access.")
         self.service.moodle.require_course(course_id)
         if kind == "grades":
             url = f"{BASE_URL}/grade/report/user/index.php?id={course_id}"

@@ -41,7 +41,7 @@ def review_revision(graph: Graph, assertion: Assertion) -> str | None:
                 key = node.scope.get("lecture")
                 for lecture in content.lectures:
                     if lecture.key == key:
-                        for section in lecture.sections:
+                        for section in lecture.entries:
                             if node.kind == "lecture" or node.id.endswith(
                                 f"/section/{section.key}"
                             ):
@@ -52,7 +52,7 @@ def review_revision(graph: Graph, assertion: Assertion) -> str | None:
             if (
                 record is None
                 or lecture is None
-                or not any(record.key in s.evidence for s in lecture.sections)
+                or not any(record.key in s.evidence for s in lecture.entries)
             ):
                 return None
             evidence_records.append(record.model_dump(mode="json"))

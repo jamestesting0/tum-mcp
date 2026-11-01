@@ -31,9 +31,16 @@ class Artemis:
             raise CampusError(Code.SCOPE_DENIED, "Artemis identity changed; reconnect.")
         return identity
 
-    def courses(self) -> Courses:
+    def courses(self, include_past: bool = False) -> Courses:
         self.identity()
-        return decode(Courses, self.api.get("/api/course/courses/for-dropdown"))
+        active = decode(Courses, self.api.get("/api/course/courses/for-dropdown"))
+        courses = {item.id: item.model_copy(update={"active": True}) for item in active.root}
+        if include_past:
+            past = decode(Courses, self.api.get("/api/course/courses/for-archive"))
+            for item in past.root:
+                if item.id not in courses:
+                    courses[item.id] = item.model_copy(update={"active": False})
+        return Courses(tuple(courses.values()))
 
     def exercises(self, course_id: int) -> Overview:
         self.identity()

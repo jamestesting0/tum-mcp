@@ -1,4 +1,4 @@
-"""Validate selected raster assets and transactionally manage only owned figures."""
+"""Validate selected raster assets and transactionally manage only owned thumbnails."""
 
 import re
 from pathlib import Path
@@ -9,7 +9,7 @@ from pydantic import Field, ValidationError
 from tum_mcp.course_app_paths import app_folder, app_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_content import LectureContent
-from tum_mcp.lecture_evidence import Figure
+from tum_mcp.lecture_evidence import Thumbnail
 from tum_mcp.lecture_processing.visuals import raster
 from tum_mcp.settings import Frozen
 from tum_mcp.study_models import Digest
@@ -37,47 +37,40 @@ def asset_writes(root: Path, content: LectureContent | None) -> tuple[Write, ...
         raise CampusError(
             Code.WORKSPACE_CONFLICT, "Edited lecture asset ownership needs review."
         ) from None
-    figures = (
-        tuple(
-            figure
-            for lecture in content.lectures
-            for section in lecture.sections
-            for figure in section.figures
-        )
-        if content
-        else ()
+    thumbnails = (
+        tuple(image for lecture in content.lectures for image in lecture.images) if content else ()
     )
-    selected = {figure.asset: figure for figure in figures}
+    selected = {thumbnail.asset: thumbnail for thumbnail in thumbnails}
     if any(
-        (figure.width, figure.height)
-        != (selected[figure.asset].width, selected[figure.asset].height)
-        for figure in figures
+        (thumbnail.width, thumbnail.height)
+        != (selected[thumbnail.asset].width, selected[thumbnail.asset].height)
+        for thumbnail in thumbnails
     ):
         raise CampusError(
-            Code.INVALID_RESPONSE, "One lecture figure has conflicting declared dimensions."
+            Code.INVALID_RESPONSE, "One lecture thumbnail has conflicting declared dimensions."
         )
     writes: list[Write] = []
     owned: dict[str, str] = {}
-    for name, figure in selected.items():
+    for name, thumbnail in selected.items():
         public = app_path(root, name)
         private = private_path(root, name)
         source = private if private.exists() else public
-        payload = figure_bytes(source, figure)
+        payload = thumbnail_bytes(source, thumbnail)
         before = read_bytes(public)
-        if before is not None and digest(before) != figure.sha256:
+        if before is not None and digest(before) != thumbnail.sha256:
             raise CampusError(
-                Code.WORKSPACE_CONFLICT, "Edited public lecture figure was preserved."
+                Code.WORKSPACE_CONFLICT, "Edited public lecture thumbnail was preserved."
             )
         if before is None or name in record.files:
             writes.append(Write(f"{folder}/{name}", before, payload))
-            owned[name] = figure.sha256
+            owned[name] = thumbnail.sha256
     for name, expected in record.files.items():
         if name in selected:
             continue
         before = read_bytes(app_path(root, name))
         if before is not None and digest(before) != expected:
             raise CampusError(
-                Code.WORKSPACE_CONFLICT, "Edited obsolete lecture figure was preserved."
+                Code.WORKSPACE_CONFLICT, "Edited obsolete lecture thumbnail was preserved."
             )
         writes.append(Write(f"{folder}/{name}", before, None))
     if previous is not None or owned:
@@ -91,15 +84,15 @@ def asset_writes(root: Path, content: LectureContent | None) -> tuple[Write, ...
     return tuple(writes)
 
 
-def figure_bytes(source: Path, figure: Figure) -> bytes:
+def thumbnail_bytes(source: Path, thumbnail: Thumbnail) -> bytes:
     if not source.is_file() or source.stat().st_size > 16 * 1024**2:
         raise CampusError(
-            Code.INVALID_RESPONSE, "Selected lecture figure is missing or exceeds 16 MiB."
+            Code.INVALID_RESPONSE, "Selected lecture thumbnail is missing or exceeds 16 MiB."
         )
     payload = source.read_bytes()
-    if digest(payload) != figure.sha256:
+    if digest(payload) != thumbnail.sha256:
         raise CampusError(
-            Code.STALE_RESULT, "Selected lecture figure changed; preserve and review it."
+            Code.STALE_RESULT, "Selected lecture thumbnail changed; preserve and review it."
         )
     signatures = {
         ".png": payload.startswith(b"\x89PNG\r\n\x1a\n"),
@@ -108,12 +101,12 @@ def figure_bytes(source: Path, figure: Figure) -> bytes:
     }
     if not signatures[source.suffix]:
         raise CampusError(
-            Code.INVALID_RESPONSE, "Lecture figure format differs from its file extension."
+            Code.INVALID_RESPONSE, "Lecture thumbnail format differs from its file extension."
         )
     with raster(payload) as image:
-        if image.size != (figure.width, figure.height):
+        if image.size != (thumbnail.width, thumbnail.height):
             raise CampusError(
                 Code.INVALID_RESPONSE,
-                "Lecture figure dimensions differ from its declared source.",
+                "Lecture thumbnail dimensions differ from its declared source.",
             )
     return payload

@@ -51,7 +51,7 @@ def storyboard(content: StudyContent, **changes: object) -> dict:
                 "beats": [
                     {
                         "key": "b01",
-                        "kind": "hook",
+                        "kind": "overview",
                         "narration": ["Which node does the search reach next?"],
                         "intent": "Show the start node.",
                         "locators": [locate(content, "bfs", "summary", "summary")],
@@ -60,11 +60,19 @@ def storyboard(content: StudyContent, **changes: object) -> dict:
                     {
                         "key": "b02",
                         "kind": "question",
+                        "point": "Queue order",
                         "narration": ["Pause and decide."],
                         "pause_s": 3,
                         "question": question.key,
                         "intent": "Ask the practice question.",
                         "locators": [locate(content, "bfs", "question", question.key)],
+                    },
+                    {
+                        "key": "b03",
+                        "kind": "recap",
+                        "narration": ["The queue preserves the breadth first order."],
+                        "intent": "Connect the queue to the traversal order.",
+                        "locators": [locate(content, "bfs", "summary", "summary")],
                     },
                 ],
             }
@@ -95,7 +103,7 @@ def test_teaching_hash_ignores_layout_provenance_and_navigation(content: StudyCo
 def test_valid_storyboard_maps_objectives_and_estimates_length(content: StudyContent) -> None:
     report = check_storyboard(Storyboard.model_validate(storyboard(content)), content)
     assert report.errors == ()
-    assert report.estimated_seconds > 3 and report.words == 10
+    assert report.estimated_seconds > 3 and report.words == 17
     assert any(item.startswith("objective.not_in_video") for item in report.warnings)
 
 
@@ -157,18 +165,24 @@ def test_stems_stay_stable_and_new_videos_take_unused_numbers(content: StudyCont
         (Selection(unit="dfs", decision="video", reason="Now a trace."),),
         content,
         frozenset({"02_taken", "04_depth-first"}),
-        {"dfs": "04_depth-first"},
+        {"study/dfs": "04_depth-first"},
     )
     assert {item.unit: item.stem for item in again}["dfs"] == "04_depth-first"
 
 
 def test_timing_lays_out_measured_sentences_and_pauses(content: StudyContent) -> None:
     board = Storyboard.model_validate(storyboard(content))
-    timing = compose_timing(board, "a" * 64, "silent", {"b01/1": (2.0, None), "b02/1": (1.0, None)})
-    first, second = timing.beats
+    timing = compose_timing(
+        board,
+        "a" * 64,
+        "silent",
+        {"b01/1": (2.0, None), "b02/1": (1.0, None), "b03/1": (2.0, None)},
+    )
+    first, second, third = timing.beats
     assert first.cues[0].start == 0.25 and first.duration == 2.45
     assert second.start == 2.45 and second.duration == pytest.approx(0.25 + 1 + 0.2 + 3)
-    assert timing.total == pytest.approx(second.start + second.duration)
+    assert third.start == pytest.approx(second.start + second.duration)
+    assert timing.total == pytest.approx(third.start + third.duration)
 
 
 def test_chunk_names_change_with_text_and_voice_settings() -> None:
@@ -179,3 +193,42 @@ def test_chunk_names_change_with_text_and_voice_settings() -> None:
     assert chunk_name("b01", 1, "A sentence.", tag) != chunk_name("b01", 1, "A sentence!", tag)
     assert chunk_name("b01", 1, "A sentence.", tag) != chunk_name("b01", 1, "A sentence.", other)
     assert json.dumps(chunk_name("b01", 1, "x", tag)).startswith('"b01_01-')
+
+
+def test_long_question_free_explanations_need_no_duration_or_question_waiver(
+    content: StudyContent,
+) -> None:
+    value = storyboard(content)
+    first = value["chapters"][0]["beats"][0]
+    first["locators"].append(locate(content, "bfs", "objective", value["objectives"][0]))
+    first["narration"] = ["A prepared mechanism with enough reasoning to follow each change."] * 12
+    ending = value["chapters"][0]["beats"][-1]
+    value["chapters"][0]["beats"] = [
+        first,
+        *[
+            {
+                **first,
+                "key": f"b{index:02d}",
+                "kind": "mechanism",
+                "point": "A sustained construction",
+                "on_screen": [],
+            }
+            for index in range(2, 22)
+        ],
+        {**ending, "key": "b22"},
+    ]
+    report = check_storyboard(Storyboard.model_validate(value), content)
+    assert not report.errors and report.estimated_seconds > 600
+    assert not any(w.split(":")[0] in {"length.long", "retrieval.none"} for w in report.warnings)
+
+
+def test_lesson_cannot_skip_orientation_knowledge_points_and_closure(
+    content: StudyContent,
+) -> None:
+    value = storyboard(content)
+    value["chapters"][0]["beats"][0]["kind"] = "bridge"
+    value["chapters"][0]["beats"][1].pop("point")
+    value["chapters"][0]["beats"][-1]["kind"] = "pitfall"
+    board = Storyboard.model_validate(value)
+    rules = {error.split()[0].rstrip(":") for error in check_storyboard(board, content).errors}
+    assert {"lesson.overview", "lesson.point", "lesson.closure"} <= rules

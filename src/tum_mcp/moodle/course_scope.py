@@ -29,8 +29,9 @@ def term_of(course: Course) -> str | None:
 def select_courses(
     courses: list[Course], today: date | None = None
 ) -> tuple[list[Course], list[Course]]:
+    """Prefer the current term without excluding other or unclassified semesters."""
     term = current_term(today)
     return (
-        [course for course in courses if term_of(course) == term],
+        sorted(courses, key=lambda course: term_of(course) != term),
         [course for course in courses if term_of(course) is None],
     )

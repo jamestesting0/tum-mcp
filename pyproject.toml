@@ -28,6 +28,7 @@ dependencies = [
   "latex2mathml>=3.81,<4",
   "m3u8>=6,<7",
   "packaging>=25,<27",
+  "tzdata>=2025.2",
 ]
 
 [project.scripts]

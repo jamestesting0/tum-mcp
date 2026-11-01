@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "course_key": "component-preview",
   "lectures": [
     {
@@ -10,18 +10,18 @@
         "course_id": 1,
         "recording_id": 1,
         "recorded_on": "2026-10-25",
-        "duration_s": 60,
+        "duration_s": 5400,
         "synthetic": true
       },
-      "overview": "In an unweighted graph, BFS explores vertices in layers of increasing distance. The queue preserves that order.",
-      "takeaways": [
-        "Mark a vertex when you enqueue it, so it enters the queue once.",
-        "The shortest-path guarantee requires equal edge costs."
-      ],
+      "summary": "BFS explores an unweighted graph in layers of increasing distance; the queue keeps that order, which is why first discovery gives a shortest path.",
       "sources": [
         {
           "key": "lecture-demo",
           "sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163"
+        },
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
         }
       ],
       "checked_at": "2026-10-25T08:00:00Z",
@@ -30,112 +30,202 @@
         "eligible": [
           {
             "start_s": 0,
-            "end_s": 60
+            "end_s": 5400
           }
         ],
         "processed": [
           {
             "start_s": 0,
-            "end_s": 60
+            "end_s": 5400
           }
         ],
         "excluded": [],
         "missing": [],
         "reviewed": true
       },
-      "sections": [
+      "notes": [
         {
-          "key": "fifo-invariant",
-          "title": "Why first discovery gives a shortest path",
-          "blocks": [
-            {
-              "kind": "text",
-              "sources": [
-                "lecture-demo"
-              ],
-              "paragraphs": [
-                "When a vertex at distance d is removed, every newly discovered neighbor receives distance d+1. FIFO processes vertices already in the queue first. Those vertices have distance d or d+1, so a later discovery cannot provide a shorter route."
-              ]
-            },
-            {
-              "kind": "formula",
-              "title": "Distance on first discovery",
-              "level": 1,
-              "sources": [
-                "lecture-demo"
-              ],
-              "latex": "d(v)=d(u)+1",
-              "plain": "An undiscovered neighbor is one edge farther from the start.",
-              "symbols": [
-                {
-                  "symbol": "u",
-                  "meaning": "The removed queue vertex"
-                },
-                {
-                  "symbol": "v",
-                  "meaning": "Its newly discovered neighbor"
-                },
-                {
-                  "symbol": "d",
-                  "meaning": "Minimum edge count from the start"
-                }
-              ],
-              "conditions": "Unweighted graph with FIFO order and marking when enqueuing."
-            },
-            {
-              "kind": "text",
-              "title": "When this guarantee holds",
-              "level": 2,
-              "sources": [
-                "lecture-demo"
-              ],
-              "paragraphs": [
-                "For A–B–C, the distances from A are 0, 1 and 2. This argument counts edges; it does not establish minimum total cost for arbitrary weighted edges."
-              ]
-            }
+          "key": "disconnected-graphs",
+          "text": "One BFS visits only the source's connected component. To traverse a disconnected graph, restart from an unvisited vertex after the queue empties.",
+          "sources": ["components"],
+          "pages": "1",
+          "evidence": ["speech-components"]
+        },
+        {
+          "key": "count-adjacencies",
+          "text": "An undirected edge is stored in both endpoints' adjacency lists. With \\(m\\) undirected edges, a full scan examines \\(2m\\) entries.",
+          "evidence": ["speech-adjacencies"]
+        }
+      ],
+      "highlights": [
+        {
+          "key": "first-discovery",
+          "title": "Tracing the queue to prove first discovery is shortest",
+          "interval": {
+            "start_s": 760,
+            "end_s": 1145
+          },
+          "teaches": "In an unweighted graph BFS reaches each vertex first along a path with the fewest edges, because the queue only ever holds distances \\(d\\) and \\(d+1\\).",
+          "points": [
+            "Removing a vertex at distance \\(d\\) gives each undiscovered neighbour distance \\(d+1\\).",
+            "On the path \\(A\\)–\\(B\\)–\\(C\\) the distances from \\(A\\) are \\(0\\), \\(1\\) and \\(2\\)."
+          ],
+          "sources": [
+            "components"
+          ],
+          "pages": "1",
+          "evidence": [
+            "speech-first",
+            "frame-first"
+          ],
+          "thumbnail": {
+            "evidence": "frame-first",
+            "sha256": "1ffe9ebdf59391f97ba3fa10c28bd750ce65280c5bb9b21c1853217b048cc935",
+            "asset": "lecture-assets/1ffe9ebdf59391f97ba3fa10c28bd750ce65280c5bb9b21c1853217b048cc935.png",
+            "width": 640,
+            "height": 360,
+            "captured_at_s": 772.4
+          }
+        },
+        {
+          "key": "mark-on-enqueue",
+          "title": "Tracing duplicate enqueues through a shared neighbour",
+          "interval": {
+            "start_s": 1390,
+            "end_s": 1665
+          },
+          "teaches": "Marking at enqueue time keeps every vertex in the queue once, so BFS runs in \\(O(V+E)\\).",
+          "points": [
+            "Marking at dequeue time lets a vertex enter the queue once per incoming edge."
           ],
           "evidence": [
-            "speech",
-            "board"
+            "speech-enqueue",
+            "frame-enqueue"
           ],
-          "figures": [
-            {
-              "evidence": "board",
-              "sha256": "1ffe9ebdf59391f97ba3fa10c28bd750ce65280c5bb9b21c1853217b048cc935",
-              "asset": "lecture-assets/1ffe9ebdf59391f97ba3fa10c28bd750ce65280c5bb9b21c1853217b048cc935.png",
-              "width": 640,
-              "height": 360,
-              "captured_at_s": 37.5,
-              "caption": "Synthetic source frame: a two-edge path illustrates the layer invariant.",
-              "alt": "A path A to B to C; distances from A are zero, one and two."
-            }
-          ]
+          "thumbnail": {
+            "evidence": "frame-enqueue",
+            "sha256": "61d8dc1ff8bf6e648a022bc786df1e4363dae9bd4791b51229e6c9f414e4bcbc",
+            "asset": "lecture-assets/61d8dc1ff8bf6e648a022bc786df1e4363dae9bd4791b51229e6c9f414e4bcbc.png",
+            "width": 640,
+            "height": 360,
+            "captured_at_s": 1402.0
+          }
+        },
+        {
+          "key": "weighted-edges",
+          "title": "Working a weighted counterexample to BFS",
+          "interval": {
+            "start_s": 2490,
+            "end_s": 2730
+          },
+          "teaches": "Fewest edges is not cheapest once edge costs differ; Dijkstra's algorithm handles non-negative weights.",
+          "points": [
+            "A direct edge of cost \\(5\\) loses to two edges of cost \\(1\\)."
+          ],
+          "evidence": [
+            "speech-weighted",
+            "frame-weighted"
+          ],
+          "thumbnail": {
+            "evidence": "frame-weighted",
+            "sha256": "ba113f3a80fa83549d4418120da2dfe0ac5f6c03226172db0da1368f3c0619b6",
+            "asset": "lecture-assets/ba113f3a80fa83549d4418120da2dfe0ac5f6c03226172db0da1368f3c0619b6.png",
+            "width": 640,
+            "height": 360,
+            "captured_at_s": 2501.5
+          }
         }
       ]
     }
   ],
   "evidence": [
     {
-      "key": "speech",
+      "key": "speech-components",
+      "source_key": "lecture-demo",
+      "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
+      "kind": "subtitle",
+      "recording_id": 1,
+      "interval": {"start_s": 2100, "end_s": 2110},
+      "reviewed": true
+    },
+    {
+      "key": "speech-adjacencies",
+      "source_key": "lecture-demo",
+      "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
+      "kind": "subtitle",
+      "recording_id": 1,
+      "interval": {"start_s": 2200, "end_s": 2210},
+      "reviewed": true
+    },
+    {
+      "key": "speech-first",
       "source_key": "lecture-demo",
       "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
       "kind": "subtitle",
       "recording_id": 1,
       "interval": {
-        "start_s": 20,
-        "end_s": 60
+        "start_s": 760,
+        "end_s": 1145
       },
       "reviewed": true
     },
     {
-      "key": "board",
+      "key": "frame-first",
       "source_key": "lecture-demo",
       "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
       "kind": "frame",
       "recording_id": 1,
       "interval": {
-        "start_s": 37.4,
-        "end_s": 37.6
+        "start_s": 772.3,
+        "end_s": 772.5
+      },
+      "reviewed": true
+    },
+    {
+      "key": "speech-enqueue",
+      "source_key": "lecture-demo",
+      "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
+      "kind": "subtitle",
+      "recording_id": 1,
+      "interval": {
+        "start_s": 1390,
+        "end_s": 1665
+      },
+      "reviewed": true
+    },
+    {
+      "key": "frame-enqueue",
+      "source_key": "lecture-demo",
+      "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
+      "kind": "frame",
+      "recording_id": 1,
+      "interval": {
+        "start_s": 1401.9,
+        "end_s": 1402.1
+      },
+      "reviewed": true
+    },
+    {
+      "key": "speech-weighted",
+      "source_key": "lecture-demo",
+      "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
+      "kind": "subtitle",
+      "recording_id": 1,
+      "interval": {
+        "start_s": 2490,
+        "end_s": 2730
+      },
+      "reviewed": true
+    },
+    {
+      "key": "frame-weighted",
+      "source_key": "lecture-demo",
+      "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
+      "kind": "frame",
+      "recording_id": 1,
+      "interval": {
+        "start_s": 2501.4,
+        "end_s": 2501.6
       },
       "reviewed": true
     }

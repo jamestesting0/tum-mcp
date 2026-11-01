@@ -1,6 +1,9 @@
 """Regenerate the synthetic Video Notes fixtures with the optional render runtime's Python.
 
 Usage: <video runtime python> -I tests/fixtures/video/generate.py
+AAC codec fixture: bash tests/fixtures/video/generate-audio.sh (requires ffmpeg/ffprobe).
+speech.wav is the lossless synchrony WAV from review-course's media-gallery recipe
+(Kokoro v1.0 fp32, af_heart, en-us, speed 1), not the tone fixture.
 """
 
 import math

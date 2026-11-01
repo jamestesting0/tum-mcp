@@ -15,7 +15,7 @@ teaching review is not proof that students learn.
 
 - The JSON lists `lint`, `failures`, `layout` and `check`. Fix the reported line,
   then the beat, then the chapter.
-- Open every contact sheet in `sheets` and look at each beat's last frame: readable
+- Open every contact sheet in `sheets` and inspect entry/middle/exit samples: readable
   text, no overlap, nothing in the caption band, the right state shown for the
   narration, and the formula entries in `formulas` matching the source. Use `frames`
   for any moment the user mentions. If you cannot view images, publish with
@@ -24,6 +24,17 @@ teaching review is not proof that students learn.
   frame rate, duration within 0.5 s of timing, audio within 0.1 s of video,
   -16 ± 1 LUFS, true peak at most -1.4 dBTP, ordered captions and chapters inside the
   video, a poster and no unwaived layout issue.
+
+## Perception and source review
+
+Follow [media review](../../review-course/references/media.md). Inspect the entire
+final playback with sound, not just sampled frames: transitions, current state,
+referents, useful prior state, pronunciation, joins, captions and chapter seeks.
+Compare source formula entries, assumptions and every Exercise demand. Re-enter
+chapters and check orientation. A correct endpoint with missing visible reasoning
+does not pass; neither does an early result hidden by choosing a later screenshot.
+Record actual inspected intervals and file hashes. Missing listening/playback stays
+incomplete; transcripts, loudness, ASR and frame sheets cannot substitute for it.
 
 ## Report
 

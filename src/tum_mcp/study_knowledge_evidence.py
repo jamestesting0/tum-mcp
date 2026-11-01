@@ -135,7 +135,7 @@ class EvidenceChecks:
             return Validity("unknown", "timed evidence reference is missing")
         if evidence.interval is None or not evidence.reviewed or evidence.uncertainty:
             return Validity("stale", "timed evidence is unreviewed or uncertain")
-        if not any(evidence.key in section.evidence for section in lecture.sections):
+        if not any(evidence.key in section.evidence for section in lecture.entries):
             return Validity("stale", "timed evidence belongs to a different lecture")
         if any(
             span.start_s < evidence.interval.end_s and evidence.interval.start_s < span.end_s
@@ -152,7 +152,7 @@ class EvidenceChecks:
         if lecture is None:
             return (Validity("unknown", "lecture is missing"),)
         selected = (
-            keys if keys is not None else tuple({e for s in lecture.sections for e in s.evidence})
+            keys if keys is not None else tuple({e for s in lecture.entries for e in s.evidence})
         )
         if not selected:
             return (Validity("unknown", "no timed evidence for this lecture item"),)

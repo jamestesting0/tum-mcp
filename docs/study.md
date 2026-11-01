@@ -8,7 +8,8 @@ The optional `prepare-lecture` skill adds a Lecture workspace; install it with
 `tum-mcp install lecture`. See [Lecture](lecture-notes.md).
 The optional `audio-notes` skill turns prepared lessons into spoken tracks; install
 it with `tum-mcp install audio-notes`. The optional `video-notes` skill turns prepared
-topics into short narrated explainer videos; install it with `tum-mcp install video-notes`.
+topics into depth-first visual explanations and selected Exercises into solution
+walkthroughs; install it with `tum-mcp install video-notes`.
 
 ## Start with one course
 
@@ -410,11 +411,14 @@ the course or create new subject matter. An audio-only request reuses the prepar
 course; it does not refresh campus sources or rebuild the website automatically.
 
 Before synthesis, Audio Notes consolidates repeated explanations and reviews the
-script for coverage, clear terminology, concise examples and useful recall. It
+script for coverage, clear terminology, chapter re-entry and useful reinforcement. It
 preserves distinct ideas and conditions rather than targeting a fixed duration.
 Teaching reviews are tied to the script and narration-guidance fingerprints;
 updated guidance prompts a review of existing scripts without automatically
-regenerating unchanged speech. These checks do not establish learning outcomes.
+regenerating unchanged speech. Audio supports uninterrupted hands-free revision:
+no screen, spoken response or mandatory interaction. Exact Study dependencies are
+disclosed where a construction cannot be taught through sound alone.
+These checks do not establish learning outcomes.
 
 All course-specific audio files stay inside the project's `audio/` directory:
 
@@ -474,22 +478,41 @@ then make the BFS one first.
 ```
 
 The agent proposes which topics get a video and records a reason for each topic it
-leaves text-first. Each video covers one topic, usually 3 to 8 minutes, in short
-chapters. It is a visual adaptation of the prepared lesson: the problem first, the
-course's own example before the general rule, consistent colors per symbol, one or
-two pause-and-think questions from the topic's practice, and a short recap. Nothing
+leaves text-first. Concept videos develop one topic with sustained visual reasoning,
+without a duration target. They adapt the prepared lesson: the problem first, the
+course's own example before the general rule, and consistent objects and symbols.
+They open with the learning question and section map, develop named knowledge
+points within those sections, and finish by connecting the results. Storyboard
+checks require `overview`, substantive beats with a `point`, and a final `recap`.
+Questions may reuse practice when useful; there is no question quota. Nothing
 outside the prepared content is added; a missing example is reported back to
 `prepare-study`.
+
+For an explicitly requested Exercise walkthrough, prepare and check the problem
+with `prepare-exercises`, then use `video-notes exercise PROJECT SET/KEY` to bind
+the exact problem. Cover all parts, justify the method, show transformations and
+their meaning, and independently verify the result. The storyboard must establish
+the shared problem and include setup, strategy, work, verification and an answer
+for each part, with a distinct final-answer emphasis and a complete summary for
+multi-part problems. Concise removes detours,
+not instruction: a longer clear solution beats a short opaque one.
 
 Behind the skill, `tum-mcp video-notes` does the checkable work. It prints the
 fingerprints a storyboard cites and rejects storyboards whose sources changed. It
 measures one narration file per sentence and renders the scenes with a pinned Manim
 and Typst runtime (no LaTeX needed). It enforces that animations fit their narration
-frame by frame and reports overlapping or off-screen text. Each run produces a
-contact sheet per chapter for review, and the final video is checked for codec,
+frame by frame; sentence cues align reveals to measured speech. It reports
+overlapping or off-screen text. Labels can wrap at a measured scene width without
+shrinking; crowded scenes need recomposition rather than smaller type.
+Each run produces entry/middle/exit contact sheets
+for review, and the final video is checked for codec,
 sync, loudness, captions and chapters before publication. Unchanged chapters are
 reused, interrupted runs resume, and a failed publication restores the previous
 files.
+
+Video colors derive from the current app CSS. New projects use light; explicit
+dark remains supported. A rendered video has a fixed theme, independent of the
+app's theme switch.
 
 Narration follows the Audio Notes policy: the free ElevenLabs website when it really
 generates and downloads the text, otherwise local Kokoro, with no accounts or
@@ -516,11 +539,21 @@ videos/
 
 Published videos appear above the topic's Content in the local app (`tum-mcp study`)
 with chapters, captions and a transcript link, and show a notice when the topic
-changed after the video was made. They load when you press play. Hosted study sites
+changed after the video was made. Exercise videos mount only when Solution (or
+“Video solution (all parts)”) opens, never autoplay, pause on close, and do not
+change written-answer progress. Exam does not expose them. Hosted study sites
 never include or request videos; copy files from `videos/tracks/` to watch them
 elsewhere. `tum-mcp video-notes inspect PROJECT` reports planned, stale, pending and
 published videos, and `tum-mcp study demo PROJECT --videos` adds a synthetic preview
 clip.
+
+`study schema audio-plan`, `audio-manifest` and `review` describe typed records.
+`study report PROJECT --section review` has a separate `media` section for
+pending/broken/stale outputs, source-bound revisions, evidence and audio/video
+averages. Media needs actual script, signal and complete listening evidence;
+video also needs frames and full playback. Missing perception stays incomplete.
+An ASR transcript, passing codec check or contact sheet cannot certify that a
+voice was heard. Reviews never claim mastery or exam readiness.
 
 The render runtime (about 320 MB) installs on first use with
 `tum-mcp video-notes runtime install`. Windows x64 needs nothing else. macOS 14+ on

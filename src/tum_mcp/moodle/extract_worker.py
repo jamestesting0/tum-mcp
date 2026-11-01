@@ -115,10 +115,11 @@ def _run_worker(body: bytes, content_type: str) -> bytes:
 
 def _tree_memory(worker: psutil.Process) -> int:
     """Resident memory of the worker and its children. Sandboxes such as macOS seatbelt deny
-    listing every process, so the worker's own memory is the bound there."""
+    listing every process, so the worker's own memory is the bound there. A child that exits
+    while Windows lists it raises NoSuchProcess; the next poll reads the tree again."""
     try:
         children = worker.children(recursive=True)
-    except (psutil.AccessDenied, PermissionError):
+    except (psutil.AccessDenied, psutil.NoSuchProcess, PermissionError):
         children = []
     try:
         return sum(process.memory_info().rss for process in [worker, *children])

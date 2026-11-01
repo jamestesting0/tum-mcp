@@ -4,6 +4,8 @@ A video is a visual adaptation of one prepared Study unit. It earns its place wh
 motion shows something the page cannot: a state changing, a quantity moving, a
 derivation step transforming, a trace advancing. The prepared unit stays the
 reference; flashcards and practice stay in the app.
+For prepared Exercises use [walkthroughs](exercise-walkthroughs.md), not this lesson
+shape. [Explanation design](explanation-design.md) gives concrete visual mechanisms.
 
 ## Choose units
 
@@ -16,8 +18,9 @@ contract. Planning keeps existing video numbers and never renumbers.
 
 ## Rules
 
-- **R1 Motivation first.** Open with the problem the unit solves, taken from its
-  summary, within about 30 seconds. No invented hook.
+- **R1 Orient first.** Open with the source-backed learning question, what the
+  viewer will understand, and a short map of the sections. State the selected
+  scope rather than implying that a partial lesson covers the whole unit.
 - **R2 Concrete before abstract.** Show the course's own worked example, diagram
   frames, plot data or practice givens before the general rule. If the unit has no
   concrete instance, report the gap to prepare-study instead of inventing one.
@@ -27,38 +30,45 @@ contract. Planning keeps existing video numbers and never renumbers.
   names it. The beat timing enforces this; keep each beat to one idea.
 - **R5 Redundancy and modality.** Narration explains; the screen shows objects, short
   labels, the key formula and at most one short sentence. Never put the narration on
-  screen. Still name every essential visual change aloud, so the transcript works
-  without the picture.
+  screen. Name essential referents for orientation; do not force narration to
+  replace the visual construction. A video transcript is not an audio-only lesson.
 - **R6 Signaling.** Highlight or indicate what is being named, never by color alone.
   The same symbol keeps the same color in every video of the course
   (`videos/style.json` `symbol_colors`).
 - **R7 Coherence.** No decorative motion, music, sound effects or filler. Every
   animation shows a relationship or a state change.
-- **R8 Segmenting.** Chapters of 30 to 120 seconds, one concept each. Aim for 3 to 8
-  minutes per video; past 10 minutes suggest splitting the unit in prepare-study.
-- **R9 Retrieval.** One or two `question` beats per video, each an existing practice
-  question that fits what was shown. Show the givens, narrate the prompt, pause 3 to
-  5 seconds (`pause_s`), then answer from the prepared explanation. Label a
-  misconception as one. Never turn it into a different question.
+- **R8 Sections and knowledge points.** Chapters are meaningful sections. Each
+  substantive beat names its `point`: a specific knowledge point supported by its
+  prepared locators. Several beats may develop the same point. Keep its objects
+  and useful intermediate results visible; explain why the next section follows.
+  There is no chapter, knowledge-point count or video duration target.
+- **R9 Optional retrieval.** A `question` beat may reuse an existing practice question
+  when it helps this explanation. Show its givens and answer from prepared feedback.
+  No quota, invented question or mandatory prediction/pause.
 - **R10 Rediscoverable steps.** Say why the next step helps and what makes it valid.
   Equation steps transform with matching parts; kept terms stay where they are.
 - **R11 Fidelity.** Edge and inequality directions, order, units, signs, monotonicity
   and extrema match the source. Plot only source data or exact source formulas, and
   call interpolation illustrative. Numbers come from storyboard `number` items.
-- **R12 Close.** Recap the central relationship in a few sentences and point to the
-  unit's Practice. Never claim that watching proves mastery.
+- **R12 Resolve the opening question.** Connect the section results, return to the
+  central visual and summarize the relationship and its conditions. The viewer
+  should know what the explanation established. Never claim that watching proves
+  mastery.
 
-Default shape, adapted rather than imposed: hook, bridge, instance, mechanism,
-generalize (the abstraction colour-linked to the instance), pitfall, question, recap.
-These are the beat `kind` values.
+Start with an `overview` beat and finish with `recap`. Between them, choose
+`hook`, `bridge`, `instance`, `mechanism`, `generalize`, `pitfall` and optional
+`question` beats to teach the named knowledge points. Do not turn the outline
+into a string of disconnected title cards. An overview, a useful transition and
+a final synthesis are teaching; branding intros and stock goodbyes add nothing.
 
 ## Storyboards
 
 `tum-mcp video-notes unit PROJECT UNIT` prints every locator with its fingerprint and
 the unit hash; copy them, never compute them. Each beat lists the locators it
 teaches from. `storyboard check` fails on stale units, changed or missing locators,
-unknown questions and objectives without a beat; it warns about objectives left to
-practice and missing question beats. A beat with no narration needs a pause of at
+unknown questions, objectives without a beat, missing overview/recap and unnamed
+knowledge points; it warns about objectives left to practice.
+A beat with no narration needs a pause of at
 least 0.5 seconds. On-screen text, math, numbers and code live in the beat's
 `on_screen` items; scene code shows them by key. Math items carry `typst` (no `#`)
 and, when copied from a formula block, the original `source_latex` for comparison.

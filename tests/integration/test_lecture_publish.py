@@ -25,7 +25,7 @@ def data(site):
     "include_exercises,include_lectures",
     [(False, False), (True, False), (False, True), (True, True)],
 )
-def test_scope_projection_and_referenced_figures_only(
+def test_scope_projection_and_referenced_thumbnails_only(
     lecture_project: Path, include_exercises: bool, include_lectures: bool
 ) -> None:
     build(lecture_project, publish=False)
@@ -75,9 +75,9 @@ def test_excluded_lecture_math_source_and_content_are_removed(lecture_project: P
     value = json.loads(notes.read_text(encoding="utf-8"))
     lecture = value["lectures"][0]
     lecture["sources"] = [{"key": "lecture-only", "sha256": source.sha256}]
-    lecture["overview"] += r" LECTURE_ONLY_TEXT \(\mathrm{LECTUREONLYMATH}\)"
-    for block in lecture["sections"][0]["blocks"]:
-        block["sources"] = ["lecture-only"]
+    lecture["summary"] += r" LECTURE_ONLY_TEXT \(\mathrm{LECTUREONLYMATH}\)"
+    for entry in lecture["notes"] + lecture["highlights"]:
+        entry["sources"] = ["lecture-only"]
     for evidence in value["evidence"]:
         evidence.update(source_key="lecture-only", source_sha256=source.sha256)
     notes.write_text(json.dumps(value), encoding="utf-8")
@@ -131,9 +131,9 @@ def test_excluded_notes_only_and_missing_figure_fail_without_remote_writes(
     assert data(export_site(root, include_lectures=True))["workspaces"] == ["lectures"]
     for image in (root / "study/lecture-assets").iterdir():
         image.unlink()
-    with pytest.raises(CampusError, match="figure"):
+    with pytest.raises(CampusError, match="thumbnail"):
         export_site(root, include_lectures=True)
-    with pytest.raises(CampusError, match="figure"):
+    with pytest.raises(CampusError, match="thumbnail"):
         configure(root, include_lectures=True)
     assert github.requests == []
 
@@ -160,3 +160,23 @@ def test_export_limits_reject_before_remote_read_or_write(
     with pytest.raises(CampusError):
         commit_site(GitHub.discover(), publication, site)
     assert github.requests == []
+
+
+def test_note_image_is_exported_only_with_lecture_inclusion(lecture_project: Path) -> None:
+    path = lecture_project / "study/lectures.json"
+    value = json.loads(path.read_bytes())
+    lecture = value["lectures"][0]
+    first = lecture["highlights"][0]
+    lecture["notes"][0]["image"] = first["thumbnail"] | {"alt": "A three-vertex path."}
+    lecture["notes"][0]["evidence"] += first["evidence"]
+    lecture["highlights"] = []
+    used = set(lecture["notes"][0]["evidence"])
+    value["evidence"] = [item for item in value["evidence"] if item["key"] in used]
+    path.write_text(json.dumps(value))
+    build(lecture_project, publish=False)
+    included = export_site(lecture_project, include_lectures=True)
+    assert first["thumbnail"]["asset"] in included
+    assert data(included)["lectures"]["lectures"][0]["notes"][0]["image"]["alt"]
+    excluded = export_site(lecture_project, include_lectures=False)
+    assert not any(name.startswith("lecture-assets/") for name in excluded)
+    assert "lectures" not in data(excluded)

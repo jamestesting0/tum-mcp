@@ -1,4 +1,4 @@
-"""Choose public workspaces before deriving sources, math and figure bytes."""
+"""Choose public workspaces before deriving sources, math, figure and thumbnail bytes."""
 
 import json
 from pathlib import Path
@@ -7,8 +7,9 @@ from pydantic import ValidationError
 
 from tum_mcp.course_app_paths import app_path
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_assets import figure_bytes
-from tum_mcp.lecture_evidence import Figure
+from tum_mcp.lecture_assets import thumbnail_bytes
+from tum_mcp.lecture_content import NoteImage
+from tum_mcp.lecture_evidence import Thumbnail
 from tum_mcp.study_build import _inline_math
 from tum_mcp.study_figures import figure_bytes as study_figure_bytes
 from tum_mcp.study_figures import figure_images
@@ -91,14 +92,17 @@ def assets(root: Path, payload: dict) -> dict[str, bytes]:
     }
     try:
         for lecture in payload.get("lectures", {}).get("lectures", []):
-            for section in lecture["sections"]:
-                for item in section["figures"]:
-                    figure = Figure.model_validate(
-                        {key: value for key, value in item.items() if key in Figure.model_fields}
-                    )
-                    result[figure.asset] = figure_bytes(app_path(root, figure.asset), figure)
+            for note in lecture["notes"]:
+                if note["image"] is not None:
+                    image = NoteImage.model_validate(note["image"])
+                    result[image.asset] = thumbnail_bytes(app_path(root, image.asset), image)
+            for highlight in lecture["highlights"]:
+                thumbnail = Thumbnail.model_validate(highlight["thumbnail"])
+                result[thumbnail.asset] = thumbnail_bytes(
+                    app_path(root, thumbnail.asset), thumbnail
+                )
     except (KeyError, TypeError, ValidationError):
         raise CampusError(
-            Code.INVALID_RESPONSE, "Rebuild selected lecture figures before publishing."
+            Code.INVALID_RESPONSE, "Rebuild selected lecture thumbnails before publishing."
         ) from None
     return result

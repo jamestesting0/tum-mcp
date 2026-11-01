@@ -7,6 +7,30 @@
   happens on the next relevant request. Uninstall stops graph use and preserves its
   files. Reinstall checks freshness before reuse. Native course review remains
   independent of disabled memory, and no document pipeline or background index is added.
+- Moodle discovery defaults to current-semester courses; `include_past=true` lists
+  enrolled courses from every semester, current first. Explicit older and otherwise
+  accessible known course IDs support material reads and indexed search. Live Moodle
+  course access is checked before returning content, including cached text; enrollment prompts and denied courses stay blocked.
+- Artemis discovery defaults to active courses; `include_past=true` adds past courses
+  with semester labels when available. CLI discovery has `--include-past`. Past-course
+  lectures, student slides and released exercise statements use the same server
+  permissions and read boundaries.
+- Explicit semester requests such as WS23 select the older offering for course
+  preparation and keep its semester and provider IDs during later syncs. Unscoped
+  Moodle material search defaults to current courses; `include_past=true` expands it.
+- Ship timezone data so current-semester detection also works on Windows and other
+  hosts without a system IANA timezone database.
+- Lecture separates concise Notes from substantial worked explanations worth watching.
+  Short remarks, corrections and instructions need no watch card; optional note images
+  carry meaning and descriptive alt text. Highlights show a time range and duration, a recording frame, a title,
+  what it teaches and up to three points, and opens the recording at its start; the
+  lecture list shows note/highlight counts and watching time. Notes-only,
+  highlights-only and no selected additions are supported.
+  `tum-mcp lecture thumbnail` stages a captured frame as a 960 px thumbnail, and
+  `tum-mcp lecture check` verifies highlight boundaries against the transcript and prints
+  each highlight's opening/closing speech and each note's supporting speech.
+  `lectures.json` moves to schema version 2;
+  earlier lecture notes need re-authoring.
 - Lecture preparation no longer fails on recordings whose AAC timestamps drift slightly:
   a window decoded a few samples short now pads that jitter instead of rejecting every
   chunk. Each failed preflight sample or chunk is recorded in the receipt with its time,
@@ -16,7 +40,7 @@
   relation, each line with its reason and one labelled group per requested result. With
   `walkthrough` it steps through the lines with Previous and Next, keeps earlier lines,
   draws the state each line reaches, and offers Show all steps. Usable in Study, exercise
-  Compare answers, Exam and Lecture.
+  Compare answers and Exam.
 - Mathematics is typeset by the bundled KaTeX 0.19.1, as in Notion: TeX fonts, square
   roots, kets and spacing, text-size inline vectors and matrices, and long inline math
   that wraps after its relations on a phone. The build still validates every expression
@@ -30,11 +54,9 @@
 - review-course separates purposeful reinforcement from duplication, walks each item as
   a first encounter, adds checks for reminders at the point of use, unpacked notation,
   shown objects, explained working and general rules, and calibrates them on two subjects.
-  prepare-lecture adds a teaching-value pass for lecture visuals.
 - Diagrams, UML, plots and figures take the background of the card that holds them
   instead of a darker inset.
-- A Lecture section's sources sit on its title row when its first passage is untitled.
-  Review scorecards accept the solution, transfer, Compare and Explore visual ids the
+- Review scorecards accept the solution, transfer, Compare and Explore visual ids the
   render check emits, and a review saved with no scores reports every dimension
   unscored instead of failing.
 

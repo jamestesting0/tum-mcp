@@ -1,5 +1,6 @@
 """Project explicit workspace relationships without inventing concept equivalence."""
 
+from tum_mcp.lecture_content import Highlight
 from tum_mcp.study_content import SourceVersion, term_markers
 from tum_mcp.study_knowledge_graph import Edge, Graph, Node, block_records, safe_text
 from tum_mcp.study_knowledge_models import LectureEvidence, SourceEvidence, normalized
@@ -240,24 +241,30 @@ def _lectures(graph: Graph) -> None:
                 "lectures",
                 "lecture",
                 lecture.title,
-                lecture.overview,
-                " ".join(lecture.takeaways),
+                lecture.summary,
+                "",
                 lecture.model_dump(mode="json"),
                 lecture.sources,
                 scope,
                 "owner",
             )
         )
-        for section in lecture.sections:
-            value = section.model_dump(mode="json")
+        for entry in lecture.entries:
+            value = entry.model_dump(mode="json")
+            if isinstance(entry, Highlight):
+                title = entry.title
+                body = safe_text([entry.teaches, *entry.points])
+            else:
+                title = entry.text
+                body = entry.text
             child = graph.add(
                 Node(
-                    f"{owner.id}/section/{section.key}",
+                    f"{owner.id}/section/{entry.key}",
                     "lectures",
                     "section",
-                    section.title,
+                    title,
                     "",
-                    safe_text(value["blocks"]),
+                    body,
                     value,
                     lecture.sources,
                     scope,

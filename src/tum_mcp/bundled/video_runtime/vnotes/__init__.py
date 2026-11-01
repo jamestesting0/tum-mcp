@@ -114,7 +114,10 @@ class NotesScene(Scene):
         self.beat_timing = {key: timings[key] for key in self.beat_order}
         self.chapter_start = self.beat_timing[self.beat_order[0]]["start"]
         self.done: list[str] = []
-        self.tokens = style.THEMES[context.style.get("theme", "dark")]
+        self.active_beat: str | None = None
+        self.active_cue = False
+        self.last_cue = 0
+        self.tokens = context.style["tokens"]
         self.screen = {
             item["key"]: item
             for chapter in context.storyboard["chapters"]
@@ -133,13 +136,20 @@ class NotesScene(Scene):
 
     @contextmanager
     def beat(self, key: str) -> Iterator[BeatHandle]:
+        if self.active_beat is not None:
+            raise VideoNotesError("Beats cannot be nested.")
         position = len(self.done)
         if position >= len(self.beat_order) or self.beat_order[position] != key:
             expected = self.beat_order[position] if position < len(self.beat_order) else "none"
             raise VideoNotesError(f"{self.chapter_key}: played beat {key}; expected {expected}.")
         timing = self.beat_timing[key]
         handle = BeatHandle(key=key, duration=timing["duration"], started=self.time, scene=self)
-        yield handle
+        self.active_beat = key
+        self.last_cue = 0
+        try:
+            yield handle
+        finally:
+            self.active_beat = None
         target = self._frames(timing["start"] + timing["duration"]) - self._frames(
             self.chapter_start
         )
@@ -155,6 +165,49 @@ class NotesScene(Scene):
             # A frozen wait renders int(duration * fps) frames; +0.5 makes that exactly n.
             self.wait((target - current + 0.5) / config.frame_rate, frozen_frame=True)
         self.done.append(key)
+        self._probe(key)
+
+    @contextmanager
+    def cue(self, index: int) -> Iterator[BeatHandle]:
+        """Align a sentence-specific change to its measured interval in the active beat."""
+        key = self.active_beat
+        if key is None:
+            raise VideoNotesError("cue() must be inside an active beat.")
+        if self.active_cue:
+            raise VideoNotesError(f"{key}: sentence cues cannot be nested.")
+        cues = self.beat_timing[key]["cues"]
+        if type(index) is not int or not 1 <= index <= len(cues):
+            raise VideoNotesError(f"{key}: cue index {index} is missing; use 1-{len(cues)}.")
+        if index <= self.last_cue:
+            raise VideoNotesError(f"{key}: cue {index} is out of order after {self.last_cue}.")
+        cue = cues[index - 1]
+        start = self._frames(cue["start"]) - self._frames(self.chapter_start)
+        end = self._frames(cue["end"]) - self._frames(self.chapter_start)
+        current = self._frames(self.time)
+        if current > start + 1:
+            raise VideoNotesError(f"{key}: cue {index} has already started.")
+        if current < start:
+            self.wait((start - current + 0.5) / config.frame_rate, frozen_frame=True)
+        self.active_cue = True
+        self.last_cue = index
+        self._probe(key)
+        try:
+            yield BeatHandle(
+                key=f"{key}/cue-{index}",
+                duration=(end - start) / config.frame_rate,
+                started=start / config.frame_rate,
+                scene=self,
+            )
+        finally:
+            self.active_cue = False
+        current = self._frames(self.time)
+        if current > end:
+            raise VideoNotesError(
+                f"{key}: animations run {(current - end) / config.frame_rate:.2f}s "
+                f"past cue {index}; shorten run_time values."
+            )
+        if current < end:
+            self.wait((end - current + 0.5) / config.frame_rate, frozen_frame=True)
         self._probe(key)
 
     def _item(self, key: str, kind: str) -> dict[str, Any]:
@@ -189,11 +242,25 @@ class NotesScene(Scene):
             font_paths=[str(_context().fonts)],
         )
 
-    def label(self, key: str, *, size: float = 32, color: str | None = None) -> Mobject:
+    def label(
+        self, key: str, *, size: float = 32, color: str | None = None, width: float | None = None
+    ) -> Mobject:
         item = self._item(key, "label")
-        mobject = self._typst(
-            _typst_string(item["text"]), self._size("label", size), self._text_color(color)
-        )
+        size = self._size("label", size)
+        ink = self._text_color(color)
+        mobject = self._typst(_typst_string(item["text"]), size, ink)
+        if width is not None:
+            if not math.isfinite(width) or width <= 0:
+                raise VideoNotesError("Label width must be positive and finite.")
+            if mobject.width > width:
+                ratio = width / mobject.width
+                mobject = self._typst(
+                    "#context { let body = ["
+                    + _typst_string(item["text"])
+                    + f"]; block(width: measure(body).width * {ratio:.8f}, body) }}",
+                    size,
+                    ink,
+                )
         return self._mark(mobject, key, "label", size)
 
     def math(self, key: str, *, size: float = 40, color: str | None = None) -> Mobject:
@@ -354,6 +421,7 @@ class NotesScene(Scene):
                 "beat": beat,
                 "rule": rule + (".waived" if waived else ""),
                 "detail": detail,
+                "time": f"{self.time + self.chapter_start:.3f}",
             }
         )
 

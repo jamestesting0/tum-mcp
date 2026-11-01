@@ -1,8 +1,26 @@
+import subprocess
+import sys
 from datetime import date
 
 from tum_mcp.moodle.course_scope import current_term, select_courses
 from tum_mcp.moodle.models import Course, Material
 from tum_mcp.moodle.parsing import discussions_from_html, materials_from_html
+
+
+def test_current_semester_works_without_system_timezone_data() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            "import zoneinfo; zoneinfo.reset_tzpath(()); "
+            "from tum_mcp.moodle.course_scope import current_term; print(current_term())",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == current_term()
 
 
 def test_semester_labels_override_stale_in_progress_dates() -> None:
@@ -12,8 +30,9 @@ def test_semester_labels_override_stale_in_progress_dates() -> None:
         Course(id=3, fullname="Advising", enddate=0),
     ]
     selected, ambiguous = select_courses(courses, date(2026, 10, 20))
-    assert [course.id for course in selected] == [2]
+    assert [course.id for course in selected] == [2, 1, 3]
     assert [course.id for course in ambiguous] == [3]
+    assert select_courses(courses, date(2028, 10, 20))[0] == courses
     assert current_term(date(2027, 2, 1)) == "W26/27"
     assert current_term(date(2027, 5, 1)) == "S27"
 

@@ -103,8 +103,9 @@ def test_activation_cases_have_unique_ids_and_current_workflow_labels() -> None:
 
 
 @pytest.mark.parametrize("name", ["codex", "claude"])
+@pytest.mark.parametrize("workflow", ["audio-notes", "review-course"])
 def test_audio_workflow_installs_with_its_complete_reference_bundle(
-    name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    name: str, workflow: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from tum_mcp.skills import bundled
 
@@ -115,15 +116,15 @@ def test_audio_workflow_installs_with_its_complete_reference_bundle(
     from tum_mcp.extensions import set_audio_notes
 
     set_audio_notes(True)
-    source = bundled() / "audio-notes"
+    source = bundled() / workflow
     # When the host installs its managed study skills.
     install_client(name, home)
     # Then the audio skill is discoverable and its linked resources survive export.
-    entries = list(home.rglob("audio-notes/SKILL.md"))
+    entries = list(home.rglob(f"{workflow}/SKILL.md"))
     assert len(entries) == 1
     entry = entries[0]
     frontmatter = yaml.safe_load(entry.read_text(encoding="utf-8").split("---", 2)[1])
-    assert frontmatter["name"] == "audio-notes"
+    assert frontmatter["name"] == workflow
     expected = {path.relative_to(source) for path in source.rglob("*") if path.is_file()}
     installed = {
         path.relative_to(entry.parent) for path in entry.parent.rglob("*") if path.is_file()
@@ -131,3 +132,17 @@ def test_audio_workflow_installs_with_its_complete_reference_bundle(
     assert installed == expected
     for relative in expected - {Path("SKILL.md")}:
         assert (entry.parent / relative).read_bytes() == (source / relative).read_bytes()
+    if workflow == "review-course":
+        for filename in (
+            "referents-clear.m4a",
+            "referents-dense.m4a",
+            "delivery-clear.m4a",
+            "delivery-broken.m4a",
+            "synchrony-aligned.mp4",
+            "synchrony-early.mp4",
+            "worked-opaque.mp4",
+            "worked-clear.mp4",
+        ):
+            data = (entry.parent / "references/media-gallery" / filename).read_bytes()
+            assert data[4:8] == b"ftyp"
+            assert len(data) > 1000

@@ -23,9 +23,9 @@ def create(root: Path, **changes) -> Create:
     lecture = read_lectures(root).lectures[0]
     anchor = LectureAnchor(
         lecture_key=lecture.key,
-        section_key=lecture.sections[0].key,
+        section_key=lecture.highlights[0].key,
         semantic_revision=lecture.semantic_revision,
-        quote="FIFO processes vertices already in the queue first.",
+        quote="the queue holds only distances",
     ).model_copy(update=changes)
     return Create(
         op="create",
@@ -65,7 +65,7 @@ def test_lecture_comment_upgrade_filter_and_receipt_independent_revision(
     )
     assert result.exit_code == 0, result.output
     assert json.loads(result.output)["comments"][0]["content_state"] == "current"
-    value["lectures"][0]["overview"] += " A new explanation."
+    value["lectures"][0]["summary"] += " A new explanation."
     notes.write_text(json.dumps(value))
     result = CliRunner().invoke(app, ["study", "comments", "list", str(root), "--view", "lectures"])
     assert json.loads(result.output)["comments"][0]["content_state"] == "content_changed"
@@ -101,7 +101,7 @@ def test_select_save_reload_locate_and_ambiguous_passage_stays_unavailable(
     try:
         page = context.new_page()
         page.goto(lecture_url + "#lectures/bfs-lecture")
-        text = page.locator(".lecture-material p").first
+        text = page.locator(".lecture-teaches").first
         text.evaluate("""element => {
           const range = document.createRange(); range.selectNodeContents(element);
           const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
@@ -124,10 +124,10 @@ def test_select_save_reload_locate_and_ambiguous_passage_stays_unavailable(
         capture.mkdir(parents=True, exist_ok=True)
         page.screenshot(path=str(capture / "lecture-comment.png"))
         # A duplicated quote without context has two exact matches; never choose one silently.
-        page.locator(".lecture-material p").first.evaluate(
+        page.locator(".lecture-teaches").first.evaluate(
             "element => element.after(element.cloneNode(true))"
         )
-        page.locator(".lecture-material").first.evaluate(
+        page.locator(".lecture-highlight").first.evaluate(
             "element => element.dispatchEvent(new Event("
             "'study-activity-change', { bubbles: true }))"
         )
@@ -138,7 +138,7 @@ def test_select_save_reload_locate_and_ambiguous_passage_stays_unavailable(
         # Mutate persisted authored text and rebuild; old literal quote is absent.
         path = lecture_project / "study/lectures.json"
         payload = json.loads(path.read_text())
-        payload["lectures"][0]["sections"][0]["blocks"][0]["paragraphs"][0] = (
+        payload["lectures"][0]["highlights"][0]["teaches"] = (
             "Revised explanation with different wording."
         )
         path.write_text(json.dumps(payload))
@@ -148,7 +148,63 @@ def test_select_save_reload_locate_and_ambiguous_passage_stays_unavailable(
         page.reload()
         page.locator(".comment-marker").click()
         expect(page.get_by_text("Passage unavailable.", exact=True).first).to_be_visible()
-        # Time/source/figure controls cannot become selected prose anchors.
+        # Time, source and thumbnail controls cannot become selected prose anchors.
         assert page.locator(".citation-panel [data-comment-target]").count() == 0
+        assert page.locator(".lecture-thumb [data-comment-target]").count() == 0
+    finally:
+        context.close()
+
+
+@pytest.mark.skipif(
+    os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Explicit browser QA."
+)
+def test_note_selection_comment_relocates_and_text_edit_makes_it_stale(
+    course_browser: Browser,
+    lecture_url: str,
+    lecture_project: Path,
+) -> None:
+    context = course_browser.new_context()
+    try:
+        page = context.new_page()
+        page.goto(lecture_url + "#lectures/bfs-lecture/n-adjacency")
+        expect(page.locator(".lecture-note")).to_be_focused()
+        page.locator(".lecture-note-text").evaluate("""element => {
+          const range = document.createRange(); range.selectNodeContents(element);
+          const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
+          document.dispatchEvent(new Event('selectionchange'));
+        }""")
+        page.get_by_role("button", name="Comment", exact=True).click()
+        page.get_by_role("textbox", name="Comment", exact=True).fill("Show both adjacency entries.")
+        page.get_by_role("button", name="Save", exact=True).click()
+        expect(page.locator(".comment-marker")).to_be_visible()
+        saved = read_comments(lecture_project)["comments"][0]
+        assert saved["anchor"]["section_key"] == "n-adjacency"
+        page.reload()
+        page.locator(".comment-marker").click()
+        expect(page.get_by_text("Show both adjacency entries.", exact=True)).to_be_visible()
+        path = lecture_project / "study/lectures.json"
+        value = json.loads(path.read_bytes())
+        value["lectures"][0]["notes"][0]["text"] = "Each edge contributes two stored entries."
+        path.write_text(json.dumps(value))
+        from tum_mcp.study_build import build
+
+        build(lecture_project, publish=False)
+        stale = CliRunner().invoke(
+            app, ["study", "comments", "list", str(lecture_project), "--view", "lectures"]
+        )
+        assert json.loads(stale.output)["comments"][0]["content_state"] == "content_changed"
+        page.reload()
+        page.locator(".comment-marker").click()
+        expect(page.get_by_text("Passage unavailable.", exact=True).first).to_be_visible()
+        with pytest.raises(CampusError) as caught:
+            change_comment(
+                lecture_project,
+                create(
+                    lecture_project,
+                    section_key="n-adjacency",
+                    semantic_revision=saved["anchor"]["semantic_revision"],
+                ),
+            )
+        assert caught.value.code == Code.STALE_RESULT
     finally:
         context.close()

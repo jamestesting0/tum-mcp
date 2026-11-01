@@ -1,4 +1,4 @@
-"""Confirm recording figures against prepared captures and reproducible pixel transforms."""
+"""Confirm highlight thumbnails against prepared captures and reproducible pixel transforms."""
 
 import tempfile
 from pathlib import Path
@@ -13,11 +13,12 @@ from tum_mcp.lecture_processing.visuals import app_frame
 from tum_mcp.study_store import ReadObserver, digest, private_path
 
 
-def verify_figures(
+def verify_thumbnails(
     root: Path, lecture: Lecture, *, read_observer: ReadObserver | None = None
 ) -> None:
-    figures = tuple(figure for section in lecture.sections for figure in section.figures)
-    if lecture.recording.synthetic or not figures:
+    if lecture.recording.synthetic:
+        return
+    if not lecture.images:
         return
     try:
         inventory = FrameInventory.model_validate_json(
@@ -25,10 +26,10 @@ def verify_figures(
         )
     except ValidationError:
         raise CampusError(Code.INVALID_RESPONSE, "Prepared frame inventory is malformed.") from None
-    for figure in figures:
+    for thumbnail in lecture.images:
         verified = False
         for frame in inventory.captured:
-            if frame.captured_at_s != figure.captured_at_s:
+            if frame.captured_at_s != thumbnail.captured_at_s:
                 continue
             path = private_path(root, f"lectures/{lecture.recording.key}/frames/{frame.sha256}.png")
             if not path.is_file() or path.stat().st_size > 64 * 1024**2:
@@ -42,18 +43,19 @@ def verify_figures(
                 raise CampusError(
                     Code.STALE_RESULT, "Prepared original frame is missing or changed."
                 )
-            if figure.crop is None and figure.sha256 == frame.sha256:
+            if thumbnail.crop is None and thumbnail.sha256 == frame.sha256:
                 verified = True
                 break
-            with tempfile.TemporaryDirectory(prefix="lecture-figure-check-") as folder:
+            with tempfile.TemporaryDirectory(prefix="lecture-thumbnail-check-") as folder:
                 derived = app_frame(
-                    frame.model_copy(update={"path": path}), Path(folder), figure.crop
+                    frame.model_copy(update={"path": path}), Path(folder), thumbnail.crop
                 )
-                if derived.sha256 == figure.sha256:
+                if derived.sha256 == thumbnail.sha256:
                     verified = True
                     break
         if not verified:
             raise CampusError(
                 Code.STALE_RESULT,
-                "A lecture figure does not match a prepared recording capture or verified crop.",
+                "A highlight thumbnail does not match a prepared recording capture or its "
+                "verified crop. Stage it again with tum-mcp lecture thumbnail.",
             )

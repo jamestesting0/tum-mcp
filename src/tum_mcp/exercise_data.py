@@ -85,8 +85,11 @@ def check_terms(value: JsonValue, study: StudyContent | None, workspace: str) ->
 
 def render_exercises(content: ExerciseContent) -> dict[str, JsonValue]:
     """Compile safe blocks and attach stable learning revisions for the renderer."""
+    from tum_mcp.video_sources import exercise_hash
+
     value = compile_formulas(content.model_dump(mode="json", exclude_none=True))
     for group, rendered_group in zip(content.sets, value["sets"], strict=True):
         for exercise, rendered in zip(group.exercises, rendered_group["exercises"], strict=True):
             rendered["revision"] = exercise_revision(exercise)
+            rendered["videoRevision"] = exercise_hash(exercise)
     return value

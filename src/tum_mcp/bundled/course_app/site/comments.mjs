@@ -124,7 +124,10 @@ export function renderCommentedView(unit, view, activity, activate) {
       const entry = reading.querySelector(`[data-explore-key="${CSS.escape(item.anchor.item_key)}"]`);
       return locate(item)?.section?.querySelector(SECTION_HEADING) || entry?.querySelector('h2') || reading.querySelector('.explore-reading');
     }
-    if (isLecture) return [...reading.querySelectorAll('[data-lecture-section]')].find(section => section.dataset.lectureSection === item.anchor.section_key)?.querySelector('h2');
+    if (isLecture) {
+      const section = [...reading.querySelectorAll('[data-lecture-section]')].find(section => section.dataset.lectureSection === item.anchor.section_key);
+      return section?.querySelector('h2,h3,.lecture-note-text');
+    }
     if (isExercise) {
       const owner = locate(item)?.section?.closest('.read-section, .exercise-step, .exam-entry, .exam-section');
       return owner?.querySelector(SECTION_HEADING) || reading.querySelector('h1');
