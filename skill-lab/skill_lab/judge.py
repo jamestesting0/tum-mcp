@@ -14,6 +14,7 @@ DIMENSIONS = (
     "correctness",
     "coverage",
     "clarity",
+    "cohesion",
     "cognitive_load",
     "representation",
     "practice",

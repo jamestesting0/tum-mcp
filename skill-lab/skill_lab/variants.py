@@ -63,8 +63,12 @@ def check_patch(patch: Path) -> list[str]:
 def materialize(ref: str, destination: Path) -> None:
     destination.mkdir(parents=True)
     if ref == WORKTREE:
+        # The working tree includes new files not yet added to git, but never ignored ones.
         listed = subprocess.run(
-            ["git", "ls-files", "-z"], cwd=paths.REPO, capture_output=True, check=True
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            cwd=paths.REPO,
+            capture_output=True,
+            check=True,
         ).stdout
         for relative in filter(None, listed.decode().split("\0")):
             source = paths.REPO / relative

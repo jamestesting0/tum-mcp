@@ -1,0 +1,23 @@
+id: exercises-quantum
+turns:
+  - say: "I just connected my TUM account. Set up a study project in this folder for my quantum computing course this semester and collect its materials."
+    skills: [sync-course, read-content]
+  - say: "I have one past exam with its solution as a PDF. Add it to the project and use only that past exam."
+    skills: [prepare-exams]
+  - say: "Build Study lessons for what the two highest-scoring questions of that exam test: at most four lessons."
+    skills: [prepare-study]
+  - say: "Prepare Exam patterns for those two questions from that past exam: at most two patterns."
+    skills: [prepare-exams]
+  - say: "Score the lessons and the exam patterns, and fix what is hard to learn from."
+    skills: [review-course, prepare-study, prepare-exams]
+  - say: "Prepare guided exercises for one exercise sheet of this course: at most two exercises."
+    skills: [prepare-exercises]
+  - say: "Score the lessons, the exercises and the exam patterns, and fix what is hard to learn from."
+    skills: [review-course, prepare-study, prepare-exercises, prepare-exams]
+replies:
+  course: "The introduction to quantum computing course, this semester."
+  semester: "The current semester."
+  exam: "Use only the past exam I gave you."
+  paper: "Use only the past exam I gave you."
+  sheet: "Your choice: one sheet whose topics the lessons cover."
+  default: "Your choice, go ahead."
