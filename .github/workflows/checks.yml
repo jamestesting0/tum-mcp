@@ -14,16 +14,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  source:
+    name: Source tests (${{ matrix.os }})
+    # Own codex/** branches are already checked by their exact-commit push run.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      !startsWith(github.head_ref, 'codex/')
     strategy:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 35 || 25 }}
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 25 || 20 }}
     env:
       TUM_MCP_BROWSER_INTEGRATION: '1'
       TUM_MCP_STUDY_BROWSER_JOURNEYS: 'primary'
+      TUM_MOODLE_SYSTEM_KEYRING: '1'
+      TUM_MCP_LECTURE_ASR_INTEGRATION: '1'
+      TUM_MCP_VIDEO_RENDER_INTEGRATION: '1'
+      TUM_MCP_LECTURE_CUDA_LIBRARIES: ${{ matrix.os != 'macos-latest' && '1' || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
@@ -50,28 +60,47 @@ jobs:
         run: |
           uv run ruff check src tests scripts skill-lab
           uv run ruff format --check src tests scripts skill-lab
+      # Native recognition, CUDA libraries and video rendering run inside the parallel suite.
+      - name: Test on macOS and Windows
+        if: runner.os != 'Linux'
+        run: >-
+          uv run pytest -v --tb=short --durations=20 -o faulthandler_timeout=120
+          -n auto --dist loadfile
+          --deselect=tests/integration/test_study_browser.py::test_study_website_journeys_pass_in_the_checkout
+      - name: Test in a Linux desktop keyring session
+        if: runner.os == 'Linux'
+        run: |
+          dbus-run-session -- sh -e -c '
+            printf "ci-test-only" | gnome-keyring-daemon --unlock --components=secrets
+            uv run pytest -v --tb=short --durations=20 -o faulthandler_timeout=120 -n auto --dist loadfile
+          '
+      - name: Build Python distribution
+        run: uv build
+
+  installed:
+    name: Installed package (${{ matrix.os }})
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      !startsWith(github.head_ref, 'codex/')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 25 || 20 }}
+    env:
+      TUM_MCP_BROWSER_INTEGRATION: '1'
+      TUM_MCP_STUDY_BROWSER_JOURNEYS: 'primary'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.5"
+          enable-cache: true
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22.22.2'
-      - name: Verify optional native lecture recognition
-        env:
-          TUM_MCP_LECTURE_ASR_INTEGRATION: '1'
-        run: uv run pytest -v tests/integration/test_lecture_runtime_native.py --tb=short
-      - name: Verify optional CUDA recognizer libraries
-        if: runner.os != 'macOS'
-        env:
-          TUM_MCP_LECTURE_CUDA_LIBRARIES: '1'
-        run: uv run pytest -v tests/integration/test_lecture_cuda_libraries.py --tb=short
-      - name: Verify optional native video rendering
-        env:
-          TUM_MCP_VIDEO_RENDER_INTEGRATION: '1'
-        run: uv run pytest -v tests/integration/test_video_render_native.py --tb=short
-      - name: Check Windows browser and UTF-8 fixture regressions
-        if: runner.os == 'Windows'
-        run: >-
-          uv run pytest -x -v
-          tests/integration/test_exercise_browser.py::test_static_exercises_under_a_project_prefix
-          --tb=short
       - name: Build and inspect campus npm artifact
         run: |
           node npm/build.mjs
@@ -83,21 +112,3 @@ jobs:
         run: npm run test:consumer
       - name: Verify updates from 0.9.0 and safe removal
         run: npm run test:upgrade
-      - name: Test on macOS and Windows
-        if: runner.os != 'Linux'
-        env:
-          TUM_MOODLE_SYSTEM_KEYRING: "1"
-        run: >-
-          uv run pytest -v --tb=short --durations=20 -o faulthandler_timeout=60
-          --deselect=tests/integration/test_study_browser.py::test_study_website_journeys_pass_in_the_checkout
-      - name: Test in a Linux desktop keyring session
-        if: runner.os == 'Linux'
-        env:
-          TUM_MOODLE_SYSTEM_KEYRING: "1"
-        run: |
-          dbus-run-session -- sh -e -c '
-            printf "ci-test-only" | gnome-keyring-daemon --unlock --components=secrets
-            uv run pytest -v --tb=short --durations=20 -o faulthandler_timeout=60
-          '
-      - name: Build Python distribution
-        run: uv build

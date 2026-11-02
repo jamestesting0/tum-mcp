@@ -8,9 +8,9 @@ Client adapters still generate the configuration each host needs.
 
 ```sh
 uv sync --locked
-uv run ruff check src tests scripts
-uv run ruff format --check src tests scripts
-uv run pytest -v -x --tb=short --durations=20 -o faulthandler_timeout=60
+uv run ruff check src tests scripts skill-lab
+uv run ruff format --check src tests scripts skill-lab
+uv run pytest -n auto --dist loadfile --tb=short --durations=20 -o faulthandler_timeout=120
 uv build
 node npm/build.mjs
 npm test
@@ -22,6 +22,18 @@ npm run test:package-lifecycle
 
 Python 3.13 is the managed runtime. Install Tesseract for OCR tests. Default tests
 use synthetic sources and credentials. No language-server installation is needed.
+`-n auto --dist loadfile` (pytest-xdist) runs test files in parallel and keeps each
+file's module-scoped browser on one worker; drop it to debug a single test serially.
+The synthetic skill-lab tests run separately (`uv run pytest skill-lab/tests`), not in CI.
+
+Every test gets private `TUM_MCP_DATA_DIR`, `TUM_MOODLE_DATA_DIR` and
+`TUM_MOODLE_DOWNLOAD_DIR` folders from an autouse fixture in `tests/conftest.py`, so a
+developer's real installation, extensions and credentials never change a result;
+configuration follows the data folder unless a test sets `TUM_MCP_CONFIG_DIR`. Only
+`live` tests use the real profile. On Windows, the same file replaces the PowerShell ACL
+call for private folders with a no-op because each call costs about a second; tests marked
+`native_acl` (`test_windows_permissions.py`) apply and inspect real ACLs, and the
+installed consumer, upgrade and lifecycle checks use the real code path.
 Optional extensions are off by default; validate both selected and unselected skill
 packs.
 
@@ -66,12 +78,20 @@ reads and preserves Playwright's default disabled features before adding this
 opt-out. A native browser regression checks the effective arguments, and installed
 consumer checks verify that the option reaches Windows browsers through WSL.
 
+Desktop checks run two independent jobs per OS so source and installed coverage
+proceed concurrently. `Source tests (OS)` runs Ruff (Linux only), the complete pytest
+suite in parallel, including native recognition, CUDA libraries, video rendering and
+the native keyring, then `uv build`. `Installed package (OS)` builds and inspects the
+npm artifact and runs the Node tests, package lifecycle, consumer and 0.9.0 upgrade
+checks. WSL keeps one job per engine. All eight exact-revision checks (three source,
+three installed, two WSL) are required.
+
 The broad checkout study journey runs on Linux. macOS and Windows deselect only
 `tests/integration/test_study_browser.py::test_study_website_journeys_pass_in_the_checkout`;
-their full installed journeys still exercise that fixture. Other source tests and
-native checks keep their existing coverage. Package builds, upgrades and lifecycle
-tests continue in all five environments. Ruff lint/format runs once on Linux, after dependency
-installation. The existing five exact-revision GitHub checks remain required.
+their full installed journeys still exercise that fixture. Ruff lint/format runs once
+on Linux, after dependency installation. Pull requests from this repository's own
+`codex/**` branches skip their duplicate campaign: the push run already checks the
+exact commit. Pull requests from forks are checked.
 
 During development, run affected tests and focused regressions. Reuse applicable
 passing results instead of running a complete local suite immediately before the
@@ -81,9 +101,12 @@ checks. Relevant source, test, dependency or environment changes invalidate earl
 results. `AGENTS.md` is local and ignored; this tracked document carries the policy
 to other checkouts.
 
-Verbose test IDs, immediate first-failure output, slowest-test timings and a stack
-dump after 60 seconds make a stalled boundary visible. The dump is diagnostic;
-it does not skip a slow test or extend the CI deadline.
+Verbose test IDs, slowest-test timings and a stack dump after 120 seconds make a
+stalled boundary visible. The dump is diagnostic;
+it does not skip a slow test or extend the CI deadline. pytest-timeout fails any test
+still running after 300 seconds (configured in `pyproject.toml`); under xdist the stuck
+worker is replaced and reported by test name. It exists because a Chromium renderer can
+die without Playwright noticing, which otherwise blocks a worker until the job budget.
 
 Each layer owns a different failure boundary:
 
@@ -100,7 +123,8 @@ project for each test. Launcher tests only need an HTML entry point. Neither
 shares mutable course state. Client transaction tests use five small synthetic
 skills, including nested binary assets; full-pack export, migration and installed
 consumer tests retain the actual bundled files. Browser checks keep the phone/desktop and light/dark
-rendering matrix; long revision-state journeys run once per layout. Keep native
+rendering matrix pairwise, `(390, light)` and `(wide, dark)`, so every width and theme
+runs without repeating each combination; long revision-state journeys run once per layout. Keep native
 ACL/keyring and installed-artifact checks even when a mocked unit test is faster.
 Text fixtures use explicit UTF-8; line-ending cases cover LF and CRLF without
 changing the meaning of the managed inventory or user notes.
@@ -117,7 +141,7 @@ removal that preserves work/credentials. Earlier releases are outside this matri
 The package-lifecycle check uses a local synthetic registry and real isolated
 global npm prefixes to verify downloads, backend validation, replacement,
 failure ordering and one-command removal. It does not publish a test release.
-All five jobs must pass on the exact pushed commit before completion is claimed.
+All eight jobs must pass on the exact pushed commit before completion is claimed.
 Desktop jobs additionally install the optional hash-locked CPU recognizer and
 transcribe the synthetic speech fixture; supported Apple Silicon runners also
 exercise MLX. This explicit test downloads public pinned model files, never campus
@@ -125,10 +149,8 @@ recordings. Ordinary test runs skip it unless `TUM_MCP_LECTURE_ASR_INTEGRATION=1
 Linux and Windows jobs also install the hash-locked CUDA runtime and load its pinned
 cuBLAS the way CTranslate2 does, without a GPU (`TUM_MCP_LECTURE_CUDA_LIBRARIES=1`);
 GPU inference itself runs in the native test only on a host with an NVIDIA GPU.
-Recognition runs before package lifecycle checks to expose native dependency
-failures early. Windows also runs the affected browser/UTF-8 fixture checks first.
-Its complete job budget is 35 minutes for native ACL and subprocess coverage;
-the macOS and Linux budgets remain 25 minutes.
+These native checks run inside the parallel source suite. Windows source and
+installed jobs have 25-minute budgets; macOS and Linux have 20 minutes.
 
 Live Moodle checks are opt-in: `TUM_MOODLE_LIVE=1 uv run pytest tests/live -q`.
 They use the developer's selected course and saved session. Keep them out of CI.
@@ -270,8 +292,10 @@ See [the workflow guide](lecture-notes.md).
 Use `skills validate --all` to check the packaged optional workflow without installing
 it; default validation checks the selected workflows. Activation statistics remain
 unmeasured until genuine fresh-session trial records exist. Default tests use
-synthetic media and course data. `test:consumer` and `test:upgrade` exercise optional
-install/update/export/removal from an actual local npm artifact. Never publish or
+synthetic media and course data. `test:upgrade` exercises optional lecture, audio and
+video install/update/export/removal from an actual local npm artifact on every platform;
+`test:consumer` covers the course-memory extension on a fresh installation and logs the
+duration of each phase. Never publish or
 stage npm as a test.
 
 ## Explore maintenance boundary
@@ -322,7 +346,12 @@ packaged launcher; retain all native installation, upgrade and lifecycle gates.
 Retrieval evaluation uses fixed synthetic typed-reference gold sets, separate authored
 lexical/native-map and raw-page finder baselines, the same packet budgets, and explicit
 cold extraction versus warm lookup timing. Projection and source verification are timed
-separately on 300 synthetic units without a wall-clock CI threshold. Agent effectiveness
+separately on 300 synthetic units without a wall-clock CI threshold. CI checks every
+case's safety, status and graph completeness and that the control cases' baselines still
+find their answers, using one prepared project copied per case. The bridge comparison,
+timings, 300-unit profile and `.omo/evidence/study-knowledge-harness/` files run only
+with `TUM_MCP_KNOWLEDGE_EVALUATION=1 uv run pytest -q
+tests/integration/test_study_knowledge_evaluation.py`. Agent effectiveness
 needs paired model trials in the dev-only skill lab, with exact model/revision/corpus
 identity, unsuccessful runs retained and quality, tokens, setup and update latency
 reported separately. Retrieval tests alone do not establish student learning gains.

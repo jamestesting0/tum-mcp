@@ -16,6 +16,11 @@ concurrency:
 jobs:
   browser:
     name: WSL 3.x / engine ${{ matrix.wsl }}
+    # Own codex/** branches are already checked by their exact-commit push run.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      !startsWith(github.head_ref, 'codex/')
     strategy:
       fail-fast: false
       matrix:
