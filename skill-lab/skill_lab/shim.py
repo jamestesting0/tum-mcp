@@ -4,8 +4,11 @@ Usage: <variant python> -I shim.py <tum-mcp arguments...>
 Standard library only, because it runs on the variant's interpreter without the lab on its path.
 """
 
+import json
 import os
 import sys
+import time
+import uuid
 
 BLOCKED = frozenset(
     {"login", "logout", "setup", "uninstall", "update", "install", "manage", "serve"}
@@ -21,12 +24,42 @@ def refusal(arguments: list[str]) -> str | None:
     return None
 
 
+# Commands that open a browser, which the trial's sandbox blocks; the lab runs them on the host.
+BROKERED = (["study", "visuals"],)
+WAIT_SECONDS = 1200
+
+
+def brokered(arguments: list[str], folder: str) -> int:
+    """Hand the command to the lab through a request file and print the host's result."""
+    os.makedirs(folder, exist_ok=True)
+    name = uuid.uuid4().hex
+    request = os.path.join(folder, f"{name}.request.json")
+    with open(request + ".tmp", "w", encoding="utf-8") as handle:
+        json.dump({"arguments": arguments, "cwd": os.getcwd()}, handle)
+    os.replace(request + ".tmp", request)
+    response = os.path.join(folder, f"{name}.response.json")
+    deadline = time.monotonic() + WAIT_SECONDS
+    while not os.path.exists(response):
+        if time.monotonic() > deadline:
+            print("The lab did not run the browser check in time.", file=sys.stderr)
+            return 1
+        time.sleep(1)
+    with open(response, encoding="utf-8") as handle:
+        result = json.load(handle)
+    sys.stdout.write(result["stdout"])
+    sys.stderr.write(result["stderr"])
+    return int(result["code"])
+
+
 def main() -> None:
     arguments = sys.argv[1:]
     message = refusal(arguments)
     if message:
         print(message, file=sys.stderr)
         raise SystemExit(2)
+    folder = os.environ.get("SKILL_LAB_RENDER_BROKER")
+    if folder and any(arguments[: len(prefix)] == prefix for prefix in BROKERED):
+        raise SystemExit(brokered(arguments, folder))
     os.execv(sys.executable, [sys.executable, "-I", "-m", "tum_mcp", *arguments])  # noqa: S606
 
 

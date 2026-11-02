@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import threading
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -28,6 +29,64 @@ HOST_LOGS = {
 Installer = Callable[[Path, str, Path, Path], None]
 SESSION_EXPIRED_MARKERS = ("SESSION_EXPIRED",)
 EXPIRED_MESSAGE = "A campus session expired during the run; run `tum-mcp login`, then repeat it."
+
+
+def _broker_command(python: Path, arguments: list[str]) -> list[str]:
+    return [str(python), "-I", "-m", "tum_mcp", *arguments]
+
+
+def _render_request(job: dict, workspace: Path) -> tuple[list[str], Path]:
+    arguments = job["arguments"]
+    cwd = Path(job["cwd"]).resolve()
+    if not cwd.is_relative_to(workspace) or arguments[:2] != ["study", "visuals"]:
+        raise LabError("The render broker only runs study visuals inside its trial workspace.")
+    if len(arguments) < 3 or arguments[2].startswith("-"):
+        raise LabError("A render request names its course project.")
+    project = (cwd / arguments[2]).resolve()
+    if not project.is_relative_to(workspace):
+        raise LabError("A render request's project stays inside its trial workspace.")
+    options = iter(arguments[3:])
+    for option in options:
+        if option in {"--unit", "--exercise"}:
+            value = next(options, "")
+            if not value or value.startswith("-"):
+                raise LabError("A render selection needs a unit or exercise key.")
+        elif option not in {"--exam", "--gallery", "--phone"}:
+            raise LabError("The render broker received an unsupported option.")
+    return arguments, cwd
+
+
+def render_broker(folder: Path, python: Path) -> threading.Event:
+    """Serve the trial's browser checks on the host, outside the author's sandbox: each request
+    file names a `tum-mcp` command, and its result is written beside it. Returns the event that
+    stops the server."""
+    stop = threading.Event()
+
+    def serve() -> None:
+        while not stop.wait(1):
+            for request in sorted(folder.glob("*.request.json")):
+                job = json.loads(request.read_text(encoding="utf-8"))
+                request.unlink()
+                try:
+                    arguments, cwd = _render_request(job, folder.parent.resolve())
+                    done = subprocess.run(  # noqa: S603 - workspace-bound render command only
+                        _broker_command(python, arguments),
+                        cwd=cwd,
+                        capture_output=True,
+                        text=True,
+                        timeout=1200,
+                        check=False,
+                    )
+                    result = {"code": done.returncode, "stdout": done.stdout, "stderr": done.stderr}
+                except (LabError, subprocess.TimeoutExpired) as error:
+                    result = {"code": 2, "stdout": "", "stderr": str(error)}
+                response = request.with_name(request.name.replace(".request.", ".response."))
+                staged = response.with_suffix(".tmp")
+                staged.write_text(json.dumps(result), encoding="utf-8")
+                staged.replace(response)
+
+    threading.Thread(target=serve, daemon=True).start()
+    return stop
 
 
 def storage_environment(downloads: Path) -> dict[str, str]:
@@ -193,6 +252,7 @@ def execute(
     scenario_id: str | None = None,
     checkpoint: str | None = None,
     confirm: bool = False,
+    plant: bool = False,
     installer: Installer = install,
     python: Path | None = None,
     campus_check: Callable[[], None] = lambda: require_moodle(campus_states()),
@@ -248,6 +308,7 @@ def execute(
             timeout,
             installer,
             python or variants.python_of(variant_dir),
+            plant=plant,
         )
     finally:
         lock.release()
@@ -267,6 +328,8 @@ def _run(
     timeout: int,
     installer: Installer,
     python: Path,
+    *,
+    plant: bool = False,
 ) -> dict:
     run_dir = paths.round_dir(round_id) / "runs" / run_id
     downloads, bin_dir = run_dir / "downloads", run_dir / "bin"
@@ -281,9 +344,17 @@ def _run(
     subprocess.run(["git", "init", "-q", "--bare", str(history)], check=True)
     if source:
         restore(*source, workspace)
+    if plant:
+        from skill_lab import calibrate
+
+        planted = calibrate.plant(workspace)
+        (run_dir / "planted.json").write_text(json.dumps(planted, indent=2), encoding="utf-8")
     shim = bin_dir / "tum-mcp"
+    broker = workspace / ".lab-broker"
     shim.write_text(
-        f'#!/bin/sh\nexec "{python}" -I "{LAB_CODE / "shim.py"}" "$@"\n', encoding="utf-8"
+        f'#!/bin/sh\nSKILL_LAB_RENDER_BROKER="{broker}" exec "{python}" -I '
+        f'"{LAB_CODE / "shim.py"}" "$@"\n',
+        encoding="utf-8",
     )
     shim.chmod(0o755)
     home = paths.profile_home(spec.host)
@@ -304,6 +375,7 @@ def _run(
     }
     write_record(run_dir, record)
     began = time.monotonic()
+    serving = render_broker(broker, python)
     try:
         installer(variant_dir, spec.host, home, downloads)
         environment = hosts.clean_environment(
@@ -367,6 +439,7 @@ def _run(
         record["status"] = "failed"
         record["error"] = str(error)
     finally:
+        serving.set()
         record["minutes"] = round((time.monotonic() - began) / 60, 1)
         record["ended"] = datetime.now(UTC).isoformat(timespec="seconds")
         reported = {

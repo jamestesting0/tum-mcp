@@ -13,6 +13,18 @@ the same scenario, judges the outputs blind and records what each change did.
 
 `lab` below means `uv run skill-lab/lab.py`, run from the repository root.
 
+For review calibration, resume a course checkpoint with `lab run ROUND --variant NAME
+--from ROUND/RUN@TURN --plant`, then run `lab calibrate ROUND/RUN`. Planting edits only
+the isolated trial workspace. The report gives recall by dimension and rejected-finding
+share; existing findings and rejected or unrelated checks do not count as detection.
+The catalogue spans all ten dimensions but only plants defects the course can hold.
+Raw calibration records contain private course material and stay under `.omo/skill-lab/`.
+
+Trials forward `study visuals` through the lab shim to a host render broker. Only that
+command, its supported selectors and a project inside the trial workspace are allowed;
+the broker has a bounded execution time. Manual interaction review still needs a browser
+session. This broker does not change the installed student CLI.
+
 ## One-time setup (human)
 
 ```sh

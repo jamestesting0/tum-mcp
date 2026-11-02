@@ -72,6 +72,18 @@ def cmd_variant(args: argparse.Namespace) -> None:
     )
 
 
+def cmd_calibrate(args: argparse.Namespace) -> None:
+    from skill_lab import calibrate
+
+    round_id, _, run_id = args.run.partition("/")
+    run_dir = paths.round_dir(round_id) / "runs" / run_id
+    planted_path = run_dir / "planted.json"
+    if not planted_path.is_file():
+        raise LabError(f"{args.run} planted no defects; start it with --plant.")
+    planted = json.loads(planted_path.read_text(encoding="utf-8"))
+    print(json.dumps(calibrate.recall(run_dir / "workspace", planted), indent=2))
+
+
 def cmd_run(args: argparse.Namespace) -> None:
     from skill_lab import runs
 
@@ -97,6 +109,7 @@ def cmd_run(args: argparse.Namespace) -> None:
                 scenario_id=args.scenario,
                 checkpoint=args.from_checkpoint,
                 confirm=args.confirm,
+                plant=args.plant,
             )
             records.append({key: record.get(key) for key in ("id", "status", "minutes", "error")})
         return records
@@ -231,7 +244,16 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--scenario")
     p.add_argument("--from", dest="from_checkpoint", help="RUN@TURN or ROUND/RUN@TURN")
     p.add_argument("--confirm", action="store_true")
+    p.add_argument(
+        "--plant",
+        action="store_true",
+        help="plant known defects into the restored course before the first turn (calibration)",
+    )
     p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("calibrate", help="How many planted defects a run's review found.")
+    p.add_argument("run", help="ROUND/RUN of a run started with --plant")
+    p.set_defaults(func=cmd_calibrate)
 
     p = sub.add_parser("collect", help="Compute workflow metrics for runs.")
     p.add_argument("round")

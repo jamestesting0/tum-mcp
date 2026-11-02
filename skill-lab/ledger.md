@@ -94,3 +94,120 @@ row. Confidence: medium, every item in one run. Models: codex gpt-6.1-terra xhig
 Shipped to the working tree. Keep the situation field, LaTeX figure labels and variable rules;
 an extra lesson the review adds for understanding is fine. Plan check-level review evidence
 next and re-test Cohesion then. Not committed yet.
+
+## review-rigor (2026-11-01)
+
+- scenario: review-quantum; confirm: None
+- author: codex:gpt-6.1-terra:xhigh; probe judge: codex:gpt-6.1-sol:xhigh
+- base: WORKTREE + 0 patch(es)
+
+### Weakness
+
+One Codex gpt-6.1-terra xhigh review turn (4 min) on the cohesion-polish quantum course with seven planted defects found and undid 5 of 7: the wrong result, the meta line, the described pitfall, the dropped section opening and the misplaced section. It missed a paragraph whose point was moved to its end (cohesion.point_first) and a derivation whose variable meanings were removed. It never ran `study review-pack` and wrote no scorecard: because the browser interaction pass could not run in the sandbox, it left every item stale. `study visuals --exam` crashed on untitled Exam figures.
+
+### Edits
+
+- review-course: each pass starts from its review-pack, a fresh session gets the pack as its brief, and the scorecard is always saved; a pass that could not run in full is recorded and caps its dimensions at 2.
+- study visuals: an untitled Exam visual is headed by its key (test added).
+- lab calibrate: each defect is checked as undone (opening, order and meanings restored, or probe text gone), findings from before planting are ignored, and defects sit in separate blocks.
+- Completion audit: per-check closest calls now require a quote, its exact content path and a reason; findings need a real check, location and fix, and item scores must equal their accepted findings' severities. Checks-passed counts exclude unexamined checks. Report-proven failures are prefilled; heuristic silence does not count as semantic success.
+- The calibration catalogue now covers all ten dimensions. Rejected findings and findings for a different check cannot count as detection. The host broker allows only supported visual-check options and workspace-bound projects, with a bounded execution time.
+
+### Lesson
+
+The render broker works: the trial ran `study visuals` on the host and fixed its own label overlaps from the result. A review skill that makes its record depend on checks the host cannot run gets no record at all; the record must be saved with the gap named.
+
+### Decision
+
+Keep the implementation and its regression gates. The pilot corrected 5 of 7 seeded defects,
+but it produced no current verified scorecard; this measures corrections, not validated
+reviewer recall. The post-pilot skill changes have not had a second model trial under the
+one-pilot budget. No claim of improved reviewer accuracy is established. Interaction review
+still needs a browser session. The MCP spike was omitted in favor of the smaller lab-only
+shim broker, whose actual host render execution was demonstrated by this trial.
+
+## cheatsheet-coverage (2026-11-02)
+
+- scenario: cheatsheet-fai; confirm: None
+- author: codex:gpt-6.1-terra:xhigh; probe judge: codex:gpt-6.1-sol:xhigh
+- base: WORKTREE + 0 patch(es); resumed from pattern-pilot-3/fixed-1@5 (FAI)
+
+### Weakness
+
+One Codex gpt-6.1-terra xhigh trial (two turns, about 7 minutes) wrote a twelve-entry sheet for
+two topics with section paths, two `workflow_from` methods and ten exam requirements, then ran
+`study review-pack --item exam/sheet --pass cheatsheet` and saved a scored sheet review with one
+accepted representation finding. Every requirement came from the past exam: the report listed
+17 content sources without requirements, and the review still scored coverage 3. Pitfalls and
+details typed mathematics as characters (Greek letters, ≥, m−1), two displayed formulas wrote
+quotients with a slash, one line repeated its own formula, and meaning lists that named a
+variable as bare LaTeX (`\lambda` instead of `\(\lambda\)`) showed the raw command in the app.
+The entries were formula-led, which fits these statistics topics; a significance entry that
+reads naturally as a two-by-two decision table stayed a line, and the review did not flag it.
+
+### Edits
+
+- Coverage: `unrecorded_sources` is an invariant on the sheet's coverage, raised while any
+  current content source has no exam requirement; the sheet cannot score coverage 3 with it open.
+  The cheatsheet guide says a request limited to one past exam or some topics still reads the
+  lecture material, and an unrelated source gets one `out_of_scope` requirement with a reason.
+- `exam-report` and the sheet's review pack report typed mathematics (`sheet_plain_math`,
+  invariant), slash quotients in displayed formulas (`slash_quotient`, fix or keep; units and
+  derivatives excluded) and a line repeating its formula (`line_repeats_formula`).
+- App: meaning-list symbols render as mathematics whether written `\(\lambda\)` or `\lambda`,
+  in cheatsheet entries and Study formula blocks (browser regression added).
+- Notation: a slash inside a fraction avoids nesting another fraction.
+
+### Lesson
+
+The new review route works end to end: the trial found the pass, saved a verified sheet review
+and used sections and `workflow_from` unprompted. Advisory report lines were read but not acted
+on; a coverage gap must be an invariant to change a score.
+
+### Decision
+
+Keep the implementation and the post-pilot gates. Representation diversity on non-formula
+material is not yet shown by a trial: this course's sampled topics were formula-led. The
+post-pilot fixes have tests and a rebuilt view of the trial's sheet but no second paid trial.
+No lecture trial was run, by the user's choice.
+
+## cheatsheet-coverage-2 and cheatsheet-coverage-3 (2026-11-02)
+
+- scenarios: cheatsheet-fai-2 (resumed from pattern-pilot-3/fixed-1@5), cheatsheet-fai-fresh (empty folder)
+- author: codex:gpt-6.1-terra:xhigh; base: WORKTREE + 0 patch(es)
+
+### Weakness
+
+Neither trial could test non-formula cheatsheet material. Both chose two non-statistics lectures
+(search, constraint satisfaction, intelligent agents) and declined to author entries because only
+text extracts of the slides were local: a resumed run has no original files (the lab removes each
+run's downloads), and the fresh sync stored text records only. Following prepare-exams ("look at
+every slide page you rely on"), the agent asked for the PDFs instead of writing from extracts.
+
+### Decision
+
+No skill change. Declining to author from unverifiable extracts is the intended behaviour. The lab
+cannot yet supply original Moodle files to a Codex trial, so representation diversity on
+non-formula material remains untested by a trial.
+
+## cheatsheet-coverage-4 (2026-11-02)
+
+- scenario: cheatsheet-fai-fresh (empty folder); author: codex:gpt-6.1-terra:xhigh; base: WORKTREE
+- lab fix first: Codex trials get their Moodle download folder as an extra writable folder
+
+### Weakness
+
+The trial synced FAI, downloaded the lecture PDFs and wrote twelve entries on search and constraint
+satisfaction in sections, then reviewed them (turns of 9, 25 and 37 minutes). Coverage now held:
+56 exam requirements over 41 sources, 31 of them `out_of_scope` with reasons. Entries were mostly
+text with two tables; a variable legend was written as a prose paragraph and table cells typed
+variables as plain letters (`b,d`), and nothing flagged either. The review scored clarity,
+representation and organization 2 only because it could not open the app interactively, not for
+content: the save-with-gap rule capped content dimensions a browser check does not judge. The run
+ended "failed" on a host websocket disconnect after the last turn's work was saved.
+
+### Decision
+
+Keep. Follow-ups (user): desktop-only checks by default; Study prose checks and variable meanings
+for maths in cheatsheet details; a collapse control for long entries; only checks that need the
+browser cap the dimensions they judge.

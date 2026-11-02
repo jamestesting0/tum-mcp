@@ -108,6 +108,7 @@ def codex_command(
     *,
     session: str | None,
     judge: bool = False,
+    downloads: str | None = None,
 ) -> list[str]:
     command = [
         "codex",
@@ -125,6 +126,10 @@ def codex_command(
         command += ["-s", "read-only", "-c", "mcp_servers={}"]
     else:
         command += ["-s", "workspace-write", "-c", "sandbox_workspace_write.network_access=false"]
+        # Moodle downloads land in the run's own folder, outside the workspace; the trial must
+        # be able to import them, as a student imports from their Downloads folder.
+        if downloads:
+            command += ["--add-dir", downloads]
     if session:
         command += ["resume", session]
     command.append(message)
@@ -225,7 +230,14 @@ def run_turn(
     if spec.host == "claude":
         command = claude_command(spec, message, session=session, judge=judge)
     else:
-        command = codex_command(spec, message, workspace, session=session, judge=judge)
+        command = codex_command(
+            spec,
+            message,
+            workspace,
+            session=session,
+            judge=judge,
+            downloads=environment.get("TUM_MOODLE_DOWNLOAD_DIR"),
+        )
     raw.parent.mkdir(parents=True, exist_ok=True)
     try:
         completed = subprocess.run(

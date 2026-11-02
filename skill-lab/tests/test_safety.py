@@ -1,3 +1,4 @@
+import pytest
 from skill_lab import safety, shim
 
 SKILL = "src/tum_mcp/bundled/skills/prepare-study/SKILL.md"
@@ -141,3 +142,52 @@ def test_codex_redaction():
     redacted = safety.redact_codex(events)
     assert redacted[0]["item"]["result"]["redacted"] is True
     assert redacted[1]["item"]["result"] == "AI"
+
+
+def test_a_browser_check_runs_on_the_host_and_its_output_returns(tmp_path, monkeypatch, capsys):
+    # The trial's sandbox blocks the browser; the shim hands `study visuals` to the lab, which
+    # runs it outside the sandbox and returns its output and exit code.
+    import sys
+    from pathlib import Path
+
+    from skill_lab import runs, shim
+
+    folder = tmp_path / "broker"
+    host = tmp_path / "host.py"
+    host.write_text("import sys; print('checked', sys.argv[-1]); raise SystemExit(3)\n")
+    monkeypatch.setattr(
+        runs, "_broker_command", lambda python, arguments: [sys.executable, str(host), *arguments]
+    )
+    stop = runs.render_broker(folder, Path(sys.executable))
+    monkeypatch.chdir(tmp_path)
+    try:
+        code = shim.brokered(["study", "visuals", "course"], str(folder))
+    finally:
+        stop.set()
+    assert code == 3
+    assert "checked course" in capsys.readouterr().out
+
+
+def test_the_render_broker_refuses_other_commands_and_outside_projects(tmp_path):
+    from skill_lab import LabError, runs
+
+    for arguments in (
+        ["login"],
+        ["study", "publish", "."],
+        ["study", "visuals", "../outside"],
+        ["study", "visuals", ".", "--output", "../outside"],
+    ):
+        with pytest.raises(LabError):
+            runs._render_request({"arguments": arguments, "cwd": str(tmp_path)}, tmp_path)
+
+
+def test_codex_trial_can_import_its_own_moodle_downloads(tmp_path) -> None:
+    # Trials stopped for want of lecture PDFs: downloads land outside the Codex workspace.
+    from skill_lab.hosts import codex_command
+    from skill_lab.models import ModelSpec
+
+    spec = ModelSpec.parse("codex:gpt-6.1-terra:xhigh")
+    trial = codex_command(spec, "hi", tmp_path, session=None, downloads="/run/downloads")
+    judge = codex_command(spec, "hi", tmp_path, session=None, judge=True, downloads="/x")
+    assert trial[trial.index("--add-dir") + 1] == "/run/downloads"
+    assert "--add-dir" not in judge
