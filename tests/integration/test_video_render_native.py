@@ -82,6 +82,13 @@ def installed(tmp_path_factory: pytest.TempPathFactory) -> Path:
             os.environ["TUM_MCP_DATA_DIR"] = previous
 
 
+@pytest.fixture(autouse=True)
+def installed_data(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The shared isolated profile must not hide this module's installed runtime."""
+    if "installed" in request.fixturenames:
+        monkeypatch.setenv("TUM_MCP_DATA_DIR", str(request.getfixturevalue("installed")))
+
+
 def course(tmp_path: Path, scene: str) -> Path:
     root = tmp_path / "course"
     (root / "app").mkdir(parents=True)

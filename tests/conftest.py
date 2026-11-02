@@ -1,9 +1,41 @@
+import os
 from pathlib import Path
 
 import pytest
 from keyring.backend import KeyringBackend
 
-from tum_mcp.moodle import auth
+from tum_mcp.moodle import auth, secret_files
+
+
+@pytest.fixture(autouse=True)
+def isolated_profile(
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Never read or write the developer's real TUM MCP or Moodle folders.
+
+    Configuration stays under the data folder by default, so moving one moves both.
+    """
+    if request.node.get_closest_marker("live"):
+        return
+    root = tmp_path_factory.mktemp("profile")
+    monkeypatch.delenv("TUM_MCP_CONFIG_DIR", raising=False)
+    for name, folder in (
+        ("TUM_MCP_DATA_DIR", "data"),
+        ("TUM_MOODLE_DATA_DIR", "moodle"),
+        ("TUM_MOODLE_DOWNLOAD_DIR", "downloads"),
+    ):
+        monkeypatch.setenv(name, str(root / folder))
+
+
+@pytest.fixture(autouse=True)
+def fast_windows_permissions(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One PowerShell process per private folder costs ~0.8s; ACL owners opt back in."""
+    if os.name == "nt" and not request.node.get_closest_marker("native_acl"):
+        monkeypatch.setattr(secret_files, "_secure_windows_path", lambda path: None)
 
 
 class MemoryKeyring(KeyringBackend):

@@ -130,8 +130,9 @@ another comparison group. A run whose host reports a different model is marked
 - After the last turn the lab keeps only redacted transcripts: TUMonline, Zulip, personal
   records, forum reads and feedback become byte counts and hashes. A credential scan
   quarantines a run on any hit. Raw host session logs in the profile are deleted.
-- Everything real stays in the gitignored `.omo/skill-lab/`. CI only runs the synthetic tests
-  in `skill-lab/tests/`; it never logs in, reads campus or runs a trial.
+- Everything real stays in the gitignored `.omo/skill-lab/`. The synthetic tests in
+  `skill-lab/tests/` run locally (`uv run pytest skill-lab/tests`), not in CI; they never
+  log in, read campus or run a trial.
 
 ## Layout
 

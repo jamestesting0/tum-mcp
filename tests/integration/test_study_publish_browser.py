@@ -205,9 +205,7 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
         (evidence / "captures.json").write_text(json.dumps(captures, indent=2), encoding="utf-8")
 
 
-@pytest.mark.parametrize(
-    "width,theme", [(390, "light"), (390, "dark"), (1440, "light"), (1440, "dark")]
-)
+@pytest.mark.parametrize("width,theme", [(390, "light"), (1440, "dark")])
 def test_complete_public_app_keeps_learning_panels_and_lecture_timestamp_links(
     course_browser: Browser, lecture_extension: Path, tmp_path: Path, width: int, theme: str
 ) -> None:

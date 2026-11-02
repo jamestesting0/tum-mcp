@@ -48,14 +48,23 @@ exclude = ["skill-lab"]
 [dependency-groups]
 dev = [
     "pytest>=9,<10",
+    "pytest-timeout>=2.4,<3",
+    "pytest-xdist>=3.8,<4",
     "ruff==0.16.9",
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "skill-lab/tests"]
+# skill-lab/tests are dev-only and run locally: uv run pytest skill-lab/tests
+testpaths = ["tests"]
 pythonpath = ["skill-lab"]
 addopts = "-ra --strict-markers"
-markers = ["live: requires an explicit live Moodle session"]
+# A browser whose renderer dies can block Playwright forever; fail that test instead.
+timeout = 300
+timeout_method = "thread"
+markers = [
+    "live: requires an explicit live Moodle session",
+    "native_acl: applies real Windows ACLs instead of the fast test stub",
+]
 filterwarnings = ["error::pytest.PytestUnhandledThreadExceptionWarning"]
 
 [tool.ruff]

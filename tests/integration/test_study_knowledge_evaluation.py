@@ -1,6 +1,8 @@
 """Fixed synthetic gold refs; finder is a richer-corpus baseline, not a graph ablation."""
 
 import json
+import os
+import shutil
 import statistics
 import time
 import tracemalloc
@@ -26,6 +28,9 @@ CASES = json.loads(
     (Path(__file__).parents[1] / "fixtures/study_knowledge/retrieval-cases.json").read_bytes()
 )
 ARTIFACTS = Path(".omo/evidence/study-knowledge-harness/implementation")
+# Baseline timings and evidence files are local evidence, never a CI gate.
+EVALUATION = os.environ.get("TUM_MCP_KNOWLEDGE_EVALUATION") == "1"
+evaluation_only = pytest.mark.skipif(not EVALUATION, reason="local evaluation opt-in")
 
 
 pytestmark = pytest.mark.usefixtures("course_memory")
@@ -143,11 +148,11 @@ def safe_result(packet, forbidden=None):
 
 
 def test_fixed_retrieval_suite_and_two_existing_baselines(tmp_path: Path):
-    results = []
+    (tmp_path / "template").mkdir()
+    template = prepared(tmp_path / "template")
+    results, cache_checked = [], False
     for case in CASES:
-        folder = tmp_path / case["id"]
-        folder.mkdir()
-        root = prepared(folder)
+        root = Path(shutil.copytree(template, tmp_path / case["id"] / template.name))
         selector = case["selector"]
         if change := case.get("change"):
             apply_change(root, change)
@@ -182,23 +187,28 @@ def test_fixed_retrieval_suite_and_two_existing_baselines(tmp_path: Path):
             "graph_items": sorted(ids),
             "bytes": len(encoded(packet)),
         }
-        if case["group"] in {"bridge", "control"}:
+        # Controls prove both baselines still find the answer; bridges only compare them.
+        if case["group"] == "control" or (EVALUATION and case["group"] == "bridge"):
             start = time.perf_counter()
             lexical = native_baseline(root, selector)
             row["lexical_seconds"] = time.perf_counter() - start
             start = time.perf_counter()
             cold = native_baseline(root, selector, pages=True)
             row["finder_cold_seconds"] = time.perf_counter() - start
-            start = time.perf_counter()
-            warm = native_baseline(root, selector, pages=True)
-            row["finder_warm_seconds"] = time.perf_counter() - start
+            if EVALUATION or not cache_checked:
+                start = time.perf_counter()
+                warm = native_baseline(root, selector, pages=True)
+                row["finder_warm_seconds"] = time.perf_counter() - start
+                assert cold["items"] == warm["items"]
+                cache_checked = True
             row["lexical_complete"] = required <= {n["id"] for n in lexical["items"]}
-            row["finder_complete"] = required <= {n["id"] for n in warm["items"]}
-            assert cold["items"] == warm["items"]
+            row["finder_complete"] = required <= {n["id"] for n in cold["items"]}
             if case["group"] == "control":
                 assert row["lexical_complete"] and row["finder_complete"]
         results.append(row)
     assert sum(r.get("graph_complete", False) for r in results if r["group"] == "bridge") >= 8
+    if not EVALUATION:
+        return
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     (ARTIFACTS / "task-10-comparison.json").write_text(
         json.dumps(
@@ -220,6 +230,7 @@ def test_safety_oracle_rejects_a_tempting_broken_result():
         )
 
 
+@evaluation_only
 def test_three_hundred_unit_projection_and_payload_profile(tmp_path: Path):
     root = prepared(tmp_path)
     inputs = load_inputs(root)

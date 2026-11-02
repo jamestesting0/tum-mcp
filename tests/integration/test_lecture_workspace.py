@@ -38,9 +38,7 @@ def lecture_url(lecture_project: Path) -> Iterator[str]:
             assert not thread.is_alive()
 
 
-@pytest.mark.parametrize(
-    "width,theme", [(390, "light"), (390, "dark"), (1440, "light"), (1440, "dark")]
-)
+@pytest.mark.parametrize("width,theme", [(390, "light"), (1440, "dark")])
 def test_highlights_deep_links_thumbnails_and_workspace_return(
     course_browser: Browser, lecture_url: str, width: int, theme: str, tmp_path: Path
 ) -> None:

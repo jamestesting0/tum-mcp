@@ -8,7 +8,10 @@ import pytest
 
 from tum_mcp.moodle.secret_files import _secure_windows_path, local_cipher
 
-pytestmark = pytest.mark.skipif(os.name != "nt", reason="Requires native Windows ACLs.")
+pytestmark = [
+    pytest.mark.skipif(os.name != "nt", reason="Requires native Windows ACLs."),
+    pytest.mark.native_acl,
+]
 
 
 @pytest.mark.parametrize("consumer_environment", [False, True])

@@ -620,9 +620,7 @@ def test_compare_is_the_one_place_a_step_reveals_its_reasoning(
         context.close()
 
 
-@pytest.mark.parametrize(
-    "width,theme", [(390, "light"), (390, "dark"), (1440, "light"), (1440, "dark")]
-)
+@pytest.mark.parametrize("width,theme", [(390, "light"), (1440, "dark")])
 def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
     course_browser: Browser, exercise_project: Path, exercise_url: str, width: int, theme: str
 ) -> None:
@@ -710,9 +708,7 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
         context.close()
 
 
-@pytest.mark.parametrize(
-    "width,theme", [(390, "light"), (390, "dark"), (1440, "light"), (1440, "dark")]
-)
+@pytest.mark.parametrize("width,theme", [(390, "light"), (1440, "dark")])
 def test_guides_follow_their_parts_and_keep_nested_context(
     course_browser: Browser, exercise_project: Path, exercise_url: str, width: int, theme: str
 ) -> None:

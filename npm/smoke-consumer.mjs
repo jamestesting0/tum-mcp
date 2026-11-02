@@ -1,4 +1,3 @@
-import { lectureLifecycle } from './lecture-consumer.mjs';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -36,10 +35,15 @@ function run(command, args, timeout = 600000, childEnv = env) {
   return result.stdout;
 }
 
+const started = Date.now();
+const phase = name => console.log(`Consumer: ${name} (${((Date.now() - started) / 1000).toFixed(1)}s)`);
+
 try {
+  phase('install the packaged artifact');
   // Invoking npm's JavaScript entrypoint also works on Windows without a shell/.cmd wrapper.
   run(process.execPath, [process.env.npm_execpath, 'install', '--prefix', root, '--ignore-scripts', '--no-audit', '--no-fund', resolve(artifact)]);
   const launcher = join(root, 'node_modules/@jamestesting888/tum-mcp/npm/tum-mcp.mjs');
+  phase('prepare the managed runtime');
   run(process.execPath, [launcher, 'setup', '--client', 'generic']);
   const first = JSON.parse(readFileSync(join(root, 'data/runtime.json'), 'utf8'));
   run(process.execPath, [launcher, 'setup', '--client', 'generic']);
@@ -94,7 +98,9 @@ for name in ('cursor','antigravity'):
     uninstall_client(name,home)
     assert not any((skills/skill).exists() for skill in CURRENT_SKILLS)
 `;
+  phase('check local storage and additional clients');
   run(first.python, ['-I', '-c', storage], 60000);
+  phase('check study routing and the course-memory lifecycle');
   const studyProject = join(root, 'course Ω');
   const status = () => JSON.parse(run(process.execPath, [launcher, 'study', 'status', studyProject]));
   assert.equal(status().mode, 'initialize');
@@ -139,14 +145,14 @@ for name in ('cursor','antigravity'):
   assert.ok(restored.items.some(item => item.id === `study/unit/${nativeUnit.key}`));
   assert.equal(readFileSync(memoryPath, 'utf8'), memoryBytes);
   run(process.execPath, [launcher, 'uninstall', 'course-memory', '--json']);
-  const lectureEvidence = lectureLifecycle(root, args => run(process.execPath, [launcher, ...args]));
-  assert.equal(lectureEvidence.installed_skills, 8);
+  // The upgrade consumer owns the optional lecture/audio/video lifecycle on every platform.
   const studyState = join(studyProject, '.tum-mcp/state.json');
   writeFileSync(studyState, 'synthetic damaged study state');
   assert.equal(status().mode, 'recover');
   assert.equal(readFileSync(studyState, 'utf8'), 'synthetic damaged study state');
   let browserEvidence = null;
   if (process.env.TUM_MCP_BROWSER_INTEGRATION === '1' || /microsoft|wsl/i.test(release())) {
+    phase('verify owned browsers and study journeys');
     const browserEnv = browserEnvironment();
     const studyFixtureRoot = join(root, 'course-fixture');
     mkdirSync(studyFixtureRoot);
@@ -204,7 +210,9 @@ async def check():
         assert denied.is_error
 anyio.run(check)
 `;
+  phase('check the packaged MCP protocol');
   run(first.python, ['-I', '-c', protocol], 60000);
+  phase('check study demo, template and inspection');
   const demoProject = join(root, 'Synthetic course');
   run(process.execPath, [launcher, 'study', 'demo', demoProject]);
   const template = JSON.parse(run(process.execPath, [launcher, 'study', 'template']));
@@ -214,5 +222,6 @@ anyio.run(check)
   const study = JSON.parse(run(process.execPath, [launcher, 'study', 'inspect', demoProject]));
   assert.equal(study.course.synthetic, true); assert.deepEqual(study.stale_units, []);
   assert.ok(readFileSync(join(demoProject, 'app', 'reading.mjs'), 'utf8').includes('renderReading'));
+  phase('passed');
   console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: skills.checked_skills.length, studyStateRoutingPassed: true, courseMemoryLifecyclePassed: true, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
 } finally { rmSync(root, { recursive: true, force: true }); }

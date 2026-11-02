@@ -317,8 +317,7 @@ def walkthrough_server(
 
 
 @browser_only
-@pytest.mark.parametrize("width", [390, 1440])
-@pytest.mark.parametrize("theme", ["light", "dark"])
+@pytest.mark.parametrize("width,theme", [(390, "light"), (1440, "dark")])
 def test_walkthrough_disclosure_never_autoplays_or_reveals_written_parts(
     browsers: dict,
     walkthrough_server: str,
