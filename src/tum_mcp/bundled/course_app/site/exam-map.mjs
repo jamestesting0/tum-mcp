@@ -1,5 +1,7 @@
 import { node, svgNode, studyText, button, append, plainText } from './dom.mjs';
 import { exam, concepts, topics, conceptBadge, quietLink } from './exam-state.mjs';
+import { entry } from './exam-entry.mjs';
+import { iconButton } from './navigation.mjs';
 
 const kinds = { requires: 'needed for', derives: 'leads to', contrasts: 'contrasts with' };
 function lines(text, width = 20) {
@@ -33,8 +35,9 @@ function legendItem(dashed, text) {
   return append(node('span', 'exam-map-legend-item'), sample, node('span', '', text));
 }
 
-// The semester map: build-time positions, focusable nodes and a compact card for the selection.
-export function renderMap(onOpen) {
+// The semester map: build-time positions, focusable nodes and, for the selection, the same entry
+// the cheatsheet list shows, so a student reads the details without leaving the map.
+export function renderMap() {
   const map = exam.map;
   const root = node('section', 'exam-map'); root.setAttribute('aria-labelledby', 'exam-map-title');
   const title = node('h2', '', 'Semester map'); title.id = 'exam-map-title';
@@ -43,7 +46,11 @@ export function renderMap(onOpen) {
   if (!map?.nodes?.length) { root.hidden = true; return root; }
   const links = new Map(map.nodes.map(item => [item.key, []]));
   for (const edge of map.edges) { links.get(edge.start).push({ ...edge, other: edge.end, out: true }); links.get(edge.end).push({ ...edge, other: edge.start, out: false }); }
-  const card = node('div', 'exam-map-card'); card.setAttribute('role', 'status'); card.hidden = true;
+  const card = node('div', 'exam-map-card'); card.setAttribute('role', 'region'); card.hidden = true;
+  // Only the selection is announced, never the whole entry.
+  const status = node('p', 'visually-hidden'); status.setAttribute('aria-live', 'polite');
+  // Once the student opens an entry, the next selection opens too, so they can browse details.
+  let expanded = false;
   const ordered = [...map.nodes].sort((a, b) => a.column - b.column || a.y - b.y || a.x - b.x);
   const elements = new Map();
   let selected = null;
@@ -61,14 +68,26 @@ export function renderMap(onOpen) {
     }
     for (const edge of svg.querySelectorAll('[data-edge]')) edge.classList.toggle('related', edge.dataset.start === key || edge.dataset.end === key);
     const concept = concepts.get(key);
-    card.replaceChildren(
-      append(node('p', 'exam-map-card-title'), studyText('strong', '', concept.title), node('span', 'small', ` · ${conceptBadge(concept)}`)),
-      studyText('p', '', concept.line),
-    );
-    if (concept.trigger) card.append(append(node('p', 'small'), node('span', 'exam-label', 'When you see: '), studyText('span', '', concept.trigger)));
-    card.append(quietLink('Open in Cheatsheet', `#exam/sheet/${concept.key}`));
+    // The open state carries over from the entry shown now, read when the selection changes.
+    const current = card.querySelector('.exam-entry-details');
+    if (current) expanded = current.open;
+    const made = entry(concept, { id: false });
+    if (made.details) made.details.open = expanded;
+    card.setAttribute('aria-label', plainTitle(key));
+    card.replaceChildren(iconButton('Close', 'close', deselect), made.article);
+    card.append(append(node('p', 'small exam-map-more'), quietLink('Open in Cheatsheet', `#exam/sheet/${concept.key}`)));
     card.hidden = false;
+    status.textContent = `Selected: ${plainTitle(key)}`;
     if (focus) elements.get(key).focus();
+    // In full screen the details sit beside the map, which narrows: keep the node in view.
+    if (root.classList.contains('expanded')) requestAnimationFrame(() => reveal(position.get(key)));
+  }
+  function deselect() {
+    const key = selected;
+    selected = null; card.hidden = true; card.replaceChildren(); status.textContent = '';
+    for (const element of elements.values()) { element.classList.remove('selected', 'related'); element.setAttribute('aria-pressed', 'false'); }
+    for (const edge of svg.querySelectorAll('[data-edge]')) edge.classList.remove('related');
+    if (key) elements.get(key)?.focus({ preventScroll: true });
   }
   const scroller = node('div', 'exam-map-scroll'); scroller.tabIndex = 0;
   // The collapsed frame takes the map's shape, so a wide, short map leaves no empty band.
@@ -158,7 +177,8 @@ export function renderMap(onOpen) {
     group.addEventListener('keydown', event => {
       const index = ordered.findIndex(entry => entry.key === item.key);
       const next = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (selected === item.key) onOpen(item.key); else select(item.key); }
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); const details = card.querySelector('.exam-entry-details');
+        if (selected === item.key && details) { details.open = !details.open; } else select(item.key); }
       else if (next) { event.preventDefault(); elements.get(ordered[(index + next + ordered.length) % ordered.length].key).focus(); }
     });
     elements.set(item.key, group); svg.append(group);
@@ -256,7 +276,10 @@ export function renderMap(onOpen) {
   };
   document.addEventListener('fullscreenchange', onFullscreen);
   root.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && root.classList.contains('expanded') && !document.fullscreenElement) { setExpanded(false); full.focus(); }
+    if (event.key !== 'Escape') return;
+    // Escape closes the details first, then leaves full screen.
+    if (!card.hidden) { event.preventDefault(); deselect(); return; }
+    if (root.classList.contains('expanded') && !document.fullscreenElement) { setExpanded(false); full.focus(); }
   });
   heading.append(full);
   const tools = append(node('div', 'exam-map-tools'), tool('Zoom out', ICONS.out, () => zoomAt(0.8)), tool('Zoom in', ICONS.in, () => zoomAt(1.25)), tool('Fit', ICONS.fit, fit));
@@ -283,6 +306,6 @@ export function renderMap(onOpen) {
     }
     group.append(items); overview.append(group);
   }
-  root.append(append(node('div', 'exam-map-frame'), scroller, tools, legend), overview, card);
+  root.append(append(node('div', 'exam-map-frame'), scroller, tools, legend), overview, card, status);
   return root;
 }

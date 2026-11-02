@@ -28,6 +28,8 @@ Use the same ten dimensions, with these replacements for Study-specific checks:
 | Clarity | Shared checks, plus `clarity.symbols_recall` on the Guide's and Solution's derivations: a variable the student must recall from the lecture or an earlier part opens its meaning in this exercise, with its value when the task gives one. |
 
 Cognitive load, representation and redundancy retain their shared checks.
+Statements keep every given and task verbatim, but omit the sheet's framing sentences
+that contribute neither. `meta_reference` reads statements as well as guides and solutions.
 Do not change a released case to satisfy `practice.new_case`: apply that check to authored
 transfer practice, not the original problem. Do not penalize the same missing answer in
 Practice and Coverage: a missing original demand belongs to Coverage; a Compare answer
@@ -41,16 +43,30 @@ automatic 3 because the Study check does not apply.
 ## Exam
 
 Exam patterns are scored items (`exam/pattern/<key>`) with the ten dimensions. The
-cheatsheet, past papers and practice exams are not: use `study exam-report` as evidence
-and record their findings in the course pass; do not invent item keys for them.
+cheatsheet is one item (`exam/sheet`) read in the single `cheatsheet` pass on six
+dimensions with the rubric's [Cheatsheet](rubric.md#cheatsheet) checks. Past papers and
+practice exams are not items: use `study exam-report` as evidence and record their
+findings in the course pass; do not invent item keys for them.
 
 Read as a revising student who has studied the material. Exam stays concise and never
 re-teaches: depth is one tap away through Recall, which must open the passage that
 teaches each concept. Past papers and practice exams show no Recall before the attempt,
 because recognising the pattern is the skill they practise.
 
-- Cheatsheet: compressed but sufficient conditions, readable formulas and useful retrieval
-  cues; a correct entry need not introduce its concept with a worked example.
+- Cheatsheet: start from `study review-pack PROJECT --item exam/sheet --pass cheatsheet`
+  and the coverage report's `cheatsheet` section. Open the cited source pages and look for
+  exam-relevant material of any kind that no entry holds before judging the entries. A
+  complete one-line fact needs no expansion; a method needs its steps, a formula its
+  meanings, a comparison its table. A correct entry need not introduce its concept with a
+  worked example.
+- Pattern: before scoring, answer: does a listed exam question need each decision step and
+  each case (`cognitive_load.moves_fit`)? Do the cases share the steps around them, or is
+  each a different method that needs its own pattern (`organization.fork_placement`)? Does
+  every which-case feedback name the given that decides it (`practice.case_feedback`)? Does
+  each step or case that uses a formula, rule or code show it under `apply`, and is each
+  pitfall the actual wrong working in the task moment where it happens, with its rule
+  (`representation.shown_not_described`)? Does every applied formula open its variables'
+  meanings in this pattern, without the text restating them (`clarity.symbols_recall`)?
 - Pattern: score it with this table; the shared checks apply unless a row replaces them.
 
   | Dimension | Pattern evidence |
@@ -75,6 +91,9 @@ The current scorecard has no Lecture item scores. Record findings in the course 
 and check the recording/transcript evidence before judging fidelity.
 
 - Check claims, limiting conditions and timestamps against the supplied recording evidence.
+- Each note's title and context let a student who missed the lecture see what the remark
+  answers. Context unsupported by the evidence, or a message that only makes sense with the
+  lecture in mind, goes back to prepare-lecture to fix; Lecture has no item score to lower.
 - Preserve useful explanations beyond the slides, without copying an entire Study lesson.
 - Check processed and missing intervals; a complete-looking passage does not prove full
   recording coverage.

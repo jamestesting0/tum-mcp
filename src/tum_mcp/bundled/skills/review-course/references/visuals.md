@@ -1,7 +1,7 @@
 # Visual pass
 
 Score every drawn visual (diagram, UML diagram, flowchart, plot, figure, table) the way the
-student sees it: from the contact sheets at phone and desktop width, with the render
+student sees it: from its desktop contact sheet (phone sheets only when asked), with the render
 findings and the cited source page beside it. Never score a visual from its JSON.
 For Video Notes use [media evidence](media.md): entry/middle/exit samples plus
 complete playback, with each `cXX/bXX/key` visual scored on these six criteria.
@@ -10,13 +10,13 @@ A right endpoint cannot repair an incorrect or missing intermediate construction
 ## Evidence
 
 1. `tum-mcp study visuals PROJECT` writes `.tum-mcp/visual-check.json` and the sheets
-   `.tum-mcp/visuals/<item>-phone-N.png` and `<item>-desktop-N.png`. Each picture carries
+   `.tum-mcp/visuals/<item>-desktop-N.png` (and `<item>-phone-N.png` with `--phone`). Each picture carries
    its title, its key (`block:3`, `question:q1:0`, `statement:0`, `step:trace:1`) and the
    codes it was flagged with. A drawing that scrolls sideways appears twice: as the
    student first sees it and whole, captioned "whole drawing".
 2. Include the solution, Compare and transfer-answer sheets. Open their controls in the app
    to check the surrounding context; an injected sheet checks the drawing, not its reveal.
-3. Open every sheet of the item, the phone sheet first: most students read there. Look
+3. Open every sheet of the item. Look
    at each picture for five seconds and say its message; then read its caption.
 4. Open the cited source page. Fidelity can only be judged against it.
 

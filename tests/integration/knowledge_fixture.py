@@ -205,6 +205,8 @@ def knowledge_project(
             notes=[
                 {
                     "key": "registration",
+                    "title": "Who calls the observers",
+                    "context": "The slide shows displays updating when the subject changes.",
                     "text": "The subject invokes registered observer interfaces.",
                     "sources": ["slides"],
                     "evidence": [payload["evidence"][0]["key"]],

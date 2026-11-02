@@ -267,3 +267,14 @@ def test_note_text_edit_invalidates_comments_but_evidence_refresh_does_not() -> 
     assert LectureContent.model_validate(value).lectures[0].semantic_revision == before
     value["lectures"][0]["notes"][0]["text"] = "Count both stored adjacency entries."
     assert LectureContent.model_validate(value).lectures[0].semantic_revision != before
+
+
+def test_note_context_sets_up_its_message_without_repeating_it() -> None:
+    value = json.loads(FIXTURE.read_bytes())
+    note = value["lectures"][0]["notes"][0]
+    note["context"] = note["text"]
+    with pytest.raises(ValueError, match="does not repeat it"):
+        LectureContent.model_validate(value)
+    note.pop("context")
+    with pytest.raises(ValueError, match="context"):
+        LectureContent.model_validate(value)

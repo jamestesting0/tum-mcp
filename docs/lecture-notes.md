@@ -15,8 +15,11 @@ model caches and customizations. Reinstalling can reuse them.
 
 Ask: “Prepare Lecture from this recording and these slides.” It adds Lecture to the
 same course app, alongside Study and Exercises. Notes preserve useful short remarks,
-conditions, corrections and explicit instructions. They show the information directly,
-with sources tucked behind a source control and an optional meaningful recording frame.
+conditions, corrections and explicit instructions. Each note names what it concerns, the
+situation it answers (what the slide states, a question asked, the approach it corrects)
+and then its message, so it reads without having attended. Sources sit behind a source
+control; a note may add a meaningful recording frame and a Recall link to the Study
+passage on its subject.
 Highlights are substantial worked explanations worth following: an example, derivation,
 demonstration, method comparison or conceptual explanation that adds to the materials.
 A highlight shows its time range and duration, a frame from the recording, a title,
@@ -147,8 +150,8 @@ The agent authors `app/lectures.json` (schema version 2) using real source hashe
 coverage; the legacy `study/` layout stays supported. Thumbnails stage in
 `.tum-mcp/lecture-assets/` and copy only when selected. Source freshness and the
 authored content's semantic revision are separate, preserving comments through harmless
-receipt/decorative-thumbnail updates. Note text and meaningful note-image edits change
-the revision. Local comments support `--view lectures --lecture KEY`.
+receipt/decorative-thumbnail updates. Note title, context, text and meaningful
+note-image edits change the revision. Local comments support `--view lectures --lecture KEY`.
 
 Open with `tum-mcp study` from the course folder. For a credential-free synthetic
 preview after installing the extension, use `tum-mcp study demo PROJECT --lectures`.

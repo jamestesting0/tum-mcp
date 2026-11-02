@@ -62,6 +62,7 @@ TEMPLATE_FILES = (
     "exam.mjs",
     "exam-state.mjs",
     "exam-sheet.mjs",
+    "exam-entry.mjs",
     "exam-map.mjs",
     "exam-patterns.mjs",
     "exam-mock.mjs",
@@ -444,6 +445,21 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
                     Code.INVALID_RESPONSE,
                     "Study links to unknown Lecture: " + ", ".join(sorted(missing)),
                 )
+            blocks = {
+                (unit.key, block.key)
+                for unit in (content.units if content else ())
+                for block in unit.blocks
+            }
+            if unknown := sorted(
+                f"{note.passage.unit}/{note.passage.block}"
+                for lecture in lectures.lectures
+                for note in lecture.notes
+                if note.passage and (note.passage.unit, note.passage.block) not in blocks
+            ):
+                raise CampusError(
+                    Code.INVALID_RESPONSE,
+                    "Lecture notes link Study passages that do not exist: " + ", ".join(unknown),
+                )
         if exam:
             stale += stale_exam(root, state, exam)
             check_unit_links(exam, content)
@@ -451,7 +467,7 @@ def build(root: Path, *, publish: bool = True, upgrade_layout: bool = False) -> 
 
         ledger = read_ledger(root)
         if ledger is not None:
-            check_ledger(ledger, state, content, exercises)
+            check_ledger(ledger, state, content, exercises, exam)
         elif content and any(unit.explore for unit in content.units):
             raise CampusError(
                 Code.ACTION_REQUIRED,

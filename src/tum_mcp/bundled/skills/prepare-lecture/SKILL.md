@@ -49,8 +49,8 @@ when connecting, preparing missing evidence or capturing frames.
 6. Reconcile safe source receipts when needed, then author `app/lectures.json` (or the
    existing legacy `study/` layout) with `study schema lectures` and
    [content](references/content.md). Raw media and transcripts stay private.
-7. Run `tum-mcp lecture check PROJECT`. Fix every error. Check each note against the
-   reported supporting speech, preserving its conditions and attribution. Verify the
+7. Run `tum-mcp lecture check PROJECT`; fix every error. Check notes and their context
+   against the reported speech, keeping conditions and attribution. Verify the
    full selected explanation, not just the printed opening/closing excerpts, against
    each highlight's title, teaches line and points. Check unclear speech against
    the slides and frames.

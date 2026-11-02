@@ -20,7 +20,8 @@ Recall chip above the exercise that opens the explanation and, from it, that pas
 the exercise. Later Study builds validate links. Check that the passage really teaches
 what the task needs ([coverage](../../prepare-study/references/coverage.md#while-authoring)).
 Link that passage instead of explaining the idea again in the statement or steps, and
-use Study's terms (`{{term}}`), symbols and conventions.
+use Study's terms (`{{term}}`), symbols and conventions, with maths set as in
+[notation](../../prepare-study/references/content.md#notation).
 
 Steps contain purpose, prompt, optional rich blocks, sources/check, requested hints
 and reviewed explanation. Students answer on paper; the app shows no answer boxes
@@ -86,8 +87,9 @@ A question students must picture from prose alone is harder than the subject. Ev
 question you write (distilled practice, Exam practice exams, worked practices
 and drills) pairs its text with at least one block that shows the situation; the
 build rejects text-only ones. Give it a case Study does not work: the lesson's example with
-renamed variables tests recall, not the method. A released statement keeps its wording but not its wall
-of text: give each part its own block titled with its number, enumerations as points,
+renamed variables tests recall, not the method. A released statement keeps the wording of its givens and tasks, but not
+the sheet's framing ("This exercise should refresh your knowledge…", flagged as
+`statement_framing`) or its wall of text: give each part its own block titled with its number, enumerations as points,
 givens (numbers, costs, scoring rules) as a table and the setting as a figure or diagram
 beside it. The table replaces the sentence that listed the givens; keep the sentence's
 other words, not the numbers twice. A frame, table or figure that belongs to a part follows it untitled, so it

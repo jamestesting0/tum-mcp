@@ -325,6 +325,7 @@ def exam_document(root: Path) -> dict:
                 "basis": "tested",
                 "sources": [ref("slides")],
                 "details": [text("Structure", "slides", "Subject keeps a list of observers.")],
+                "workflow_from": "observer-design",
             },
             {
                 "key": "loose-coupling",

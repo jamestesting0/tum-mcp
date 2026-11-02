@@ -16,7 +16,7 @@ raw transcript/media into the app. Review conflicts and changed sources before
 updating authored hashes. Do not fabricate a source hash, recording identity or
 complete coverage to get a build through validation.
 
-`lectures.json` has `schema_version: 2`, the bound `course_key`, `lectures` and
+`lectures.json` has `schema_version: 3`, the bound `course_key`, `lectures` and
 `evidence`. Each lecture has a stable key and title, the recording identity and date,
 a `summary` (at most 600 characters), the exact source key/SHA versions, its checked-at
 time, coverage, `notes` (up to 100) and `highlights` (up to 40) in recording order.
@@ -24,8 +24,11 @@ Either or both arrays may be empty; do not manufacture additions. Use the actual
 course/recording IDs plus the opaque course slug; they are not interchangeable.
 Synthetic recordings belong only to a synthetic course.
 
-Each note has a unique `key`, concise `text` (at most 600 characters), `evidence`
-keys and optional `sources`/`pages` as below. Note and highlight keys share one
+Each note has a unique `key`, a `title` (at most
+100 characters: what it concerns), a `context` (at most 300: the situation it answers),
+the message as `text` (at most 400; never a repeat of the context), `evidence` keys,
+an optional `passage` (`unit` and `block` of the Study passage that teaches the subject;
+the build checks it exists) and optional `sources`/`pages` as below. Note and highlight keys share one
 namespace per lecture. A note has no authored clip interval: its speech evidence
 locates its recording source, shown only inside the source control. Optional `image`
 uses the staged thumbnail object plus required descriptive `alt`; it is meaningful

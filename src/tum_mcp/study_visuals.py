@@ -1,10 +1,11 @@
 """Render check for a built study app: measure every painted visual and draw contact sheets.
 
 Each unit's lesson and practice questions and each exercise step open in an installed Chromium
-browser at phone, narrow and desktop width. A script measures what the app painted for each
-visual; the findings go to ``.tum-mcp/visual-check.json``, tied to the content and app revision so
-they go stale when either changes, and contact sheets of every visual at phone and desktop width
-go to ``.tum-mcp/visuals/`` so the reviewing agent looks at what a student sees.
+browser at desktop width, and with ``phone`` also at phone and narrow width. A script measures
+what the app painted for each visual; the findings go to ``.tum-mcp/visual-check.json``, tied to
+the content and app revision so they go stale when either changes, and contact sheets of every
+visual at each checked width (phone and desktop, not narrow) go to ``.tum-mcp/visuals/`` so the
+reviewing agent looks at what a student sees.
 """
 
 import base64
@@ -35,6 +36,8 @@ if TYPE_CHECKING:
     from tum_mcp.study_content import Block, StudyContent
 
 WIDTHS = {"phone": 390, "narrow": 600, "desktop": 1280}
+# Desktop is checked by default; phone and narrow widths only when asked (`--phone`).
+DEFAULT_WIDTHS = ("desktop",)
 SHEET_WIDTHS = ("phone", "desktop")
 # CSS pixels of screenshots per contact-sheet page, so a page stays legible when viewed whole.
 SHEET_HEIGHT = 1600
@@ -225,7 +228,7 @@ def _visits(
         # Exam shows its blocks across many views; they are drawn in a lesson's column.
         host = f"#{content.units[0].key}/content" if content and content.units else "#home"
         shown: list[dict[str, JsonValue]] = [
-            {"id": key, "title": block.title, "block": render_blocks((block,))[0]}
+            {"id": key, "title": block.title or key, "block": render_blocks((block,))[0]}
             for key, block in found.items()
         ]
         expected = {str(entry["id"]): entry["block"] for entry in shown}
@@ -331,7 +334,11 @@ def _shoot(page: "Page", selector: str, width: int, *, widen: bool = False) -> b
 
 
 def _measure(
-    root: Path, site: Path, visits: list[Visit], sheet_stem: str | None = None
+    root: Path,
+    site: Path,
+    visits: list[Visit],
+    sheet_stem: str | None = None,
+    widths: tuple[str, ...] = tuple(WIDTHS),
 ) -> tuple[dict[str, dict[str, Visual]], dict[str, list[str]]]:
     from playwright.sync_api import sync_playwright
 
@@ -359,7 +366,7 @@ def _measure(
         with browser_driver(choices[0]), sync_playwright() as playwright:
             browser = launch_loopback_browser(playwright.chromium, choices[0])
             try:
-                for name, pixels in WIDTHS.items():
+                for name, pixels in ((name, WIDTHS[name]) for name in widths):
                     photograph = name in SHEET_WIDTHS
                     context = browser.new_context(
                         viewport={"width": pixels, "height": 900},
@@ -473,6 +480,7 @@ def check_visuals(
     *,
     exam: bool = False,
     gallery: bool = False,
+    phone: bool = False,
 ) -> dict[str, Any]:
     from tum_mcp.exam_data import read_exam
     from tum_mcp.exercise_data import read_exercises
@@ -508,7 +516,8 @@ def check_visuals(
         frozenset(exercises),
         with_exam=exam,
     )
-    measured, sheets = _measure(root, site, visits) if visits else ({}, {})
+    widths = tuple(WIDTHS) if phone else DEFAULT_WIDTHS
+    measured, sheets = _measure(root, site, visits, widths=widths) if visits else ({}, {})
     app = app_revision(site)
     previous = read_report(root)
     items: dict[str, Any] = dict(previous["items"]) if previous and previous["app"] == app else {}

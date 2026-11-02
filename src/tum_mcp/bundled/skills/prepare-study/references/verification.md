@@ -16,7 +16,7 @@ relying on them.
 | Change | Check |
 | --- | --- |
 | New site | Prove one demanding unit, then confirm every unit's Content, Flashcards and Practice render with their sources and without script errors. Walk the student path below once. |
-| Content edit | Rebuild, run `tum-mcp study visuals PROJECT --unit KEY` and fix what it reports, then open the changed view. Read the rendered text and notation, and the contact sheets of its tables, diagrams and plots, at a phone width (~390px) and a desktop width. |
+| Content edit | Rebuild, run `tum-mcp study visuals PROJECT --unit KEY` and fix what it reports, then open the changed view. Read the rendered text and notation, and the contact sheets of its tables, diagrams and plots, at desktop width (phone only when asked). |
 | Unit order, labels, paths or citations | Outline grouping, home topic rows, Next links and Revision order; these can change without unit revisions changing. |
 | Inventory-only update | Staleness and coverage reporting; rebuild affected units, not unchanged teaching. |
 | Skill prose | Links, metadata and instructions; not unrelated application suites. |
@@ -27,7 +27,7 @@ generic clicks for every question proves less than reviewing each item's meaning
 
 ## Student path
 
-On a new site, follow the path a student takes on a phone and on a desktop: home →
+On a new site, follow the path a student takes on a desktop: home →
 Start → Content → Next → rate cards → Practice → check answers to End of set → next
 unit → Revision. Note any text that does not fit, notation that breaks, or a step
 that needs an extra scroll or tap, and fix the content that causes it. App behavior
@@ -48,7 +48,7 @@ honestly; neither a build nor testing certifies bug-free software.
 ## Explore changes
 
 After a reviewed optional edit, check its real Explore route, citations, Contents and
-comments at phone/desktop widths. Units without items keep three tabs. Explore stays
+comments at desktop width. Units without items keep three tabs. Explore stays
 outside Revision, core Next/Continue, counts, minutes and Video Notes. Its own source
 changes require review/rebinding; core saved ratings must survive optional-only edits.
 Run `study visuals` for optional visuals too and refresh stale teaching/course reviews

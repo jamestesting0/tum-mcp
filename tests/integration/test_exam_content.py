@@ -143,6 +143,10 @@ def parts(value: dict, *names: str) -> None:
         (lambda v: parts(v, "a", "b", "a"), "each part's steps stay together"),
         (lambda v: v["patterns"][0]["pitfalls"][0].update(step=9), "names a step of the workflow"),
         (
+            lambda v: v["concepts"][0].update(kind="formula", formula=None),
+            "formula entry carries its formula",
+        ),
+        (
             lambda v: v["patterns"][1]["examples"].append(v["patterns"][1]["examples"][0]),
             "without a decision step has one example",
         ),

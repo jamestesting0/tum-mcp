@@ -201,7 +201,7 @@ and `study report` lists items whose check is missing, stale or failing.
 
 Ask `review-course` to score the lessons and exercises the way a student meets them.
 It reads each item in six passes (logic, text, visuals, interaction, intuition and
-structure) and gives each unit and exercise 1 to 3 points for correctness, clarity,
+structure) and gives each unit, exercise and Exam pattern 1 to 3 points for correctness, clarity, cohesion,
 cognitive load, representation, practice, coverage, intuition, organization and
 redundancy. Each drawn visual gets its own score from the contact sheets for fidelity,
 form, layout, legibility, focus and convention, calibrated against a gallery of rated
@@ -213,6 +213,14 @@ pass a course map and flags terms used before they are taught, odd groups, repea
 passages and practice, and missing links. The agent names the rubric check behind each
 lost point, saves the scores in `.tum-mcp/review.json`, then fixes the findings and
 scores again.
+Each pass starts from `tum-mcp study review-pack PROJECT --item ITEM --pass NAME`.
+The pack includes report-proven failures and the rubric checks still needing judgement;
+absence of a heuristic warning never proves a semantic check passes. Fresh reviewers hunt
+for defects. Findings name the check, exact passage and its path, fix, severity (1 or 2),
+and verification verdict. Rejections require a reason. Every other check records its closest
+call with a quote, path and reason. The scorecard enforces scores from accepted findings,
+and the report counts checked criteria, missing passes and open prompts. A report prompt
+must be fixed or kept with a reason before the review passes.
 Editing a unit or exercise makes its score stale, and so does changing the course's
 units, groups or links for the course score, so `study report` lists what needs a new
 review and what is still below the bar. A scorecard saved under an earlier rubric still
@@ -222,7 +230,8 @@ Workspace profiles keep the shared dimensions but tailor their evidence: exercis
 reviews preserve released statements and assess each part's guide and answer rather
 than requiring a second lesson. Exam checks distinguish cheatsheets, patterns and papers;
 Lecture checks recording fidelity and added explanation without requiring quizzes.
-Exam and Lecture findings currently belong to the course pass, not separate item scores.
+Exam patterns and the cheatsheet have item scores (the cheatsheet in one pass against the
+sources' exam requirements); past papers and Lecture belong to the course pass.
 
 ## Preview the app
 
@@ -305,10 +314,13 @@ tum-mcp study exam-report ./pse-ws26         # what the agent reads before autho
 Imported files stay private and survive campus syncs. Copies of the same exam from
 different places count once.
 
-- **Cheatsheet**: a semester map of the exam-relevant ideas and one-line entries with
-  formulas, triggers and pitfalls; open an entry for details, including what each
-  formula's variables mean. The map can be dragged,
-  zoomed and opened full screen.
+- **Cheatsheet**: a semester map of the exam-relevant ideas and one-line entries
+  grouped by topic and section: facts, rules, comparisons, code and frameworks as well as
+  formulas and methods. Open an entry for its details (a table, list, code, diagram, a
+  formula's variable meanings or a method's steps); a complete one-line fact has nothing
+  to open. Click a map node to read the same entry under the map and expand it; a long
+  entry ends with Collapse. The map can be dragged, zoomed and opened full screen, where
+  the entry sits beside it.
 - **Exam patterns**: recurring question types with recognition cues, a solving workflow
   whose steps open to the exact formula, rule or code they apply (click a variable for
   its meaning), marking points, a worked practice that applies each workflow step,

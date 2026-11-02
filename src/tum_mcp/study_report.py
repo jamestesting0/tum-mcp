@@ -44,6 +44,15 @@ NOMINALISATION = re.compile(
     r"make|makes|achieve|achieves)\s+(?:a|an|the)?\s*\w+(?:tion|ment|sion|ance|ence)\s+of\b",
     re.IGNORECASE,
 )
+# A sheet's framing of an exercise, which states no given or task: "This exercise should
+# refresh your knowledge…", "In this sheet you will…".
+STATEMENT_FRAMING = re.compile(
+    r"\b(?:this|the following|today's) (?:exercise|sheet|task|problem|worksheet)s? "
+    r"(?:should|will|is meant to|aims? to|helps?|lets? you|is designed to)\b"
+    r"|\brefresh your (?:knowledge|memory|skills)\b"
+    r"|\bin this (?:exercise|sheet|task),? (?:we|you) (?:will|are going to|practi[sc]e)\b",
+    re.IGNORECASE,
+)
 META_REFERENCE = re.compile(
     r"\b(?:the|this|our) (?:lecture|course|slides?|lesson|section|page|unit|chapter|textbook) "
     r"(?:groups?|says?|states?|shows?|focus(?:es)?|lists?|defines?|describes?|covers?|calls?|"
@@ -688,36 +697,44 @@ def quality_flags(
                     f"{len(exercise.parts)} parts share one guide; name each step's `part` so "
                     "every part gets its own guide.",
                 )
-            # A released statement may cite its lecture; authored guidance and solutions may not.
-            authored = [
-                text
-                for step in exercise.steps
-                for text in (
-                    step.prompt,
-                    *step.hints,
-                    step.explanation,
-                    *(
-                        part
-                        for block in (
-                            *step.blocks,
-                            *(
-                                step.check.model_answer
-                                if step.check
-                                and step.check.kind == "self_check"
-                                and isinstance(step.check.model_answer, tuple)
-                                else ()
-                            ),
-                        )
-                        if isinstance(block, TextBlock)
-                        for part in (*block.paragraphs, *block.steps, *block.points)
-                    ),
-                )
-            ] + [
-                part
-                for block in exercise.solution.blocks
-                if isinstance(block, TextBlock)
-                for part in (*block.paragraphs, *block.steps, *block.points)
-            ]
+            authored = (
+                [
+                    text
+                    for step in exercise.steps
+                    for text in (
+                        step.prompt,
+                        *step.hints,
+                        step.explanation,
+                        *(
+                            part
+                            for block in (
+                                *step.blocks,
+                                *(
+                                    step.check.model_answer
+                                    if step.check
+                                    and step.check.kind == "self_check"
+                                    and isinstance(step.check.model_answer, tuple)
+                                    else ()
+                                ),
+                            )
+                            if isinstance(block, TextBlock)
+                            for part in (*block.paragraphs, *block.steps, *block.points)
+                        ),
+                    )
+                ]
+                + [
+                    part
+                    for block in exercise.solution.blocks
+                    if isinstance(block, TextBlock)
+                    for part in (*block.paragraphs, *block.steps, *block.points)
+                ]
+                + [
+                    part
+                    for block in exercise.statement
+                    if isinstance(block, TextBlock)
+                    for part in (*block.paragraphs, *block.steps, *block.points)
+                ]
+            )
             narrated = [
                 sentence
                 for text in authored
@@ -728,8 +745,25 @@ def quality_flags(
                 flag(
                     exercise.key,
                     "meta_reference",
-                    f"{len(narrated)} sentence(s) in the guide or solution talk about the material "
+                    f"{len(narrated)} sentence(s) in the statement, guide or solution talk "
+                    "about the material "
                     f"instead of the subject, such as '{narrated[0][:90]}'; state the idea itself.",
+                )
+            framing = [
+                sentence
+                for block in exercise.statement
+                if isinstance(block, TextBlock)
+                for part in (*block.paragraphs, *block.steps, *block.points)
+                for sentence in re.split(r"(?<=[.!?])\s+", part)
+                if STATEMENT_FRAMING.search(sentence)
+            ]
+            if framing:
+                flag(
+                    exercise.key,
+                    "statement_framing",
+                    f"The statement frames the exercise instead of giving it, such as "
+                    f"'{framing[0][:90]}'. Keep every given and task word for word and drop the "
+                    "framing sentence.",
                 )
             asides = [
                 block.title
@@ -905,6 +939,26 @@ def _opening(
         if not concrete:
             opening += [item for item in found if item not in opening]
     return opening, symbols, terms - seen_terms
+
+
+def plain_math(value: JsonValue) -> list[str]:
+    """Mathematics typed as characters or words in the rendered text of any content."""
+    return [
+        found[0]
+        for _, text in _prose(value)
+        if (found := PLAIN_MATH.search(prose := INLINE_SPANS.sub(" ", text)))
+        or (found := SPOKEN_MATH.search(prose))
+    ]
+
+
+# A quotient written with a slash in displayed mathematics, outside units and derivatives.
+_UNIT_GROUP = re.compile(r"\\(?:mathrm|text|operatorname)\{[^{}]*\}|\bd\s*/\s*d")
+_SLASH = re.compile(r"[\w)}!]\s*/\s*[\\\w({]")
+
+
+def slash_quotients(latex: str) -> list[str]:
+    stripped = _UNIT_GROUP.sub(" ", latex)
+    return [match[0] for match in _SLASH.finditer(stripped)]
 
 
 def _prose(value: JsonValue, item: str = "") -> Iterator[tuple[str, str]]:

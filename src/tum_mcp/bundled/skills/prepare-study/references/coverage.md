@@ -11,7 +11,10 @@ For each lecture in scope, record its stated learning outcomes verbatim with a l
 (the outcomes slide, or its section headings when none are stated). Plan units from these
 outcomes, not from outcomes you invent for a unit. For each exercise sheet or exam, record
 every problem as an item: `prepared` with its exercise key, `pending`, `not_inspected`,
-`unavailable` or `out_of_scope`.
+`unavailable` or `out_of_scope`. For the cheatsheet, record what each source makes
+exam-relevant as `exam` requirements with the entries that hold them
+([inventory](../../prepare-exams/references/cheatsheet.md#inventory-first)); they are
+separate from outcomes, and the report lists them under `cheatsheet`.
 
 ## Course state
 

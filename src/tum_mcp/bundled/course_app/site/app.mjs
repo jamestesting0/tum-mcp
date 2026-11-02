@@ -433,6 +433,10 @@ function route(initial = false) {
   if (workspace === 'exercises' && raw.split('/')[3] && !restore) {
     focusHeading(unitHeading); scrollReadingTo(main.querySelector('.step-navigation') || unitHeading);
   }
+  if (workspace === 'exam' && newParts[1] === 'patterns' && newParts[3] && !restore) {
+    const target = main.querySelector(`[data-pattern-target="${CSS.escape(newParts[3])}"]`);
+    if (target) { focusHeading(target.querySelector('h2')); scrollReadingTo(target); }
+  }
   // #unit/content/block opens the lesson at one keyed passage, as definitions and references link it.
   const passage = workspace === 'study' && !revising && currentView === 'content' && hash.split('/')[2];
   const section = passage && main.querySelector(`[data-block="${CSS.escape(passage)}"]`);

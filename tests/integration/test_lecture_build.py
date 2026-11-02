@@ -202,3 +202,25 @@ def test_failure_after_managed_figure_deletion_restores_the_previous_app(
     with pytest.raises(CampusError, match="restored"):
         build(root, publish=False)
     assert bytes_tree(root) == before
+
+
+def test_note_passage_must_name_a_study_block(lecture_project: Path) -> None:
+    # A note's Recall link opened nothing when its Study block did not exist.
+    path = lecture_project / "study/lectures.json"
+    value = json.loads(path.read_bytes())
+    content_path = lecture_project / "study/content.json"
+    content = json.loads(content_path.read_bytes())
+    unit, block = content["units"][0], "first-block"
+    unit["blocks"][0]["key"] = block
+    content_path.write_text(json.dumps(content))
+    note = value["lectures"][0]["notes"][0]
+    note["passage"] = {"unit": unit["key"], "block": "no-such-block"}
+    path.write_text(json.dumps(value))
+    with pytest.raises(CampusError, match="do not exist"):
+        build(lecture_project, publish=False)
+    note["passage"] = {"unit": unit["key"], "block": block}
+    path.write_text(json.dumps(value))
+    build(lecture_project, publish=False)
+    rendered = payload(lecture_project)["lectures"]["lectures"][0]["notes"][0]
+    assert rendered["passage"] == {"unit": unit["key"], "block": block}
+    assert rendered["title"] and rendered["context"]

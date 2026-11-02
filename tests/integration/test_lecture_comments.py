@@ -218,3 +218,31 @@ def test_note_selection_comment_relocates_and_text_edit_deletes_it(
         assert caught.value.code == Code.STALE_RESULT
     finally:
         context.close()
+
+
+@pytest.mark.skipif(
+    os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Explicit browser QA."
+)
+def test_comment_on_a_note_context_locates_after_reload(
+    course_browser: Browser, lecture_url: str
+) -> None:
+    # A note now reads title, context and message; a quote from its context must anchor too.
+    context = course_browser.new_context()
+    try:
+        page = context.new_page()
+        page.goto(lecture_url + "#lectures/bfs-lecture")
+        page.locator(".lecture-note-context").first.evaluate("""element => {
+          const range = document.createRange(); range.selectNodeContents(element);
+          const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
+          document.dispatchEvent(new Event('selectionchange'));
+        }""")
+        page.get_by_role("button", name="Comment", exact=True).click()
+        page.get_by_role("textbox", name="Comment", exact=True).fill("Name the slide.")
+        page.get_by_role("button", name="Save", exact=True).click()
+        page.reload()
+        marker = page.locator(".lecture-note .comment-marker")
+        expect(marker).to_be_visible()
+        marker.click()
+        expect(page.get_by_text("Name the slide.", exact=True)).to_be_visible()
+    finally:
+        context.close()

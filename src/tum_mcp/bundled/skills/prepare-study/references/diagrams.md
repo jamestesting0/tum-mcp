@@ -71,7 +71,7 @@ order, and the main path before the loop back.
 ## Check
 
 Build, then run `tum-mcp study visuals PROJECT --unit KEY`. It draws every diagram at
-phone, narrow and desktop width, reports what it measures (an edge through a node, labels
+desktop width (`--phone` adds phone and narrow when asked), reports what it measures (an edge through a node, labels
 that overlap or sit on a line, text under 12 px, a drawing that differs from its block)
 and writes contact sheets to `.tum-mcp/visuals/`. Open the sheets and look. A diagram
 passes when a student can follow its main path without reading the caption, no label

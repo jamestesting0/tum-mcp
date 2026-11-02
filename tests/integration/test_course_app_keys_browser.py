@@ -74,3 +74,32 @@ def test_practice_and_guides_page_with_arrow_keys(
     page.keyboard.press("ArrowRight")
     expect(step).to_have_text("Step 3 of 5")
     page.close()
+
+
+def test_recall_opens_the_whole_section_with_one_citation(
+    course_browser: Browser, example_url: str
+) -> None:
+    page = course_browser.new_page(viewport={"width": 1280, "height": 900})
+    page.goto(example_url + "#study/components/content")
+    expect(page.locator("main h1")).to_be_visible()
+    # A titled block followed by untitled ones (its formula, figure or derivation).
+    result = page.evaluate(
+        """async () => {
+          const { default: data } = await import('./data.mjs');
+          const { openReference } = await import('./reference-panel.mjs');
+          const unit = data.units[0], blocks = unit.blocks;
+          const start = blocks.findIndex(
+            (b, i) => b.title && blocks[i + 1] && !blocks[i + 1].title);
+          openReference(unit, blocks[start], document.body);
+          const panel = document.querySelector('dialog.reference-panel');
+          const opening = panel.querySelector('.read-section');
+          return {
+            bodies: panel.querySelectorAll('.block-body').length,
+            repeated: opening.querySelectorAll('.source-note').length,
+          };
+        }"""
+    )
+    page.close()
+    assert result["bodies"] > 1
+    # The panel's title cites the section, so its opening repeats no citation.
+    assert result["repeated"] == 0

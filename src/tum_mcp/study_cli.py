@@ -204,6 +204,40 @@ def exam_report_command(
     typer.echo(json.dumps(result, indent=2))
 
 
+@app.command(name="review-pack")
+def review_pack_command(
+    project: Path,
+    item: Annotated[str, typer.Option(help="Item key from the review report.")],
+    pass_: Annotated[
+        Literal["logic", "text", "visuals", "interaction", "intuition", "structure", "cheatsheet"],
+        typer.Option("--pass", help="The rubric pass that reads it (exam/sheet: cheatsheet)."),
+    ],
+) -> None:
+    """Write what one review pass needs: its checks, the item's text and its report prompts."""
+    from tum_mcp.exam_data import read_exam, sheet_flags
+    from tum_mcp.exercise_data import read_exercises
+    from tum_mcp.study_build import read_content
+    from tum_mcp.study_coverage import read_ledger
+    from tum_mcp.study_coverage import sheet_flags as coverage_flags
+    from tum_mcp.study_report import quality_flags
+    from tum_mcp.study_review import review_pack
+    from tum_mcp.study_store import load_state
+    from tum_mcp.study_structure import forward_terms
+
+    root = project.expanduser().resolve()
+    content = read_content(root) if app_path(root, "content.json").is_file() else None
+    exercises = read_exercises(root)
+    exam = read_exam(root)
+    flags = [
+        *quality_flags(content, exercises),
+        *(forward_terms(content) if content else ()),
+        *sheet_flags(exam),
+        *coverage_flags(load_state(root), ledger := read_ledger(root), exam),
+    ]
+    pack = review_pack(item, pass_, content, exercises, exam, flags, ledger)
+    typer.echo(json.dumps(pack, indent=2, ensure_ascii=False))
+
+
 @app.command()
 def report(
     project: Path,
@@ -215,11 +249,12 @@ def report(
     """Report review flags, the course map, uncovered sources, scorecard and render check."""
     from functools import cache
 
-    from tum_mcp.exam_data import read_exam
+    from tum_mcp.exam_data import read_exam, sheet_flags
     from tum_mcp.exercise_data import read_exercises
     from tum_mcp.lecture_data import read_lectures
     from tum_mcp.study_build import read_content
     from tum_mcp.study_coverage import coverage_report, read_ledger
+    from tum_mcp.study_coverage import sheet_flags as coverage_flags
     from tum_mcp.study_media import discover
     from tum_mcp.study_report import quality_flags
     from tum_mcp.study_review import read_scorecard, review_report
@@ -255,7 +290,7 @@ def report(
             knowledge_revision=semantics(),
             media=media().structure,
         ),
-        "coverage": lambda: coverage_report(state, content, exercises, ledger()),
+        "coverage": lambda: coverage_report(state, content, exercises, ledger(), exam()),
         "review": lambda: review_report(
             state,
             content,
@@ -267,7 +302,12 @@ def report(
             knowledge_revision=semantics(),
             media_inventory=media(),
             root=root,
-            flags=[*quality(), *(forward_terms(content) if content else ())],
+            flags=[
+                *quality(),
+                *(forward_terms(content) if content else ()),
+                *sheet_flags(exam()),
+                *coverage_flags(state, ledger(), exam()),
+            ],
         ),
         "render": lambda: render_report(root, content, exercises, exam()),
     }
@@ -444,12 +484,18 @@ def visuals(
     gallery: Annotated[
         bool, typer.Option("--gallery", help="Draw review-course's calibration gallery instead.")
     ] = False,
+    phone: Annotated[
+        bool,
+        typer.Option(
+            "--phone", help="Also check phone and narrow widths (desktop only by default)."
+        ),
+    ] = False,
 ) -> None:
     """Measure every drawn visual at phone, narrow and desktop width and draw contact sheets."""
     from tum_mcp.study_visuals import check_visuals
 
     result = check_visuals(
-        project, tuple(unit or ()), tuple(exercise or ()), exam=exam, gallery=gallery
+        project, tuple(unit or ()), tuple(exercise or ()), exam=exam, gallery=gallery, phone=phone
     )
     typer.echo(json.dumps(result, indent=2, ensure_ascii=False))
 

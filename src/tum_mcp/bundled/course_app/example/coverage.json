@@ -17,6 +17,58 @@
             "components"
           ]
         }
+      ],
+      "exam": [
+        {
+          "key": "queue-rules",
+          "text": "State the access rules and costs of a queue.",
+          "locator": "Template",
+          "status": "covered",
+          "concepts": [
+            "fifo",
+            "queue",
+            "operation-costs"
+          ]
+        },
+        {
+          "key": "choose-structure",
+          "text": "Choose a container from its removal rule.",
+          "locator": "Template",
+          "status": "covered",
+          "concepts": [
+            "removal-matrix",
+            "structure-families",
+            "stack"
+          ]
+        },
+        {
+          "key": "java-queue",
+          "text": "Use the Java queue methods.",
+          "locator": "Template",
+          "status": "covered",
+          "concepts": [
+            "queue-java",
+            "ring-buffer"
+          ]
+        },
+        {
+          "key": "bfs-rules",
+          "text": "Apply BFS and state when it finds shortest paths.",
+          "locator": "Template",
+          "status": "covered",
+          "concepts": [
+            "bfs",
+            "bfs-shortest",
+            "average-degree"
+          ]
+        },
+        {
+          "key": "adjacency-matrix",
+          "text": "Compare adjacency lists and matrices.",
+          "locator": "Template",
+          "status": "gap",
+          "note": "Synthetic example of a requirement still without an entry."
+        }
       ]
     },
     {

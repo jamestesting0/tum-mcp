@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from material_fixture import exam_document, exam_project, pdf_bytes
 
-from tum_mcp.exam_content import ExamContent
+from tum_mcp.exam_content import Concept, ExamContent
 from tum_mcp.exam_data import exam_report, exam_statistics, stale_exam
 from tum_mcp.exam_layout import NODE_GAP, NODE_WIDTH, layout
 from tum_mcp.study_store import load_state
@@ -54,6 +54,53 @@ def test_report_flags_targets_and_review_items_without_enforcing_them(content: E
     json.dumps(report)
 
 
+def test_workflow_from_names_a_pattern_that_lists_the_concept(project: Path) -> None:
+    document = exam_document(project)
+    pattern = document["patterns"][0]
+    listed = pattern["concepts"][0]
+    other = next(c for c in document["concepts"] if c["key"] not in pattern["concepts"])
+    for concept in document["concepts"]:
+        if concept["key"] in {listed, other["key"]}:
+            concept["workflow_from"] = pattern["key"]
+    with pytest.raises(ValueError, match="does not list it"):
+        ExamContent.model_validate(document)
+    other.pop("workflow_from")
+    assert ExamContent.model_validate(document)
+
+
+def test_one_line_fact_passes_but_a_method_without_steps_is_flagged(
+    content: ExamContent,
+) -> None:
+    # A pattern merely listing a procedure no longer counts as its steps: only details or
+    # workflow_from put steps in the entry.
+    concept = next(
+        concept
+        for concept in content.concepts
+        if any(concept.key in pattern.concepts for pattern in content.patterns)
+    )
+    bare = {"formula": None, "trigger": None, "pitfall": None, "details": ()}
+    fact = concept.model_copy(update={**bare, "kind": "fact"})
+    method = concept.model_copy(update={**bare, "kind": "procedure", "workflow_from": None})
+    measures = {
+        kind: {
+            flag["measure"]
+            for flag in exam_report(
+                content.model_copy(
+                    update={
+                        "concepts": tuple(
+                            item if c.key == concept.key else c for c in content.concepts
+                        )
+                    }
+                )
+            )["targets"]
+            if flag["item"] == f"concept:{concept.key}"
+        }
+        for kind, item in (("fact", fact), ("method", method))
+    }
+    assert "procedure entry without steps" not in measures["fact"]
+    assert "procedure entry without steps" in measures["method"]
+
+
 def test_layout_is_deterministic_layered_and_non_overlapping(content: ExamContent) -> None:
     first, second = layout(content), layout(content)
     assert first == second
@@ -81,3 +128,57 @@ def test_changed_sources_mark_only_dependent_items_stale(tmp_path: Path) -> None
     assert stale_exam(root, load_state(root), content) == ()
     (root / "materials/exams/material-exam-ws22-upload.pdf").write_bytes(pdf_bytes(["Edited"]))
     assert stale_exam(root, load_state(root), content) == ("variant:ws22-a",)
+
+
+def test_cheatsheet_typed_math_and_slash_quotients_are_prompts(content: ExamContent) -> None:
+    # The FAI pilot typed λ and ≥ into pitfalls and wrote displayed quotients with slashes;
+    # nothing reported either. Units and derivatives keep their slash.
+    from tum_mcp.exam_data import sheet_flags
+    from tum_mcp.study_report import slash_quotients
+
+    concept = next(c for c in content.concepts if c.formula)
+    typed = concept.model_copy(
+        update={
+            "pitfall": "Only for λ > 0.",
+            "formula": concept.formula.model_copy(update={"latex": "v = d/n"}),
+            "line": "Speed: \\(v = d/n\\).",
+        }
+    )
+    changed = content.model_copy(
+        update={"concepts": tuple(typed if c.key == concept.key else c for c in content.concepts)}
+    )
+    flags = {(f["item"], f["flag"]) for f in sheet_flags(changed)}
+    assert (f"concept:{concept.key}", "sheet_plain_math") in flags
+    assert (f"concept:{concept.key}", "slash_quotient") in flags
+    assert (f"concept:{concept.key}", "line_repeats_formula") in flags
+    assert slash_quotients(r"v = 3\,\mathrm{m/s},\quad \frac{d}{dx} = d/dx") == []
+
+
+def test_entry_meanings_and_prose_prompts_for_non_formula_entries(content: ExamContent) -> None:
+    # The FAI pilot typed its variable meanings as a dense sentence beside a table, and nothing
+    # reported it; a non-formula entry had no way to list them.
+    from tum_mcp.exam_data import sheet_flags
+    from tum_mcp.study_content import Symbol, TextBlock
+
+    concept = next(c for c in content.concepts if not c.formula)
+    source = concept.sources[0].key
+    legend = TextBlock(
+        kind="text",
+        sources=(source,),
+        paragraphs=(
+            "\\(b\\): maximum branching, \\(d\\): shallowest goal depth. These bounds assume "
+            "\\(b \\ge 2\\). Memory bounds assume tree search. Here c is any step cost.",
+        ),
+    )
+    data = concept.model_dump(mode="json") | {"details": [legend.model_dump(mode="json")]}
+    listed = Concept.model_validate(
+        data | {"symbols": [{"symbol": "\\(b\\)", "meaning": "maximum branching factor"}]}
+    )
+    assert listed.symbols == (Symbol(symbol="\\(b\\)", meaning="maximum branching factor"),)
+    with pytest.raises(ValueError, match="does not appear"):
+        Concept.model_validate(data | {"symbols": [{"symbol": "\\(q\\)", "meaning": "x"}]})
+    changed = content.model_copy(
+        update={"concepts": tuple(listed if c.key == concept.key else c for c in content.concepts)}
+    )
+    flags = {f["flag"] for f in sheet_flags(changed) if f["item"] == f"concept:{concept.key}"}
+    assert {"sheet_dense_paragraph", "prose_legend"} <= flags

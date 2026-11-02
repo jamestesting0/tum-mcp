@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "course_key": "component-preview",
   "lectures": [
     {
@@ -46,14 +46,19 @@
       "notes": [
         {
           "key": "disconnected-graphs",
-          "text": "One BFS visits only the source's connected component. To traverse a disconnected graph, restart from an unvisited vertex after the queue empties.",
+          "title": "BFS on a disconnected graph",
+          "context": "The BFS on the slides starts from one source and stops when the queue is empty.",
+          "text": "That run visits only the source's component. To visit every vertex, restart from an unvisited vertex until none is left.",
+          "passage": {"unit": "components", "block": "graph-trace"},
           "sources": ["components"],
           "pages": "1",
           "evidence": ["speech-components"]
         },
         {
           "key": "count-adjacencies",
-          "text": "An undirected edge is stored in both endpoints' adjacency lists. With \\(m\\) undirected edges, a full scan examines \\(2m\\) entries.",
+          "title": "Counting adjacency entries",
+          "context": "Tracing the neighbour loop of BFS scans every adjacency list once.",
+          "text": "An undirected edge is stored in both endpoints' lists, so \\(m\\) undirected edges give \\(2m\\) entries to scan.",
           "evidence": ["speech-adjacencies"]
         }
       ],
@@ -119,9 +124,6 @@
             "end_s": 2730
           },
           "teaches": "Fewest edges is not cheapest once edge costs differ; Dijkstra's algorithm handles non-negative weights.",
-          "points": [
-            "A direct edge of cost \\(5\\) loses to two edges of cost \\(1\\)."
-          ],
           "evidence": [
             "speech-weighted",
             "frame-weighted"

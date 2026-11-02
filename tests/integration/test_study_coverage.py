@@ -251,3 +251,62 @@ def test_ledger_references_must_resolve_before_the_build_trusts_them(
     ledger(exercise_project, [entry])
     with pytest.raises(CampusError, match=message):
         build(exercise_project, publish=False)
+
+
+def test_cheatsheet_is_judged_against_source_exam_requirements(
+    tmp_path: Path, course_memory: Path
+) -> None:
+    # Past-exam links alone never showed what the sources make exam-relevant; the ledger's
+    # exam requirements do, and a requirement may not point at an entry that does not exist.
+    from knowledge_fixture import knowledge_project
+
+    from tum_mcp.exam_data import read_exam
+
+    project = knowledge_project(tmp_path)
+    exam = read_exam(project)
+    source = exam.concepts[0].sources[0].key
+    held = exam.concepts[0].key
+    requirement = {"key": "r1", "text": "State the rule.", "locator": "Slide 3"}
+    existing = json.loads(ledger_path(project).read_bytes())["sources"]
+
+    def with_exam(requirements: list[dict]) -> list[dict]:
+        others = [entry for entry in existing if entry["source"] != source]
+        mine = next(
+            (entry for entry in existing if entry["source"] == source),
+            {"source": source, "status": {"checked_at": "2026-11-02"}},
+        )
+        return [*others, {**mine, "exam": requirements}]
+
+    ledger(
+        project,
+        with_exam(
+            [
+                {**requirement, "status": "covered", "concepts": [held]},
+                {
+                    "key": "r2",
+                    "text": "Compare the access levels.",
+                    "locator": "Slide 4",
+                    "status": "gap",
+                    "note": "No entry yet.",
+                },
+            ]
+        ),
+    )
+    build(project, publish=False)
+    result = CliRunner().invoke(app, ["study", "report", str(project), "--section", "coverage"])
+    sheet = json.loads(result.stdout)["coverage"]["cheatsheet"]
+    assert sheet["requirements"] == 2
+    assert [gap["requirement"] for gap in sheet["gaps"]] == ["r2"]
+    assert held not in sheet["entries_without_requirement"]
+    assert source not in sheet["sources_without_requirements"]
+    from tum_mcp.study_coverage import sheet_flags
+
+    flags = sheet_flags(load_state(project), read_ledger(project), exam)
+    assert [flag["flag"] for flag in flags] == (
+        ["unrecorded_sources"] if sheet["sources_without_requirements"] else []
+    )
+    ledger(
+        project, with_exam([{**requirement, "status": "covered", "concepts": ["no-such-entry"]}])
+    )
+    with pytest.raises(CampusError, match="does not have"):
+        build(project, publish=False)

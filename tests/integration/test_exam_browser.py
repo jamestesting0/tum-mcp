@@ -26,6 +26,10 @@ def exam_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     # Exam replay accepts labelled steps without the exercise-only part-block contract.
     for step in document["sittings"][0]["variants"][0]["questions"][0]["guidance"]["steps"]:
         step["part"] = "(a)"
+    # A meaning list may name its variable as bare LaTeX; the pilot's \lambda showed raw.
+    for concept in document["concepts"]:
+        for symbol in (concept.get("formula") or {}).get("symbols", []):
+            symbol["symbol"] = symbol["symbol"].removeprefix("\\(").removesuffix("\\)")
     (root / "app/exam.json").write_text(json.dumps(document), encoding="utf-8")
     build(root, publish=False)
     with PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(root / "app"))) as server:
@@ -68,9 +72,35 @@ def test_cheatsheet_scans_filters_flags_and_maps(
     expect(page.locator(".page-citation")).to_have_count(1)
     expect(page.locator(".exam-entry .citation")).to_have_count(0)
     expect(page.locator("#concept-observer .exam-cue.cue")).to_have_text("When you see")
+    # An entry a pattern lists opens to that pattern's steps and leads on to practising them.
+    steps = page.locator("#concept-observer .exam-entry-steps")
+    expect(steps.locator(".exam-workflow > li").first).to_be_visible()
+    expect(steps.get_by_role("link", name="Worked practice", exact=True)).to_have_attribute(
+        "href", re.compile(r"#exam/patterns/.+/worked")
+    )
+    steps.get_by_role("link", name="Practise", exact=True).click()
+    target = page.locator('[data-pattern-target="practise"]')
+    expect(target.get_by_role("heading", name="Practise", exact=True)).to_be_visible()
+    assert target.bounding_box()["y"] < 300
+    if width < 800:
+        page.get_by_role("button", name="Expand course outline", exact=True).click()
+    page.locator('a[href="#exam/sheet"]').first.click()
+    page.locator("#concept-observer .exam-entry-row").click()
     # An opened formula entry lists what each variable means in general.
     page.locator("#concept-cohesion .exam-entry-row").click()
     expect(page.locator(".symbols dd", has_text="method pairs sharing no field")).to_be_visible()
+    # An entry taller than the screen ends with Collapse, which closes it and returns to its title.
+    page.set_viewport_size({"width": width, "height": 320})
+    page.locator("#concept-observer .exam-entry-row").click()
+    page.locator("#concept-observer .exam-entry-row").click()
+    collapse = page.locator("#concept-observer .exam-entry-collapse")
+    expect(collapse).to_be_visible()
+    collapse.click()
+    expect(page.locator("#concept-observer > details")).not_to_have_attribute("open", "")
+    expect(page.locator("#concept-observer > details > summary")).to_be_focused()
+    page.set_viewport_size({"width": width, "height": 900})
+    assert "\\" not in page.locator("#concept-cohesion .symbols").inner_text()
+    expect(page.locator("#concept-cohesion .symbols dt .katex").first).to_be_visible()
     if width >= 720:
         node = page.locator('.exam-node[data-concept="loose-coupling"]')
         node.click()
@@ -97,7 +127,30 @@ def test_cheatsheet_scans_filters_flags_and_maps(
         page.keyboard.up("Control")
         zoomed = page.locator(".exam-map-svg").get_attribute("viewBox")
         assert zoomed and moved and float(zoomed.split()[2]) < float(moved.split()[2])
+        # A node shows the same entry as the list, with its details, and stays open while the
+        # student follows a connection to the next node.
+        card = page.locator(".exam-map-card")
+        page.locator('.exam-node[data-concept="observer"]').focus()
+        page.keyboard.press("Enter")
+        card.locator(".exam-entry-row").click()
+        expect(card.locator(".exam-workflow > li").first).to_be_visible()
+        expect(card.locator("[data-exam-item]")).to_have_count(0)
+        assert page.evaluate(
+            "(() => { const ids = [...document.querySelectorAll('[id]')].map(e => e.id);"
+            " return ids.length === new Set(ids).size; })()"
+        )
+        expect(card.locator(".exam-map-connections")).to_have_count(0)
+        page.locator('.exam-node[data-concept="loose-coupling"]').dispatch_event("click")
+        expect(card).to_have_attribute("aria-label", "Loose coupling")
+        page.locator('.exam-node[data-concept="observer"]').dispatch_event("click")
+        expect(card.locator("details.exam-entry-details")).to_have_attribute("open", "")
         page.get_by_role("button", name="Full screen").click()
+        expect(page.locator(".exam-map")).to_have_class(re.compile("expanded"))
+        # Full screen keeps the entry beside the map, and Escape closes it before full screen.
+        frame, pane = page.locator(".exam-map-scroll").bounding_box(), card.bounding_box()
+        assert frame and pane and pane["x"] >= frame["x"] + frame["width"] - 1
+        page.keyboard.press("Escape")
+        expect(card).to_be_hidden()
         expect(page.locator(".exam-map")).to_have_class(re.compile("expanded"))
         page.get_by_role("button", name="Exit full screen").click()
         expect(page.locator(".exam-map")).not_to_have_class(re.compile("expanded"))

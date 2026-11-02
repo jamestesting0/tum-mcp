@@ -32,8 +32,9 @@ Lecture list, a lecture and a highlight deep link. Check:
   states the lecture's scope; note counts and highlight watching time are distinct.
   Notes precede highlights; absent sections leave no empty heading. Notes-only,
   highlights-only and no selected additions must not create dummy cards.
-- Notes are concise and self-contained, with no prominent time range or mandatory
-  thumbnail. Their source controls open the supporting moment and applicable pages.
+- Each note reads as title, context and message; a student who missed the lecture can
+  tell what it answers. Notes are concise, with no prominent time range or mandatory
+  thumbnail, and a Recall link opens the right Study passage. Their source controls open the supporting moment and applicable pages.
   Meaningful images have descriptive alternative text; formulas render correctly.
 - Time ranges use the original recording clock. Independently open at least two
   highlight links in the player and confirm that each lands where its explanation
@@ -41,7 +42,7 @@ Lecture list, a lecture and a highlight deep link. Check:
   is a verification limitation.
 - Every thumbnail loads, shows the highlight's topic and lies inside its range.
 - Slide or script pages appear in a highlight's sources only where they apply.
-- Notes and highlights read well at phone and desktop widths, with no overflowing
+- Notes and highlights read well at desktop width, with no overflowing
   thumbnails, formulas or text and no visible provenance labels. Source/attribution
   review stays private; app behavior itself is covered by the package's tests.
 - Selection comments on both notes and highlights save and locate the exact passage.

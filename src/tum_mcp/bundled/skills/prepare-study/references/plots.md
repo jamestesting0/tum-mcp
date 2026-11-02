@@ -43,7 +43,7 @@ it and the plot shows it.
 ## Check
 
 Build, then run `tum-mcp study visuals PROJECT --unit KEY` and open the plot's contact
-sheets at phone and desktop width. The check reports labels that overlap or sit on a curve
+sheet at desktop width. The check reports labels that overlap or sit on a curve
 and text under 12 px. The message should be visible within five seconds, every label
 should sit clear of the lines, and the scale should not mislead. review-course scores the
 plot on its [visual rubric](../../review-course/references/visuals.md#rubric).

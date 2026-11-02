@@ -96,7 +96,7 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
     content["units"][0]["blocks"][0]["paragraphs"] = ["The lecture gives a bound of n squared."]
     narrated = quality_flags(StudyContent.model_validate(content), None)
     assert "meta_reference" in {flag["flag"] for flag in narrated}
-    # The same applies to an exercise's guide, though not to its released statement.
+    # The same applies to an exercise's guide and statement.
     guided = exercises()
     guided["sets"][0]["exercises"][0]["steps"][0]["explanation"] = (
         "The lecture checks a generated goal before inserting it."
@@ -106,7 +106,7 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
     guided = exercises()
     exercise = guided["sets"][0]["exercises"][0]
     exercise["statement"][0]["paragraphs"] = ["The lecture gives the following problem."]
-    assert "meta_reference" not in {
+    assert "meta_reference" in {
         flag["flag"] for flag in quality_flags(None, ExerciseContent.model_validate(guided))
     }
     step = next(step for step in exercise["steps"] if step["check"]["kind"] == "self_check")
@@ -386,3 +386,23 @@ def test_an_action_hidden_in_a_noun_is_flagged() -> None:
     content["units"][0]["blocks"][0]["paragraphs"] = ["We compute the trace."]
     flags = quality_flags(StudyContent.model_validate(content), None)
     assert key not in {f["item"] for f in flags if f["flag"] == "nominalisation"}
+
+
+def test_an_exercise_statement_that_frames_instead_of_giving_is_flagged() -> None:
+    payload = exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    source = exercise["sources"][0]["key"]
+    framing = {
+        "kind": "text",
+        "sources": [source],
+        "paragraphs": [
+            "This exercise should refresh your knowledge of graphs.",
+            "The section explains graphs.",
+        ],
+    }
+    exercise["statement"] = [framing, *exercise["statement"]]
+    flags = quality_flags(
+        StudyContent.model_validate(study()), ExerciseContent.model_validate(payload)
+    )
+    assert exercise["key"] in {f["item"] for f in flags if f["flag"] == "statement_framing"}
+    assert exercise["key"] in {f["item"] for f in flags if f["flag"] == "meta_reference"}

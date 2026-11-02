@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+- Reviews hunt for defects instead of justifying scores: `tum-mcp study review-pack` gives one
+  rubric pass its checks, the item's passages and its report prompts; findings quote their
+  passage word for word and are accepted or rejected with a reason; scores follow from accepted
+  findings, with checks passed per dimension; each 3 quotes its closest call; every pass is
+  recorded (fresh or same session) and every open report prompt is fixed or kept with a reason.
+- The cheatsheet covers all exam-relevant knowledge, not only formulas and methods: the
+  coverage ledger records each source's `exam` requirements and the report lists the sheet's
+  gaps; entries take sections (`path`) inside a topic and show tables, lists, trees, code and
+  diagrams when opened; a one-line fact has no empty disclosure; only an entry naming a
+  pattern in `workflow_from` shows its workflow. A formula entry needs its formula, and
+  `exam-report` flags a method without steps. The cheatsheet is a reviewed item
+  (`exam/sheet`, one `cheatsheet` review pass, its own checks) that turns stale when an entry,
+  shown workflow or requirement changes; its review cannot pass coverage while a content source
+  has no requirement, and `exam-report` flags typed mathematics, slash quotients in displayed
+  formulas and a line that repeats its formula. Recall shows the whole Study section with one
+  citation.
+- Meaning lists show a variable written as bare LaTeX (`\lambda`) as mathematics.
+- A semester-map node shows the same entry as the list under the map, expandable; in full
+  screen the entry sits beside the map. An opened entry taller than the screen ends with
+  Collapse, which returns to its title.
+- Cheatsheet entries without a formula can list their variables' meanings (`symbols`); the
+  cheatsheet review checks concise text and meanings, and `exam-report` flags dense paragraphs
+  and meaning lists typed as sentences.
+- `study visuals` and the review and verification steps check desktop width only; `--phone`
+  adds phone and narrow widths when asked. A check that cannot run caps only the dimension it
+  judges.
+- Lecture notes (`lectures.json` schema 3) need a `title` and the `context` they answer
+  before their message, and may link a Study `passage` as Recall. Notes and highlights share
+  one cleaner layout.
+- Notation guidance says when to write a fraction and when a slash or `\div`.
+- `study report` flags exercise statements that frame instead of giving (`statement_framing`).
+- Skill lab: trials run `study visuals` on the host through the shim, and `lab run --plant` with
+  `lab calibrate` measures how many planted defects a review finds or undoes.
+- `study visuals --exam` no longer fails on an untitled Exam figure.
 - "Publish the study app" publishes all prepared Study, Exercises, Exam and Lecture
   workspaces and required images through the existing incremental publisher.
   Public exports remove document citations and private evidence while retaining

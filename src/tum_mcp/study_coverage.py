@@ -6,7 +6,7 @@ whole-course request is judged against the sources' own outcomes, not against un
 
 import datetime
 from pathlib import Path
-from typing import Annotated, Literal, assert_never
+from typing import TYPE_CHECKING, Annotated, Literal, assert_never
 
 from pydantic import Field, JsonValue, ValidationError, model_validator
 
@@ -16,6 +16,9 @@ from tum_mcp.settings import Frozen
 from tum_mcp.study_content import Label, StudyContent, Text
 from tum_mcp.study_models import Key, StudyState
 from tum_mcp.study_store import private_path
+
+if TYPE_CHECKING:
+    from tum_mcp.exam_content import ExamContent
 
 Locator = Annotated[str, Field(min_length=1, max_length=200)]
 
@@ -104,11 +107,32 @@ class Item(Frozen):
         return self
 
 
+class ExamRequirement(Frozen):
+    """One thing the source makes exam-relevant, and the cheatsheet entries that hold it.
+    Separate from outcomes: Study teaching something is not the sheet holding it."""
+
+    key: Key
+    text: Text
+    locator: Locator
+    status: Literal["covered", "partial", "gap", "out_of_scope"]
+    concepts: tuple[Key, ...] = Field(default=(), max_length=10)
+    note: Text | None = None
+
+    @model_validator(mode="after")
+    def held(self) -> "ExamRequirement":
+        if self.status in {"covered", "partial"} and not self.concepts:
+            raise ValueError("A covered or partial requirement names its cheatsheet entries.")
+        if self.status in {"gap", "out_of_scope"} and not self.note:
+            raise ValueError("A gap or out-of-scope requirement says why.")
+        return self
+
+
 class SourceCoverage(Frozen):
     source: Key
     status: SourceStatus
     outcomes: tuple[Outcome, ...] = Field(default=(), max_length=60)
     items: tuple[Item, ...] = Field(default=(), max_length=100)
+    exam: tuple[ExamRequirement, ...] = Field(default=(), max_length=100)
 
     @model_validator(mode="after")
     def enrichment_keys(self) -> "SourceCoverage":
@@ -130,6 +154,9 @@ class CoverageLedger(Frozen):
     def distinct(self) -> "CoverageLedger":
         if len({item.source for item in self.sources}) != len(self.sources):
             raise ValueError("Record each source once.")
+        keys = [item.key for entry in self.sources for item in entry.exam]
+        if len(set(keys)) != len(keys):
+            raise ValueError("Exam requirement keys must be distinct.")
         return self
 
 
@@ -157,8 +184,17 @@ def check_ledger(
     state: StudyState,
     content: StudyContent | None,
     exercises: ExerciseContent | None,
+    exam: "ExamContent | None" = None,
 ) -> None:
     """References must resolve, so the report can trust what the ledger says is prepared."""
+    entries = {concept.key for concept in exam.concepts} if exam else set()
+    for requirement in (item for entry in ledger.sources for item in entry.exam):
+        if missing := set(requirement.concepts) - entries:
+            raise CampusError(
+                Code.INVALID_RESPONSE,
+                f"Exam requirement {requirement.key} names entries the cheatsheet does not "
+                f"have: {sorted(missing)}.",
+            )
     if ledger.course_key != state.course.key:
         raise CampusError(Code.SCOPE_DENIED, "The coverage ledger belongs to another course.")
     resources = {item.resource.key for item in state.resources}
@@ -260,14 +296,69 @@ def study_preparation(state: StudyState, ledger: CoverageLedger | None) -> dict[
     return result
 
 
+def unrecorded_sources(state: StudyState, ledger: CoverageLedger | None) -> list[str]:
+    """Current content sources with no exam requirement: unread for the cheatsheet."""
+    recorded = {entry.source for entry in ledger.sources if entry.exam} if ledger else set()
+    return sorted(
+        item.resource.key
+        for item in state.resources
+        if item.status == "current"
+        and item.resource.kind == "content"
+        and item.resource.key not in recorded
+    )
+
+
+def sheet_flags(
+    state: StudyState, ledger: CoverageLedger | None, exam: "ExamContent | None"
+) -> list[dict[str, JsonValue]]:
+    """A cheatsheet review cannot pass coverage while a source was never read for it."""
+    if not (exam and exam.concepts) or not (missing := unrecorded_sources(state, ledger)):
+        return []
+    return [
+        {
+            "item": "exam/sheet",
+            "flag": "unrecorded_sources",
+            "detail": f"{len(missing)} current content source(s) have no exam requirement, such "
+            f"as {', '.join(missing[:5])}. Read each and record its requirements, or one "
+            "out_of_scope requirement saying why it is outside the sheet.",
+        }
+    ]
+
+
 def coverage_report(
     state: StudyState,
     content: StudyContent | None,
     exercises: ExerciseContent | None,
     ledger: CoverageLedger | None,
+    exam: "ExamContent | None" = None,
 ) -> dict[str, JsonValue]:
     """What is not yet inspected, taught or prepared, so completion is judged against sources."""
     recorded = {entry.source: entry for entry in ledger.sources} if ledger else {}
+    cheatsheet: dict[str, JsonValue] | None = None
+    if exam and exam.concepts:
+        requirements = [(entry.source, item) for entry in recorded.values() for item in entry.exam]
+        cheatsheet = {
+            # The sheet is judged against what the sources make exam-relevant, never against
+            # its own entry list; unread sources stay unknown.
+            "requirements": len(requirements),
+            "gaps": [
+                {
+                    "source": source,
+                    "requirement": item.key,
+                    "text": item.text,
+                    "status": item.status,
+                    "locator": item.locator,
+                    **({"note": item.note} if item.note else {}),
+                }
+                for source, item in requirements
+                if item.status in {"gap", "partial"}
+            ],
+            "sources_without_requirements": unrecorded_sources(state, ledger),
+            "entries_without_requirement": sorted(
+                {concept.key for concept in exam.concepts}
+                - {key for _, item in requirements for key in item.concepts}
+            ),
+        }
     current = [item for item in state.resources if item.status == "current"]
     taught = {unit.key for unit in content.units} if content else set()
     uninspected = [
@@ -332,4 +423,5 @@ def coverage_report(
         "status_unknown": sorted(
             key for key, entry in recorded.items() if entry.status.availability == "unknown"
         ),
+        **({"cheatsheet": cheatsheet} if cheatsheet is not None else {}),
     }

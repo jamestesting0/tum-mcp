@@ -57,16 +57,33 @@ Show the object, never describe it: write \(P = \begin{pmatrix}1 & 0\\ 0 & 0\end
 not "the diagonal matrix with entries 1, 0"; a vector, table or graph likewise appears
 itself, and the sentence says what to notice in it. `study report` flags described objects
 as `described_object`. Inside a sentence, a column vector of up to three entries or a
-matrix up to 2x2 reads well: the line grows to fit it, and long inline math wraps after
-`=` or `+`. Write a ket as `\lvert 0\rangle` or `|0\rangle` and a square root as
+matrix up to 2x2 reads well: the line grows to fit it. One `\( ... \)` never breaks across
+lines, so keep inline expressions short and split long ones into several. Write a ket as `\lvert 0\rangle` or `|0\rangle` and a square root as
 `\sqrt{2}`; KaTeX sets them as in TeX. Anything larger goes in a formula block (`tall_inline_math`).
 Use `\lvert`/`\rvert` and `\mid` for bars; `\left( ... \right)` stretches fences around
 a fraction.
 
+Fractions and division (house style, after the amsmath guide and publisher and NIST
+conventions; readability first):
+
+| Where | Write |
+| --- | --- |
+| A displayed formula or worked calculation | `\frac{1}{\rho}`, `\frac{a+b}{c+d}`, not `1/\rho` or `\div` chains |
+| A symbolic quotient or reciprocal the sentence is about | `\(\frac{1}{\rho}\)` inline too, when it shows the structure |
+| Incidental arithmetic in a sentence | `\(n/2\)` or `\(1/2\)` where it reads better |
+| Division as the operation being taught | `\div` |
+| Units, derivatives, quotient sets, code | Their usual form: `\(\mathrm{m/s}\)`, `\(d/dx\)`, `//` |
+
+Inside a fraction, a slash avoids nesting another one: `\frac{\bar x-\mu}{\sigma/\sqrt{n}}`.
+Use plain `\frac`, which sizes itself to its place; `\dfrac` and `\tfrac` only for a
+deliberate local reason. Group repeated division unambiguously, and move a nested
+quotient into a formula block rather than cramming it into a sentence.
+
 Convert complete mathematical tokens, never letters inside ordinary words, and reread
 the prose after notation edits. Long equations belong in formula blocks. Keep source
-titles and outline labels plain. Diagrams and figures have no LaTeX renderer; their
-labels use Unicode, such as θ₁ or γ = 0.5. Dollar signs stay literal; code blocks and
+titles and outline labels plain. Figure labels write mathematics as inline LaTeX too; the
+app typesets them, and `study report` flags labels that type it as characters. Dollar signs
+stay literal; code blocks and
 comments never interpret markup. `study report` flags plain-text mathematics as
 `plain_math`.
 

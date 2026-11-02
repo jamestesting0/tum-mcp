@@ -47,7 +47,7 @@ function show(host, items, anchor) {
   // a whole formula names each variable to tell them apart.
   for (const item of items) {
     const row = node('p', 'symbol-row');
-    if (!anchor) row.append(append(node('span', 'symbol-name'), texElement(symbolLatex(item.symbol)) || node('code', '', item.symbol)));
+    if (!anchor) row.append(symbolName('span', 'symbol-name', item.symbol));
     bubble.append(append(row, studyText('span', 'symbol-meaning', item.meaning)));
   }
   document.body.append(bubble);
@@ -57,6 +57,10 @@ function show(host, items, anchor) {
 }
 
 // A variable is marked once per block, so a line lists every variable its LaTeX contains.
+// A meaning list's variable, written \(\rho\) or \rho, set as mathematics.
+export function symbolName(tag, className, symbol) {
+  return append(node(tag, className), texElement(symbolLatex(symbol)) || node('code', '', symbol));
+}
 export function withMeanings(host, symbols, latex) {
   const names = symbols.map(item => item.symbol);
   const used = [...new Set(symbolMarks(latex, names).map(([, , index]) => index))]

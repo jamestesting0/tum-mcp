@@ -1,5 +1,6 @@
 import { node, studyText, plainText } from './dom.mjs';
 import { fitMath, parseMath, texElement } from './mathml.mjs';
+import { symbolName } from './symbols.mjs';
 
 const namespace = 'http://www.w3.org/1998/Math/MathML';
 const relations = new Set(['=', '≈', '≠', '≤', '≥', '<', '>', '⇒', '⇔', '←']);
@@ -109,7 +110,7 @@ export function renderFormula(block) {
   else expression.append(node('p', '', block.plain));
   box.append(expression, studyText('p', '', block.plain));
   const glossary = node('dl', 'symbols');
-  for (const symbol of block.symbols) glossary.append(studyText('dt', '', symbol.symbol), studyText('dd', '', symbol.meaning));
+  for (const symbol of block.symbols) glossary.append(symbolName('dt', '', symbol.symbol), studyText('dd', '', symbol.meaning));
   box.append(glossary, ...(block.conditions ? [studyText('p', 'small', block.conditions)] : []));
   return box;
 }

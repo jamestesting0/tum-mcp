@@ -1,6 +1,6 @@
 # Interaction pass
 
-Work the item in the app as a student, at phone width (390 px) and desktop width, with
+Work the item in the app as a student, at desktop width (phone only when the user asks), with
 `tum-mcp study serve PROJECT`. Drive a browser when the host can; otherwise work from the
 data and the contact sheets and say which steps you could not try. This pass scores
 Practice.
@@ -26,11 +26,11 @@ exercise step of the course in the browser, where text revealed only on interact
    claims.
 5. Flashcards: the front asks one thing and the back answers exactly that.
 6. Exam patterns: in every example (switch between them) and part, pick a wrong case first;
-   its feedback must name what in this question rules it out. Read every case at phone
-   width, and every pitfall's situation, wrong line, correction and reason. Work each Practise item
+   its feedback must name what in this question rules it out. Read every case
+   and every pitfall's situation, wrong line, correction and reason. Work each Practise item
    before its Compare or Solution.
-7. Navigation: every control is reachable by keyboard and visible at phone width, the
-   page never scrolls sideways, and returning to a step keeps the student's work.
+7. Navigation: every control is reachable by keyboard and visible, the page never
+   scrolls sideways, and returning to a step keeps the student's work.
 
 ## Findings
 

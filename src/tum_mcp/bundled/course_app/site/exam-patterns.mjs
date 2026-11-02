@@ -107,7 +107,9 @@ function applicable(tag, className, text, apply) {
   return details;
 }
 
-function workflowSection(pattern, mark) {
+// The workflow as numbered steps, each opening what it applies; the cheatsheet entry of a
+// concept the pattern uses shows the same steps.
+export function workflowSteps(pattern, mark = element => element) {
   const steps = node('ol', 'exam-workflow');
   pattern.workflow.forEach((step, index) => {
     const body = append(node('div', 'workflow-body'), applicable('p', 'workflow-do', step.do, step.apply));
@@ -120,7 +122,11 @@ function workflowSection(pattern, mark) {
     if (step.why) body.append(studyText('p', 'workflow-why', step.why));
     steps.append(mark(append(node('li'), body), `step:${index}`));
   });
-  return section('Workflow', steps);
+  return steps;
+}
+
+function workflowSection(pattern, mark) {
+  return section('Workflow', workflowSteps(pattern, mark));
 }
 
 // Each pitfall opens with the task moment it happens in, then the wrong working, its
@@ -177,6 +183,7 @@ function exampleView(pattern, example, number) {
 function workedPractice(pattern) {
   const views = pattern.examples.map((example, number) => exampleView(pattern, example, number));
   const root = section('Worked practice');
+  root.dataset.patternTarget = 'worked';
   if (views.length > 1) {
     const switcher = node('div', 'example-switch'); switcher.setAttribute('role', 'group'); switcher.setAttribute('aria-label', 'Examples');
     const buttons = views.map((_, index) => button(`Example ${index + 1}`, () => show(index)));
@@ -210,7 +217,11 @@ export function renderPattern(key) {
   if (pattern.pitfalls?.length) root.append(pitfallsSection(pattern, mark));
   root.append(workedPractice(pattern));
   if (pattern.variations?.length) root.append(section('How it varied', mark(list('', pattern.variations), 'variations')));
-  if (pattern.drill?.length) root.append(section('Practise', ...pattern.drill.map(drill => drillItem(drill, pattern))));
+  if (pattern.drill?.length) {
+    const practice = section('Practise', ...pattern.drill.map(drill => drillItem(drill, pattern)));
+    practice.dataset.patternTarget = 'practise';
+    root.append(practice);
+  }
   if (stats.instances.length) {
     const table = node('table', 'exam-instances'), head = node('tr');
     for (const title of ['Exam', 'Question', 'Points', 'Counted']) { const th = node('th', '', title); th.scope = 'col'; head.append(th); }

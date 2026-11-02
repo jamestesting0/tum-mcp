@@ -32,9 +32,31 @@ class NoteImage(Thumbnail):
     alt: Line
 
 
+NoteTitle = Annotated[str, Field(min_length=1, max_length=100), AfterValidator(validate_inline)]
+Context = Annotated[str, Field(min_length=1, max_length=300), AfterValidator(validate_inline)]
+
+
+class NotePassage(Frozen):
+    """The Study block that teaches the note's subject; Recall opens it beside the page."""
+
+    unit: Key
+    block: Key
+
+
+def _plain(text: str) -> str:
+    return " ".join(text.split()).casefold().rstrip(".")
+
+
 class Note(Frozen):
     key: Key
-    text: Summary
+    # What the note concerns, in the course's terms.
+    title: NoteTitle
+    # The situation the remark responds to, so a student who missed the lecture sees why it
+    # matters: what the slide states, a question asked, the usual approach it corrects.
+    context: Context
+    # The message itself: the caveat, rule, correction or instruction, with its conditions.
+    text: Line
+    passage: NotePassage | None = None
     sources: tuple[Key, ...] = Field(default=(), max_length=5)
     pages: PageRange | None = None
     evidence: tuple[Key, ...] = Field(min_length=1, max_length=20)
@@ -44,6 +66,9 @@ class Note(Frozen):
     def located(self) -> "Note":
         if self.pages is not None and not self.sources:
             raise ValueError("Note pages need the source they belong to.")
+        context, text = _plain(self.context), _plain(self.text)
+        if context in text or text in context:
+            raise ValueError("A note's context sets up its message; it does not repeat it.")
         return self
 
 
@@ -97,6 +122,8 @@ class Lecture(Frozen):
             "notes": [
                 {
                     "key": note.key,
+                    "title": note.title,
+                    "context": note.context,
                     "text": note.text,
                     "image": (
                         {"sha256": note.image.sha256, "alt": note.image.alt}
@@ -150,7 +177,7 @@ def _within(inner: Interval, outer: Interval) -> bool:
 
 
 class LectureContent(Frozen):
-    schema_version: Literal[2] = 2
+    schema_version: Literal[3] = 3
     course_key: Key
     lectures: tuple[Lecture, ...] = Field(min_length=1, max_length=300)
     evidence: tuple[Evidence, ...] = Field(default=(), max_length=30000)

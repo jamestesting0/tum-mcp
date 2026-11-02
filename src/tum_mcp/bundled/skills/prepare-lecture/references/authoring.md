@@ -61,6 +61,19 @@ omission reasons in the private review map, not as filler on the page.
   conditions and concrete mathematical objects; use inline formulas or a frame
   rather than describing a visual object only in words. Do not turn notes into
   long lessons or add a thumbnail merely for decoration.
+- Give every note what it concerns and why it matters, for a student who missed the
+  lecture. The `title` names the subject in the course's terms ("BFS on a disconnected
+  graph", "Correction to the Dijkstra slide", "Exam: allowed aids"). The `context` sets
+  up the remark: what the slide or example states, the question a student asked, the
+  usual approach it corrects, or the task where it applies. Then `text` gives the
+  message. Weak: context "The lecturer explained BFS." Strong: context "The BFS on the
+  slides starts from one source and stops when the queue is empty.", text "That run
+  visits only the source's component; restart from an unvisited vertex until none is
+  left." Take the context from the speech and materials; when the situation cannot be
+  verified, keep the context to what is verified and record the gap privately. Never
+  invent a scenario, restate the message, or narrate the recording.
+- Add `passage` when one Study passage really teaches the note's subject; the note then
+  offers it as Recall beside the page.
 - A highlight title names the particular question, example or explanation
   ("Tracing duplicate enqueues through a shared neighbour"), not a generic topic.
 - *Teaches* is one sentence that states what the student learns, with its condition.

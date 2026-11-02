@@ -1,10 +1,11 @@
 # Scoring rubric
 
 Each dimension scores 1 (blocks learning), 2 (works with friction) or 3 (easy to learn
-from). A 3 means every check of the dimension holds: answer each check yes or no before
-you choose the score. Score by the weakest place: one wrong answer makes correctness 1
-even if the rest is right. A finding names the check it fails (`"check":
-"redundancy.text_restates_picture"`), so the report can count which checks fail most.
+from). Hunt for failures check by check: each failure is a finding that names its check
+(`"check": "redundancy.text_restates_picture"`) and quotes its passage word for word, so the
+report can count which checks fail most. A dimension with an accepted finding scores 2, or 1
+when the place blocks learning: one wrong answer makes correctness 1 even if the rest is
+right. Without one it scores 3.
 
 Items (each unit, exercise and Exam pattern) score ten dimensions; the course scores three:
 Optional audio/videos use the separate [media rubric](media.md), not these item
@@ -12,8 +13,8 @@ requirements. They do not need interactive practice or a duration target.
 
 Apply the [workspace profile](profiles.md) before these checks. It replaces Study-specific
 demands for exercises and defines the evidence for Exam and Lecture course findings. The
-unit's plan in `.tum-mcp/plans/` adds its own decisions to these checks. Each 3 needs the
-passage that earns it under `evidence`.
+unit's plan in `.tum-mcp/plans/` adds its own decisions to these checks. Each 3 quotes its
+closest call, the passage that came nearest to failing, under `evidence`.
 
 | Pass | Dimensions |
 | --- | --- |
@@ -24,6 +25,7 @@ passage that earns it under `evidence`.
 | [Intuition](intuition.md) | Intuition |
 | [Structure](structure.md) | Organization, Redundancy |
 | [Course](course.md) | Course organization, course redundancy, Integration |
+| Cheatsheet (`exam/sheet`) | Correctness, Coverage, Clarity, Representation, Organization, Redundancy, with the [Cheatsheet](#cheatsheet) checks only |
 
 ## One owner per problem
 
@@ -57,6 +59,8 @@ where this table puts it:
 | Which-case feedback that only says right or wrong | Practice |
 | A pitfall that describes the mistake instead of showing it | Representation |
 | A pitfall without the task moment it happens in | Representation |
+| A cheatsheet method without its steps, or a formula without its meanings | Clarity (cheatsheet) |
+| Exam-relevant source material, of any kind, with no cheatsheet entry | Coverage (cheatsheet) |
 | A pitfall without the rule its wrong line breaks | Intuition |
 | A displayed formula whose variable the reader must recall from elsewhere, with no meaning on it | Clarity |
 | Every index and constant of a formula marked with a meaning | Cognitive load |
@@ -145,7 +149,10 @@ What the student has to hold in mind at once.
 - `cognitive_load.short_prose`: no paragraph longer than two sentences or 45 words; a
   procedure comes as labelled steps and a worked example as one computed value per step.
 - `cognitive_load.math_set`: every symbol and formula is set as mathematics, not typed
-  characters.
+  characters; a displayed or structural quotient is a fraction (`\frac`), not a slash or
+  `\div` chain, and no inline fraction is so tall or nested that it breaks the line
+  ([notation](../../prepare-study/references/content.md#notation)). Units, `d/dx`, code
+  and short incidental `n/2` are fine.
 - `cognitive_load.state_shown`: the state of a procedure is shown, not tracked mentally.
 - `cognitive_load.together`: text and the picture it refers to sit together.
 - `cognitive_load.fits_phone`: a question fits one phone screen; a large step has a middle
@@ -364,6 +371,9 @@ and send the student to each other.
 - `integration.prerequisite_links`: every exercise names the unit and block it needs,
   and that block teaches what the steps use.
 - `integration.exam_links`: Exam concepts cite the units that teach them.
+- `integration.entries_apply`: cheatsheet entries link the Study units that teach them
+  and the patterns that use them, and a pattern's workflow appears only in the entry that
+  names it as its method.
 - `integration.lecture_links`: units link the Lecture of the lectures they teach.
 - `integration.same_notation`: terms, symbols and conventions are the same in every
   workspace, and marked terms open the Study definition.
@@ -377,3 +387,44 @@ and send the student to each other.
 that repeats another's question without extending it.
 1: an exercise needs knowledge no linked passage teaches, two workspaces contradict each
 other (another convention or answer), or a workspace links to nothing.
+
+## Cheatsheet
+
+The cheatsheet (`exam/sheet`) is one item, read in one `cheatsheet` pass against the
+course sources and the exam requirements in the coverage ledger. It is a revision
+reference, not a lesson: it needs no practice, intuition or teaching moves, and a
+one-line fact that is complete as written needs no expansion.
+
+- `correctness.sheet_true`: every statement, list member, table cell, condition, unit,
+  threshold and code behaviour matches the cited source for this course and its exam
+  period; a rule keeps its direction and its exceptions.
+- `coverage.sheet_inventory`: every exam requirement the sources state is held by an
+  entry or recorded as a gap with a reason, including facts, definitions, rules, lists,
+  classifications, comparisons, code and frameworks, not only formulas and methods; a
+  source read for the sheet but without requirements is a finding.
+- `clarity.sheet_sufficient`: each entry can be used as read: its line states the claim
+  with the condition that makes it true; a formula opens its variables' meanings; a method
+  opens its steps (details or `workflow_from`); a list or comparison is complete.
+- `clarity.sheet_concise`: text reads as Study text does: one claim per sentence, at most
+  two sentences or 45 words a paragraph, conditions and caveats as points, maths set as
+  maths, no aside that changes nothing the student does.
+- `clarity.sheet_meanings`: every variable in an entry's maths opens its meaning (the
+  formula's `symbols`, or the entry's own `symbols` for maths in its line, tables or text);
+  no meaning list typed as a sentence ("\(b\): maximum branching, \(d\): ...").
+- `representation.sheet_form`: each entry takes the form its retrieval task needs: a
+  table for a comparison or a two-input rule (both axes labelled), a list for members or
+  obligations, a tree for a classification, code for syntax or structure, a figure for a
+  shape or state, a formula with meanings; never a paragraph that spells one of these out.
+  Fractions follow the notation policy: a displayed quotient is a fraction, compact
+  inline forms only where they read better.
+- `organization.sheet_grouping`: topics and their sections (`path`) put related
+  references together in course order, so a student finds and compares them; no global
+  buckets by form ("Formulas", "Facts").
+- `redundancy.sheet_expansion`: an expanded entry adds substance (conditions, meanings,
+  steps, the table or code itself); it does not repeat its line, another entry or the
+  Study lesson, and no entry is padded to justify expanding.
+
+2: one missing requirement, one wrong condition or cell, one entry in a form that hides
+its structure, or one padded expansion.
+1: a wrong rule or value a student would use in the exam, several missing requirements,
+or a sheet reduced to formulas and methods while the sources rest on other knowledge.

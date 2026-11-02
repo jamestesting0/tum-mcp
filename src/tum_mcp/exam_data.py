@@ -1,5 +1,6 @@
 """Read Exam content, derive every statistic in code, and project it for the app."""
 
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -21,12 +22,18 @@ from tum_mcp.exam_content import (
     variant_revision,
 )
 from tum_mcp.study_content import StudyContent, compile_formulas, has_visual
+from tum_mcp.study_math import inline_math
 from tum_mcp.study_models import StudyState
 from tum_mcp.study_report import (
+    PARAGRAPH_SENTENCES,
+    PARAGRAPH_WORDS,
+    _sentences,
     echoed_meanings,
     generic_meanings,
+    plain_math,
     redeclared_meanings,
     renamed_meanings,
+    slash_quotients,
     typed_math_labels,
     unexplained_variables,
 )
@@ -286,6 +293,34 @@ def _mock_topic_shares(content: ExamContent, mock: Mock) -> dict[str, float]:
     return {key: round(value, 4) for key, value in sorted(shares.items())}
 
 
+# Cheatsheet targets that a review must fix or keep with a reason, by report measure.
+SHEET_FLAGS = {
+    "procedure entry without steps": "method_without_steps",
+    "meanings that only rename": "renamed_meaning",
+    "meanings that say only 'given'": "generic_meaning",
+    "line characters": "long_line",
+    "plain mathematics": "sheet_plain_math",
+    "displayed quotient with a slash": "slash_quotient",
+    "line repeats the formula": "line_repeats_formula",
+    "dense paragraph": "sheet_dense_paragraph",
+    "variable meanings written as prose": "prose_legend",
+}
+# "\(b\): maximum branching, \(d\): ..." spells out a meaning list in a sentence.
+PROSE_LEGEND = re.compile(r"(?:\\\([^()]{1,30}?\\\)|\b[A-Za-z]\b)\s*:\s+[a-z]")
+
+
+def sheet_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
+    """The cheatsheet's report targets as review prompts on the cheatsheet item."""
+    if content is None:
+        return []
+    return [
+        {"item": target["item"], "flag": SHEET_FLAGS[measure], "detail": target["value"]}
+        for target in exam_report(content)["targets"]
+        if str(target["item"]).startswith("concept:")
+        and (measure := str(target["measure"])) in SHEET_FLAGS
+    ]
+
+
 def exam_report(content: ExamContent) -> dict[str, JsonValue]:
     """What an agent needs before writing forecasts or reviewing: blueprint, risks, targets."""
     statistics = exam_statistics(content)
@@ -305,8 +340,40 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
         targets.append({"item": item, "measure": measure, "value": value, "target": target})
 
     for concept in content.concepts:
+        # A one-line fact is complete as it is; a method needs its steps, as details or as the
+        # workflow of the pattern it names.
+        if concept.kind in {"procedure", "algorithm"} and not (
+            concept.details or concept.workflow_from
+        ):
+            flag(f"concept:{concept.key}", "procedure entry without steps", concept.kind, [])
         if renamed := renamed_meanings(concept.model_dump(mode="json")):
             flag(f"concept:{concept.key}", "meanings that only rename", renamed[:5], [])
+        # The formula's spoken reading is plain words by design.
+        if typed := plain_math(concept.model_dump(mode="json", exclude={"formula": {"plain"}})):
+            flag(f"concept:{concept.key}", "plain mathematics", typed[:5], [])
+        if concept.formula and "".join(concept.formula.latex.split()) in {
+            "".join(span.split()).rstrip(".,;") for span in inline_math(concept.line)
+        }:
+            flag(f"concept:{concept.key}", "line repeats the formula", concept.line[:120], [])
+        # Paragraphs and points, and the captions and descriptions under tables and drawings.
+        texts: list[str] = []
+        for block in concept.details:
+            texts += [*getattr(block, "paragraphs", ()), *getattr(block, "points", ())]
+            for name in ("caption", "description", "explanation"):
+                if isinstance(text := getattr(block, name, None), str):
+                    texts.append(text)
+        if dense := [
+            text[:80]
+            for text in texts
+            if len(text.split()) > PARAGRAPH_WORDS or _sentences(text) > PARAGRAPH_SENTENCES
+        ]:
+            flag(f"concept:{concept.key}", "dense paragraph", dense[:3], [])
+        if legends := [
+            text[:80] for text in (concept.line, *texts) if len(PROSE_LEGEND.findall(text)) >= 2
+        ]:
+            flag(f"concept:{concept.key}", "variable meanings written as prose", legends[:3], [])
+        if concept.formula and (slashes := slash_quotients(concept.formula.latex)):
+            flag(f"concept:{concept.key}", "displayed quotient with a slash", slashes[:5], [])
         if generic := generic_meanings(concept.model_dump(mode="json")):
             flag(f"concept:{concept.key}", "meanings that say only 'given'", generic[:5], [])
         if len(concept.line) > TARGETS["concept_line"]:

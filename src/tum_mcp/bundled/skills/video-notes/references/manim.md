@@ -85,7 +85,8 @@ pipeline runs Manim for you.
 
 ## Typst math
 
-Typst math differs from LaTeX: `frac(a, b)` or `a/b`, `sum_(i=1)^n`, `x_i`, `x^2`,
+Typst math differs from LaTeX: `frac(a, b)` or `a/b` (both stacked; choose them as in
+[notation](../../prepare-study/references/content.md#notation)), `sum_(i=1)^n`, `x_i`, `x^2`,
 `overline(x)`, `hat(x)`, `sqrt(x)`, `vec(a, b)`, `mat(1, 2; 3, 4)`, `->`, `<=`,
 `!=`, `dot`, `times`, Greek by name (`alpha`, `Delta`). Multi-letter names need
 quotes or a space-free function form: `"cost"(v)`. A conditional bar is `|`

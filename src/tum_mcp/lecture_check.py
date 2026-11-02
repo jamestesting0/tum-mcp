@@ -84,7 +84,16 @@ def check_highlights(
                 for span in spans
             ):
                 issues.append("uncertain_speech")
-            note_items.append({"key": note.key, "speech": speech[:TEXT_LIMIT], "issues": issues})
+            # The context is checked against the speech as carefully as the message.
+            note_items.append(
+                {
+                    "key": note.key,
+                    "context": note.context,
+                    "text": note.text,
+                    "speech": speech[:TEXT_LIMIT],
+                    "issues": issues,
+                }
+            )
         total = sum(item.interval.end_s - item.interval.start_s for item in lecture.highlights)
         processed = sum(span.end_s - span.start_s for span in merge_intervals(receipt.processed))
         reports.append(

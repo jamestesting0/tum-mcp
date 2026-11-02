@@ -34,7 +34,7 @@ else.
 5. **Check.** The build estimates every label's box and rejects labels that touch a
    stroke, sit on a filled shape, overlap another label or leave the canvas; move the label,
    never the rule. Then run `tum-mcp study visuals PROJECT --unit KEY` and look at the
-   figure on its contact sheets at phone and desktop width, and in dark mode when the host
+   figure on its desktop contact sheet, and in dark mode when the host
    can render pages. If the message is not obvious within five seconds, simplify.
 
 The app draws each label on a small halo of the page colour and never shows a figure wider

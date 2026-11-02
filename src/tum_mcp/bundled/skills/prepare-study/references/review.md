@@ -43,7 +43,7 @@ with this gate.
 9. After the build, run `tum-mcp study visuals PROJECT` and fix every defect it reports in
    the content (an edge through a node, clashing labels, text under 12 px, a drawing that
    differs from its block). Open the contact sheets in `.tum-mcp/visuals/` and look at each
-   visual at phone and desktop width.
+   visual at desktop width.
 10. Score the batch with [review-course](../../review-course/SKILL.md); its scorecard turns
    stale when an item changes, and its course review when units, groups or links change,
    so the review follows the content.

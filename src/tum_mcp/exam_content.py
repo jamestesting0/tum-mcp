@@ -24,6 +24,7 @@ from tum_mcp.study_content import (
     VISUAL_RULE,
     Block,
     CodeRef,
+    Label,
     SourceVersion,
     Symbol,
     Text,
@@ -36,7 +37,7 @@ from tum_mcp.study_content import (
     project_files,
     tree_nodes,
 )
-from tum_mcp.study_math import compile_latex, symbol_occurs
+from tum_mcp.study_math import compile_latex, inline_math, symbol_occurs
 from tum_mcp.study_models import Digest, Key, PageRange
 from tum_mcp.study_store import digest
 
@@ -246,6 +247,8 @@ class Concept(Frozen):
         "pitfall",
     ]
     tier: Literal["core", "supporting"] = "core"
+    # Subsections within the topic, outermost first, so related references sit together.
+    path: tuple[Label, ...] = Field(default=(), max_length=2)
     line: Text
     formula: CompactFormula | None = None
     trigger: Text | None = None
@@ -256,6 +259,11 @@ class Concept(Frozen):
     passages: tuple[StudyPassage, ...] = Field(default=(), max_length=10)
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=20)
     details: tuple[Block, ...] = Field(default=(), max_length=20)
+    # The pattern whose workflow is this entry's method; the entry shows that workflow.
+    workflow_from: Key | None = None
+    # Meanings of the variables in a non-formula entry's maths (line, tables, text), listed
+    # when the entry opens; a formula entry lists them with its formula.
+    symbols: tuple[Symbol, ...] = Field(default=(), max_length=20)
 
     @model_validator(mode="after")
     def cited(self) -> "Concept":
@@ -264,7 +272,34 @@ class Concept(Frozen):
             raise ValueError("Concept details cite only the concept's sources.")
         if any(passage.unit not in self.units for passage in self.passages):
             raise ValueError("A concept's passages come from the units it names.")
+        if self.kind == "formula" and self.formula is None:
+            raise ValueError("A formula entry carries its formula, with what each variable means.")
+        if self.symbols:
+            if self.formula is not None:
+                raise ValueError("A formula entry lists its meanings with its formula.")
+            check_meanings(self.symbols, entry_math(self), "A cheatsheet entry")
         return self
+
+
+def entry_math(concept: "Concept") -> list[str]:
+    """Every LaTeX expression an entry shows: its line and its details' text, cells and formulas."""
+    found: list[str] = []
+
+    def visit(value: object) -> None:
+        if isinstance(value, str):
+            found.extend(inline_math(value))
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                if key == "latex" and isinstance(item, str):
+                    found.append(item)
+                elif key not in {"sources", "key", "symbols"}:
+                    visit(item)
+        elif isinstance(value, list | tuple):
+            for item in value:
+                visit(item)
+
+    visit([concept.line, *(block.model_dump(mode="json") for block in concept.details)])
+    return found
 
 
 class Link(Frozen):
@@ -710,6 +745,12 @@ class ExamContent(Frozen):
         for _, _, question in past.values():
             if question.guidance:
                 check_steps_against_files(question.statement, question.guidance.steps)
+        listed = {pattern.key: pattern.concepts for pattern in self.patterns}
+        for concept in self.concepts:
+            if concept.workflow_from and concept.key not in listed.get(concept.workflow_from, ()):
+                raise ValueError(
+                    f"Concept {concept.key} shows the workflow of a pattern that does not list it."
+                )
         for pattern in self.patterns:
             if not set(pattern.concepts) <= concepts:
                 raise ValueError(f"Pattern {pattern.key} references an unknown concept.")

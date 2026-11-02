@@ -122,7 +122,9 @@ def test_wide_solution_table_is_measured(exercise_project: Path) -> None:
     ]
     path.write_text(json.dumps(payload))
     build(exercise_project, publish=False)
-    checked = invoke("visuals", str(exercise_project), "--exercise", "sheet-1/sample-relaxation")
+    checked = invoke(
+        "visuals", str(exercise_project), "--exercise", "sheet-1/sample-relaxation", "--phone"
+    )
     record = json.loads(report_path(exercise_project).read_bytes())
     visuals = record["items"]["exercises/sheet-1/sample-relaxation"]["visuals"]
     answer = next(visual for visual in visuals if visual["id"] == "solution:0")
@@ -138,14 +140,14 @@ def test_corpus_passes_and_an_edit_makes_its_check_stale(project: Path) -> None:
     # Given the FAI-style corpus: seven graphs, five UML diagrams and seven plots.
     add_corpus(project)
     checked = invoke("visuals", str(project), "--unit", "visuals")
-    # Then every visual is drawn as authored, clear and legible at every width.
+    # Then every visual is drawn as authored, clear and legible at desktop, the default width.
     assert checked["passed"] is True, checked["defects"]
     assert checked["checked"] == ["study/visuals"]
     assert checked["sheets"] and all((project / sheet).is_file() for sheet in checked["sheets"])
     record = json.loads(report_path(project).read_bytes())["items"]["study/visuals"]
     assert len(record["visuals"]) == 19
     widths = {width for visual in record["visuals"] for width in visual["widths"]}
-    assert widths == {"phone", "narrow", "desktop"}
+    assert widths == {"desktop"}
     assert "study/visuals" not in render(project)["unchecked"]
     # When the unit changes, its check is stale until it runs again.
     path = project / "study/content.json"
@@ -169,3 +171,17 @@ def test_gallery_shows_what_the_check_catches_and_what_needs_a_reviewer(project:
     assert not [
         code for code in findings["gallery:composite-without-client"] if "scrolls" not in code
     ]
+
+
+def test_an_untitled_exam_visual_is_drawn_under_its_key() -> None:
+    # The check heads each injected visual with its title; an untitled Exam figure crashed it.
+    from tum_mcp.exam_content import ExamContent
+
+    example = Path(__file__).parents[2] / "src/tum_mcp/bundled/course_app/example/exam.json"
+    payload = json.loads(example.read_bytes())
+    for example_ in payload["patterns"][1]["examples"]:
+        for block in example_.get("blocks", []):
+            block.pop("title", None)
+    visits, _ = _visits(None, None, ExamContent.model_validate(payload), with_exam=True)
+    titles = [entry["title"] for visit in visits for entry in visit.inject]
+    assert titles and all(titles)

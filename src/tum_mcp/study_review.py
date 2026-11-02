@@ -54,6 +54,39 @@ DIMENSIONS: tuple[Dimension, ...] = (
     "redundancy",
 )
 CourseDimension = Literal["organization", "redundancy", "integration"]
+# The rubric's reading passes; each reads the item for its own dimensions.
+Pass = Literal["logic", "text", "visuals", "interaction", "intuition", "structure", "cheatsheet"]
+PASSES: dict[str, tuple[str, ...]] = {
+    "logic": ("correctness", "coverage"),
+    "text": ("clarity", "cohesion", "cognitive_load"),
+    "visuals": ("representation",),
+    "interaction": ("practice",),
+    "intuition": ("intuition",),
+    "structure": ("organization", "redundancy"),
+}
+# The cheatsheet is one item read in one pass, on the dimensions a revision reference has:
+# no practice, intuition or teaching moves, and its own checks (rubric section Cheatsheet).
+SHEET = "exam/sheet"
+SHEET_PASSES: dict[str, tuple[str, ...]] = {
+    "cheatsheet": (
+        "correctness",
+        "coverage",
+        "clarity",
+        "representation",
+        "organization",
+        "redundancy",
+    ),
+}
+
+
+def item_passes(item: str) -> dict[str, tuple[str, ...]]:
+    return SHEET_PASSES if item == SHEET else PASSES
+
+
+def item_dimensions(item: str) -> tuple[str, ...]:
+    return SHEET_PASSES["cheatsheet"] if item == SHEET else DIMENSIONS
+
+
 # A rubric check such as redundancy.text_restates_picture; its prefix is the finding's dimension.
 Check = Annotated[str, Field(pattern=r"^[a-z_]+\.[a-z_]+$", max_length=80)]
 Criterion = Literal["fidelity", "form", "layout", "legibility", "focus", "convention"]
@@ -69,7 +102,12 @@ CRITERIA: tuple[Criterion, ...] = (
 Score = Literal[1, 2, 3]
 ItemKey = Annotated[
     str,
-    Field(pattern=r"^(study/[a-z0-9-]+|exercises/[a-z0-9-]+/[a-z0-9-]+|exam/pattern/[a-z0-9-]+)$"),
+    Field(
+        pattern=(
+            r"^(study/[a-z0-9-]+|exercises/[a-z0-9-]+/[a-z0-9-]+|exam/pattern/[a-z0-9-]+"
+            r"|exam/sheet)$"
+        )
+    ),
 ]
 Revision = Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]
 # The visual's address on the render check's contact sheets, such as block:3 or step:trace:0.
@@ -85,15 +123,26 @@ VisualKey = Annotated[
 
 
 class Finding(Frozen):
-    """What a student meets that costs a point, named precisely enough to fix."""
+    """What a student meets that costs a point, named precisely enough to fix: the passage
+    quoted word for word from the item, then the authoring side's verdict on it."""
 
     dimension: Dimension
     check: Check | None = None
     note: Text
+    quote: Text | None = None
+    fix: Text | None = None
+    # The authoring session accepts a finding (and fixes it) or rejects it with its reason;
+    # only accepted findings count against a score.
+    status: Literal["accepted", "rejected"] = "accepted"
+    reason: Text | None = None
+    score: Literal[1, 2] = 2
+    location: Text | None = None
 
     @model_validator(mode="after")
     def checked(self) -> "Finding":
         _own_check(self.dimension, self.check)
+        if self.status == "rejected" and not self.reason:
+            raise ValueError("A rejected finding says why the content is right as written.")
         return self
 
 
@@ -131,6 +180,19 @@ class VisualReview(Frozen):
         return self
 
 
+class KeptPrompt(Frozen):
+    """A report prompt left as it is, with the reason the content is right as written."""
+
+    flag: Annotated[str, Field(pattern=r"^[a-z_]+$", max_length=60)]
+    reason: Text
+
+
+class ClosestCall(Frozen):
+    quote: Text
+    location: Text
+    reason: Text
+
+
 class ItemReview(Frozen):
     item: ItemKey
     revision: Revision
@@ -141,11 +203,29 @@ class ItemReview(Frozen):
     # The passage that earns each 3, quoted from the item; the report lists 3s without one.
     evidence: dict[Dimension, Text] = Field(default_factory=dict)
     kept: Text | None = None
+    # Each report prompt open on the item at review time that is kept, with its reason; a
+    # fixed prompt leaves the report instead.
+    prompts: tuple[KeptPrompt, ...] = Field(default=(), max_length=40)
+    # The rubric passes that read the item, and whether each ran in a session that did not
+    # write the content ("fresh") or in the authoring session ("same").
+    passes: dict[Pass, Literal["fresh", "same"]] = Field(default_factory=dict)
+    closest_calls: dict[Check, ClosestCall] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def explained(self) -> "ItemReview":
         # A review saved before a dimension existed still loads; the report lists what it lacks.
-        _found(self.scores, self.findings)
+        _found(self.scores, tuple(f for f in self.findings if f.status == "accepted"))
+        for dimension, score in self.scores.items():
+            derived = min(
+                (
+                    finding.score
+                    for finding in self.findings
+                    if finding.status == "accepted" and finding.dimension == dimension
+                ),
+                default=3,
+            )
+            if score != derived:
+                raise ValueError(f"{dimension} scores {derived} from its verified findings.")
         if len({visual.visual for visual in self.visuals}) != len(self.visuals):
             raise ValueError("Score each visual once.")
         weakest = min((min(visual.scores.values()) for visual in self.visuals), default=3)
@@ -175,6 +255,10 @@ def _found(
     scores: dict[str, int], findings: tuple["Finding | CourseFinding | MediaFinding", ...]
 ) -> None:
     found = {finding.dimension for finding in findings}
+    if scored_high := [name for name, score in scores.items() if score == 3 and name in found]:
+        raise ValueError(
+            "A dimension with an accepted finding scores below 3: " + ", ".join(scored_high) + "."
+        )
     if missing := [name for name, score in scores.items() if score < 3 and name not in found]:
         raise ValueError("A score below 3 names its finding: " + ", ".join(missing) + ".")
 
@@ -360,7 +444,12 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "prose_calculation": "representation",
     "compressed_working": "representation",
     "meta_reference": "clarity",
+    "statement_framing": "clarity",
     "summary_repeats_objective": "redundancy",
+    # The cheatsheet: typed mathematics, and sources read for it without exam requirements.
+    "sheet_plain_math": "representation",
+    "sheet_dense_paragraph": "clarity",
+    "unrecorded_sources": "coverage",
 }
 
 
@@ -369,8 +458,10 @@ def _flagged_items(
 ) -> list[str]:
     """The review items a quality flag points into: a unit or exercise key, a block or step
     under it, or the JSON path of an arithmetic error."""
-    if item.startswith("study/"):
+    if item.startswith(("study/", "exam/pattern/")) or item == SHEET:
         return [item]
+    if item.startswith("concept:"):
+        return [SHEET]
     if found := re.match(r"study:units\[(\d+)\]", item):
         return [f"study/{content.units[int(found[1])].key}"] if content else []
     if found := re.match(r"exercises:sets\[(\d+)\]\.exercises\[(\d+)\]", item):
@@ -390,10 +481,226 @@ def revision(item: BaseModel) -> str:
     return hashlib.sha256(item.model_dump_json().encode()).hexdigest()[:16]
 
 
+def rubric_checks(item: str = "") -> dict[str, tuple[str, ...]]:
+    """Every check the bundled rubric lists for an item, by dimension: the item rubric, or the
+    Cheatsheet section for the cheatsheet."""
+    from importlib.resources import files
+
+    rubric = files("tum_mcp").joinpath("bundled/skills/review-course/references/rubric.md")
+    checks: dict[str, list[str]] = {}
+    text = rubric.read_text()
+    item_rubric = (
+        text.split("\n## Cheatsheet\n")[1].split("\n## ")[0]
+        if item == SHEET
+        else text.split("## Course organization")[0]
+    )
+    for dimension, name in re.findall(r"^- `([a-z_]+)\.([a-z_]+)`", item_rubric, re.M):
+        checks.setdefault(dimension, []).append(f"{dimension}.{name}")
+    return {dimension: tuple(names) for dimension, names in checks.items()}
+
+
+FLAG_CHECKS = {
+    "arithmetic": "correctness.recomputed",
+    "forward_term": "organization.dependency_order",
+    "plain_math": "cognitive_load.math_set",
+    "dense_paragraph": "cognitive_load.short_prose",
+    "described_object": "representation.shown_not_described",
+    "prose_calculation": "representation.working_shown",
+    "compressed_working": "representation.working_shown",
+    "meta_reference": "clarity.no_meta",
+    "statement_framing": "clarity.no_meta",
+    "unexplained_symbol": "clarity.symbols_recall",
+    "echoed_meaning": "redundancy.said_once",
+    "sheet_plain_math": "representation.sheet_form",
+    "slash_quotient": "representation.sheet_form",
+    "line_repeats_formula": "redundancy.sheet_expansion",
+    "sheet_dense_paragraph": "clarity.sheet_concise",
+    "prose_legend": "clarity.sheet_meanings",
+    "unrecorded_sources": "coverage.sheet_inventory",
+}
+
+
+def deterministic_checks(flags: Sequence[dict[str, JsonValue]]) -> dict[str, str]:
+    # Detectors establish failures, not a clean bill for semantic checks they only partly cover.
+    return {
+        FLAG_CHECKS[str(flag["flag"])]: (
+            "fail" if str(flag["flag"]) in INVARIANT_FLAGS else "prompt"
+        )
+        for flag in flags
+        if str(flag["flag"]) in FLAG_CHECKS
+    }
+
+
+def review_pack(
+    item: str,
+    name: str,
+    content: StudyContent | None,
+    exercises: ExerciseContent | None,
+    exam: "ExamContent | None",
+    flags: Sequence[dict[str, JsonValue]],
+    ledger: CoverageLedger | None = None,
+) -> dict[str, JsonValue]:
+    """What one pass needs to read one item: its checks with their wording, the item's text by
+    path, and the report prompts already decided for it."""
+    from importlib.resources import files
+
+    models = item_models(content, exercises, exam, ledger)
+    if item not in models:
+        raise CampusError(Code.ACTION_REQUIRED, f"No reviewed item {item}; see the report.")
+    if name not in item_passes(item):
+        raise CampusError(
+            Code.ACTION_REQUIRED,
+            f"{item} is read in the passes " + ", ".join(item_passes(item)) + ".",
+        )
+    rubric = files("tum_mcp").joinpath("bundled/skills/review-course/references/rubric.md")
+    wording = {
+        check: " ".join(text.split()).removeprefix(": ")
+        for check, text in re.findall(
+            r"^- `([a-z_]+\.[a-z_]+)`((?: \([^)]*\))?: .+?)(?=\n- `|\n\n|\Z)",
+            rubric.read_text(),
+            re.M | re.S,
+        )
+    }
+    dimensions = item_passes(item)[name]
+    relevant = [
+        flag for flag in flags if item in _flagged_items(str(flag["item"]), content, exercises)
+    ]
+    determined = deterministic_checks(relevant)
+    return {
+        "item": item,
+        "revision": revision(models[item]),
+        "pass": name,
+        "dimensions": list(dimensions),
+        "checks": [
+            {
+                "check": check,
+                "text": wording.get(check, ""),
+                "verdict": determined.get(check, "review"),
+            }
+            for dimension in dimensions
+            for check in rubric_checks(item).get(dimension, ())
+        ],
+        "report": [
+            {
+                "flag": flag["flag"],
+                "detail": flag["detail"],
+                "decision": "fix" if str(flag["flag"]) in INVARIANT_FLAGS else "fix or keep",
+            }
+            for flag in relevant
+        ],
+        "passages": [
+            {"path": path, "text": text}
+            for path, text in item_passages(models[item].model_dump(mode="json"))
+        ],
+    }
+
+
+def item_models(
+    content: StudyContent | None,
+    exercises: ExerciseContent | None,
+    exam: "ExamContent | None" = None,
+    ledger: CoverageLedger | None = None,
+) -> dict[str, BaseModel]:
+    """Every reviewed item's content, by item key."""
+    items: dict[str, BaseModel] = {
+        f"study/{unit.key}": unit for unit in (content.units if content else ())
+    }
+    for group in exercises.sets if exercises else ():
+        for exercise in group.exercises:
+            items[f"exercises/{group.key}/{exercise.key}"] = exercise
+    for pattern in exam.patterns if exam else ():
+        items[f"exam/pattern/{pattern.key}"] = pattern
+    if exam and exam.concepts:
+        items[SHEET] = sheet_model(exam, ledger)
+    return items
+
+
+class Sheet(Frozen):
+    """The cheatsheet as one reviewed item: its entries, the workflows they show and the
+    requirements they are judged against, so any of them changing makes the review stale."""
+
+    topics: list[JsonValue]
+    concepts: list[JsonValue]
+    links: list[JsonValue]
+    workflows: list[JsonValue]
+    requirements: list[JsonValue]
+
+
+def sheet_model(exam: "ExamContent", ledger: CoverageLedger | None) -> Sheet:
+    shown = {concept.workflow_from for concept in exam.concepts if concept.workflow_from}
+    return Sheet(
+        topics=[item.model_dump(mode="json") for item in exam.topics],
+        concepts=[item.model_dump(mode="json", exclude_none=True) for item in exam.concepts],
+        links=[item.model_dump(mode="json", exclude_none=True) for item in exam.links],
+        workflows=[
+            {
+                "pattern": pattern.key,
+                "title": pattern.title,
+                "workflow": [
+                    step.model_dump(mode="json", exclude_none=True) for step in pattern.workflow
+                ],
+            }
+            for pattern in exam.patterns
+            if pattern.key in shown
+        ],
+        requirements=[
+            {"source": entry.source, **item.model_dump(mode="json", exclude_none=True)}
+            for entry in (ledger.sources if ledger else ())
+            for item in entry.exam
+        ],
+    )
+
+
+# Fields that carry no text a student reads, or markup a quote cannot come from.
+_UNREAD = {
+    "key",
+    "sources",
+    "pages",
+    "svg",
+    "mathml",
+    "image",
+    "revision",
+    "anchor",
+    "unit",
+    "topic",
+    "basis",
+    "tier",
+    "workflow_from",
+}
+
+
+def item_passages(value: JsonValue, path: str = "") -> list[tuple[str, str]]:
+    """The text a student reads in an item, as (path, text) pairs in reading order."""
+    if isinstance(value, dict):
+        return [
+            pair
+            for key, item in value.items()
+            if key not in _UNREAD
+            for pair in item_passages(item, f"{path}.{key}" if path else key)
+        ]
+    if isinstance(value, list):
+        return [
+            pair for i, item in enumerate(value) for pair in item_passages(item, f"{path}[{i}]")
+        ]
+    return [(path, value)] if isinstance(value, str) and value.strip() else []
+
+
+def _plain(text: str) -> str:
+    return " ".join(text.replace("\\(", " ").replace("\\)", " ").split())
+
+
+def quoted(quote: str, passages: list[tuple[str, str]]) -> bool:
+    """Whether a quote occurs word for word in the item (spacing and inline-math delimiters
+    aside)."""
+    wanted = _plain(quote).strip(" .\"'“”‘’…")
+    return bool(wanted) and any(wanted in _plain(text) for _, text in passages)
+
+
 def reviewable(
     content: StudyContent | None,
     exercises: ExerciseContent | None,
     exam: "ExamContent | None" = None,
+    ledger: CoverageLedger | None = None,
 ) -> dict[str, tuple[str, str]]:
     """Every unit, exercise and Exam pattern a student works through, with its title and
     current revision."""
@@ -406,6 +713,8 @@ def reviewable(
             items[f"exercises/{group.key}/{exercise.key}"] = (exercise.title, revision(exercise))
     for pattern in exam.patterns if exam else ():
         items[f"exam/pattern/{pattern.key}"] = (pattern.title, revision(pattern))
+    if exam and exam.concepts:
+        items[SHEET] = ("Cheatsheet", revision(sheet_model(exam, ledger)))
     return items
 
 
@@ -432,7 +741,7 @@ def review_report(
         raise CampusError(Code.SCOPE_DENIED, "The review scorecard belongs to another course.")
     media_inventory = media_inventory if media_inventory is not None else MediaInventory()
     media = media_report(root, media_inventory, scorecard.media if scorecard else ())
-    current = reviewable(content, exercises, exam)
+    current = reviewable(content, exercises, exam, ledger)
     drawn = visual_ids(content, exercises)
     reviews = {review.item: review for review in scorecard.reviews} if scorecard else {}
     unreviewed = [
@@ -490,7 +799,7 @@ def review_report(
     unscored_dimensions = [
         {"item": review.item, "dimensions": missing}
         for review in fresh
-        if (missing := [name for name in DIMENSIONS if name not in review.scores])
+        if (missing := [name for name in item_dimensions(review.item) if name not in review.scores])
     ]
     unevidenced = [
         {"item": review.item, "dimensions": missing}
@@ -511,6 +820,113 @@ def review_report(
         for key in _flagged_items(str(flag["item"]), content, exercises)
         if key in by_item and by_item[key].scores.get(dimension) == 3
     ]
+    # Every accepted finding quotes its passage, and every 3 quotes its closest call, word for
+    # word from the item; each item is read by every pass.
+    passages = {
+        key: item_passages(model.model_dump(mode="json"))
+        for key, model in item_models(content, exercises, exam, ledger).items()
+        if key in by_item
+    }
+    unquoted = [
+        {"item": item.item, "quotes": missing}
+        for item in fresh
+        if (
+            missing := [
+                *(
+                    f"{finding.check or finding.dimension}: {finding.quote or '(no quote)'}"
+                    for finding in item.findings
+                    if finding.status == "accepted"
+                    and not (finding.quote and quoted(finding.quote, passages[item.item]))
+                ),
+                *(
+                    f"evidence {name}: {text}"
+                    for name, text in item.evidence.items()
+                    if item.scores.get(name) == 3 and not quoted(text, passages[item.item])
+                ),
+            ]
+        )
+    ]
+    missing_passes = [
+        {"item": item.item, "passes": missing}
+        for item in fresh
+        if (missing := [name for name in item_passes(item.item) if name not in item.passes])
+    ]
+    rubrics = {"": rubric_checks(), SHEET: rubric_checks(SHEET)}
+    missing_checks = []
+    for item in fresh:
+        rubric = rubrics[SHEET if item.item == SHEET else ""]
+        calls = item.closest_calls
+        failed = {finding.check for finding in item.findings if finding.status == "accepted"}
+        required = {check for checks in rubric.values() for check in checks} - failed
+        missing = sorted(required - calls.keys())
+        invalid = [
+            check
+            for check, call in calls.items()
+            if check not in {check for checks in rubric.values() for check in checks}
+            or not quoted(
+                call.quote,
+                [(path, text) for path, text in passages[item.item] if path == call.location],
+            )
+        ]
+        incomplete = [
+            finding.check or finding.dimension
+            for finding in item.findings
+            if not finding.check
+            or finding.check not in rubric.get(finding.dimension, ())
+            or not finding.fix
+            or not finding.location
+            or not finding.quote
+            or not quoted(
+                finding.quote,
+                [(path, text) for path, text in passages[item.item] if path == finding.location],
+            )
+        ]
+        if missing or invalid or incomplete:
+            missing_checks.append(
+                {"item": item.item, "missing": missing, "invalid": invalid, "findings": incomplete}
+            )
+    checks_passed = {
+        item.item: {
+            dimension: f"{len(passed)}/{len(rubric[dimension])}"
+            for rubric in [rubrics[SHEET if item.item == SHEET else ""]]
+            for dimension in DIMENSIONS
+            if dimension in item.scores and dimension in rubric
+            for failed in [
+                {
+                    finding.check
+                    for finding in item.findings
+                    if finding.status == "accepted"
+                    and finding.dimension == dimension
+                    and finding.check
+                }
+            ]
+            for passed in [
+                {
+                    check
+                    for check, call in item.closest_calls.items()
+                    if check in rubric[dimension]
+                    and quoted(
+                        call.quote,
+                        [
+                            (path, text)
+                            for path, text in passages[item.item]
+                            if path == call.location
+                        ],
+                    )
+                }
+                - failed
+            ]
+        }
+        for item in fresh
+    }
+    # A prompt is fixed (it leaves the report) or kept with a reason; never silently open.
+    open_prompts = [
+        {"item": key, "flag": flag["flag"], "detail": flag["detail"]}
+        for flag in flags
+        if str(flag["flag"]) not in INVARIANT_FLAGS
+        for key in _flagged_items(str(flag["item"]), content, exercises)
+        if key in by_item and str(flag["flag"]) not in {p.flag for p in by_item[key].prompts}
+    ]
     review = scorecard.course if scorecard else None
     course, course_blocks = (
         _course_report(
@@ -529,7 +945,12 @@ def review_report(
     checks = Counter(
         finding.check
         for finding in (
-            *(finding for item in fresh for finding in item.findings),
+            *(
+                finding
+                for item in fresh
+                for finding in item.findings
+                if finding.status == "accepted"
+            ),
             *(review.findings if review and course and course["status"] == "fresh" else ()),
         )
         if finding.check
@@ -543,6 +964,10 @@ def review_report(
             or unscored_dimensions
             or unevidenced
             or conflicts
+            or open_prompts
+            or unquoted
+            or missing_passes
+            or missing_checks
             or blocking
             or course_blocks
             or not media["passed"]
@@ -553,6 +978,12 @@ def review_report(
         "unscored_dimensions": unscored_dimensions,
         "unevidenced": unevidenced,
         "flag_conflicts": conflicts,
+        "open_prompts": open_prompts,
+        "unquoted": unquoted,
+        "missing_passes": missing_passes,
+        "missing_checks": missing_checks,
+        "scores": {item.item: dict(item.scores) for item in fresh},
+        "checks_passed": checks_passed,
         "below_bar": below,
         "course": course,
         "media": media,

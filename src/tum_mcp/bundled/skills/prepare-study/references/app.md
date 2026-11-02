@@ -37,7 +37,9 @@ optional backlog are demonstrated in the private agent report.
   (and, in Exam, the cheatsheet entry) beside the page. In the local preview, a citation opens the stored course file at its page.
 - **Exercises and Lecture:** separate workspaces in the same app when prepared.
   Lecture lists lectures newest first. Concise Notes precede watchable Highlights.
-  Note sources link to the supporting recording moment without prominent timestamps;
+  A note shows its title, the situation it answers and its message, with an optional
+  Recall link to the Study passage. Note sources link to the supporting recording
+  moment without prominent timestamps;
   highlights show a range, duration and recording thumbnail. Notes may include a
   meaningful frame. Either section may be absent.
 - **Contents:** a button lists the current page's headings in every workspace; wide

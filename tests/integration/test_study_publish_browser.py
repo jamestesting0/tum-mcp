@@ -321,6 +321,9 @@ def test_complete_public_app_keeps_learning_panels_and_lecture_timestamp_links(
                 page.locator(".exam-entry-row").first.click()
                 expect(page.locator(".exam-entry-body:visible")).not_to_have_count(0)
             elif name == "lectures":
+                # Thumbnails load lazily; on a phone the notes push them below the fold.
+                for image in page.locator(".lecture-thumb img").all():
+                    image.scroll_into_view_if_needed()
                 page.wait_for_function(
                     "() => [...document.querySelectorAll('.lecture-thumb img')]"
                     ".every(image => image.complete && image.naturalWidth > 0)"

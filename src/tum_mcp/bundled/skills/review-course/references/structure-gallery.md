@@ -146,6 +146,28 @@ correctly." / "It is a common mistake."
 right \(P=\sin^2\varphi\) / "Measurement uses the squared magnitude." Nothing says what is
 being computed when a student writes the wrong line.
 
+**empty-entry** (item, cheatsheet). The entry "Phase oracle" (a procedure) opens to its
+one line and two links: no steps, formula or cue.
+
+**one-line-fact** (item, cheatsheet). "Java `int` division truncates towards zero:
+\(-7/2\) is \(-3\)." The entry has no details and no disclosure.
+
+**formulas-only-sheet** (item, cheatsheet). A software-engineering course's slides rest on
+ACID, the CIA triad, cloud service models and testing levels; the sheet holds two formulas
+and one procedure, and the ledger records no exam requirements for those slides.
+
+**prose-matrix** (item, cheatsheet). "Internal equity is retained earnings, external
+equity is new shares, internal debt is provisions and external debt is loans."
+
+**flattened-quotient** (item, any). A displayed derivation reads
+\(r = 1/\rho\) and \(\Delta = (a+b)/(c+d)\).
+
+**tall-inline-fraction** (item, any). A sentence holds
+\(\frac{\frac{a}{b}+1}{\frac{c}{d}}\) between two lines of text.
+
+**units-and-halves** (item, any). "The speed is \(3\,\mathrm{m/s}\); the loop runs \(n/2\)
+times."
+
 **degenerate-fork** (item, Exam pattern). An estimation pattern's first step splits on
 "the counts sum to more than zero" and "every count is zero"; no listed exam question has an
 all-zero sample, yet the second case gets its own example and Practise item.
@@ -213,6 +235,13 @@ the \(i\)-th state", and \(p_i\) in the formula opens the same meaning.
 | correct-only-feedback | Practice 2 | `practice.case_feedback` | The feedback never names the \(2/0\) that decides the case, so a wrong guess teaches nothing. |
 | described-pitfall | Representation 2; Intuition 2 | `representation.shown_not_described`; `intuition.reasons` | No wrong working is shown and no rule says why it fails; show the \(2/0\) case and name the \(0/0\) condition. |
 | contextless-pitfall | Representation 2 | `representation.shown_not_described` | A reader cannot tell when they would write \(\sin\varphi\); give the situation ("Turning the marked amplitude after \(k\) iterations into a success probability"). |
+| empty-entry | Clarity 2 | `clarity.sheet_sufficient` | A student revising cannot apply the procedure from the entry; name its pattern in `workflow_from` or give it steps as details. |
+| one-line-fact | Clarity 3; Redundancy 3 | `clarity.sheet_sufficient`, `redundancy.sheet_expansion` | The line is the whole reference with its condition and an example; an expansion would only pad it. |
+| formulas-only-sheet | Coverage 1 | `coverage.sheet_inventory` | The sources rest on declarative knowledge the sheet never holds; record the requirements and give each a fitting entry. |
+| prose-matrix | Representation 2 | `representation.sheet_form` | Two inputs decide the category; a table with internal/external and equity/debt axes shows it at a glance. |
+| flattened-quotient | Cognitive load 2 | `cognitive_load.math_set` | A displayed quotient hides its numerator and denominator behind a slash; write \(\frac{1}{\rho}\) and \(\frac{a+b}{c+d}\). |
+| tall-inline-fraction | Cognitive load 2 | `cognitive_load.math_set` | A nested fraction breaks the line height; move it into a formula block. |
+| units-and-halves | Cognitive load 3 | `cognitive_load.math_set` | Units and short incidental arithmetic read best with a slash. |
 | degenerate-fork | Cognitive load 2 | `cognitive_load.moves_fit`, `coverage.cases_complete` | No exam reaches the invented case, which doubles the examples and practice; drop the fork and keep the edge as a pitfall if it costs marks. |
 | merged-methods | Organization 2 | `organization.fork_placement` | The cases share no steps; they are four patterns behind one label, and "apply the selected operation" teaches no move. Split them and keep each workflow concrete. |
 | described-move | Representation 2 | `representation.shown_not_described` | The move names a formula the student must recall elsewhere; give the case an `apply` with \(\sum_j K_j^\dagger K_j=I\) and \(\mathcal E(\rho)=\sum_j K_j\rho K_j^\dagger\). |

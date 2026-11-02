@@ -811,21 +811,33 @@ h1 > .comment-marker { margin-inline-start: var(--s2); }
 .lecture-coverage { margin-top: 0; }
 .reading :is(h2, h3, h4, h5, h6, [data-contents-entry]) { scroll-margin-top: var(--s6); }
 .lecture-time { display: inline-flex; align-items: center; min-height: var(--target); }
-.lecture-note-list { padding-inline-start: var(--s6); }
-.lecture-note-list > li + li { margin-top: var(--s4); }
-.lecture-note-row { display: flex; align-items: flex-start; gap: var(--s2); }
-.lecture-note-row > p { flex: 1; min-width: 0; margin: 0; }
+/* Notes and highlights share one rhythm: the list owns the space and a quiet rule between
+   items; each item owns the small gaps inside it. */
+.lecture-notes > h2, .lecture-highlights > h2 { margin-bottom: var(--s2); }
+.lecture-note-list { margin: 0; padding: 0; list-style: none; }
+.lecture-note-list > li + li { margin-top: 0; }
+.lecture-note, .lecture-highlights > .lecture-highlight { margin: 0; padding-block: var(--space-between); border-top: 1px solid var(--line); }
+.lecture-note:first-child, .lecture-highlights > h2 + .lecture-highlight { padding-top: var(--s3); border-top: 0; }
+.lecture-note-head { display: flex; align-items: flex-start; gap: var(--s2); }
+.lecture-note-title { flex: 1; min-width: 0; padding-block: var(--s1); font-weight: 600; line-height: 1.5; }
+.lecture-note-context { color: var(--muted); }
+.lecture-note > .lecture-note-text { margin-top: var(--s1); }
+button.lecture-recall { margin-top: var(--s2); }
 .lecture-note-image { display: block; width: 100%; max-width: 28rem; height: auto; margin-top: var(--s3); border-radius: var(--r1); }
-.lecture-highlight { display: grid; gap: var(--s3) var(--s4); }
+.lecture-highlight { display: grid; gap: var(--space-related) var(--s4); }
 .lecture-thumb { display: block; aspect-ratio: 16 / 9; border-radius: var(--r1); overflow: hidden; background: var(--aside); }
 .lecture-thumb img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .lecture-highlight-body { min-width: 0; }
 .lecture-highlight-body > .section-heading { margin-bottom: 0; }
-.lecture-highlight-body p.lecture-when { margin-top: 0; }
+.lecture-highlight-body > .section-heading > h3 { padding-bottom: 0; }
+.lecture-highlight-body p.lecture-when { margin-top: var(--s1); }
 .lecture-highlight-text { min-width: 0; }
 .lecture-highlight-text p.lecture-teaches { margin-top: 0; }
+.lecture-highlight-text .lecture-points { margin-top: var(--s2); }
 @media (min-width: 600px) {
-  .lecture-highlight { grid-template-columns: 12rem minmax(0, 1fr); align-items: center; }
+  .lecture-highlight { grid-template-columns: 12rem minmax(0, 1fr); align-items: start; }
+  /* A frame that fails to load leaves the title the full width, not a narrow column. */
+  .lecture-highlight:has(> .lecture-thumb[hidden]) { grid-template-columns: minmax(0, 1fr); }
   .lecture-highlight-text { grid-column: 1 / -1; }
 }
 .exam-entry-panel .exam-entry-head { margin: 0 0 var(--s3); }
@@ -903,12 +915,19 @@ h1 > .comment-marker { margin-inline-start: var(--s2); }
 .exam-map-scroll.panning { cursor: grabbing; }
 .exam-map-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .exam-map-svg { display: block; width: 100%; height: 100%; font-family: var(--font-ui); }
-.exam-map.expanded { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; gap: var(--s2); margin: 0; padding: var(--s4); background: var(--canvas); }
+.exam-map.expanded { position: fixed; inset: 0; z-index: 40; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--s3); margin: 0; padding: var(--s4); background: var(--canvas); }
 /* min-height 0 lets the frame shrink to the screen, so the legend at its foot stays visible. */
-.exam-map.expanded .exam-map-frame { flex: 1; display: flex; min-height: 0; }
+.exam-map.expanded .exam-map-frame { display: flex; min-height: 0; }
 .exam-map.expanded .exam-map-scroll { flex: 1; height: auto; max-height: none; aspect-ratio: auto !important; }
 .exam-map.expanded .exam-map-overview { display: none; }
-.exam-map.expanded .exam-map-card { position: absolute; right: calc(var(--s4) + var(--s3)); bottom: calc(var(--s4) + var(--s3)); max-width: min(380px, calc(100% - 2 * var(--s6))); margin: 0; box-shadow: 0 8px 24px rgb(0 0 0 / .2); }
+/* Full screen keeps the map and the selected entry together: a pane beside the map, or a sheet
+   under it on narrow screens, each scrolling on its own. */
+.exam-map.expanded .exam-map-card { max-height: 50dvh; margin: 0; overflow-y: auto; overscroll-behavior: contain; }
+@media (min-width: 800px) {
+  .exam-map.expanded:has(.exam-map-card:not([hidden])) { grid-template-columns: minmax(0, 1fr) min(400px, 38%); grid-template-rows: auto minmax(0, 1fr); }
+  .exam-map.expanded .exam-map-heading { grid-column: 1 / -1; }
+  .exam-map.expanded .exam-map-card { grid-column: 2; grid-row: 2; max-height: none; }
+}
 .exam-map-column { fill: var(--muted); font-size: 14px; font-weight: 650; }
 .exam-node { cursor: pointer; outline: none; }
 .exam-node rect { fill: var(--canvas); stroke: var(--line); stroke-width: 1.5; }
@@ -933,8 +952,12 @@ button.exam-map-tool svg { width: 16px; height: 16px; fill: none; stroke: curren
 .exam-map-legend path { fill: none; stroke: var(--muted); stroke-width: 1.4; }
 .exam-map-legend path.dashed { stroke-dasharray: 4 3; }
 .exam-map-legend path.head { fill: var(--muted); stroke: none; }
-.exam-map-card { margin-top: var(--s3); padding: var(--s3) var(--s4); border-left: 3px solid var(--accent); background: var(--surface); border-radius: var(--r1); }
-.exam-map-card p { margin: var(--s1) 0; }
+.exam-map-card { position: relative; margin-top: var(--space-related); padding: var(--s1) var(--s4) var(--s3); border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); }
+.exam-map-card > .icon-button { position: absolute; top: var(--s2); right: var(--s2); z-index: 1; }
+.exam-map-card .exam-entry { border-bottom: 0; }
+.exam-map-card .exam-entry-row { padding-inline-end: calc(var(--target) + var(--s2)); }
+.exam-map-card .exam-entry-body { padding-bottom: 0; }
+.exam-map-more { margin: var(--s2) 0 0; padding-inline-start: calc(14px + var(--s3)); }
 .exam-map-overview { display: none; }
 .exam-map-topic { border-bottom: 1px solid var(--line); }
 .exam-map-topic > summary { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: var(--target); padding: var(--s2) 0; cursor: pointer; }
@@ -951,7 +974,17 @@ button.exam-map-item { display: flex; justify-content: space-between; gap: var(-
 .exam-entry-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-top: var(--s3); }
 .exam-entry-footer > .exam-entry-links { margin: 0; }
 .exam-detail .section-heading { margin-top: var(--s4); }
-.exam-detail h3 { margin: 0; font-size: var(--text-ui); }
+.exam-detail :is(h3, h4, h5, h6) { margin: var(--s3) 0 var(--s1); font-size: var(--text-ui); font-weight: 600; }
+.exam-detail [data-level="2"], .exam-detail [data-level="3"] { color: var(--muted); }
+.exam-topic > .exam-path { margin: var(--s6) 0 var(--s1); font-size: var(--text-subsection); font-weight: 600; }
+.exam-topic > h4.exam-path { margin-top: var(--s4); font-size: var(--text-body); color: var(--muted); }
+.exam-entry-row.static { cursor: auto; }
+.exam-entry-footer:not(:has(> :not([hidden]))) { display: none; }
+.exam-entry-footer > .exam-entry-collapse + .exam-entry-links { margin-inline-end: auto; }
+button.exam-entry-collapse { display: inline-flex; align-items: center; gap: var(--s1); margin-inline: calc(-1 * var(--s2)) auto; padding-inline: var(--s2); color: var(--muted); font-size: var(--text-small); }
+button.exam-entry-collapse:hover { color: var(--ink); }
+.exam-entry-collapse svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.exam-entry-row.static::before { visibility: hidden; }
 .pattern-example > .exam-stem + .exam-guided { margin-top: var(--s5); }
 .pattern-example > .exam-guided + .example-part { margin-top: var(--s6); }
 .exam-guided { list-style: none; padding: 0; margin: var(--s4) 0 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
@@ -984,7 +1017,8 @@ button.exam-map-item { display: flex; justify-content: space-between; gap: var(-
 .exam-entry-body { padding: 0 0 var(--s4) calc(14px + var(--s3)); }
 .exam-entry-body p { margin: var(--s2) 0; }
 .exam-formula { font-size: 1.05em; }
-.exam-detail h3 { margin: var(--s3) 0 var(--s1); font-size: var(--text-ui); }
+.exam-entry-steps h3 { margin: var(--s3) 0 var(--s1); font-size: var(--text-ui); }
+.exam-entry-steps .exam-workflow { margin-top: var(--space-inside); }
 .exam-pattern-list { padding-inline-start: var(--s6); }
 .exam-pattern-list .unit-link { display: grid; gap: var(--s1); }
 .exam-cues li { margin-block: var(--s2); }

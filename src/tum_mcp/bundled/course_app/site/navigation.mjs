@@ -101,7 +101,7 @@ export function contentsOutline(reading, enabled = true) {
     if (signal.aborted) return;
     // Headings, plus sections a renderer marks with data-contents-entry (such as exercise disclosures).
     const found = [...reading.querySelectorAll(`${headingSelector}, [data-contents-entry]`)].filter(heading => heading.getClientRects().length && heading.innerText.trim()
-      && !heading.closest('.feedback, .citation-panel, .visually-hidden, [data-comment-ui], dialog'));
+      && !heading.closest('.feedback, .citation-panel, .visually-hidden, [data-comment-ui], dialog, .exam-map-card, .exam-entry-body'));
     if (found.length === headings.length && found.every((heading, index) => heading === headings[index])) return;
     headings = found; links = []; pinned = null;
     const list = node('ol'), parents = [];

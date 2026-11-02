@@ -6,7 +6,16 @@ from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.errors import CampusError
-from tum_mcp.study_review import CRITERIA, DIMENSIONS, read_scorecard, scorecard_path
+from tum_mcp.study_review import (
+    CRITERIA,
+    DIMENSIONS,
+    SHEET,
+    item_dimensions,
+    item_passes,
+    read_scorecard,
+    rubric_checks,
+    scorecard_path,
+)
 from tum_mcp.study_store import load_state
 
 
@@ -57,6 +66,38 @@ def test_malformed_sidecar_blocks_semantic_report_but_not_local_build(
     result = CliRunner().invoke(app, ["study", "report", str(root), "--section", "structure"])
     assert result.exit_code != 0 and "PRIVATE_SENTINEL" not in str(result.exception)
     build(root, publish=False)
+
+
+def test_cheatsheet_is_one_item_read_in_its_own_pass_and_stales_with_its_body(
+    tmp_path: Path, course_memory: Path
+) -> None:
+    # The cheatsheet used to have no item review: an Exam-only course got no sheet review,
+    # and a changed entry body never made a review stale.
+    from knowledge_fixture import knowledge_project
+
+    from tum_mcp.course_app_paths import app_path
+
+    root = knowledge_project(tmp_path)
+    assert SHEET in {entry["item"] for entry in report(root)["unreviewed"]}
+    found = pack(root, SHEET, "cheatsheet")
+    checks = {item["check"] for item in found["checks"]}
+    assert checks == {check for names in rubric_checks(SHEET).values() for check in names}
+    assert "coverage.sheet_inventory" in checks and not checks & set(
+        check for names in rubric_checks().values() for check in names
+    )
+    wrong = CliRunner().invoke(
+        app, ["study", "review-pack", str(root), "--item", SHEET, "--pass", "text"]
+    )
+    assert wrong.exit_code != 0
+    score(root, reviewed(root), whole(report(root)))
+    review = report(root)
+    assert not review["stale"] and not review["missing_passes"] and not review["missing_checks"]
+    assert set(review["scores"][SHEET]) == set(item_dimensions(SHEET))
+    path = app_path(root, "exam.json")
+    value = json.loads(path.read_bytes())
+    value["concepts"][0]["details"][0]["title"] = "Revised detail"
+    path.write_text(json.dumps(value))
+    assert [entry["item"] for entry in report(root)["stale"]] == [SHEET]
 
 
 def test_exam_patterns_are_reviewed_items_that_turn_stale_when_edited(
@@ -112,16 +153,47 @@ def whole(review: dict) -> dict:
     )
 
 
+def opening(item: str) -> str:
+    """The path of the passage a review quotes: the item's title, or the first entry's."""
+    return "concepts[0].title" if item == SHEET else "title"
+
+
+def pack(project: Path, item: str, name: str) -> dict:
+    result = CliRunner().invoke(
+        app, ["study", "review-pack", str(project), "--item", item, "--pass", name]
+    )
+    assert result.exit_code == 0, result.output
+    return json.loads(result.output)
+
+
+def passage(project: Path, item: str) -> str:
+    """A passage of the item, word for word, as a review quotes its closest call."""
+    found = pack(project, item, next(iter(item_passes(item))))
+    return next(p["text"] for p in found["passages"] if p["path"] == opening(item))
+
+
 def reviewed(project: Path) -> list[dict]:
-    """Every unit and exercise scored 3 on every dimension and visual."""
+    """Every unit and exercise read by every pass, scored 3 on every dimension and visual,
+    each 3 quoting a passage, and every open report prompt kept with a reason."""
     listed = report(project)["unreviewed"]
-    return [
+    quotes = {entry["item"]: passage(project, entry["item"]) for entry in listed}
+    reviews = [
         {
             "item": entry["item"],
             "revision": entry["revision"],
             "reviewed_at": "2026-10-30",
-            "scores": {name: 3 for name in DIMENSIONS},
-            "evidence": dict.fromkeys(DIMENSIONS, "The passage that earns the score."),
+            "scores": {name: 3 for name in item_dimensions(entry["item"])},
+            "evidence": dict.fromkeys(item_dimensions(entry["item"]), quotes[entry["item"]]),
+            "passes": dict.fromkeys(item_passes(entry["item"]), "fresh"),
+            "closest_calls": {
+                check: {
+                    "quote": quotes[entry["item"]],
+                    "location": opening(entry["item"]),
+                    "reason": "The title names the idea.",
+                }
+                for checks in rubric_checks(entry["item"]).values()
+                for check in checks
+            },
             "visuals": [
                 {"visual": key, "scores": {name: 3 for name in CRITERIA}}
                 for key in entry["visuals"]
@@ -129,6 +201,14 @@ def reviewed(project: Path) -> list[dict]:
         }
         for entry in listed
     ]
+    score(project, reviews)
+    for review in reviews:
+        review["prompts"] = [
+            {"flag": prompt["flag"], "reason": "The passage is right as written."}
+            for prompt in report(project)["open_prompts"]
+            if prompt["item"] == review["item"]
+        ]
+    return reviews
 
 
 def test_every_native_solution_transfer_compare_and_explore_visual_can_be_scored(tmp_path: Path):
@@ -441,17 +521,9 @@ def test_scores_follow_the_content_they_read_and_low_scores_need_a_fix(
     drawn = next(key for key, entry in listed.items() if entry["visuals"])
     sharp = {name: 3 for name in CRITERIA}
     good = {name: 3 for name in DIMENSIONS}
-    quoted = dict.fromkeys(DIMENSIONS, "The passage that earns the score.")
-    reviews = [
-        {
-            "item": key,
-            "revision": value,
-            "reviewed_at": "2026-10-29",
-            "scores": good,
-            "evidence": quoted,
-        }
-        for key, value in items.items()
-    ]
+    reviews = reviewed(project)
+    for review in reviews:
+        review["visuals"] = []
     score(project, reviews)
     unscored = report(project)
     assert unscored["passed"] is False
@@ -485,7 +557,14 @@ def test_scores_follow_the_content_they_read_and_low_scores_need_a_fix(
     score(project, reviews, course)
     with pytest.raises(CampusError, match="names its finding"):
         read_scorecard(project)
-    finding = {"dimension": "cognitive_load", "note": "Three ideas in one paragraph."}
+    finding = {
+        "dimension": "cognitive_load",
+        "check": "cognitive_load.one_new_idea",
+        "note": "Three ideas in one paragraph.",
+        "quote": passage(project, reviews[0]["item"]),
+        "location": "title",
+        "fix": "Separate the ideas.",
+    }
     reviews[0] |= {"findings": [finding]}
     score(project, reviews, course)
     low = report(project)
@@ -495,6 +574,7 @@ def test_scores_follow_the_content_they_read_and_low_scores_need_a_fix(
     score(project, reviews, course)
     assert report(project)["passed"] is True
     reviews[0] |= {"scores": good | {"cognitive_load": 1}}
+    finding["score"] = 1
     score(project, reviews, course)
     assert report(project)["passed"] is False
     # Editing a reviewed unit makes its review stale.
@@ -676,3 +756,73 @@ def test_every_solution_transfer_compare_and_explore_visual_id_can_be_scored() -
     assert {item.visual for item in scored} == keys
     with pytest.raises(ValueError):
         VisualReview(visual="answer:2", scores={name: 3 for name in CRITERIA})
+
+
+def test_findings_quote_their_passage_and_every_pass_reads_the_item(
+    exercise_project: Path,
+) -> None:
+    project = exercise_project
+    reviews = reviewed(project)
+    score(project, reviews, whole(report(project)))
+    assert report(project)["passed"] is True
+    review = reviews[0]
+    # A 3 whose closest call is not in the item, and a finding that quotes nothing, fail.
+    review["evidence"]["cohesion"] = "A sentence the item never contains."
+    score(project, reviews, whole(report(project)))
+    assert report(project)["unquoted"][0]["item"] == review["item"]
+    review["evidence"]["cohesion"] = passage(project, review["item"])
+    review["scores"]["cohesion"] = 2
+    review["findings"] = [
+        {
+            "dimension": "cohesion",
+            "check": "cohesion.linked",
+            "note": "Abrupt.",
+            "location": "title",
+            "fix": "Explain the link.",
+        }
+    ]
+    score(project, reviews, whole(report(project)))
+    assert report(project)["unquoted"]
+    # A rejected finding needs its reason and does not count; then the score returns to 3.
+    review["findings"][0] |= {"quote": passage(project, review["item"]), "status": "rejected"}
+    review["scores"]["cohesion"] = 3
+    course = whole(report(project))
+    score(project, reviews, course)
+    rejected = CliRunner().invoke(app, ["study", "report", str(project), "--section", "review"])
+    assert "says why" in str(rejected.exception)
+    review["findings"][0]["reason"] = "The block before states the relation."
+    score(project, reviews, course)
+    checked = report(project)
+    assert checked["passed"] is True
+    assert checked["checks_passed"][review["item"]]["cohesion"] == "5/5"
+    # Every pass reads the item.
+    del review["passes"]["structure"]
+    score(project, reviews, whole(report(project)))
+    assert report(project)["missing_passes"] == [{"item": review["item"], "passes": ["structure"]}]
+
+
+def test_review_requires_each_check_and_validates_its_location(exercise_project: Path) -> None:
+    project = exercise_project
+    reviews = reviewed(project)
+    course = whole(report(project))
+    call = reviews[0]["closest_calls"].pop("cohesion.point_first")
+    score(project, reviews, course)
+    result = report(project)
+    assert "cohesion.point_first" in result["missing_checks"][0]["missing"]
+    assert result["passed"] is False
+    reviews[0]["closest_calls"]["cohesion.point_first"] = call | {"location": "absent.path"}
+    score(project, reviews, course)
+    assert "cohesion.point_first" in report(project)["missing_checks"][0]["invalid"]
+
+
+def test_review_pack_prefills_report_failures_not_semantic_passes(exercise_project: Path) -> None:
+    from tum_mcp.study_build import read_content
+    from tum_mcp.study_review import review_pack
+
+    content = read_content(exercise_project)
+    unit = content.units[0]
+    flags = [{"item": unit.key, "flag": "meta_reference", "detail": "Meta text."}]
+    pack = review_pack(f"study/{unit.key}", "text", content, None, None, flags)
+    verdicts = {check["check"]: check["verdict"] for check in pack["checks"]}
+    assert verdicts["clarity.no_meta"] == "fail"
+    assert verdicts["cohesion.point_first"] == "review"

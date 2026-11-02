@@ -22,7 +22,7 @@ export function recallRow(items) {
       const unit = data.units.find(entry => entry.key === item.unit);
       const block = unit?.blocks.find(entry => item.block && entry.key === item.block);
       if (unit) bubble.append(button('Open lesson', () => openReference(unit, block, chip), 'quiet term-more'));
-      if (item.concept) bubble.append(button('Open cheatsheet', async () => (await import('./exam-sheet.mjs')).openConcept(item.concept, chip), 'quiet term-more'));
+      if (item.concept) bubble.append(button('Open cheatsheet', async () => (await import('./exam-entry.mjs')).openConcept(item.concept, chip), 'quiet term-more'));
     }, 'recall-tip'));
   }
   return row;

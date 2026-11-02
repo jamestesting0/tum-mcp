@@ -22,7 +22,7 @@ Build the actual app. Exercise one representative changed response branch only
 when it changes: work on paper → compare → continue (a choice: wrong → repair → change → check), and
 the direct solution. A hint should help beyond the bare
 statement while an independent learner incurs no compulsory step. Check new long
-notation, tables and diagrams at a phone width. Drafts, navigation, storage and
+notation, tables and diagrams at desktop width. Drafts, navigation, storage and
 comments are app behavior covered by the package's tests; report a suspected app
 defect instead of changing installed files (see
 [the course app](../../prepare-study/references/app.md)).

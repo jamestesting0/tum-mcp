@@ -1,5 +1,6 @@
 import data from './data.mjs';
-import { node, studyText, append, sourcesNote, topicRow } from './dom.mjs';
+import { node, studyText, append, button, sourcesNote, topicRow } from './dom.mjs';
+import { openReference } from './reference-panel.mjs';
 import { renderCommentedView } from './comments.mjs';
 import { nextStep } from './navigation.mjs';
 
@@ -37,8 +38,19 @@ function noteView(note, active) {
   if (active) root.dataset.lectureActiveSection = '';
   const sources = [...new Set([...note.sources, note.recording_source])];
   const provenance = { [note.recording_source]: [timeLink(note.url, note.at_s)] };
-  root.append(append(node('div', 'lecture-note-row'), studyText('p', 'lecture-note-text', note.text),
-    sourcesNote(sources, data.sources, data.course.synthetic, '', provenance, note.pages || '')));
+  // What the note is about, the situation it answers, then the message itself.
+  root.append(
+    append(node('div', 'lecture-note-head'), studyText('p', 'lecture-note-title', note.title),
+      sourcesNote(sources, data.sources, data.course.synthetic, note.title, provenance, note.pages || '')),
+    studyText('p', 'lecture-note-context', note.context),
+    studyText('p', 'lecture-note-text', note.text));
+  const unit = note.passage && data.units.find(item => item.key === note.passage.unit);
+  const block = unit?.blocks.find(item => item.key === note.passage.block);
+  if (block) {
+    const recall = button('', () => openReference(unit, block, recall), 'term-more lecture-recall');
+    recall.append(studyText('span', '', `Recall: ${block.title || unit.title}`));
+    root.append(recall);
+  }
   if (note.image) {
     const image = node('img', 'lecture-note-image');
     Object.assign(image, { src: note.image.asset, alt: note.image.alt, width: note.image.width, height: note.image.height, loading: 'lazy', decoding: 'async' });

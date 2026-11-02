@@ -39,9 +39,9 @@ source citations stay local. Use publish-course for a publication request.
 3. **Registry** ([patterns](references/patterns.md)). One sitting per real exam;
    attach every copy of it as roles of one variant. Extract every subquestion and
    classify it by transferable solving strategy, reusing existing patterns first.
-4. **Cheatsheet** ([cheatsheet](references/cheatsheet.md)). Keep only what earns
-   exam points; write the one line first, put the rest behind Expand, and link the
-   ideas that genuinely depend on or contrast with each other.
+4. **Cheatsheet** ([cheatsheet](references/cheatsheet.md)). Record every kind of
+   exam-relevant source material; give each its form, its line first and the rest behind
+   Expand; link dependent or contrasting ideas.
 5. **Patterns.** A short workflow that solves every member, with a decision step where
    the method forks; recognition cues from the question text, the formula, rule or code
    each step and case applies,
@@ -61,8 +61,9 @@ source citations stay local. Use publish-course for a publication request.
    `tum-mcp study visuals PROJECT --exam` and fix what it reports, then check the app. Solutions
    answer each part once, labelled, in the form the part asks for. When a question needs
    knowledge Study lacks, record it in the [coverage ledger](../prepare-study/references/coverage.md).
-   When Study exists, run the [course pass](../review-course/references/course.md) of
-   review-course, which checks how Exam links to it.
+   Review cheatsheet changes from
+   `tum-mcp study review-pack PROJECT --item exam/sheet --pass cheatsheet`; with Study, also
+   run the [course pass](../review-course/references/course.md).
 8. **Report** sittings, questions and their coverage, review items, kept outliers with
    reasons, gaps and checks actually run. Launch with `tum-mcp study`.
 

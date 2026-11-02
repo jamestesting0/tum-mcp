@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "course_key": "algorithms-demo",
   "lectures": [
     {
@@ -42,6 +42,8 @@
       "notes": [
         {
           "key": "n-adjacency",
+          "title": "Counting adjacency entries",
+          "context": "The trace on the slides walks the neighbour loop of every vertex.",
           "text": "An undirected edge appears in both endpoints' adjacency lists; count both entries when tracing the neighbour loop.",
           "sources": ["graphs"],
           "pages": "2",

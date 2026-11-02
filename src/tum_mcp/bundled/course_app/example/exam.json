@@ -218,6 +218,9 @@
       "topic": "structures",
       "title": "FIFO",
       "kind": "definition",
+      "path": [
+        "Linear structures"
+      ],
       "line": "First in, first out: the oldest item leaves first.",
       "basis": "prerequisite",
       "sources": [
@@ -232,9 +235,12 @@
       "topic": "structures",
       "title": "Queue",
       "kind": "definition",
+      "path": [
+        "Linear structures"
+      ],
       "line": "Enqueue at the back, dequeue at the front, both in \\(O(1)\\).",
       "trigger": "Requests are served in arrival order.",
-      "pitfall": "An array that shifts on dequeue costs O(n).",
+      "pitfall": "An array that shifts on dequeue costs \\(O(n)\\).",
       "basis": "tested",
       "sources": [
         {
@@ -259,7 +265,10 @@
       "key": "stack",
       "topic": "structures",
       "title": "Stack",
-      "kind": "definition",
+      "kind": "fact",
+      "path": [
+        "Linear structures"
+      ],
       "line": "Last in, first out: push and pop at the top.",
       "basis": "untested_core",
       "sources": [
@@ -270,10 +279,243 @@
       ]
     },
     {
+      "key": "ring-buffer",
+      "topic": "structures",
+      "title": "Ring buffer invariants",
+      "kind": "fact",
+      "path": [
+        "Linear structures"
+      ],
+      "line": "A fixed array with wrapping head and tail indices keeps both queue ends \\(O(1)\\).",
+      "basis": "emphasized",
+      "symbols": [
+        {
+          "symbol": "\\(n\\)",
+          "meaning": "capacity of the buffer"
+        }
+      ],
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "details": [
+        {
+          "kind": "text",
+          "sources": [
+            "components"
+          ],
+          "points": [
+            "`head` points at the oldest item; `tail` at the next free slot.",
+            "Both advance modulo the capacity \\(n\\): \\(i \\leftarrow (i + 1) \\bmod n\\).",
+            "A separate `size` tells a full buffer from an empty one, since then \\(\\mathit{head} = \\mathit{tail}\\) in both."
+          ]
+        }
+      ],
+      "on_map": false
+    },
+    {
+      "key": "queue-java",
+      "topic": "structures",
+      "title": "Queue methods in Java",
+      "kind": "fact",
+      "path": [
+        "Linear structures"
+      ],
+      "line": "`ArrayDeque` implements `Queue`: `offer` adds at the tail, `poll` removes the head and returns `null` when empty.",
+      "basis": "emphasized",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "details": [
+        {
+          "kind": "code",
+          "sources": [
+            "components"
+          ],
+          "language": "java",
+          "code": "Queue<String> queue = new ArrayDeque<>();\nqueue.offer(\"a\");        // add at the tail\nqueue.offer(\"b\");\nString head = queue.peek(); // \"a\", not removed\nqueue.poll();            // removes \"a\"\nqueue.poll();            // removes \"b\"\nqueue.poll();            // null: the queue is empty",
+          "explanation": "`add` and `remove` do the same but throw an exception instead of returning `false` or `null`."
+        }
+      ],
+      "on_map": false
+    },
+    {
+      "key": "operation-costs",
+      "topic": "structures",
+      "title": "Queue operation costs",
+      "kind": "distinction",
+      "path": [
+        "Choosing a structure"
+      ],
+      "line": "Only the shifting array pays \\(O(n)\\) to dequeue; ring buffer and linked list keep every operation \\(O(1)\\).",
+      "basis": "emphasized",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "details": [
+        {
+          "kind": "table",
+          "sources": [
+            "components"
+          ],
+          "caption": "Worst-case cost by implementation",
+          "columns": [
+            "Operation",
+            "Shifting array",
+            "Ring buffer",
+            "Linked list"
+          ],
+          "rows": [
+            [
+              "Enqueue",
+              "\\(O(1)\\) amortised",
+              "\\(O(1)\\)",
+              "\\(O(1)\\)"
+            ],
+            [
+              "Dequeue",
+              "\\(O(n)\\)",
+              "\\(O(1)\\)",
+              "\\(O(1)\\)"
+            ],
+            [
+              "Peek",
+              "\\(O(1)\\)",
+              "\\(O(1)\\)",
+              "\\(O(1)\\)"
+            ],
+            [
+              "Extra memory",
+              "none",
+              "fixed capacity",
+              "one pointer per item"
+            ]
+          ]
+        }
+      ],
+      "on_map": false
+    },
+    {
+      "key": "removal-matrix",
+      "topic": "structures",
+      "title": "Which structure a removal rule needs",
+      "kind": "distinction",
+      "path": [
+        "Choosing a structure"
+      ],
+      "line": "Removal order picks the structure; whether inserts arrive in order only changes the name.",
+      "basis": "emphasized",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "details": [
+        {
+          "kind": "table",
+          "sources": [
+            "components"
+          ],
+          "caption": "Structure by removal rule and insertion order",
+          "columns": [
+            "Removal rule",
+            "Inserts in arrival order",
+            "Inserts by priority"
+          ],
+          "rows": [
+            [
+              "Oldest first",
+              "Queue",
+              "Priority queue (min arrival time)"
+            ],
+            [
+              "Newest first",
+              "Stack",
+              "Priority queue (max arrival time)"
+            ]
+          ]
+        }
+      ],
+      "on_map": false
+    },
+    {
+      "key": "structure-families",
+      "topic": "structures",
+      "title": "Families of containers",
+      "kind": "definition",
+      "path": [
+        "Choosing a structure"
+      ],
+      "line": "Linear containers keep one order; non-linear ones keep a hierarchy or a network.",
+      "basis": "emphasized",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "details": [
+        {
+          "kind": "tree",
+          "sources": [
+            "components"
+          ],
+          "root": {
+            "label": "Containers",
+            "children": [
+              {
+                "label": "Linear",
+                "children": [
+                  {
+                    "label": "Stack",
+                    "note": "LIFO"
+                  },
+                  {
+                    "label": "Queue",
+                    "note": "FIFO"
+                  },
+                  {
+                    "label": "Deque",
+                    "note": "both ends"
+                  }
+                ]
+              },
+              {
+                "label": "Non-linear",
+                "children": [
+                  {
+                    "label": "Tree",
+                    "note": "hierarchy"
+                  },
+                  {
+                    "label": "Graph",
+                    "note": "network"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "on_map": false
+    },
+    {
       "key": "bfs",
       "topic": "graphs",
       "title": "Breadth-first search",
       "kind": "algorithm",
+      "path": [
+        "Traversal"
+      ],
       "units": [
         "components"
       ],
@@ -304,12 +546,150 @@
         "conditions": "Adjacency lists."
       },
       "basis": "tested",
+      "workflow_from": "order-search",
       "sources": [
         {
           "key": "components",
           "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
         }
       ]
+    },
+    {
+      "key": "bfs-shortest",
+      "topic": "graphs",
+      "title": "When BFS finds shortest paths",
+      "kind": "theorem",
+      "path": [
+        "Traversal"
+      ],
+      "line": "In an unweighted graph, BFS reaches each node first along a path with the fewest edges.",
+      "basis": "emphasized",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "details": [
+        {
+          "kind": "text",
+          "title": "Conditions",
+          "sources": [
+            "components"
+          ],
+          "points": [
+            "Holds when every edge costs the same.",
+            "With different weights, the fewest edges need not be the cheapest path: use Dijkstra."
+          ]
+        },
+        {
+          "kind": "diagram",
+          "title": "Layers from the source",
+          "sources": [
+            "components"
+          ],
+          "description": "Three nodes in a line; the queue holds one layer at a time.",
+          "nodes": [
+            {
+              "key": "a",
+              "label": "A",
+              "row": 0,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "row": 0,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "row": 0,
+              "col": 2,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "b",
+              "directed": true
+            },
+            {
+              "start": "b",
+              "end": "c",
+              "directed": true
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Distance 1 discovered",
+              "visited": [
+                "a"
+              ],
+              "active": [
+                "b"
+              ],
+              "frontier": [
+                "c"
+              ],
+              "state": [
+                {
+                  "label": "Queue",
+                  "value": "C"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "a",
+                  "end": "b"
+                }
+              ]
+            }
+          ],
+          "state_labels": "traversal"
+        }
+      ]
+    },
+    {
+      "key": "average-degree",
+      "topic": "graphs",
+      "title": "Average degree",
+      "kind": "formula",
+      "path": [
+        "Measuring graphs"
+      ],
+      "line": "Each undirected edge adds 2 to the degree sum, so the average degree is twice the edges over the nodes.",
+      "formula": {
+        "latex": "\\bar{d} = \\frac{2E}{V}",
+        "plain": "d bar equals 2 E over V",
+        "symbols": [
+          {
+            "symbol": "\\(\\bar{d}\\)",
+            "meaning": "average number of neighbours per node"
+          },
+          {
+            "symbol": "\\(E\\)",
+            "meaning": "number of edges"
+          },
+          {
+            "symbol": "\\(V\\)",
+            "meaning": "number of nodes"
+          }
+        ],
+        "conditions": "Undirected graph without self-loops, \\(V > 0\\)."
+      },
+      "basis": "emphasized",
+      "sources": [
+        {
+          "key": "components",
+          "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+        }
+      ],
+      "on_map": false
     }
   ],
   "links": [
@@ -328,6 +708,16 @@
       "end": "stack",
       "kind": "contrasts",
       "note": "Opposite removal order."
+    },
+    {
+      "start": "queue",
+      "end": "ring-buffer",
+      "kind": "derives"
+    },
+    {
+      "start": "bfs",
+      "end": "bfs-shortest",
+      "kind": "derives"
     }
   ],
   "patterns": [
