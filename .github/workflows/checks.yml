@@ -65,14 +65,14 @@ jobs:
         if: runner.os != 'Linux'
         run: >-
           uv run pytest -v --tb=short --durations=20 -o faulthandler_timeout=120
-          -n auto --dist loadfile
+          -n logical --dist loadfile
           --deselect=tests/integration/test_study_browser.py::test_study_website_journeys_pass_in_the_checkout
       - name: Test in a Linux desktop keyring session
         if: runner.os == 'Linux'
         run: |
           dbus-run-session -- sh -e -c '
             printf "ci-test-only" | gnome-keyring-daemon --unlock --components=secrets
-            uv run pytest -v --tb=short --durations=20 -o faulthandler_timeout=120 -n auto --dist loadfile
+            uv run pytest -v --tb=short --durations=20 -o faulthandler_timeout=120 -n logical --dist loadfile
           '
       - name: Build Python distribution
         run: uv build

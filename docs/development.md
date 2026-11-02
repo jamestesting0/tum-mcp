@@ -10,7 +10,7 @@ Client adapters still generate the configuration each host needs.
 uv sync --locked
 uv run ruff check src tests scripts skill-lab
 uv run ruff format --check src tests scripts skill-lab
-uv run pytest -n auto --dist loadfile --tb=short --durations=20 -o faulthandler_timeout=120
+uv run pytest -n logical --dist loadfile --tb=short --durations=20 -o faulthandler_timeout=120
 uv build
 node npm/build.mjs
 npm test
@@ -22,8 +22,9 @@ npm run test:package-lifecycle
 
 Python 3.13 is the managed runtime. Install Tesseract for OCR tests. Default tests
 use synthetic sources and credentials. No language-server installation is needed.
-`-n auto --dist loadfile` (pytest-xdist) runs test files in parallel and keeps each
-file's module-scoped browser on one worker; drop it to debug a single test serially.
+`-n logical --dist loadfile` (pytest-xdist) runs one worker per logical CPU and keeps
+each file's module-scoped browser on one worker; drop it to debug a test serially.
+(`-n auto` counts physical cores and starts only two workers on 4-vCPU hosted runners.)
 The synthetic skill-lab tests run separately (`uv run pytest skill-lab/tests`), not in CI.
 
 Every test gets private `TUM_MCP_DATA_DIR`, `TUM_MOODLE_DATA_DIR` and
