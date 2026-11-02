@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.17.0 — 2026-11-02
+
 - Reviews hunt for defects instead of justifying scores: `tum-mcp study review-pack` gives one
   rubric pass its checks, the item's passages and its report prompts; findings quote their
   passage word for word and are accepted or rejected with a reason; scores follow from accepted
