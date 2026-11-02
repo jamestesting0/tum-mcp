@@ -26,10 +26,10 @@ def example_url(tmp_path: Path) -> Iterator[str]:
     assert result.exit_code == 0, result.output
     # A second practice question, so there is a next one to page to.
     path = root / "app/content.json"
-    content = json.loads(path.read_text())
+    content = json.loads(path.read_text(encoding="utf-8"))
     question = content["units"][0]["questions"][0]
     content["units"][0]["questions"].append({**question, "key": question["key"] + "-again"})
-    path.write_text(json.dumps(content))
+    path.write_text(json.dumps(content), encoding="utf-8")
     result = CliRunner().invoke(app, ["study", "build", str(root), "--local-only"])
     assert result.exit_code == 0, result.output
     with PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(root / "app"))) as server:
