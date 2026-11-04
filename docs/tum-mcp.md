@@ -121,14 +121,21 @@ tum-mcp study build --help
 
 `login` takes no arguments or connection options. Services marked Action needed
 are preselected; other services remain opt-in. Move with up/down, toggle
-services with Space, and press Enter. Defaults use saved diagnostic status;
-`doctor --live` checks whether saved sessions have expired.
+services with Space, and press Enter. Missing, stale (12-hour) or invalidated
+verification triggers a live identity check before the selector opens. Fresh
+results are reused; `doctor --live` forces another check.
 Choose a browser when more than one is
 installed. Only selected tabs open in one temporary browser context. Moodle,
 Artemis, Zulip and TUMonline all follow this flow.
 Sign-in/MFA stays in the browser. `TERM=dumb` uses numbered prompts: Enter accepts
-the displayed defaults, and entering numbers replaces them. Ctrl+C
+the displayed defaults, and entering numbers replaces them. Esc
 cancels and retains completed connections.
+
+`logout` without arguments opens a saved-account selector with the same session
+verification. Nothing is preselected. It removes only the chosen local sessions;
+settings, permissions, downloads and other connections remain. The explicit
+`logout PROVIDER ACCOUNT_ID` form does not need a terminal or a network check.
+Both Esc and Ctrl+C cancel selectors; their keyboard guides show Esc.
 
 Detection covers Chrome, Edge, Brave, Chromium, Vivaldi, Opera and selected
 preview channels. Set `TUM_MCP_BROWSER` to an executable path for another

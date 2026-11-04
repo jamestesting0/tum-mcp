@@ -10,6 +10,7 @@ import typer
 from prompt_toolkit.output import ColorDepth
 
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.terminal_input import numbered_input, with_escape
 from tum_mcp.tumonline.policy import LABELS, PolicyStore, Scope
 from tum_mcp.ui import (
     State,
@@ -57,11 +58,11 @@ def choose_scopes(current: frozenset[Scope]) -> frozenset[Scope] | None:
             console.print(f"{index}. {label} ({'allowed' if scope in current else 'denied'})")
         console.print(
             "Enter the numbers to allow, separated by commas, none to deny all, "
-            "or press Enter to keep the current settings."
+            "or press Enter to keep the current settings. Esc cancels."
         )
         numbers = {str(index): scope for index, (scope, _, _) in enumerate(CATEGORIES, 1)}
         while True:
-            answer = console.input("Permissions: ").strip().lower()
+            answer = numbered_input("Permissions: ").strip().lower()
             if not answer:
                 return current
             if answer == "none":
@@ -72,23 +73,25 @@ def choose_scopes(current: frozenset[Scope]) -> frozenset[Scope] | None:
             console.print("Choose numbers from the list, none, or Enter.")
 
     console.print("Up/down: move · Space: select")
-    console.print("Enter: save · Ctrl+C: cancel")
+    console.print("Enter: save · Esc: cancel")
     console.print()
-    selected = questionary.checkbox(
-        "TUMonline permissions",
-        choices=[
-            questionary.Choice(
-                selection_label(label, State.ENABLED if scope in current else State.DISABLED),
-                value=scope.value,
-                checked=scope in current,
-            )
-            for scope, label, _ in CATEGORIES
-        ],
-        qmark="",
-        pointer=">",
-        style=selector_style(),
-        instruction="",
-        color_depth=ColorDepth.DEPTH_1_BIT if "NO_COLOR" in os.environ else None,
+    selected = with_escape(
+        questionary.checkbox(
+            "TUMonline permissions",
+            choices=[
+                questionary.Choice(
+                    selection_label(label, State.ENABLED if scope in current else State.DISABLED),
+                    value=scope.value,
+                    checked=scope in current,
+                )
+                for scope, label, _ in CATEGORIES
+            ],
+            qmark="",
+            pointer=">",
+            style=selector_style(),
+            instruction="",
+            color_depth=ColorDepth.DEPTH_1_BIT if "NO_COLOR" in os.environ else None,
+        )
     ).unsafe_ask()
     return None if selected is None else frozenset(Scope(value) for value in selected)
 

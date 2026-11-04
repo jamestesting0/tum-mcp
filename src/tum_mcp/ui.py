@@ -15,6 +15,7 @@ from rich.theme import Theme
 from tum_mcp import __version__
 from tum_mcp.connect import ServiceChoice, available_services
 from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError
+from tum_mcp.terminal_input import numbered_input, with_escape
 
 STYLES = {
     "title": "bold",
@@ -163,14 +164,14 @@ def select_many[T](
         section(console, title)
         for index, (_, label, state, _selectable) in enumerate(choices, 1):
             console.print(Text.assemble(f"{index}. {label}  ", status_badge(state)))
-        console.print("Enter numbers separated by commas. Ctrl+C cancels.")
+        console.print("Enter numbers separated by commas. Esc cancels.")
         default_numbers = ",".join(
             str(index) for index, row in enumerate(choices, 1) if row[0] in selected_defaults
         )
         available = {str(index) for index, row in enumerate(choices, 1) if row[3]}
         while True:
             prompt = f"Selection [{default_numbers}]: " if default_numbers else "Selection: "
-            answer = console.input(prompt).strip()
+            answer = numbered_input(prompt).strip()
             numbers = [value.strip() for value in (answer or default_numbers).split(",")]
             if numbers and all(value in available for value in numbers):
                 selected = list(dict.fromkeys(choices[int(value) - 1][0] for value in numbers))
@@ -181,25 +182,27 @@ def select_many[T](
                 continue
             console.print("Choose at least one available item by number.")
     console.print("Up/down: move · Space: select")
-    console.print("Enter: continue · Ctrl+C: cancel")
+    console.print("Enter: continue · Esc: cancel")
     console.print()
-    result = questionary.checkbox(
-        title,
-        choices=[
-            questionary.Choice(
-                selection_label(label, state),
-                value=value,
-                disabled=not selectable,
-                checked=value in selected_defaults,
-            )
-            for value, label, state, selectable in choices
-        ],
-        qmark="",
-        pointer=">",
-        style=selector_style(),
-        instruction="",
-        validate=valid,
-        color_depth=ColorDepth.DEPTH_1_BIT if "NO_COLOR" in os.environ else None,
+    result = with_escape(
+        questionary.checkbox(
+            title,
+            choices=[
+                questionary.Choice(
+                    selection_label(label, state),
+                    value=value,
+                    disabled=not selectable,
+                    checked=value in selected_defaults,
+                )
+                for value, label, state, selectable in choices
+            ],
+            qmark="",
+            pointer=">",
+            style=selector_style(),
+            instruction="",
+            validate=valid,
+            color_depth=ColorDepth.DEPTH_1_BIT if "NO_COLOR" in os.environ else None,
+        )
     ).unsafe_ask()
     return (
         tuple(value for value, _, _, enabled in choices if enabled and value in result)
@@ -212,7 +215,7 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
     from tum_mcp.diagnostics import collect_services
 
     console = terminal_console()
-    report = collect_services()
+    report = collect_services(live="stale")
     descriptions = {
         ServiceChoice.MOODLE: "Materials and downloads",
         ServiceChoice.ARTEMIS: "Exercises and feedback",
@@ -226,13 +229,7 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
             item.state for item in report.services if item.label.split(" ")[0] == service.label
         ]
         state = (
-            State.ACTION
-            if State.ACTION in states
-            else State.CONFIGURED
-            if states and all(s == State.CONFIGURED for s in states)
-            else states[0]
-            if states
-            else State.UNCONFIGURED
+            State.ACTION if State.ACTION in states else states[0] if states else State.UNCONFIGURED
         )
         label = (
             service.label if console.width < 70 else f"{service.label:<10} {descriptions[service]}"
@@ -258,21 +255,24 @@ def select_browser(browsers: tuple[BrowserChoice, ...]) -> BrowserChoice:
         console.print("Browser")
         for index, browser in enumerate(browsers, 1):
             console.print(Text(f"{index}. {browser.label}"))
+        console.print("Enter a browser number. Esc cancels.")
         while True:
-            answer = console.input("Browser number: ").strip()
+            answer = numbered_input("Browser number: ").strip()
             if answer.isdecimal() and 1 <= int(answer) <= len(browsers):
                 return browsers[int(answer) - 1]
             console.print("Choose one of the listed browser numbers.")
     console.print("Up/down: move · Enter: continue")
-    console.print("Ctrl+C: cancel")
-    result = questionary.select(
-        "Browser",
-        choices=[questionary.Choice(browser.label, value=browser) for browser in browsers],
-        qmark="",
-        pointer=">",
-        instruction="",
-        style=selector_style(),
-        color_depth=ColorDepth.DEPTH_1_BIT if "NO_COLOR" in os.environ else None,
+    console.print("Esc: cancel")
+    result = with_escape(
+        questionary.select(
+            "Browser",
+            choices=[questionary.Choice(browser.label, value=browser) for browser in browsers],
+            qmark="",
+            pointer=">",
+            instruction="",
+            style=selector_style(),
+            color_depth=ColorDepth.DEPTH_1_BIT if "NO_COLOR" in os.environ else None,
+        )
     ).unsafe_ask()
     match result:
         case BrowserChoice():

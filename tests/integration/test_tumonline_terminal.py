@@ -118,13 +118,15 @@ def test_arrow_keys_move_between_categories(
     )
 
 
+@pytest.mark.parametrize("keys", [b"\x03", b"\x1b"])
+@pytest.mark.parametrize("terminal", ["xterm-256color", "dumb"])
 def test_checkbox_cancellation_preserves_policy(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, keys: bytes, terminal: str
 ) -> None:
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path))
     policies = PolicyStore()
     original = policies.create(ACCOUNT)
-    code, output = run_manager(tmp_path, b" \x03")
+    code, output = run_manager(tmp_path, keys, terminal=terminal)
     assert code == 0, output
     assert policies.read(ACCOUNT) == original
 

@@ -8,6 +8,7 @@ import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, ValidationError
 
@@ -50,39 +51,43 @@ def session_check(
     *,
     session: Path,
     key: Path,
-    live: bool,
+    live: bool | Literal["stale"],
     verify: Callable[[], None],
     verified_detail: str,
 ) -> Check:
     """Share timestamped live results across local status readers."""
     path = session.with_suffix(".verification.json")
-    if not live:
+    if live is not True:
+        cached = None
         try:
             cached = LiveVerification.model_validate_json(path.read_bytes())
         except FileNotFoundError:
-            return check
+            if live is False:
+                return check
         except ValidationError:
-            return check.model_copy(
+            check = check.model_copy(
                 update={"detail": "Invalid verification record; run tum-mcp doctor --live."}
             )
-        if cached.key_stamp != file_stamp(key):
-            return check
-        age = time.time() - cached.checked_at
-        if not 0 <= age < 12 * 60 * 60:
-            return check.model_copy(
+        if cached is not None and cached.key_stamp == file_stamp(key):
+            age = time.time() - cached.checked_at
+            if 0 <= age < 12 * 60 * 60:
+                timestamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(cached.checked_at))
+                return check.model_copy(
+                    update={
+                        "state": State.READY if cached.succeeded else State.ACTION,
+                        "detail": (
+                            f"Live session verified at {timestamp} (valid for 12 hours)."
+                            if cached.succeeded
+                            else f"Live check failed at {timestamp}; "
+                            "run tum-mcp doctor --live to retry."
+                        ),
+                    }
+                )
+            check = check.model_copy(
                 update={"detail": "Live verification expired; run tum-mcp doctor --live."}
             )
-        timestamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(cached.checked_at))
-        return check.model_copy(
-            update={
-                "state": State.READY if cached.succeeded else State.ACTION,
-                "detail": (
-                    f"Live session verified at {timestamp} (valid for 12 hours)."
-                    if cached.succeeded
-                    else f"Live check failed at {timestamp}; run tum-mcp doctor --live to retry."
-                ),
-            }
-        )
+        if live is False:
+            return check
     try:
         verify()
         result = check.model_copy(update={"state": State.READY, "detail": verified_detail})
@@ -149,7 +154,7 @@ class ServiceReport(Frozen):
     needs_connection: bool
 
 
-def collect_services(*, live: bool = False) -> ServiceReport:
+def collect_services(*, live: bool | Literal["stale"] = False) -> ServiceReport:
     """Inspect connections without runtime scans or local writes by default."""
     data = data_path()
     config = config_path()

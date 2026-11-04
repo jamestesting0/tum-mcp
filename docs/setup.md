@@ -55,7 +55,7 @@ needed, red means failed, and muted dots mean inactive. Every dot has a text
 label. `NO_COLOR` disables color; narrow terminals use stacked rows.
 
 Bare `tum-mcp setup`, `tum-mcp install` and `tum-mcp uninstall` share the same
-keyboard controls as login. Nothing is preselected; Ctrl+C cancels. Uninstall
+keyboard controls as login. Nothing is preselected; Esc cancels. Uninstall
 also offers **All — TUM MCP**, which removes the package and managed client setup.
 Personal notes, sessions and customized files are retained. Scripts can name extensions:
 `tum-mcp uninstall lecture audio-notes --json`.
@@ -94,8 +94,15 @@ Run **`tum-mcp login`**, with no arguments, in an interactive terminal:
 4. Return to the terminal for the saved-connection result.
 
 In a numbered prompt, Enter accepts the displayed defaults; entering numbers
-replaces them. Defaults use the saved diagnostic status. Run `tum-mcp doctor --live`
-to check whether a saved session has expired.
+replaces them. Esc cancels. Login verifies saved sessions when their diagnostic
+result is missing or older than 12 hours, or the credential key has changed.
+Fresh results are reused; `tum-mcp doctor --live` forces another check.
+
+Run `tum-mcp logout` to choose saved connections to remove. It refreshes stale
+verification in the same way, but preselects nothing. Removing a connection clears
+its local credentials, retaining settings, TUMonline permissions, downloads and
+other connections. Remote sessions are not revoked. The explicit
+`tum-mcp logout PROVIDER ACCOUNT_ID` form remains available for scripts.
 
 Campus services use temporary-browser sign-in and encrypted session storage.
 No API key or native credential-store prompt is needed. A temporary browser

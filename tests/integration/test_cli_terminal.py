@@ -22,6 +22,7 @@ def run_selector(
     browser_keys: bytes | None = None,
     columns: int = 80,
     checks: tuple[tuple[str, State], ...] = (),
+    command: str = "login",
 ) -> tuple[int, str]:
     import pty
 
@@ -33,7 +34,7 @@ def run_selector(
         "from tum_mcp.diagnostics import Check, ServiceReport\n"
         "from tum_mcp.connect import ConnectionResult\n"
         + (
-            "diagnostics.collect_services=lambda:ServiceReport(services=tuple("
+            "diagnostics.collect_services=lambda **kwargs:ServiceReport(services=tuple("
             "Check(label=label,state=state,detail='synthetic') for label,state in "
             f"{tuple((label, state.value) for label, state in checks)!r}"
             "),issues=(),needs_connection=True)\n"
@@ -52,7 +53,7 @@ def run_selector(
         "  if on_connected: on_connected(result)\n"
         " return results\n"
         "connect.connect_services=connected\n"
-        "sys.argv=['tum-mcp','login']\n"
+        f"sys.argv=['tum-mcp',{command!r}]\n"
         "from tum_mcp.cli import main\nmain()\n",
         encoding="utf-8",
     )
@@ -84,12 +85,18 @@ def run_selector(
                 ready = (
                     b"Selection" in plain and b": " in plain
                     if terminal == "dumb"
-                    else b"TUMonline" in plain and b"\x1b[?25l" in captured
+                    else (b"Choose connections" if command == "logout" else b"TUMonline") in plain
+                    and b"\x1b[?25l" in captured
                 )
                 if not sent and ready:
                     os.write(master, keys)
                     sent = True
-                elif sent and not browser_sent and browser_keys and b"Browser" in plain:
+                elif (
+                    sent
+                    and not browser_sent
+                    and browser_keys
+                    and (b"Browser number:" if terminal == "dumb" else b"Browser") in plain
+                ):
                     os.write(master, browser_keys)
                     browser_sent = True
             if process.poll() is not None:
@@ -117,12 +124,17 @@ def test_real_terminal_selection_connects_only_the_checked_services(tmp_path: Pa
     assert "SELECTED=moodle,artemis,zulip" not in output
 
 
-def test_real_terminal_cancellation_restores_cursor_and_never_connects(tmp_path: Path) -> None:
-    code, output = run_selector(tmp_path, b"\x03")
+@pytest.mark.parametrize("keys", [b"\x03", b"\x1b"])
+@pytest.mark.parametrize("terminal", ["xterm-256color", "dumb"])
+def test_real_terminal_cancellation_restores_cursor_and_never_connects(
+    tmp_path: Path, keys: bytes, terminal: str
+) -> None:
+    code, output = run_selector(tmp_path, keys, terminal=terminal)
     assert code == 130, output
     assert "SELECTED=" not in output
     assert "Cancelled" in output
-    assert "\x1b[?25h" in output
+    if terminal != "dumb":
+        assert "\x1b[?25h" in output
 
 
 def test_dumb_terminal_uses_a_numbered_prompt(tmp_path: Path) -> None:
@@ -166,8 +178,14 @@ def test_real_browser_picker_uses_the_chosen_browser_at_narrow_width(tmp_path: P
     assert "SELECTED=moodle" in output and "BROWSER=second" in output
 
 
-def test_cancelling_browser_picker_does_not_connect(tmp_path: Path) -> None:
-    code, output = run_selector(tmp_path, b" \r", browser_keys=b"\x03")
+@pytest.mark.parametrize("keys", [b"\x03", b"\x1b"])
+@pytest.mark.parametrize("terminal", ["xterm-256color", "dumb"])
+def test_cancelling_browser_picker_does_not_connect(
+    tmp_path: Path, keys: bytes, terminal: str
+) -> None:
+    code, output = run_selector(
+        tmp_path, b"1\n" if terminal == "dumb" else b" \r", browser_keys=keys, terminal=terminal
+    )
     assert code == 130, output
     assert "SELECTED=" not in output and "No browser was opened" in output
 
@@ -197,3 +215,32 @@ def test_login_defaults_to_action_needed_services_and_allows_changes(
     assert code == 0, output
     selected = re.search(r"SELECTED=([^\r\n]+)", output)
     assert selected and selected[1] == ("zulip" if override else "moodle,artemis"), output
+
+
+@pytest.mark.parametrize("terminal", ["xterm-256color", "dumb"])
+@pytest.mark.parametrize("cancel", [False, True])
+def test_logout_picker_removes_only_selected_connection_or_cancels(
+    tmp_path: Path, terminal: str, cancel: bool
+) -> None:
+    from tum_mcp.credentials import Credential, Vault
+    from tum_mcp.moodle.auth import Session, SessionStore
+    from tum_mcp.moodle.config import Paths
+    from tum_mcp.settings import Account, Provider, save_account
+
+    store = SessionStore(Paths.default(), storage="file")
+    store.save(Session(generation=store.begin_login(), cookies=[], verified_at=0))
+    account = Account(provider=Provider.ARTEMIS, origin="https://example.invalid", principal="keep")
+    save_account(account)
+    vault = Vault()
+    vault.save(account, Credential(account_id=account.id))
+    keys = b"\x1b" if cancel else b"1\n" if terminal == "dumb" else b" \r"
+    code, output = run_selector(
+        tmp_path,
+        keys,
+        terminal=terminal,
+        command="logout",
+        checks=(("Moodle", State.ACTION), ("Artemis", State.READY)),
+    )
+    assert code == (130 if cancel else 0), output
+    assert store.file("session.enc").exists() is cancel
+    assert vault.load(account).account_id == account.id

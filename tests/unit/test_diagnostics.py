@@ -58,7 +58,14 @@ def saved_service(
             principal="synthetic",
         )
         save_account(owner)
-    Vault().save(owner, Credential(account_id=owner.id, authentication="browser_session"))
+    cookies = (
+        (auth.Cookie(name="session", value="synthetic", domain="campus.tum.de"),)
+        if service == ServiceChoice.TUMONLINE
+        else ()
+    )
+    Vault().save(
+        owner, Credential(account_id=owner.id, authentication="browser_session", cookies=cookies)
+    )
     root = data_path() / "credentials/local"
     return service, root / f"{owner.id}.enc", root / "session.key"
 
@@ -216,6 +223,119 @@ def test_corrupt_verification_record_does_not_hide_saved_session(
     # Then it reports unverified without overwriting the damaged record.
     assert result.state == State.CONFIGURED
     assert record.read_bytes() == b"invalid json"
+
+
+@pytest.mark.parametrize("record_state", ["missing", "expired", "invalid", "key_changed"])
+@pytest.mark.parametrize("accepted", [False, True])
+def test_login_refreshes_stale_verification_and_preselects_rejected_sessions(
+    saved_service: tuple[ServiceChoice, Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    record_state: str,
+    accepted: bool,
+) -> None:
+    from tum_mcp import ui
+    from tum_mcp.diagnostics import collect_services
+
+    service, session, _ = saved_service
+    record = session.with_suffix(".verification.json")
+    if record_state != "missing":
+        collect_services(live=True)
+        if record_state == "expired":
+            monkeypatch.setattr("tum_mcp.diagnostics.time.time", lambda: 143_200)
+        elif record_state == "invalid":
+            record.write_bytes(b"invalid")
+        else:
+            saved = json.loads(record.read_bytes())
+            saved["key_stamp"] = [0, 0, 0, 0]
+            record.write_text(json.dumps(saved), encoding="utf-8")
+    calls = []
+
+    def verify(*args, **kwargs):
+        calls.append(service)
+        if not accepted:
+            raise CampusError(Code.AUTH_REQUIRED, "synthetic rejection")
+
+    for method in (
+        "tum_mcp.moodle.http_client.MoodleHTTP.get",
+        "tum_mcp.artemis.Artemis.identity",
+        "tum_mcp.zulip.Zulip.identity",
+        "tum_mcp.tum_live.TumLive.identity",
+        "tum_mcp.tumonline.study_service.StudyService.verify",
+    ):
+        monkeypatch.setattr(method, verify)
+    rows = []
+    defaults = []
+
+    def select(title, choices, **kwargs):
+        rows.extend(choices)
+        defaults.extend(kwargs["defaults"])
+        return None
+
+    monkeypatch.setattr(ui, "select_many", select)
+    ui.select_services()
+    assert calls == [service]
+    assert next(row[2] for row in rows if row[0] == service) == (
+        State.READY if accepted else State.ACTION
+    )
+    assert (service in defaults) is not accepted
+    assert json.loads(record.read_bytes())["succeeded"] is accepted
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_logout_verifies_saved_accounts_and_removes_only_selected_credentials(
+    saved_service: tuple[ServiceChoice, Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    cancel: bool,
+) -> None:
+    from types import SimpleNamespace
+
+    from tum_mcp import logout
+    from tum_mcp.tumonline.policy import PolicyStore
+
+    service, session, _ = saved_service
+    other = Account(provider=Provider.ZULIP, origin="https://example.invalid", principal="keep")
+    save_account(other)
+    vault = Vault()
+    vault.save(other, Credential(account_id=other.id))
+    policies = PolicyStore.snapshot()
+    monkeypatch.setattr(logout, "sys", SimpleNamespace(stdin=SimpleNamespace(isatty=lambda: True)))
+
+    def select(title, choices, **kwargs):
+        target = next(row for row in choices if row[0].service == service)
+        assert target[2] == State.READY
+        assert not kwargs.get("defaults")
+        return None if cancel else (target[0],)
+
+    monkeypatch.setattr(logout, "select_many", select)
+    if cancel:
+        import typer
+
+        with pytest.raises(typer.Exit) as stopped:
+            logout.choose_logout()
+        assert stopped.value.exit_code == 130
+    else:
+        logout.choose_logout()
+    assert session.exists() is cancel
+    assert vault.load(other).account_id == other.id
+    assert PolicyStore.snapshot() == policies
+
+
+def test_explicit_logout_keeps_positional_arguments_and_does_not_require_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    account = Account(
+        provider=Provider.ARTEMIS, origin="https://example.invalid", principal="remove"
+    )
+    save_account(account)
+    vault = Vault()
+    vault.save(account, Credential(account_id=account.id))
+    monkeypatch.setattr(
+        "tum_mcp.diagnostics.collect_services", lambda **kwargs: pytest.fail("No network required")
+    )
+    result = CliRunner().invoke(app, ["logout", "artemis", account.id])
+    assert result.exit_code == 0, result.output
+    with pytest.raises(CampusError):
+        vault.load(account)
 
 
 @pytest.fixture(autouse=True)

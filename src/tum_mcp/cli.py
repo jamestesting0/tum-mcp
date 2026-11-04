@@ -180,8 +180,18 @@ app.command()(discover)
 
 
 @app.command()
-def logout(provider: Provider, account_id: str) -> None:
-    """Remove one local credential; preserve settings, downloads, and workspaces."""
+def logout(
+    provider: Annotated[Provider | None, typer.Argument()] = None,
+    account_id: Annotated[str | None, typer.Argument()] = None,
+) -> None:
+    """Choose local connections to remove, or name one provider and account."""
+    if provider is None and account_id is None:
+        from tum_mcp.logout import choose_logout
+
+        choose_logout()
+        return
+    if provider is None or account_id is None:
+        raise CampusError(Code.ACTION_REQUIRED, "Provide both a provider and account ID.")
     Vault().logout(find_account(account_id, provider))
     typer.echo("Local credential removed. Revoke remote API keys separately if needed.")
 

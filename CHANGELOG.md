@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.17.2 — 2026-11-04
+
+- Selectors accept Escape to cancel and show Esc in the keyboard guide. Ctrl+C
+  still cancels. This includes numbered prompts, browser choice, extensions,
+  client setup and TUMonline permissions.
+- Login checks saved campus sessions when verification is missing, stale or no
+  longer matches the credential key. Fresh results are reused; rejected sessions
+  are marked Action needed and preselected. Default doctor checks remain local.
+- Running `tum-mcp logout` without arguments opens an account picker with the
+  same verification behavior. Nothing is preselected; removal preserves other
+  connections, account settings, TUMonline permissions and downloads. Explicit
+  provider/account logout remains available.
+
 ## 0.17.1 — 2026-11-04
 
 - Login preselects services marked Action needed, including services with more than
