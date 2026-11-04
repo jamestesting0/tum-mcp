@@ -87,10 +87,15 @@ retains its previous configuration format; new integrations should use `doctor -
 
 Run **`tum-mcp login`**, with no arguments, in an interactive terminal:
 
-1. Use up/down to move and Space to select services. Installed Lecture adds TUM-Live.
+1. Services marked Action needed are preselected. Use up/down to move and Space to
+   change the selection. Installed Lecture adds TUM-Live.
 2. Press Enter. If several browsers are installed, choose one and press Enter.
 3. Complete TUM sign-in/MFA in the opened window. Only selected service tabs open.
 4. Return to the terminal for the saved-connection result.
+
+In a numbered prompt, Enter accepts the displayed defaults; entering numbers
+replaces them. Defaults use the saved diagnostic status. Run `tum-mcp doctor --live`
+to check whether a saved session has expired.
 
 Campus services use temporary-browser sign-in and encrypted session storage.
 No API key or native credential-store prompt is needed. A temporary browser

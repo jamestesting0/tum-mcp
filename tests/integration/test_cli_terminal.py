@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tum_mcp.ui import State
+
 pytestmark = pytest.mark.skipif(os.name == "nt", reason="PTY keyboard QA uses POSIX terminal APIs.")
 
 
@@ -19,6 +21,7 @@ def run_selector(
     no_color: bool = False,
     browser_keys: bytes | None = None,
     columns: int = 80,
+    checks: tuple[tuple[str, State], ...] = (),
 ) -> tuple[int, str]:
     import pty
 
@@ -26,8 +29,18 @@ def run_selector(
     driver.write_text(
         "import sys\n"
         "from tum_mcp import connect\n"
+        "from tum_mcp import diagnostics\n"
+        "from tum_mcp.diagnostics import Check, ServiceReport\n"
         "from tum_mcp.connect import ConnectionResult\n"
-        "import tum_mcp.moodle.browsers as browsers\n"
+        + (
+            "diagnostics.collect_services=lambda:ServiceReport(services=tuple("
+            "Check(label=label,state=state,detail='synthetic') for label,state in "
+            f"{tuple((label, state.value) for label, state in checks)!r}"
+            "),issues=(),needs_connection=True)\n"
+            if checks
+            else ""
+        )
+        + "import tum_mcp.moodle.browsers as browsers\n"
         "browsers.discover_browsers=lambda:(browsers.BrowserChoice('First browser','first'),"
         + ("browsers.BrowserChoice('Second browser','second')," if browser_keys else "")
         + ")\n"
@@ -69,7 +82,7 @@ def run_selector(
                     os.write(master, b"\x1b[1;1R")
                 plain = re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", bytes(captured))
                 ready = (
-                    b"Selection: " in plain
+                    b"Selection" in plain and b": " in plain
                     if terminal == "dumb"
                     else b"TUMonline" in plain and b"\x1b[?25l" in captured
                 )
@@ -91,7 +104,9 @@ def run_selector(
     output = bytes(captured).decode("utf-8", errors="replace")
     if destination := os.environ.get("TUM_MCP_TERMINAL_QA"):
         Path(destination).mkdir(parents=True, exist_ok=True)
-        (Path(destination) / f"selector-{keys.hex()}.ansi").write_text(output, encoding="utf-8")
+        (Path(destination) / f"selector-{terminal}-{columns}-{keys.hex()}.ansi").write_text(
+            output, encoding="utf-8"
+        )
     return process.returncode, output
 
 
@@ -161,3 +176,24 @@ def test_dumb_terminal_browser_picker(tmp_path: Path) -> None:
     code, output = run_selector(tmp_path, b"1,2\n", browser_keys=b"2\n", terminal="dumb")
     assert code == 0, output
     assert "SELECTED=moodle,artemis" in output and "BROWSER=second" in output
+
+
+@pytest.mark.parametrize("terminal", ["xterm-256color", "dumb"])
+@pytest.mark.parametrize("override", [False, True])
+def test_login_defaults_to_action_needed_services_and_allows_changes(
+    tmp_path: Path, terminal: str, override: bool
+) -> None:
+    checks = (
+        ("Moodle", State.ACTION),
+        ("Artemis 1", State.READY),
+        ("Artemis 2", State.ACTION),
+        ("Zulip", State.CONFIGURED),
+        ("TUMonline", State.UNCONFIGURED),
+    )
+    keys = b"\r"
+    if override:
+        keys = b"3\n" if terminal == "dumb" else b" \x1b[B \x1b[B \r"
+    code, output = run_selector(tmp_path, keys, terminal=terminal, checks=checks)
+    assert code == 0, output
+    selected = re.search(r"SELECTED=([^\r\n]+)", output)
+    assert selected and selected[1] == ("zulip" if override else "moodle,artemis"), output

@@ -86,7 +86,7 @@ def test_live_result_survives_in_doctor_json_and_login_selector_without_remote_c
         monkeypatch.setattr(method, lambda *args, **kwargs: pytest.fail("No remote checks"))
     choices = []
 
-    def select(title, rows):
+    def select(title, rows, **kwargs):
         choices.extend(rows)
         return None
 

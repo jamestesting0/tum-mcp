@@ -140,7 +140,11 @@ def selection_label(label: str, state: State) -> list[tuple[str, str]]:
 
 
 def select_many[T](
-    title: str, choices: tuple[tuple[T, str, State, bool], ...], *, exclusive: T | None = None
+    title: str,
+    choices: tuple[tuple[T, str, State, bool], ...],
+    *,
+    exclusive: T | None = None,
+    defaults: tuple[T, ...] = (),
 ) -> tuple[T, ...] | None:
     """Choose actions independently from the displayed current status."""
 
@@ -152,14 +156,22 @@ def select_many[T](
         return True
 
     console = terminal_console()
+    selected_defaults = tuple(
+        value for value, _, _, enabled in choices if enabled and value in defaults
+    )
     if os.environ.get("TERM") == "dumb":
         section(console, title)
         for index, (_, label, state, _selectable) in enumerate(choices, 1):
             console.print(Text.assemble(f"{index}. {label}  ", status_badge(state)))
         console.print("Enter numbers separated by commas. Ctrl+C cancels.")
+        default_numbers = ",".join(
+            str(index) for index, row in enumerate(choices, 1) if row[0] in selected_defaults
+        )
         available = {str(index) for index, row in enumerate(choices, 1) if row[3]}
         while True:
-            numbers = [value.strip() for value in console.input("Selection: ").split(",")]
+            prompt = f"Selection [{default_numbers}]: " if default_numbers else "Selection: "
+            answer = console.input(prompt).strip()
+            numbers = [value.strip() for value in (answer or default_numbers).split(",")]
             if numbers and all(value in available for value in numbers):
                 selected = list(dict.fromkeys(choices[int(value) - 1][0] for value in numbers))
                 accepted = valid(selected)
@@ -174,7 +186,12 @@ def select_many[T](
     result = questionary.checkbox(
         title,
         choices=[
-            questionary.Choice(selection_label(label, state), value=value, disabled=not selectable)
+            questionary.Choice(
+                selection_label(label, state),
+                value=value,
+                disabled=not selectable,
+                checked=value in selected_defaults,
+            )
             for value, label, state, selectable in choices
         ],
         qmark="",
@@ -209,7 +226,9 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
             item.state for item in report.services if item.label.split(" ")[0] == service.label
         ]
         state = (
-            State.CONFIGURED
+            State.ACTION
+            if State.ACTION in states
+            else State.CONFIGURED
             if states and all(s == State.CONFIGURED for s in states)
             else states[0]
             if states
@@ -219,7 +238,11 @@ def select_services() -> tuple[ServiceChoice, ...] | None:
             service.label if console.width < 70 else f"{service.label:<10} {descriptions[service]}"
         )
         choices.append((service, label, state, True))
-    return select_many("Choose services", tuple(choices))
+    return select_many(
+        "Choose services",
+        tuple(choices),
+        defaults=tuple(service for service, _, state, _ in choices if state == State.ACTION),
+    )
 
 
 def select_browser(browsers: tuple[BrowserChoice, ...]) -> BrowserChoice:

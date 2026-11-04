@@ -119,11 +119,15 @@ tum-mcp --help
 tum-mcp study build --help
 ```
 
-`login` takes no arguments or connection options. Move with up/down, toggle
-services with Space, and press Enter. Choose a browser when more than one is
+`login` takes no arguments or connection options. Services marked Action needed
+are preselected; other services remain opt-in. Move with up/down, toggle
+services with Space, and press Enter. Defaults use saved diagnostic status;
+`doctor --live` checks whether saved sessions have expired.
+Choose a browser when more than one is
 installed. Only selected tabs open in one temporary browser context. Moodle,
 Artemis, Zulip and TUMonline all follow this flow.
-Sign-in/MFA stays in the browser. `TERM=dumb` uses numbered prompts. Ctrl+C
+Sign-in/MFA stays in the browser. `TERM=dumb` uses numbered prompts: Enter accepts
+the displayed defaults, and entering numbers replaces them. Ctrl+C
 cancels and retains completed connections.
 
 Detection covers Chrome, Edge, Brave, Chromium, Vivaldi, Opera and selected

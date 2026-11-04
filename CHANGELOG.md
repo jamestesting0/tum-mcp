@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.17.1 — 2026-11-04
+
+- Login preselects services marked Action needed, including services with more than
+  one saved account when any account needs attention. Press Enter to accept or
+  change the selection with Space. Numbered prompts also accept Enter for the
+  displayed defaults; other services remain opt-in.
+
 ## 0.17.0 — 2026-11-02
 
 - Reviews hunt for defects instead of justifying scores: `tum-mcp study review-pack` gives one
