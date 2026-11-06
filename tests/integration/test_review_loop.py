@@ -1,5 +1,6 @@
 import json
 import re
+import shlex
 import sys
 from importlib.resources import files
 from pathlib import Path
@@ -272,7 +273,7 @@ def test_a_headless_checker_is_recorded_as_fresh(project: Path, tmp_path: Path) 
     loop.start(project, budget=5)
     opened = loop.next_round(project)
     packet_id = opened["packets"][0]["packet"]
-    script = tmp_path / "checker.py"
+    script = tmp_path / "fresh checker.py"
     script.write_text(
         "import json, re, sys\n"
         f"sys.path[:0] = [{str(Path(__file__).parent)!r}, {str(Path(__file__).parents[1])!r}]\n"
@@ -289,7 +290,7 @@ def test_a_headless_checker_is_recorded_as_fresh(project: Path, tmp_path: Path) 
             "--packet",
             packet_id,
             "--command",
-            f"{sys.executable} {script} {{prompt}}",
+            shlex.join([sys.executable, str(script), "{prompt}"]),
         ],
     )
     assert result.exit_code == 0, result.output
@@ -379,7 +380,7 @@ def test_a_refused_checker_answer_gets_one_repair_pass(
     # A checker's whole review was lost twice to one malformed visual score.
     loop.start(project, budget=5)
     packet_id = loop.next_round(project)["packets"][0]["packet"]
-    script = tmp_path / "checker.py"
+    script = tmp_path / "fresh checker.py"
     script.write_text(
         "import json, re, sys\n"
         f"sys.path[:0] = [{str(Path(__file__).parent)!r}, {str(Path(__file__).parents[1])!r}]\n"
@@ -403,7 +404,7 @@ def test_a_refused_checker_answer_gets_one_repair_pass(
             "--packet",
             packet_id,
             "--command",
-            f"{sys.executable} {script} {{prompt}}",
+            shlex.join([sys.executable, str(script), "{prompt}"]),
         ],
     )
     if repair_valid:

@@ -1,6 +1,7 @@
 """Answer keys, plans and digests: the checks an author runs while writing one item."""
 
 import json
+import shlex
 import sys
 from pathlib import Path
 
@@ -124,7 +125,7 @@ def test_the_plan_gate_holds_only_for_the_plan_it_read(demo: Path, tmp_path: Pat
     invoke("review", "plan-record", str(demo), "--file", str(answer))
     assert gate_status(Plan.model_validate_json(path.read_bytes())) == "provisional"
     # A fresh headless checker reads the waiting plans and its verdict approves them.
-    script = tmp_path / "checker.py"
+    script = tmp_path / "plan checker.py"
     script.write_text(
         "import json, re, sys\n"
         "packet = json.load(open(re.search(r'at (\\S+\\.json)', sys.argv[1]).group(1)))\n"
@@ -132,7 +133,7 @@ def test_the_plan_gate_holds_only_for_the_plan_it_read(demo: Path, tmp_path: Pat
         "         for p in packet['plans']]\n"
         "print(json.dumps({'items': items}))\n"
     )
-    command = f"{sys.executable} {script} {{prompt}}"
+    command = shlex.join([sys.executable, str(script), "{prompt}"])
     assert invoke("review", "run-checker", str(demo), "--plans", "--command", command)[
         "recorded"
     ] == [item]
