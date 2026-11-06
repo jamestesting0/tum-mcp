@@ -68,6 +68,8 @@ def run_selector(
     captured = bytearray()
     sent = False
     browser_sent = False
+    cancel_started: float | None = None
+    cancel_elapsed: float | None = None
     deadline = time.monotonic() + 15
     try:
         while time.monotonic() < deadline:
@@ -82,6 +84,8 @@ def run_selector(
                 if b"\x1b[6n" in chunk:
                     os.write(master, b"\x1b[1;1R")
                 plain = re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", bytes(captured))
+                if cancel_started is not None and cancel_elapsed is None and b"Cancelled" in plain:
+                    cancel_elapsed = time.monotonic() - cancel_started
                 ready = (
                     b"Selection" in plain and b": " in plain
                     if terminal == "dumb"
@@ -89,6 +93,8 @@ def run_selector(
                     and b"\x1b[?25l" in captured
                 )
                 if not sent and ready:
+                    if keys == b"\x1b":
+                        cancel_started = time.monotonic()
                     os.write(master, keys)
                     sent = True
                 elif (
@@ -97,6 +103,8 @@ def run_selector(
                     and browser_keys
                     and (b"Browser number:" if terminal == "dumb" else b"Browser") in plain
                 ):
+                    if browser_keys == b"\x1b":
+                        cancel_started = time.monotonic()
                     os.write(master, browser_keys)
                     browser_sent = True
             if process.poll() is not None:
@@ -109,6 +117,10 @@ def run_selector(
         process.wait()
         os.close(master)
     output = bytes(captured).decode("utf-8", errors="replace")
+    if cancel_started is not None:
+        assert cancel_elapsed is not None and cancel_elapsed < 0.4, (
+            f"Escape cancellation took {cancel_elapsed!r} seconds.\n{output}"
+        )
     if destination := os.environ.get("TUM_MCP_TERMINAL_QA"):
         Path(destination).mkdir(parents=True, exist_ok=True)
         (Path(destination) / f"selector-{terminal}-{columns}-{keys.hex()}.ansi").write_text(

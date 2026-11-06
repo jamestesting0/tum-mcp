@@ -4,6 +4,7 @@
 
 ## 0.18.0 — 2026-11-06
 
+- Escape cancels CLI selectors promptly in both interactive and numbered terminal prompts.
 - Course authoring stores each lesson, exercise, exam entry and lecture in its own
   file. The Python implementation is organized under `tum_mcp.course`; the
   `tum-mcp study`, Lecture, media and campus tool entry points remain available.

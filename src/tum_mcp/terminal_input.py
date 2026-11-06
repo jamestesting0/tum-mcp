@@ -22,6 +22,8 @@ def escape_bindings() -> KeyBindings:
 
 def with_escape(question: questionary.Question) -> questionary.Question:
     application = question.application
+    # Both escape-sequence decoding and ambiguous bindings otherwise delay cancellation.
+    application.ttimeoutlen = application.timeoutlen = 0.05
     application.key_bindings = merge_key_bindings(
         [
             binding
@@ -37,6 +39,7 @@ def numbered_input(message: str) -> str:
     session: PromptSession[str] = PromptSession(
         key_bindings=escape_bindings(), output=DummyOutput()
     )
+    session.app.ttimeoutlen = session.app.timeoutlen = 0.05
     previous = 0
     ready = False
 
