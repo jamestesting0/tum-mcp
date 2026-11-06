@@ -150,6 +150,7 @@ def test_corpus_passes_and_an_edit_makes_its_check_stale(project: Path) -> None:
     assert checked["passed"] is True, checked["defects"]
     assert checked["checked"] == ["study/visuals"]
     assert checked["sheets"] and all((project / sheet).is_file() for sheet in checked["sheets"])
+    assert all(sheet.startswith(".tum-mcp/visuals/") for sheet in checked["sheets"])
     record = json.loads(report_path(project).read_bytes())["items"]["study/visuals"]
     assert len(record["visuals"]) == 19
     widths = {width for visual in record["visuals"] for width in visual["widths"]}

@@ -463,7 +463,7 @@ def _measure(
                         for item, taken in shots.items():
                             stem = folder / f"{sheet_stem or item.replace('/', '_')}-{name}"
                             sheets[item, name] = tuple(
-                                str(path.relative_to(root))
+                                path.relative_to(root).as_posix()
                                 for path in _sheets(sheet_page, taken, pixels, stem)
                             )
                     context.close()
