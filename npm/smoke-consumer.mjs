@@ -220,7 +220,11 @@ anyio.run(check)
   run(process.execPath, [launcher, 'study', 'demo', demoProject]);
   const template = JSON.parse(run(process.execPath, [launcher, 'study', 'template']));
   assert.equal(template.author, 'app/study/course.json and app/study/units/<unit>.json');
-  assert.ok(['flashcards.mjs', 'navigation.mjs', 'revision.mjs'].every(file => template.files.includes(file)));
+  assert.ok([
+    'runtime/study/flashcards.mjs',
+    'runtime/shell/navigation.mjs',
+    'runtime/study/revision.mjs',
+  ].every(file => template.files.includes(file)));
   assert.match(template.revision, /^[a-f0-9]{64}$/);
   const study = JSON.parse(run(process.execPath, [launcher, 'study', 'inspect', demoProject]));
   assert.equal(study.course.synthetic, true); assert.deepEqual(study.stale_units, []);
