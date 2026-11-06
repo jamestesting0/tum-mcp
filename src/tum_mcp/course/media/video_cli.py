@@ -60,7 +60,7 @@ def runtime_status(
     if json_output:
         _emit(report)
         return
-    from tum_mcp.ui import State, heading, status_rows, terminal_console
+    from tum_mcp.commands.ui import State, heading, status_rows, terminal_console
 
     console = terminal_console()
     heading(console, "Video runtime", "Manim, Typst and encoder for Video Notes.")

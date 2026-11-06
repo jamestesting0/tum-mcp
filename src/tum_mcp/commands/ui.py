@@ -13,9 +13,9 @@ from rich.text import Text
 from rich.theme import Theme
 
 from tum_mcp import __version__
+from tum_mcp.commands.terminal_input import numbered_input, with_escape
 from tum_mcp.connect import ServiceChoice, available_services
 from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError
-from tum_mcp.terminal_input import numbered_input, with_escape
 
 STYLES = {
     "title": "bold",

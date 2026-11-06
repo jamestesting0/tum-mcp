@@ -9,9 +9,9 @@ from rich.theme import Theme
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.commands.ui import STYLES, State, status_rows
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import audio_notes_enabled, lecture_enabled
-from tum_mcp.ui import STYLES, State, status_rows
 
 
 @pytest.fixture(autouse=True)

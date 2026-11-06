@@ -4,8 +4,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
-from tum_mcp.client_hosts import ClientHost
-from tum_mcp.client_installs import ClientName
+from tum_mcp.clients.hosts import ClientHost
+from tum_mcp.clients.installs import ClientName
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import config_dir
 

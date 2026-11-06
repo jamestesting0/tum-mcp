@@ -6,13 +6,14 @@ from shutil import which
 import pytest
 from typer.testing import CliRunner
 
-from tum_mcp import client_discovery, diagnostics
+from tum_mcp import diagnostics
 from tum_mcp.cli import app
-from tum_mcp.client_hosts import ClientHost
-from tum_mcp.client_installs import ClientName
+from tum_mcp.clients import discovery as client_discovery
+from tum_mcp.clients.hosts import ClientHost
+from tum_mcp.clients.installs import ClientName
+from tum_mcp.commands.ui import State
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.platforms import System
-from tum_mcp.ui import State
 
 
 @pytest.fixture

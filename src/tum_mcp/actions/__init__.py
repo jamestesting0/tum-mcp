@@ -2,14 +2,14 @@
 
 from filelock import FileLock
 
-from tum_mcp.action_models import ActionReceipt, ActionReview, StartAction, SubmitAction
-from tum_mcp.action_preflight import Preflight
-from tum_mcp.approvals import Approvals
+from tum_mcp.actions.approvals import Approvals
+from tum_mcp.actions.models import ActionReceipt, ActionReview, StartAction, SubmitAction
+from tum_mcp.actions.preflight import Preflight
+from tum_mcp.actions.remote_gate import require_verified_boundary
 from tum_mcp.artemis import Artemis
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.git_ops import run_git
-from tum_mcp.remote_gate import require_verified_boundary
 from tum_mcp.settings import Account, Provider, config_dir, find_account
 from tum_mcp.transport import API
 

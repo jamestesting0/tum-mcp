@@ -79,9 +79,9 @@ def set_extension(
     name: Literal["audio-notes", "video-notes", "course-memory"], enabled: bool
 ) -> str:
     """Enable only after all clients preflight; disable before trying to prune files."""
-    from tum_mcp.client_config import client_config_path, read_client_config
-    from tum_mcp.client_installs import Write, commit_writes, prune_removed_folders
     from tum_mcp.clients import prepare_client
+    from tum_mcp.clients.config import client_config_path, read_client_config
+    from tum_mcp.clients.installs import Write, commit_writes, prune_removed_folders
     from tum_mcp.skills import metadata, selected
     from tum_mcp.updates import installation_targets
 

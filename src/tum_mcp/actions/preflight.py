@@ -6,21 +6,21 @@ import time
 from pathlib import Path
 from typing import Literal
 
-from tum_mcp.action_models import (
+from tum_mcp.actions.models import (
     ActionReview,
     ActionTarget,
     StartAction,
     SubmitAction,
     action_fingerprint,
 )
+from tum_mcp.actions.submission import preview
+from tum_mcp.actions.test_receipts import load_test_receipt
 from tum_mcp.artemis import Artemis
 from tum_mcp.artemis.models import ExerciseView
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.git_ops import repository_url
 from tum_mcp.settings import Frozen, preferences
-from tum_mcp.submission import preview
-from tum_mcp.test_receipts import load_test_receipt
 
 
 class Constraints(Frozen):

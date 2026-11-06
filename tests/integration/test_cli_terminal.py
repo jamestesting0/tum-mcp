@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tum_mcp.ui import State
+from tum_mcp.commands.ui import State
 
 pytestmark = pytest.mark.skipif(os.name == "nt", reason="PTY keyboard QA uses POSIX terminal APIs.")
 

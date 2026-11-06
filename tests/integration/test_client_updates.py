@@ -6,7 +6,7 @@ import pytest
 
 from tum_mcp import skills
 from tum_mcp.clients import client_config_path, install_client
-from tum_mcp.skill_catalog import CURRENT_SKILLS
+from tum_mcp.skills.catalog import CURRENT_SKILLS
 
 
 @pytest.fixture(scope="module")
@@ -110,7 +110,7 @@ def test_customized_skill_blocks_its_client_without_overwriting_any_file(
 def test_failed_client_write_rolls_back_already_written_managed_files(
     name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from tum_mcp import client_installs
+    from tum_mcp.clients import installs as client_installs
     from tum_mcp.errors import CampusError
 
     # Given a changed runtime and a write error after its launcher would change.
@@ -118,7 +118,7 @@ def test_failed_client_write_rolls_back_already_written_managed_files(
     home = tmp_path / "profile"
     install_client(name, home)
     before = {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()}
-    from tum_mcp.client_hosts import ClientHost
+    from tum_mcp.clients.hosts import ClientHost
 
     target = client_installs.receipt_path(name, ClientHost.LOCAL, home)
     write = client_installs.private_write
@@ -223,8 +223,8 @@ def test_native_registration_binds_the_selected_data_and_download_directories(
 def test_update_does_not_silently_downgrade_a_newer_managed_client(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from tum_mcp.client_hosts import ClientHost
-    from tum_mcp.client_installs import receipt_path
+    from tum_mcp.clients.hosts import ClientHost
+    from tum_mcp.clients.installs import receipt_path
     from tum_mcp.errors import CampusError
 
     # Given a newer managed installation recorded by another package version.

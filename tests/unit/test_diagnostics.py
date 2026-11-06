@@ -9,13 +9,13 @@ import pytest
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app, main
+from tum_mcp.commands.ui import State
 from tum_mcp.connect import ServiceChoice
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.diagnostics import collect_diagnostics
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle import auth
 from tum_mcp.settings import Account, Provider, save_account
-from tum_mcp.ui import State
 
 
 @pytest.fixture(params=tuple(ServiceChoice))
@@ -74,7 +74,7 @@ def test_live_result_survives_in_doctor_json_and_login_selector_without_remote_c
     saved_service: tuple[ServiceChoice, Path, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Given a service freshly checked through the CLI.
-    from tum_mcp import ui
+    from tum_mcp.commands import ui
 
     service, session, _ = saved_service
     runner = CliRunner()
@@ -233,7 +233,7 @@ def test_login_refreshes_stale_verification_and_preselects_rejected_sessions(
     record_state: str,
     accepted: bool,
 ) -> None:
-    from tum_mcp import ui
+    from tum_mcp.commands import ui
     from tum_mcp.diagnostics import collect_services
 
     service, session, _ = saved_service
@@ -562,7 +562,8 @@ def test_all_campus_authentication_tools_direct_users_to_the_same_selector(
 def test_wsl_doctor_reports_both_client_profiles_without_creating_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from tum_mcp import client_discovery, diagnostics
+    from tum_mcp import diagnostics
+    from tum_mcp.clients import discovery as client_discovery
     from tum_mcp.moodle.platforms import System
 
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))

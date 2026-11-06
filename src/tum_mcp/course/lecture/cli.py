@@ -42,7 +42,7 @@ def runtime_status(
     if json_output:
         typer.echo(report.model_dump_json(indent=2))
         return
-    from tum_mcp.ui import State, heading, status_rows, terminal_console
+    from tum_mcp.commands.ui import State, heading, status_rows, terminal_console
 
     console = terminal_console()
     heading(console, "Lecture runtime", "Local speech recognition and recording prerequisites.")

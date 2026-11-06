@@ -12,9 +12,9 @@ from pathlib import Path
 from pydantic import JsonValue
 
 from tum_mcp import __version__
-from tum_mcp.client_config import Marketplace, client_config_path, read_client_config
-from tum_mcp.client_hosts import ClientHost, StdioLaunch, client_launch, storage_environment
-from tum_mcp.client_installs import MANAGED_ROOTS
+from tum_mcp.clients.config import Marketplace, client_config_path, read_client_config
+from tum_mcp.clients.hosts import ClientHost, StdioLaunch, client_launch, storage_environment
+from tum_mcp.clients.installs import MANAGED_ROOTS
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.moodle.config import private_write

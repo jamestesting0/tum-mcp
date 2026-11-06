@@ -157,9 +157,9 @@ def render_broker(
 
 
 def storage_environment(downloads: Path) -> dict[str, str]:
-    from tum_mcp.client_hosts import storage_environment as real
+    from skill_lab.install_variant import client_module
 
-    environment = dict(real())
+    environment = dict(client_module("hosts").storage_environment())
     environment["TUM_MOODLE_DOWNLOAD_DIR"] = str(downloads)
     return environment
 

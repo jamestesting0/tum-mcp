@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from tum_mcp import client_hosts
-from tum_mcp.client_hosts import ClientHost, StdioLaunch
 from tum_mcp.clients import client_config_path, install_client
+from tum_mcp.clients import hosts as client_hosts
+from tum_mcp.clients.hosts import ClientHost, StdioLaunch
 from tum_mcp.errors import CampusError
 from tum_mcp.moodle.browsers import BrowserSetupError
-from tum_mcp.skill_catalog import CURRENT_SKILLS
+from tum_mcp.skills.catalog import CURRENT_SKILLS
 from tum_mcp.uninstall import uninstall_client
 
 
@@ -96,7 +96,7 @@ def test_legacy_windows_registration_can_gain_download_path_binding(
 ) -> None:
     import os
 
-    from tum_mcp.legacy_clients import legacy_installation
+    from tum_mcp.clients.legacy import legacy_installation
 
     # Given a real-shaped old runtime and the former three-path WSL entry.
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))

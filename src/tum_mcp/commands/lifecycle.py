@@ -7,7 +7,7 @@ from typing import Annotated, Literal, assert_never
 
 import typer
 
-from tum_mcp.client_hosts import ClientHost
+from tum_mcp.clients.hosts import ClientHost
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extension_management import ExtensionName
 
@@ -26,6 +26,7 @@ def install(
     ] = False,
 ) -> None:
     """Choose optional workflows to install, or provide their names."""
+    from tum_mcp.commands.ui import State, heading, status_rows, terminal_console
     from tum_mcp.extension_management import LABELS, choose_extensions
     from tum_mcp.extensions import (
         install_lecture,
@@ -33,7 +34,6 @@ def install(
         set_course_memory,
         set_video_notes,
     )
-    from tum_mcp.ui import State, heading, status_rows, terminal_console
 
     selected = (
         tuple(extensions)
@@ -112,10 +112,10 @@ def setup(
     runtime_only: Annotated[bool, typer.Option("--runtime-only", hidden=True)] = False,
 ) -> None:
     """Prepare the runtime and choose coding clients to configure."""
-    from tum_mcp.client_hosts import client_home
     from tum_mcp.clients import install_client
+    from tum_mcp.clients.hosts import client_home
+    from tum_mcp.commands.ui import State, heading, select_many, status_rows, terminal_console
     from tum_mcp.diagnostics import available_client_checks
-    from tum_mcp.ui import State, heading, select_many, status_rows, terminal_console
 
     prepare_only = runtime_only or (
         not client and not sys.stdin.isatty() and os.environ.get("TUM_MCP_NPM_LAUNCHER") == "1"
@@ -174,8 +174,8 @@ def setup(
 
 def update() -> None:
     """Refresh configured clients after the npm launcher prepares the chosen version."""
+    from tum_mcp.commands.ui import State, heading, status_rows, terminal_console
     from tum_mcp.extensions import lecture_installation, prepare_recognizer
-    from tum_mcp.ui import State, heading, status_rows, terminal_console
     from tum_mcp.updates import refresh_clients
 
     console = terminal_console()

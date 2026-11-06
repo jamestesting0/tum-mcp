@@ -2,11 +2,11 @@
 
 from typing import Literal
 
+from tum_mcp.commands.ui import State
 from tum_mcp.diagnostics import Check, session_check
 from tum_mcp.errors import CampusError
 from tum_mcp.settings import data_path
 from tum_mcp.tumonline.policy import PolicyStore, Scope
-from tum_mcp.ui import State
 
 
 def connection_checks(*, live: bool | Literal["stale"] = False) -> tuple[Check, ...]:

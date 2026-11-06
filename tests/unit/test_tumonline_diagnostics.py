@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
+from tum_mcp.commands.ui import State
 from tum_mcp.credentials import Vault
 from tum_mcp.tumonline.diagnostics import connection_checks
 from tum_mcp.tumonline.policy import PolicyStore, Scope
-from tum_mcp.ui import State
 
 ACCOUNT = "a" * 64
 

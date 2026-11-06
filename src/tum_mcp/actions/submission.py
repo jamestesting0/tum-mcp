@@ -3,11 +3,11 @@
 import time
 from pathlib import Path
 
+from tum_mcp.actions.test_receipts import load_test_receipt
 from tum_mcp.artemis import Artemis
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.git_ops import run_git
 from tum_mcp.settings import Frozen, Provider, find_account, preferences
-from tum_mcp.test_receipts import load_test_receipt
 from tum_mcp.transport import API
 from tum_mcp.workspace import WorkspaceReceipt, fingerprint, workflow_status
 

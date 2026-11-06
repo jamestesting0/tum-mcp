@@ -9,11 +9,11 @@ from urllib.parse import unquote, urlsplit
 import typer
 from pydantic import SecretStr
 
+from tum_mcp.actions.runner import run_tests
 from tum_mcp.artemis import Artemis
 from tum_mcp.credentials import RepositorySecret, Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.git_ops import repository_url
-from tum_mcp.runner import run_tests
 from tum_mcp.settings import Provider, find_account
 from tum_mcp.transport import API
 

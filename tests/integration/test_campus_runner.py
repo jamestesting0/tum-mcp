@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from keyring.backend import KeyringBackend
 
-from tum_mcp.runner import run_tests
+from tum_mcp.actions.runner import run_tests
 from tum_mcp.settings import Account, Preferences, Provider, config_dir
 from tum_mcp.settings import TestRecipe as Recipe
 from tum_mcp.workspace import WorkspaceReceipt

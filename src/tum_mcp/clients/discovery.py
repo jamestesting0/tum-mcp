@@ -5,8 +5,8 @@ import shutil
 from pathlib import Path
 from typing import Final, assert_never
 
-from tum_mcp.client_hosts import ClientHost
-from tum_mcp.client_installs import ClientName
+from tum_mcp.clients.hosts import ClientHost
+from tum_mcp.clients.installs import ClientName
 from tum_mcp.moodle.platforms import System, system
 
 MAC_APPLICATIONS: Final = Path("/Applications")

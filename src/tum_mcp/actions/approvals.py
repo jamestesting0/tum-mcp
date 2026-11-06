@@ -8,7 +8,7 @@ from uuid import uuid4
 from cryptography.fernet import InvalidToken
 from filelock import FileLock
 
-from tum_mcp.action_models import Action, ActionReceipt, Grant, action_fingerprint
+from tum_mcp.actions.models import Action, ActionReceipt, Grant, action_fingerprint
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write

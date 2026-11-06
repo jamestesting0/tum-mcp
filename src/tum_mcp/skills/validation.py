@@ -9,8 +9,8 @@ from pydantic import Field
 
 from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.settings import Frozen
-from tum_mcp.skill_catalog import BUNDLED_SKILLS, OPTIONAL_SKILLS, active_skills
 from tum_mcp.skills import bundled, legacy_overrides, metadata, selected
+from tum_mcp.skills.catalog import BUNDLED_SKILLS, OPTIONAL_SKILLS, active_skills
 
 
 class ValidationReport(Frozen):

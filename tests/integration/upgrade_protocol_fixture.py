@@ -12,7 +12,7 @@ import anyio
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-from tum_mcp.client_config import client_config_path, read_client_config
+from tum_mcp.clients.config import client_config_path, read_client_config
 
 
 async def check() -> None:

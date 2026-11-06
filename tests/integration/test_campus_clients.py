@@ -15,7 +15,7 @@ from tum_mcp.uninstall import uninstall_client
 def test_skills_and_client_configuration_use_utf8_with_a_legacy_locale(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from tum_mcp.skill_validation import validate_skills
+    from tum_mcp.skills.validation import validate_skills
 
     # Given UTF-8 skills and user settings on a Windows-style default code page.
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
@@ -32,7 +32,7 @@ def test_skills_and_client_configuration_use_utf8_with_a_legacy_locale(
     uninstall_client("claude", home)
 
     # Then every skill remains readable and unrelated Unicode settings survive.
-    from tum_mcp.skill_catalog import CURRENT_SKILLS
+    from tum_mcp.skills.catalog import CURRENT_SKILLS
 
     assert set(report.checked_skills) == set(CURRENT_SKILLS)
     assert report.errors == ()
@@ -93,7 +93,7 @@ def test_personal_skill_override_survives_package_export(
     assert manifest["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
     assert len(manifest["extensions"]["com.openai"]["interface"]["shortDescription"]) <= 30
     # Codex keeps its plugin cache while the version is unchanged; the version follows the skills.
-    from tum_mcp.client_rendering import codex_cache_note, plugin_version
+    from tum_mcp.clients.rendering import codex_cache_note, plugin_version
 
     assert manifest["version"] == plugin_version(root / "skills")
     changed = tmp_path / "changed-skills"

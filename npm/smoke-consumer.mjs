@@ -63,7 +63,7 @@ from tum_mcp.moodle.config import Paths
 from tum_mcp.clients import install_client,client_config_path,read_client_config
 from tum_mcp.credentials import Credential,Vault
 from tum_mcp.settings import Account,Provider
-from tum_mcp.skill_catalog import CURRENT_SKILLS
+from tum_mcp.skills.catalog import CURRENT_SKILLS
 from tum_mcp.skills import bundled
 from tum_mcp.uninstall import uninstall_client
 def forbidden():
@@ -190,7 +190,7 @@ for name in ('cursor','antigravity'):
   const protocol = `import os,sys,anyio
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters,stdio_client
-from tum_mcp.client_hosts import ClientHost,client_launch
+from tum_mcp.clients.hosts import ClientHost,client_launch
 from tum_mcp.moodle.browsers import is_wsl
 async def check():
     launch=client_launch(ClientHost.WINDOWS if is_wsl() else ClientHost.LOCAL)

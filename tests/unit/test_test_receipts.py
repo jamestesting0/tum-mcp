@@ -3,9 +3,9 @@ from pathlib import Path
 import pytest
 from keyring.backend import KeyringBackend
 
+from tum_mcp.actions.runner import TestReceipt as Receipt
+from tum_mcp.actions.test_receipts import load_test_receipt, save_test_receipt
 from tum_mcp.errors import CampusError
-from tum_mcp.runner import TestReceipt as Receipt
-from tum_mcp.test_receipts import load_test_receipt, save_test_receipt
 from tum_mcp.workspace import WorkspaceReceipt
 
 

@@ -5,12 +5,12 @@ from pathlib import Path
 import pytest
 
 from tum_mcp import __version__
-from tum_mcp.client_hosts import ClientHost, client_launch
-from tum_mcp.client_installs import ClientName, Installation, receipt_path
 from tum_mcp.clients import client_config_path, install_client
+from tum_mcp.clients.hosts import ClientHost, client_launch
+from tum_mcp.clients.installs import ClientName, Installation, receipt_path
 from tum_mcp.errors import CampusError
-from tum_mcp.skill_catalog import CURRENT_SKILLS
 from tum_mcp.skills import customize_skill, export_pack
+from tum_mcp.skills.catalog import CURRENT_SKILLS
 from tum_mcp.uninstall import uninstall_client
 from tum_mcp.updates import refresh_clients
 

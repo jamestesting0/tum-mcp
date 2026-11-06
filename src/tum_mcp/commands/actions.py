@@ -5,8 +5,8 @@ from typing import Literal
 
 import typer
 
-from tum_mcp.action_preflight import Preflight
-from tum_mcp.approvals import Approvals
+from tum_mcp.actions.approvals import Approvals
+from tum_mcp.actions.preflight import Preflight
 from tum_mcp.artemis import Artemis
 from tum_mcp.credentials import Vault
 from tum_mcp.settings import Provider, find_account

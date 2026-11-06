@@ -8,11 +8,11 @@ from typing import Final, Literal
 
 from pydantic import Field, JsonValue, ValidationError, model_validator
 
-from tum_mcp.client_hosts import ClientHost
+from tum_mcp.clients.hosts import ClientHost
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen, config_path
-from tum_mcp.skill_catalog import BUNDLED_SKILLS, LEGACY_SKILLS
+from tum_mcp.skills.catalog import BUNDLED_SKILLS, LEGACY_SKILLS
 
 ClientName = Literal["codex", "claude", "cursor", "antigravity", "generic"]
 MANAGED_ROOTS: Final = {

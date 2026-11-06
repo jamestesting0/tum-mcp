@@ -4,7 +4,7 @@ import click
 import typer
 from typer.core import TyperArgument, TyperCommand, TyperGroup, TyperOption
 
-from tum_mcp.ui import detail_rows, heading, section, terminal_console
+from tum_mcp.commands.ui import detail_rows, heading, section, terminal_console
 
 
 def command_help(command: TyperCommand | TyperGroup, context: click.Context) -> None:

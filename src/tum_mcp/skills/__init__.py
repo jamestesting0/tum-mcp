@@ -12,8 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.settings import Frozen, config_path
-from tum_mcp.skill_catalog import LEGACY_SKILLS as LEGACY_SKILLS
-from tum_mcp.skill_catalog import OPTIONAL_SKILLS, active_skills
+from tum_mcp.skills.catalog import LEGACY_SKILLS as LEGACY_SKILLS
+from tum_mcp.skills.catalog import OPTIONAL_SKILLS, active_skills
 
 
 def legacy_overrides() -> tuple[Path, ...]:

@@ -7,12 +7,12 @@ from filelock import FileLock
 from pydantic import TypeAdapter, ValidationError
 
 from tum_mcp import __version__
-from tum_mcp.client_config import CLIENTS as CLIENTS
-from tum_mcp.client_config import ClientConfiguration, Marketplace
-from tum_mcp.client_config import client_config_path as client_config_path
-from tum_mcp.client_config import read_client_config as read_client_config
-from tum_mcp.client_hosts import ClientHost, client_home, client_launch
-from tum_mcp.client_installs import (
+from tum_mcp.clients.config import CLIENTS as CLIENTS
+from tum_mcp.clients.config import ClientConfiguration, Marketplace
+from tum_mcp.clients.config import client_config_path as client_config_path
+from tum_mcp.clients.config import read_client_config as read_client_config
+from tum_mcp.clients.hosts import ClientHost, client_home, client_launch
+from tum_mcp.clients.installs import (
     ClientName,
     Installation,
     Write,
@@ -24,8 +24,8 @@ from tum_mcp.client_installs import (
     receipt_path,
     require_supported_version,
 )
-from tum_mcp.client_rendering import rendered_client
-from tum_mcp.client_rendering import same_tree as same_tree
+from tum_mcp.clients.rendering import rendered_client
+from tum_mcp.clients.rendering import same_tree as same_tree
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.settings import config_dir, data_path
@@ -87,7 +87,7 @@ def prepare_client(
     if previous is not None:
         require_supported_version(previous, __version__)
     if previous is None and existing is not None:
-        from tum_mcp.legacy_clients import legacy_installation
+        from tum_mcp.clients.legacy import legacy_installation
 
         previous = legacy_installation(selected, host, base, existing, server)
     if (

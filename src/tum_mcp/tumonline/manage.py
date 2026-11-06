@@ -9,10 +9,8 @@ import questionary
 import typer
 from prompt_toolkit.output import ColorDepth
 
-from tum_mcp.errors import CampusError, Code
-from tum_mcp.terminal_input import numbered_input, with_escape
-from tum_mcp.tumonline.policy import LABELS, PolicyStore, Scope
-from tum_mcp.ui import (
+from tum_mcp.commands.terminal_input import numbered_input, with_escape
+from tum_mcp.commands.ui import (
     State,
     heading,
     selection_label,
@@ -20,6 +18,8 @@ from tum_mcp.ui import (
     status_rows,
     terminal_console,
 )
+from tum_mcp.errors import CampusError, Code
+from tum_mcp.tumonline.policy import LABELS, PolicyStore, Scope
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 CATEGORIES: Final = (

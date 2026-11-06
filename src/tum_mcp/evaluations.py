@@ -8,7 +8,7 @@ from pydantic import RootModel
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.parsing import decode
 from tum_mcp.settings import Frozen
-from tum_mcp.skill_validation import Trial
+from tum_mcp.skills.validation import Trial
 
 
 class ActivationCase(Frozen):

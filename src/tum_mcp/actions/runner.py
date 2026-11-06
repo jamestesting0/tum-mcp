@@ -173,7 +173,7 @@ def run_tests(workspace: Path, recipe_name: str) -> TestReceipt:
             output_truncated=truncated,
             verification_level=recipe.verification_level,
         )
-        from tum_mcp.test_receipts import save_test_receipt
+        from tum_mcp.actions.test_receipts import save_test_receipt
 
         save_test_receipt(receipt, record)
         return record

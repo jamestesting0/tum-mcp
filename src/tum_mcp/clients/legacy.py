@@ -10,8 +10,8 @@ from pathlib import Path
 
 from pydantic import JsonValue
 
-from tum_mcp.client_hosts import ClientHost
-from tum_mcp.client_installs import ClientName, Installation, read_owned_file
+from tum_mcp.clients.hosts import ClientHost
+from tum_mcp.clients.installs import ClientName, Installation, read_owned_file
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import data_path
 

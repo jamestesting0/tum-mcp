@@ -5,15 +5,17 @@ import httpx2
 import pytest
 from keyring.backend import KeyringBackend
 
-from tum_mcp import actions, remote_gate, submission
-from tum_mcp.action_models import ActionReview
-from tum_mcp.action_preflight import Preflight
-from tum_mcp.approvals import Approvals
+from tum_mcp import actions
+from tum_mcp.actions import remote_gate, submission
+from tum_mcp.actions.approvals import Approvals
+from tum_mcp.actions.models import ActionReview
+from tum_mcp.actions.preflight import Preflight
+from tum_mcp.actions.runner import TestReceipt as Receipt
+from tum_mcp.actions.test_receipts import save_test_receipt
 from tum_mcp.artemis import Artemis
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.git_ops import run_git
-from tum_mcp.runner import TestReceipt as Receipt
 from tum_mcp.settings import (
     Account,
     Provider,
@@ -23,7 +25,6 @@ from tum_mcp.settings import (
     save_account,
 )
 from tum_mcp.settings import TestRecipe as Recipe
-from tum_mcp.test_receipts import save_test_receipt
 from tum_mcp.transport import API
 from tum_mcp.workspace import WorkspaceReceipt, fingerprint
 

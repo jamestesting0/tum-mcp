@@ -5,8 +5,8 @@ import yaml
 
 from tum_mcp.clients import install_client
 from tum_mcp.errors import CampusError
-from tum_mcp.skill_validation import validate_skills
 from tum_mcp.skills import customize_skill, export_pack
+from tum_mcp.skills.validation import validate_skills
 
 
 def test_pack_contains_reading_and_study_workflows_with_valid_references(
@@ -75,8 +75,8 @@ def test_local_study_workflow_does_not_require_a_campus_server(name: str) -> Non
 
 def test_every_bundled_skill_has_complete_host_display_metadata() -> None:
     # Codex prefixes "<Plugin>: " to skills without a display name, so every skill needs one.
-    from tum_mcp.skill_catalog import BUNDLED_SKILLS
     from tum_mcp.skills import bundled
+    from tum_mcp.skills.catalog import BUNDLED_SKILLS
 
     for name in BUNDLED_SKILLS:
         metadata = yaml.safe_load((bundled() / name / "agents/openai.yaml").read_text("utf-8"))
@@ -91,7 +91,7 @@ def test_activation_cases_have_unique_ids_and_current_workflow_labels() -> None:
     from importlib.resources import files
 
     from tum_mcp.evaluations import Corpus
-    from tum_mcp.skill_catalog import BUNDLED_SKILLS
+    from tum_mcp.skills.catalog import BUNDLED_SKILLS
 
     cases = Corpus.model_validate_json(
         (files("tum_mcp") / "bundled/activation-cases.json").read_bytes()

@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from keyring.backend import KeyringBackend
 
-from tum_mcp.action_models import StartAction, action_fingerprint
-from tum_mcp.approvals import Approvals
+from tum_mcp.actions.approvals import Approvals
+from tum_mcp.actions.models import StartAction, action_fingerprint
 from tum_mcp.credentials import Vault
 from tum_mcp.errors import CampusError
 

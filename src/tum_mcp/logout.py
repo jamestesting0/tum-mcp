@@ -5,6 +5,7 @@ from typing import assert_never
 
 import typer
 
+from tum_mcp.commands.ui import State, heading, select_many, terminal_console
 from tum_mcp.connect import ConnectionResult, ServiceChoice
 from tum_mcp.credentials import Vault
 from tum_mcp.diagnostics import collect_services
@@ -15,7 +16,6 @@ from tum_mcp.settings import Account, Provider, preferences
 from tum_mcp.tumonline.identity import AccountRef
 from tum_mcp.tumonline.onboarding import disconnect
 from tum_mcp.tumonline.policy import PolicyStore
-from tum_mcp.ui import State, heading, select_many, terminal_console
 
 
 def choose_logout() -> None:

@@ -13,9 +13,10 @@ from typing import Literal
 from pydantic import Field, ValidationError
 
 from tum_mcp import __version__
-from tum_mcp.client_hosts import ClientHost, client_home
-from tum_mcp.client_installs import ClientName
 from tum_mcp.clients import CLIENTS, client_config_path, read_client_config
+from tum_mcp.clients.hosts import ClientHost, client_home
+from tum_mcp.clients.installs import ClientName
+from tum_mcp.commands.ui import State
 from tum_mcp.connect import ServiceChoice
 from tum_mcp.errors import CampusError
 from tum_mcp.moodle.browsers import BrowserSetupError, discover_browsers, is_wsl
@@ -24,7 +25,6 @@ from tum_mcp.moodle.errors import MoodleError
 from tum_mcp.moodle.platforms import data_root
 from tum_mcp.settings import Account, Frozen, Preferences, Provider, config_path, data_path
 from tum_mcp.skills import inspect_skills
-from tum_mcp.ui import State
 
 
 class Check(Frozen):
@@ -310,7 +310,7 @@ def client_check(name: str, *, home: Path, host: ClientHost = ClientHost.LOCAL) 
         )
         state = State.CONFIGURED if registered else State.UNCONFIGURED
         if registered and name == "codex":
-            from tum_mcp.client_rendering import codex_cache_note
+            from tum_mcp.clients.rendering import codex_cache_note
 
             if note := codex_cache_note(home):
                 state, detail = State.ACTION, note
@@ -330,7 +330,7 @@ def available_client_checks(
     *, home: Path, host: ClientHost = ClientHost.LOCAL, include_generic: bool = False
 ) -> tuple[tuple[ClientName, Check], ...]:
     """Show installed clients and existing registrations; setup also offers Generic."""
-    from tum_mcp.client_discovery import client_installed
+    from tum_mcp.clients.discovery import client_installed
 
     checks = []
     for name in CLIENTS:

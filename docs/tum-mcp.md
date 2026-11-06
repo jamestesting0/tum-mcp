@@ -367,7 +367,7 @@ development and held-out partitions. It covers explicit/implicit requests, unrel
 negatives, missing credentials and unsupported-action negatives. Old trial
 results must not be reused against the consolidated skill labels. `skills evaluate TRIALS.jsonl` scores supplied fresh-session
 records separately by host/version/model. Each record follows `Trial` in
-`skill_validation.py` and references its retained raw trace by SHA-256. The scorer
+`skills/validation.py` and references its retained raw trace by SHA-256. The scorer
 does not launch other agents or certify the supplied traces, summary quality,
 or platform acceptance. Inspect traces and backend effects before approving a
 release; no measured activation accuracy is claimed by the structural checks.

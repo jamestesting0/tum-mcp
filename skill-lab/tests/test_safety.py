@@ -26,7 +26,17 @@ def test_patch_paths_and_guard():
         "src/tum_mcp/moodle/service.py",
     ]
     assert safety.guarded(touched) == ["src/tum_mcp/moodle/service.py"]
-    for path in ("skill-lab/skill_lab/runs.py", "src/tum_mcp/client_rendering.py", "AGENTS.md"):
+    for path in (
+        "skill-lab/skill_lab/runs.py",
+        "src/tum_mcp/client_rendering.py",
+        "src/tum_mcp/clients/rendering.py",
+        "src/tum_mcp/clients/hosts.py",
+        "src/tum_mcp/commands/lifecycle.py",
+        "src/tum_mcp/commands/actions.py",
+        "src/tum_mcp/commands/workflow.py",
+        "src/tum_mcp/actions/remote_gate.py",
+        "AGENTS.md",
+    ):
         assert safety.guarded([path]) == [path]
     assert safety.guarded(["src/tum_mcp/study_report.py"]) == []
 

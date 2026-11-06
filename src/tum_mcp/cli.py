@@ -11,9 +11,9 @@ from typing import Annotated
 import typer
 
 from tum_mcp import __version__
-from tum_mcp.cli_help import configure_help
+from tum_mcp.commands.discovery import discover
+from tum_mcp.commands.help import configure_help
 from tum_mcp.credentials import Vault
-from tum_mcp.discovery_cli import discover
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import (
     audio_notes_enabled,
@@ -120,9 +120,9 @@ def connect() -> None:
     """Choose services and complete sign-in."""
     from rich.text import Text
 
+    from tum_mcp.commands.ui import heading, select_browser, select_services, terminal_console
     from tum_mcp.connect import ConnectionResult, ServiceChoice, connect_services
     from tum_mcp.moodle.browsers import discover_browsers
-    from tum_mcp.ui import heading, select_browser, select_services, terminal_console
 
     console = terminal_console()
     if not sys.stdin.isatty():
@@ -214,8 +214,8 @@ def doctor(
     """Show connections, extensions and relevant client/runtime health."""
     from rich.text import Text
 
+    from tum_mcp.commands.ui import heading, section, status_rows, terminal_console
     from tum_mcp.diagnostics import collect_diagnostics
-    from tum_mcp.ui import heading, section, status_rows, terminal_console
 
     report = collect_diagnostics(live=live)
     if json_output:
@@ -250,7 +250,7 @@ def doctor(
     )
 
 
-from tum_mcp.lifecycle_cli import install, setup, uninstall, update  # noqa: E402
+from tum_mcp.commands.lifecycle import install, setup, uninstall, update  # noqa: E402
 
 app.command()(setup)
 app.command()(install)
@@ -271,7 +271,7 @@ def list_skills(
     if json_output:
         typer.echo(json.dumps(skills, indent=2))
         return
-    from tum_mcp.ui import State, heading, status_rows, terminal_console
+    from tum_mcp.commands.ui import State, heading, status_rows, terminal_console
 
     console = terminal_console()
     heading(console, "Skills", "Active workflow definitions for your configured clients.")
@@ -317,13 +317,13 @@ def validate_skill_pack(
     ] = False,
 ) -> None:
     """Check metadata and real tool references; does not claim routing accuracy."""
-    from tum_mcp.skill_validation import validate_skills
+    from tum_mcp.skills.validation import validate_skills
 
     report = validate_skills(include_optional=all_skills)
     if json_output:
         typer.echo(report.model_dump_json(indent=2))
     else:
-        from tum_mcp.ui import State, heading, status_rows, terminal_console
+        from tum_mcp.commands.ui import State, heading, status_rows, terminal_console
 
         console = terminal_console()
         heading(

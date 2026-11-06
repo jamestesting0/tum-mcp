@@ -7,6 +7,7 @@ from typing import assert_never
 
 import typer
 
+from tum_mcp.commands.ui import State, heading, select_many, status_rows, terminal_console
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import (
     lecture_installation,
@@ -16,7 +17,6 @@ from tum_mcp.extensions import (
     set_video_notes,
     uninstall_lecture,
 )
-from tum_mcp.ui import State, heading, select_many, status_rows, terminal_console
 
 
 class ExtensionName(StrEnum):

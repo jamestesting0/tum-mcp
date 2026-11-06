@@ -7,9 +7,9 @@ from filelock import FileLock
 from pydantic import ValidationError
 
 from tum_mcp import __version__
-from tum_mcp.client_config import Marketplace, client_config_path, read_client_config
-from tum_mcp.client_hosts import ClientHost, client_home, client_launch
-from tum_mcp.client_installs import (
+from tum_mcp.clients.config import Marketplace, client_config_path, read_client_config
+from tum_mcp.clients.hosts import ClientHost, client_home, client_launch
+from tum_mcp.clients.installs import (
     ClientName,
     Installation,
     Write,
@@ -20,9 +20,9 @@ from tum_mcp.client_installs import (
     read_owned_file,
     receipt_path,
 )
-from tum_mcp.client_rendering import rendered_client
+from tum_mcp.clients.legacy import legacy_installation
+from tum_mcp.clients.rendering import rendered_client
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.legacy_clients import legacy_installation
 from tum_mcp.settings import config_dir
 
 

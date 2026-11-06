@@ -5,8 +5,8 @@ import pytest
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.client_config import client_config_path
 from tum_mcp.clients import install_client
+from tum_mcp.clients.config import client_config_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.moodle import auth
 from tum_mcp.removal import remove_clients

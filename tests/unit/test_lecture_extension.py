@@ -7,8 +7,8 @@ from tum_mcp.connect import ServiceChoice, available_services
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import install_lecture, lecture_enabled, require_lecture, uninstall_lecture
 from tum_mcp.lecture_processing import runtime
-from tum_mcp.skill_catalog import CURRENT_SKILLS
 from tum_mcp.skills import inspect_skills
+from tum_mcp.skills.catalog import CURRENT_SKILLS
 
 
 @pytest.fixture

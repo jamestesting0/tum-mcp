@@ -10,8 +10,8 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 from tum_mcp.clients import client_config_path, install_client
 from tum_mcp.errors import CampusError
-from tum_mcp.skill_catalog import CURRENT_SKILLS
 from tum_mcp.skills import bundled
+from tum_mcp.skills.catalog import CURRENT_SKILLS
 from tum_mcp.uninstall import uninstall_client
 
 

@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 from tum_mcp.cli import app
 from tum_mcp.clients import install_client
 from tum_mcp.extensions import lecture_enabled
-from tum_mcp.skill_catalog import CURRENT_SKILLS
+from tum_mcp.skills.catalog import CURRENT_SKILLS
 
 
 @pytest.fixture

@@ -180,7 +180,10 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/server.py` | Combined read-only MCP service, including sixteen `moodle_*` tools |
 | `src/tum_mcp/connect.py` | Unified interactive connection workflow |
 | `src/tum_mcp/credentials.py`, `transport.py`, `settings.py` | Shared campus credential vault, HTTP transport and account policy |
-| `src/tum_mcp/client_*.py` | Host-specific configuration and managed skill installation |
+| `src/tum_mcp/commands/` | CLI command groups and shared terminal presentation |
+| `src/tum_mcp/actions/` | Exercise action preflights, approval records, test evidence and the dormant executor |
+| `src/tum_mcp/clients/` | Host-specific configuration and managed skill installation |
+| `src/tum_mcp/skills/` | Skill registry, loading and validation |
 | `src/tum_mcp/course/project/` | Course state, paths, init, sync, status, the agent guide and the recorded schedule |
 | `src/tum_mcp/course/sources/` | Page text, search, imports, duplicates and source digests |
 | `src/tum_mcp/course/content/` | Per-workspace content models (study blocks, exercises, exam, responses) and the one per-item file loader (`store.py`) |

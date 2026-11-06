@@ -12,7 +12,7 @@ from tum_mcp.settings import data_dir
 from tum_mcp.workspace import WorkspaceReceipt
 
 if TYPE_CHECKING:
-    from tum_mcp.runner import TestReceipt
+    from tum_mcp.actions.runner import TestReceipt
 
 
 def _filename(workflow: WorkspaceReceipt) -> str:
@@ -30,7 +30,7 @@ def save_test_receipt(workflow: WorkspaceReceipt, receipt: "TestReceipt") -> Non
 
 
 def load_test_receipt(workflow: WorkspaceReceipt) -> "TestReceipt":
-    from tum_mcp.runner import TestReceipt
+    from tum_mcp.actions.runner import TestReceipt
 
     path = data_dir() / "workflow-state" / _filename(workflow)
     if not path.is_file():
