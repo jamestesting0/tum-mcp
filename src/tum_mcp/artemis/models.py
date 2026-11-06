@@ -1,6 +1,14 @@
 """Student-facing Artemis response projections; secrets and staff fields are dropped."""
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel, SecretStr
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    SecretStr,
+    model_validator,
+)
 
 from tum_mcp.settings import Frozen, PositiveId
 
@@ -98,6 +106,19 @@ class Exercise(Wire):
 
 class Overview(Wire):
     exercises: tuple[Exercise, ...]
+
+    @model_validator(mode="before")
+    @classmethod
+    def omitted_empty_exercises(cls, value: object) -> object:
+        # Artemis omits the empty exercise set from its score-summary envelope.
+        score_groups = ("total", "text", "programming", "modeling", "fileUpload", "quiz")
+        if (
+            isinstance(value, dict)
+            and "exercises" not in value
+            and all(isinstance(value.get(f"{group}Scores"), dict) for group in score_groups)
+        ):
+            return {"exercises": ()}
+        return value
 
 
 class Details(Wire):

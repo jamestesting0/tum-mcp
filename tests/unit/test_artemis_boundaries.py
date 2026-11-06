@@ -14,7 +14,11 @@ COMMIT = "a" * 40
 
 
 def provider(
-    *, sensitive: bool = True, wrong_course: bool = False, workspace_enabled: bool = True
+    *,
+    sensitive: bool = True,
+    wrong_course: bool = False,
+    workspace_enabled: bool = True,
+    overview: dict | None = None,
 ) -> Artemis:
     account = Account(
         provider=Provider.ARTEMIS,
@@ -57,7 +61,9 @@ def provider(
 
     routes = {
         "/api/core/public/account": {"id": 7, "login": "student"},
-        "/api/course/courses/77/exercises-for-overview": {
+        "/api/course/courses/77/exercises-for-overview": overview
+        if overview is not None
+        else {
             "exercises": [exercise, {"id": 12, "title": "Exam", "type": "quiz"}],
         },
         "/api/exercise/exercises/11/details": {"exercise": exercise},
@@ -126,6 +132,22 @@ def test_course_listing_omits_sensitive_records_and_assessments() -> None:
     assert result.exercises[0].student_participations is None
     assert result.exercises[0].problem_statement is None
     assert artemis.exercise(77, 11).exercise.student_participations[0].id == 9
+
+
+def test_overview_accepts_omitted_empty_exercise_list() -> None:
+    # Artemis omits its empty exercise set but retains all score summaries.
+    response = {
+        f"{kind}Scores": {}
+        for kind in ("total", "text", "programming", "modeling", "fileUpload", "quiz")
+    }
+    overview = provider(overview=response).exercises(77)
+    assert overview.model_dump(mode="json") == {"exercises": []}
+
+
+@pytest.mark.parametrize("response", [{}, {"totalScores": {}}, {"exercises": {}}])
+def test_overview_rejects_unrecognized_missing_or_malformed_list(response: dict) -> None:
+    with pytest.raises(CampusError, match="INVALID_RESPONSE"):
+        provider(overview=response).exercises(77)
 
 
 def test_cross_course_exercise_response_is_rejected() -> None:
