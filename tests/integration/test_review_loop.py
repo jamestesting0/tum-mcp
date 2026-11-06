@@ -17,7 +17,10 @@ RULED = "The situation is one plain fact the prompt states."
 
 
 def packets(project: Path, opened: dict) -> list[dict]:
-    return [json.loads((project / entry["path"]).read_text()) for entry in opened["packets"]]
+    return [
+        json.loads((project / entry["path"]).read_text(encoding="utf-8"))
+        for entry in opened["packets"]
+    ]
 
 
 def answer(packet: dict, fail: dict[str, str] | None = None, covers: dict | None = None) -> dict:
@@ -258,7 +261,11 @@ def test_a_spent_budget_stops_and_extending_continues(project: Path) -> None:
         loop.next_round(project)
     loop.extend(project, 1)
     assert loop.status(project)["status"] == "running"
-    assert (project / ".tum-mcp/loop/scorecard.md").read_text().startswith("# Review scorecard")
+    assert (
+        (project / ".tum-mcp/loop/scorecard.md")
+        .read_text(encoding="utf-8")
+        .startswith("# Review scorecard")
+    )
 
 
 def test_a_headless_checker_is_recorded_as_fresh(project: Path, tmp_path: Path) -> None:
@@ -271,7 +278,7 @@ def test_a_headless_checker_is_recorded_as_fresh(project: Path, tmp_path: Path) 
         f"sys.path[:0] = [{str(Path(__file__).parent)!r}, {str(Path(__file__).parents[1])!r}]\n"
         "from test_review_loop import answer\n"
         "path = re.search(r'at (\\S+\\.json)', sys.argv[1]).group(1)\n"
-        "print(json.dumps(answer(json.load(open(path)))))\n"
+        "print(json.dumps(answer(json.load(open(path, encoding='utf-8')))))\n"
     )
     result = CliRunner().invoke(
         app,
@@ -378,7 +385,8 @@ def test_a_refused_checker_answer_gets_one_repair_pass(
         f"sys.path[:0] = [{str(Path(__file__).parent)!r}, {str(Path(__file__).parents[1])!r}]\n"
         "from test_review_loop import answer\n"
         "prompt = sys.argv[1]\n"
-        "packet = json.load(open(re.search(r'packet at (\\S+\\.json)', prompt).group(1)))\n"
+        "packet = json.load(open(re.search(r'packet at (\\S+\\.json)', prompt).group(1), "
+        "encoding='utf-8'))\n"
         "result = answer(packet)\n"
         "if 'were refused' not in prompt:\n"
         "    result['items'][0]['checks'].pop(next(iter(result['items'][0]['checks'])))\n"

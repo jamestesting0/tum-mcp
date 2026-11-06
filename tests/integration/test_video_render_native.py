@@ -93,7 +93,7 @@ def installed_data(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPat
 def course(tmp_path: Path, scene: str) -> Path:
     root = tmp_path / "course"
     (root / "app").mkdir(parents=True)
-    shutil.copyfile(FIXTURES / "course_app/content.json", content_file(root, "study"))
+    content_file(root, "study").write_bytes((FIXTURES / "course_app/content.json").read_bytes())
     selection = tmp_path / "selection.json"
     selection.write_text(
         json.dumps({"units": [{"unit": "bfs", "decision": "video", "reason": "Trace."}]}),

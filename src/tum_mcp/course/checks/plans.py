@@ -79,7 +79,11 @@ def read_plan(root: Path, item: str) -> Plan | None:
 def plans(root: Path) -> list[Plan]:
     folder = confined(root, ".tum-mcp/plans")
     found = sorted(folder.glob("**/*.json")) if folder.is_dir() else []
-    return [plan for path in found if (plan := read_plan(root, str(path.relative_to(folder))[:-5]))]
+    return [
+        plan
+        for path in found
+        if (plan := read_plan(root, path.relative_to(folder).with_suffix("").as_posix()))
+    ]
 
 
 def _stepped(block: dict) -> bool:
