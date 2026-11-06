@@ -4,6 +4,8 @@ import hashlib
 import io
 import json
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -28,6 +30,7 @@ HOST_LOGS = {
 
 Installer = Callable[[Path, str, Path, Path], None]
 SESSION_EXPIRED_MARKERS = ("SESSION_EXPIRED",)
+BROKER_SECONDS = 2400
 EXPIRED_MESSAGE = "A campus session expired during the run; run `tum-mcp login`, then repeat it."
 
 
@@ -35,55 +38,119 @@ def _broker_command(python: Path, arguments: list[str]) -> list[str]:
     return [str(python), "-I", "-m", "tum_mcp", *arguments]
 
 
-def _render_request(job: dict, workspace: Path) -> tuple[list[str], Path]:
+RENDER_OPTIONS = frozenset({"--exam", "--gallery", "--phone", "--interact", "--json"})
+PACKET = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{0,80}$")
+
+
+def _render_request(
+    job: dict, workspace: Path, checker: list[str] | None = None
+) -> tuple[list[str], Path]:
     arguments = job["arguments"]
     cwd = Path(job["cwd"]).resolve()
-    if not cwd.is_relative_to(workspace) or arguments[:2] != ["study", "visuals"]:
-        raise LabError("The render broker only runs study visuals inside its trial workspace.")
+    command = arguments[:2]
+    if not cwd.is_relative_to(workspace) or command not in (
+        ["study", "visuals"],
+        ["review", "run-checker"],
+        ["lecture", "prepare"],
+    ):
+        raise LabError(
+            "The broker only runs study visuals, review run-checker and lecture prepare "
+            "inside its trial workspace."
+        )
     if len(arguments) < 3 or arguments[2].startswith("-"):
-        raise LabError("A render request names its course project.")
+        raise LabError("A broker request names its course project.")
     project = (cwd / arguments[2]).resolve()
     if not project.is_relative_to(workspace):
-        raise LabError("A render request's project stays inside its trial workspace.")
+        raise LabError("A broker request's project stays inside its trial workspace.")
     options = iter(arguments[3:])
-    for option in options:
-        if option in {"--unit", "--exercise"}:
+    if command == ["lecture", "prepare"]:
+        recordings = 0
+        for option in options:
+            if option == "--previews":
+                continue
             value = next(options, "")
-            if not value or value.startswith("-"):
-                raise LabError("A render selection needs a unit or exercise key.")
-        elif option not in {"--exam", "--gallery", "--phone"}:
-            raise LabError("The render broker received an unsupported option.")
-    return arguments, cwd
+            pattern = {
+                "--recording": r"https://live\.rbg\.tum\.de/w/[A-Za-z0-9_-]{1,100}/[1-9][0-9]{0,15}",
+                "--language": r"[a-z]{2,3}",
+                "--frame-at": r"[0-9]{1,7}(?:\.[0-9]{1,6})?",
+            }.get(option)
+            if pattern is None or re.fullmatch(pattern, value) is None:
+                raise LabError(
+                    "Lecture preparation accepts canonical recording URLs, language, "
+                    "frame times and --previews only."
+                )
+            recordings += option == "--recording"
+        if not recordings:
+            raise LabError("Lecture preparation names at least one selected recording.")
+        return arguments, cwd
+    if command == ["study", "visuals"]:
+        for option in options:
+            if option in {"--unit", "--exercise"}:
+                value = next(options, "")
+                if not value or value.startswith("-"):
+                    raise LabError("A render selection needs a unit or exercise key.")
+            elif option not in RENDER_OPTIONS:
+                raise LabError("The render broker received an unsupported option.")
+        return arguments, cwd
+    # A fresh checker: the trial names only what to check; the lab picks the read-only command,
+    # with the trial's own host and model, so a trial cannot run anything else on the host.
+    if checker is None:
+        raise LabError("This trial has no fresh checker.")
+    chosen: list[str] = []
+    for option in options:
+        if option == "--packet":
+            value = next(options, "")
+            if not PACKET.match(value):
+                raise LabError("A checker request names a packet id from review next.")
+            chosen += [option, value]
+        elif option == "--plans":
+            chosen.append(option)
+        else:
+            raise LabError("A checker request names only --packet ID or --plans.")
+    return [*arguments[:3], *chosen, "--command", shlex.join(checker)], cwd
 
 
-def render_broker(folder: Path, python: Path) -> threading.Event:
-    """Serve the trial's browser checks on the host, outside the author's sandbox: each request
-    file names a `tum-mcp` command, and its result is written beside it. Returns the event that
-    stops the server."""
+def render_broker(
+    folder: Path,
+    python: Path,
+    checker: list[str] | None = None,
+    environment: dict[str, str] | None = None,
+) -> threading.Event:
+    """Serve vetted checks and recording preparation outside the author's sandbox.
+
+    Each request names a workspace-bound command; its result is written beside it.
+    Returns the event that stops the server.
+    """
     stop = threading.Event()
 
+    def handle(request: Path, job: dict) -> None:
+        try:
+            arguments, cwd = _render_request(job, folder.parent.resolve(), checker)
+            done = subprocess.run(  # noqa: S603 - workspace-bound vetted command only
+                _broker_command(python, arguments),
+                cwd=cwd,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=BROKER_SECONDS,
+                check=False,
+            )
+            result = {"code": done.returncode, "stdout": done.stdout, "stderr": done.stderr}
+        except (LabError, subprocess.TimeoutExpired) as error:
+            result = {"code": 2, "stdout": "", "stderr": str(error)}
+        response = request.with_name(request.name.replace(".request.", ".response."))
+        staged = response.with_suffix(".tmp")
+        staged.write_text(json.dumps(result), encoding="utf-8")
+        staged.replace(response)
+
     def serve() -> None:
+        # Each request runs on its own thread: a render never waits behind a long checker,
+        # and a round's checkers run side by side.
         while not stop.wait(1):
             for request in sorted(folder.glob("*.request.json")):
                 job = json.loads(request.read_text(encoding="utf-8"))
                 request.unlink()
-                try:
-                    arguments, cwd = _render_request(job, folder.parent.resolve())
-                    done = subprocess.run(  # noqa: S603 - workspace-bound render command only
-                        _broker_command(python, arguments),
-                        cwd=cwd,
-                        capture_output=True,
-                        text=True,
-                        timeout=1200,
-                        check=False,
-                    )
-                    result = {"code": done.returncode, "stdout": done.stdout, "stderr": done.stderr}
-                except (LabError, subprocess.TimeoutExpired) as error:
-                    result = {"code": 2, "stdout": "", "stderr": str(error)}
-                response = request.with_name(request.name.replace(".request.", ".response."))
-                staged = response.with_suffix(".tmp")
-                staged.write_text(json.dumps(result), encoding="utf-8")
-                staged.replace(response)
+                threading.Thread(target=handle, args=(request, job), daemon=True).start()
 
     threading.Thread(target=serve, daemon=True).start()
     return stop
@@ -375,12 +442,10 @@ def _run(
     }
     write_record(run_dir, record)
     began = time.monotonic()
-    serving = render_broker(broker, python)
+    environment = hosts.clean_environment(storage_environment(downloads), home, bin_dir, spec.host)
+    serving = render_broker(broker, python, hosts.checker_command(spec), environment)
     try:
         installer(variant_dir, spec.host, home, downloads)
-        environment = hosts.clean_environment(
-            storage_environment(downloads), home, bin_dir, spec.host
-        )
         if source:
             snapshot(history, workspace, start)
         session = None

@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 
 from skill_lab import LabError
+from tum_mcp.course.content.store import read_document, write_document
 
 META_LINE = "This section explains the idea that follows."
 DESCRIBED = "Students often get this step wrong."
@@ -236,11 +237,21 @@ def _extra_defects(content: dict, touched: set[int]) -> list[dict]:
 
 
 def _findings(project: Path) -> list[tuple[str, dict]]:
-    card = _read(project / ".tum-mcp" / "review.json") or {}
+    """Every finding in the review records, in the shape recall compares: a rejected finding
+    stays rejected, any other one was accepted."""
+    records = sorted((project / ".tum-mcp" / "review" / "items").glob("**/*.json"))
     return [
-        (review["item"], finding)
-        for review in card.get("reviews", [])
-        for finding in review.get("findings", [])
+        (
+            record["item"],
+            {
+                "dimension": finding["check"].split(".")[0],
+                "check": finding["check"],
+                "note": finding["why"],
+                "status": "rejected" if finding["status"] == "rejected" else "accepted",
+            },
+        )
+        for record in map(_read, records)
+        for finding in record.get("findings", [])
     ]
 
 
@@ -248,8 +259,7 @@ def plant(workspace: Path) -> dict:
     """Plants every defect the course has a place for; returns what was planted where and the
     findings the scorecard already held, which do not count as finding a planted defect."""
     project = _project(workspace)
-    app = project / "app"
-    content, exam = _read(app / "content.json"), _read(app / "exam.json")
+    content, exam = read_document(project, "study"), read_document(project, "exam")
     if content is None:
         raise LabError("Calibration needs Study content to plant defects in.")
     planted, touched = [], set()
@@ -259,9 +269,9 @@ def plant(workspace: Path) -> dict:
                 {"defect": name, "check": CHECKS[name], "dimension": dimension, **record}
             )
     planted.extend(_extra_defects(content, touched))
-    (app / "content.json").write_text(json.dumps(content, indent=2, ensure_ascii=False) + "\n")
+    write_document(project, "study", content)
     if exam is not None:
-        (app / "exam.json").write_text(json.dumps(exam, indent=2, ensure_ascii=False) + "\n")
+        write_document(project, "exam", exam)
     prior = [
         [item, finding["dimension"], finding.get("note", "")]
         for item, finding in _findings(project)
@@ -279,11 +289,11 @@ def recall(workspace: Path, planted: dict) -> dict:
         for item, finding in _findings(project)
         if (item, finding["dimension"], finding.get("note", "")) not in prior
     ]
-    content = _read(project / "app" / "content.json") or {"units": []}
+    content = read_document(project, "study") or {"units": []}
     text = "\n".join(
-        (project / "app" / name).read_text(encoding="utf-8")
-        for name in ("content.json", "exam.json")
-        if (project / "app" / name).is_file()
+        json.dumps(document, indent=2, ensure_ascii=False)
+        for document in (content, read_document(project, "exam"))
+        if document
     )
     results, by_dimension = [], {}
     for defect in planted["defects"]:

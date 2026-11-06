@@ -24,9 +24,17 @@ def refusal(arguments: list[str]) -> str | None:
     return None
 
 
-# Commands that open a browser, which the trial's sandbox blocks; the lab runs them on the host.
-BROKERED = (["study", "visuals"],)
-WAIT_SECONDS = 1200
+# Browser checks, fresh checker sessions and recording acquisition need the host's
+# capabilities; the trial still selects only workspace-bound, vetted commands.
+BROKERED = (["study", "visuals"], ["review", "run-checker"], ["lecture", "prepare"])
+WAIT_SECONDS = 2400
+
+
+def brokers(arguments: list[str]) -> bool:
+    """Whether the lab runs this command on the host; help needs no browser or checker."""
+    if "--help" in arguments or "-h" in arguments:
+        return False
+    return any(arguments[: len(prefix)] == prefix for prefix in BROKERED)
 
 
 def brokered(arguments: list[str], folder: str) -> int:
@@ -41,7 +49,7 @@ def brokered(arguments: list[str], folder: str) -> int:
     deadline = time.monotonic() + WAIT_SECONDS
     while not os.path.exists(response):
         if time.monotonic() > deadline:
-            print("The lab did not run the browser check in time.", file=sys.stderr)
+            print("The lab did not run the check in time.", file=sys.stderr)
             return 1
         time.sleep(1)
     with open(response, encoding="utf-8") as handle:
@@ -58,7 +66,7 @@ def main() -> None:
         print(message, file=sys.stderr)
         raise SystemExit(2)
     folder = os.environ.get("SKILL_LAB_RENDER_BROKER")
-    if folder and any(arguments[: len(prefix)] == prefix for prefix in BROKERED):
+    if folder and brokers(arguments):
         raise SystemExit(brokered(arguments, folder))
     os.execv(sys.executable, [sys.executable, "-I", "-m", "tum_mcp", *arguments])  # noqa: S606
 

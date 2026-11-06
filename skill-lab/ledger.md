@@ -211,3 +211,236 @@ ended "failed" on a host websocket disconnect after the last turn's work was sav
 Keep. Follow-ups (user): desktop-only checks by default; Study prose checks and variable meanings
 for maths in cheatsheet details; a collapse control for long entries; only checks that need the
 browser cap the dimensions they judge.
+
+## pilot-terra-high (2026-11-05)
+
+- scenario: workspace-sections; confirm: None
+- author: codex:gpt-6.1-terra:high; probe judge: codex:gpt-6.1-sol:xhigh
+- base: WORKTREE + 0 patch(es)
+
+### Weakness
+A cheap pilot (one Study lesson, one guided exercise, one cheatsheet section; 18 minutes)
+of the per-item review-loop harness. The agent followed the draft checks, but: the plan gate
+was self-checked yet recorded as fresh (`plan-record` defaulted to fresh) and no command could
+check plans freshly; a definition taught only by restating itself passed the plan check; the
+cheatsheet was never linted, and its lint failed on a course-wide coverage flag no scoped
+draft can clear; the snapshot error hid its cause and the content contract described the
+per-item layout wrongly, so the agent read the package source; the lab refused `--interact`;
+text-only scenario questions and a visual-free guide raised nothing; a link-less two-entry
+semester map took a full screen; the student message cited a skill file.
+
+### Edits
+| File | Change | Observed difference | Verdict |
+| --- | --- | --- | --- |
+| sync, lint, plans, report, exam map | Snapshot errors name the field; lint lists items and does not block on course-wide flags; definitions need an example; advisory text_only_question flag; map hidden without links | On the trial's course the new checks fire where the review later found problems | keep |
+| review CLI, runner | `run-checker --plans`; `plan-record` defaults to same | Synthetic tests | keep |
+| lab broker and shim | `--interact`, `--json` and a lab-chosen read-only checker on the host | The next round's trial ran every interaction check | keep |
+| prepare skills, content contract | Sheet lint, per-item layout, plan gate commands, asking without citing files, derived outcome states | Not yet re-run | pending |
+
+### Lesson
+Cheap trials expose harness friction fast: every time the agent read the package source, a
+message or contract was missing. Self-checks must be recorded as such by default.
+
+### Decision
+Keep all. Confidence: medium, one run; content edits not yet exercised by a new authoring trial.
+
+## loop-terra-high (2026-11-05)
+
+- scenario: workspace-sections-review; confirm: None
+- author: codex:gpt-6.1-terra:high; probe judge: codex:gpt-6.1-sol:xhigh
+- base: WORKTREE + 0 patch(es)
+
+### Weakness
+The review loop's first trial (two rounds, 6 minutes) on the pilot's course after its fixes.
+Checkers were host subagents forked from the maker's session, so not fresh. The one-section
+cheatsheet could never pass: a course-wide flag (sources without exam requirements) became a
+coverage finding against the item. Seven `review fix` calls failed on a content error that
+named the merged document path instead of the item file. Checkers passed the text-only
+advisory flags without ruling on them. The last round's fixes ended unverified, so 1 of 3
+items passed. The agent guessed lint arguments and `--help` went to the broker.
+
+### Edits
+| File | Change | Observed difference | Verdict |
+| --- | --- | --- | --- |
+| review loop, checks registry | Course-wide flags hold a separate `course` gate entry; sheet inventory check scoped to sources the sheet read; scorecard and status count fixes awaiting a check | On the trial's course the sheet's coverage now shows under `course`; status names the extend step | keep |
+| content errors, lint, shim | Errors name the item file; lint all items or a bare key; help runs locally | Synthetic tests | keep |
+| review-course skill, checker prompt | Forked subagents are not fresh; every report flag is a finding or ruled out in evidence | Not yet re-run | pending |
+
+### Lesson
+A scoped review must separate item quality from course-wide coverage, and a host's subagents
+are fresh only if they start empty. The last round's fixes always end unverified; say so.
+
+### Decision
+Keep all. The loop itself worked end to end: packets, records, fixes, verification and the
+gate behaved as designed; 11 findings opened, 5 verified, none rejected. Confidence: low, one run.
+
+## loop-quality (2026-11-06)
+
+- scenario: workspace-sections-review; confirm: None
+- author: codex:gpt-6.1-terra:high; probe judge: codex:gpt-6.1-sol:xhigh
+- base: WORKTREE + 0 patch(es)
+
+### Weakness
+
+The earlier two-round baseline passed informal definitions, prose-heavy explanation
+and text-only practice. This candidate used the same saved starting point and model;
+the baseline was not rerun.
+
+### Edits
+
+Per-concept teaching evidence, refined-definition flags, quoted verification of
+rewritten passages and required advisory rulings were exercised by the candidate.
+Its two rounds took 20.4 minutes, versus 6.2 for the saved baseline. The candidate
+corrected both definitions to the precise conditional form, added a concrete test
+instance and improved the opening. It recorded 29 findings versus 11 in the baseline,
+but those totals do not measure recall. Invalid visual answers and queued broker
+requests prevented an efficient, fully verified result. The gate stayed closed.
+
+Post-trial corrections make missing question context non-waivable, flag run-together
+labelled steps, demand source evidence for objectives, and show exchanges instead of
+narrating them. A finding ruling must name its relevant check. The runner permits one
+targeted answer repair, broker requests run independently, and plan errors name the
+needed example link. A measured zero-gap definition transition was repaired.
+
+### Lesson
+
+A required ruling is insufficient when a checker can waive a true invariant.
+Use code for reliable missing-context detection, require a relevant finding for a
+finding ruling, and keep semantic checks critical of their own source interpretation.
+One candidate is evidence of better corrections, not proof of general reviewer
+accuracy or final content quality.
+
+### Decision
+
+Keep the harness corrections and their focused tests. The raw candidate is not
+gate-passing: 18 fixes await fresh verification and other sheet gaps remain open.
+Post-trial semantic guidance has not had a third model run. Preserve that limit
+rather than calling this content ready to publish. No baseline rerun or release.
+
+## search-quality (2026-11-06)
+
+- scenario: search-sections-review; confirm: None
+- author: codex:gpt-6.1-terra:high; probe judge: codex:gpt-6.1-sol:xhigh
+- base: WORKTREE + 0 patch(es)
+
+### Weakness
+
+The conceptual pilot did not establish that harder procedural teaching would work.
+This fresh authoring trial prepared one algorithmic lesson, one released exercise
+and one sheet section, followed by at most two review rounds.
+
+### Edits
+
+The trial used codex gpt-6.1-terra high and took 33.5 minutes. Reviews caught incomplete
+priority-frontier updates, cutoff rules, trace reasons, hints, citations and an
+unsupported comparison of asymptotic bounds. Eleven findings were freshly verified;
+22 late fixes were explicitly left unverified. The gate remained closed.
+
+Independent keys compare 51 final lesson/exercise values and states successfully.
+Installed-browser review at desktop and phone widths exercised trace navigation,
+Guide and Solution without page errors or page-level overflow. Phone comparison
+tables still had tall cells. The trial is not a mobile-quality pass.
+
+The original walkthrough-inspection crash was reproduced from the saved authored
+content and fixed by inspecting its stage. Browser tests cover that path, passage
+spacing and the search glyph, whose missing shared styling was found visually.
+Post-trial guidance prevents filler second calculations, glossary-style expansion
+to satisfy retrieval coverage, and long conditions repeated inside compact cells.
+
+### Lesson
+
+A review loop can improve correctness while making teaching longer and less focused.
+Evaluate its edits as content: a second example must add reasoning, and retrieval
+coverage must not silently expand a narrowly requested lesson. Real rendering found
+a crash and an icon defect that schema and semantic checks alone missed.
+
+### Decision
+
+Keep the concrete runtime fixes, gate protections and revised guidance. Do not claim
+that a two-round budget makes the authored course ready: late fixes and phone-table
+defects remain visible in the saved trial. The final rule revisions have focused
+regression evidence, not another model trial. No baseline rerun or release.
+
+## solo-four-spaces (2026-11-06)
+
+- scenario: multi-course-workspaces; one solo candidate, no baseline rerun
+- author and independent checkers: codex:gpt-6.1-terra:high
+- base: WORKTREE; post-pilot repairs evaluated separately
+
+### Weakness
+
+The previous pilot did not establish quality across all four workspaces or across
+different subject demands. This batch prepared three lessons, two released
+exercises, two exam patterns and lecture notes.
+
+### Observation
+
+Authoring took about 40.1 minutes. The review turn reached its 45-minute deadline;
+the recorded run failed after 85.7 minutes. No project gate passed. Reviews made
+useful corrections but also repeated findings, demanded lesson-style teaching in
+revision workflows, treated independent practice as guided practice and confused
+new authored values with claims of source provenance.
+
+Direct inspection found equation clipping missed by empty visual selections,
+phone overflow from long inline mathematics, ineffective misconception examples,
+an incomplete public event path, and audio decoding that rejected small accumulated
+clock jitter. Runtime repairs have focused regressions and real-content evidence.
+The decoder still rejects an actual missing-frame-sized PCM deficit.
+
+The primary completed the selected lecture after the fix, compared the recovered
+transcript with materials and inspected its meaningful source image. This is
+ASR/material/image evidence, not independent source-audio listening.
+
+### Edits and evidence
+
+- Checkers now receive canonical workspace guidance with their packets. A focused
+  fresh revision review accepted the concise workflow, independent drill and
+  authored application values while retaining a useful reasoning finding.
+- The first probe answer and its automatic repair failed evidence validation.
+  Explicit manual recovery obtained the required concept-to-instance evidence;
+  the validator was preserved. The prompt now names the required field directly.
+- A fresh software review found further teaching defects, and one alleged plan
+  ordering requirement unsupported by the saved plan. Primary corrections improve
+  the example, practice and rendered explanation; they are not called freshly
+  verified model verdicts.
+- Organization checks no longer require duplicate course maps or extra lessons to
+  fill a bounded single-unit group. Genuine missing coverage remains separate.
+- Desktop and phone inspection exercised the actual learning controls. Formula
+  clipping and page overflow are fixed; long code and indivisible calculations
+  can still require local horizontal scrolling.
+
+### Decision
+
+Keep the surgical runtime repairs and refined guidance. Preserve the failed
+original run and distinguish its results from primary repairs and focused probes.
+This round does not establish reliable automatic convergence, student learning
+gains, lower model cost or publication readiness. No commit, push or release.
+
+### Final release correction pass (2026-11-06)
+
+Reused the existing prepared items without regenerating a baseline. Eight fresh
+packets recorded in the first bounded pass; the second recorded seven directly and
+one after explicit recovery of a missing visual-note field through normal validation.
+The correction pass found and fixed three protocol defects: named-list reordering
+did not invalidate review evidence, accepted answers could leave an old refused
+answer artifact behind, and the answer example omitted the note required for weak
+visual scores. Targeted regressions reproduce each defect.
+
+Removed internal per-finding fingerprint history from checker inputs while retaining
+it in the ledger: 11.9% fewer serialized characters across 27 measured packets.
+This is a size measurement, not a claimed timing improvement. Lecture notes can now
+use the shared sourced SVG renderer without pretending an authored drawing is a
+recording frame; source, SVG-safety and semantic-revision checks remain enforced.
+
+Final primary corrections addressed coefficient feedback, redundant trace labels,
+guide wording and structure, explicit state dispatch, and the illustrated search
+comparison. Six keys verify 35 nonduplicated fields; removed duplicate columns remain
+covered in the combined action/state checks. Desktop/phone inspection and native
+authored-Java execution pass. These are primary repairs after review, not evidence
+that the original author autonomously completed a satisfactory course or passed all
+publication gates.
+
+At the user's request, obsolete pilot caches were removed while concise results,
+the active verification workspace and account profiles were preserved. Old-format
+compatibility work was dropped. Installed consumer fixtures were ported to the
+per-item layout; installation, browser journeys and lifecycle safeguards were kept.

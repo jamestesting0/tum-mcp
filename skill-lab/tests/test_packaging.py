@@ -1,11 +1,12 @@
 import json
+import re
 import tarfile
 import tomllib
 import zipfile
 
 from skill_lab import paths
 
-LEAKS = ("skill-lab", "skill_lab")
+LEAKS = ("skill-lab", "skill_lab", "skill lab")
 
 
 def test_npm_allowlist_and_wheel_exclude_the_lab():
@@ -22,8 +23,8 @@ def test_shipped_docs_do_not_mention_the_lab():
     package = json.loads((paths.REPO / "package.json").read_text())
     for entry in package["files"]:
         if entry.endswith(".md"):
-            text = (paths.REPO / entry).read_text(encoding="utf-8")
-            assert not any(leak in text for leak in LEAKS), entry
+            text = (paths.REPO / entry).read_text(encoding="utf-8").casefold()
+            assert not any(re.search(rf"{re.escape(leak)}\b", text) for leak in LEAKS), entry
 
 
 def test_built_artifacts_contain_no_lab_files():

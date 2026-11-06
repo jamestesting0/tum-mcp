@@ -1,0 +1,21 @@
+id: workspace-sections-review
+turns:
+  - say: "I just connected my TUM account. Set up a study project in this folder for my AI course this semester and collect its materials."
+    skills: [sync-course, read-content]
+  - say: "Build one Study lesson for the first lecture, only one section for now."
+    skills: [prepare-study]
+  - say: "Add one guided exercise from the latest released exercise sheet, only one problem."
+    skills: [prepare-exercises]
+  - say: "Make one Exam cheatsheet section for the first lecture."
+    skills: [prepare-exams]
+  - say: "Now review the lesson, the exercise and the cheatsheet section with the review loop, two rounds at most, and fix what it finds."
+    skills: [review-course, prepare-study, prepare-exercises, prepare-exams]
+replies:
+  round: "Two rounds at most."
+  budget: "Two rounds at most."
+  course: "The fundamentals of AI course, this semester."
+  semester: "The current semester."
+  sheet: "Use the newest sheet stamped for the current semester."
+  exam: "I have no past exam to add; use the lectures."
+  paper: "I have no past exam to add; use the lectures."
+  default: "Your choice, go ahead."

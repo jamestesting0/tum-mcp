@@ -26,7 +26,7 @@ def write_cache(home, slugs):
 
 
 def test_bare_host_names_expand_to_the_default_author():
-    assert str(ModelSpec.parse("codex")) == "codex:gpt-6.1-terra:xhigh"
+    assert str(ModelSpec.parse("codex")) == "codex:gpt-6.1-terra:high"
     assert str(ModelSpec.parse("claude")) == "claude:opus:medium"
 
 

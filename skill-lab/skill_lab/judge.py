@@ -23,11 +23,11 @@ DIMENSIONS = (
 RUBRIC_FILES = ("rubric.md", "logic.md", "text.md", "visuals.md", "interaction.md", "intuition.md")
 JSON_BLOCK = re.compile(r"```json\s*(\{.*?\})\s*```", re.S)
 # The judge compares only workspaces both runs built; the others are named, not judged.
-WORKSPACE_FILES = {
-    "content.json": "Study",
-    "exercises.json": "Exercises",
-    "exam.json": "Exam",
-    "lectures.json": "Lecture",
+WORKSPACE_FOLDERS = {
+    "study": "Study",
+    "exercises": "Exercises",
+    "exam": "Exam",
+    "lectures": "Lecture",
 }
 
 
@@ -132,11 +132,11 @@ def build_packet(pair_key: str, left: dict, right: dict, packet: Path) -> dict:
         copy_candidate(runs[side], packet / "candidates" / letter)
     apps = {letter: packet / "candidates" / letter / "app" for letter in ids}
     unjudged = {}
-    for name, workspace in WORKSPACE_FILES.items():
-        built = [letter for letter, app in apps.items() if (app / name).is_file()]
+    for name, workspace in WORKSPACE_FOLDERS.items():
+        built = [letter for letter, app in apps.items() if (app / name).is_dir()]
         if len(built) == 1:
             unjudged[workspace] = runs[ids[built[0]]]["id"]
-            (apps[built[0]] / name).unlink()
+            shutil.rmtree(apps[built[0]] / name)
     # The bundled data repeats every workspace, including any left out above.
     for app in apps.values():
         (app / "data.mjs").unlink(missing_ok=True)

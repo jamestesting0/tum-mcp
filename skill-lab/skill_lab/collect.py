@@ -8,6 +8,7 @@ from pathlib import Path
 
 from skill_lab import paths, variants
 from skill_lab.runs import storage_environment
+from tum_mcp.course.content.store import present
 
 
 def count_items(value: object) -> int:
@@ -107,13 +108,10 @@ def collect_run(round_id: str, run_id: str, *, visuals: bool = True) -> dict:
         "questions_answered": sum(len(turn.get("replies", [])) for turn in record["turns"]),
         "project_created": project is not None,
         "delivered": bool(
-            project
-            and any(
-                (project / "app" / name).is_file() for name in ("content.json", "exercises.json")
-            )
+            project and any(present(project, workspace) for workspace in ("study", "exercises"))
         ),
-        "lessons_built": bool(project and (project / "app" / "content.json").is_file()),
-        "exercises_built": bool(project and (project / "app" / "exercises.json").is_file()),
+        "lessons_built": bool(project and present(project, "study")),
+        "exercises_built": bool(project and present(project, "exercises")),
         **transcript_stats(run_dir, host),
         "files_outside_project": files_outside_project(run_dir, record.get("project")),
     }

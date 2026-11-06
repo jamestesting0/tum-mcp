@@ -20,10 +20,31 @@ share; existing findings and rejected or unrelated checks do not count as detect
 The catalogue spans all ten dimensions but only plants defects the course can hold.
 Raw calibration records contain private course material and stay under `.omo/skill-lab/`.
 
-Trials forward `study visuals` through the lab shim to a host render broker. Only that
-command, its supported selectors and a project inside the trial workspace are allowed;
-the broker has a bounded execution time. Manual interaction review still needs a browser
-session. This broker does not change the installed student CLI.
+Trials forward `study visuals` (including `--interact`), `review run-checker` and
+`lecture prepare` through
+the lab shim to a host broker, because the trial's sandbox has no browser or recording
+network access and cannot start a nested session. Only those commands, their supported selectors and a project inside the
+trial workspace are allowed. For a checker the trial names only `--packet ID` or `--plans`;
+the lab runs it read-only with the trial's own host and model. The broker has a bounded
+execution time and does not change the installed student CLI.
+Recording preparation accepts canonical TUM-Live recording URLs, known language,
+selected frame times and optional previews. The bound course and processor enforce
+recording membership and eligible time; credentials stay inside the host processor.
+It does not install a recognizer or accept arbitrary URLs, imported-file paths or
+runtime-management commands.
+
+## Local checks
+
+Run the dev-only synthetic tests separately; they are not part of CI:
+
+```sh
+uv run pytest skill-lab/tests
+uv run ruff check src tests scripts skill-lab
+uv run ruff format --check src tests scripts skill-lab
+```
+
+The published development guide covers application checks. Keep lab instructions
+here so they do not enter the shipped documentation.
 
 ## One-time setup (human)
 
@@ -57,14 +78,14 @@ lab models --host codex
 
 # First round only: run the current skills once per author; these runs become the baseline.
 lab round new r0 --fresh --scenario course-workspaces --author claude \
-  --matrix codex:gpt-6.1-terra:xhigh --judge codex:gpt-6.1-sol:xhigh --reason "first baseline"
+  --matrix codex:gpt-6.1-terra:high --judge codex:gpt-6.1-sol:xhigh --reason "first baseline"
 lab variant r0 base
 lab run r0 --variant base --all-authors     # Claude and Codex at once
 
 # Every later round: --from takes the previous round's newest completed run per author as
 # the baseline (or name them with --baseline ROUND/RUN, or later with `lab baseline`).
 lab round new r1 --from r0 --scenario course-workspaces --author claude \
-  --matrix codex:gpt-6.1-terra:xhigh --judge codex:gpt-6.1-sol:xhigh --reason "headings"
+  --matrix codex:gpt-6.1-terra:high --judge codex:gpt-6.1-sol:xhigh --reason "headings"
 lab variant r1 candidate --patch .omo/skill-lab/rounds/r1/candidate.patch
 lab run r1 --variant candidate --all-authors
 lab collect r1
@@ -104,7 +125,7 @@ independent. To look at a run's app:
 ```
 
 Models are `host:model:effort`; a bare `claude` or `codex` means that host's default author,
-`claude:opus:medium` or `codex:gpt-6.1-terra:xhigh`. Claude takes an alias (`opus`, `sonnet`, `haiku`, `fable`)
+`claude:opus:medium` or `codex:gpt-6.1-terra:high`. Claude takes an alias (`opus`, `sonnet`, `haiku`, `fable`)
 or a `claude-*` name with `low|medium|high|xhigh|max`; Codex takes a model from its list with
 a supported effort. Judges default to `claude:claude-opus-5-5:xhigh` and
 `codex:gpt-6.1-sol:xhigh` for confirmation; `ultra` is refused for judging. A baseline and

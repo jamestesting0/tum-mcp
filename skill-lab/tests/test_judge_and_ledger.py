@@ -94,8 +94,10 @@ def fake_run(round_id, run_id, author, started, workspaces, materials):
     run_dir = paths.round_dir(round_id) / "runs" / run_id
     app = run_dir / "workspace" / "app"
     app.mkdir(parents=True)
-    for name in (*workspaces, "data.mjs"):
-        (app / name).write_text("{}")
+    for name in workspaces:
+        (app / name).mkdir()
+        (app / name / "index.json").write_text("{}")
+    (app / "data.mjs").write_text("{}")
     for name in materials:
         (run_dir / "workspace" / "materials" / name).parent.mkdir(parents=True, exist_ok=True)
         (run_dir / "workspace" / "materials" / name).write_text(name)
@@ -117,13 +119,13 @@ def fake_run(round_id, run_id, author, started, workspaces, materials):
 def test_a_round_judges_its_candidates_against_the_previous_rounds_runs(lab_state):
     # Given an earlier round's runs by two authors and one candidate per author now.
     claude, codex = "claude:sonnet:high", "codex:gpt-6.1-terra:xhigh"
-    fake_run("t1", "base-1", claude, "1", ["content.json"], ["a.pdf"])
-    fake_run("t1", "base-2", claude, "2", ["content.json", "exercises.json"], ["a.pdf"])
-    fake_run("t1", "base-3", codex, "3", ["content.json"], ["a.pdf"])
+    fake_run("t1", "base-1", claude, "1", ["study"], ["a.pdf"])
+    fake_run("t1", "base-2", claude, "2", ["study", "exercises"], ["a.pdf"])
+    fake_run("t1", "base-3", codex, "3", ["study"], ["a.pdf"])
     assert sorted(rounds.inherited_baselines("t1")) == ["t1/base-2", "t1/base-3"]
     rounds.save("r1", {"baselines": ["t1/base-2", "t1/base-3"]})
-    fake_run("r1", "candidate-1", codex, "4", ["content.json", "exam.json"], ["a.pdf", "b.pdf"])
-    fake_run("r1", "candidate-2", claude, "5", ["content.json", "exercises.json"], ["a.pdf"])
+    fake_run("r1", "candidate-1", codex, "4", ["study", "exam"], ["a.pdf", "b.pdf"])
+    fake_run("r1", "candidate-2", claude, "5", ["study", "exercises"], ["a.pdf"])
     # When the round pairs runs, each baseline meets the newest candidate by its author.
     assert judge.default_pairs("r1") == [["t1/base-2", "candidate-2"], ["t1/base-3", "candidate-1"]]
     # Then a packet holds only the workspaces both built, and every material either read.
@@ -136,6 +138,6 @@ def test_a_round_judges_its_candidates_against_the_previous_rounds_runs(lab_stat
     assert sorted(p.name for p in (packet / "sources").iterdir()) == ["a.pdf", "b.pdf"]
     for letter in ("A", "B"):
         app = packet / "candidates" / letter / "app"
-        assert sorted(p.name for p in app.iterdir()) == ["content.json"]
+        assert sorted(p.name for p in app.iterdir()) == ["study"]
     with pytest.raises(LabError):
         rounds.checked_baselines(["base-2"])

@@ -11,7 +11,7 @@ CLAUDE_ALIASES = ("opus", "sonnet", "haiku", "fable")
 CLAUDE_EFFORTS = ("low", "medium", "high", "xhigh", "max")
 JUDGE_FORBIDDEN_EFFORTS = frozenset({"ultra"})
 DEFAULT_CONFIRM_JUDGES = ("claude:claude-opus-5-5:xhigh", "codex:gpt-6.1-sol:xhigh")
-DEFAULT_AUTHORS = {"claude": "claude:opus:medium", "codex": "codex:gpt-6.1-terra:xhigh"}
+DEFAULT_AUTHORS = {"claude": "claude:opus:medium", "codex": "codex:gpt-6.1-terra:high"}
 
 
 @dataclass(frozen=True)

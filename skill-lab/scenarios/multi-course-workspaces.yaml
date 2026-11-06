@@ -1,0 +1,27 @@
+id: multi-course-workspaces
+turns:
+  - say: "Set up three course projects in ai/, quantum/ and software/ for my AI, quantum-computing and software-design courses this semester. Collect the materials needed for a small preparation batch, not the whole courses."
+    skills: [sync-course, read-content]
+  - say: "In ai/, create one Study lesson on an algorithmic topic developed in the available lecture material. Pick one coherent topic; I will request review after the batch."
+    skills: [prepare-study]
+  - say: "In quantum/, create one Study lesson on a mathematical topic with a worked derivation or calculation. Keep it to one coherent topic."
+    skills: [prepare-study]
+  - say: "In software/, create one Study lesson on a software-design topic with concrete code or a design to reason about. This completes the limit of three Study lessons across the courses."
+    skills: [prepare-study]
+  - say: "Add exactly two guided exercises from the available course materials: one mathematical reasoning/calculation exercise in quantum/, and one code construction or software-design exercise in software/. Keep their different demands; do not add more Study lessons."
+    skills: [prepare-exercises]
+  - say: "Add exactly two exam patterns: one for a mathematical question family in quantum/, and one for an algorithmic or design question family in ai/ or software/, whichever has better supporting tasks. Each pattern should teach one useful method and include its guided and independent practice. Use the available course evidence without inventing exam provenance or expanding the three-lesson scope."
+    skills: [prepare-exams]
+  - say: "In ai/, prepare the Lecture workspace with notes from one completed lecture stream. Choose substantial usable teaching, compare it with the supplied materials, and record useful additions. Reuse valid evidence; acquire missing recording evidence through the normal lecture workflow."
+    skills: [prepare-lecture, sync-course, read-content]
+  - say: "Now run the review loops on the prepared items in all three projects, including Study, Exercises, the two exam patterns and Lecture. Fix findings critically, inspect the rendered desktop and phone content, and use up to five review rounds per project. Keep any genuine unresolved gap visible rather than expanding to whole-course preparation. Report final content quality and checks, not just that the workflow ran."
+    skills: [review-course, prepare-study, prepare-exercises, prepare-exams, prepare-lecture]
+replies:
+  loop: "Wait until the end-of-batch review request."
+  course: "Use Fundamentals of Artificial Intelligence, Einführung in Quantum Computing, and Patterns in Software Engineering this semester."
+  semester: "The current semester."
+  recording: "Choose one completed AI recording with substantial usable teaching; exclude silent intervals."
+  stream: "Choose one completed AI recording with substantial usable teaching; exclude silent intervals."
+  exam: "Use the available lectures and released exercises. I have no extra past paper to import."
+  paper: "Use the available lectures and released exercises. I have no extra past paper to import."
+  default: "Use your judgment within the stated scope and continue."

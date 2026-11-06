@@ -1,0 +1,22 @@
+id: search-sections-review
+turns:
+  - say: "I just connected my TUM account. Set up a study project in this folder for my AI course this semester and collect its materials."
+    skills: [sync-course, read-content]
+  - say: "Build one Study lesson on uninformed search from the search lecture: breadth-first and depth-first search, one section for now."
+    skills: [prepare-study]
+  - say: "Add one guided exercise on search from the exercise sheets, only one problem."
+    skills: [prepare-exercises]
+  - say: "Make one Exam cheatsheet section on uninformed search."
+    skills: [prepare-exams]
+  - say: "Now review the lesson, the exercise and the cheatsheet section with the review loop, two rounds at most, and fix what it finds."
+    skills: [review-course, prepare-study, prepare-exercises, prepare-exams]
+replies:
+  loop: "Not yet; I will ask for the review at the end."
+  round: "Two rounds at most."
+  budget: "Two rounds at most."
+  course: "The fundamentals of AI course, this semester."
+  semester: "The current semester."
+  sheet: "Use a released sheet that has a search problem; if none is released yet, use the newest sheet with a search problem."
+  exam: "I have no past exam to add; use the lectures."
+  paper: "I have no past exam to add; use the lectures."
+  default: "Your choice, go ahead."

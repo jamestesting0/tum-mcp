@@ -101,6 +101,22 @@ def claude_command(
     return command
 
 
+def checker_command(spec: ModelSpec) -> list[str]:
+    """A fresh, read-only checker session with the trial's own model; `{prompt}` is filled in
+    by `tum-mcp review run-checker`, which reads the answers from standard output."""
+    if spec.host == "claude":
+        return [
+            "claude", "-p", "{prompt}", "--model", spec.model, "--effort", spec.effort,
+            "--strict-mcp-config", "--allowedTools", ",".join(JUDGE_ALLOWED),
+            "--disallowedTools", "Bash,Write,Edit,WebFetch,WebSearch",
+        ]  # fmt: skip
+    return [
+        "codex", "exec", "--skip-git-repo-check", "-m", spec.model,
+        "-c", f'model_reasoning_effort="{spec.effort}"', "-s", "read-only",
+        "-c", "mcp_servers={}", "{prompt}",
+    ]  # fmt: skip
+
+
 def codex_command(
     spec: ModelSpec,
     message: str,
