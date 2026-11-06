@@ -27,7 +27,12 @@ assumption. Keep only the members that teach or test different decisions.
 Every question must stand alone in both topic Practice and pooled Revision. When it is
 about a situation, show that situation in the question's `blocks` (the graph with its
 weights, the drawn setup, the table, the formula, the code) and let the prompt ask only
-the question; say each fact once. A question about a concept needs no picture. Include
+the question; say each fact once. Systems or cases to classify are a table the student
+scans. Every question has a code snippet, diagram, formula, table or plot carrying
+information it needs, including conceptual questions. If the context would be a
+decorative picture or a table repeating the prompt, write a richer case that makes
+the concept useful instead. `text_only_question` holds the gate; brevity is not an
+exemption. Include
 notation, units and assumptions the answer depends on. A reference to “the graph above” breaks when the
 item is pooled. An optional `hint` recalls the idea without naming the option.
 

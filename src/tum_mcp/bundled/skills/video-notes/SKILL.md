@@ -12,7 +12,7 @@ discovery pointer and user's rules. The handbook's receipt describes local revie
 freshness; verify affected facts against sources. Reuse context already read in this
 request. Do not re-read the whole inventory for each authoring step.
 
-Videos adapt prepared Study (`app/content.json`) or Exercises (`app/exercises.json`);
+Videos adapt prepared Study (`app/study/`) or Exercises (`app/exercises/`);
 they are not a second authoring workflow. Never research or invent course facts,
 examples, numbers, analogies presented as course content, exam predictions or
 questions. A missing concrete example is a gap for the source authoring skill, which labels

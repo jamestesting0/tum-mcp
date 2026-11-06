@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+from documents import content_file
 from playwright.sync_api import Page
 from study_popover_fixture import popover_checks
 
@@ -24,9 +25,9 @@ def open_notes(page: Page) -> None:
 
 
 def comment_checks(page: Page, project: Path) -> None:
-    from tum_mcp.study_build import build
-    from tum_mcp.study_comment_models import Create, Delete, Edit, SetStatus
-    from tum_mcp.study_comments import change_comment, read_comments
+    from tum_mcp.course.app.build import build
+    from tum_mcp.course.app.comment_models import Create, Delete, Edit, SetStatus
+    from tum_mcp.course.app.comments import change_comment, read_comments
 
     quote = select_passage(page)
     page.get_by_role("button", name="Comment", exact=True).click()
@@ -181,7 +182,7 @@ def comment_checks(page: Page, project: Path) -> None:
     dialog.get_by_role("button", name="Cancel", exact=True).click()
     # A quote gone from its passage is deleted, never attached to a different passage or kept
     # as unavailable.
-    source = project / "study/content.json"
+    source = content_file(project, "study")
     original = source.read_bytes()
     value = json.loads(original)
     unit = next(unit for unit in value["units"] if unit["key"] == note["anchor"]["unit_key"])

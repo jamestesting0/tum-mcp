@@ -4,12 +4,12 @@ from pathlib import Path
 
 from pydantic import Field, ValidationError
 
+from tum_mcp.course.lecture.evidence import Interval
+from tum_mcp.course.project.store import ReadObserver, confined
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing.preparation_audio import AudioResult
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
-from tum_mcp.study_store import ReadObserver, confined
 
 
 class Progress(Frozen):

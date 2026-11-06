@@ -3,16 +3,16 @@
 import json
 from pathlib import Path
 
+from documents import content_file
 from knowledge_fixture import knowledge_project
 
-from tum_mcp.course_app_paths import app_path
-from tum_mcp.lecture_evidence import Crop, Interval, Recording
+from tum_mcp.course.lecture.evidence import Crop, Interval, Recording
+from tum_mcp.course.project.store import digest, load_state, private_path
 from tum_mcp.lecture_processing.prepare_visuals import FrameInventory
 from tum_mcp.lecture_processing.receipts import PreparedReceipt, source_text
 from tum_mcp.lecture_processing.timeline import watch_link
 from tum_mcp.lecture_processing.validity import RecordingTiming, evaluate
 from tum_mcp.lecture_processing.visuals import SourceFrame, app_frame
-from tum_mcp.study_store import digest, load_state, private_path
 
 
 def real_cached_lecture(tmp_path: Path, *, with_frame: bool = False) -> Path:
@@ -101,7 +101,7 @@ def real_cached_lecture(tmp_path: Path, *, with_frame: bool = False) -> Path:
     source["sha256"] = digest(payload)
     (root / source["path"]).write_bytes(payload)
     private_path(root, "state.json").write_text(json.dumps(state), encoding="utf-8")
-    path = app_path(root, "lectures.json")
+    path = content_file(root, "lectures")
     content = json.loads(path.read_bytes())
     content["lectures"][0].update(
         recording=recording.model_dump(mode="json"),

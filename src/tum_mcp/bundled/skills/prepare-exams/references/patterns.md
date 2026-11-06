@@ -97,6 +97,8 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   practice. Every case is practised again here in a new setting; name it in `cases`
   (never shown). Each item opens a Solution with its expected answer, the explanation and,
   for a full problem, a worked `solution`; only a multiple choice is checked on screen.
+  A `self_check` already shows its full `model_answer` in that panel. Omit `solution`
+  when it would repeat that answer; both fields are visible together.
   Order items so neighbours need different cases.
 
 Every question you write here, worked practice and drills included, shows its

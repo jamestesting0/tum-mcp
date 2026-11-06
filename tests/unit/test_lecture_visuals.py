@@ -9,8 +9,8 @@ import pytest
 from PIL import Image, ImageDraw
 from pydantic import SecretStr
 
+from tum_mcp.course.lecture.evidence import Crop, Interval
 from tum_mcp.errors import CampusError
-from tum_mcp.lecture_evidence import Crop, Interval
 from tum_mcp.lecture_processing.media import MediaCache, acquire
 from tum_mcp.lecture_processing.media_budget import TransferBudget
 from tum_mcp.lecture_processing.media_http import MediaHTTP
@@ -63,11 +63,18 @@ def generated_vod(tmp_path: Path, request) -> Path:
     return vod(tmp_path, request.param)
 
 
-def vod(tmp_path: Path, segments: str, rate: int = 16000, jitter: bool = False) -> Path:
-    """A synthetic six-second HLS recording with AAC audio sampled at `rate`.
+def vod(
+    tmp_path: Path,
+    segments: str,
+    rate: int = 16000,
+    jitter: bool = False,
+    duration: int = 6,
+    jitter_every: int = 1,
+) -> Path:
+    """A synthetic HLS recording with AAC audio sampled at `rate`.
 
-    `jitter` delays each audio packet's timestamp by one more clock tick than the last,
-    as some lecture encoders do, so timestamps run slightly ahead of the samples.
+    `jitter` adds one clock tick every `jitter_every` audio packets, so timestamps
+    run slightly ahead of the samples as in some lecture encoders.
     """
     if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
         pytest.skip("Local FFmpeg/ffprobe optional capability is absent.")
@@ -75,12 +82,12 @@ def vod(tmp_path: Path, segments: str, rate: int = 16000, jitter: bool = False) 
     root.mkdir()
     argv = ["ffmpeg", "-hide_banner", "-loglevel", "error"]
     for color in ("blue", "red", "green"):
-        argv += ["-f", "lavfi", "-i", f"color=c={color}:s=320x180:r=10:d=2"]
+        argv += ["-f", "lavfi", "-i", f"color=c={color}:s=320x180:r=10:d={duration / 3}"]
     argv += [
         "-f",
         "lavfi",
         "-i",
-        f"sine=frequency=440:sample_rate={rate}:duration=6",
+        f"sine=frequency=440:sample_rate={rate}:duration={duration}",
         "-filter_complex",
         "[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]",
         "-map",
@@ -97,7 +104,7 @@ def vod(tmp_path: Path, segments: str, rate: int = 16000, jitter: bool = False) 
         "aac",
         "-ar",
         str(rate),
-        *(["-bsf:a", "setts=pts=PTS+N:dts=DTS+N"] if jitter else []),
+        *(["-bsf:a", f"setts=pts=PTS+N/{jitter_every}:dts=DTS+N/{jitter_every}"] if jitter else []),
         "-f",
         "hls",
         "-hls_time",

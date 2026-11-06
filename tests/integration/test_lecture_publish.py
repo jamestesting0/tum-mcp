@@ -4,14 +4,15 @@ from pathlib import Path
 import pytest
 import test_lecture_build as lecture_fixtures
 import test_study_publish as publish_fixtures
+from documents import content_file
 
+from tum_mcp.course.app.build import build
+from tum_mcp.course.app.github import GitHub
+from tum_mcp.course.app.publish import configure, publish
+from tum_mcp.course.app.publish_models import Publication, course_identity
+from tum_mcp.course.app.publish_site import MARKER, SITE_FILES, commit_site, export_site
+from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError
-from tum_mcp.study_build import build
-from tum_mcp.study_github import GitHub
-from tum_mcp.study_publish import configure, publish
-from tum_mcp.study_publish_models import Publication, course_identity
-from tum_mcp.study_publish_site import MARKER, SITE_FILES, commit_site, export_site
-from tum_mcp.study_store import load_state
 
 lecture_project = lecture_fixtures.lecture_project
 github = publish_fixtures.github
@@ -27,15 +28,11 @@ def data(site):
 def test_scope_projection_and_referenced_thumbnails_only(
     lecture_project: Path, selected: tuple[str, ...]
 ) -> None:
-    for workspace, filename in (
-        ("study", "content.json"),
-        ("exercises", "exercises.json"),
-        ("lectures", "lectures.json"),
-    ):
+    for workspace in ("study", "exercises", "lectures"):
         if workspace not in selected:
-            (lecture_project / "study" / filename).unlink()
+            content_file(lecture_project, workspace).unlink()
     build(lecture_project, publish=False)
-    (lecture_project / "study/unrelated.png").write_bytes(b"PRIVATE_FILE")
+    (lecture_project / "app/unrelated.png").write_bytes(b"PRIVATE_FILE")
     (lecture_project / ".tum-mcp/comments.json").write_text("PRIVATE_COMMENT", encoding="utf-8")
     site = export_site(lecture_project)
     payload = data(site)
@@ -51,8 +48,8 @@ def test_scope_projection_and_referenced_thumbnails_only(
 def test_lecture_content_math_and_canonical_links_survive_without_source_metadata(
     lecture_project: Path,
 ) -> None:
-    from tum_mcp.study_models import Resource, ResourceState
-    from tum_mcp.study_store import digest
+    from tum_mcp.course.project.models import Resource, ResourceState
+    from tum_mcp.course.project.store import digest
 
     root = lecture_project
     state = load_state(root)
@@ -76,7 +73,7 @@ def test_lecture_content_math_and_canonical_links_survive_without_source_metadat
         state.model_copy(update={"resources": (*state.resources, source)}).model_dump_json(),
         encoding="utf-8",
     )
-    notes = root / "study/lectures.json"
+    notes = content_file(root, "lectures")
     value = json.loads(notes.read_text(encoding="utf-8"))
     lecture = value["lectures"][0]
     lecture["sources"] = [{"key": "lecture-only", "sha256": source.sha256}]
@@ -121,7 +118,7 @@ def test_deleted_lecture_assets_leave_the_same_repository_without_erasing_unrela
     publish(root, wait_seconds=0, rebuild=False)
     assert any(name.startswith("lecture-assets/") for name in github.files(selected.repository))
     github.edit(selected.repository, "personal.txt", b"Keep my unrelated file")
-    path = root / "study/lectures.json"
+    path = content_file(root, "lectures")
     notes = json.loads(path.read_bytes())
     removed = notes["lectures"][0]["highlights"][-1]["thumbnail"]["asset"]
     lecture_fixtures.remove_second_highlight(notes)
@@ -138,11 +135,11 @@ def test_lecture_only_exports_and_missing_images_fail_without_remote_writes(
     lecture_project: Path, github
 ) -> None:
     root = lecture_project
-    (root / "study/content.json").unlink()
-    (root / "study/exercises.json").unlink()
+    (content_file(root, "study")).unlink()
+    (content_file(root, "exercises")).unlink()
     build(root, publish=False)
     assert data(export_site(root))["workspaces"] == ["lectures"]
-    for image in (root / "study/lecture-assets").iterdir():
+    for image in (root / "app/lecture-assets").iterdir():
         image.unlink()
     with pytest.raises(CampusError, match="thumbnail"):
         export_site(root)
@@ -176,7 +173,7 @@ def test_export_limits_reject_before_remote_read_or_write(
 
 
 def test_note_images_export_without_highlights_or_private_provenance(lecture_project: Path) -> None:
-    path = lecture_project / "study/lectures.json"
+    path = content_file(lecture_project, "lectures")
     value = json.loads(path.read_bytes())
     lecture = value["lectures"][0]
     first = lecture["highlights"][0]

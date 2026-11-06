@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tum_mcp.study_content import StudyContent
-from tum_mcp.video_content import (
+from tum_mcp.course.content.study import StudyContent
+from tum_mcp.course.media.video_content import (
     Locator,
     Selection,
     Storyboard,

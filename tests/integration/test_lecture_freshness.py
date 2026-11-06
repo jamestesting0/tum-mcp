@@ -6,10 +6,10 @@ import pytest
 from lecture_prepared_fixture import prepare_recording
 from PIL import Image
 
+from tum_mcp.course.app.build import build
+from tum_mcp.course.project.store import digest
 from tum_mcp.errors import CampusError
 from tum_mcp.lecture_processing.receipts import InvalidReceipt
-from tum_mcp.study_build import build
-from tum_mcp.study_store import digest
 
 
 @pytest.mark.parametrize("failure", ["whole_silence", "invented_frame", "generated_diagram"])

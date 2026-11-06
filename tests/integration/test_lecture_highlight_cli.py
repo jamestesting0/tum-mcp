@@ -8,9 +8,9 @@ from PIL import Image, ImageDraw
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.build import build
+from tum_mcp.course.lecture.evidence import Interval
 from tum_mcp.errors import CampusError
-from tum_mcp.lecture_evidence import Interval
-from tum_mcp.study_build import build
 
 
 def frame_png() -> bytes:

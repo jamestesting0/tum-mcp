@@ -9,12 +9,13 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
+from documents import content_file
 from playwright.sync_api import Browser, Page, expect
 from playwright.sync_api import TimeoutError as BrowserTimeout
 
-from tum_mcp.study_build import build
-from tum_mcp.study_preview import Handler, PreviewServer
-from tum_mcp.study_publish_site import export_site
+from tum_mcp.course.app.build import build
+from tum_mcp.course.app.preview import Handler, PreviewServer
+from tum_mcp.course.app.publish_site import export_site
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1",
@@ -41,7 +42,7 @@ def switch_workspace(page: Page, name: str) -> None:
 def exercise_url(exercise_project: Path) -> Iterator[str]:
     build(exercise_project, publish=False)
     with PreviewServer(
-        ("127.0.0.1", 0), partial(Handler, directory=str(exercise_project / "study"))
+        ("127.0.0.1", 0), partial(Handler, directory=str(exercise_project / "app"))
     ) as server:
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -72,7 +73,7 @@ def test_optional_guidance_and_workspace_round_trip(
             visible=True
         ).first.click()
         expect(page.get_by_role("heading", name="The problem", exact=True)).to_be_visible()
-        page.locator(".reading summary", has_text="Guide").click()
+        page.locator(".reading .segment", has_text="Guide").first.click()
         # Students answer on paper: a compared step offers no answer box.
         expect(page.get_by_label("Your answer", exact=True)).to_have_count(0)
         page.get_by_role("button", name="Hint", exact=True).click()
@@ -149,7 +150,7 @@ def test_paper_only_review_and_direct_solution_do_not_require_a_form(
                 "Take the first unsettled vertex", exact=False
             )
         ).to_be_visible()
-        page.locator(".reading summary", has_text="Guide").click()
+        page.locator(".reading .segment", has_text="Guide").first.click()
         page.get_by_role("button", name="Compare", exact=True).click()
         # Then comparison is available with no typed response or automatic correctness claim.
         expect(page.get_by_label("Your answer", exact=True)).not_to_be_visible()
@@ -187,7 +188,7 @@ def test_choice_feedback_revision_recovery_and_workspace_reset(
         expect(page.get_by_text("Not quite", exact=True)).not_to_be_visible()
         page.get_by_role("button", name="Check", exact=True).click()
         page.get_by_role("button", name="Finish", exact=True).click()
-        path = exercise_project / "study/exercises.json"
+        path = content_file(exercise_project, "exercises")
         payload = json.loads(path.read_bytes())
         payload["sets"][0]["exercises"][0]["steps"][0]["prompt"] += " Explain the path cost."
         path.write_text(json.dumps(payload))
@@ -251,7 +252,7 @@ def test_exercise_passage_comment_saves_privately_and_survives_reload(
         document = json.loads((exercise_project / ".tum-mcp/comments.json").read_bytes())
         assert document["schema_version"] == 2
         assert document["comments"][0]["anchor"]["exercise_key"] == "sample-relaxation"
-        assert "Explain why discovery" not in (exercise_project / "study/data.mjs").read_text()
+        assert "Explain why discovery" not in (exercise_project / "app/data.mjs").read_text()
     finally:
         context.close()
 
@@ -294,11 +295,10 @@ def test_missing_course_data_offers_recovery_instead_of_loading_forever(
 def test_unprepared_workspace_has_a_path_back_to_prepared_content(
     course_browser: Browser, exercise_project: Path, missing: str
 ) -> None:
-    filename = "content.json" if missing == "study" else "exercises.json"
-    (exercise_project / "study" / filename).unlink()
+    content_file(exercise_project, missing).unlink()
     build(exercise_project, publish=False)
     with PreviewServer(
-        ("127.0.0.1", 0), partial(Handler, directory=str(exercise_project / "study"))
+        ("127.0.0.1", 0), partial(Handler, directory=str(exercise_project / "app"))
     ) as server:
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -322,7 +322,7 @@ def test_static_exercises_under_a_project_prefix(
     course_browser: Browser, exercise_project: Path, tmp_path: Path, exercise_only: bool
 ) -> None:
     if exercise_only:
-        (exercise_project / "study/content.json").unlink()
+        (content_file(exercise_project, "study")).unlink()
     build(exercise_project, publish=False)
     host = tmp_path / "host"
     site = host / "course"
@@ -594,7 +594,7 @@ def test_step_arrows_keep_the_same_control_focus_and_alignment(
 def test_compare_is_the_one_place_a_step_reveals_its_reasoning(
     course_browser: Browser, exercise_project: Path, exercise_url: str
 ) -> None:
-    path = exercise_project / "study/exercises.json"
+    path = content_file(exercise_project, "exercises")
     payload = json.loads(path.read_bytes())
     steps = payload["sets"][0]["exercises"][0]["steps"]
     ungraded = steps[0]
@@ -625,7 +625,7 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
     course_browser: Browser, exercise_project: Path, exercise_url: str, width: int, theme: str
 ) -> None:
     # Given a Study definition the exercise names, a marked term in a step and two part answers.
-    content_path = exercise_project / "study/content.json"
+    content_path = content_file(exercise_project, "study")
     content = json.loads(content_path.read_bytes())
     weighted = next(unit for unit in content["units"] if unit["key"] == "weighted")
     weighted["blocks"].insert(
@@ -643,7 +643,7 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
         },
     )
     content_path.write_text(json.dumps(content))
-    path = exercise_project / "study/exercises.json"
+    path = content_file(exercise_project, "exercises")
     payload = json.loads(path.read_bytes())
     exercise = payload["sets"][0]["exercises"][0]
     exercise["prerequisites"][0]["block"] = "relaxation"
@@ -712,7 +712,7 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
 def test_guides_follow_their_parts_and_keep_nested_context(
     course_browser: Browser, exercise_project: Path, exercise_url: str, width: int, theme: str
 ) -> None:
-    path = exercise_project / "study/exercises.json"
+    path = content_file(exercise_project, "exercises")
     payload = json.loads(path.read_bytes())
     exercise = payload["sets"][0]["exercises"][0]
     sources = exercise["statement"][0]["sources"]
@@ -799,50 +799,24 @@ def test_guides_follow_their_parts_and_keep_nested_context(
         expect(
             parts.nth(0).get_by_role("heading", name="Context for the second question")
         ).to_have_count(0)
+        # Each part ends with one Guide | Solution pill and one shared panel.
         for part in parts.all():
-            expect(part.locator(".exercise-solution > summary")).to_have_text("Solution")
-            guide = part.locator(".exercise-guide")
-            expect(guide.locator(":scope > summary")).to_have_text("Guide")
+            expect(part.locator(".pill-panel .segment")).to_have_text(["Guide", "Solution"])
             assert part.evaluate("(part) => part.lastElementChild.matches('.exercise-part-help')")
-        solutions = parts.locator(".exercise-solution")
-        expect(solutions.locator(".solution-label")).to_have_count(0)
-        first_solution = solutions.nth(0)
-        first_solution.evaluate(
-            """details => {
-                window.solutionOpened = new Promise((resolve, reject) => {
-                    const timeout = setTimeout(
-                        () => reject(new Error('Solution did not open')), 5000);
-                    details.addEventListener('toggle', () => {
-                        clearTimeout(timeout); resolve(details.open);
-                    }, { once: true });
-                });
-            }"""
-        )
-        first_solution.locator(":scope > summary").click()
-        assert page.evaluate("() => window.solutionOpened")
-        expect(first_solution.locator('[data-field="solution:0"]')).to_be_visible()
-        expect(solutions.nth(1).locator('[data-field="solution:1"]')).to_be_hidden()
+        pills = parts.locator(".pill-panel")
+        expect(page.locator(".solution-label")).to_have_count(0)
+        first, second = pills.nth(0), pills.nth(1)
+        first.get_by_role("button", name="Solution", exact=True).click()
+        expect(first.locator('[data-field="solution:0"]')).to_be_visible()
+        expect(page.locator('[data-field="solution:1"]')).to_have_count(0)
         expect(page.locator('[data-field="solution-note:0"]')).to_be_hidden()
         expect(parts.nth(1).get_by_role("heading", name="The tie case", level=4)).to_be_visible()
-        first = parts.nth(0).locator(".exercise-guide")
-        expect(first).not_to_have_attribute("open", "")
-        first.evaluate(
-            """guide => {
-                window.guideOpened = new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => reject(new Error('Guide did not open')), 5000);
-                    guide.addEventListener('toggle', () => {
-                        clearTimeout(timeout); resolve(guide.open);
-                    }, { once: true });
-                });
-            }"""
-        )
-        first.locator(":scope > summary").click()
-        assert page.evaluate("() => window.guideOpened")
+        # Choosing Guide swaps the panel in place; the choice survives a reload.
+        first.get_by_role("button", name="Guide", exact=True).click()
+        expect(first.locator('[data-field="solution:0"]')).to_have_count(0)
         page.reload()
-        expect(first).to_have_attribute("open", "")
-        expect(parts.nth(1).locator(".exercise-guide")).not_to_have_attribute("open", "")
-        expect(first_solution).to_have_attribute("open", "")
-        expect(solutions.nth(1)).not_to_have_attribute("open", "")
+        expect(first).to_have_attribute("data-open", "guide:0")
+        expect(second).to_have_attribute("data-open", "")
         page.screenshot(path=str(evidence / f"parts-open-{width}-{theme}.png"))
         expect(
             first.get_by_role("heading", name=exercise["steps"][0]["prompt"], level=3)
@@ -852,9 +826,11 @@ def test_guides_follow_their_parts_and_keep_nested_context(
         expect(first.get_by_role("heading", name=REASON_STEP)).to_be_focused()
         first.get_by_role("button", name="Compare", exact=True).click()
         first.locator("button.primary", has_text="Next step").click()
+        # The last step of one part opens the next part's guide.
         expect(
             parts.nth(1).get_by_role("heading", name=exercise["steps"][2]["prompt"])
         ).to_be_focused()
+        expect(second).to_have_attribute("data-open", re.compile("guide"))
         parts.nth(1).get_by_label(
             exercise["steps"][2]["check"]["options"][0]["text"], exact=True
         ).check()
@@ -870,25 +846,22 @@ def test_guides_follow_their_parts_and_keep_nested_context(
         )
         assert saved["steps"][exercise["steps"][0]["key"]]["first"]["solutionViewed"] is True
         assert saved["steps"][exercise["steps"][2]["key"]]["first"]["solutionViewed"] is False
-        expect(
-            solutions.nth(1).get_by_text(second_answer["blocks"][0]["paragraphs"][0], exact=True)
-        ).to_be_hidden()
         page.locator(".exercise-help").get_by_text("Solution notes", exact=True).click()
         expect(page.locator('[data-field="solution-note:0"]')).to_be_visible()
+        # Guide steps and solutions stay out of Contents; the parts' headings lead there.
         if width < 1200:
             page.get_by_role("button", name="Show contents", exact=True).click()
         outline = page.locator(".page-outline")
-        guide_link = outline.get_by_role("link", name="Guide", exact=True).nth(1)
-        assert guide_link.locator("xpath=ancestor::li").count() == 3
-        solution_link = outline.get_by_role("link", name="Solution", exact=True).nth(1)
-        assert solution_link.locator("xpath=ancestor::li").count() == 3
-        solution_link.click()
-        expect(solutions.nth(1).locator(":scope > summary")).to_be_focused()
-        page.keyboard.press("Enter")
-        expect(solutions.nth(1).locator('[data-field="solution:1"]')).to_be_visible()
-        expect(first_solution).to_have_attribute("open", "")
-        first_solution.locator(":scope > summary").click()
-        expect(solutions.nth(1)).to_have_attribute("open", "")
+        expect(outline.get_by_role("link", name="Guide", exact=True)).to_have_count(0)
+        expect(outline.get_by_role("link", name="Solution", exact=True)).to_have_count(0)
+        if width < 1200:
+            page.keyboard.press("Escape")
+        # Opening one part's Solution leaves the other part's panel as it was.
+        second.get_by_role("button", name="Solution", exact=True).click()
+        expect(second.locator('[data-field="solution:1"]')).to_be_visible()
+        second.get_by_role("button", name="Solution", exact=True).click()
+        expect(second).to_have_attribute("data-open", "")
+        second.get_by_role("button", name="Guide", exact=True).click()
         expect(parts.nth(1).get_by_role("button", name="Finish", exact=True)).to_be_enabled()
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         assert errors == []
@@ -901,7 +874,7 @@ def test_local_preview_opens_only_inventory_files(
 ) -> None:
     from http.client import HTTPConnection
 
-    from tum_mcp.study_store import load_state
+    from tum_mcp.course.project.store import load_state
 
     stored = next(item.path for item in load_state(exercise_project).resources if item.path)
     host = exercise_url.removeprefix("http://").rstrip("/")
@@ -923,7 +896,7 @@ def test_local_preview_opens_only_inventory_files(
 def test_outline_names_only_categories_that_add_information(
     course_browser: Browser, exercise_project: Path, exercise_url: str
 ) -> None:
-    path = exercise_project / "study/exercises.json"
+    path = content_file(exercise_project, "exercises")
     payload = json.loads(path.read_bytes())
     first = payload["sets"][0]
     first.update(category="Exercise 1", title="Exercise 1: Shortest paths")
@@ -984,7 +957,7 @@ def test_pending_sheets_remain_discoverable_without_prepared_exercises(
     course_browser: Browser, exercise_url: str, exercise_project: Path, prepared: bool
 ) -> None:
     # Given synthetic pending sheets, with or without any prepared exercises.
-    path = exercise_project / "study/data.mjs"
+    path = exercise_project / "app/data.mjs"
     payload = json.loads(path.read_text().removeprefix("export default ").removesuffix(";\n"))
     payload["pending"] = [{"set": None, "source": "Sheet still to prepare", "labels": ["P1"]}]
     if not prepared:
@@ -1017,7 +990,7 @@ def test_study_overview_shows_only_core_preparation_gaps(
     core_gap: bool,
 ) -> None:
     # Legacy payloads may still include authoring-only preparation fields.
-    path = exercise_project / "study/data.mjs"
+    path = exercise_project / "app/data.mjs"
     payload = json.loads(path.read_text().removeprefix("export default ").removesuffix(";\n"))
     payload["studyPreparation"] = {
         "pending": [
@@ -1028,7 +1001,7 @@ def test_study_overview_shows_only_core_preparation_gaps(
                     {
                         "key": "compare",
                         "text": "Compare <img src=x onerror=alert(1)> algorithms",
-                        "status": "partial",
+                        "status": "pending",
                         "locator": "Slide 3",
                     }
                 ],
@@ -1056,7 +1029,6 @@ def test_study_overview_shows_only_core_preparation_gaps(
         if core_gap:
             expect(known.locator("summary")).to_be_visible()
             known.locator("summary").click()
-            expect(known).to_contain_text("Partly prepared")
             expect(known).to_contain_text("Compare <img src=x onerror=alert(1)> algorithms")
             expect(known.locator("img")).to_have_count(0)
         else:
@@ -1069,7 +1041,7 @@ def test_study_overview_shows_only_core_preparation_gaps(
 def test_distilled_code_practice_writes_code_and_checks_literal_code(
     course_browser: Browser, exercise_url: str, exercise_project: Path
 ) -> None:
-    path = exercise_project / "study/exercises.json"
+    path = content_file(exercise_project, "exercises")
     payload = json.loads(path.read_bytes())
     original = payload["sets"][0]["exercises"][0]
     source = original["sources"][0]["key"]
@@ -1141,7 +1113,7 @@ def test_distilled_code_practice_writes_code_and_checks_literal_code(
         page.goto(exercise_url + "#exercises/sheet-1/copy-drill")
         expect(page.locator(".practice-for")).to_contain_text(original["title"])
         expect(page.locator(".code-region .code-line")).to_have_count(3)
-        page.locator(".reading summary", has_text="Guide").click()
+        page.locator(".reading .segment", has_text="Guide").first.click()
         editor = page.get_by_label("Your code (Java)", exact=True)
         expect(editor).to_have_value(starter)
         editor.evaluate(

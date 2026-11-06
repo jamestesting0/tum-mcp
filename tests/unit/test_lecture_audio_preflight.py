@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
+from tum_mcp.course.lecture.evidence import Interval
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing import preparation_audio
 from tum_mcp.lecture_processing.chunk_store import Chunk, StagedError
 from tum_mcp.lecture_processing.preparation_audio import RecognizerUnavailable, prepare_audio

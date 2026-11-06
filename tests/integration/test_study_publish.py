@@ -6,16 +6,18 @@ from threading import Event
 from typing import Literal, assert_never
 
 import pytest
+from documents import content_file
 from filelock import FileLock, Timeout
 from study_publish_fixture import GitHubFixture
 from typer.testing import CliRunner
 
-from tum_mcp import study_github, study_preview
 from tum_mcp.cli import app
+from tum_mcp.course.app import github as study_github
+from tum_mcp.course.app import preview as study_preview
+from tum_mcp.course.app.build import RETIRED_TEMPLATE_FILES, build
+from tum_mcp.course.app.publish_models import load_publication
+from tum_mcp.course.app.publish_site import MARKER, SITE_FILES, blob_sha
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_build import RETIRED_TEMPLATE_FILES, build
-from tum_mcp.study_publish_models import load_publication
-from tum_mcp.study_publish_site import MARKER, SITE_FILES, blob_sha
 
 
 @pytest.fixture
@@ -34,7 +36,7 @@ def first_publish(project: Path):
 
 
 def change_lesson(project: Path) -> None:
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     content = json.loads(path.read_bytes())
     content["introduction"] += " Updated synthetic lesson."
     path.write_text(json.dumps(content), encoding="utf-8")
@@ -87,7 +89,7 @@ def test_full_app_publication_requires_renewed_consent_for_selective_settings(
 
 def test_first_publication_exports_only_the_site(project: Path, github: GitHubFixture) -> None:
     # Given private source, comment and arbitrary files alongside the generated app.
-    (project / "study/private.txt").write_text("synthetic-private-original", encoding="utf-8")
+    (project / "app/private.txt").write_text("synthetic-private-original", encoding="utf-8")
     (project / ".tum-mcp/comments.json").write_text("synthetic-local-comment", encoding="utf-8")
     (project / ".env").write_text("synthetic-credential-file", encoding="utf-8")
     # When public site publication is explicitly authorized.
@@ -99,7 +101,7 @@ def test_first_publication_exports_only_the_site(project: Path, github: GitHubFi
     assert set(files) == {*SITE_FILES, MARKER, "README.md"}
     assert all(b"synthetic-private-original" not in value for value in files.values())
     assert b"data.hosted = true" in files["data.mjs"]
-    assert b"data.hosted" not in (project / "study/data.mjs").read_bytes()
+    assert b"data.hosted" not in (project / "app/data.mjs").read_bytes()
     creation = next(request for request in github.requests if request.endpoint == "user/repos")
     assert creation.body["private"] is True
     saved = load_publication(project)
@@ -131,7 +133,7 @@ def test_build_updates_the_same_repository_and_unchanged_build_is_local(
 def test_concurrent_publish_cannot_restore_an_older_prepared_snapshot(
     project: Path, github: GitHubFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from tum_mcp import study_publish
+    from tum_mcp.course.app import publish as study_publish
 
     assert first_publish(project).exit_code == 0
     repository = load_publication(project).repository
@@ -161,7 +163,7 @@ def test_concurrent_publish_cannot_restore_an_older_prepared_snapshot(
     with ThreadPoolExecutor(max_workers=2) as workers:
         older = workers.submit(first_publish, project)
         assert captured.wait(10), "The first publisher did not prepare its snapshot."
-        path = project / "study/content.json"
+        path = content_file(project, "study")
         content = json.loads(path.read_bytes())
         content["introduction"] += " NEWEST_PUBLIC_CONTENT"
         path.write_text(json.dumps(content))
@@ -276,7 +278,7 @@ def test_remote_edits_are_not_overwritten(project: Path, github: GitHubFixture) 
     assert result.publication.status == "failed"
     assert result.publication.message.startswith("WORKSPACE_CONFLICT")
     assert github.files(repository)["styles.css"] == b"Manual remote changes"
-    assert b"Updated synthetic lesson" in (project / "study/data.mjs").read_bytes()
+    assert b"Updated synthetic lesson" in (project / "app/data.mjs").read_bytes()
 
 
 def test_explicit_sync_rechecks_an_unchanged_site(project: Path, github: GitHubFixture) -> None:
@@ -321,8 +323,8 @@ def test_failed_authentication_never_prints_cli_stderr(
 
 def test_name_collision_uses_a_stable_suffix(project: Path, github: GitHubFixture) -> None:
     # Given an unrelated repository occupying the proposed name.
-    from tum_mcp.study_publish_models import course_identity, repository_name
-    from tum_mcp.study_store import load_state
+    from tum_mcp.course.app.publish_models import course_identity, repository_name
+    from tum_mcp.course.project.store import load_state
 
     course = load_state(project).course
     occupied = f"student/{repository_name(course)}"

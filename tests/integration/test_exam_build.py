@@ -3,25 +3,26 @@ import uuid
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from material_fixture import exam_document, exam_project, minimal_unit, pdf_bytes
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.build import build
+from tum_mcp.course.app.comment_models import OPERATION
+from tum_mcp.course.app.comments import change_comment, read_comments
+from tum_mcp.course.app.publish_site import export_site
+from tum_mcp.course.content.exam import ExamContent
+from tum_mcp.course.content.exam_data import exam_revisions
+from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.exam_content import ExamContent
-from tum_mcp.exam_data import exam_revisions
-from tum_mcp.study_build import build
-from tum_mcp.study_comment_models import OPERATION
-from tum_mcp.study_comments import change_comment, read_comments
-from tum_mcp.study_publish_site import export_site
-from tum_mcp.study_store import load_state
 
 
 @pytest.fixture
 def course(tmp_path: Path) -> Path:
     root = exam_project(tmp_path)
     (root / "app").mkdir()
-    (root / "app/exam.json").write_text(json.dumps(exam_document(root)), encoding="utf-8")
+    (content_file(root, "exam")).write_text(json.dumps(exam_document(root)), encoding="utf-8")
     return root
 
 
@@ -59,7 +60,7 @@ def test_exam_prep_exports_alone_and_with_study_without_document_references(cour
     image = course / "app/figures/exam-only.png"
     image.parent.mkdir()
     Image.new("RGB", (16, 16), "white").save(image)
-    authored = course / "app/exam.json"
+    authored = content_file(course, "exam")
     exam = json.loads(authored.read_bytes())
     exam["concepts"][0].setdefault("details", []).append(
         {
@@ -89,7 +90,7 @@ def test_exam_prep_exports_alone_and_with_study_without_document_references(cour
         "introduction": "Synthetic.",
         "units": [unit],
     }
-    (course / "app/content.json").write_text(json.dumps(study), encoding="utf-8")
+    (content_file(course, "study")).write_text(json.dumps(study), encoding="utf-8")
     build(course, publish=False)
     site = export_site(course)["data.mjs"]
     published = json.loads(site.removeprefix(b"const data = ").split(b";\ndata.hosted")[0])
@@ -103,7 +104,7 @@ def test_cli_schema_report_and_inspect(course: Path) -> None:
     runner = CliRunner()
     schema = json.loads(runner.invoke(app, ["study", "schema", "exam"]).output)
     assert "sittings" in schema["properties"]
-    report = json.loads(runner.invoke(app, ["study", "exam-report", str(course)]).output)
+    report = json.loads(runner.invoke(app, ["study", "exam-report", str(course), "--json"]).output)
     assert report["prepared"] and report["stats"]["sittings_considered"] == 2
     assert "exam" in report["materials"] and report["stale"] == []
     stale = json.loads(
@@ -120,7 +121,7 @@ def test_cli_schema_report_and_inspect(course: Path) -> None:
 
 def test_exam_comments_round_trip_with_current_revisions(course: Path) -> None:
     build(course, publish=False)
-    content = ExamContent.model_validate_json((course / "app/exam.json").read_bytes())
+    content = ExamContent.model_validate_json((content_file(course, "exam")).read_bytes())
     revision = exam_revisions(content)["concept:observer"]
     state = read_comments(course)
     identity = json.loads(
@@ -152,8 +153,8 @@ def test_exam_comments_round_trip_with_current_revisions(course: Path) -> None:
 
 
 def test_exam_guidance_cannot_use_an_optional_only_study_block(course: Path) -> None:
-    from tum_mcp.exam_data import check_unit_links
-    from tum_mcp.study_content import StudyContent
+    from tum_mcp.course.content.exam_data import check_unit_links
+    from tum_mcp.course.content.study import StudyContent
 
     state = load_state(course)
     source = next(item for item in state.resources if item.resource.key == "slides")

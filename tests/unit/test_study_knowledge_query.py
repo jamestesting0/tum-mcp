@@ -4,10 +4,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from tum_mcp.course.memory.graph import Edge, Graph, Node
+from tum_mcp.course.memory.packet import encoded, excerpt, fit
+from tum_mcp.course.memory.query import lexical_score, seeds, walk
 from tum_mcp.errors import CampusError
-from tum_mcp.study_knowledge_graph import Edge, Graph, Node
-from tum_mcp.study_knowledge_packet import encoded, excerpt, fit
-from tum_mcp.study_knowledge_query import lexical_score, seeds, walk
 
 
 def node(ref, title="Topic", body="", workspace="study", payload=None):

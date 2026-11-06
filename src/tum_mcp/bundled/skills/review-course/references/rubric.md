@@ -170,7 +170,7 @@ without its state.
 
 ## Representation
 
-Each idea is shown in the shape it has ([representations](../../prepare-study/references/review.md#choose-the-representation)).
+Each idea is shown in the shape it has ([representations](../../prepare-study/references/representations.md#choose-the-representation)).
 
 - `representation.shape_fits`: procedures are traces with their state, parallel cases
   tables or lists, two-input rules matrices, physical or spatial ideas drawn figures,

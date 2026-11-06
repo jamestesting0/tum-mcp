@@ -19,8 +19,8 @@ perception or learning.
    sound, captions and transitions. Record actual intervals, including re-entry at
    chapters. A playback tool without sound perception supports synchronization
    observations, not delivery. ASR, waveforms and frames do not replace hearing.
-4. Save `media` entries beside existing `reviews` and `course` in
-   `.tum-mcp/review.json` (`study schema review`). Copy the report's current item
+4. Save the media entries as a list in `.tum-mcp/review/media.json`
+   (`study schema media-review`). Copy the report's current item
    (`audio/CATEGORY` or `video/STEM`) and revision; never calculate or reuse a
    revision by filename. Preserve unrelated reviews.
 

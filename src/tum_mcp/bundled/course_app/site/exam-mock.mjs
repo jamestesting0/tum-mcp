@@ -1,5 +1,5 @@
 import data from './data.mjs';
-import { node, studyText, append, sourcesNote, shareCitations, plainText } from './dom.mjs';
+import { node, studyText, append, sourcesNote, shareCitations, plainText, pillPanel } from './dom.mjs';
 import { renderBlockBody, renderAnswers } from './reading.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exam } from './exam-state.mjs';
@@ -50,7 +50,7 @@ export function renderPaper(paper) {
     section.append(append(node('div', 'section-heading'), node('h2', '', title), sourcesNote(cited, data.sources, data.course.synthetic, title)));
     section.append(statementBody(question.statement, (element, index) => annotateExam(element, questionItem(paper, question), paper.revision, `${question.key}:statement:${index}`)));
     if (question.parts?.length) section.append(append(node('ol', 'exam-parts'), ...question.parts.map(text => studyText('li', '', text))));
-    const solution = node('details', 'disclosure exam-solution'), body = append(node('div', 'disclosure-panel'), renderAnswers(question.solution));
+    const body = append(node('div'), renderAnswers(question.solution));
     if (question.marking?.length) {
       body.append(node('p', 'small exam-marking-label', question.marking_basis === 'official' ? 'Official marking' : 'Where the marks are'),
         append(node('ul', 'exam-marking'), ...question.marking.map(item => studyText('li', '', `${item.text} (${item.points})`))));
@@ -58,8 +58,7 @@ export function renderPaper(paper) {
     // Recall waits behind the solution: recognising the pattern is what the paper practises.
     const recall = examRecall(question.concepts || [], question.patterns || []);
     if (recall) body.append(recall);
-    solution.append(node('summary', '', 'Solution'), body);
-    section.append(solution);
+    section.append(pillPanel('Solution', [{ value: 'solution', label: 'Solution', content: body }]).element);
     root.append(section);
   }
   shareCitations(root, eyebrow);

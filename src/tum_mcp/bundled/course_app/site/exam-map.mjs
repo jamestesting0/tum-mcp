@@ -43,7 +43,8 @@ export function renderMap() {
   const title = node('h2', '', 'Semester map'); title.id = 'exam-map-title';
   const heading = append(node('div', 'section-heading exam-map-heading'), title);
   root.append(heading);
-  if (!map?.nodes?.length) { root.hidden = true; return root; }
+  // Without links the map only repeats the sheet's own grouping, so it is left out.
+  if (!map?.nodes?.length || !map.edges?.length) { root.hidden = true; return root; }
   const links = new Map(map.nodes.map(item => [item.key, []]));
   for (const edge of map.edges) { links.get(edge.start).push({ ...edge, other: edge.end, out: true }); links.get(edge.end).push({ ...edge, other: edge.start, out: false }); }
   const card = node('div', 'exam-map-card'); card.setAttribute('role', 'region'); card.hidden = true;

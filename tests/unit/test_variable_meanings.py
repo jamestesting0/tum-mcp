@@ -4,10 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tum_mcp.exam_content import CompactFormula
-from tum_mcp.study_content import DerivationBlock, resolve_meanings
-from tum_mcp.study_math import symbol_marks, validate_inline
-from tum_mcp.study_report import (
+from tum_mcp.course.checks.report import (
     echoed_meanings,
     generic_meanings,
     redeclared_meanings,
@@ -15,6 +12,9 @@ from tum_mcp.study_report import (
     typed_math_labels,
     unexplained_variables,
 )
+from tum_mcp.course.content.exam import CompactFormula
+from tum_mcp.course.content.latex import symbol_marks, validate_inline
+from tum_mcp.course.content.study import DerivationBlock, resolve_meanings
 
 CASES = json.loads((Path(__file__).parents[1] / "fixtures/symbol_marks.json").read_text())
 
@@ -147,7 +147,7 @@ def test_a_task_quantity_needs_a_meaning_and_a_specific_one() -> None:
 
 
 def test_figure_labels_write_mathematics_as_latex() -> None:
-    from tum_mcp.study_figures import safe_svg
+    from tum_mcp.course.content.figures import safe_svg
 
     figure = '<svg viewBox="0 0 200 100"><text x="10" y="40">{}</text></svg>'
     # Typed subscripts and kets render in the text font, unlike the typeset math around them.

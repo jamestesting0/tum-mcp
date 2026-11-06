@@ -16,8 +16,12 @@ export function lectureLifecycle(root, command) {
   }
   const project = join(root, 'optional-lecture-course');
   command(['study', 'demo', project, '--lectures']);
-  const notes = join(project, 'app/lectures.json');
-  const before = readFileSync(notes);
+  const indexPath = join(project, 'app/lectures/lectures.json');
+  const index = JSON.parse(readFileSync(indexPath, 'utf8'));
+  const notes = new Map([
+    indexPath,
+    ...index.lectures.map(key => join(project, 'app/lectures/lectures', `${key}.json`)),
+  ].map(path => [path, readFileSync(path)]));
   const payload = JSON.parse(readFileSync(join(project, 'app/data.mjs'), 'utf8').slice('export default '.length).trim().replace(/;$/, ''));
   assert.deepEqual(payload.workspaces, ['study', 'exercises', 'lectures', 'exam']);
   const image = join(project, 'app', payload.lectures.lectures[0].highlights[0].thumbnail.asset);
@@ -30,7 +34,7 @@ export function lectureLifecycle(root, command) {
   const removed = JSON.parse(command(['uninstall', 'lecture', '--json']));
   assert.equal(removed.enabled, false);
   assert.equal(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.length, 7);
-  assert.ok(readFileSync(notes).equals(before));
+  for (const [path, before] of notes) assert.ok(readFileSync(path).equals(before));
   assert.ok(existsSync(image));
   assert.match(readFileSync(entry, 'utf8'), /Personal lecture preference/);
   command(['install', 'lecture', '--no-asr']);

@@ -1,8 +1,8 @@
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from tum_mcp.exercise_checks import Check
-from tum_mcp.exercise_content import ExerciseContent
+from tum_mcp.course.content.exercises import ExerciseContent
+from tum_mcp.course.content.responses import Check
 
 CHECK = TypeAdapter(Check)
 

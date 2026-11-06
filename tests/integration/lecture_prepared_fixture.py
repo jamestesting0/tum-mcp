@@ -5,15 +5,17 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-from tum_mcp.lecture_evidence import Interval, Recording
+from documents import content_file
+
+from tum_mcp.course.lecture.evidence import Interval, Recording
+from tum_mcp.course.project.models import Binding, Course, Coverage, Resource, Snapshot
+from tum_mcp.course.project.store import digest
+from tum_mcp.course.project.sync import sync
 from tum_mcp.lecture_processing.prepare_visuals import FrameInventory
 from tum_mcp.lecture_processing.receipts import PreparedReceipt, source_text
 from tum_mcp.lecture_processing.transcript_models import Passage
 from tum_mcp.lecture_processing.validity import RecordingTiming, evaluate
 from tum_mcp.lecture_processing.visuals import SourceFrame
-from tum_mcp.study_models import Binding, Course, Coverage, Resource, Snapshot
-from tum_mcp.study_store import digest
-from tum_mcp.study_sync import sync
 
 FIXTURES = Path(__file__).parents[1] / "fixtures/course_app"
 SPEECH = (
@@ -154,7 +156,7 @@ def prepare_recording(tmp_path: Path) -> Prepared:
         )
     (root / "app").mkdir()
     shutil.copytree(FIXTURES / "lecture-assets", root / ".tum-mcp/lecture-assets")
-    prepared = Prepared(root, recording, folder, root / "app/lectures.json", notes)
+    prepared = Prepared(root, recording, folder, content_file(root, "lectures"), notes)
     prepared.write_receipt(receipt)
     prepared.write_notes()
     frames = []

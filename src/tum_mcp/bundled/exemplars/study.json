@@ -1,0 +1,530 @@
+{
+  "schema_version": 1,
+  "course_key": "exemplar",
+  "organization": "topics",
+  "introduction": "A gold exemplar.",
+  "units": [
+    {
+      "key": "bfs",
+      "label": "Search",
+      "title": "Breadth-first search",
+      "summary": "How a queue makes the first path found the one with the fewest edges.",
+      "minutes": 15,
+      "objectives": [
+        {
+          "key": "trace-bfs",
+          "text": "Trace breadth-first search on a small graph and read off a shortest path."
+        },
+        {
+          "key": "choose-search",
+          "text": "Choose breadth-first or depth-first search for a task."
+        }
+      ],
+      "sources": [
+        {
+          "key": "search",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "Search level by level",
+          "key": "levels",
+          "sources": [
+            "search"
+          ],
+          "paragraphs": [
+            "To find the fewest moves from a start to a goal, check every one-move option before any two-move option."
+          ]
+        },
+        {
+          "kind": "definition",
+          "key": "frontier",
+          "sources": [
+            "search"
+          ],
+          "term": "Frontier",
+          "statement": "The nodes found so far that the search has not expanded yet."
+        },
+        {
+          "kind": "walkthrough",
+          "title": "Trace it on a graph",
+          "key": "bfs-trace",
+          "level": 2,
+          "sources": [
+            "search"
+          ],
+          "stage": {
+            "kind": "diagram",
+            "description": "Five nodes: S links to A and B, A to C, and both B and C to the goal G.",
+            "nodes": [
+              {
+                "key": "s",
+                "label": "S",
+                "row": 0,
+                "col": 0
+              },
+              {
+                "key": "a",
+                "label": "A",
+                "row": 0,
+                "col": 1
+              },
+              {
+                "key": "b",
+                "label": "B",
+                "row": 1,
+                "col": 1
+              },
+              {
+                "key": "c",
+                "label": "C",
+                "row": 0,
+                "col": 2
+              },
+              {
+                "key": "g",
+                "label": "G",
+                "row": 1,
+                "col": 2
+              }
+            ],
+            "edges": [
+              {
+                "start": "s",
+                "end": "a"
+              },
+              {
+                "start": "s",
+                "end": "b"
+              },
+              {
+                "start": "a",
+                "end": "c"
+              },
+              {
+                "start": "b",
+                "end": "g"
+              },
+              {
+                "start": "c",
+                "end": "g"
+              }
+            ]
+          },
+          "steps": [
+            {
+              "action": "Put \\(S\\) in the frontier.",
+              "why": "The search starts from the start node.",
+              "subgoal": "Start",
+              "active": [
+                "s"
+              ],
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "S"
+                },
+                {
+                  "label": "Expanded",
+                  "value": "none"
+                }
+              ]
+            },
+            {
+              "action": "Expand \\(S\\): generate \\(A\\) and \\(B\\).",
+              "why": "\\(S\\) is the only frontier node.",
+              "subgoal": "Expand",
+              "visited": [
+                "s"
+              ],
+              "frontier": [
+                "a",
+                "b"
+              ],
+              "edges": [
+                {
+                  "start": "s",
+                  "end": "a"
+                },
+                {
+                  "start": "s",
+                  "end": "b"
+                }
+              ],
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "A, B"
+                },
+                {
+                  "label": "Expanded",
+                  "value": "S"
+                }
+              ]
+            },
+            {
+              "action": "Expand \\(A\\): generate \\(C\\).",
+              "why": "A queue takes the oldest node, and \\(A\\) entered before \\(B\\).",
+              "subgoal": "Expand",
+              "active": [
+                "a"
+              ],
+              "visited": [
+                "s"
+              ],
+              "frontier": [
+                "b",
+                "c"
+              ],
+              "edges": [
+                {
+                  "start": "a",
+                  "end": "c"
+                }
+              ],
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "B, C"
+                },
+                {
+                  "label": "Expanded",
+                  "value": "S, A"
+                }
+              ]
+            },
+            {
+              "action": "Expand \\(B\\): generate \\(G\\).",
+              "why": "\\(B\\) is now the oldest node: every node one edge from \\(S\\) is expanded before any node two edges away.",
+              "subgoal": "Expand",
+              "active": [
+                "b"
+              ],
+              "visited": [
+                "s",
+                "a"
+              ],
+              "frontier": [
+                "c",
+                "g"
+              ],
+              "edges": [
+                {
+                  "start": "b",
+                  "end": "g"
+                }
+              ],
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "C, G"
+                },
+                {
+                  "label": "Expanded",
+                  "value": "S, A, B"
+                }
+              ]
+            },
+            {
+              "action": "Stop: \\(G\\) is the goal. Path \\(S \\to B \\to G\\).",
+              "why": "The goal test runs when a node is generated, and the first path found has the fewest edges.",
+              "subgoal": "Stop",
+              "active": [
+                "g"
+              ],
+              "visited": [
+                "s",
+                "a",
+                "b"
+              ],
+              "edges": [
+                {
+                  "start": "s",
+                  "end": "b"
+                },
+                {
+                  "start": "b",
+                  "end": "g"
+                }
+              ],
+              "note": "Testing only when a node is expanded costs one more expansion here; the path stays the same.",
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "C, G"
+                },
+                {
+                  "label": "Path",
+                  "value": "\\(S \\to B \\to G\\)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "title": "Why the first path found is shortest",
+          "key": "bfs-shortest",
+          "sources": [
+            "search"
+          ],
+          "steps": [
+            "The queue hands out nodes in the order they were found.",
+            "Every node one edge from \\(S\\) is found before any node two edges away.",
+            "So the goal is first found along a path with the fewest edges: \\(S \\to B \\to G\\) above."
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Breadth-first or depth-first",
+          "key": "bfs-vs-dfs",
+          "sources": [
+            "search"
+          ],
+          "caption": "The same search with a different frontier",
+          "columns": [
+            "Question",
+            "Breadth-first",
+            "Depth-first"
+          ],
+          "rows": [
+            [
+              "Which node comes next?",
+              "The oldest found (queue)",
+              "The newest found (stack)"
+            ],
+            [
+              "First path to the goal",
+              "Fewest edges",
+              "Any path"
+            ],
+            [
+              "Memory on a wide graph",
+              "A whole level",
+              "One branch"
+            ]
+          ]
+        }
+      ],
+      "flashcards": [
+        {
+          "key": "frontier-card",
+          "objective": "trace-bfs",
+          "front": "What does the frontier hold during a search?",
+          "back": "The nodes found so far that have not been expanded.",
+          "sources": [
+            "search"
+          ]
+        },
+        {
+          "key": "queue-card",
+          "objective": "choose-search",
+          "front": "Which frontier makes the first path found the shortest in edges?",
+          "back": "A queue: breadth-first search takes the oldest node first.",
+          "sources": [
+            "search"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "key": "third-expansion",
+          "objective": "trace-bfs",
+          "level": "apply",
+          "prompt": "Breadth-first search starts at \\(S\\) and adds neighbours in alphabetical order. Which node does it expand third?",
+          "blocks": [
+            {
+              "kind": "diagram",
+              "sources": [
+                "search"
+              ],
+              "description": "S links to A and B; A links to C; B links to D.",
+              "nodes": [
+                {
+                  "key": "s",
+                  "label": "S",
+                  "row": 0,
+                  "col": 0
+                },
+                {
+                  "key": "a",
+                  "label": "A",
+                  "row": 0,
+                  "col": 1
+                },
+                {
+                  "key": "b",
+                  "label": "B",
+                  "row": 1,
+                  "col": 1
+                },
+                {
+                  "key": "c",
+                  "label": "C",
+                  "row": 0,
+                  "col": 2
+                },
+                {
+                  "key": "d",
+                  "label": "D",
+                  "row": 1,
+                  "col": 2
+                }
+              ],
+              "edges": [
+                {
+                  "start": "s",
+                  "end": "a"
+                },
+                {
+                  "start": "s",
+                  "end": "b"
+                },
+                {
+                  "start": "a",
+                  "end": "c"
+                },
+                {
+                  "start": "b",
+                  "end": "d"
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "The graph before the search starts.",
+                  "active": [
+                    "s"
+                  ]
+                }
+              ]
+            }
+          ],
+          "options": [
+            {
+              "key": "a",
+              "text": "\\(A\\)",
+              "feedback": "\\(A\\) is expanded second, right after \\(S\\)."
+            },
+            {
+              "key": "b",
+              "text": "\\(B\\)",
+              "feedback": "After \\(S\\) and \\(A\\), the oldest node in the queue is \\(B\\)."
+            },
+            {
+              "key": "c",
+              "text": "\\(C\\)",
+              "feedback": "\\(C\\) was found after \\(B\\), so the queue hands out \\(B\\) first; taking \\(C\\) would be depth-first."
+            }
+          ],
+          "correct": "b",
+          "explanation": "The queue order is \\(S\\), then \\(A, B\\), then \\(C, D\\); the third expansion is \\(B\\).",
+          "sources": [
+            "search"
+          ]
+        },
+        {
+          "key": "pick-search",
+          "objective": "choose-search",
+          "level": "reason",
+          "prompt": "A maze solver must return a path from \\(S\\) to \\(G\\) with the fewest moves. Which search guarantees \\(S \\to B \\to G\\) here?",
+          "blocks": [
+            {
+              "kind": "diagram",
+              "sources": [
+                "search"
+              ],
+              "description": "Two routes from S to G: S, B, G and S, A, C, G.",
+              "nodes": [
+                {
+                  "key": "s",
+                  "label": "S",
+                  "row": 0,
+                  "col": 0
+                },
+                {
+                  "key": "a",
+                  "label": "A",
+                  "row": 0,
+                  "col": 1
+                },
+                {
+                  "key": "b",
+                  "label": "B",
+                  "row": 1,
+                  "col": 1
+                },
+                {
+                  "key": "c",
+                  "label": "C",
+                  "row": 0,
+                  "col": 2
+                },
+                {
+                  "key": "g",
+                  "label": "G",
+                  "row": 1,
+                  "col": 2
+                }
+              ],
+              "edges": [
+                {
+                  "start": "s",
+                  "end": "a"
+                },
+                {
+                  "start": "s",
+                  "end": "b"
+                },
+                {
+                  "start": "a",
+                  "end": "c"
+                },
+                {
+                  "start": "b",
+                  "end": "g"
+                },
+                {
+                  "start": "c",
+                  "end": "g"
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Two routes to the goal.",
+                  "active": [
+                    "s",
+                    "g"
+                  ]
+                }
+              ]
+            }
+          ],
+          "options": [
+            {
+              "key": "bfs",
+              "text": "Breadth-first search",
+              "feedback": "It expands every one-move option first, so it reaches G through B."
+            },
+            {
+              "key": "dfs",
+              "text": "Depth-first search",
+              "feedback": "It may follow \\(A\\) and \\(C\\) first and return the three-move path."
+            },
+            {
+              "key": "either",
+              "text": "Either search",
+              "feedback": "Only the queue order guarantees the fewest moves; a stack can go deep first."
+            }
+          ],
+          "correct": "bfs",
+          "explanation": "Breadth-first search finds every node at distance 1 before distance 2, so its first path to G has the fewest edges.",
+          "sources": [
+            "search"
+          ]
+        }
+      ]
+    }
+  ]
+}

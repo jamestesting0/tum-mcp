@@ -1,9 +1,10 @@
 from fractions import Fraction
 from importlib.resources import files
 from pathlib import Path
+from typing import get_args
 
-from tum_mcp.exercise_content import ExerciseContent
-from tum_mcp.study_content import StudyContent
+from tum_mcp.course.content.exercises import ExerciseContent
+from tum_mcp.course.content.study import Block, StudyContent
 
 
 def test_distributed_preview_is_one_component_unit_and_one_exercise() -> None:
@@ -12,20 +13,11 @@ def test_distributed_preview_is_one_component_unit_and_one_exercise() -> None:
     exercises = ExerciseContent.model_validate_json((example / "exercises.json").read_bytes())
     assert len(study.units) == len(exercises.sets) == 1
     unit = study.units[0]
-    assert {block.kind for block in unit.blocks} == {
-        "text",
-        "definition",
-        "formula",
-        "derivation",
-        "table",
-        "code",
-        "diagram",
-        "plot",
-        "uml",
-        "files",
-        "tree",
-        "figure",
+    # The preview shows every kind of block the schema offers.
+    kinds = {
+        get_args(kind.model_fields["kind"].annotation)[0] for kind in get_args(get_args(Block)[0])
     }
+    assert {block.kind for block in unit.blocks} == kinds
     assert any(block.kind == "text" and block.steps for block in unit.blocks)
     assert len(unit.flashcards) == len(unit.questions) == 1
     assert len(unit.explore) == 1
@@ -81,8 +73,8 @@ def test_private_learning_answers_have_independent_arithmetic_oracles() -> None:
 
 
 def test_optional_synthetic_lecture_has_reviewed_highlights_math_and_confined_thumbnails() -> None:
-    from tum_mcp.lecture_assets import thumbnail_bytes
-    from tum_mcp.lecture_content import LectureContent
+    from tum_mcp.course.lecture.assets import thumbnail_bytes
+    from tum_mcp.course.lecture.content import LectureContent
 
     example = files("tum_mcp") / "bundled/course_app/example"
     notes = LectureContent.model_validate_json((example / "lectures.json").read_bytes())

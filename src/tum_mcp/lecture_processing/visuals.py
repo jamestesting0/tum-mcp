@@ -11,15 +11,15 @@ from pathlib import Path
 from PIL import Image, ImageChops, UnidentifiedImageError
 from pydantic import FiniteFloat
 
+from tum_mcp.course.lecture.evidence import THUMBNAIL_EDGE, Crop, Seconds
+from tum_mcp.course.project.models import Digest
+from tum_mcp.course.project.store import confined
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import THUMBNAIL_EDGE, Crop, Seconds
 from tum_mcp.lecture_processing.decoding import local_input, probe, run_decoder
 from tum_mcp.lecture_processing.media import AcquiredSegment
 from tum_mcp.lecture_processing.timeline import MapPiece, Timeline
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
-from tum_mcp.study_models import Digest
-from tum_mcp.study_store import confined
 
 
 class SourceFrame(Frozen):

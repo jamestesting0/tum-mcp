@@ -3,8 +3,8 @@ import math
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from tum_mcp.study_content import Block, compile_formulas
-from tum_mcp.study_plot import compile_expression, sample
+from tum_mcp.course.content.plot import compile_expression, sample
+from tum_mcp.course.content.study import Block, compile_formulas
 
 BLOCK = TypeAdapter(Block)
 

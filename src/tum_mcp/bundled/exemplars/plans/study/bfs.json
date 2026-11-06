@@ -1,0 +1,38 @@
+{
+  "item": "study/bfs",
+  "concepts": [
+    {
+      "name": "Frontier",
+      "kind": "definition",
+      "instance": "After S is expanded the frontier is A, B.",
+      "blocks": [
+        "frontier",
+        "bfs-trace"
+      ]
+    },
+    {
+      "name": "Breadth-first search",
+      "kind": "algorithm",
+      "instance": "S to G on a five-node graph, step by step.",
+      "blocks": [
+        "bfs-trace"
+      ]
+    },
+    {
+      "name": "First path found is shortest",
+      "kind": "rule",
+      "instance": "G is first generated from B, one edge from S.",
+      "blocks": [
+        "bfs-shortest"
+      ]
+    },
+    {
+      "name": "Breadth-first or depth-first",
+      "kind": "comparison",
+      "instance": "The same graph searched with a queue and with a stack.",
+      "blocks": [
+        "bfs-vs-dfs"
+      ]
+    }
+  ]
+}

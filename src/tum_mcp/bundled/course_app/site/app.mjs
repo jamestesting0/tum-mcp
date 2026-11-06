@@ -249,7 +249,7 @@ function studyPreparation() {
   const pending = data.studyPreparation?.pending || [];
   if (pending.length) root.append(preparationDisclosure({ title: 'Not prepared yet', noun: 'source',
     entries: pending.map(entry => ({ title: entry.title, labels: entry.outcomes.map(outcome =>
-      `${outcome.status === 'partial' ? 'Partly prepared · ' : ''}${outcome.text} · ${outcome.locator}`) })),
+      `${outcome.text} · ${outcome.locator}`) })),
   }));
   return root;
 }

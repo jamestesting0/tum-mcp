@@ -86,7 +86,7 @@
         const r = shrink(rect(label), 1);
         if (strokes.some(points => points.some(p => inside(p, r)))) add('label_on_line', `"${say(label)}" sits on a curve`);
       }
-      const block = expected[id];
+      const block = expected[id]?.stage || expected[id];
       if (block && (block.notes || []).length !== svg.querySelectorAll('circle.plot-mark').length) add('fidelity', 'a marked point is missing');
       continue;
     }
@@ -119,7 +119,7 @@
       if (nodes.some(n => area(r, n.rect) > 4)) add('label_on_node', `"${say(label)}" covers a node`);
     }
     // The picture shows what was authored: every node, edge, arrow and label, nothing more.
-    const block = expected[id];
+    const block = expected[id]?.stage || expected[id];
     if (!block) continue;
     const differ = (what, painted, authored) => {
       const a = [...painted].sort().join('|'), b = [...authored].sort().join('|');

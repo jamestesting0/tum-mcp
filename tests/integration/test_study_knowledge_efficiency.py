@@ -6,8 +6,9 @@ from pathlib import Path
 
 import pytest
 from course_memory_profile import profile, scaled_course
+from documents import content_file
 
-from tum_mcp.study_knowledge_store import load_inputs
+from tum_mcp.course.memory.store import load_inputs
 
 pytestmark = pytest.mark.usefixtures("course_memory")
 
@@ -65,7 +66,7 @@ def test_small_packet_avoids_validating_discarded_native_candidates(tmp_path: Pa
 
 @pytest.mark.parametrize("limit", [1, 4, 12])
 def test_selection_skips_stale_top_home_and_preserves_workspace_reservations(tmp_path: Path, limit):
-    from tum_mcp.study_knowledge_query import context
+    from tum_mcp.course.memory.query import context
 
     root = scaled_course(tmp_path, 10, crowded=True)
     (root / "materials/content/material-source-000.md").write_text("Changed evidence.")
@@ -87,7 +88,7 @@ def test_natural_query_quality_contract(tmp_path: Path, case):
     from knowledge_annotations import annotation, write_registry
     from knowledge_fixture import knowledge_project
 
-    from tum_mcp.study_knowledge_query import context
+    from tum_mcp.course.memory.query import context
 
     root = knowledge_project(tmp_path, workspaces=frozenset({"study"}))
     write_registry(root, [annotation(root)], reviewed=True)
@@ -103,8 +104,8 @@ def test_natural_query_quality_contract(tmp_path: Path, case):
 def test_revision_only_does_not_assess_inactive_history(tmp_path: Path, monkeypatch):
     from course_memory_profile import mixed_registry
 
-    from tum_mcp.study_knowledge_assertions import AssertionChecks
-    from tum_mcp.study_knowledge_report import knowledge_report, knowledge_revision
+    from tum_mcp.course.memory.assertions import AssertionChecks
+    from tum_mcp.course.memory.report import knowledge_report, knowledge_revision
 
     root = mixed_registry(tmp_path)
     expected = knowledge_report(root)["knowledge_revision"]
@@ -125,7 +126,7 @@ def test_revision_only_matches_full_semantic_audit(tmp_path: Path, state):
     from knowledge_annotations import annotation, write_registry
     from knowledge_fixture import knowledge_project
 
-    from tum_mcp.study_knowledge_report import knowledge_report, knowledge_revision
+    from tum_mcp.course.memory.report import knowledge_report, knowledge_revision
 
     root = knowledge_project(tmp_path, workspaces=frozenset({"study"}))
     rows = [] if state == "empty" else [annotation(root)]
@@ -155,15 +156,15 @@ def test_revision_only_matches_full_semantic_audit(tmp_path: Path, state):
 def test_revision_revalidates_snapshot_before_return(tmp_path: Path, monkeypatch):
     from course_memory_profile import mixed_registry
 
+    from tum_mcp.course.memory.report import knowledge_revision
+    from tum_mcp.course.memory.store import SnapshotReader
     from tum_mcp.errors import CampusError, Code
-    from tum_mcp.study_knowledge_report import knowledge_revision
-    from tum_mcp.study_knowledge_store import SnapshotReader
 
     root = mixed_registry(tmp_path)
     original = SnapshotReader.verify
 
     def changed(reader):
-        path = root / "app/content.json"
+        path = content_file(root, "study")
         value = json.loads(path.read_bytes())
         value["introduction"] += " Changed during the request."
         path.write_text(json.dumps(value))

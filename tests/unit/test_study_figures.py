@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from tum_mcp.course.content.figures import figure_bytes, figure_images, safe_svg
 from tum_mcp.errors import CampusError
-from tum_mcp.study_figures import figure_bytes, figure_images, safe_svg
 
 ARM = (
     '<svg viewBox="0 0 480 300"><defs><marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" '

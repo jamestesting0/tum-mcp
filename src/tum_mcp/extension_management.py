@@ -59,7 +59,7 @@ def extension_rows() -> list[tuple[str, State, str]]:
                     assert_never(unreachable)
             detail = descriptions[name]
             if name == ExtensionName.VIDEO_NOTES and enabled:
-                from tum_mcp.video_runtime import summary
+                from tum_mcp.course.media.video_runtime import summary
 
                 detail = f"{detail} {summary()}"
             rows.append((LABELS[name], State.ENABLED if enabled else State.DISABLED, detail))

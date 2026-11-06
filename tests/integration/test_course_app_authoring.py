@@ -1,11 +1,12 @@
 import json
 from pathlib import Path
 
+from documents import content_file
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.study_build import build, read_content
-from tum_mcp.study_store import load_state
+from tum_mcp.course.app.build import build, read_content
+from tum_mcp.course.project.store import load_state
 
 
 def test_demo_preserves_edited_optional_classification(tmp_path: Path) -> None:
@@ -18,19 +19,19 @@ def test_demo_preserves_edited_optional_classification(tmp_path: Path) -> None:
     edited = ledger.read_text().replace("The synthetic source", "The edited synthetic source")
     assert edited != ledger.read_text()
     ledger.write_text(edited)
-    content = (root / "app/content.json").read_bytes()
+    content = (content_file(root, "study")).read_bytes()
     again = runner.invoke(app, args)
     assert again.exit_code != 0 and "preserved" in str(again.exception)
     assert ledger.read_text() == edited
-    assert (root / "app/content.json").read_bytes() == content
+    assert (content_file(root, "study")).read_bytes() == content
 
 
 def test_either_preparation_order_and_targeted_update_preserve_other_workspace(
     exercise_project: Path,
 ) -> None:
     root = exercise_project
-    study = root / "study/content.json"
-    exercises = root / "study/exercises.json"
+    study = content_file(root, "study")
+    exercises = content_file(root, "exercises")
     original_study = study.read_bytes()
     original_exercises = exercises.read_bytes()
     # Exercises can be prepared first, without inventing a Study prerequisite unit.
@@ -46,7 +47,7 @@ def test_either_preparation_order_and_targeted_update_preserve_other_workspace(
     build(root, publish=False)
     assets = {
         path.name: path.read_bytes()
-        for path in (root / "study").iterdir()
+        for path in (root / "app").iterdir()
         if path.is_file() and path.suffix in {".mjs", ".css", ".html"} and path.name != "data.mjs"
     }
     payload = json.loads(original_exercises)
@@ -56,14 +57,14 @@ def test_either_preparation_order_and_targeted_update_preserve_other_workspace(
     build(root, publish=False)
     assert study.read_bytes() == original_study
     assert json.loads(exercises.read_bytes())["sets"][0]["exercises"][1] == untouched
-    assert all((root / "study" / name).read_bytes() == value for name, value in assets.items())
+    assert all((root / "app" / name).read_bytes() == value for name, value in assets.items())
     assert read_content(root).course_key == load_state(root).course.key
 
 
 def test_second_course_uses_the_same_template_without_demo_identity_assumptions(
     tmp_path: Path,
 ) -> None:
-    from tum_mcp.study_sync import sync
+    from tum_mcp.course.project.sync import sync
 
     fixture = Path(__file__).parents[1] / "fixtures/course_app"
     snapshot = json.loads((fixture / "snapshot.json").read_bytes())
@@ -76,13 +77,13 @@ def test_second_course_uses_the_same_template_without_demo_identity_assumptions(
     sync(root, incoming, course_input="Conditional probability")
     (root / "app").mkdir()
     payload = (fixture / "probability-exercises.json").read_bytes()
-    (root / "app/exercises.json").write_bytes(payload)
+    (content_file(root, "exercises")).write_bytes(payload)
     report = build(root, publish=False)
     assert report.units == 0 and report.exercises == 1
     # Adding Study later retains the original exercises and shared assets.
     content = json.loads((fixture / "content.json").read_bytes())
     content["course_key"] = "probability-pilot"
     content["units"] = [u for u in content["units"] if u["key"] == "probability"]
-    (root / "app/content.json").write_text(json.dumps(content))
+    (content_file(root, "study")).write_text(json.dumps(content))
     assert build(root, publish=False).units == 1
-    assert (root / "app/exercises.json").read_bytes() == payload
+    assert json.loads(content_file(root, "exercises").read_bytes()) == json.loads(payload)

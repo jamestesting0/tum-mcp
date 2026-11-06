@@ -4,10 +4,10 @@ from pathlib import Path
 import pytest
 from material_fixture import exam_document, exam_project, pdf_bytes
 
-from tum_mcp.exam_content import Concept, ExamContent
-from tum_mcp.exam_data import exam_report, exam_statistics, stale_exam
-from tum_mcp.exam_layout import NODE_GAP, NODE_WIDTH, layout
-from tum_mcp.study_store import load_state
+from tum_mcp.course.content.exam import Concept, ExamContent
+from tum_mcp.course.content.exam_data import exam_report, exam_statistics, stale_exam
+from tum_mcp.course.content.exam_layout import NODE_GAP, NODE_WIDTH, layout
+from tum_mcp.course.project.store import load_state
 
 
 @pytest.fixture(scope="module")
@@ -133,8 +133,8 @@ def test_changed_sources_mark_only_dependent_items_stale(tmp_path: Path) -> None
 def test_cheatsheet_typed_math_and_slash_quotients_are_prompts(content: ExamContent) -> None:
     # The FAI pilot typed λ and ≥ into pitfalls and wrote displayed quotients with slashes;
     # nothing reported either. Units and derivatives keep their slash.
-    from tum_mcp.exam_data import sheet_flags
-    from tum_mcp.study_report import slash_quotients
+    from tum_mcp.course.checks.report import slash_quotients
+    from tum_mcp.course.content.exam_data import sheet_flags
 
     concept = next(c for c in content.concepts if c.formula)
     typed = concept.model_copy(
@@ -157,8 +157,8 @@ def test_cheatsheet_typed_math_and_slash_quotients_are_prompts(content: ExamCont
 def test_entry_meanings_and_prose_prompts_for_non_formula_entries(content: ExamContent) -> None:
     # The FAI pilot typed its variable meanings as a dense sentence beside a table, and nothing
     # reported it; a non-formula entry had no way to list them.
-    from tum_mcp.exam_data import sheet_flags
-    from tum_mcp.study_content import Symbol, TextBlock
+    from tum_mcp.course.content.exam_data import sheet_flags
+    from tum_mcp.course.content.study import Symbol, TextBlock
 
     concept = next(c for c in content.concepts if not c.formula)
     source = concept.sources[0].key

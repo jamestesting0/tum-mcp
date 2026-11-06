@@ -10,8 +10,7 @@ When disabled, leave retained graph files unused and follow the ordinary workflo
 
 For a bound local course, read `.tum-mcp/course.md` and the relevant source records
 first. Keep course/agent notes and state under `.tum-mcp/`; root AGENTS.md is the
-discovery pointer and user's rules. Legacy `.study/` remains readable until explicit
-`study upgrade PROJECT`. The handbook's receipt describes local review, not live
+discovery pointer and user's rules. The handbook's receipt describes local review, not live
 freshness; verify affected facts against sources. Reuse context already read in this
 request. Do not re-read the whole inventory for each authoring step.
 

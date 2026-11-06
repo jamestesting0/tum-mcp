@@ -1,10 +1,10 @@
 import data from './data.mjs';
-import { node, studyText, button, append, sourcesNote, pageCitation, shareCitations, plainText, shuffled } from './dom.mjs';
+import { node, studyText, button, append, sourcesNote, pageCitation, shareCitations, plainText, shuffled, pillPanel, scrollReadingTo } from './dom.mjs';
 import { renderBlockBody, renderAnswers } from './reading.mjs';
 import { renderResponse, optionExplanations, expectedAnswer, answerMark } from './exercise-response.mjs';
 import { annotateExam } from './anchors.mjs';
 import { codeReferences, filesIn } from './files.mjs';
-import { exam, patterns, pastQuestions, seen, sample, list } from './exam-state.mjs';
+import { exam, patterns, pastQuestions, seen, list } from './exam-state.mjs';
 import { examRecall } from './recall.mjs';
 import { fitMath, texElement } from './mathml.mjs';
 import { renderCode } from './code.mjs';
@@ -23,12 +23,16 @@ function blocksWithoutTitles(blocks) {
   return root;
 }
 // An optional check, and the answer whenever the student wants it.
-// A choice is checked; every other item is compared with its answer at will.
-function answerControls(check, identity, answer, expected = true, shown = []) {
+// A choice is checked; every other item is compared with its answer at will. A hint sits
+// beside Check or Compare in one row, as in an Exercises step.
+function answerControls(check, identity, answer, expected = true, shown = [], hintText = '') {
   const feedback = node('div', 'exercise-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
   const response = renderResponse(check, '', () => feedback.replaceChildren(), identity, shown);
+  const hints = node('div', 'exercise-hints stack'), actions = node('div', 'cluster exercise-actions');
+  // The hint's place joins the step only when it is asked for.
+  const hint = hintText && button('Hint', () => { hints.replaceChildren(studyText('p', '', hintText)); actions.before(hints); hint.hidden = true; }, 'secondary');
   if (check?.kind === 'choice') {
-    const actions = append(node('div', 'cluster exercise-actions'), button('Check', () => {
+    actions.append(button('Check', () => {
       const result = response.validate();
       if (!result.valid) { feedback.replaceChildren(node('p', 'small', 'Choose an answer first.')); return; }
       response.showResult(true);
@@ -36,20 +40,25 @@ function answerControls(check, identity, answer, expected = true, shown = []) {
       feedback.replaceChildren(append(node('section', `feedback${result.correct ? '' : ' incorrect'}`), node('h3', '', result.correct ? 'Correct' : 'Not quite'),
         ...result.repairs.map(text => studyText('p', '', text)), answer, optionExplanations(shuffled(check.options, identity), check.correct, result.chosen)));
     }, 'primary'));
-    return [response.root, actions, feedback];
+  } else {
+    // Compare reveals the same Answer box as an Exercises step.
+    const revealed = append(node('section', 'feedback compare'), node('h3', '', 'Answer'));
+    if (check && expected) revealed.append(expectedAnswer(check));
+    revealed.append(answer);
+    const compare = button('Compare', () => {
+      const open = feedback.firstChild !== revealed;
+      feedback.replaceChildren(...(open ? [revealed] : []));
+      compare.setAttribute('aria-expanded', String(open));
+    }, 'primary');
+    compare.setAttribute('aria-expanded', 'false');
+    actions.append(compare);
   }
-  // Compare reveals the same Answer box as an Exercises step.
-  const compare = node('details', 'disclosure answer-reveal'), revealed = append(node('section', 'feedback compare'), node('h3', '', 'Answer'));
-  if (check && expected) revealed.append(expectedAnswer(check));
-  revealed.append(answer);
-  compare.append(node('summary', '', 'Compare'), revealed);
-  return [response.root, compare];
+  if (hint) actions.append(hint);
+  return [response.root, feedback, actions];
 }
 
 function solutionPanel(...content) {
-  const full = node('details', 'disclosure');
-  full.append(node('summary', '', 'Solution'), append(node('div', 'disclosure-panel'), ...content));
-  return full;
+  return pillPanel('Solution', [{ value: 'solution', label: 'Solution', content: append(node('div'), ...content) }]).element;
 }
 
 // Practice without steps. Every item is worked on paper and opens its Solution, like a
@@ -109,7 +118,8 @@ function applicable(tag, className, text, apply) {
 
 // The workflow as numbered steps, each opening what it applies; the cheatsheet entry of a
 // concept the pattern uses shows the same steps.
-export function workflowSteps(pattern, mark = element => element) {
+const workflowId = (pattern, number) => `workflow-${pattern.key}-${number}`;
+export function workflowSteps(pattern, mark = element => element, linked = false) {
   const steps = node('ol', 'exam-workflow');
   pattern.workflow.forEach((step, index) => {
     const body = append(node('div', 'workflow-body'), applicable('p', 'workflow-do', step.do, step.apply));
@@ -120,13 +130,16 @@ export function workflowSteps(pattern, mark = element => element) {
       })));
     }
     if (step.why) body.append(studyText('p', 'workflow-why', step.why));
-    steps.append(mark(append(node('li'), body), `step:${index}`));
+    // Only the pattern page's own workflow is the target of its step links; copies elsewhere
+    // (cheatsheet entries) carry no id, so ids stay unique.
+    const item = append(node('li'), body); if (linked) item.id = workflowId(pattern, index + 1);
+    steps.append(mark(item, `step:${index}`));
   });
   return steps;
 }
 
 function workflowSection(pattern, mark) {
-  return section('Workflow', workflowSteps(pattern, mark));
+  return section('Workflow', workflowSteps(pattern, mark, true));
 }
 
 // Each pitfall opens with the task moment it happens in, then the wrong working, its
@@ -146,15 +159,21 @@ function pitfallsSection(pattern, mark) {
 // workflow's own cases as the options.
 function guidedCard(pattern, step, field, position, total, shownFiles) {
   const card = node('li', 'exam-guided-step');
-  card.append(append(node('p', 'exam-guided-label'), node('span', 'exam-guided-number', `Step ${position + 1} of ${total}`), studyText('span', '', pattern.workflow[step.step - 1].do)));
+  // The header only counts; the step number leads to the workflow step it applies.
+  const label = button(`Step ${position + 1} of ${total}`, () => {
+    const target = document.getElementById(workflowId(pattern, step.step));
+    if (!target) return;
+    scrollReadingTo(target); target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash');
+  }, 'exam-guided-number');
+  label.title = `Workflow step ${step.step}`;
+  card.append(append(node('p', 'exam-guided-label'), label));
   card.append(annotateExam(studyText('p', 'exam-guided-prompt', step.prompt), `pattern:${pattern.key}`, pattern.revision, `practice:${field}`));
   if (step.code?.length) card.append(codeReferences(step.code, shownFiles));
-  if (step.hint) { const hint = node('details', 'disclosure plain'); hint.append(node('summary', '', 'Hint'), studyText('p', '', step.hint)); card.append(hint); }
   const check = step.case ? {
     kind: 'choice', correct: `case-${step.case}`,
     options: pattern.workflow[step.step - 1].cases.map((item, index) => ({ key: `case-${index + 1}`, text: item.when, feedback: step.case_feedback[index] })),
   } : step.check;
-  card.append(...answerControls(check, `practice-${pattern.key}-${field}`, blocksWithoutTitles(step.answer), check?.kind !== 'self_check', (step.code || []).map(ref => ref.path)));
+  card.append(...answerControls(check, `practice-${pattern.key}-${field}`, blocksWithoutTitles(step.answer), check?.kind !== 'self_check', (step.code || []).map(ref => ref.path), step.hint || ''));
   return card;
 }
 
@@ -204,7 +223,7 @@ export function renderPattern(key) {
   const eyebrow = node('p', 'eyebrow', 'Exam pattern');
   const header = append(node('div', 'unit-header'), eyebrow, heading, mark(studyText('p', 'unit-summary', pattern.summary), 'summary'));
   // Past-exam evidence appears only when there is some; the citation says where the pattern comes from.
-  if (stats.sittings_considered) header.append(append(node('p', 'small exam-badge'), seen(stats), sample(stats) ? ` · ${sample(stats)}` : ''));
+  if (stats.sittings_considered) header.append(node('p', 'small exam-badge', seen(stats)));
   // The pattern is named already, so its concepts can be recalled before the student starts.
   const recall = examRecall(pattern.concepts);
   if (recall) header.append(recall);
@@ -224,13 +243,16 @@ export function renderPattern(key) {
   }
   if (stats.instances.length) {
     const table = node('table', 'exam-instances'), head = node('tr');
-    for (const title of ['Exam', 'Question', 'Points', 'Counted']) { const th = node('th', '', title); th.scope = 'col'; head.append(th); }
+    for (const title of ['Exam', 'Question', 'Points']) { const th = node('th', '', title); th.scope = 'col'; head.append(th); }
     table.append(append(node('thead'), head));
     const body = node('tbody');
     for (const instance of stats.instances) {
-      const row = node('tr');
-      row.append(node('td', '', `${instance.label}${instance.variant && instance.variant !== instance.label ? ` · ${instance.variant}` : ''}`), node('td', '', instance.number),
-        node('td', '', instance.points == null ? '–' : String(instance.points)), node('td', '', instance.considered ? 'Yes' : 'No (older syllabus)'));
+      const row = node('tr'), number = node('td');
+      // A stored question opens in its paper, so a past instance is practised where it was asked.
+      if (instance.stored) { const link = node('a', '', instance.number); link.href = `#exam/paper/${encodeURIComponent(instance.paper)}/${encodeURIComponent(instance.question)}`; number.append(link); }
+      else number.textContent = instance.number;
+      row.append(node('td', '', `${instance.label}${instance.variant && instance.variant !== instance.label ? ` · ${instance.variant}` : ''}`), number,
+        node('td', '', instance.points == null ? '–' : String(instance.points)));
       body.append(row);
     }
     table.append(body);

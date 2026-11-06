@@ -1,18 +1,23 @@
 import data from './data.mjs';
-import { node, studyText, append } from './dom.mjs';
+import { node, studyText, append, topicRow } from './dom.mjs';
 import { renderCommentedView } from './comments.mjs';
 import { annotateExam } from './anchors.mjs';
 import { exerciseState } from './exercise-state.mjs';
-import { exercisePage } from './exercises.mjs';
-import { exam, examPrefix, variants, sample, quietLink } from './exam-state.mjs';
+import { exercisePage, exerciseStarted } from './exercises.mjs';
+import { exam, examPrefix, variants, quietLink } from './exam-state.mjs';
 import { renderSheet } from './exam-sheet.mjs';
 import { renderPattern } from './exam-patterns.mjs';
 import { renderPaper, paperFor } from './exam-mock.mjs';
-import { nextStep } from './navigation.mjs';
+import { nextStep, iconGlyph } from './navigation.mjs';
+import { isCompleted } from './completion.mjs';
 import { examRecall } from './recall.mjs';
 
 const decode = value => { try { return decodeURIComponent(value || ''); } catch { return ''; } };
-let guided;
+let guided, store;
+// Pages opened, so a pattern or paper the student has started reads as in progress.
+const visitsKey = `${examPrefix}visited`;
+const visited = () => { const value = store.read(visitsKey, {}); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; };
+function visit(href) { const value = visited(); if (!value[href]) store.write(visitsKey, { ...value, [href]: true }); }
 
 function header(title, eyebrow, summary) {
   const heading = studyText('h1', '', title);
@@ -20,10 +25,9 @@ function header(title, eyebrow, summary) {
   if (summary) box.append(studyText('p', 'unit-summary', summary));
   return { box, heading };
 }
-function card(href, title, detail, status) {
+function card(href, title, detail) {
   const link = node('a', 'exam-card'); link.href = href;
   link.append(node('span', 'exam-card-title', title), node('span', 'small', detail));
-  if (status) link.append(node('span', 'small exam-card-status', status));
   return append(node('li'), link);
 }
 const replayable = () => variants.filter(({ variant }) => variant.replayable);
@@ -63,14 +67,36 @@ function home() {
   const years = stats.years?.length ? ` (${stats.years[0] === stats.years[1] ? stats.years[0] : `${stats.years[0]}–${stats.years[1]}`})` : '';
   if (stats.sittings_considered) root.append(node('p', 'small exam-evidence',
     `${stats.sittings_considered} past exam${stats.sittings_considered === 1 ? '' : 's'}${years}${stats.sittings_outdated ? `; ${stats.sittings_outdated} older one${stats.sittings_outdated === 1 ? '' : 's'} not counted` : ''}`));
-  const cards = node('ul', 'exam-cards');
-  if (exam.concepts.length) cards.append(card('#exam/sheet', 'Cheatsheet', `${exam.concepts.length} entries${exam.map?.nodes?.length ? ' and a semester map' : ''}`));
-  if (exam.patterns.length) cards.append(card(`#exam/patterns/${orderedPatterns()[0].key}`, 'Exam patterns', `${exam.patterns.length} recurring question types`, sample(stats.patterns[stats.pattern_order[0]])));
-  const papers = replayable().length, mocks = exam.mocks.length;
-  if (papers || mocks) cards.append(card(firstPaper(), 'Practice exams', [papers && `${papers} past paper${papers === 1 ? '' : 's'}`, mocks && `${mocks} practice exam${mocks === 1 ? '' : 's'}`].filter(Boolean).join(' · ')));
-  const empty = !cards.children.length;
-  if (empty) root.append(node('p', '', 'Exam has not been prepared for this course.'));
-  else root.append(cards);
+  // The same rows as the Study and Exercises homes: each page with its status, and Continue.
+  const seen = visited(), status = (href, started) => isCompleted(href) ? 'Done' : started || seen[href] ? 'In progress' : 'Not started';
+  const groups = [];
+  if (exam.concepts.length) groups.push({ title: '', rows: [{ href: '#exam/sheet', title: 'Cheatsheet', details: [`${exam.concepts.length} entries${exam.map?.edges?.length ? ' and a semester map' : ''}`] }] });
+  if (exam.patterns.length) groups.push({ title: 'Exam patterns', rows: orderedPatterns().map(pattern => ({ href: `#exam/patterns/${pattern.key}`, title: pattern.title, details: [] })) });
+  const practice = [
+    ...replayable().map(({ variant }) => {
+      const paper = paperFor('paper', variant.key);
+      const started = paper.questions.some(question => exerciseStarted(guided.get(guidedExercise(paper, question))));
+      return { href: `#exam/paper/${variant.key}`, title: paper.title, details: ['Past paper'], started };
+    }),
+    ...exam.mocks.map(mock => ({ href: `#exam/mock/${mock.key}`, title: paperFor('mock', mock.key).title, details: ['Practice exam'] })),
+  ];
+  if (practice.length) groups.push({ title: 'Practice exams', rows: practice });
+  const rows = groups.flatMap(group => group.rows).map(row => ({ ...row, status: status(row.href, row.started) }));
+  const empty = !rows.length;
+  if (empty) { root.append(node('p', '', 'Exam has not been prepared for this course.')); return { root, heading, title: 'Exam', items: [], empty }; }
+  const resume = rows.find(row => row.status === 'In progress') || rows.find(row => row.status === 'Not started');
+  if (resume) {
+    const go = node('a', 'button primary resume'); go.href = resume.href;
+    go.append(iconGlyph('play'), node('span', 'visually-hidden', `${resume.status === 'In progress' ? 'Continue' : 'Start'}: `), studyText('span', '', resume.title));
+    box.append(append(node('div', 'cluster home-actions'), go));
+  }
+  const list = node('section', 'home-topics exam-list'); list.setAttribute('aria-label', 'Exam');
+  let index = 0;
+  for (const group of groups) {
+    if (group.title) list.append(studyText('h3', 'topic-group', group.title));
+    list.append(append(node('ul', 'topic-list'), ...group.rows.map(() => { const row = rows[index++]; return topicRow(row.href, row.title, row.details, row.status); })));
+  }
+  root.append(list);
   return { root, heading, title: 'Exam', items: [], empty };
 }
 
@@ -125,6 +151,7 @@ function guidedQuestion(variantKey, questionKey, stepKey) {
 
 export function renderExam(hash, read, write) {
   guided ||= exerciseState(read, write, `${examPrefix}guided:`);
+  store = { read, write };
   const [, section, key, part, step] = hash.split('/').map(decode);
   let page = null;
   if (!section) page = home();
@@ -141,6 +168,7 @@ export function renderExam(hash, read, write) {
     page.root.prepend(node('p', 'notice', 'That page is no longer here.'));
   }
   const here = { sheet: '#exam/sheet', patterns: `#exam/patterns/${key || orderedPatterns()[0]?.key}`, mock: `#exam/mock/${key}`, paper: `#exam/paper/${key}` }[section];
+  if (here && section !== 'sheet') visit(here);
   const following = !page.navigateStep && here && onward(here);
   if (following) page.root.append(following);
   const root = page.navigateStep ? page.root : renderCommentedView({ key: section || 'home', title: page.title, items: page.items || [] }, 'exam', page.root).root;

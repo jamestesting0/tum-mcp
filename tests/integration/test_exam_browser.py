@@ -6,11 +6,12 @@ from functools import partial
 from threading import Thread
 
 import pytest
+from documents import content_file
 from material_fixture import exam_document, exam_project, with_guided_paper
 from playwright.sync_api import Browser, Page, expect
 
-from tum_mcp.study_build import build
-from tum_mcp.study_preview import Handler, PreviewServer
+from tum_mcp.course.app.build import build
+from tum_mcp.course.app.preview import Handler, PreviewServer
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1",
@@ -30,7 +31,7 @@ def exam_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     for concept in document["concepts"]:
         for symbol in (concept.get("formula") or {}).get("symbols", []):
             symbol["symbol"] = symbol["symbol"].removeprefix("\\(").removesuffix("\\)")
-    (root / "app/exam.json").write_text(json.dumps(document), encoding="utf-8")
+    (content_file(root, "exam")).write_text(json.dumps(document), encoding="utf-8")
     build(root, publish=False)
     with PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(root / "app"))) as server:
         thread = Thread(target=server.serve_forever, daemon=True)
@@ -62,7 +63,7 @@ def test_cheatsheet_scans_filters_flags_and_maps(
     errors: list[str] = []
     page = open_page(course_browser, exam_url, width, errors)
     expect(page.locator(".exam-profile")).to_contain_text("90 minutes")
-    page.locator(".exam-card", has_text="Cheatsheet").click()
+    page.locator(".exam-list a", has_text="Cheatsheet").click()
     page.get_by_role("heading", name="Cheatsheet", exact=True).wait_for()
     entries = page.locator(".exam-entry")
     expect(entries).to_have_count(6)
@@ -206,11 +207,11 @@ def test_patterns_drills_and_worked_practice(
     expect(drill.get_by_label("Your answer")).to_have_count(0)
     expect(drill.get_by_role("button", name="Check")).to_have_count(0)
     expect(page.locator(".exam-drill-item summary", has_text="Compare")).to_have_count(0)
-    drill.locator("summary", has_text="Solution").click()
+    drill.locator(".segment", has_text="Solution").click()
     expect(drill.locator(".expected-value")).to_have_text("Subject")
     expect(drill.locator(".disclosure-panel")).to_contain_text("The subject owns registrations")
     full = page.locator(".exam-drill-item").nth(1)
-    full.locator("summary", has_text="Solution").click()
+    full.locator(".segment", has_text="Solution").click()
     expect(full.locator(".disclosure-panel")).to_contain_text("update(Ship s)")
     # One example at a time; the which-case question uses the workflow's cases.
     practice = page.locator(".pattern-example:visible .exam-guided-step")
@@ -220,7 +221,7 @@ def test_patterns_drills_and_worked_practice(
     which.get_by_label("Observers need different fields").check()
     which.get_by_role("button", name="Check").click()
     expect(which.locator(".feedback")).to_contain_text("No display needs another field.")
-    practice.nth(2).locator("summary", has_text="Compare").click()
+    practice.nth(2).get_by_role("button", name="Compare").click()
     expect(practice.nth(2)).to_contain_text("Loop over displays.")
     page.get_by_role("button", name="Example 2").click()
     expect(practice.nth(0)).to_contain_text("Which object changes?")
@@ -257,7 +258,7 @@ def test_guided_past_paper_uses_exercise_steps(
     page.goto(exam_url + "#exam/paper/ws23-a")
     page.locator(".exam-card", has_text="Guide").click()
     page.get_by_role("heading", name="Question 1", exact=True).first.wait_for()
-    page.locator("summary", has_text="Guide").click()
+    page.locator(".segment", has_text="Guide").first.click()
     page.get_by_role("button", name="Compare").click()
     expect(page.locator(".exercise-feedback .expected-value")).to_have_text("station")
     page.locator("button.primary", has_text="Next step").click()
@@ -287,9 +288,10 @@ def test_practice_exam_shows_each_solution_on_demand(
     expect(page.get_by_role("heading", name="Question 1", exact=True)).to_have_count(0)
     expect(page.get_by_role("heading", name="Question 1 \u00b7 10 points")).to_have_count(1)
     first = page.locator('.exam-question[data-question="f1-1"]')
-    expect(first.locator(".exam-solution")).not_to_have_attribute("open", "")
-    first.locator(".exam-solution > summary").click()
-    expect(first.locator(".exam-solution")).to_contain_text("Loop over members.")
+    solution = first.locator(".pill-panel")
+    expect(solution.locator(".pill-content")).to_be_hidden()
+    solution.get_by_role("button", name="Solution", exact=True).click()
+    expect(solution).to_contain_text("Loop over members.")
     expect(first.locator(".exam-marking")).to_contain_text("Notification implemented (10)")
     expect(page.get_by_role("button", name="Start")).to_have_count(0)
     no_overflow(page)

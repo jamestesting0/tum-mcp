@@ -5,12 +5,13 @@ import stat
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from filelock import FileLock
 
-from tum_mcp import video_project as project
+from tum_mcp.course.media import video_project as project
+from tum_mcp.course.media.video_content import Storyboard
+from tum_mcp.course.media.video_runtime import RuntimeStatus
 from tum_mcp.errors import CampusError
-from tum_mcp.video_content import Storyboard
-from tum_mcp.video_runtime import RuntimeStatus
 
 FIXTURES = Path(__file__).parents[1] / "fixtures"
 CLIP = FIXTURES / "video/clip.mp4"
@@ -110,7 +111,7 @@ class FakeRuntime:
 def course(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "course"
     (root / "app").mkdir(parents=True)
-    shutil.copyfile(FIXTURES / "course_app/content.json", root / "app/content.json")
+    content_file(root, "study").write_bytes((FIXTURES / "course_app/content.json").read_bytes())
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     return root
 
@@ -119,21 +120,21 @@ def course(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def runtime(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> FakeRuntime:
     fake = FakeRuntime()
     ready = RuntimeStatus(supported=True, installed=True, profile="test", reason="ready")
-    monkeypatch.setattr("tum_mcp.video_runtime.call_worker", fake)
-    monkeypatch.setattr("tum_mcp.video_runtime.status", lambda: ready)
-    monkeypatch.setattr("tum_mcp.video_runtime.python_path", lambda: tmp_path / "python")
-    monkeypatch.setattr(
-        "tum_mcp.video_runtime.render_profile", lambda: "test-0-aaaaaaaaaaaa-bbbbbbbbbbbb"
-    )
+    from tum_mcp.course.media import video_runtime
+
+    monkeypatch.setattr(video_runtime, "call_worker", fake)
+    monkeypatch.setattr(video_runtime, "status", lambda: ready)
+    monkeypatch.setattr(video_runtime, "python_path", lambda: tmp_path / "python")
+    monkeypatch.setattr(video_runtime, "render_profile", lambda: "test-0-aaaaaaaaaaaa-bbbbbbbbbbbb")
     return fake
 
 
 def content_json(root: Path) -> dict:
-    return json.loads((root / "app/content.json").read_text(encoding="utf-8"))
+    return json.loads((content_file(root, "study")).read_text(encoding="utf-8"))
 
 
 def write_content(root: Path, value: dict) -> None:
-    (root / "app/content.json").write_text(json.dumps(value), encoding="utf-8")
+    (content_file(root, "study")).write_text(json.dumps(value), encoding="utf-8")
 
 
 def prepare(root: Path, tmp_path: Path) -> None:
@@ -325,8 +326,8 @@ def test_content_edits_are_classified_and_acknowledged(
 def test_palette_drift_preserves_published_files_and_narration(
     course: Path, runtime: FakeRuntime, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, theme: str
 ) -> None:
-    from tum_mcp import video_style
-    from tum_mcp.video_content import StyleProfile
+    from tum_mcp.course.media import video_style
+    from tum_mcp.course.media.video_content import StyleProfile
 
     prepare(course, tmp_path)
     project._write_json(course / "videos/style.json", StyleProfile(theme=theme))
@@ -514,7 +515,7 @@ def test_optional_reading_does_not_change_core_video_inputs(course: Path) -> Non
 def test_contact_sheets_paginate_unique_real_frames(
     course: Path, runtime: FakeRuntime, tmp_path: Path, duration: float
 ) -> None:
-    from tum_mcp.video_content import BeatTiming, ChapterBound, Timing
+    from tum_mcp.course.media.video_content import BeatTiming, ChapterBound, Timing
 
     prepare(course, tmp_path)
     board, _ = project.stored_storyboard(course, STEM)
@@ -544,9 +545,8 @@ def test_contact_sheets_paginate_unique_real_frames(
 
 
 def prepare_walkthrough(root: Path, tmp_path: Path, parts: int = 1, *, timed: bool = True) -> str:
-    from tum_mcp.course_app_paths import app_path
 
-    path = app_path(root, "exercises.json")
+    path = content_file(root, "exercises")
     data = json.loads(path.read_bytes())
     exercise = data["sets"][0]["exercises"][0]
     if parts > 1:
@@ -651,7 +651,7 @@ def test_walkthrough_rejects_mixed_identity_or_missing_part_mapping(
 ) -> None:
     from pydantic import ValidationError
 
-    from tum_mcp.video_content import StoryboardFile
+    from tum_mcp.course.media.video_content import StoryboardFile
 
     stem = prepare_walkthrough(exercise_project, tmp_path, parts=3)
     data = json.loads((exercise_project / f"videos/storyboards/{stem}.json").read_bytes())
@@ -676,9 +676,8 @@ def test_source_variants_do_not_collide_on_bare_keys_or_cross_course(
     runtime: FakeRuntime,
     tmp_path: Path,
 ) -> None:
-    from tum_mcp.course_app_paths import app_path
 
-    path = app_path(exercise_project, "exercises.json")
+    path = content_file(exercise_project, "exercises")
     data = json.loads(path.read_bytes())
     data["sets"][0]["exercises"][0]["key"] = "bfs"
     path.write_text(json.dumps(data), encoding="utf-8")
@@ -711,10 +710,9 @@ def test_exercise_only_walkthrough_publishes_all_thirteen_parts(
     runtime: FakeRuntime,
     tmp_path: Path,
 ) -> None:
-    from tum_mcp.course_app_paths import app_path
-    from tum_mcp.video_content import ExerciseReceipt
+    from tum_mcp.course.media.video_content import ExerciseReceipt
 
-    app_path(exercise_project, "content.json").unlink()
+    content_file(exercise_project, "study").unlink()
     stem = prepare_walkthrough(exercise_project, tmp_path, parts=13)
     assert project.check(exercise_project, stem).errors == ()
     final = project.render(
@@ -748,7 +746,6 @@ def test_walkthrough_freshness_tracks_only_selected_teaching_and_provenance(
     tmp_path: Path,
     mutation: str,
 ) -> None:
-    from tum_mcp.course_app_paths import app_path
 
     stem = prepare_walkthrough(exercise_project, tmp_path)
     final = project.render(
@@ -761,7 +758,7 @@ def test_walkthrough_freshness_tracks_only_selected_teaching_and_provenance(
         teaching_review=review(tmp_path),
         visual_review="not_performed",
     )
-    path = app_path(exercise_project, "exercises.json")
+    path = content_file(exercise_project, "exercises")
     value = json.loads(path.read_bytes())
     exercise = value["sets"][0]["exercises"][0]
     match mutation:
@@ -801,7 +798,6 @@ def test_walkthrough_used_prerequisite_and_removed_target_are_not_silently_rebou
     runtime: FakeRuntime,
     tmp_path: Path,
 ) -> None:
-    from tum_mcp.course_app_paths import app_path
 
     stem = prepare_walkthrough(exercise_project, tmp_path)
     board_path = exercise_project / f"videos/storyboards/{stem}.json"
@@ -821,7 +817,7 @@ def test_walkthrough_used_prerequisite_and_removed_target_are_not_silently_rebou
         teaching_review=review(tmp_path),
         visual_review="not_performed",
     )
-    study = app_path(exercise_project, "content.json")
+    study = content_file(exercise_project, "study")
     data = json.loads(study.read_bytes())
     next(u for u in data["units"] if u["key"] == "weighted")["summary"] += " A new condition."
     study.write_text(json.dumps(data), encoding="utf-8")
@@ -831,7 +827,7 @@ def test_walkthrough_used_prerequisite_and_removed_target_are_not_silently_rebou
     )
     with pytest.raises(CampusError, match="changed"):
         project.acknowledge(exercise_project, stem, review(tmp_path))
-    path = app_path(exercise_project, "exercises.json")
+    path = content_file(exercise_project, "exercises")
     data = json.loads(path.read_bytes())
     data["sets"][0]["exercises"].pop(0)
     path.write_text(json.dumps(data), encoding="utf-8")
@@ -845,7 +841,7 @@ def test_walkthrough_rejects_changed_source_bytes(
     runtime: FakeRuntime,
     tmp_path: Path,
 ) -> None:
-    from tum_mcp.study_store import load_state
+    from tum_mcp.course.project.store import load_state
 
     stem = prepare_walkthrough(exercise_project, tmp_path)
     info = project.exercise_locators(exercise_project, "sheet-1/sample-relaxation")
@@ -864,9 +860,9 @@ def test_published_video_review_identity_survives_pruned_caches_and_detects_chan
     runtime: FakeRuntime,
     tmp_path: Path,
 ) -> None:
-    from tum_mcp.study_build import read_content
-    from tum_mcp.study_media import discover
-    from tum_mcp.study_store import load_state
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.media.inventory import discover
+    from tum_mcp.course.project.store import load_state
 
     stem = prepare_walkthrough(exercise_project, tmp_path)
     final = project.render(
@@ -905,9 +901,9 @@ def test_media_discovery_cannot_count_a_stem_reassigned_to_another_source_as_com
     runtime: FakeRuntime,
     tmp_path: Path,
 ) -> None:
-    from tum_mcp.study_build import read_content
-    from tum_mcp.study_media import discover
-    from tum_mcp.study_store import load_state
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.media.inventory import discover
+    from tum_mcp.course.project.store import load_state
 
     stem = prepare_walkthrough(exercise_project, tmp_path)
     final = project.render(
@@ -939,13 +935,12 @@ def test_unpublished_plan_target_removed_from_the_source_is_not_new_work(
     runtime: FakeRuntime,
     tmp_path: Path,
 ) -> None:
-    from tum_mcp.course_app_paths import app_path
-    from tum_mcp.study_build import read_content
-    from tum_mcp.study_media import discover
-    from tum_mcp.study_store import load_state
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.media.inventory import discover
+    from tum_mcp.course.project.store import load_state
 
     stem = prepare_walkthrough(exercise_project, tmp_path)
-    path = app_path(exercise_project, "exercises.json")
+    path = content_file(exercise_project, "exercises")
     data = json.loads(path.read_bytes())
     group = next(group for group in data["sets"] if group["key"] == "sheet-1")
     group["exercises"] = [
@@ -974,9 +969,9 @@ def test_published_chapters_and_input_snapshots_are_not_unchecked_declarations(
 ) -> None:
     import hashlib
 
-    from tum_mcp.study_build import read_content
-    from tum_mcp.study_media import discover
-    from tum_mcp.study_store import load_state
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.media.inventory import discover
+    from tum_mcp.course.project.store import load_state
 
     stem = prepare_walkthrough(exercise_project, tmp_path, parts=2)
     final = project.render(

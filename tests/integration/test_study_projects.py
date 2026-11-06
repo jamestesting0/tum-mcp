@@ -5,10 +5,10 @@ import pytest
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.build import build, read_content, stale_units
+from tum_mcp.course.project.store import load_state
+from tum_mcp.course.project.sync import sync
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_build import build, read_content, stale_units
-from tum_mcp.study_store import load_state
-from tum_mcp.study_sync import sync
 
 
 def test_initialization_requires_an_explicit_course_before_creating_files(
@@ -31,6 +31,16 @@ def test_one_project_cannot_change_course_identity(project: Path, inputs: Path) 
     assert (project / ".tum-mcp/state.json").read_bytes() == before
 
 
+def test_an_invalid_snapshot_names_what_failed(project: Path, inputs: Path) -> None:
+    # The pilot's agent had to read the source to learn its snapshot repeated a key.
+    incoming = json.loads(inputs.read_bytes())
+    incoming["resources"].append(incoming["resources"][0])
+    inputs.write_text(json.dumps(incoming), encoding="utf-8")
+    with pytest.raises(CampusError) as error:
+        sync(project, inputs)
+    assert "keys must be unique" in error.value.message
+
+
 def test_source_update_invalidates_only_dependent_units(project: Path, inputs: Path) -> None:
     incoming = json.loads(inputs.read_bytes())
     incoming["resources"][1]["text"] += "\nVerified source revision two.\n"
@@ -38,11 +48,11 @@ def test_source_update_invalidates_only_dependent_units(project: Path, inputs: P
     inputs.write_text(json.dumps(incoming), encoding="utf-8")
     sync(project, inputs)
     assert stale_units(project, load_state(project), read_content(project)) == ("bfs",)
-    previous_site = (project / "study/data.mjs").read_bytes()
+    previous_site = (project / "app/data.mjs").read_bytes()
     with pytest.raises(CampusError) as error:
         build(project)
     assert error.value.code == Code.STALE_RESULT
-    assert (project / "study/data.mjs").read_bytes() == previous_site
+    assert (project / "app/data.mjs").read_bytes() == previous_site
 
 
 @pytest.mark.parametrize("deleted", [False, True])
@@ -143,7 +153,7 @@ def test_imports_cannot_escape_the_snapshot_directory(tmp_path: Path, inputs: Pa
 
 
 def test_edited_renderer_is_retained_when_data_is_rebuilt(project: Path) -> None:
-    target = project / "study/styles.css"
+    target = project / "app/styles.css"
     custom = target.read_bytes() + b"\n/* user theme */\n"
     target.write_bytes(custom)
     report = build(project)
@@ -154,7 +164,7 @@ def test_edited_renderer_is_retained_when_data_is_rebuilt(project: Path) -> None
 def test_interrupted_write_restores_the_previous_project(
     project: Path, inputs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from tum_mcp import study_store
+    from tum_mcp.course.project import store as study_store
 
     before = {p.relative_to(project): p.read_bytes() for p in project.rglob("*") if p.is_file()}
     incoming = json.loads(inputs.read_bytes())
@@ -181,7 +191,7 @@ def test_interrupted_write_restores_the_previous_project(
 
 
 def test_adding_a_verified_source_binding_preserves_course_progress_namespace(project, inputs):
-    before = (project / "study/data.mjs").read_text(encoding="utf-8")
+    before = (project / "app/data.mjs").read_text(encoding="utf-8")
     previous = json.loads(before.removeprefix("export default ").removesuffix(";\n"))
     incoming = json.loads(inputs.read_bytes())
     # Synthetic sources remain synthetic; a new source mapping must not change course identity.
@@ -195,7 +205,7 @@ def test_adding_a_verified_source_binding_preserves_course_progress_namespace(pr
     sync(project, inputs)
     build(project)
     current = json.loads(
-        (project / "study/data.mjs")
+        (project / "app/data.mjs")
         .read_text(encoding="utf-8")
         .removeprefix("export default ")
         .removesuffix(";\n")

@@ -7,8 +7,9 @@ from pathlib import Path
 
 from pydantic import Field, ValidationError, model_validator
 
+from tum_mcp.course.lecture.evidence import Interval
+from tum_mcp.course.project.store import confined
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing.runtime import recognition_profile
 from tum_mcp.lecture_processing.runtime_spec import selected as runtime_spec
 from tum_mcp.lecture_processing.transcript_models import AudioQuality, AudioStage, Passage
@@ -16,7 +17,6 @@ from tum_mcp.lecture_processing.transcription import analyze, passages, recogniz
 from tum_mcp.lecture_processing.validity import Validity, require_content
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
-from tum_mcp.study_store import confined
 
 
 class StagedError(CampusError):

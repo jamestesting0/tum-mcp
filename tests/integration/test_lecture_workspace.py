@@ -9,11 +9,12 @@ from threading import Thread
 
 import pytest
 import test_lecture_build as lecture_fixtures
+from documents import content_file
 from playwright.sync_api import Browser, expect
 from test_exercise_browser import switch_workspace
 
-from tum_mcp.study_build import build
-from tum_mcp.study_preview import Handler, PreviewServer
+from tum_mcp.course.app.build import build
+from tum_mcp.course.app.preview import Handler, PreviewServer
 
 lecture_project = lecture_fixtures.lecture_project
 
@@ -24,9 +25,21 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def lecture_url(lecture_project: Path) -> Iterator[str]:
+    path = content_file(lecture_project, "lectures")
+    document = json.loads(path.read_text())
+    document["lectures"][0]["notes"][0]["figure"] = {
+        "kind": "figure",
+        "alt": "Two possible terminal positions.",
+        "sources": document["lectures"][0]["notes"][0]["sources"],
+        "svg": (
+            '<svg viewBox="0 0 240 100" fill="none" stroke="currentColor">'
+            '<circle cx="60" cy="50" r="30"/><circle cx="180" cy="50" r="30"/></svg>'
+        ),
+    }
+    path.write_text(json.dumps(document))
     build(lecture_project, publish=False)
     with PreviewServer(
-        ("127.0.0.1", 0), partial(Handler, directory=str(lecture_project / "study"))
+        ("127.0.0.1", 0), partial(Handler, directory=str(lecture_project / "app"))
     ) as server:
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -70,6 +83,9 @@ def test_highlights_deep_links_thumbnails_and_workspace_return(
         ]
         expect(page.locator(".lecture-highlight h3")).to_have_text(titles)
         expect(page.locator(".lecture-note-text")).to_contain_text("both endpoints")
+        figure = page.get_by_role("img", name="Two possible terminal positions.")
+        expect(figure).to_be_visible()
+        assert figure.locator("circle").count() == 2
         assert page.locator(".lecture-note img,.lecture-note .lecture-when").count() == 0
         assert "Keep in mind" not in page.locator("main").inner_text()
         # Each highlight shows its range and length; the frame opens the same moment.
@@ -141,7 +157,7 @@ def test_notes_only_highlights_only_and_empty_selection(
     theme: str,
     tmp_path: Path,
 ) -> None:
-    path = lecture_project / "study/lectures.json"
+    path = content_file(lecture_project, "lectures")
     value = json.loads(path.read_bytes())
     lecture = value["lectures"][0]
     if kind == "notes":
@@ -203,16 +219,12 @@ def test_notes_only_highlights_only_and_empty_selection(
 def test_all_workspace_subsets_route_without_two_way_fallthrough(
     lecture_project: Path, course_browser: Browser, selected: tuple[str, ...]
 ) -> None:
-    for workspace, filename in (
-        ("study", "content.json"),
-        ("exercises", "exercises.json"),
-        ("lectures", "lectures.json"),
-    ):
+    for workspace in ("study", "exercises", "lectures"):
         if workspace not in selected:
-            (lecture_project / "study" / filename).unlink()
+            content_file(lecture_project, workspace).unlink()
     build(lecture_project, publish=False)
     with PreviewServer(
-        ("127.0.0.1", 0), partial(Handler, directory=str(lecture_project / "study"))
+        ("127.0.0.1", 0), partial(Handler, directory=str(lecture_project / "app"))
     ) as server:
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -235,14 +247,14 @@ def test_all_workspace_subsets_route_without_two_way_fallthrough(
 def test_missing_routes_images_and_untrusted_copy_are_readable(
     lecture_project: Path, course_browser: Browser
 ) -> None:
-    path = lecture_project / "study/lectures.json"
+    path = content_file(lecture_project, "lectures")
     content = json.loads(path.read_text())
     content["lectures"][0]["highlights"][0]["teaches"] = '<script>alert("unsafe")</script>'
     content["lectures"][0]["coverage"]["status"] = "partial"
     path.write_text(json.dumps(content))
     build(lecture_project, publish=False)
     with PreviewServer(
-        ("127.0.0.1", 0), partial(Handler, directory=str(lecture_project / "study"))
+        ("127.0.0.1", 0), partial(Handler, directory=str(lecture_project / "app"))
     ) as server:
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()

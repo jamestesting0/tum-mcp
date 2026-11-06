@@ -3,6 +3,7 @@ import { node, studyText, append, button, sourcesNote, topicRow } from './dom.mj
 import { openReference } from './reference-panel.mjs';
 import { renderCommentedView } from './comments.mjs';
 import { nextStep } from './navigation.mjs';
+import { renderBlockBody } from './reading.mjs';
 
 const lectures = [...(data.lectures?.lectures || [])].sort((a, b) => b.recording.recorded_on.localeCompare(a.recording.recorded_on) || a.key.localeCompare(b.key));
 export const lectureLink = (lecture, highlight) => `#lectures/${encodeURIComponent(lecture.key)}${highlight ? `/${encodeURIComponent(highlight.key)}` : ''}`;
@@ -33,6 +34,32 @@ export function lectureOutline(current = '') {
   return nav;
 }
 function decode(value) { try { return decodeURIComponent(value || ''); } catch { return ''; } }
+// The Study passage that teaches an entry's subject, opened beside the page.
+function recallButton(passage) {
+  const unit = passage && data.units.find(item => item.key === passage.unit);
+  const block = unit?.blocks.find(item => item.key === passage.block);
+  if (!block) return null;
+  const recall = button('', () => openReference(unit, block, recall), 'term-more lecture-recall');
+  recall.append(studyText('span', '', `Recall: ${block.title || unit.title}`));
+  return recall;
+}
+// The explanation's stages, each opening the recording at its own moment; consecutive
+// steps of one subgoal sit under its label and the numbering runs on across them.
+function highlightSteps(steps) {
+  const root = node('div', 'lecture-step-groups');
+  let list = null;
+  steps.forEach((step, index) => {
+    if (!list || step.subgoal !== steps[index - 1].subgoal) {
+      if (step.subgoal) root.append(studyText('p', 'eyebrow lecture-step-subgoal', step.subgoal));
+      list = node('ol', 'lecture-steps'); list.start = index + 1; root.append(list);
+    }
+    const item = node('li');
+    item.append(append(node('p', 'lecture-step-action'), timeLink(step.url, step.at), ' ', studyText('span', '', step.action)), studyText('p', 'lecture-step-why', step.why));
+    if (step.note) item.append(append(node('p', 'walk-note'), node('strong', '', 'Pitfall: '), studyText('span', '', step.note)));
+    list.append(item);
+  });
+  return root;
+}
 function noteView(note, active) {
   const root = node('li', 'lecture-note'); root.dataset.lectureSection = note.key; root.dataset.commentTarget = 'lectures'; root.tabIndex = -1;
   if (active) root.dataset.lectureActiveSection = '';
@@ -44,13 +71,9 @@ function noteView(note, active) {
       sourcesNote(sources, data.sources, data.course.synthetic, note.title, provenance, note.pages || '')),
     studyText('p', 'lecture-note-context', note.context),
     studyText('p', 'lecture-note-text', note.text));
-  const unit = note.passage && data.units.find(item => item.key === note.passage.unit);
-  const block = unit?.blocks.find(item => item.key === note.passage.block);
-  if (block) {
-    const recall = button('', () => openReference(unit, block, recall), 'term-more lecture-recall');
-    recall.append(studyText('span', '', `Recall: ${block.title || unit.title}`));
-    root.append(recall);
-  }
+  const recall = recallButton(note.passage);
+  if (recall) root.append(recall);
+  if (note.figure) root.append(renderBlockBody(note.figure));
   if (note.image) {
     const image = node('img', 'lecture-note-image');
     Object.assign(image, { src: note.image.asset, alt: note.image.alt, width: note.image.width, height: note.image.height, loading: 'lazy', decoding: 'async' });
@@ -76,6 +99,9 @@ function highlightView(highlight, active) {
   // The frame sits beside the title and time; what the passage teaches reads at full width below.
   const text = append(node('div', 'lecture-highlight-text'), studyText('p', 'lecture-teaches', highlight.teaches));
   if (highlight.points.length) text.append(append(node('ul', 'lecture-points'), ...highlight.points.map(item => studyText('li', '', item))));
+  if (highlight.steps?.length) text.append(highlightSteps(highlight.steps));
+  const recall = recallButton(highlight.passage);
+  if (recall) text.append(recall);
   root.append(thumb, body, text);
   return root;
 }

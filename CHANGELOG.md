@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 0.18.0 — 2026-11-06
+
+- Course authoring stores each lesson, exercise, exam entry and lecture in its own
+  file. The Python implementation is organized under `tum_mcp.course`; the
+  `tum-mcp study`, Lecture, media and campus tool entry points remain available.
+- Preparation records source digests, structured teaching plans and computed answer
+  keys. Lint identifies broken plan links and content defects while an item is
+  being written; answer verification compares computed results with the content.
+- `tum-mcp review` runs gated rounds with fresh checkers, quoted findings, explicit
+  advisory rulings and verification of repairs. Packets carry workspace-specific
+  guidance, and unchanged evidence is reused. Internal fingerprint history stays
+  in the ledger rather than being repeated in checker inputs.
+- Review guidance distinguishes first-time Study teaching from concise Exam
+  revision, independent drills and authored applications of sourced rules.
+  Bounded preparations do not require extra lessons to fill topic groups. Passing
+  computed checks alone does not establish teaching quality or complete coverage.
+- Shared app controls support walkthrough inspection and search. Listed derivations
+  keep their full width, and long inline expressions scroll locally without
+  breaking equations or overflowing the page.
+- Lecture preparation accepts small accumulated audio timestamp jitter while
+  retaining the missing-frame rejection boundary. Notes can include a meaningful
+  source frame, a sourced SVG illustration and a Recall link; recording coverage remains distinct from
+  semantic or listening review.
+
 ## 0.17.2 — 2026-11-04
 
 - Selectors accept Escape to cancel and show Esc in the keyboard guide. Ctrl+C
@@ -55,8 +79,6 @@
   one cleaner layout.
 - Notation guidance says when to write a fraction and when a slash or `\div`.
 - `study report` flags exercise statements that frame instead of giving (`statement_framing`).
-- Skill lab: trials run `study visuals` on the host through the shim, and `lab run --plant` with
-  `lab calibrate` measures how many planted defects a review finds or undoes.
 - `study visuals --exam` no longer fails on an untitled Exam figure.
 - "Publish the study app" publishes all prepared Study, Exercises, Exam and Lecture
   workspaces and required images through the existing incremental publisher.

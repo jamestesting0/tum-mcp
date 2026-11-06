@@ -1,7 +1,7 @@
 import data from './data.mjs';
-import { node, studyText, button, append, announce, sourcesNote, shareCitations, focusHeading, scrollReadingTo, preparationDisclosure, topicRow, shuffled } from './dom.mjs';
+import { node, studyText, button, append, announce, sourcesNote, shareCitations, focusHeading, scrollReadingTo, preparationDisclosure, topicRow, shuffled, pillPanel } from './dom.mjs';
 import { renderReading, renderBlockBody, renderAnswers } from './reading.mjs';
-import { arrowPaging, iconButton, iconGlyph, nextStep } from './navigation.mjs';
+import { arrowPaging, usePager, iconButton, iconGlyph, nextStep } from './navigation.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExercise } from './anchors.mjs';
 import { markCompleted, isCompleted } from './completion.mjs';
@@ -51,12 +51,12 @@ export function exerciseOutline(current = '') {
   return root;
 }
 
+// Any work on a problem: a viewed solution or a step drafted, hinted, compared, checked or skipped.
+export const exerciseStarted = value => value.solutionViewed || Object.values(value.partSolutions).some(part => part.viewed)
+  || Object.values(value.steps).some(step => step.draft || step.hints || step.compared || step.skipped || step.checked !== null);
 function exerciseStatus(group, exercise, state) {
   if (isCompleted(exerciseLink(group, exercise))) return 'Done';
-  const value = state.get(exercise);
-  const started = value.solutionViewed || Object.values(value.partSolutions).some(part => part.viewed)
-    || Object.values(value.steps).some(step => step.draft || step.hints || step.compared || step.skipped || step.checked !== null);
-  return started ? 'In progress' : 'Not started';
+  return exerciseStarted(state.get(exercise)) ? 'In progress' : 'Not started';
 }
 // As on the Study home: continue the first problem in progress, or start the first one not started.
 function resumeLink(state) {
@@ -212,21 +212,8 @@ export function exercisePage(exercise, options) {
       && exercise.statement.find(block => block.key === exercise.part_blocks[group.part]);
     const guideLevel = partBlock ? (partBlock.level || 1) + 2 : 2;
     const panel = node('section', 'exercise-step');
-    if (groupIndex === 0 && exercise.objectives?.length) {
-      const goals = node('div', 'exercise-goals');
-      goals.append(node('p', 'small objectives-label', 'Goals'), append(node('ul'), ...exercise.objectives.map(text => studyText('li', '', text))));
-      panel.append(goals);
-    }
     const owns = key => steps.some(item => item.key === key);
     const opened = Boolean(stepKey) ? owns(stepKey) : value.helpOpen && (owns(value.lastStep) || (!multi));
-    const label = 'Guide';
-    const details = disclosure(label, panel, opened, isOpen => {
-      value.helpOpen = isOpen;
-      if (isOpen) value.lastStep = steps[index].key;
-      state.save(exercise); activityChanged();
-    });
-    details.classList.add('exercise-guide');
-    details.querySelector('summary').dataset.contentsLevel = String(Math.min(6, guideLevel));
     let index = steps.findIndex(item => item.key === (stepKey || value.lastStep));
     if (index < 0) index = 0;
     const navigation = node('div', 'step-navigation'), counter = node('span', 'step-count');
@@ -240,7 +227,7 @@ export function exercisePage(exercise, options) {
     });
     navigation.append(append(node('p', 'small'), counter), prev, next);
     const body = node('div', 'step-body'); panel.append(navigation, body);
-    arrowPaging(details, prev, next);
+    arrowPaging(panel, prev, next, { active: opened });
     function paint() {
       const step = steps[index], saved = value.steps[step.key];
       value.lastStep = step.key; body.replaceChildren();
@@ -327,9 +314,7 @@ export function exercisePage(exercise, options) {
       }
       update(); state.save(exercise); if (root.dataset.citations !== undefined) shareCitations(root, eyebrow); return title;
     }
-    if (group.part && !options.untitledStatement) partSections.get(group.part).append(append(node('div', 'exercise-part-help'), details));
-    else help.append(details);
-    return { steps, details, panel, navigation, owns, paint, get index() { return index; }, set index(value) { index = value; } };
+    return { part: group.part, reveal: () => {}, steps, panel, navigation, owns, opened, paint, get index() { return index; }, set index(value) { index = value; } };
   });
   guides.forEach(guide => guide.paint());
   // Painting every guide moves lastStep; it belongs to the step the student opened.
@@ -338,18 +323,36 @@ export function exercisePage(exercise, options) {
   state.save(exercise);
   root.append(help);
   let trim = null;
+  // Guide and Solution share one pill and one panel per part; the open segment is remembered.
+  const guideValue = guide => `guide:${guides.indexOf(guide)}`;
+  function helpPill(own, solution, solutionOpen, saveSolution) {
+    const segments = own.map(guide => ({ value: guideValue(guide), label: own.length > 1 && guide.part ? `Guide ${guide.part}` : 'Guide', content: guide.panel }));
+    if (solution) segments.push({ value: 'solution', label: 'Solution', content: solution });
+    const openGuide = own.find(guide => guide.opened);
+    const selected = solution && solutionOpen ? 'solution' : openGuide ? guideValue(openGuide) : null;
+    const choose = chosen => {
+      const guide = guides.find(item => guideValue(item) === chosen);
+      value.helpOpen = Boolean(guide);
+      if (guide) { value.lastStep = guide.steps[guide.index].key; usePager(guide.panel); }
+      if (solution) saveSolution(chosen === 'solution');
+      state.save(exercise); activityChanged();
+    };
+    const pill = pillPanel('Help', segments, { selected, onChange: choose });
+    for (const guide of own) guide.reveal = () => { pill.open(guideValue(guide)); choose(guideValue(guide)); };
+    return pill.element;
+  }
+  const placed = new Set();
   if (partSections.size) {
     exercise.parts.forEach((part, index) => {
-      const controls = partSections.get(part).querySelector('.exercise-part-help');
-      const saved = value.partSolutions[part];
+      const saved = value.partSolutions[part], own = guides.filter(guide => guide.part === part);
+      own.forEach(guide => placed.add(guide));
       const answer = renderAnswers(exercise.solution, (element, field) => target(element, field), index);
-      const solution = disclosure('Solution', answer, saved.open, opened => {
-        saved.open = opened; saved.viewed ||= opened; state.save(exercise); activityChanged();
-      });
-      solution.classList.add('exercise-solution');
-      solution.querySelector('summary').dataset.contentsLevel = controls.querySelector('summary').dataset.contentsLevel;
-      controls.append(solution);
+      partSections.get(part).append(append(node('div', 'exercise-part-help'), helpPill(own, answer, saved.open, opened => {
+        saved.open = opened; saved.viewed ||= opened;
+      })));
     });
+    const loose = guides.filter(guide => !placed.has(guide));
+    if (loose.length) help.append(helpPill(loose, null));
     if (exercise.solution.notes?.length) {
       const notes = renderAnswers({ answers: [], notes: exercise.solution.notes }, (element, field) => target(element, field));
       help.append(disclosure('Solution notes', notes, value.solutionOpen, opened => {
@@ -359,14 +362,13 @@ export function exercisePage(exercise, options) {
     if (options.video) help.append(exerciseVideo(exercise, options.video));
   } else {
     const solution = renderAnswers(exercise.solution, (element, field) => target(element, field));
-    const details = disclosure('Solution', solution, value.solutionOpen, opened => {
-      value.solutionOpen = opened; value.solutionViewed ||= opened; state.save(exercise); activityChanged();
-    });
     if (options.afterSolution) solution.append(options.afterSolution);
-    help.append(details);
+    help.append(helpPill(guides.filter(guide => guide.steps.length), solution, value.solutionOpen, opened => {
+      value.solutionOpen = opened; value.solutionViewed ||= opened;
+    }));
     if (options.video) {
       if (exercise.parts?.length > 1) help.append(exerciseVideo(exercise, options.video));
-      else exerciseVideo(exercise, options.video, details);
+      else exerciseVideo(exercise, options.video, solution);
     }
   }
   if (exercise.transfer) {
@@ -390,9 +392,9 @@ export function exercisePage(exercise, options) {
       const previousTop = navigation.getBoundingClientRect().top;
       const scroller = matchMedia('(max-width: 799px)').matches ? document.scrollingElement : root.closest('main');
       trim?.(); root.style.paddingBottom = '0px';
-      guide.index = nextIndex; guide.details.open = true; value.helpOpen = true;
+      guide.index = nextIndex; guide.reveal();
       const prompt = guide.paint();
-      if (usingArrows) { if (document.activeElement.disabled) (prev.disabled ? next : prev).focus({ preventScroll: true }); }
+      if (usingArrows) { if (document.activeElement.disabled) navigation.querySelector('button:not(:disabled)')?.focus({ preventScroll: true }); }
       else focusHeading(prompt);
       if (previousTop >= 0 && previousTop <= innerHeight - 44) {
         const desired = scroller.scrollTop + navigation.getBoundingClientRect().top - previousTop;

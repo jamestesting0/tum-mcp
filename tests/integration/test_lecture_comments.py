@@ -5,14 +5,15 @@ from uuid import uuid4
 
 import pytest
 import test_lecture_workspace as fixtures
+from documents import content_file
 from playwright.sync_api import Browser, expect
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.comment_models import Create, LectureAnchor
+from tum_mcp.course.app.comments import change_comment, read_comments
+from tum_mcp.course.lecture.data import read_lectures
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_data import read_lectures
-from tum_mcp.study_comment_models import Create, LectureAnchor
-from tum_mcp.study_comments import change_comment, read_comments
 
 lecture_project = fixtures.lecture_project
 lecture_url = fixtures.lecture_url
@@ -55,7 +56,7 @@ def test_lecture_comment_upgrade_filter_and_receipt_independent_revision(
     saved = change_comment(root, create(root))
     assert saved["schema_version"] == 3 and len(saved["comments"]) == 2
     lecture = read_lectures(root).lectures[0]
-    notes = root / "study/lectures.json"
+    notes = content_file(root, "lectures")
     value = json.loads(notes.read_text())
     value["lectures"][0]["checked_at"] = "2026-10-26T16:00:00Z"
     notes.write_text(json.dumps(value))
@@ -136,13 +137,13 @@ def test_select_save_reload_locate_ambiguous_stays_and_gone_passage_is_deleted(
         page.screenshot(path=str(capture / "lecture-comment-ambiguous.png"))
         page.reload()
         # Mutate persisted authored text and rebuild; old literal quote is absent.
-        path = lecture_project / "study/lectures.json"
+        path = content_file(lecture_project, "lectures")
         payload = json.loads(path.read_text())
         payload["lectures"][0]["highlights"][0]["teaches"] = (
             "Revised explanation with different wording."
         )
         path.write_text(json.dumps(payload))
-        from tum_mcp.study_build import build
+        from tum_mcp.course.app.build import build
 
         build(lecture_project, publish=False)
         # The quote is gone from its section, so the app deletes the note on load.
@@ -189,11 +190,11 @@ def test_note_selection_comment_relocates_and_text_edit_deletes_it(
         page.reload()
         page.locator(".comment-marker").click()
         expect(page.get_by_text("Show both adjacency entries.", exact=True)).to_be_visible()
-        path = lecture_project / "study/lectures.json"
+        path = content_file(lecture_project, "lectures")
         value = json.loads(path.read_bytes())
         value["lectures"][0]["notes"][0]["text"] = "Each edge contributes two stored entries."
         path.write_text(json.dumps(value))
-        from tum_mcp.study_build import build
+        from tum_mcp.course.app.build import build
 
         build(lecture_project, publish=False)
         stale = CliRunner().invoke(

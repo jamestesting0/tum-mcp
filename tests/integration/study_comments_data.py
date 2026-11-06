@@ -1,9 +1,9 @@
 from pathlib import Path
 from uuid import uuid4
 
-from tum_mcp.study_build import read_content, unit_revision
-from tum_mcp.study_comment_models import Anchor, Create
-from tum_mcp.study_comments import read_comments
+from tum_mcp.course.app.build import read_content, unit_revision
+from tum_mcp.course.app.comment_models import Anchor, Create
+from tum_mcp.course.app.comments import read_comments
 
 
 def operation(project: Path) -> Create:

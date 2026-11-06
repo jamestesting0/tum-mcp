@@ -6,7 +6,7 @@ import pytest
 from material_fixture import exam_document, exam_project
 from pydantic import ValidationError
 
-from tum_mcp.exam_content import ExamContent, concept_revision
+from tum_mcp.course.content.exam import ExamContent, concept_revision
 
 
 @pytest.fixture(scope="module")

@@ -4,7 +4,7 @@ from typing import Annotated
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, SecretStr
 
-from tum_mcp.lecture_evidence import Seconds, SilenceMarker
+from tum_mcp.course.lecture.evidence import Seconds, SilenceMarker
 from tum_mcp.settings import PositiveId
 
 Slug = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,100}$")]

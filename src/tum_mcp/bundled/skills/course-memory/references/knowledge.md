@@ -80,7 +80,7 @@ conversation automatically.
 
 ## Maintain reviewed relationships
 
-The optional private `.tum-mcp/knowledge.json` (legacy `.study/knowledge.json`) follows
+The optional private `.tum-mcp/knowledge.json` follows
 `study schema knowledge`: course/semester, concepts and assertions. Do not copy course
 content into it. Use stable typed item refs and explicit concept keys; shared aliases
 remain ambiguous. Relations are teaches, practices, assesses, clarifies, prerequisite_of

@@ -3,10 +3,10 @@
 import json
 from pathlib import Path
 
-from tum_mcp.study_knowledge_assertions import review_revision
-from tum_mcp.study_knowledge_projection import project
-from tum_mcp.study_knowledge_store import load_inputs
-from tum_mcp.study_store import load_state, private_path
+from tum_mcp.course.memory.assertions import review_revision
+from tum_mcp.course.memory.projection import project
+from tum_mcp.course.memory.store import load_inputs
+from tum_mcp.course.project.store import load_state, private_path
 
 
 def annotation(root: Path, ref: str = "study/unit/observer", key: str = "teaching") -> dict:

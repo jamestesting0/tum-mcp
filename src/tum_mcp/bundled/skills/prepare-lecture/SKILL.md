@@ -15,7 +15,9 @@ corrections and instructions become readable Notes. Highlights are substantial
 explanations worth following: worked reasoning, examples, demonstrations or sustained
 conceptual explanations. Every highlight has a time range and a recording thumbnail;
 notes have source links without prominent timestamps and may include a meaningful
-frame. Neither section is mandatory. Do not recreate Study or add assessment controls.
+frame. A sourced inline-SVG `figure` can show a comparison the recording frame does
+not make clear; reuse the Study figure schema and keep it distinct from the captured
+`image`. Neither section is mandatory. Do not recreate Study or add assessment controls.
 
 This is an optional extension: `tum-mcp install lecture`. Its cached authoring
 workflow does not require a campus session. See [sources](references/sources.md)
@@ -39,17 +41,22 @@ when connecting, preparing missing evidence or capturing frames.
    absent from materials you could not inspect.
 4. Classify candidates as Note, Highlight or Omit with
    [authoring](references/authoring.md). Compare explanations, not just topic names.
-   Record what each highlight adds and include the setup through the conclusion.
+   Record what each highlight adds and include the setup through the conclusion. A
+   highlight whose explanation has stages gets `steps` (action, why, and the `at` time of
+   each stage inside the highlight), and one that a Study passage teaches links it as
+   `passage` for Recall, as notes do.
 5. Capture one frame per highlight in a single `lecture prepare` call with a repeated
    `--frame-at`, at a moment that shows the highlight's topic. Look at every frame
    yourself: it must show what the highlight is about. Use it to confirm names and
    notation; check clip boundaries against speech, not a later still. Stage
    each thumbnail with `lecture thumbnail`. Capture a note image only when the visual
    itself carries necessary information; notes otherwise need no frame.
-6. Reconcile safe source receipts when needed, then author `app/lectures.json` (or the
-   existing legacy `study/` layout) with `study schema lectures` and
+6. Reconcile safe source receipts when needed, then author each lecture's file under
+   `app/lectures/` with `study schema lectures` and
    [content](references/content.md). Raw media and transcripts stay private.
-7. Run `tum-mcp lecture check PROJECT`; fix every error. Check notes and their context
+7. Run `tum-mcp lecture check PROJECT`; fix every error. The review loop
+   ([review-course](../review-course/SKILL.md)) reads each note and highlight with the
+   lecture-entry profile. Check notes and their context
    against the reported speech, keeping conditions and attribution. Verify the
    full selected explanation, not just the printed opening/closing excerpts, against
    each highlight's title, teaches line and points. Check unclear speech against

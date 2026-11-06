@@ -2,8 +2,8 @@ import math
 
 import pytest
 
+from tum_mcp.course.lecture.evidence import Interval, Recording, SilenceMarker
 from tum_mcp.errors import CampusError
-from tum_mcp.lecture_evidence import Interval, Recording, SilenceMarker
 from tum_mcp.lecture_processing.timeline import MapPiece, Timeline, watch_link
 from tum_mcp.lecture_processing.validity import RecordingTiming, evaluate, require_content
 

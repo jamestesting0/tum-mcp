@@ -1,8 +1,10 @@
+import { openSearch } from './search.mjs';
 import data from './data.mjs';
 import { enableCompletion } from './completion.mjs';
 import { node, studyText, button, append, focusHeading, scrollReadingTo } from './dom.mjs';
 
 const paths = {
+  search: 'M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14m5 12 4.5 4.5',
   book: 'M12 5C8 3 5 3 3 4v15c3-1 6-1 9 1m0-15c4-2 7-2 9-1v15c-3-1-6-1-9 1V5',
   lecture: 'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',
   pencil: 'm5 15 10-10 4 4L9 19H5v-4m8-8 4 4',
@@ -101,7 +103,7 @@ export function contentsOutline(reading, enabled = true) {
     if (signal.aborted) return;
     // Headings, plus sections a renderer marks with data-contents-entry (such as exercise disclosures).
     const found = [...reading.querySelectorAll(`${headingSelector}, [data-contents-entry]`)].filter(heading => heading.getClientRects().length && heading.innerText.trim()
-      && !heading.closest('.feedback, .citation-panel, .visually-hidden, [data-comment-ui], dialog, .exam-map-card, .exam-entry-body'));
+      && !heading.closest('.feedback, .citation-panel, .visually-hidden, [data-comment-ui], dialog, .exam-map-card, .exam-entry-body, .pill-content'));
     if (found.length === headings.length && found.every((heading, index) => heading === headings[index])) return;
     headings = found; links = []; pinned = null;
     const list = node('ol'), parents = [];
@@ -232,7 +234,12 @@ export function renderSidebar(context) {
   });
   toggle.className = 'icon-button outline-toggle';
   toggle.setAttribute('aria-controls', 'outline-body');
-  top.append(title, toggle, where);
+  // Search sits under the course name on every page; "/" opens it from anywhere.
+  const find = node('button', 'sidebar-search'); find.type = 'button';
+  find.append(iconGlyph('search'), node('span', '', 'Search'), node('kbd', '', '/'));
+  find.setAttribute('aria-keyshortcuts', '/'); find.setAttribute('aria-label', 'Search'); find.title = 'Search (/)';
+  find.addEventListener('click', () => openSearch(find));
+  top.append(title, toggle, where, find);
   const body = node('div', 'sidebar-body'); body.id = 'outline-body';
   // Every route rebuilds the outline; each workspace's list keeps the place the student scrolled to.
   const tops = context.outlineTops ||= {};
@@ -321,7 +328,8 @@ function pagerFor(target) {
   const shown = activePager?.isConnected && activePager.getClientRects().length && (activePager.localName !== 'details' || activePager.open);
   // Focus on the page, a tab, or a heading or region the app focused (tabindex -1) is no
   // control of its own, so the arrows go to the pager last used.
-  return (target === document.body || target.matches('[role="tab"], [tabindex="-1"]')) && shown ? activePager : null;
+  // A Guide | Solution segment opened the guide, so its arrows page that guide.
+  return (target === document.body || target.matches('[role="tab"], [tabindex="-1"], .pill-panel .segment')) && shown ? activePager : null;
 }
 document.addEventListener('keydown', event => {
   const target = event.target;
@@ -339,6 +347,8 @@ document.addEventListener('keydown', event => {
     else document.activeElement.blur();
   }
 });
+// The pager the arrows go to when focus rests on the page, such as a guide just opened.
+export function usePager(region) { activePager = region; }
 export function arrowPaging(region, previous, next, { active = false } = {}) {
   pagers.set(region, { previous, next });
   const use = () => { activePager = region; };

@@ -4,15 +4,16 @@ import json
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from knowledge_fixture import knowledge_project
 from knowledge_lecture_fixture import real_cached_lecture
 
-from tum_mcp.course_app_paths import app_path
+from tum_mcp.course.memory.evidence import EvidenceChecks
+from tum_mcp.course.memory.models import SourceEvidence, SupportGroup
+from tum_mcp.course.memory.store import load_inputs
+from tum_mcp.course.project.paths import app_path
+from tum_mcp.course.project.store import load_state, private_path
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_knowledge_evidence import EvidenceChecks
-from tum_mcp.study_knowledge_models import SourceEvidence, SupportGroup
-from tum_mcp.study_knowledge_store import load_inputs
-from tum_mcp.study_store import load_state, private_path
 
 pytestmark = pytest.mark.usefixtures("course_memory")
 
@@ -20,8 +21,8 @@ pytestmark = pytest.mark.usefixtures("course_memory")
 def test_support_alternatives_preserve_relation_but_never_repair_stale_owner(tmp_path: Path):
     from knowledge_annotations import annotation, write_registry
 
-    from tum_mcp.study_knowledge_assertions import AssertionChecks
-    from tum_mcp.study_knowledge_projection import project
+    from tum_mcp.course.memory.assertions import AssertionChecks
+    from tum_mcp.course.memory.projection import project
 
     root = knowledge_project(tmp_path)
     other = next(s for s in load_state(root).resources if s.resource.key != "slides")
@@ -56,17 +57,17 @@ def test_support_alternatives_preserve_relation_but_never_repair_stale_owner(tmp
 
 
 def test_unkeyed_and_repeated_passages_have_only_stable_owner_anchors(tmp_path: Path):
-    from tum_mcp.study_knowledge_projection import project
+    from tum_mcp.course.memory.projection import project
 
     root = knowledge_project(tmp_path)
-    path = app_path(root, "content.json")
+    path = content_file(root, "study")
     value = json.loads(path.read_bytes())
     blocks = value["units"][0]["blocks"]
     blocks.append(dict(blocks[0]))
     value["units"][1]["blocks"][0].pop("key", None)
     path.write_text(json.dumps(value))
     # This native schema already rejects duplicate passage keys; preserve that gate.
-    with pytest.raises(CampusError, match="Invalid content.json"):
+    with pytest.raises(CampusError, match="Invalid app/study/course.json"):
         load_inputs(root)
     blocks.pop()
     blocks[0].pop("key")
@@ -80,9 +81,9 @@ def test_unkeyed_and_repeated_passages_have_only_stable_owner_anchors(tmp_path: 
 def test_registry_and_packets_never_enter_site_exports(tmp_path: Path):
     from knowledge_annotations import annotation, write_registry
 
-    from tum_mcp.study_build import build
-    from tum_mcp.study_knowledge_query import context
-    from tum_mcp.study_publish_site import export_site
+    from tum_mcp.course.app.build import build
+    from tum_mcp.course.app.publish_site import export_site
+    from tum_mcp.course.memory.query import context
 
     root = knowledge_project(tmp_path)
     row = annotation(root) | {"rationale": "PRIVATE_KNOWLEDGE_SENTINEL"}
@@ -105,8 +106,8 @@ def files(root: Path) -> dict[str, bytes]:
 def test_retired_and_pending_memory_stay_inactive_without_erasing_history(tmp_path: Path):
     from knowledge_annotations import annotation, write_registry
 
-    from tum_mcp.study_knowledge_query import context
-    from tum_mcp.study_knowledge_report import knowledge_report
+    from tum_mcp.course.memory.query import context
+    from tum_mcp.course.memory.report import knowledge_report
 
     root = knowledge_project(tmp_path)
     replacement = annotation(root, key="replacement")
@@ -148,7 +149,7 @@ def test_retired_and_pending_memory_stay_inactive_without_erasing_history(tmp_pa
     assert files(root) == before
 
 
-@pytest.mark.parametrize("layout", [("app", ".tum-mcp"), ("study", ".study")])
+@pytest.mark.parametrize("layout", [("app", ".tum-mcp")])
 def test_snapshot_is_read_only_with_missing_optional_registry(tmp_path: Path, layout) -> None:
     root = knowledge_project(tmp_path, layout)
     before = files(root)
@@ -161,14 +162,14 @@ def test_snapshot_is_read_only_with_missing_optional_registry(tmp_path: Path, la
     assert files(root) == before
 
 
-@pytest.mark.parametrize("change", ["authored", "new-registry", "source", "migration"])
+@pytest.mark.parametrize("change", ["authored", "new-registry", "source"])
 def test_snapshot_detects_changes_between_read_and_return(tmp_path: Path, change: str) -> None:
     root = knowledge_project(tmp_path)
     inputs = load_inputs(root)
     EvidenceChecks(inputs).source(inputs.study.units[0].sources[0])
     match change:
         case "authored":
-            path = app_path(root, "content.json")
+            path = content_file(root, "study")
             value = json.loads(path.read_bytes())
             value["introduction"] += " Changed."
             path.write_text(json.dumps(value), encoding="utf-8")
@@ -177,8 +178,6 @@ def test_snapshot_detects_changes_between_read_and_return(tmp_path: Path, change
         case "source":
             path = root / inputs.resources["slides"].path
             path.write_bytes(path.read_bytes().replace(b"Observer", b"Strategy"))
-        case "migration":
-            (root / ".tum-mcp/migration.lock").write_text("interrupted", encoding="utf-8")
     with pytest.raises(CampusError) as error:
         inputs.reader.verify()
     assert error.value.code in {Code.STALE_RESULT, Code.WORKSPACE_CONFLICT}
@@ -219,9 +218,9 @@ def test_snapshot_boundary_errors_preserve_private_inputs(tmp_path: Path, change
     root = knowledge_project(tmp_path)
     match change:
         case "malformed":
-            app_path(root, "content.json").write_text("PRIVATE_SENTINEL", encoding="utf-8")
+            app_path(root, "study/course.json").write_text("PRIVATE_SENTINEL", encoding="utf-8")
         case "scope":
-            path = app_path(root, "exercises.json")
+            path = content_file(root, "exercises")
             value = json.loads(path.read_bytes()) | {"course_key": "another-course"}
             path.write_text(json.dumps(value), encoding="utf-8")
         case "semester":
@@ -230,7 +229,7 @@ def test_snapshot_boundary_errors_preserve_private_inputs(tmp_path: Path, change
                 encoding="utf-8",
             )
         case "symlink":
-            path = app_path(root, "content.json")
+            path = app_path(root, "study/course.json")
             path.rename(root / "saved.json")
             try:
                 path.symlink_to(root / "saved.json")
@@ -274,7 +273,7 @@ def test_lecture_snapshot_checks_original_frames_and_verified_crops(
         path = next(private_path(root, "lectures/live-42-11/frames").glob("*.png"))
         path.write_bytes(b"changed original frame")
     else:
-        path = app_path(root, "lectures.json")
+        path = content_file(root, "lectures")
         value = json.loads(path.read_bytes())
         thumbnail = value["lectures"][0]["highlights"][0]["thumbnail"]
         thumbnail["sha256"] = "f" * 64

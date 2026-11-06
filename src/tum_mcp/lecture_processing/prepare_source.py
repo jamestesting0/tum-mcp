@@ -5,15 +5,15 @@ import json
 import re
 from pathlib import Path
 
+from tum_mcp.course.lecture.evidence import Interval
+from tum_mcp.course.project.models import Binding
+from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing.captions import webvtt
 from tum_mcp.lecture_processing.media_models import Manifest
 from tum_mcp.lecture_processing.transcript_models import Passage
 from tum_mcp.lecture_processing.validity import RecordingTiming, Validity, evaluate, require_content
 from tum_mcp.settings import Provider, find_account, preferences
-from tum_mcp.study_models import Binding
-from tum_mcp.study_store import load_state
 from tum_mcp.transport import API
 from tum_mcp.tum_live.client import TumLive
 from tum_mcp.tum_live.wire import Watch

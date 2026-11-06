@@ -41,7 +41,7 @@ class SmokeEvidence(TypedDict):
 
 def study_smoke(browser: Browser, site: Path, unit: str) -> SmokeEvidence:
     """Check installed assets and native UI without repeating long learning journeys."""
-    from tum_mcp.study_build import TEMPLATE_FILES
+    from tum_mcp.course.app.build import TEMPLATE_FILES
 
     errors: list[str] = []
     missing: list[str] = []
@@ -109,7 +109,7 @@ def main() -> None:
     assert os.environ.get("TUM_MOODLE_DATA_DIR"), (
         "Consumer QA requires TUM_MOODLE_DATA_DIR pointing to a disposable data directory."
     )
-    from tum_mcp.course_app_paths import app_path
+    from tum_mcp.course.project.paths import app_path
 
     journeys = os.environ.get("TUM_MCP_STUDY_BROWSER_JOURNEYS", "all")
     assert journeys in {"all", "primary"}, "Study browser journeys must be all or primary."

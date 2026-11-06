@@ -1,8 +1,8 @@
 """Graph interpretation must not turn shared content into false dependencies."""
 
-from tum_mcp.study_knowledge_assertions import cycle_groups
-from tum_mcp.study_knowledge_graph import Edge, safe_text
-from tum_mcp.study_knowledge_packet import excerpt
+from tum_mcp.course.memory.assertions import cycle_groups
+from tum_mcp.course.memory.graph import Edge, safe_text
+from tum_mcp.course.memory.packet import excerpt
 
 
 def test_packet_excerpts_remove_links_with_mixed_case_schemes() -> None:

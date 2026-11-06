@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from tum_mcp.course.lecture.evidence import Interval, SilenceMarker
 from tum_mcp.errors import CampusError
-from tum_mcp.lecture_evidence import Interval, SilenceMarker
 from tum_mcp.lecture_processing.captions import webvtt
 from tum_mcp.lecture_processing.chunk_store import process_chunk
 from tum_mcp.lecture_processing.transcript_models import AudioQuality, Passage, Recognition

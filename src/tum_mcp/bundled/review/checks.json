@@ -1,0 +1,1343 @@
+{
+  "version": 1,
+  "checks": [
+    {
+      "id": "correctness.source_match",
+      "dimension": "correctness",
+      "rule": "every definition, claim and value agrees with the cited page.",
+      "pass": "The heuristic definition matches slide 4 word for word in meaning.",
+      "fail": "The unit says A* expands the highest f first; the cited slide says lowest.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "lecture-entry",
+        "study-unit"
+      ],
+      "scope": "block",
+      "version": 1,
+      "default_fail": true
+    },
+    {
+      "id": "correctness.recomputed",
+      "dimension": "correctness",
+      "rule": "every number is recomputed with code: examples, trace states, table cells, plot points, answers, hints and the numbers inside feedback.",
+      "pass": "A script reproduces every frontier and f-value in the trace.",
+      "fail": "The trace lists f(C)=11 but g+h gives 6+5=11 only if the edge costs 6, and it costs 10.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "study-unit"
+      ],
+      "scope": "block",
+      "version": 1,
+      "default_fail": true
+    },
+    {
+      "id": "correctness.answer_key",
+      "dimension": "correctness",
+      "rule": "every answer, explanation and option feedback agrees with your own solution.",
+      "pass": "Each option's feedback agrees with an independent solution.",
+      "fail": "The key marks B correct, but your own solution reaches C.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "study-unit"
+      ],
+      "scope": "block",
+      "version": 1,
+      "default_fail": true
+    },
+    {
+      "id": "correctness.conventions",
+      "dimension": "correctness",
+      "rule": "the conventions an answer depends on (tie-breaks, order, indexing, rounding) are stated before the task, or every valid alternative is accepted; a running example keeps its givens unless the text says they change.",
+      "pass": "'Ties break alphabetically' appears before the trace that needs it.",
+      "fail": "Two frontier orders are possible and the task never says which one counts.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "correctness.citations",
+      "dimension": "correctness",
+      "rule": "each citation supports the rule, definition or source claim for which it is used. An authored application may choose new givens that do not appear on that page; verify its reasoning and numbers independently. A claim that an example is released or official still needs that specific source. Whether the page exists is checked by code.",
+      "pass": "The citation opens page 18, which shows the A* pseudocode.",
+      "fail": "The block cites page 40 for a definition that page 12 gives.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "block",
+      "version": 2
+    },
+    {
+      "id": "correctness.cases_exclusive",
+      "dimension": "correctness",
+      "rule": "a decision step's cases never overlap, and every listed past instance, example and part falls under exactly one of them.",
+      "pass": "Case 'cycle in the graph' and case 'tree' cannot both hold at a step.",
+      "fail": "Cases 'cost ≥ 0' and 'cost > 0' both match a zero-cost edge.",
+      "profiles": [
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "clarity.one_reading",
+      "dimension": "clarity",
+      "rule": "short, direct sentences; one idea per paragraph; every sentence reads once, without mapping 'these', 'respectively' or 'the former' back onto earlier clauses.",
+      "pass": "'A* adds g and h. The smallest sum goes first.'",
+      "fail": "'These judge resemblance and outcome, respectively.' sends the reader back to sort two earlier clauses.",
+      "profiles": [
+        "exam-pattern",
+        "exercise",
+        "lecture-entry",
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 2
+    },
+    {
+      "id": "clarity.terms_defined",
+      "dimension": "clarity",
+      "rule": "each term is defined where it is introduced; later marking with {{term}} is checked by code (forward_term).",
+      "pass": "'Frontier' is defined in the section that first uses it.",
+      "fail": "'Reached set' is used three sections before any definition.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "clarity.notation_unpacked",
+      "dimension": "clarity",
+      "rule": "when teaching a new notation-heavy rule, say its claim in words, give its symbols' meanings, work a concrete case, then state the general identity and conditions. An Exam revision workflow may state an already-learned formula before its practice example and link the lesson through Recall; its applied formula still supplies the symbols and conditions needed to use it.",
+      "pass": "The claim is said in words, each symbol reminded, a case worked, then the identity.",
+      "fail": "\\(\\langle a|c\\rangle\\) appears with no word on what it is.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "block",
+      "version": 2
+    },
+    {
+      "id": "clarity.symbols_recall",
+      "dimension": "clarity",
+      "rule": "in displayed formulas, the variables a reader would stop to recall (defined elsewhere, compound or easily confused, shifting meaning, a formula used as a tool) open a meaning that says what each is here, in about twelve words; obvious indices, constants and just-defined variables are not marked; no meaning only renames its variable. Strict for Exam pattern applied formulas and cheatsheet formulas, judged for Study and Exercises ([variable meanings](../../prepare-study/references/variables.md)).",
+      "pass": "\\(h(n)\\) in the displayed formula opens 'estimated cost from n to a goal'.",
+      "fail": "A displayed formula uses \\(C^*\\) from three units back with no meaning on it.",
+      "profiles": [
+        "exam-pattern",
+        "exercise",
+        "lecture-entry",
+        "study-unit"
+      ],
+      "scope": "block",
+      "version": 1
+    },
+    {
+      "id": "clarity.clear_task",
+      "dimension": "clarity",
+      "rule": "every prompt says what the student produces.",
+      "pass": "'Write the frontier after each expansion as a list.'",
+      "fail": "'Consider the frontier.' (what does the student produce?)",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "study-unit"
+      ],
+      "scope": "block",
+      "version": 1
+    },
+    {
+      "id": "clarity.case_observable",
+      "dimension": "clarity",
+      "rule": "a case's `when` names something the student can see in their working at that step, and its `then` names one move.",
+      "pass": "When: 'the popped node is the goal' → Then: 'stop and return the path'.",
+      "fail": "When: 'the heuristic is good' (not visible in the working).",
+      "profiles": [
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "clarity.no_meta",
+      "dimension": "clarity",
+      "rule": "no line about the material itself (\"the lecture groups…\", \"Authored example:\") or that tells the student to work ([writing](../../prepare-study/references/writing.md)).",
+      "pass": "'A* combines cost so far with an estimate.'",
+      "fail": "'The lecture groups these algorithms by...' or 'Authored example:'",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "lecture-entry",
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cohesion.familiar_first",
+      "dimension": "cohesion",
+      "rule": "sentences start from what the reader has (the topic, the result just reached, the term the last sentence ended on) and end on what is new.",
+      "pass": "'... ends at the frontier. The frontier then holds...'",
+      "fail": "A sentence opens on a new term and ends on the familiar topic.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cohesion.point_first",
+      "dimension": "cohesion",
+      "rule": "each paragraph and block opens with its point; the opening sentences of a section alone tell its argument.",
+      "pass": "The paragraph opens 'Greedy search can be wrong.' and then shows why.",
+      "fail": "The point of the paragraph arrives in its last sentence.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cohesion.linked",
+      "dimension": "cohesion",
+      "rule": "a first-time reader can tell how each section and block relates to the one before (follows from it, contrasts with it, specializes it, a parallel case), and the text states the relation where they could not infer it.",
+      "pass": "'Greedy ignores the cost so far, so A* adds it back.'",
+      "fail": "A new section on IDS starts with no hint how it relates to DFS above.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cohesion.honest_connectives",
+      "dimension": "cohesion",
+      "rule": "a connective marks a real turn (\"so\", \"but\", \"because\"); none is stacked for flow.",
+      "pass": "'So' joins a result to its consequence.",
+      "fail": "'Moreover' and 'Furthermore' stack three unrelated facts.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cohesion.one_term",
+      "dimension": "cohesion",
+      "rule": "one term per concept and one notation per quantity across the item; every \"this\" and \"it\" has one possible referent.",
+      "pass": "'Frontier' throughout the unit.",
+      "fail": "'Frontier', 'open list' and 'queue' name the same thing.",
+      "profiles": [
+        "exam-pattern",
+        "exercise",
+        "lecture-entry",
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cognitive_load.one_new_idea",
+      "dimension": "cognitive_load",
+      "rule": "one new idea per section or step.",
+      "pass": "One section introduces admissibility only.",
+      "fail": "One section introduces admissibility, consistency and dominance together.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cognitive_load.first_encounter",
+      "dimension": "cognitive_load",
+      "rule": "walked in reading order by someone who knows only what earlier sections and units taught, no section asks them to hold new symbols or terms they cannot yet picture, and no line asks them to guess a missing step.",
+      "pass": "Each step uses only symbols defined earlier on the page.",
+      "fail": "A step needs 'consistent' before the page defines it.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cognitive_load.reminder_at_use",
+      "dimension": "cognitive_load",
+      "rule": "a prerequisite taught far back (another unit, or many sections earlier) gets a one-line reminder or a `{{term}}` link where it is used, so the student need not navigate away. This is reinforcement, not redundancy.",
+      "pass": "'Recall: UCS expands the lowest g.' where A* builds on it.",
+      "fail": "A* uses UCS's rule from another unit with no reminder or link.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cognitive_load.short_prose",
+      "dimension": "cognitive_load",
+      "rule": "no paragraph longer than two sentences or 45 words; a procedure comes as labelled steps and a worked example as one computed value per step.",
+      "pass": "Two short sentences per paragraph.",
+      "fail": "A paragraph of four sentences and 80 words.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1,
+      "decided_by": "dense_paragraph"
+    },
+    {
+      "id": "cognitive_load.math_set",
+      "dimension": "cognitive_load",
+      "rule": "every symbol and formula is set as mathematics, not typed characters; a displayed or structural quotient is a fraction (`\\frac`), not a slash or `\\div` chain, and no inline fraction is so tall or nested that it breaks the line ([notation](../../prepare-study/references/content.md#notation)). Units, `d/dx`, code and short incidental `n/2` are fine.",
+      "pass": "\\(\\frac{1}{\\rho}\\) set as mathematics.",
+      "fail": "'1/rho' typed as plain characters.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "study-unit"
+      ],
+      "scope": "block",
+      "version": 1
+    },
+    {
+      "id": "cognitive_load.together",
+      "dimension": "cognitive_load",
+      "rule": "text and the picture it refers to sit together.",
+      "pass": "The caption sits under its diagram.",
+      "fail": "The table explained is two sections below the text that explains it.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cognitive_load.fits_student",
+      "dimension": "cognitive_load",
+      "rule": "Study can be followed by a first-time reader who knows the teaching profile's prerequisites, without over-explaining what they already know; Exam stays concise and reaches depth through Recall instead of re-teaching.",
+      "pass": "Study assumes only the profile's prerequisites.",
+      "fail": "Study re-teaches Python syntax the profile says students know.",
+      "profiles": [
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "cognitive_load.moves_fit",
+      "dimension": "cognitive_load",
+      "rule": "every teaching move earns its place for this content; a worked example of a one-line definition, a bridge between parallel cases, an analogy that adds nothing or an essential idea hidden in an insight is a finding.",
+      "pass": "A worked example only where the idea has steps.",
+      "fail": "A worked example of a one-line definition.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "representation.shape_fits",
+      "dimension": "representation",
+      "rule": "procedures are traces with their state, parallel cases tables or lists, two-input rules matrices, physical or spatial ideas drawn figures, symbols formulas with each symbol explained, structures diagrams or trees, a logical argument its premises and conclusion on separate lines or as a formula, and the members of a list a list.",
+      "pass": "A two-input rule is a decision matrix.",
+      "fail": "Parallel cases, or four capabilities, are written as one long sentence.",
+      "profiles": [
+        "exam-pattern",
+        "exercise",
+        "lecture-entry",
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 2
+    },
+    {
+      "id": "representation.shown_not_described",
+      "dimension": "representation",
+      "rule": "a matrix, vector, table, graph, state, exchange or run that the text names is shown itself (\\(P = \\begin{pmatrix}1&0\\\\0&0\\end{pmatrix}\\), the exchange as a table of questions and answers, the run as its trace), and the text says what to notice in it; prose never asks the student to picture an object from a description of it (\"the diagonal matrix with entries 1, 0\", \"one respondent writes A, the other writes B\").",
+      "pass": "The matrix is written out as a matrix.",
+      "fail": "'One respondent writes a walk in the rain; the other writes a quiet evening.' narrates an exchange a two-row table would show.",
+      "profiles": [
+        "exam-pattern",
+        "exercise",
+        "lecture-entry",
+        "study-unit"
+      ],
+      "scope": "block",
+      "version": 2
+    },
+    {
+      "id": "representation.picture_carries_data",
+      "dimension": "representation",
+      "rule": "every authored question pairs its text with useful code, a diagram, formula, table or plot carrying information it needs. Conceptual questions use a concrete case to apply or distinguish the concept; brevity does not exempt them. Do not add a decorative picture or a table that merely repeats the prompt. Released statements keep their wording, with the relevant object or application shown in the guide.",
+      "pass": "The graph in the question shows every edge cost the task needs.",
+      "fail": "Four systems to classify are described in a sentence instead of a table the student scans.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "study-unit"
+      ],
+      "scope": "block",
+      "version": 3
+    },
+    {
+      "id": "representation.prose_points",
+      "dimension": "representation",
+      "rule": "the text beside a picture tells the student what to look at in it, in reading order.",
+      "pass": "'Note how B leaves the frontier at step 3.'",
+      "fail": "The text repeats what the table already lists.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "practice.new_case",
+      "dimension": "practice",
+      "rule": "authored application questions use a case the lesson did not work; re-asking a worked example with its numbers tests recall of that example. Retrieval cards and released exercise statements are not subject to this check.",
+      "pass": "The question uses a graph the lesson did not trace.",
+      "fail": "The question re-asks the worked example with the same numbers.",
+      "profiles": [
+        "study-unit",
+        "exercise"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "practice.plausible_options",
+      "dimension": "practice",
+      "rule": "options are plausible, and each wrong option's feedback names its mistake.",
+      "pass": "Each wrong option is a real mistake, and its feedback names it.",
+      "fail": "An option nobody would pick; feedback says only 'wrong'.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "block",
+      "version": 1
+    },
+    {
+      "id": "practice.hint_ladder",
+      "dimension": "practice",
+      "rule": "provided hints point toward the next operation without giving its answer; a large guided step has a middle hint. Independent Exam drills need no hint ladder: they test use of the method without guided steps.",
+      "pass": "Hint 1 points to the idea, hint 2 works the first operation; a large step has a middle hint.",
+      "fail": "The first hint gives the answer.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "block",
+      "version": 2
+    },
+    {
+      "id": "practice.complete_answer",
+      "dimension": "practice",
+      "rule": "Compare and the solution answer everything that was asked.",
+      "pass": "Compare gives the frontier and the reached set the prompt asked for.",
+      "fail": "Compare gives only the frontier.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "study-unit"
+      ],
+      "scope": "block",
+      "version": 1
+    },
+    {
+      "id": "practice.case_feedback",
+      "dimension": "practice",
+      "rule": "which-case feedback names what in this question decides each case, never only right or wrong.",
+      "pass": "'Choose case 2: the popped node is the goal here.'",
+      "fail": "'Correct.' only.",
+      "profiles": [
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "practice.interleaved",
+      "dimension": "practice",
+      "rule": "Practise items change the setting of the worked examples, and neighbouring items need different cases.",
+      "pass": "Neighbouring Practise items need different cases.",
+      "fail": "Three Practise items in a row need the same case.",
+      "profiles": [
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "coverage.ledger_outcomes",
+      "dimension": "coverage",
+      "rule": "every outcome the coverage ledger assigns to the unit is taught and practised.",
+      "pass": "Every outcome the ledger links to the unit is taught and practised.",
+      "fail": "An assigned outcome is taught but never practised.",
+      "profiles": [
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1,
+      "default_fail": true
+    },
+    {
+      "id": "coverage.all_parts",
+      "dimension": "coverage",
+      "rule": "an exercise answers every part of the original.",
+      "pass": "Parts (a)-(d) each have an answer.",
+      "fail": "Part (c) asks whether the heuristic is consistent; no answer says.",
+      "profiles": [
+        "exercise"
+      ],
+      "scope": "item",
+      "version": 1,
+      "default_fail": true
+    },
+    {
+      "id": "coverage.cases_complete",
+      "dimension": "coverage",
+      "rule": "every listed past instance and example needs only the listed cases; a case the exams never need is a `cognitive_load.moves_fit` finding.",
+      "pass": "Every past instance needs only the listed cases.",
+      "fail": "A past exam question needs a case the pattern lacks.",
+      "profiles": [
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1,
+      "default_fail": true
+    },
+    {
+      "id": "intuition.motivated",
+      "dimension": "intuition",
+      "rule": "a first-time reader can tell why each new idea comes where it does: the problem it solves, the limit of the previous idea, a concrete case, or its use just after. The means fits the idea; a forced motivation is a `cognitive_load.moves_fit` finding.",
+      "pass": "'BFS ignores costs, so UCS orders by cost.'",
+      "fail": "A new method appears with no problem it solves.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "intuition.concrete_first",
+      "dimension": "intuition",
+      "rule": "when introducing a new abstract or notation-heavy idea, a worked example or picture comes before the general rule. Exam revision workflows use learned ideas and may present the method before worked practice; use Recall for the prerequisite teaching.",
+      "pass": "A small graph is traced before the general rule.",
+      "fail": "A new abstract definition comes before any example that makes it understandable.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 2
+    },
+    {
+      "id": "intuition.reasons",
+      "dimension": "intuition",
+      "rule": "every step of a procedure says why it is allowed.",
+      "pass": "Each walkthrough step says why: 'C has the smallest f, so it goes next.'",
+      "fail": "Steps say what happens but never why it is allowed.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "lecture-entry",
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1,
+      "default_fail": true,
+      "teaching": true
+    },
+    {
+      "id": "intuition.misconception",
+      "dimension": "intuition",
+      "rule": "where a source (lecture, forum, exam pitfall or solution note) documents a wrong belief students hold, the item names it and shows it fail; never invent one.",
+      "pass": "A documented exam pitfall is named and shown to fail.",
+      "fail": "An invented misconception no source mentions.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "intuition.prediction",
+      "dimension": "intuition",
+      "rule": "where the item asks for one, the student predicts before a result is revealed: in an exercise step or a practice question; a lesson does not ask for predictions.",
+      "pass": "An exercise step asks which node comes next before revealing it.",
+      "fail": "A Study lesson asks for a prediction (not allowed in Study).",
+      "profiles": [
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "intuition.limits",
+      "dimension": "intuition",
+      "rule": "the item says where the idea stops working.",
+      "pass": "'A* is optimal only with an admissible heuristic.'",
+      "fail": "The method is presented with no condition where it fails.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "intuition.general_rule",
+      "dimension": "intuition",
+      "rule": "a worked calculation that instantiates a reusable rule states that rule with its symbols, conditions and use. Another application is useful only when it tests a new condition, decision or misconception. Do not demand a second calculation to practise an already-known operation such as addition, or add formulas to descriptive material. A rule left to be inferred from one example is a finding.",
+      "pass": "The unequal-edge-cost example leads to the path-cost rule and the condition under which BFS is optimal; no extra example of addition is needed.",
+      "fail": "Numbers worked once and the reusable rule left to be inferred.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 2,
+      "teaching": true
+    },
+    {
+      "id": "organization.dependency_order",
+      "dimension": "organization",
+      "rule": "each section uses only what earlier sections or earlier units taught; no `{{term}}` before the section that defines it.",
+      "pass": "Each section uses only what earlier sections taught.",
+      "fail": "A section uses a result the next section derives.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.outline",
+      "dimension": "organization",
+      "rule": "titled sections form a Contents list a student can scan: heading levels nest, titles are short, distinct and parallel, and each says what the section teaches. Examples and supporting arguments nest under their topic instead of appearing as unrelated peers; genuinely parallel topics stay at the same level.",
+      "pass": "Titles nest and say what each section teaches.",
+      "fail": "Ten level-1 titles with no grouping, two of them alike.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.builds_up",
+      "dimension": "organization",
+      "rule": "each section comes once what it builds on is in place; nothing is said out of place (a pitfall before its method, a recap in the middle). How a section relates to the one before is `cohesion.linked`.",
+      "pass": "The pitfall follows the method it belongs to.",
+      "fail": "A pitfall appears before its method.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.plan_followed",
+      "dimension": "organization",
+      "rule": "where the unit has a teaching plan, the item does what the plan decided, or the plan records why it changed.",
+      "pass": "The unit follows its plan or the plan records the change.",
+      "fail": "The plan's walkthrough was replaced by a table without a note.",
+      "profiles": [
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.parts_in_order",
+      "dimension": "organization",
+      "rule": "an exercise presents its parts in the original order, each followed by its own guide after all its supporting blocks, and each step builds on the previous one.",
+      "pass": "Parts appear in the sheet's order, each with its own guide.",
+      "fail": "Part (b)'s guide appears under part (a).",
+      "profiles": [
+        "exercise"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.fork_placement",
+      "dimension": "organization",
+      "rule": "a fork that only picks a final formula is a cheatsheet entry reached through Recall, a fork that changes the next move is a decision step, and different first moves are separate patterns.",
+      "pass": "A fork that changes the next move is a decision step.",
+      "fail": "A formula lookup written as a decision step.",
+      "profiles": [
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.example_shape",
+      "dimension": "organization",
+      "rule": "cases that past papers ask together are parts of one example; a case that needs its own setting has its own example.",
+      "pass": "Cases the exam asks together are parts of one example.",
+      "fail": "Each case gets an unrelated example that no exam question resembles.",
+      "profiles": [
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.said_once",
+      "dimension": "redundancy",
+      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat.",
+      "pass": "The rule is explained once and linked elsewhere.",
+      "fail": "The same derivation appears in full in two sections.",
+      "profiles": [
+        "exam-pattern",
+        "exercise",
+        "lecture-entry",
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.text_restates_picture",
+      "dimension": "redundancy",
+      "rule": "text and captions add to their picture, table or formula instead of repeating it.",
+      "pass": "The caption says what to notice.",
+      "fail": "The caption lists every cell of the table again.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.prompt_restates_picture",
+      "dimension": "redundancy",
+      "rule": "a question's prompt and its picture do not repeat each other.",
+      "pass": "The prompt asks; the picture shows.",
+      "fail": "The prompt repeats every edge cost the picture shows.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.distinct_practice",
+      "dimension": "redundancy",
+      "rule": "no two cards or questions ask the same decision in the same form.",
+      "pass": "Each question asks a different decision.",
+      "fail": "Two questions ask the same decision in the same form.",
+      "profiles": [
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.no_repeated_labels",
+      "dimension": "redundancy",
+      "rule": "no repeated citation, label, assumption or instruction.",
+      "pass": "Each assumption is stated once where it is needed.",
+      "fail": "The same citation and assumption appear on every block.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.unit_order",
+      "dimension": "organization",
+      "rule": "no unit uses a term, result or method that a later unit teaches; the map's `builds_on` points only backwards.",
+      "pass": "No unit uses a later unit's term.",
+      "fail": "Unit 3 uses 'admissible', which unit 5 defines.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.links_back",
+      "dimension": "organization",
+      "rule": "a unit that uses an earlier unit's idea links it, by `{{term}}` or by naming the unit, so the student can return to it.",
+      "pass": "A* links UCS when it uses its rule.",
+      "fail": "A* uses UCS's rule with no link to it.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.map_first",
+      "dimension": "organization",
+      "rule": "the introduction or course entry point says what the prepared material covers and where to start. Do not require the first lesson to repeat a course map already visible at entry.",
+      "pass": "The introduction says what the course covers and where to start.",
+      "fail": "The course opens on unit 1 with no orientation.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 2
+    },
+    {
+      "id": "organization.categories",
+      "dimension": "organization",
+      "rule": "groups follow the course's `organization` (lectures, weeks or topics) and make the prepared units easy to find; labels are short, parallel and distinct; there is no catch-all group and no folder around the whole course; a second level only for a large group. Judge the actual grouping, not a minimum unit count. A bounded single-unit preparation needs no extra lessons to fill its group; missing course coverage is recorded separately.",
+      "pass": "Groups follow the lectures, each holding its units.",
+      "fail": "An unrelated unit is filed under a misleading topic, or a catch-all group hides several distinct topics.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 2
+    },
+    {
+      "id": "organization.unit_size",
+      "dimension": "organization",
+      "rule": "each unit teaches one coherent topic; units are of comparable size.",
+      "pass": "Each unit teaches one coherent topic.",
+      "fail": "One unit covers four unrelated topics.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.one_backbone",
+      "dimension": "organization",
+      "rule": "exercise sets and Exam topics follow the order of the units they need, or differ for a reason the course gives.",
+      "pass": "Exercise sets follow the order of the units they need.",
+      "fail": "Sheet 2 needs unit 5 before unit 3 without a reason.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.one_home",
+      "dimension": "redundancy",
+      "rule": "no idea is explained in full in two units. A short reminder that links to the home is reinforcement, not a second home.",
+      "pass": "Each idea is taught in full in one unit.",
+      "fail": "Two units both teach A* in full.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.exercises_link",
+      "dimension": "redundancy",
+      "rule": "exercises link the Study passage they need instead of teaching it again.",
+      "pass": "The exercise links the Study passage it needs.",
+      "fail": "The exercise re-teaches the lesson.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.exam_compresses",
+      "dimension": "redundancy",
+      "rule": "cheatsheet lines and concept details compress Study into one line and a link; they do not copy it.",
+      "pass": "A cheatsheet line compresses Study and links it.",
+      "fail": "A cheatsheet entry copies the Study passage.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.distinct_pool",
+      "dimension": "redundancy",
+      "rule": "Revision pools all units, so no two units hold near-duplicate cards or questions.",
+      "pass": "No two units hold near-duplicate cards.",
+      "fail": "Two units hold the same card.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "integration.prerequisite_links",
+      "dimension": "integration",
+      "rule": "every exercise names the unit and block it needs, and that block teaches what the steps use.",
+      "pass": "The exercise names the block that teaches what it uses.",
+      "fail": "The exercise links a unit whose blocks do not teach the needed step.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "integration.exam_links",
+      "dimension": "integration",
+      "rule": "Exam concepts cite the units that teach them.",
+      "pass": "Exam concepts cite the units that teach them.",
+      "fail": "An exam concept with no Study link.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "integration.entries_apply",
+      "dimension": "integration",
+      "rule": "cheatsheet entries link the Study units that teach them and the patterns that use them, and a pattern's workflow appears only in the entry that names it as its method.",
+      "pass": "Cheatsheet entries link their units and patterns.",
+      "fail": "A workflow appears in an entry that does not name it as its method.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "integration.lecture_links",
+      "dimension": "integration",
+      "rule": "units link the Lecture of the lectures they teach, and each lecture highlight links the Study passage it explains.",
+      "pass": "Units and lecture highlights link each other.",
+      "fail": "A highlight explains A* with no Recall to the A* unit.",
+      "profiles": [
+        "course",
+        "lecture-entry"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "integration.same_notation",
+      "dimension": "integration",
+      "rule": "terms, symbols and conventions are the same in every workspace, and marked terms open the Study definition.",
+      "pass": "g, h and f mean the same in every workspace.",
+      "fail": "Study writes f(n), the exam pattern writes cost(n) for the same thing.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "integration.difficulty_climbs",
+      "dimension": "integration",
+      "rule": "Study practice, exercises and exam patterns each ask more transfer than the last; none repeats another's question unchanged.",
+      "pass": "Exercises ask more transfer than Study practice.",
+      "fail": "The exam pattern repeats a Study question unchanged.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "integration.media_links",
+      "dimension": "integration",
+      "rule": "media follows its exact Study/Exercise target and actual prerequisites, with consistent notation and disclosed modality limits. Alternative access is not a second competing home for the idea.",
+      "pass": "The video follows its exact Study target.",
+      "fail": "The video uses notation the unit does not.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "correctness.sheet_true",
+      "dimension": "correctness",
+      "rule": "every statement, list member, table cell, condition, unit, threshold and code behaviour matches the cited source for this course and its exam period; a rule keeps its direction and its exceptions. A definition states every condition of the course's fullest definition of the term (the digests of any lecture), not an informal gloss the course later makes precise.",
+      "pass": "Every cell matches the cited source.",
+      "fail": "The entry keeps an informal gloss although a later lecture defines the term with its conditions.",
+      "profiles": [
+        "exam-sheet"
+      ],
+      "scope": "block",
+      "version": 2,
+      "default_fail": true
+    },
+    {
+      "id": "coverage.sheet_inventory",
+      "dimension": "coverage",
+      "rule": "every exam requirement the sources state is held by an entry or recorded as a gap with a reason, including facts, definitions, rules, lists, classifications, comparisons, code and frameworks, not only formulas and methods; a source read for the sheet but without requirements is a finding. Sources the sheet has not read yet (the report's unrecorded_sources) hold the course gate, not this check.",
+      "pass": "Every exam requirement is held by an entry or recorded as a gap.",
+      "fail": "A source read for the sheet has requirements no entry holds.",
+      "profiles": [
+        "exam-sheet"
+      ],
+      "scope": "item",
+      "version": 2,
+      "default_fail": true
+    },
+    {
+      "id": "clarity.sheet_sufficient",
+      "dimension": "clarity",
+      "rule": "each entry can be used as read: its line states the claim with the condition that makes it true; a formula opens its variables' meanings; a method opens its steps (details or `workflow_from`); a list or comparison is complete.",
+      "pass": "A formula entry opens its variables' meanings.",
+      "fail": "A method entry with no steps.",
+      "profiles": [
+        "exam-sheet"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "clarity.sheet_concise",
+      "dimension": "clarity",
+      "rule": "text reads as Study text does: one claim per sentence, at most two sentences or 45 words a paragraph, conditions and caveats as points, maths set as maths, no aside that changes nothing the student does.",
+      "pass": "One claim per sentence.",
+      "fail": "A three-sentence aside that changes nothing.",
+      "profiles": [
+        "exam-sheet"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "clarity.sheet_meanings",
+      "dimension": "clarity",
+      "rule": "every variable in an entry's maths opens its meaning (the formula's `symbols`, or the entry's own `symbols` for maths in its line, tables or text); no meaning list typed as a sentence (\"\\(b\\): maximum branching, \\(d\\): ...\").",
+      "pass": "Each variable opens its meaning.",
+      "fail": "Meanings typed as one sentence.",
+      "profiles": [
+        "exam-sheet"
+      ],
+      "scope": "block",
+      "version": 1
+    },
+    {
+      "id": "representation.sheet_form",
+      "dimension": "representation",
+      "rule": "each entry takes the form its retrieval task needs: a table for a comparison or a two-input rule (both axes labelled), a list for members or obligations, a tree for a classification, code for syntax or structure, a figure for a shape or state, a formula with meanings; never a paragraph that spells one of these out. Fractions follow the notation policy: a displayed quotient is a fraction, compact inline forms only where they read better.",
+      "pass": "A comparison is a table with labelled axes.",
+      "fail": "A comparison spelled out as a paragraph.",
+      "profiles": [
+        "exam-sheet"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "organization.sheet_grouping",
+      "dimension": "organization",
+      "rule": "topics and their sections (`path`) put related references together in course order, so a student finds and compares them; no global buckets by form (\"Formulas\", \"Facts\").",
+      "pass": "Related entries sit together in course order.",
+      "fail": "Global buckets such as 'Formulas'.",
+      "profiles": [
+        "exam-sheet"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "redundancy.sheet_expansion",
+      "dimension": "redundancy",
+      "rule": "an expanded entry adds substance (conditions, meanings, steps, the table or code itself); it does not repeat its line, another entry or the Study lesson, and no entry is padded to justify expanding.",
+      "pass": "The expansion adds conditions and steps.",
+      "fail": "The expansion repeats its line.",
+      "profiles": [
+        "exam-sheet"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "representation.process_shown",
+      "dimension": "representation",
+      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state (a walkthrough or derivation), never only as a finished table or number.",
+      "pass": "The A* run is a walkthrough: each step shows the frontier and why the next node is chosen.",
+      "fail": "A finished table of frontiers, or 'Manhattan distance is 18' with no counting shown.",
+      "profiles": [
+        "exam-mock-question",
+        "exam-pattern",
+        "exercise",
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1,
+      "default_fail": true,
+      "teaching": true,
+      "replaces": [
+        "cognitive_load.state_shown",
+        "representation.working_shown"
+      ]
+    },
+    {
+      "id": "coverage.papers_replayable",
+      "dimension": "coverage",
+      "rule": "every in-scope past paper has its statement and solution stored, so students can practise it.",
+      "pass": "Every in-scope past paper has its statement and solution stored.",
+      "fail": "'1 past exam (2026)' is listed but cannot be practised.",
+      "profiles": [
+        "course"
+      ],
+      "scope": "item",
+      "version": 1,
+      "decided_by": "unreplayable_paper"
+    },
+    {
+      "id": "coverage.sheet_retrievable",
+      "dimension": "coverage",
+      "rule": "each cheatsheet fact or definition entry has a Study flashcard or question, so Revision retrieves it.",
+      "pass": "Each cheatsheet fact has a Study flashcard or question.",
+      "fail": "A cheatsheet definition no card or question ever asks for.",
+      "profiles": [
+        "exam-sheet"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "practice.student_control",
+      "dimension": "practice",
+      "rule": "steps give the student increasing responsibility where the task permits it.",
+      "pass": "Later steps give the student more of the work.",
+      "fail": "Every step is fully worked, the student only clicks Compare.",
+      "profiles": [
+        "exercise"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "intuition.method_choice",
+      "dimension": "intuition",
+      "rule": "the guide and solution say why each method fits and what choice it resolves.",
+      "pass": "The guide says why this method fits this problem.",
+      "fail": "The guide applies a method without saying why it was chosen.",
+      "profiles": [
+        "exercise"
+      ],
+      "scope": "item",
+      "version": 1
+    },
+    {
+      "id": "correctness.statement_fidelity",
+      "dimension": "correctness",
+      "rule": "the statement keeps every given and task of the released sheet; framing sentences that add neither are dropped.",
+      "pass": "Every given and task of the sheet is kept.",
+      "fail": "A given is dropped from the statement.",
+      "profiles": [
+        "exercise"
+      ],
+      "scope": "block",
+      "version": 1
+    },
+    {
+      "id": "intuition.concepts_instanced",
+      "dimension": "intuition",
+      "rule": "every concept the item teaches is shown at work on a concrete instance: a test or procedure run once, a rule applied, an argument written out, a definition beside a case it decides. For an example meant to expose a particular mistake, try that wrong move: if it gives the same result, change the givens or narrow what the example claims to teach. Start from the packet's `concepts`, then inspect the content for concepts added after planning, including those added to support new revision cards. A paragraph of method summaries is not teaching those methods. Naming or restating a concept is not an instance; a term only mentioned, not taught or tested, needs none. Answer per concept: name each concept and the block that shows its instance.",
+      "pass": "Turing test: block 'test-run' shows one interrogation and its verdict; Rational agent: 'thermostat' scores two actions by expected performance.",
+      "fail": "The Turing test is only defined; no interrogation or verdict is shown.",
+      "profiles": [
+        "study-unit",
+        "exercise",
+        "exam-pattern"
+      ],
+      "scope": "item",
+      "version": 3,
+      "default_fail": true,
+      "teaching": true
+    },
+    {
+      "id": "coverage.objectives_grounded",
+      "dimension": "coverage",
+      "rule": "every objective names an outcome the source states, or a substantial idea the source develops and the item teaches and practises. An illustrative aside is not a separate learning goal: a reflex example supports rational action, not a separate objective about acting quickly. For each objective, cite the source's outcome or developed explanation with its locator, and name its teaching and practice. A vague claim that the slide develops it is not evidence.",
+      "pass": "Each objective matches a stated outcome and has a card or question.",
+      "fail": "An objective rests on a one-line aside of the slides.",
+      "profiles": [
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 2,
+      "default_fail": true
+    }
+  ],
+  "retired": [
+    {
+      "id": "cognitive_load.state_shown",
+      "reason": "merged into representation.process_shown"
+    },
+    {
+      "id": "representation.working_shown",
+      "reason": "merged into representation.process_shown"
+    },
+    {
+      "id": "representation.visuals_pass",
+      "reason": "enforced by code: representation never scores above the weakest visual"
+    },
+    {
+      "id": "cognitive_load.fits_phone",
+      "reason": "phone checks run only on request; the middle-hint part moved into practice.hint_ladder"
+    }
+  ],
+  "v1_checks": [
+    "clarity.case_observable",
+    "clarity.clear_task",
+    "clarity.no_meta",
+    "clarity.notation_unpacked",
+    "clarity.one_reading",
+    "clarity.sheet_concise",
+    "clarity.sheet_meanings",
+    "clarity.sheet_sufficient",
+    "clarity.symbols_recall",
+    "clarity.terms_defined",
+    "cognitive_load.first_encounter",
+    "cognitive_load.fits_phone",
+    "cognitive_load.fits_student",
+    "cognitive_load.math_set",
+    "cognitive_load.moves_fit",
+    "cognitive_load.one_new_idea",
+    "cognitive_load.reminder_at_use",
+    "cognitive_load.short_prose",
+    "cognitive_load.state_shown",
+    "cognitive_load.together",
+    "cohesion.familiar_first",
+    "cohesion.honest_connectives",
+    "cohesion.linked",
+    "cohesion.one_term",
+    "cohesion.point_first",
+    "correctness.answer_key",
+    "correctness.cases_exclusive",
+    "correctness.citations",
+    "correctness.conventions",
+    "correctness.recomputed",
+    "correctness.sheet_true",
+    "correctness.source_match",
+    "correctness.statement_fidelity",
+    "coverage.all_parts",
+    "coverage.cases_complete",
+    "coverage.ledger_outcomes",
+    "coverage.sheet_inventory",
+    "integration.difficulty_climbs",
+    "integration.entries_apply",
+    "integration.exam_links",
+    "integration.lecture_links",
+    "integration.media_links",
+    "integration.prerequisite_links",
+    "integration.same_notation",
+    "intuition.concrete_first",
+    "intuition.general_rule",
+    "intuition.limits",
+    "intuition.method_choice",
+    "intuition.misconception",
+    "intuition.motivated",
+    "intuition.prediction",
+    "intuition.reasons",
+    "organization.builds_up",
+    "organization.categories",
+    "organization.dependency_order",
+    "organization.example_shape",
+    "organization.fork_placement",
+    "organization.links_back",
+    "organization.map_first",
+    "organization.one_backbone",
+    "organization.outline",
+    "organization.parts_in_order",
+    "organization.plan_followed",
+    "organization.sheet_grouping",
+    "organization.unit_order",
+    "organization.unit_size",
+    "practice.case_feedback",
+    "practice.complete_answer",
+    "practice.hint_ladder",
+    "practice.interleaved",
+    "practice.new_case",
+    "practice.plausible_options",
+    "practice.student_control",
+    "redundancy.distinct_pool",
+    "redundancy.distinct_practice",
+    "redundancy.exam_compresses",
+    "redundancy.exercises_link",
+    "redundancy.no_repeated_labels",
+    "redundancy.one_home",
+    "redundancy.prompt_restates_picture",
+    "redundancy.said_once",
+    "redundancy.sheet_expansion",
+    "redundancy.text_restates_picture",
+    "representation.picture_carries_data",
+    "representation.prose_points",
+    "representation.shape_fits",
+    "representation.sheet_form",
+    "representation.shown_not_described",
+    "representation.visuals_pass",
+    "representation.working_shown"
+  ]
+}

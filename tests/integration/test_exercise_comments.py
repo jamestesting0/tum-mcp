@@ -6,10 +6,10 @@ from study_comments_data import operation
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.exercise_content import exercise_revision
-from tum_mcp.exercise_data import read_exercises
-from tum_mcp.study_comment_models import Create, ExerciseAnchor
-from tum_mcp.study_comments import change_comment, read_comments
+from tum_mcp.course.app.comment_models import Create, ExerciseAnchor
+from tum_mcp.course.app.comments import change_comment, read_comments
+from tum_mcp.course.content.exercise_data import read_exercises
+from tum_mcp.course.content.exercises import exercise_revision
 
 
 def test_v1_comments_upgrade_only_on_mutation_and_keep_legacy_notes(exercise_project: Path) -> None:

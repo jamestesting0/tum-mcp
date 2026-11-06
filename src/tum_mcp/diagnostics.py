@@ -133,7 +133,7 @@ def github_check(*, live: bool) -> Check:
             location=executable,
             detail="GitHub CLI found; authentication not checked. Use doctor --live to verify.",
         )
-    from tum_mcp.study_github import Account, GitHub
+    from tum_mcp.course.app.github import Account, GitHub
 
     try:
         account = GitHub(executable).require("user", Account)

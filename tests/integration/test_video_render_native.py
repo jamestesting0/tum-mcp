@@ -7,9 +7,10 @@ import wave
 from pathlib import Path
 
 import pytest
+from documents import content_file
 
-from tum_mcp import video_project as project
-from tum_mcp import video_runtime
+from tum_mcp.course.media import video_project as project
+from tum_mcp.course.media import video_runtime
 
 FIXTURES = Path(__file__).parents[1] / "fixtures"
 STEM = "01_follow-the-frontier"
@@ -92,7 +93,7 @@ def installed_data(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPat
 def course(tmp_path: Path, scene: str) -> Path:
     root = tmp_path / "course"
     (root / "app").mkdir(parents=True)
-    shutil.copyfile(FIXTURES / "course_app/content.json", root / "app/content.json")
+    shutil.copyfile(FIXTURES / "course_app/content.json", content_file(root, "study"))
     selection = tmp_path / "selection.json"
     selection.write_text(
         json.dumps({"units": [{"unit": "bfs", "decision": "video", "reason": "Trace."}]}),
@@ -106,7 +107,7 @@ def course(tmp_path: Path, scene: str) -> Path:
     def locator(ref: str) -> dict:
         return {key: refs[ref][key] for key in ("kind", "ref", "fingerprint")}
 
-    objective = json.loads((root / "app/content.json").read_text(encoding="utf-8"))["units"][1][
+    objective = json.loads((content_file(root, "study")).read_text(encoding="utf-8"))["units"][1][
         "objectives"
     ][0]
     board = {
@@ -307,9 +308,7 @@ def test_exercise_source_uses_the_same_native_worker_without_study(
 ) -> None:
     from test_video_pipeline import prepare_walkthrough
 
-    from tum_mcp.course_app_paths import app_path
-
-    app_path(exercise_project, "content.json").unlink()
+    content_file(exercise_project, "study").unlink()
     stem = prepare_walkthrough(exercise_project, tmp_path, parts=2, timed=False)
     for item in project.narration(exercise_project, stem, "narrator"):
         speech_like(exercise_project / item["file"], 2.0)

@@ -1,14 +1,15 @@
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from knowledge_annotations import connected_annotations, write_registry
 from knowledge_fixture import knowledge_project
 
+from tum_mcp.course.memory.packet import encoded
+from tum_mcp.course.memory.query import context, impact
+from tum_mcp.course.memory.report import knowledge_report
+from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError
-from tum_mcp.study_knowledge_packet import encoded
-from tum_mcp.study_knowledge_query import context, impact
-from tum_mcp.study_knowledge_report import knowledge_report
-from tum_mcp.study_store import load_state
 
 pytestmark = pytest.mark.usefixtures("course_memory")
 
@@ -93,10 +94,8 @@ def test_full_report_exposes_expected_receipt_without_approving(tmp_path: Path):
 def test_uncertain_timed_evidence_never_becomes_supported_clarification(tmp_path: Path):
     import json
 
-    from tum_mcp.course_app_paths import app_path
-
     root = knowledge_project(tmp_path)
-    path = app_path(root, "lectures.json")
+    path = content_file(root, "lectures")
     value = json.loads(path.read_bytes())
     value["evidence"][0]["reviewed"] = False
     value["lectures"][0]["coverage"]["status"] = "partial"
@@ -143,7 +142,7 @@ def test_context_reports_native_reference_issues_omitted_by_its_cap(tmp_path: Pa
     import json
 
     root = knowledge_project(tmp_path, workspaces=frozenset({"study", "exercises"}))
-    path = root / "app/content.json"
+    path = content_file(root, "study")
     value = json.loads(path.read_bytes())
     template = value["units"][0]
     value["units"].extend(template | {"key": f"extra-{i}"} for i in range(4))

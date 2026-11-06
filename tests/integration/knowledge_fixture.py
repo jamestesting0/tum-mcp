@@ -3,10 +3,11 @@
 import json
 from pathlib import Path
 
+from documents import content_file
 from material_fixture import EXAM_FILES, exam_document, minimal_unit, pdf_bytes, text
 
-from tum_mcp.study_store import load_state
-from tum_mcp.study_sync import sync
+from tum_mcp.course.project.store import load_state
+from tum_mcp.course.project.sync import sync
 
 WORKSPACES = frozenset({"study", "exercises", "exam", "lectures"})
 
@@ -85,7 +86,7 @@ def knowledge_project(
                 ],
             }
         ]
-        (app / "content.json").write_text(
+        content_file(root, "study").write_text(
             json.dumps(
                 {
                     "schema_version": 1,
@@ -100,7 +101,7 @@ def knowledge_project(
         (root / ".tum-mcp/coverage.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "course_key": course,
                     "sources": [
                         {
@@ -115,14 +116,12 @@ def knowledge_project(
                                     "key": "observer-core",
                                     "text": "Explain Observer registration.",
                                     "locator": "Page 1",
-                                    "status": "covered",
                                     "units": ["observer"],
                                 },
                                 {
                                     "key": "observer-extension",
                                     "text": "Compare optional notification scheduling.",
                                     "locator": "Page 1",
-                                    "status": "covered",
                                     "role": "enrichment",
                                     "classification": {
                                         "basis": "reviewed_enrichment",
@@ -179,7 +178,7 @@ def knowledge_project(
                 ],
             },
         }
-        (app / "exercises.json").write_text(
+        content_file(root, "exercises").write_text(
             json.dumps(
                 {
                     "schema_version": 1,
@@ -190,7 +189,7 @@ def knowledge_project(
             encoding="utf-8",
         )
     if "exam" in workspaces:
-        (app / "exam.json").write_text(json.dumps(exam_document(root)), encoding="utf-8")
+        content_file(root, "exam").write_text(json.dumps(exam_document(root)), encoding="utf-8")
     if "lectures" in workspaces:
         payload = json.loads(
             (Path(__file__).parents[1] / "fixtures/course_app/lectures.json").read_bytes()
@@ -217,9 +216,7 @@ def knowledge_project(
         payload["evidence"] = payload["evidence"][:1]
         for evidence in payload["evidence"]:
             evidence.update(source_key="slides", source_sha256=source.sha256)
-        (app / "lectures.json").write_text(json.dumps(payload), encoding="utf-8")
-    if layout[0] != "app":
-        app.rename(root / layout[0])
+        content_file(root, "lectures").write_text(json.dumps(payload), encoding="utf-8")
     if layout[1] != ".tum-mcp":
         (root / ".tum-mcp").rename(root / layout[1])
     return root

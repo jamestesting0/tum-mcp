@@ -3,8 +3,8 @@
 import html
 import re
 
+from tum_mcp.course.lecture.evidence import Interval
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing.transcript_models import Passage
 from tum_mcp.lecture_processing.validity import Validity, require_content
 

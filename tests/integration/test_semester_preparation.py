@@ -8,13 +8,13 @@ from artemis_semester_fixture import ArtemisSemesterSite, artemis_site
 from moodle_semester_fixture import MoodleSite, moodle_site
 
 from tum_mcp import server
+from tum_mcp.course.project.models import Binding, Course, Coverage, Resource, Snapshot
+from tum_mcp.course.project.store import load_state
+from tum_mcp.course.project.sync import sync
 from tum_mcp.errors import CampusError
 from tum_mcp.moodle.course_scope import term_of
 from tum_mcp.moodle.models import Course as MoodleCourse
 from tum_mcp.moodle.service import Service
-from tum_mcp.study_models import Binding, Course, Coverage, Resource, Snapshot
-from tum_mcp.study_store import load_state
-from tum_mcp.study_sync import sync
 
 __all__ = ["artemis_site", "moodle_site"]
 

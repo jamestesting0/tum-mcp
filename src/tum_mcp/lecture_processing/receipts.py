@@ -7,15 +7,15 @@ from typing import Annotated, Literal
 
 from pydantic import Field, TypeAdapter, ValidationError, model_validator
 
+from tum_mcp.course.lecture.evidence import Interval, LectureCoverage, Recording, Seconds
+from tum_mcp.course.project.models import Coverage, Digest, Resource, Snapshot
+from tum_mcp.course.project.store import ReadObserver, confined, digest, load_state, private_path
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval, LectureCoverage, Recording, Seconds
 from tum_mcp.lecture_processing.progress import read_progress
 from tum_mcp.lecture_processing.transcript_models import AudioFailure, Passage
 from tum_mcp.lecture_processing.validity import Validity, require_content
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
-from tum_mcp.study_models import Coverage, Digest, Resource, Snapshot
-from tum_mcp.study_store import ReadObserver, confined, digest, load_state, private_path
 
 
 class InvalidReceipt(Frozen):

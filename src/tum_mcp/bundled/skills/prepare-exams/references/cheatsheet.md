@@ -39,7 +39,9 @@ Use tier `core` for what every student must know and `supporting` for the rest. 
 ## Write compactly
 
 - **line** (about 240 characters): the fact, rule or definition itself, with its key
-  condition. Readable without opening the entry.
+  condition. Readable without opening the entry. A definition is the course's fullest,
+  exam-ready form with every condition, even when a later lecture states it
+  (`definition_refined` names it); never the informal first gloss.
 - **formula**: LaTeX with plain-text reading, symbols and conditions; `symbols` lists every
   variable with its general meaning, shown when the entry opens
   ([variable meanings](../../prepare-study/references/variables.md)); the line says when
@@ -86,6 +88,16 @@ repeating it in another entry. When Study exists, every concept names in `units`
 units that teach it; its line and details compress that lesson, never copy it. When one
 Study block teaches the concept, name it in `passages` (`unit` and `block`): the Recall row
 on patterns and solutions opens that passage beside the page.
+
+Revision support does not authorize expanding a narrowly scoped Study lesson. If the
+sheet needs methods the requested lesson does not teach, record that gap. When the
+request allows teaching them, give them coherent teaching, worked instances and a
+matching plan before adding retrieval prompts. A paragraph of new algorithm summaries
+followed by cards is not a substitute for lessons.
+
+Keep comparison cells short; put shared assumptions and longer exceptions beside the
+table, not repeated inside each cell. When phone review is requested, check the expanded
+table there too: a cell wrapping into a screenful is not a usable lookup.
 
 ## Draw the map
 

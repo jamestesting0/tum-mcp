@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from tum_mcp import study_cli
 from tum_mcp.cli import app
-from tum_mcp.study_content import StudyContent
+from tum_mcp.course import cli as study_cli
+from tum_mcp.course.content.study import StudyContent
 
 
 def test_bundled_course_offers_four_choices_for_every_practice_question() -> None:
@@ -41,7 +41,7 @@ def test_template_is_available_without_auth_and_fingerprints_packaged_assets(
     assert {"app.mjs", "flashcards.mjs", "navigation.mjs", "revision.mjs", "styles.css"} <= set(
         before["files"]
     )
-    assert before["author"] == "app/content.json"
+    assert before["author"] == "app/study/course.json and app/study/units/<unit>.json"
     stylesheet = copied / relative / "styles.css"
     stylesheet.write_text(
         stylesheet.read_text(encoding="utf-8") + "\n/* changed template */\n", encoding="utf-8"

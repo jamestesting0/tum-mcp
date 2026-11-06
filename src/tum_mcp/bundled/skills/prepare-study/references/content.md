@@ -5,14 +5,15 @@ private file and read only the definitions you need. The synthetic demo
 (`tum-mcp study demo PROJECT`) shows each block type in use; inspect only the
 relevant object, and author real lessons from reviewed course sources.
 
-Edit `app/content.json` (legacy `study/content.json`). Preserve unaffected unit
+Edit `app/study/course.json` and the unit files `app/study/units/<key>.json`. Preserve unaffected unit
 objects and stable keys. Build installs the app and generates `data.mjs`; ordinary
 content edits need no HTML, CSS or JavaScript inspection.
 
 ## Course and units
 
-Top level: `schema_version`, `course_key`, `organization` (lectures, weeks or topics),
-`introduction` and `units`. The introduction opens the course home: one or two
+`course.json` holds `schema_version`, `course_key`, `organization` (lectures, weeks or
+topics), `introduction` and `units`, the unit keys in outline order; each unit object
+from the schema's `units` lives in its own `units/<key>.json`. The introduction opens the course home: one or two
 sentences on what the course covers and where to start.
 
 Units carry key, label, title, summary, minutes, objectives, sources, blocks,
@@ -124,7 +125,7 @@ on; citations open there, and later pages can differ from the printed slide numb
 | --- | --- |
 | text | Paragraphs, numbered `steps` and/or points; never an empty explanation. Paragraphs frame (one or two sentences); a procedure is steps and conditions are points. An item opening with a short `Label: ` shows the label in bold. |
 | definition | A `term`, the `statement` and optional `conditions`, placed right after the passage that introduces the term: it appears inside that section as the term above its full-width meaning, with no heading of its own. Give it a `key`. Write `{{term}}` in any later text, in every workspace, to let students open it in place; the build rejects unknown terms. |
-| formula | LaTeX without dollar delimiters (JSON-escaped, e.g. `"\\frac{a}{b}"`), a plain-language reading and symbol definitions (see `variables.md`). A reusable rule states its domain (\(a^2+b^2 > 0\)) and when to reach for it in `conditions`; a formula of givens has none. Unsupported macros, links and unsafe markup fail validation. Keep `mathml` only for legacy input; never supply both. |
+| formula | LaTeX without dollar delimiters (JSON-escaped, e.g. `"\\frac{a}{b}"`), a plain-language reading and symbol definitions (see `variables.md`). A reusable rule states its domain (\(a^2+b^2 > 0\)) and when to reach for it in `conditions`; a formula of givens has none. Unsupported macros, links and unsafe markup fail validation. |
 | derivation | Working the student should be able to redo: `groups` of `lines`, each line one meaningful transformation as LaTeX (a line opening with `=` or another relation continues the line above, and the app aligns the lines on their relation; givens go one per line or in the text before, never as a comma list in one line) with a short `reason` saying which rule, substitution or condition makes it follow. `symbols` gives a variable a clickable meaning where a reader would stop to recall it ([variable meanings](variables.md)). When one answer gives several results, give each its own group with a `label` naming the result. Do not split a trivial result into ceremony. Set `walkthrough: true` to step through the lines with Previous and Next (earlier lines stay visible, "Show all steps" reads everything); in a walkthrough a line may carry a `visual` (a table, diagram, plot or figure block) drawing the state that line reaches, such as amplitudes or a vector on the Bloch sphere. Use a walkthrough when several dependent transformations or a changing state are the point; never as decoration. A walkthrough never asks the student to predict: prediction belongs in an exercise step. |
 | table | Column labels, rectangular rows and a meaningful caption. |
 | code | Language, literal code and an explanation; the app highlights common languages. Label authored examples; never execute downloaded code. Add a `walkthrough` (stops of `lines` such as `"5-6"` and a short `note`) when the reader should follow the code part by part: one idea per stop, at most about six stops. |
@@ -162,5 +163,4 @@ For unattended checks, `tum-mcp study serve PROJECT --port 0` prints a URL witho
 opening a browser. The app needs no campus credentials or external services.
 
 Study and Exercises share one app and source inventory; preserve the other workspace
-when authoring. New projects use `app/`; existing `study/` projects keep working, and
-`study build PROJECT --upgrade-layout` moves them explicitly with a checked backup.
+when authoring. The app lives in `app/`.

@@ -53,12 +53,18 @@ def command_help(command: TyperCommand | TyperGroup, context: click.Context) -> 
             names = [name for name in order if name in names] + [
                 name for name in names if name not in order
             ]
+        # Commands grouped by task (Setup, Sources, Author, Check, Publish) where declared.
+        panels: dict[str, list[tuple[str, str]]] = {}
         for name in names:
             child = command.get_command(context, name)
             if child is not None and not child.hidden:
-                commands.append((name, child.get_short_help_str(limit=120)))
-        if commands:
-            section(console, "Commands")
+                panel = getattr(child, "rich_help_panel", None) or "Commands"
+                panels.setdefault(panel, []).append((name, child.get_short_help_str(limit=120)))
+        order = ("Setup", "Sources", "Author", "Check", "Publish", "Commands")
+        for title, commands in sorted(
+            panels.items(), key=lambda item: order.index(item[0]) if item[0] in order else 0
+        ):
+            section(console, title)
             detail_rows(console, commands)
     if command.epilog:
         console.print(command.epilog, markup=False)

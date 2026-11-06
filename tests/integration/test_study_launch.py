@@ -11,8 +11,8 @@ import httpx2
 import pytest
 from typer.testing import CliRunner
 
-from tum_mcp import study_preview
 from tum_mcp.cli import app
+from tum_mcp.course.app import preview as study_preview
 from tum_mcp.errors import CampusError, Code
 
 
@@ -20,7 +20,7 @@ from tum_mcp.errors import CampusError, Code
 def project(tmp_path: Path) -> Path:
     # Launcher tests need a built entry point, not a full teaching-content rebuild.
     root = tmp_path / "Course space Ω"
-    site = root / "study"
+    site = root / "app"
     site.mkdir(parents=True)
     (site / "index.html").write_bytes(b"<!doctype html><title>Course</title>")
     return root
@@ -69,7 +69,7 @@ def test_launch_serves_current_project_on_a_free_port(
             with httpx2.Client(trust_env=False, timeout=2) as client:
                 response = client.get(url)
                 assert response.status_code == 200
-                assert response.content == (project / "study/index.html").read_bytes()
+                assert response.content == (project / "app/index.html").read_bytes()
                 served.append(url)
         finally:
             worker.join(timeout=3)

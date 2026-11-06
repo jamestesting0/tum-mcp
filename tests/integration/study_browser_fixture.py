@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from documents import content_file
 from playwright.sync_api import Browser, Page, Route
 from study_activity_comments_fixture import activity_comment_checks
 from study_comments_fixture import comment_checks
@@ -50,16 +51,16 @@ def structure_checks(page: Page, content: dict) -> None:
 
 def study_website(browser: Browser) -> dict[str, object]:
     """Exercise packaged study assets through the same owned Chromium/WSL transport."""
+    from tum_mcp.course.app.build import TEMPLATE_FILES, build
+    from tum_mcp.course.app.comment_models import OPERATION
+    from tum_mcp.course.app.comments import change_comment, read_comments
+    from tum_mcp.course.project.store import private_path
+    from tum_mcp.course.project.sync import sync
     from tum_mcp.errors import CampusError
-    from tum_mcp.study_build import TEMPLATE_FILES, build
-    from tum_mcp.study_comment_models import OPERATION
-    from tum_mcp.study_comments import change_comment, read_comments
-    from tum_mcp.study_store import private_path
-    from tum_mcp.study_sync import sync
 
     with tempfile.TemporaryDirectory(prefix="tum-study-browser-") as temporary:
         project = Path(temporary) / "Synthetic course"
-        site = project / "study"
+        site = project / "app"
         site.mkdir(parents=True)
         fixture = Path(
             os.environ.get(
@@ -67,8 +68,8 @@ def study_website(browser: Browser) -> dict[str, object]:
             )
         )
         sync(project, fixture / "snapshot.json", course_input="Algorithms & Graphs")
-        (site / "content.json").write_bytes((fixture / "content.json").read_bytes())
-        content = json.loads((site / "content.json").read_bytes())
+        content_file(project, "study").write_bytes((fixture / "content.json").read_bytes())
+        content = json.loads(content_file(project, "study").read_bytes())
         optional_unit = next(unit for unit in content["units"] if unit["key"] == "bfs")
         optional_source = optional_unit["sources"][0]["key"]
         optional_unit["explore"] = [
@@ -87,7 +88,7 @@ def study_website(browser: Browser) -> dict[str, object]:
                 ],
             }
         ]
-        (site / "content.json").write_text(json.dumps(content), encoding="utf-8")
+        content_file(project, "study").write_text(json.dumps(content), encoding="utf-8")
         private_path(project, "coverage.json").write_text(
             json.dumps(
                 {
@@ -101,7 +102,6 @@ def study_website(browser: Browser) -> dict[str, object]:
                                     "key": "background",
                                     "text": "Read wider context.",
                                     "locator": "Synthetic fixture",
-                                    "status": "covered",
                                     "role": "enrichment",
                                     "classification": {
                                         "basis": "reviewed_enrichment",

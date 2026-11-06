@@ -6,13 +6,14 @@ import os
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.exercise_content import ExerciseContent
-from tum_mcp.study_build import build, read_content
-from tum_mcp.study_review import revision
-from tum_mcp.study_visuals import _visits, app_revision, report_path, visual_ids
+from tum_mcp.course.app.build import build, read_content
+from tum_mcp.course.app.visuals import _visits, app_revision, report_path, visual_ids
+from tum_mcp.course.content.exercises import ExerciseContent
+from tum_mcp.course.review.models import revision
 
 CORPUS = Path(__file__).parents[1] / "fixtures/visual-corpus.json"
 browser = pytest.mark.skipif(
@@ -32,7 +33,7 @@ def render(project: Path) -> dict:
 
 
 def add_corpus(project: Path) -> None:
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     content = json.loads(path.read_bytes())
     content["units"].append(json.loads(CORPUS.read_bytes()))
     path.write_text(json.dumps(content), encoding="utf-8")
@@ -93,7 +94,7 @@ def test_render_report_follows_the_content_and_the_app(project: Path) -> None:
         }
         for item in unchecked
     }
-    site = project / "study"
+    site = project / "app"
     record = {"schema_version": 1, "app": app_revision(site), "items": items}
     report_path(project).write_text(json.dumps(record), encoding="utf-8")
     measured = render(project)
@@ -107,7 +108,7 @@ def test_render_report_follows_the_content_and_the_app(project: Path) -> None:
 
 @browser
 def test_wide_solution_table_is_measured(exercise_project: Path) -> None:
-    path = exercise_project / "study/exercises.json"
+    path = content_file(exercise_project, "exercises")
     payload = json.loads(path.read_bytes())
     exercise = payload["sets"][0]["exercises"][0]
     source = exercise["sources"][0]["key"]
@@ -123,7 +124,12 @@ def test_wide_solution_table_is_measured(exercise_project: Path) -> None:
     path.write_text(json.dumps(payload))
     build(exercise_project, publish=False)
     checked = invoke(
-        "visuals", str(exercise_project), "--exercise", "sheet-1/sample-relaxation", "--phone"
+        "visuals",
+        str(exercise_project),
+        "--exercise",
+        "sheet-1/sample-relaxation",
+        "--phone",
+        "--json",
     )
     record = json.loads(report_path(exercise_project).read_bytes())
     visuals = record["items"]["exercises/sheet-1/sample-relaxation"]["visuals"]
@@ -139,7 +145,7 @@ def test_wide_solution_table_is_measured(exercise_project: Path) -> None:
 def test_corpus_passes_and_an_edit_makes_its_check_stale(project: Path) -> None:
     # Given the FAI-style corpus: seven graphs, five UML diagrams and seven plots.
     add_corpus(project)
-    checked = invoke("visuals", str(project), "--unit", "visuals")
+    checked = invoke("visuals", str(project), "--unit", "visuals", "--json")
     # Then every visual is drawn as authored, clear and legible at desktop, the default width.
     assert checked["passed"] is True, checked["defects"]
     assert checked["checked"] == ["study/visuals"]
@@ -150,7 +156,7 @@ def test_corpus_passes_and_an_edit_makes_its_check_stale(project: Path) -> None:
     assert widths == {"desktop"}
     assert "study/visuals" not in render(project)["unchecked"]
     # When the unit changes, its check is stale until it runs again.
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     content = json.loads(path.read_bytes())
     content["units"][-1]["summary"] += " Revised."
     path.write_text(json.dumps(content), encoding="utf-8")
@@ -159,7 +165,7 @@ def test_corpus_passes_and_an_edit_makes_its_check_stale(project: Path) -> None:
 
 @browser
 def test_gallery_shows_what_the_check_catches_and_what_needs_a_reviewer(project: Path) -> None:
-    findings = invoke("visuals", str(project), "--gallery")["findings"]
+    findings = invoke("visuals", str(project), "--gallery", "--json")["findings"]
     # A scrambled map breaks measurable rules; its lattice version passes.
     assert any(code.startswith("coincident_edges") for code in findings["gallery:map-scrambled"])
     assert findings["gallery:map-lattice"] == []
@@ -175,7 +181,7 @@ def test_gallery_shows_what_the_check_catches_and_what_needs_a_reviewer(project:
 
 def test_an_untitled_exam_visual_is_drawn_under_its_key() -> None:
     # The check heads each injected visual with its title; an untitled Exam figure crashed it.
-    from tum_mcp.exam_content import ExamContent
+    from tum_mcp.course.content.exam import ExamContent
 
     example = Path(__file__).parents[2] / "src/tum_mcp/bundled/course_app/example/exam.json"
     payload = json.loads(example.read_bytes())
@@ -185,3 +191,38 @@ def test_an_untitled_exam_visual_is_drawn_under_its_key() -> None:
     visits, _ = _visits(None, None, ExamContent.model_validate(payload), with_exam=True)
     titles = [entry["title"] for visit in visits for entry in visit.inject]
     assert titles and all(titles)
+
+
+@browser
+def test_walkthrough_stages_are_measured_without_losing_their_authored_geometry(
+    tmp_path: Path,
+) -> None:
+    # A real trial crashed by comparing its painted graph to the walkthrough wrapper,
+    # which has no nodes or edges; plot marks live in the stage as well.
+    project = tmp_path / "demo"
+    assert CliRunner().invoke(app, ["study", "demo", str(project)]).exit_code == 0
+    invoke("visuals", str(project), "--unit", "components", "--json")
+    content = read_content(project)
+    unit = next(unit for unit in content.units if unit.key == "components")
+    record = json.loads(report_path(project).read_bytes())["items"]["study/components"]
+    by_id = {entry["id"]: entry for entry in record["visuals"]}
+    for index, block in enumerate(unit.blocks):
+        if block.kind != "walkthrough" or block.stage.kind not in {"diagram", "plot"}:
+            continue
+        measured = by_id[f"block:{index}"]["widths"]["desktop"]
+        assert measured["facts"]["minTextPx"] >= 12
+        assert not any(f["code"] == "fidelity" for f in measured["findings"])
+    assert any(
+        block.kind == "walkthrough" and block.stage.kind == "diagram" for block in unit.blocks
+    )
+
+
+@browser
+def test_every_stepper_pill_and_search_on_the_demo_responds(tmp_path: Path) -> None:
+    # Given the component demo, which shows every stepper, pill and the search.
+    project = tmp_path / "demo"
+    assert CliRunner().invoke(app, ["study", "demo", str(project)]).exit_code == 0
+    # When the smoke uses each control as a student would.
+    result = invoke("visuals", str(project), "--interact", "--json")
+    # Then every control responds, with no script errors.
+    assert result["problems"] == [] and result["controls"] >= 10

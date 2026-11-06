@@ -8,7 +8,7 @@ from threading import Thread
 import httpx2
 import pytest
 
-from tum_mcp.study_preview import Handler, PreviewServer
+from tum_mcp.course.app.preview import Handler, PreviewServer
 
 
 def test_loopback_preview_confines_files_and_rejects_foreign_hosts(
@@ -17,7 +17,7 @@ def test_loopback_preview_confines_files_and_rejects_foreign_hosts(
     # Windows registry associations must not decide whether ES modules can run.
     mimetypes.init()
     monkeypatch.setitem(mimetypes.types_map, ".mjs", "text/plain")
-    site = tmp_path / "study"
+    site = tmp_path / "app"
     site.mkdir()
     (site / "index.html").write_text("<!doctype html><title>Course</title>", encoding="utf-8")
     (site / "app.mjs").write_bytes(b"export default 42;\n")

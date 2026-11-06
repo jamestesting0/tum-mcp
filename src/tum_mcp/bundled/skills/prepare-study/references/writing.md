@@ -18,7 +18,7 @@ a time. Prose frames an idea in one or two sentences; everything else is structu
   sub-result it reaches:
   "First backup: \(Q(\mathrm{continue}) = 1 + 0.5 \times 3 = 2.5\), below 3."
   End with the conclusion as the last step. Several states over several rounds are a
-  table trace instead.
+  `walkthrough`, each step with its reason ([representations](representations.md#algorithm-traces)).
 - **Cases, conditions, comparisons**: points or a table, never a sentence joined by
   "and", "while" or "whereas".
 - **Calculation the student should redo**: a `derivation` block, one transformation per
@@ -120,6 +120,13 @@ Cut or rewrite:
 - "Not X, but Y" reveals and groups of three added for rhythm.
 - "Serves as" (write "is"), "in order to" (write "to") and em dashes (use a full stop or
   a comma).
+
+## Fix the passage, not the sentence
+
+A review finding is fixed by rewriting the passage it sits in until it reads straight
+through, never by splicing a sentence in front of it. A spliced opening that leaves the
+reader to sort out "these", "respectively" or "the former" is a new defect; a checker
+verifies a fix by quoting the rewritten passage.
 
 ## Check
 

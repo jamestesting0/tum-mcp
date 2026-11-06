@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from keyring.backend import KeyringBackend
 
 from tum_mcp.moodle import auth, secret_files
@@ -93,7 +94,8 @@ def media_audio(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     import hashlib
     import json
 
-    from tum_mcp.audio_content import (
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.media.audio import (
         AudioFile,
         AudioManifest,
         AudioReceipt,
@@ -103,10 +105,9 @@ def media_audio(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         TeachingReviewFile,
         category_hash,
     )
-    from tum_mcp.media_projection import guidance_hash
-    from tum_mcp.study_build import read_content
-    from tum_mcp.study_sync import sync
-    from tum_mcp.video_content import Locator, locator_fingerprint, semantic_hash
+    from tum_mcp.course.media.video_content import Locator, locator_fingerprint, semantic_hash
+    from tum_mcp.course.project.sync import sync
+    from tum_mcp.course.review.media_projection import guidance_hash
 
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
     fixtures = Path(__file__).parent / "fixtures"
@@ -114,7 +115,7 @@ def media_audio(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     snapshot = fixtures / "course_app/snapshot.json"
     sync(root, snapshot, course_input=json.loads(snapshot.read_bytes())["course"]["title"])
     (root / "app").mkdir(exist_ok=True)
-    (root / "app/content.json").write_bytes((fixtures / "course_app/content.json").read_bytes())
+    (content_file(root, "study")).write_bytes((fixtures / "course_app/content.json").read_bytes())
     content = read_content(root)
     unit = next(u for u in content.units if u.key == "bfs")
     stem = "01_graph-revision"

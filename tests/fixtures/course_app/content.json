@@ -48,7 +48,6 @@
             "graphs"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
           "plain": "The sum of all vertex degrees equals twice the number of edges.",
           "symbols": [
@@ -103,7 +102,6 @@
             "graphs"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "A=\\begin{bmatrix}0&1&0\\\\1&0&1\\\\0&1&0\\end{bmatrix},\\qquad A^2=\\begin{bmatrix}1&0&1\\\\0&2&0\\\\1&0&1\\end{bmatrix}",
           "plain": "For the small path A–B–C, a 1 records an edge. Squaring the matrix counts walks with exactly two edges.",
           "symbols": [
@@ -199,7 +197,6 @@
                 "graphs"
               ],
               "kind": "formula",
-              "mathml": null,
               "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
               "plain": "The sum of all vertex degrees equals twice the number of edges.",
               "symbols": [
@@ -259,7 +256,6 @@
                 "graphs"
               ],
               "kind": "formula",
-              "mathml": null,
               "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
               "plain": "The sum of all vertex degrees equals twice the number of edges.",
               "symbols": [
@@ -555,7 +551,6 @@
             "bfs"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "d(v)=d(u)+1",
           "plain": "When \\(u\\) first discovers \\(v\\), the distance to \\(v\\) is the distance to \\(u\\) plus one.",
           "symbols": [
@@ -1488,7 +1483,6 @@
             "dfs"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "T(V,E)=O(|V|+|E|)",
           "plain": "With adjacency lists, DFS runs in time proportional to vertices plus edges.",
           "symbols": [
@@ -1823,7 +1817,6 @@
             "weighted"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "C(P)=\\sum_{i=0}^{m-1}w(v_i,v_{i+1})",
           "plain": "The cost of a path is the sum of its edge weights.",
           "symbols": [
@@ -1975,7 +1968,6 @@
             "weighted"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "d(v)\\leftarrow\\min\\{d(v),\\ d(u)+w(u,v)\\}",
           "plain": "Replace the tentative distance only if the route through \\(u\\) is cheaper.",
           "symbols": [
@@ -2661,7 +2653,6 @@
             "probability"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "P(H\\mid E)=\\frac{P(E\\mid H)P(H)}{P(E\\mid H)P(H)+P(E\\mid\\neg H)P(\\neg H)}=\\frac{0.8\\cdot0.2}{0.8\\cdot0.2+0.1\\cdot0.8}=\\frac{2}{3}",
           "plain": "Two thirds of the flagged messages are urgent. The denominator includes both true and false alerts.",
           "symbols": [
@@ -2736,7 +2727,6 @@
             "probability"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "P(X=k)=\\binom{n}{k}p^k(1-p)^{n-k},\\qquad \\mathbb{E}[X]=\\sum_{k=0}^{n}kP(X=k)=np",
           "plain": "The binomial probability combines the number of arrangements with their probability. The expected success count is \\(n\\) times \\(p\\).",
           "symbols": [
@@ -2891,7 +2881,6 @@
                 "probability"
               ],
               "kind": "formula",
-              "mathml": null,
               "latex": "P(H\\mid E)=\\frac{P(E\\mid H)P(H)}{P(E\\mid H)P(H)+P(E\\mid\\neg H)P(\\neg H)}=\\frac{0.8\\cdot0.2}{0.8\\cdot0.2+0.1\\cdot0.8}=\\frac{2}{3}",
               "plain": "Two thirds of the flagged messages are urgent. The denominator includes both true and false alerts.",
               "symbols": [
@@ -2955,7 +2944,6 @@
                 "probability"
               ],
               "kind": "formula",
-              "mathml": null,
               "latex": "P(H\\mid E)=\\frac{P(E\\mid H)P(H)}{P(E\\mid H)P(H)+P(E\\mid\\neg H)P(\\neg H)}=\\frac{0.8\\cdot0.2}{0.8\\cdot0.2+0.1\\cdot0.8}=\\frac{2}{3}",
               "plain": "Two thirds of the flagged messages are urgent. The denominator includes both true and false alerts.",
               "symbols": [

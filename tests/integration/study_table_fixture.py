@@ -3,14 +3,15 @@
 import json
 from pathlib import Path
 
+from documents import content_file
 from playwright.sync_api import Page, expect
 from playwright.sync_api import TimeoutError as BrowserTimeout
 
 
 def table_layout_checks(page: Page, project: Path) -> None:
-    from tum_mcp.study_build import build
+    from tum_mcp.course.app.build import build
 
-    source = project / "study/content.json"
+    source = content_file(project, "study")
     original = source.read_bytes()
     content = json.loads(original)
     unit = next(unit for unit in content["units"] if unit["key"] == "bfs")

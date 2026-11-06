@@ -2,13 +2,14 @@ import json
 from pathlib import Path
 
 import pytest
+from documents import content_file
 
+from tum_mcp.course.app.build import build
+from tum_mcp.course.app.publish_projection import project as project_public_data
+from tum_mcp.course.app.publish_site import SITE_FILES, export_site
+from tum_mcp.course.project.models import Resource, ResourceState
+from tum_mcp.course.project.store import digest, load_state
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_build import build
-from tum_mcp.study_models import Resource, ResourceState
-from tum_mcp.study_publish_projection import project as project_public_data
-from tum_mcp.study_publish_site import SITE_FILES, export_site
-from tum_mcp.study_store import digest, load_state
 
 
 def test_all_exercise_content_is_exported_without_source_or_private_file_canaries(
@@ -38,7 +39,7 @@ def test_all_exercise_content_is_exported_without_source_or_private_file_canarie
         state.model_copy(update={"resources": (*state.resources, added)}).model_dump_json(),
         encoding="utf-8",
     )
-    file = root / "study/exercises.json"
+    file = content_file(root, "exercises")
     content = json.loads(file.read_bytes())
     exercise = content["sets"][0]["exercises"][0]
     exercise["sources"] = [{"key": "ex-only", "sha256": digest(secret)}]
@@ -61,7 +62,7 @@ def test_all_exercise_content_is_exported_without_source_or_private_file_canarie
         block["paragraphs"].append("PUBLIC_STATEMENT_OR_SOLUTION")
     file.write_text(json.dumps(content))
     (root / ".tum-mcp/comments.json").write_text("PRIVATE_COMMENT")
-    (root / "study/unrelated.json").write_text("PRIVATE_RESPONSE")
+    (root / "app/unrelated.json").write_text("PRIVATE_RESPONSE")
     build(root, publish=False)
     combined = export_site(root)
     assert set(combined) == set(SITE_FILES)
@@ -69,7 +70,7 @@ def test_all_exercise_content_is_exported_without_source_or_private_file_canarie
     assert b"PUBLIC_STATEMENT_OR_SOLUTION" in combined["data.mjs"]
     assert b"PUBLICMATH" in combined["data.mjs"]
     assert not any(b"PRIVATE_" in value for value in combined.values())
-    (root / "study/content.json").unlink()
+    (content_file(root, "study")).unlink()
     build(root, publish=False)
     exported = export_site(root)["data.mjs"].decode()
     payload = json.loads(exported.removeprefix("const data = ").split(";\ndata.hosted")[0])
@@ -80,7 +81,7 @@ def test_all_exercise_content_is_exported_without_source_or_private_file_canarie
 def test_hosted_preparation_does_not_disclose_source_inventory(project: Path) -> None:
     # Given a local preparation queue containing both published and unselected sources.
     payload = json.loads(
-        (project / "study/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
+        (project / "app/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
     )
     selected = payload["units"][0]["sources"][0]["key"]
     public = {"source": selected, "title": "Published source", "outcomes": []}
@@ -103,7 +104,7 @@ def test_hosted_preparation_does_not_disclose_source_inventory(project: Path) ->
 def test_modified_generated_provenance_is_rejected_before_it_is_stripped(
     project: Path, changed: str
 ) -> None:
-    path = project / "study/data.mjs"
+    path = project / "app/data.mjs"
     payload = json.loads(path.read_bytes().removeprefix(b"export default ").removesuffix(b";\n"))
     if changed == "source_metadata":
         next(iter(payload["sources"].values()))["title"] = "PRIVATE_TAMPER"
@@ -121,8 +122,8 @@ def test_modified_generated_provenance_is_rejected_before_it_is_stripped(
 def test_static_asset_allowlist_still_rejects_non_image_or_escaping_paths(
     project: Path, path: str
 ) -> None:
-    from tum_mcp.study_publish_models import course_identity
-    from tum_mcp.study_publish_site import preflight
+    from tum_mcp.course.app.publish_models import course_identity
+    from tum_mcp.course.app.publish_site import preflight
 
     output = export_site(project)
     output[path] = b"PRIVATE"

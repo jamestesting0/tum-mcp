@@ -5,13 +5,13 @@ from pathlib import Path
 
 from pydantic import Field, ValidationError
 
+from tum_mcp.course.project.store import confined, digest
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_processing.media import AcquiredSegment
 from tum_mcp.lecture_processing.validity import Validity, require_content
 from tum_mcp.lecture_processing.visuals import SourceFrame, capture_frame, raster, sprite_frame
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
-from tum_mcp.study_store import confined, digest
 
 
 class Preview(Frozen):

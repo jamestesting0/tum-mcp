@@ -2,16 +2,17 @@ import json
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from material_fixture import material_project, minimal_unit, pdf_bytes
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.build import build
+from tum_mcp.course.app.publish_site import export_site
+from tum_mcp.course.project.store import load_state
+from tum_mcp.course.project.sync import sync
+from tum_mcp.course.sources.imports import import_file
 from tum_mcp.errors import CampusError
-from tum_mcp.study_build import build
-from tum_mcp.study_import import import_file
-from tum_mcp.study_publish_site import export_site
-from tum_mcp.study_store import load_state
-from tum_mcp.study_sync import sync
 
 
 @pytest.fixture
@@ -82,7 +83,7 @@ def test_local_sources_stay_private_while_prepared_content_can_publish(
     report = import_file(course, notes, "other", "My notes")
     state = load_state(course)
     (course / "app").mkdir()
-    (course / "app/content.json").write_text(
+    (content_file(course, "study")).write_text(
         json.dumps(
             {
                 "schema_version": 1,

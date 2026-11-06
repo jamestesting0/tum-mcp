@@ -49,17 +49,26 @@
           "title": "BFS on a disconnected graph",
           "context": "The BFS on the slides starts from one source and stops when the queue is empty.",
           "text": "That run visits only the source's component. To visit every vertex, restart from an unvisited vertex until none is left.",
-          "passage": {"unit": "components", "block": "graph-trace"},
-          "sources": ["components"],
+          "passage": {
+            "unit": "components",
+            "block": "graph-trace"
+          },
+          "sources": [
+            "components"
+          ],
           "pages": "1",
-          "evidence": ["speech-components"]
+          "evidence": [
+            "speech-components"
+          ]
         },
         {
           "key": "count-adjacencies",
           "title": "Counting adjacency entries",
           "context": "Tracing the neighbour loop of BFS scans every adjacency list once.",
           "text": "An undirected edge is stored in both endpoints' lists, so \\(m\\) undirected edges give \\(2m\\) entries to scan.",
-          "evidence": ["speech-adjacencies"]
+          "evidence": [
+            "speech-adjacencies"
+          ]
         }
       ],
       "highlights": [
@@ -90,6 +99,37 @@
             "width": 640,
             "height": 360,
             "captured_at_s": 772.4
+          },
+          "steps": [
+            {
+              "subgoal": "Set up",
+              "action": "Start the queue with \\(A\\) at distance \\(0\\).",
+              "why": "The source is the only vertex known to be reachable.",
+              "at": 772
+            },
+            {
+              "subgoal": "Trace",
+              "action": "Dequeue \\(A\\); enqueue \\(B\\) at distance \\(1\\).",
+              "why": "Every undiscovered neighbour of a distance-\\(d\\) vertex gets \\(d+1\\).",
+              "at": 845
+            },
+            {
+              "subgoal": "Trace",
+              "action": "Dequeue \\(B\\); enqueue \\(C\\) at distance \\(2\\).",
+              "why": "The queue now holds only distance \\(2\\): distances never jump by more than one.",
+              "at": 930
+            },
+            {
+              "subgoal": "Conclude",
+              "action": "Argue that the first discovery is a shortest path.",
+              "why": "Vertices leave the queue in order of distance, so a vertex is first reached from a vertex one closer to the source.",
+              "at": 1040,
+              "note": "Checking only the final queue misses the invariant: it holds after every dequeue."
+            }
+          ],
+          "passage": {
+            "unit": "components",
+            "block": "walkthrough-graph"
           }
         },
         {
@@ -147,7 +187,10 @@
       "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
       "kind": "subtitle",
       "recording_id": 1,
-      "interval": {"start_s": 2100, "end_s": 2110},
+      "interval": {
+        "start_s": 2100,
+        "end_s": 2110
+      },
       "reviewed": true
     },
     {
@@ -156,7 +199,10 @@
       "source_sha256": "0d4d37cc6983ab0872976efc28c17348ba6ed066ceadeff7367dbf037c103163",
       "kind": "subtitle",
       "recording_id": 1,
-      "interval": {"start_s": 2200, "end_s": 2210},
+      "interval": {
+        "start_s": 2200,
+        "end_s": 2210
+      },
       "reviewed": true
     },
     {

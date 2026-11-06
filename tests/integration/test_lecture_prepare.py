@@ -12,17 +12,17 @@ from PIL import Image
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.lecture.evidence import Interval
+from tum_mcp.course.project.models import Binding, Course, Coverage, Resource, Snapshot
+from tum_mcp.course.project.store import load_state
+from tum_mcp.course.project.sync import sync
 from tum_mcp.credentials import Credential
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing import preparation, runtime
 from tum_mcp.lecture_processing.media_http import MediaHTTP
 from tum_mcp.lecture_processing.receipts import evidence_bytes
 from tum_mcp.lecture_processing.transcript_models import AudioQuality, Recognition
 from tum_mcp.moodle.auth import Cookie
 from tum_mcp.settings import TUM_LIVE, Account, Provider
-from tum_mcp.study_models import Binding, Course, Coverage, Resource, Snapshot
-from tum_mcp.study_store import load_state
-from tum_mcp.study_sync import sync
 from tum_mcp.transport import API
 from tum_mcp.tum_live.client import TumLive
 

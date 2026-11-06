@@ -12,7 +12,6 @@
           "key": "components",
           "text": "Inspect the reusable components.",
           "locator": "Template",
-          "status": "covered",
           "units": [
             "components"
           ]
@@ -23,7 +22,6 @@
           "key": "queue-rules",
           "text": "State the access rules and costs of a queue.",
           "locator": "Template",
-          "status": "covered",
           "concepts": [
             "fifo",
             "queue",
@@ -34,7 +32,6 @@
           "key": "choose-structure",
           "text": "Choose a container from its removal rule.",
           "locator": "Template",
-          "status": "covered",
           "concepts": [
             "removal-matrix",
             "structure-families",
@@ -45,7 +42,6 @@
           "key": "java-queue",
           "text": "Use the Java queue methods.",
           "locator": "Template",
-          "status": "covered",
           "concepts": [
             "queue-java",
             "ring-buffer"
@@ -55,7 +51,6 @@
           "key": "bfs-rules",
           "text": "Apply BFS and state when it finds shortest paths.",
           "locator": "Template",
-          "status": "covered",
           "concepts": [
             "bfs",
             "bfs-shortest",
@@ -82,7 +77,6 @@
           "key": "context",
           "text": "Explore related background.",
           "locator": "Optional template note",
-          "status": "covered",
           "role": "enrichment",
           "classification": {
             "basis": "source_optional",
@@ -121,12 +115,10 @@
       },
       "items": [
         {
-          "label": "Problem 1 \u00b7 Graph representations",
-          "status": "pending"
+          "label": "Problem 1 \u00b7 Graph representations"
         },
         {
-          "label": "Problem 2 \u00b7 Breadth-first search",
-          "status": "pending"
+          "label": "Problem 2 \u00b7 Breadth-first search"
         }
       ]
     },

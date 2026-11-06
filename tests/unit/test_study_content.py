@@ -8,17 +8,18 @@ import pytest
 from pydantic import ValidationError
 
 from tum_mcp.artemis import Artemis
+from tum_mcp.course.content.latex import safe_mathml
+from tum_mcp.course.content.study import Objective, StudyContent
+from tum_mcp.course.project.models import Resource
 from tum_mcp.credentials import Credential
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Account, Provider
-from tum_mcp.study_content import FormulaBlock, Objective, StudyContent
-from tum_mcp.study_models import Resource
 from tum_mcp.transport import API
 
 
 def test_explore_preserves_legacy_core_progress_but_changes_teaching_review() -> None:
-    from tum_mcp.study_build import unit_revision
-    from tum_mcp.study_review import revision
+    from tum_mcp.course.app.build import unit_revision
+    from tum_mcp.course.review.models import revision
 
     payload = json.loads(
         (Path(__file__).parents[1] / "fixtures/course_app/content.json").read_bytes()
@@ -28,7 +29,7 @@ def test_explore_preserves_legacy_core_progress_but_changes_teaching_review() ->
     assert (
         unit_revision(before) == "3c3f0059e28219e78082801a80a63cc0e63d05e9372bbdd27a17f703df1d42b5"
     )
-    assert revision(before) == "f15643aee4957479"
+    assert revision(before) == "5d634d65707b01aa"
     material = {
         "key": "origin",
         "title": "Where the idea came from",
@@ -90,14 +91,6 @@ def test_invalid_inline_math_is_rejected_without_treating_prose_as_html(text: st
 
 
 def test_mathml_refuses_script_links_foreign_xml_and_entity_expansion() -> None:
-    base = {
-        "kind": "formula",
-        "title": "Safe math",
-        "sources": ["s"],
-        "plain": "x",
-        "symbols": [{"symbol": "x", "meaning": "A variable."}],
-        "conditions": "None.",
-    }
     for markup in (
         '<math xmlns="http://www.w3.org/1998/Math/MathML"><script>bad()</script></math>',
         '<math xmlns="http://www.w3.org/1998/Math/MathML" href="https://external.invalid"/>',
@@ -105,8 +98,8 @@ def test_mathml_refuses_script_links_foreign_xml_and_entity_expansion() -> None:
         '<math xmlns="http://www.w3.org/1998/Math/MathML"><mi xmlns="">x</mi></math>',
         '<!DOCTYPE math [<!ENTITY a "expanded">]><math xmlns="http://www.w3.org/1998/Math/MathML">&a;</math>',
     ):
-        with pytest.raises(ValidationError):
-            FormulaBlock.model_validate(base | {"mathml": markup})
+        with pytest.raises(ValueError):
+            safe_mathml(markup)
 
 
 def test_sample_frontier_and_answer_match_an_independent_bfs() -> None:
@@ -240,7 +233,7 @@ def test_a_skipped_heading_level_is_rejected(levels: list[int | None]) -> None:
 
 
 def test_derivations_align_lines_label_results_and_walk_through_with_visuals() -> None:
-    from tum_mcp.study_content import DerivationBlock, render_blocks
+    from tum_mcp.course.content.study import DerivationBlock, render_blocks
 
     line = {"latex": r"\frac{1}{3+4i} = \frac{3-4i}{25}", "reason": "Multiply by the conjugate."}
     block = DerivationBlock.model_validate(

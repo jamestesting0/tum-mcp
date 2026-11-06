@@ -1661,7 +1661,6 @@
             "graphs"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
           "plain": "The sum of all vertex degrees equals twice the number of edges.",
           "symbols": [
@@ -1721,7 +1720,6 @@
             "graphs"
           ],
           "kind": "formula",
-          "mathml": null,
           "latex": "\\sum_{v\\in V}\\deg(v)=2|E|",
           "plain": "The sum of all vertex degrees equals twice the number of edges.",
           "symbols": [

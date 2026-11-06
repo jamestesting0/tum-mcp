@@ -12,18 +12,19 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from knowledge_annotations import annotation, write_registry
 from knowledge_fixture import knowledge_project
 
-from tum_mcp import study_knowledge_query as query
-from tum_mcp.study_content import StudyContent
-from tum_mcp.study_knowledge_assertions import AssertionChecks, review_revision
-from tum_mcp.study_knowledge_packet import encoded
-from tum_mcp.study_knowledge_projection import project
-from tum_mcp.study_knowledge_report import knowledge_revision
-from tum_mcp.study_knowledge_store import SnapshotReader, load_inputs
-from tum_mcp.study_models import StudyState
-from tum_mcp.study_store import private_path
+from tum_mcp.course.content.study import StudyContent
+from tum_mcp.course.memory import query
+from tum_mcp.course.memory.assertions import AssertionChecks, review_revision
+from tum_mcp.course.memory.packet import encoded
+from tum_mcp.course.memory.projection import project
+from tum_mcp.course.memory.report import knowledge_revision
+from tum_mcp.course.memory.store import SnapshotReader, load_inputs
+from tum_mcp.course.project.models import StudyState
+from tum_mcp.course.project.store import private_path
 
 REPO = Path(__file__).resolve().parents[2]
 EXERCISE = "exercises/set/sheet-1/exercise/observer-practice"
@@ -31,7 +32,7 @@ EXERCISE = "exercises/set/sheet-1/exercise/observer-practice"
 
 def scaled_course(folder: Path, units: int, *, crowded: bool = False) -> Path:
     root = knowledge_project(folder, workspaces=frozenset({"study", "exercises"}))
-    content_path = root / "app/content.json"
+    content_path = content_file(root, "study")
     content = json.loads(content_path.read_bytes())
     state_path = private_path(root, "state.json")
     state = json.loads(state_path.read_bytes())
@@ -72,7 +73,7 @@ def scaled_course(folder: Path, units: int, *, crowded: bool = False) -> Path:
         StudyContent.model_validate(content).model_dump_json(), encoding="utf-8"
     )
     state_path.write_text(StudyState.model_validate(state).model_dump_json(), encoding="utf-8")
-    path = root / "app/exercises.json"
+    path = content_file(root, "exercises")
     exercises = json.loads(path.read_bytes())
     exercises["sets"][0]["exercises"][0]["prerequisites"] = [
         {"unit": f"unit-{i:03}", "explanation": "Use this foundation."}

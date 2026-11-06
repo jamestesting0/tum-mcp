@@ -26,8 +26,9 @@ the user says otherwise. Never infer a student's own progress.
 
 ## While authoring
 
-Mark each outcome `covered` (with the units that teach and practise it), `partial`, `gap` or
-`out_of_scope` (with a reason). When an exercise or exam question needs knowledge Study does
+Link each outcome to the units that teach and practise it (`units`); a linked outcome is
+prepared. Record `gap` or `out_of_scope` with a reason only for an outcome no unit
+covers. When an exercise or exam question needs knowledge Study does
 not teach well enough, either improve that Study block in the same run (when Study is in
 scope) and link it as the prerequisite's `block`, or record the gap with its note.
 

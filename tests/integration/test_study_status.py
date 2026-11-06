@@ -9,8 +9,9 @@ import pytest
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.study_status import project_status
-from tum_mcp.study_store import START
+from tum_mcp.course.project.paths import app_path
+from tum_mcp.course.project.status import project_status
+from tum_mcp.course.project.store import START
 
 
 def test_status_accepts_new_and_unmanaged_projects_without_creating_state(
@@ -42,7 +43,7 @@ def test_existing_binding_routes_to_sync_even_when_the_optional_site_is_broken(
     notes.write_text(
         notes.read_text(encoding="utf-8") + "\nPersonal rule to keep.\n", encoding="utf-8"
     )
-    (project / "study/content.json").write_bytes(b"broken optional website input")
+    app_path(project, "study/course.json").write_bytes(b"broken optional website input")
     material = project / "materials/content/material-bfs.md"
     material.write_bytes(b"My local annotation")
     before = {p.relative_to(project): p.read_bytes() for p in project.rglob("*") if p.is_file()}
@@ -62,7 +63,7 @@ def test_existing_binding_routes_to_sync_even_when_the_optional_site_is_broken(
     } == before
 
 
-@pytest.mark.parametrize("existing", [".tum-mcp", "materials", "study", "managed-rules"])
+@pytest.mark.parametrize("existing", [".tum-mcp", "materials", "app", "managed-rules"])
 def test_orphaned_material_requires_inspection_before_adoption(
     tmp_path: Path, existing: str
 ) -> None:

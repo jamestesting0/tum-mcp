@@ -4,9 +4,9 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tum_mcp.exercise_content import ExerciseContent
-from tum_mcp.study_content import StudyContent
-from tum_mcp.study_report import arithmetic_errors, quality_flags
+from tum_mcp.course.checks.report import arithmetic_errors, quality_flags
+from tum_mcp.course.content.exercises import ExerciseContent
+from tum_mcp.course.content.study import StudyContent
 
 FIXTURES = Path(__file__).parents[1] / "fixtures"
 
@@ -76,7 +76,8 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
     found = {(flag["flag"], flag["item"]) for flag in long}
     assert ("long_question", f"{content['units'][0]['key']}/{question['key']}") in found
     assert ("citation_in_title", content["units"][0]["key"]) in found
-    # A one-row table beside a question only repeats its prompt.
+    # A table repeats givens already stated in the prompt.
+    question["prompt"] = "The cost is 6. Which action should the agent choose?"
     question["blocks"] = [
         {
             "kind": "table",
@@ -136,6 +137,41 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
         "long_section",
         "dense_statement",
     }
+
+
+@pytest.mark.parametrize(
+    "prompt, repeats",
+    [
+        ("Which action does the program return?", False),
+        ("At B the status is Dirty. Which action does the program return?", True),
+        ("At A the status is Dirty. Which action does the program return?", False),
+    ],
+)
+def test_context_repetition_depends_on_givens_not_the_number_of_rows(
+    prompt: str, repeats: bool
+) -> None:
+    content = study()
+    unit = content["units"][0]
+    question = unit["questions"][0]
+    question["prompt"] = prompt
+    question["blocks"] = [
+        {
+            "kind": "table",
+            "sources": [unit["sources"][0]["key"]],
+            "caption": "Current percept",
+            "columns": ["Location", "Status"],
+            "rows": [["B", "Dirty"]],
+        }
+    ]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert (
+        any(
+            flag["flag"] == "restated_context"
+            and flag["item"] == f"{unit['key']}/{question['key']}"
+            for flag in flags
+        )
+        is repeats
+    )
 
 
 def test_flags_flowing_procedures_and_calculation_chains_in_prose() -> None:
@@ -406,3 +442,112 @@ def test_an_exercise_statement_that_frames_instead_of_giving_is_flagged() -> Non
     )
     assert exercise["key"] in {f["item"] for f in flags if f["flag"] == "statement_framing"}
     assert exercise["key"] in {f["item"] for f in flags if f["flag"] == "meta_reference"}
+
+
+def test_traces_results_and_snapshots_must_show_their_steps() -> None:
+    # Given a lesson whose objective asks students to trace, with only a finished table.
+    content = study()
+    unit = content["units"][0]
+    unit["objectives"][0]["text"] = "Trace a degree count over the edge list."
+    sources = unit["blocks"][0]["sources"]
+    flags = lambda: {  # noqa: E731
+        flag["flag"] for flag in quality_flags(StudyContent.model_validate(content), None)
+    }
+    assert "static_trace" in flags() and "untraced_procedure" not in flags()
+    # When the table becomes a walkthrough with a reason per step, the trace is taught.
+    table = next(b for b in unit["blocks"] if b["kind"] == "table")
+    walk = {
+        "kind": "walkthrough",
+        "sources": sources,
+        "stage": {k: table[k] for k in ("kind", "columns", "rows", "caption")},
+        "steps": [
+            {"action": "Fill the first row.", "why": "It has no dependency.", "shown": 1},
+            {"action": "Fill the rest.", "why": "Each row reuses the first.", "shown": 2},
+        ],
+    }
+    unit["blocks"][unit["blocks"].index(table)] = walk
+    assert not {"static_trace", "untraced_procedure"} & flags()
+    # A computed result in prose needs working in its section; a given does not.
+    unit["blocks"][0]["paragraphs"] = [r"With \(n = 4\) vertices, \(2 \cdot 3 = 6\) ends."]
+    assert "unworked_result" in flags()
+    unit["blocks"].insert(
+        1,
+        {
+            "kind": "derivation",
+            "sources": sources,
+            "groups": [{"lines": [{"latex": r"2 \cdot 3 = 6", "reason": "Two ends per edge."}]}],
+        },
+    )
+    assert "unworked_result" not in flags()
+    # One frame of a traversal is a snapshot of a process.
+    unit["blocks"].append(
+        {
+            "kind": "diagram",
+            "title": "Midway",
+            "sources": sources,
+            "description": "Two vertices, one reached.",
+            "nodes": [
+                {"key": "a", "label": "A", "row": 0, "col": 0},
+                {"key": "b", "label": "B", "row": 0, "col": 1},
+            ],
+            "edges": [{"start": "a", "end": "b"}],
+            "frames": [{"caption": "A is done.", "visited": ["a"], "frontier": ["b"]}],
+        }
+    )
+    assert "single_frame_diagram" in flags()
+
+
+def test_bookkeeping_in_set_summaries_and_exam_labels_is_flagged() -> None:
+    from importlib.resources import files
+
+    from tum_mcp.course.content.exam import ExamContent
+    from tum_mcp.course.content.exam_data import meta_flags
+
+    payload = exercises()
+    payload["sets"][0]["summary"] = "User-provided sheet with the official solution."
+    flags = quality_flags(None, ExerciseContent.model_validate(payload))
+    first = payload["sets"][0]["exercises"][0]["key"]
+    assert ("meta_reference", first) in {(flag["flag"], flag["item"]) for flag in flags}
+    exam = json.loads((files("tum_mcp") / "bundled/course_app/example/exam.json").read_bytes())
+    assert meta_flags(ExamContent.model_validate(exam)) == []
+    exam["sittings"][0]["label"] += " (user-provided)"
+    flagged = meta_flags(ExamContent.model_validate(exam))
+    assert flagged and all(flag["item"].startswith("exam/pattern/") for flag in flagged)
+
+
+def test_a_cited_page_past_the_end_of_its_source_is_flagged(monkeypatch, tmp_path) -> None:
+    from types import SimpleNamespace
+
+    from tum_mcp.course.checks.report import citation_flags
+    from tum_mcp.course.sources import text
+
+    # Given a current source whose read text has 12 pages.
+    source = SimpleNamespace(
+        status="current", sha256="a" * 64, resource=SimpleNamespace(key="slides")
+    )
+    monkeypatch.setattr(text, "cached_record", lambda root, sha: SimpleNamespace(pages=[None] * 12))
+    state = SimpleNamespace(resources=[source])
+    block = {"kind": "text", "sources": ["slides"], "pages": "11-12"}
+    assert citation_flags(tmp_path, state, {"graphs": {"blocks": [block]}}) == []
+    block["pages"] = "12-14"
+    assert [
+        flag["item"] for flag in citation_flags(tmp_path, state, {"graphs": {"blocks": [block]}})
+    ] == ["graphs"]
+
+
+def test_a_cheatsheet_fact_no_card_asks_for_is_flagged() -> None:
+    from importlib.resources import files
+
+    from tum_mcp.course.content.exam import ExamContent
+    from tum_mcp.course.content.exam_data import retrieval_flags
+
+    folder = files("tum_mcp") / "bundled/course_app/example"
+    exam = ExamContent.model_validate_json((folder / "exam.json").read_bytes())
+    study = json.loads((folder / "content.json").read_bytes())
+    concept = next(c for c in exam.concepts if c.kind == "definition")
+    flagged = {flag["item"] for flag in retrieval_flags(exam, StudyContent.model_validate(study))}
+    assert f"concept:{concept.key}" in flagged
+    card = study["units"][0]["flashcards"][0]
+    card["front"] = f"What is a {concept.title}?"
+    asked = {flag["item"] for flag in retrieval_flags(exam, StudyContent.model_validate(study))}
+    assert f"concept:{concept.key}" not in asked

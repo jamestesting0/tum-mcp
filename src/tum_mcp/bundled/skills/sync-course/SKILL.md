@@ -48,6 +48,12 @@ record uncertainty and coverage gaps, and review changed supporting sources only
 The CLI scaffolds a handbook; the agent must actually read and reconcile evidence
 before recording its review receipt. No automatic “understanding” claim.
 
+Record when each source is taught in `.tum-mcp/schedule.json`: the session dates from the
+course page or TUMonline, or else the material's release date with `basis: release` (a
+proxy). `tum-mcp study schedule PROJECT` then resolves "this week" by code, and the
+prepare skills take their scope from it. An item rebound to a changed source's new hash
+changes, so the review loop checks it again; new sources join the next loop's scope.
+
 Report the course, imported/indexed/changed material, handbook review, coverage and conflicts.
 Inspect stale Study units and Exercises once when relevant. Continue with the
 requested prepare-study, prepare-exercises or prepare-exams workspace. For configured automatic

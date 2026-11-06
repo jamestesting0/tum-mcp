@@ -2,8 +2,8 @@
 
 import hashlib
 
+from tum_mcp.course.lecture.evidence import Interval
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing.media import AcquiredSegment, MediaCache, acquire
 from tum_mcp.lecture_processing.media_models import Manifest
 from tum_mcp.lecture_processing.progress import disk_guard

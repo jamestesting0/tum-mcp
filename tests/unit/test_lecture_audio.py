@@ -7,8 +7,11 @@ from pydantic import SecretStr
 from test_lecture_visuals import generated_vod as generated_vod
 from test_lecture_visuals import vod
 
-from tum_mcp.lecture_evidence import Interval
+from tum_mcp.course.lecture.evidence import Interval
+from tum_mcp.errors import CampusError
+from tum_mcp.lecture_processing import audio as audio_module
 from tum_mcp.lecture_processing.audio import render_audio
+from tum_mcp.lecture_processing.decoding import DecoderOutput
 from tum_mcp.lecture_processing.media import MediaCache, acquire
 from tum_mcp.lecture_processing.media_budget import TransferBudget
 from tum_mcp.lecture_processing.media_http import MediaHTTP
@@ -55,3 +58,33 @@ def test_lecture_sample_rates_resample_to_the_exact_off_grid_length(
         output = render(source, tmp_path / f"{start}", Interval(start_s=start, end_s=end))
         with wave.open(str(output)) as audio:
             assert audio.getnframes() == round(end * 16000) - round(start * 16000)
+
+
+def test_full_recognition_window_preserves_small_accumulated_clock_jitter(tmp_path: Path) -> None:
+    # A real ten-minute window had 193 missing samples from sub-millisecond packet
+    # gaps, although no audio packet was missing. A short sample did not expose it.
+    source = vod(tmp_path, "mpegts", 48000, jitter=True, duration=600, jitter_every=48)
+    output = render(source, tmp_path / "decoded", Interval(start_s=0.37, end_s=599.37))
+    with wave.open(str(output)) as audio:
+        assert audio.getnframes() == 599 * 16000
+
+
+def test_missing_aac_frame_is_not_padded_as_timestamp_jitter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = vod(tmp_path, "mpegts", 48000)
+    decode = audio_module.run_decoder
+
+    def missing_frame(argv: tuple[str, ...]) -> DecoderOutput:
+        result = decode(argv)
+        with wave.open(argv[-1], "rb") as audio:
+            parameters = audio.getparams()
+            payload = audio.readframes(audio.getnframes() - 342)
+        with wave.open(argv[-1], "wb") as audio:
+            audio.setparams(parameters)
+            audio.writeframes(payload)
+        return result
+
+    monkeypatch.setattr(audio_module, "run_decoder", missing_frame)
+    with pytest.raises(CampusError, match="does not cover"):
+        render(source, tmp_path / "decoded", Interval(start_s=0.37, end_s=3.41))

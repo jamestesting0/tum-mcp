@@ -10,13 +10,13 @@ from threading import Thread
 import httpx2
 from study_comments_data import operation
 
-from tum_mcp.study_preview import Handler
+from tum_mcp.course.app.preview import Handler
 
 
 def test_comment_endpoint_is_same_origin_bounded_and_confined(project: Path) -> None:
     first = operation(project)
     with ThreadingHTTPServer(
-        ("127.0.0.1", 0), partial(Handler, directory=str(project / "study"))
+        ("127.0.0.1", 0), partial(Handler, directory=str(project / "app"))
     ) as server:
         worker = Thread(target=server.serve_forever, daemon=True)
         worker.start()
@@ -94,7 +94,7 @@ def test_comment_endpoint_is_same_origin_bounded_and_confined(project: Path) -> 
 
 def test_rejected_post_keeps_its_response_when_the_body_arrives_late(tmp_path: Path) -> None:
     # An HTTP client may still be sending when origin/size checks reject its headers.
-    site = tmp_path / "study"
+    site = tmp_path / "app"
     site.mkdir()
 
     class AbortiveCloseServer(ThreadingHTTPServer):

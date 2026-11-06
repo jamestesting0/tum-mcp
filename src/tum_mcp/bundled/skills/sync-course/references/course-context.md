@@ -76,13 +76,3 @@ stamping it. Do not overwrite unchanged prose or reset personal notes on each sy
 When authoring a lesson/exercise, first read the short orientation and the relevant
 source passages in depth. Derive prerequisites and goals from those sources; a
 handbook or a “current” receipt cannot substitute for solving and reviewing the task.
-
-## Legacy state
-
-`study upgrade PROJECT` explicitly renames .study/ to .tum-mcp/ without changing
-course identity, source files, authored app, browser keys or publication settings.
-It preserves unknown private records and archives the full old root instructions in
-.tum-mcp/legacy-AGENTS.md. Reconcile verified course facts from that archive into
-course.md; keep user rules in root AGENTS.md. Never silently merge two state folders.
-Ordinary legacy reads work until upgrade. The separate `build --upgrade-layout`
-option changes the old web folder study/ to app/; it is not the state migration.

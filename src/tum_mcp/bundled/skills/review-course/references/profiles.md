@@ -40,6 +40,10 @@ and `intuition.method_choice` for these specific checks. A finding still belongs
 dimension. If no guide or solution exists to judge, record the gap; never award an
 automatic 3 because the Study check does not apply.
 
+Judge repetition in the rendered view: a Guide answer and a full Solution must each
+work when opened separately. An independent Exam drill shows its model answer and
+optional worked solution in one panel, so repeating the same working there is a defect.
+
 ## Exam
 
 Exam patterns are scored items (`exam/pattern/<key>`) with the ten dimensions. The
@@ -53,8 +57,8 @@ re-teaches: depth is one tap away through Recall, which must open the passage th
 teaches each concept. Past papers and practice exams show no Recall before the attempt,
 because recognising the pattern is the skill they practise.
 
-- Cheatsheet: start from `study review-pack PROJECT --item exam/sheet --pass cheatsheet`
-  and the coverage report's `cheatsheet` section. Open the cited source pages and look for
+- Cheatsheet: start from its packet (profile `exam-sheet`) and the coverage report's
+  `cheatsheet` section. Open the cited source pages and look for
   exam-relevant material of any kind that no entry holds before judging the entries. A
   complete one-line fact needs no expansion; a method needs its steps, a formula its
   meanings, a comparison its table. A correct entry need not introduce its concept with a
@@ -87,13 +91,13 @@ because recognising the pattern is the skill they practise.
 
 ## Lecture
 
-The current scorecard has no Lecture item scores. Record findings in the course pass
-and check the recording/transcript evidence before judging fidelity.
+Each note and highlight is a separate `lecture-entry` item. Record its findings
+against that item and check the recording/transcript evidence before judging fidelity.
 
 - Check claims, limiting conditions and timestamps against the supplied recording evidence.
 - Each note's title and context let a student who missed the lecture see what the remark
   answers. Context unsupported by the evidence, or a message that only makes sense with the
-  lecture in mind, goes back to prepare-lecture to fix; Lecture has no item score to lower.
+  lecture in mind, is a finding against that entry.
 - Preserve useful explanations beyond the slides, without copying an entire Study lesson.
 - Check processed and missing intervals; a complete-looking passage does not prove full
   recording coverage.

@@ -36,7 +36,9 @@ dependencies, and prepares the public export before network access. It does not
 create missing workspaces. Do not separately build, inspect every original,
 resync campus sources or regenerate media just to publish an existing app.
 Stale or invalid content is a concrete blocker to resolve, not a reason to
-bypass validation or silently rewrite the course.
+bypass validation or silently rewrite the course. Before publishing, read the review gate
+(`tum-mcp review status PROJECT`): publish gate-passed workspaces, and publish one that has
+not passed only when the student explicitly says to publish anyway.
 
 Use existing host GitHub CLI authentication. If it is unavailable, start
 `gh auth login --hostname github.com` interactively and let the student complete

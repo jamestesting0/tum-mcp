@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tum_mcp.exercise_content import ExerciseContent, NumericCheck, exercise_revision
+from tum_mcp.course.content.exercises import ExerciseContent, NumericCheck, exercise_revision
 
 FIXTURE = Path(__file__).parents[1] / "fixtures/exercises.json"
 

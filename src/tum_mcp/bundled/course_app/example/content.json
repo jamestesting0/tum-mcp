@@ -398,6 +398,475 @@
           "key": "graph-trace"
         },
         {
+          "kind": "walkthrough",
+          "title": "Step-by-step run",
+          "key": "walkthrough-graph",
+          "sources": [
+            "components"
+          ],
+          "stage": {
+            "kind": "diagram",
+            "description": "Five nodes: S links to A and B, A to C, and both B and C to the goal G.",
+            "nodes": [
+              {
+                "key": "s",
+                "label": "S",
+                "row": 0,
+                "col": 0
+              },
+              {
+                "key": "a",
+                "label": "A",
+                "row": 0,
+                "col": 1
+              },
+              {
+                "key": "b",
+                "label": "B",
+                "row": 1,
+                "col": 1
+              },
+              {
+                "key": "c",
+                "label": "C",
+                "row": 0,
+                "col": 2
+              },
+              {
+                "key": "g",
+                "label": "G",
+                "row": 1,
+                "col": 2
+              }
+            ],
+            "edges": [
+              {
+                "start": "s",
+                "end": "a"
+              },
+              {
+                "start": "s",
+                "end": "b"
+              },
+              {
+                "start": "a",
+                "end": "c"
+              },
+              {
+                "start": "b",
+                "end": "g"
+              },
+              {
+                "start": "c",
+                "end": "g"
+              }
+            ]
+          },
+          "label": "Breadth-first",
+          "steps": [
+            {
+              "action": "Put \\(S\\) in the frontier.",
+              "why": "The search starts from the start node.",
+              "subgoal": "Start",
+              "active": [
+                "s"
+              ],
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "S"
+                },
+                {
+                  "label": "Expanded",
+                  "value": "none"
+                }
+              ]
+            },
+            {
+              "action": "Expand \\(S\\): generate \\(A\\) and \\(B\\).",
+              "why": "\\(S\\) is the only frontier node.",
+              "subgoal": "Expand",
+              "visited": [
+                "s"
+              ],
+              "frontier": [
+                "a",
+                "b"
+              ],
+              "edges": [
+                {
+                  "start": "s",
+                  "end": "a"
+                },
+                {
+                  "start": "s",
+                  "end": "b"
+                }
+              ],
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "A, B"
+                },
+                {
+                  "label": "Expanded",
+                  "value": "S"
+                }
+              ]
+            },
+            {
+              "action": "Expand \\(A\\): generate \\(C\\).",
+              "why": "A queue takes the oldest node, and \\(A\\) entered before \\(B\\).",
+              "subgoal": "Expand",
+              "active": [
+                "a"
+              ],
+              "visited": [
+                "s"
+              ],
+              "frontier": [
+                "b",
+                "c"
+              ],
+              "edges": [
+                {
+                  "start": "a",
+                  "end": "c"
+                }
+              ],
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "B, C"
+                },
+                {
+                  "label": "Expanded",
+                  "value": "S, A"
+                }
+              ]
+            },
+            {
+              "action": "Expand \\(B\\): generate \\(G\\).",
+              "why": "\\(B\\) is now the oldest node: every node one edge from \\(S\\) is expanded before any node two edges away.",
+              "subgoal": "Expand",
+              "active": [
+                "b"
+              ],
+              "visited": [
+                "s",
+                "a"
+              ],
+              "frontier": [
+                "c",
+                "g"
+              ],
+              "edges": [
+                {
+                  "start": "b",
+                  "end": "g"
+                }
+              ],
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "C, G"
+                },
+                {
+                  "label": "Expanded",
+                  "value": "S, A, B"
+                }
+              ]
+            },
+            {
+              "action": "Stop: \\(G\\) is the goal. Path \\(S \\to B \\to G\\).",
+              "why": "The goal test runs when a node is generated, and the first path found has the fewest edges.",
+              "subgoal": "Stop",
+              "active": [
+                "g"
+              ],
+              "visited": [
+                "s",
+                "a",
+                "b"
+              ],
+              "edges": [
+                {
+                  "start": "s",
+                  "end": "b"
+                },
+                {
+                  "start": "b",
+                  "end": "g"
+                }
+              ],
+              "note": "Testing only when a node is expanded costs one more expansion here; the path stays the same.",
+              "state": [
+                {
+                  "label": "Frontier",
+                  "value": "C, G"
+                },
+                {
+                  "label": "Path",
+                  "value": "\\(S \\to B \\to G\\)"
+                }
+              ]
+            }
+          ],
+          "variant": {
+            "label": "Depth-first",
+            "steps": [
+              {
+                "action": "Put \\(S\\) in the frontier.",
+                "why": "The search starts from the start node.",
+                "subgoal": "Start",
+                "active": [
+                  "s"
+                ],
+                "state": [
+                  {
+                    "label": "Frontier",
+                    "value": "S"
+                  },
+                  {
+                    "label": "Expanded",
+                    "value": "none"
+                  }
+                ]
+              },
+              {
+                "action": "Expand \\(S\\): generate \\(A\\) and \\(B\\).",
+                "why": "\\(S\\) is the only frontier node.",
+                "subgoal": "Expand",
+                "visited": [
+                  "s"
+                ],
+                "frontier": [
+                  "a",
+                  "b"
+                ],
+                "edges": [
+                  {
+                    "start": "s",
+                    "end": "a"
+                  },
+                  {
+                    "start": "s",
+                    "end": "b"
+                  }
+                ],
+                "state": [
+                  {
+                    "label": "Frontier",
+                    "value": "A, B"
+                  },
+                  {
+                    "label": "Expanded",
+                    "value": "S"
+                  }
+                ]
+              },
+              {
+                "action": "Expand \\(A\\): generate \\(C\\).",
+                "why": "A stack takes the newest node; \\(B\\) and \\(A\\) were pushed in that order, so \\(A\\) is on top.",
+                "subgoal": "Expand",
+                "active": [
+                  "a"
+                ],
+                "visited": [
+                  "s"
+                ],
+                "frontier": [
+                  "b",
+                  "c"
+                ],
+                "edges": [
+                  {
+                    "start": "a",
+                    "end": "c"
+                  }
+                ],
+                "state": [
+                  {
+                    "label": "Frontier",
+                    "value": "C, B"
+                  },
+                  {
+                    "label": "Expanded",
+                    "value": "S, A"
+                  }
+                ]
+              },
+              {
+                "action": "Expand \\(C\\): generate \\(G\\).",
+                "why": "\\(C\\) is the newest node, so the search keeps going deeper.",
+                "subgoal": "Expand",
+                "active": [
+                  "c"
+                ],
+                "visited": [
+                  "s",
+                  "a"
+                ],
+                "frontier": [
+                  "g",
+                  "b"
+                ],
+                "edges": [
+                  {
+                    "start": "c",
+                    "end": "g"
+                  }
+                ],
+                "state": [
+                  {
+                    "label": "Frontier",
+                    "value": "G, B"
+                  },
+                  {
+                    "label": "Expanded",
+                    "value": "S, A, C"
+                  }
+                ]
+              },
+              {
+                "action": "Stop: \\(G\\) is the goal. Path \\(S \\to A \\to C \\to G\\).",
+                "why": "DFS returns the first path it reaches, which need not be the shortest: three edges here against two.",
+                "subgoal": "Stop",
+                "active": [
+                  "g"
+                ],
+                "visited": [
+                  "s",
+                  "a",
+                  "c"
+                ],
+                "edges": [
+                  {
+                    "start": "s",
+                    "end": "a"
+                  },
+                  {
+                    "start": "a",
+                    "end": "c"
+                  },
+                  {
+                    "start": "c",
+                    "end": "g"
+                  }
+                ],
+                "state": [
+                  {
+                    "label": "Frontier",
+                    "value": "G, B"
+                  },
+                  {
+                    "label": "Path",
+                    "value": "\\(S \\to A \\to C \\to G\\)"
+                  }
+                ]
+              }
+            ]
+          },
+          "contrast": "The runs part here: the queue expands \\(B\\) next, while the stack goes deeper to \\(C\\)."
+        },
+        {
+          "kind": "walkthrough",
+          "title": "Filling a table",
+          "key": "walkthrough-table",
+          "level": 2,
+          "sources": [
+            "components"
+          ],
+          "stage": {
+            "kind": "table",
+            "caption": "Fewest coins \\(b(n)\\) for each amount \\(n\\) with coins 1 and 3",
+            "columns": [
+              "Amount \\(n\\)",
+              "\\(b(n)\\)",
+              "Coins"
+            ],
+            "rows": [
+              [
+                "0",
+                "0",
+                "none"
+              ],
+              [
+                "1",
+                "1",
+                "1"
+              ],
+              [
+                "2",
+                "2",
+                "1 + 1"
+              ],
+              [
+                "3",
+                "1",
+                "3"
+              ],
+              [
+                "4",
+                "2",
+                "3 + 1"
+              ]
+            ]
+          },
+          "steps": [
+            {
+              "action": "Set \\(b(0) = 0\\).",
+              "why": "No coin is needed for amount 0, and every later entry builds on it.",
+              "subgoal": "Base case",
+              "shown": 1,
+              "cells": [
+                "1:2"
+              ]
+            },
+            {
+              "action": "Fill \\(b(1) = 1 + b(0) = 1\\).",
+              "why": "Only coin 1 fits.",
+              "subgoal": "Fill each amount",
+              "shown": 2,
+              "cells": [
+                "2:2",
+                "2:3"
+              ]
+            },
+            {
+              "action": "Fill \\(b(2) = 1 + b(1) = 2\\).",
+              "why": "Coin 3 is still too large.",
+              "subgoal": "Fill each amount",
+              "shown": 3,
+              "cells": [
+                "3:2",
+                "3:3"
+              ]
+            },
+            {
+              "action": "Fill \\(b(3) = 1 + b(0) = 1\\).",
+              "why": "Coin 3 gives \\(1 + b(0) = 1\\), which beats coin 1's \\(1 + b(2) = 3\\).",
+              "subgoal": "Fill each amount",
+              "shown": 4,
+              "cells": [
+                "4:2",
+                "4:3"
+              ],
+              "note": "Taking the first coin that fits would give 3 coins; compare every coin."
+            },
+            {
+              "action": "Fill \\(b(4) = \\min(1 + b(3),\\, 1 + b(1)) = 2\\).",
+              "why": "Both coins fit, and both give 2 coins.",
+              "subgoal": "Fill each amount",
+              "shown": 5,
+              "cells": [
+                "5:2",
+                "5:3"
+              ]
+            }
+          ]
+        },
+        {
           "kind": "diagram",
           "title": "Process diagram",
           "sources": [

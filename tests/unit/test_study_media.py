@@ -3,12 +3,13 @@ import json
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from pydantic import ValidationError
 
-from tum_mcp.audio_content import AudioCoverage, AudioPlan
-from tum_mcp.study_build import read_content
-from tum_mcp.study_media import discover
-from tum_mcp.study_store import load_state
+from tum_mcp.course.app.build import read_content
+from tum_mcp.course.media.audio import AudioCoverage, AudioPlan
+from tum_mcp.course.media.inventory import discover
+from tum_mcp.course.project.store import load_state
 
 
 def inventory(root: Path):
@@ -95,7 +96,7 @@ def test_chapters_are_checked_even_when_their_receipt_digest_was_updated(media_a
 
 def test_core_meaning_changes_review_identity_but_explore_does_not(media_audio: Path) -> None:
     original = inventory(media_audio).items[0]
-    path = media_audio / "app/content.json"
+    path = content_file(media_audio, "study")
     value = json.loads(path.read_bytes())
     unit = next(u for u in value["units"] if u["key"] == "bfs")
     unit["explore"] = [
@@ -122,7 +123,7 @@ def test_core_meaning_changes_review_identity_but_explore_does_not(media_audio: 
 
 
 def test_pending_none_is_derived_from_actual_current_teaching(media_audio: Path) -> None:
-    from tum_mcp.audio_content import AudioCategory
+    from tum_mcp.course.media.audio import AudioCategory
 
     receipt = manifest(media_audio)["categories"]["graphs"]
     category = {name: receipt[name] for name in AudioCategory.model_fields}
@@ -134,7 +135,7 @@ def test_pending_none_is_derived_from_actual_current_teaching(media_audio: Path)
     )
     (media_audio / "audio/plan.json").write_text(plan.model_dump_json(), encoding="utf-8")
     assert inventory(media_audio).pending == []
-    path = media_audio / "app/content.json"
+    path = content_file(media_audio, "study")
     value = json.loads(path.read_bytes())
     next(u for u in value["units"] if u["key"] == "bfs")["summary"] += " Changed."
     path.write_text(json.dumps(value), encoding="utf-8")
@@ -180,7 +181,7 @@ def test_empty_optional_media_does_not_require_any_extension(media_audio: Path) 
 def test_moved_unit_is_pending_without_renaming_or_overwriting_the_old_track(
     media_audio: Path,
 ) -> None:
-    from tum_mcp.audio_content import AudioCategory, category_hash
+    from tum_mcp.course.media.audio import AudioCategory, category_hash
 
     receipt = manifest(media_audio)["categories"]["graphs"]
     category = {name: receipt[name] for name in AudioCategory.model_fields}

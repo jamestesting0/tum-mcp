@@ -8,10 +8,11 @@ from threading import Thread
 
 import httpx2
 import pytest
+from documents import content_file
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.study_preview import Handler, PreviewServer
+from tum_mcp.course.app.preview import Handler, PreviewServer
 
 STEM = "01_reusable-components"
 
@@ -237,13 +238,13 @@ def walkthrough_server(
     demo: Path,
     exercise_project: Path,
 ) -> Iterator[str]:
-    from tum_mcp import video_project
-    from tum_mcp.course_app_paths import app_path
-    from tum_mcp.study_build import build
-    from tum_mcp.study_store import load_state
-    from tum_mcp.video_content import Manifest
+    from tum_mcp.course.app.build import build
+    from tum_mcp.course.media import video_project
+    from tum_mcp.course.media.video_content import Manifest
+    from tum_mcp.course.project.paths import app_path
+    from tum_mcp.course.project.store import load_state
 
-    path = app_path(exercise_project, "exercises.json")
+    path = content_file(exercise_project, "exercises")
     content = json.loads(path.read_bytes())
     exercise = content["sets"][0]["exercises"][1]
     exercise["parts"] = ["(a)", "(b)"]
@@ -388,10 +389,10 @@ def test_single_solution_mounts_lazily_and_unselected_problem_has_no_player(
     page = context.new_page()
     with page.expect_response("**/videos/index.json"):
         page.goto(walkthrough_server + "/#exercises/sheet-1/sample-relaxation")
-    solution = page.locator("details").filter(has=page.locator("summary", has_text="Solution")).last
+    solution = page.locator(".pill-panel").last
     solution.wait_for()
     assert solution.locator("video, source").count() == 0
-    solution.locator("summary").click()
+    solution.get_by_role("button", name="Solution", exact=True).click()
     solution.locator("video").wait_for()
     assert solution.locator("video").evaluate("(v) => v.paused && v.currentTime === 0")
     context.close()
@@ -414,8 +415,8 @@ def test_bare_exercise_keys_cannot_supply_another_targets_video(
     page.route("**/videos/index.json", wrong_target)
     with page.expect_response("**/videos/index.json"):
         page.goto(walkthrough_server + "/#exercises/sheet-1/sample-relaxation")
-    solution = page.locator("details").filter(has=page.locator("summary", has_text="Solution")).last
-    solution.locator("summary").click()
+    solution = page.locator(".pill-panel").last
+    solution.get_by_role("button", name="Solution", exact=True).click()
     assert solution.locator("video, source, .video-note").count() == 0
     context.close()
 
@@ -427,11 +428,11 @@ def test_exam_guided_solution_never_requests_video_index(
 ) -> None:
     from material_fixture import exam_document, exam_project, with_guided_paper
 
-    from tum_mcp.study_build import build
+    from tum_mcp.course.app.build import build
 
     root = exam_project(tmp_path)
     (root / "app").mkdir()
-    (root / "app/exam.json").write_text(json.dumps(with_guided_paper(exam_document(root))))
+    (content_file(root, "exam")).write_text(json.dumps(with_guided_paper(exam_document(root))))
     build(root, publish=False)
     handler = partial(Handler, directory=str(root / "app"))
     with PreviewServer(("127.0.0.1", 0), handler) as running:
@@ -445,7 +446,7 @@ def test_exam_guided_solution_never_requests_video_index(
             page.goto(f"http://127.0.0.1:{running.server_port}/#exam/paper/ws23-a")
             page.locator(".exam-card", has_text="Guide").click()
             page.get_by_role("heading", name="Question 1", exact=True).first.wait_for()
-            page.locator("summary", has_text="Solution").last.click()
+            page.get_by_role("button", name="Solution", exact=True).last.click()
             assert page.locator(".video-note").count() == 0
             assert not any("/videos/" in url for url in requests)
             context.close()

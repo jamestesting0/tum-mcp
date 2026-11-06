@@ -1,20 +1,16 @@
 import json
-import shutil
 from pathlib import Path
 
-import pytest
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_build import RETIRED_TEMPLATE_FILES, build, read_content, unit_revision
-from tum_mcp.study_store import digest
+from tum_mcp.course.app.build import RETIRED_TEMPLATE_FILES, build, read_content, unit_revision
+from tum_mcp.course.project.store import digest
 
 
-def test_app_folder_build_preserves_the_existing_study_contract(project: Path) -> None:
-    # Given an authored course with unchanged content in the requested app folder.
+def test_rebuild_keeps_learning_identities_and_paths(project: Path) -> None:
+    # Given an authored course with unchanged content.
     before = read_content(project)
-    (project / "study").rename(project / "app")
     # When building with the existing service.
     build(project, publish=False)
     payload = json.loads(
@@ -25,15 +21,14 @@ def test_app_folder_build_preserves_the_existing_study_contract(project: Path) -
         unit_revision(unit) for unit in before.units
     ]
     assert payload["course"]["key"] == before.course_key
-    assert not (project / "study").exists()
     inspected = CliRunner().invoke(app, ["study", "inspect", str(project)])
     assert inspected.exit_code == 0, inspected.output
-    assert json.loads(inspected.output)["exercises_path"] == "app/exercises.json"
+    assert json.loads(inspected.output)["exercises_path"] == "app/exercises/sets.json"
 
 
 def test_retired_template_files_are_removed_unless_edited(project: Path) -> None:
     # Given a site built by an older template that still owns two retired files.
-    site = project / "study"
+    site = project / "app"
     record_path = site / ".managed.json"
     record = json.loads(record_path.read_bytes())
     unedited, edited = RETIRED_TEMPLATE_FILES[:2]
@@ -50,21 +45,6 @@ def test_retired_template_files_are_removed_unless_edited(project: Path) -> None
     assert (site / edited).read_bytes() == b"locally edited font"
     managed = json.loads(record_path.read_bytes())["files"]
     assert not set(managed) & set(RETIRED_TEMPLATE_FILES)
-
-
-def test_two_authored_layouts_are_preserved_as_a_conflict(project: Path) -> None:
-    # Given independently present authored layouts, even with initially equal content.
-    destination = project / "app"
-    destination.mkdir()
-    shutil.copy2(project / "study/content.json", destination / "content.json")
-    original = (project / "study/data.mjs").read_bytes()
-    # When a build cannot choose safely between them.
-    with pytest.raises(CampusError) as caught:
-        build(project, publish=False)
-    # Then neither layout nor the verified renderer is overwritten.
-    assert caught.value.code == Code.WORKSPACE_CONFLICT
-    assert (project / "study/data.mjs").read_bytes() == original
-    assert (destination / "content.json").is_file()
 
 
 def test_exercise_schema_is_available_without_changing_the_study_schema() -> None:

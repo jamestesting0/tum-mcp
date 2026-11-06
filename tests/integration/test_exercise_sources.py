@@ -2,14 +2,15 @@ import json
 from pathlib import Path
 
 import pytest
+from documents import content_file
 
+from tum_mcp.course.app.build import build
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_build import build
 
 
 def _data(project: Path) -> dict:
     return json.loads(
-        (project / "study/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
+        (project / "app/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
     )
 
 
@@ -29,13 +30,13 @@ def test_combined_build_includes_prepared_guidance_and_revisions(exercise_projec
 
 def test_exercises_only_build_requires_no_dummy_study_content(exercise_project: Path) -> None:
     # Given an exercises-only course with the same source inventory.
-    (exercise_project / "study/content.json").unlink()
+    (content_file(exercise_project, "study")).unlink()
     # When building prepared content.
     build(exercise_project, publish=False)
     # Then the sole available workspace is Exercises, with no authored Study stub.
     assert _data(exercise_project)["workspaces"] == ["exercises"]
     assert _data(exercise_project)["units"] == []
-    assert not (exercise_project / "study/content.json").exists()
+    assert not (content_file(exercise_project, "study")).exists()
 
 
 @pytest.mark.parametrize("fault", ["course", "source"])
@@ -43,7 +44,7 @@ def test_invalid_exercise_binding_preserves_the_last_verified_build(
     exercise_project: Path, fault: str
 ) -> None:
     # Given an edited exercise file that cannot be trusted for this inventory.
-    path = exercise_project / "study/exercises.json"
+    path = content_file(exercise_project, "exercises")
     payload = json.loads(path.read_bytes())
     if fault == "course":
         payload["course_key"] = "another-course"
@@ -51,9 +52,9 @@ def test_invalid_exercise_binding_preserves_the_last_verified_build(
         for exercise in payload["sets"][0]["exercises"]:
             exercise["sources"][0]["sha256"] = "b" * 64
     path.write_text(json.dumps(payload))
-    before = (exercise_project / "study/data.mjs").read_bytes()
+    before = (exercise_project / "app/data.mjs").read_bytes()
     # When rebuilding, neither a foreign exercise nor stale content can disappear silently.
     with pytest.raises(CampusError) as caught:
         build(exercise_project, publish=False)
     assert caught.value.code == (Code.SCOPE_DENIED if fault == "course" else Code.STALE_RESULT)
-    assert (exercise_project / "study/data.mjs").read_bytes() == before
+    assert (exercise_project / "app/data.mjs").read_bytes() == before

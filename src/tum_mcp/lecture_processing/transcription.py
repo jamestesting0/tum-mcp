@@ -7,8 +7,8 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from tum_mcp.course.lecture.evidence import Interval
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing import runtime
 from tum_mcp.lecture_processing.timeline import MapPiece, Timeline
 from tum_mcp.lecture_processing.transcript_models import AudioQuality, Passage, Recognition

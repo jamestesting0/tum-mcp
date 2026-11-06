@@ -8,8 +8,8 @@ Client adapters still generate the configuration each host needs.
 
 ```sh
 uv sync --locked
-uv run ruff check src tests scripts skill-lab
-uv run ruff format --check src tests scripts skill-lab
+uv run ruff check src tests scripts
+uv run ruff format --check src tests scripts
 uv run pytest -n logical --dist loadfile --tb=short --durations=20 -o faulthandler_timeout=120
 uv build
 node npm/build.mjs
@@ -25,7 +25,6 @@ use synthetic sources and credentials. No language-server installation is needed
 `-n logical --dist loadfile` (pytest-xdist) runs one worker per logical CPU and keeps
 each file's module-scoped browser on one worker; drop it to debug a test serially.
 (`-n auto` counts physical cores and starts only two workers on 4-vCPU hosted runners.)
-The synthetic skill-lab tests run separately (`uv run pytest skill-lab/tests`), not in CI.
 
 Every test gets private `TUM_MCP_DATA_DIR`, `TUM_MOODLE_DATA_DIR` and
 `TUM_MOODLE_DOWNLOAD_DIR` folders from an autouse fixture in `tests/conftest.py`, so a
@@ -182,13 +181,30 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/connect.py` | Unified interactive connection workflow |
 | `src/tum_mcp/credentials.py`, `transport.py`, `settings.py` | Shared campus credential vault, HTTP transport and account policy |
 | `src/tum_mcp/client_*.py` | Host-specific configuration and managed skill installation |
-| `src/tum_mcp/study_*.py` | Course snapshots, teaching, build, preview and project-local passage comments |
+| `src/tum_mcp/course/project/` | Course state, paths, init, sync, status, the agent guide and the recorded schedule |
+| `src/tum_mcp/course/sources/` | Page text, search, imports, duplicates and source digests |
+| `src/tum_mcp/course/content/` | Per-workspace content models (study blocks, exercises, exam, responses) and the one per-item file loader (`store.py`) |
+| `src/tum_mcp/course/ledger/` | Coverage ledger and the preparation states derived from its links |
+| `src/tum_mcp/course/checks/` | Report flags, structure map, answer keys (`answers.py`) and structured plans (`plans.py`) |
+| `src/tum_mcp/course/review/` | Review loop: check registry, items and fingerprints, ledger v2, packets, checker runner, scorecard and the `review` CLI |
+| `src/tum_mcp/course/app/` | Build, preview, visual and interaction checks, comments and publication |
+| `src/tum_mcp/course/memory/`, `media/`, `lecture/` | Course memory, audio and video notes, and the Lecture workspace |
+| `src/tum_mcp/course/cli.py`, `output.py` | The `study` command group and its compact output |
+| `src/tum_mcp/bundled/course_app/site/` | The course app: renderer modules and styles |
+| `src/tum_mcp/bundled/review/checks.json`, `bundled/exemplars/` | The check registry and the gate-passing exemplar with its plan and answer key |
 | `src/tum_mcp/bundled/skills/` | Canonical versioned source of reading, study, audio and video skills and their references/assets |
-| `src/tum_mcp/exam_*.py` | Exam contracts, derived statistics, report and map layout; prepared content is publishable |
-| `src/tum_mcp/study_text.py`, `study_import.py`, `study_duplicates.py` | Page-text cache, private local imports and cross-provider duplicate reports |
-| `src/tum_mcp/video_*.py`, `bundled/video_runtime/` | Video Notes contracts, lint, media checks, orchestration and the isolated render worker |
+| `bundled/video_runtime/` | The isolated Video Notes render worker |
 | `npm/` | Private-runtime installation, updates, integrity and cleanup |
 | `tests/` | Synthetic backend, package and owned-browser checks |
+
+Where to change what:
+
+| Change | Touches |
+| --- | --- |
+| A new block type | Its model in `course/content/study.py` (and the `Block` union), its renderer in `course_app/site/`, the check registry when a check reads it, the exemplar or demo that shows it, the prepare-study content reference and tests |
+| A new review profile or check | `bundled/review/checks.json` (and `review/registry.py` for a profile), the checklist it prints and the review-course profile notes |
+| A new report flag | `course/checks/report.py` (or the workspace's flag function), `INVARIANT_FLAGS` in `review/models.py` when it always means a defect, and the check whose `decided_by` names it |
+| A new authored file under `.tum-mcp/` | Its model, a `study schema` kind and the skill step that writes it |
 
 Client setup installs managed copies of the repository's skills; those copies are
 outputs, not another source tree. Use `skills customize` for a personal override.
@@ -203,15 +219,16 @@ material remain untrusted data for the skill.
 
 ## Study renderer
 
-Author `app/content.json` and optional `app/exercises.json`; legacy `study/` remains supported. Formula blocks and inline math are LaTeX, validated by
+Author one file per item under `app/` (`app/study/`, `app/exercises/`, `app/exam/`, `app/lectures/`); `course/content/store.py` assembles and validates them. Formula blocks and inline math are LaTeX, validated by
 compiling it locally into safe MathML; the app typesets the validated LaTeX with the
 vendored KaTeX (`katex.min.js`, `trust` off, rendered through DOM APIs so the strict CSP
-holds) and falls back to that MathML. Legacy MathML remains accepted. Unit `path` labels group the outline
+holds) and falls back to that MathML. Unit `path` labels group the outline
 without changing learning-progress revisions. Shared modules render all units;
 content changes do not require a framework or per-unit HTML.
 
 Shared renderer assets live in `src/tum_mcp/bundled/course_app/site/`; they are the
-source of truth for layout, styling and interaction. Design tokens sit at the top of
+source of truth for layout, styling and interaction, and
+[the design contract](course-app-design.md) describes their components and states. Design tokens sit at the top of
 `styles.css`, and the owned-browser fixtures in `tests/integration/` hold the UI
 regressions. Vertical spacing follows four relationships, each one token: a control to
 the panel it opens (`--space-inside`), content to its own control such as Guide,
@@ -261,8 +278,8 @@ The worker shares narration timing and rendering; `self.cue(index)` uses measure
 sentence bounds. `video_style.py` stages effective app CSS colors; no worker palette
 is maintained separately. Contact sheets sample entry/middle/exit frames.
 
-`study_media.py` discovers optional manifests/plans read-only and verifies actual
-artifact hashes; `study_media_report.py` checks score/evidence contracts. Media
+`course/media/inventory.py` discovers optional manifests/plans read-only and verifies actual
+artifact hashes; `course/review/media.py` checks score/evidence contracts. Media
 averages are separate. Course structure includes source/chapter/coverage links,
 not codec bytes. Pruned render caches do not erase published source identities.
 Malformed optional media leaves ordinary Study diagnostics available.
@@ -327,7 +344,7 @@ Graph fixtures opt in explicitly; base/default-off tests must remain unselected.
 conflict-safe removal, reinstall and stale evidence. The installed consumer runs
 the extension lifecycle through the packaged launcher. No model trials are needed.
 
-Knowledge projection is request-local: `study_knowledge_store` captures metadata and
+Knowledge projection is request-local: `course/memory/store.py` captures metadata and
 selected source observations; evidence checks reuse lecture receipts/figures through
 optional observers; projection preserves native schemas; assertions compute independent
 review fingerprints; query and packet modules enforce deterministic traversal and UTF-8
@@ -353,7 +370,7 @@ find their answers, using one prepared project copied per case. The bridge compa
 timings, 300-unit profile and `.omo/evidence/study-knowledge-harness/` files run only
 with `TUM_MCP_KNOWLEDGE_EVALUATION=1 uv run pytest -q
 tests/integration/test_study_knowledge_evaluation.py`. Agent effectiveness
-needs paired model trials in the dev-only skill lab, with exact model/revision/corpus
+needs paired model trials with exact model/revision/corpus
 identity, unsuccessful runs retained and quality, tokens, setup and update latency
 reported separately. Retrieval tests alone do not establish student learning gains.
 

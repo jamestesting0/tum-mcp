@@ -11,7 +11,7 @@ from playwright.sync_api import Browser
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.study_preview import Handler, PreviewServer
+from tum_mcp.course.app.preview import Handler, PreviewServer
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Explicit owned browser QA."
@@ -24,7 +24,7 @@ GAPS = """() => {
   const root = getComputedStyle(document.documentElement);
   const px = name => parseFloat(root.getPropertyValue(name)) || 0;
   const control = el =>
-    el.matches('.disclosure:not(.pending-sheets), .exercise-help, .exercise-actions');
+    el.matches('.disclosure:not(.pending-sheets), .exercise-help, .exercise-actions, .pill-panel');
   const heading = el => el.matches('h1, h2, h3, h4, h5, h6, .section-heading');
   const shown = el => el.getBoundingClientRect().height > 0 && !el.matches('.visually-hidden')
     && !['absolute', 'fixed'].includes(getComputedStyle(el).position);
@@ -38,9 +38,14 @@ GAPS = """() => {
       if (a.matches('.exam-drill-item') && b.matches('.exam-drill-item')) {
         found.push(['between', gap, b.className]);
       }
+      if (a.matches('.definitions') && b.matches('.block-body')) {
+        found.push(['passage', gap, b.className]);
+      }
     }
   }
-  return { found, related: px('--space-related'), between: px('--space-between') };
+  return {
+    found, related: px('--space-related'), between: px('--space-between'), passage: px('--s4')
+  };
 }"""
 
 
@@ -77,6 +82,18 @@ def test_controls_and_practise_items_keep_one_spacing_per_relationship(
         result = page.evaluate(GAPS)
         for relation, gap, name in result["found"]:
             measured.append((route, relation, gap - result[relation], name))
+    # The text-and-icon search button needs the same glyph styling as icon-only buttons.
+    icon = page.locator(".sidebar-search svg").evaluate(
+        """svg => {
+          const style = getComputedStyle(svg);
+          return {
+            width: parseFloat(style.width), height: parseFloat(style.height),
+            fill: style.fill, stroke: style.stroke
+          };
+        }"""
+    )
+    assert 0 < icon["width"] <= 24 and 0 < icon["height"] <= 24
+    assert icon["fill"] == "none" and icon["stroke"] != "none"
     page.close()
     assert any(relation == "related" for _, relation, _, _ in measured)
     assert [m for m in measured if m[2]] == []

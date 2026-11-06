@@ -1,16 +1,18 @@
 import json
 from pathlib import Path
 
-from tum_mcp.study_build import build
+from documents import content_file
+
+from tum_mcp.course.app.build import build
 
 
 def test_reorganizing_folders_keeps_unit_progress_revisions(project: Path) -> None:
     def app_data() -> dict:
-        text = (project / "study/data.mjs").read_text(encoding="utf-8")
+        text = (project / "app/data.mjs").read_text(encoding="utf-8")
         return json.loads(text.removeprefix("export default ").removesuffix(";\n"))
 
     before = app_data()
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     content = json.loads(path.read_bytes())
     content["units"][0]["path"] = ["Week 1", "Foundations"]
     path.write_text(json.dumps(content), encoding="utf-8")
@@ -23,7 +25,7 @@ def test_reorganizing_folders_keeps_unit_progress_revisions(project: Path) -> No
 def test_latex_is_compiled_into_generated_data_without_rewriting_author_input(
     project: Path,
 ) -> None:
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     content = json.loads(path.read_bytes())
     formula = next(b for b in content["units"][0]["blocks"] if b["kind"] == "formula")
     formula.pop("mathml", None)
@@ -31,8 +33,8 @@ def test_latex_is_compiled_into_generated_data_without_rewriting_author_input(
     desired = json.dumps(content)
     path.write_text(desired, encoding="utf-8")
     build(project)
-    assert path.read_text(encoding="utf-8") == desired
-    output = (project / "study/data.mjs").read_text(encoding="utf-8")
+    assert json.loads(path.read_text(encoding="utf-8")) == json.loads(desired)
+    output = (project / "app/data.mjs").read_text(encoding="utf-8")
     data = json.loads(output.removeprefix("export default ").removesuffix(";\n"))
     rendered = next(b for b in data["units"][0]["blocks"] if b["kind"] == "formula")
     assert rendered["latex"] == formula["latex"]
@@ -42,7 +44,7 @@ def test_latex_is_compiled_into_generated_data_without_rewriting_author_input(
 def test_inline_notation_is_compiled_once_while_code_and_currency_stay_literal(
     project: Path,
 ) -> None:
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     content = json.loads(path.read_bytes())
     unit = content["units"][0]
     unit["summary"] = r"Use \(v_i\) for a vertex. A notebook costs $5."
@@ -53,7 +55,7 @@ def test_inline_notation_is_compiled_once_while_code_and_currency_stay_literal(
     path.write_text(original, encoding="utf-8")
     build(project, publish=False)
     data = json.loads(
-        (project / "study/data.mjs")
+        (project / "app/data.mjs")
         .read_text(encoding="utf-8")
         .removeprefix("export default ")
         .removesuffix(";\n")
@@ -62,4 +64,4 @@ def test_inline_notation_is_compiled_once_while_code_and_currency_stay_literal(
     assert "<msub>" in data["inlineMath"]["v_i"]
     assert "literal code" not in data["inlineMath"]
     assert data["units"][0]["summary"] == unit["summary"]
-    assert path.read_text(encoding="utf-8") == original
+    assert json.loads(path.read_text(encoding="utf-8")) == json.loads(original)

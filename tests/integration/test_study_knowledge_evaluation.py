@@ -10,19 +10,19 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from knowledge_annotations import connected_annotations, write_registry
 from knowledge_fixture import knowledge_project
 
-from tum_mcp.course_app_paths import app_path
+from tum_mcp.course.checks.structure import course_map
+from tum_mcp.course.memory.evidence import EvidenceChecks
+from tum_mcp.course.memory.packet import encoded
+from tum_mcp.course.memory.projection import project
+from tum_mcp.course.memory.query import _collect, context, impact, seeds
+from tum_mcp.course.memory.store import load_inputs
+from tum_mcp.course.project.store import confined, load_state, private_path
+from tum_mcp.course.sources.text import find_sources
 from tum_mcp.errors import CampusError
-from tum_mcp.study_knowledge_evidence import EvidenceChecks
-from tum_mcp.study_knowledge_packet import encoded
-from tum_mcp.study_knowledge_projection import project
-from tum_mcp.study_knowledge_query import _collect, context, impact, seeds
-from tum_mcp.study_knowledge_store import load_inputs
-from tum_mcp.study_store import confined, load_state, private_path
-from tum_mcp.study_structure import course_map
-from tum_mcp.study_text import find_sources
 
 CASES = json.loads(
     (Path(__file__).parents[1] / "fixtures/study_knowledge/retrieval-cases.json").read_bytes()
@@ -49,7 +49,7 @@ def prepared(tmp_path):
     ]
     path.write_text(json.dumps(value))
     # Synthetic reviewed decisions, computed only after the equal-corpus aliases are fixed.
-    from tum_mcp.study_knowledge_assertions import review_revision
+    from tum_mcp.course.memory.assertions import review_revision
 
     graph = project(load_inputs(root))
     for row in value["assertions"]:
@@ -114,7 +114,7 @@ def apply_change(root, change):
         )
         path.write_text(json.dumps(value))
     elif change == "uncertain":
-        path = app_path(root, "lectures.json")
+        path = content_file(root, "lectures")
         value = json.loads(path.read_bytes())
         value["evidence"][0]["reviewed"] = False
         value["lectures"][0]["coverage"]["status"] = "partial"

@@ -8,8 +8,9 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from tum_mcp.course.lecture.evidence import Interval
+from tum_mcp.course.project.store import confined
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing.media_http import MediaHTTP
 from tum_mcp.lecture_processing.media_models import (
     CacheEntry,
@@ -20,7 +21,6 @@ from tum_mcp.lecture_processing.media_models import (
 from tum_mcp.lecture_processing.validity import Validity, require_content
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
-from tum_mcp.study_store import confined
 
 
 class CachedMedia(Frozen):

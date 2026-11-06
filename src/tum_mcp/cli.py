@@ -35,17 +35,20 @@ app.add_typer(skills_app, name="skills", help="Inspect and validate workflow ski
 from tum_mcp.tumonline.manage import app as manage_app  # noqa: E402
 
 app.add_typer(manage_app, name="manage", help="Manage provider permissions.")
-from tum_mcp.study_cli import app as study_app  # noqa: E402
+from tum_mcp.course.cli import app as study_app  # noqa: E402
 
 app.add_typer(study_app, name="study", help="Prepare, preview and publish a course app.")
-from tum_mcp.lecture_cli import app as lecture_app  # noqa: E402
+from tum_mcp.course.review.cli import app as review_app  # noqa: E402
+
+app.add_typer(review_app, name="review", help="Review prepared course content in gated rounds.")
+from tum_mcp.course.lecture.cli import app as lecture_app  # noqa: E402
 
 app.add_typer(
     lecture_app,
     name="lecture",
     help="Prepare recording evidence with the optional Lecture extension.",
 )
-from tum_mcp.video_cli import app as video_app  # noqa: E402
+from tum_mcp.course.media.video_cli import app as video_app  # noqa: E402
 
 app.add_typer(
     video_app,

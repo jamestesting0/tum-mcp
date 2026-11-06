@@ -7,8 +7,8 @@ import pytest
 from knowledge_annotations import annotation, connected_annotations, write_registry
 from knowledge_fixture import knowledge_project
 
-from tum_mcp.study_knowledge_packet import encoded
-from tum_mcp.study_knowledge_query import context, impact
+from tum_mcp.course.memory.packet import encoded
+from tum_mcp.course.memory.query import context, impact
 
 CASES = json.loads(
     (Path(__file__).parents[1] / "fixtures/study_knowledge/use-cases.json").read_bytes()

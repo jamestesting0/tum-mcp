@@ -5,8 +5,8 @@ from typing import Literal, assert_never
 
 from pydantic import Field, FiniteFloat, model_validator
 
+from tum_mcp.course.lecture.evidence import Interval, Recording
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval, Recording
 from tum_mcp.settings import Frozen
 
 

@@ -9,7 +9,7 @@ from playwright.sync_api import Browser
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.study_preview import Handler, PreviewServer
+from tum_mcp.course.app.preview import Handler, PreviewServer
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1",

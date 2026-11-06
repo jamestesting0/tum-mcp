@@ -9,8 +9,8 @@ from study_comments_fixture import open_notes, select_passage
 def activity_comment_checks(
     page: Page, project: Path, content: dict, view: str, pooled: bool
 ) -> None:
-    from tum_mcp.study_comment_models import Delete
-    from tum_mcp.study_comments import change_comment, read_comments
+    from tum_mcp.course.app.comment_models import Delete
+    from tum_mcp.course.app.comments import change_comment, read_comments
 
     owner = content["units"][1]
     if pooled:

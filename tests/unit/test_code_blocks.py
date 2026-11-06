@@ -1,8 +1,8 @@
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from tum_mcp.exercise_content import ExerciseContent
-from tum_mcp.study_content import Block
+from tum_mcp.course.content.exercises import ExerciseContent
+from tum_mcp.course.content.study import Block
 
 BLOCK = TypeAdapter(Block)
 CODE = "public class Counter {\n    private int count;\n\n    public void increment() {\n    }\n}\n"

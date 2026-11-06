@@ -2,11 +2,11 @@ import copy
 import json
 from pathlib import Path
 
-from tum_mcp.exam_content import Concept, ExamContent
-from tum_mcp.exercise_content import ExerciseContent
-from tum_mcp.lecture_content import LectureContent
-from tum_mcp.study_content import StudyContent
-from tum_mcp.study_structure import course_map, structure_flags, structure_revision
+from tum_mcp.course.checks.structure import course_map, structure_flags, structure_revision
+from tum_mcp.course.content.exam import Concept, ExamContent
+from tum_mcp.course.content.exercises import ExerciseContent
+from tum_mcp.course.content.study import StudyContent
+from tum_mcp.course.lecture.content import LectureContent
 
 FIXTURES = Path(__file__).parents[1] / "fixtures"
 PASSAGE = (

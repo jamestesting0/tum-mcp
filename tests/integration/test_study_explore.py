@@ -5,14 +5,15 @@ import os
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from pydantic import ValidationError
 from study_explore_fixture import add_explore
 
+from tum_mcp.course.app.build import build, read_content, unit_revision
+from tum_mcp.course.app.publish_site import export_site
+from tum_mcp.course.ledger.coverage import CoverageLedger, coverage_report, read_ledger
+from tum_mcp.course.project.store import load_state, private_path
 from tum_mcp.errors import CampusError
-from tum_mcp.study_build import build, read_content, unit_revision
-from tum_mcp.study_coverage import CoverageLedger, coverage_report, read_ledger
-from tum_mcp.study_publish_site import export_site
-from tum_mcp.study_store import load_state, private_path
 
 
 def test_optional_source_edits_require_review_without_resetting_core_progress(
@@ -22,7 +23,7 @@ def test_optional_source_edits_require_review_without_resetting_core_progress(
     add_explore(project)
     build(project, publish=False)
     payload = json.loads(
-        (project / "study/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
+        (project / "app/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
     )
     unit = next(unit for unit in payload["units"] if unit["key"] == "bfs")
     assert unit["revision"] == unit_revision(before)
@@ -85,7 +86,6 @@ def test_optional_backlog_does_not_hide_core_gaps_or_unknown_coverage(project: P
                     "key": "queue",
                     "text": "Use a queue.",
                     "locator": "Section 1",
-                    "status": "covered",
                     "units": ["bfs"],
                 }
             ],
@@ -111,15 +111,16 @@ def test_optional_backlog_does_not_hide_core_gaps_or_unknown_coverage(project: P
     assert not report["core_complete"]
     assert report["study_preparation"]["unrecorded"][0]["source"] == "bfs"
     # Enrichment cannot borrow core unit references to pretend it has been prepared.
-    outcome.update(status="covered", units=["bfs"])
+    outcome.pop("status", None)
+    outcome.update(units=["bfs"])
     with pytest.raises(ValidationError):
         CoverageLedger.model_validate(ledger)
 
 
 def test_classification_and_optional_content_invalidate_the_correct_reviews(project: Path) -> None:
-    from tum_mcp.study_report import quality_flags
-    from tum_mcp.study_review import revision
-    from tum_mcp.study_structure import structure_revision
+    from tum_mcp.course.checks.report import quality_flags
+    from tum_mcp.course.checks.structure import structure_revision
+    from tum_mcp.course.review.models import revision
 
     add_explore(project)
     before = read_content(project)
@@ -137,7 +138,7 @@ def test_classification_and_optional_content_invalidate_the_correct_reviews(proj
     payload = before.model_dump(mode="json")
     changed = next(unit for unit in payload["units"] if unit["key"] == "bfs")
     changed["explore"][0]["blocks"][0]["paragraphs"] = ["The answer is 2 + 2 = 5."]
-    from tum_mcp.study_content import StudyContent
+    from tum_mcp.course.content.study import StudyContent
 
     after = StudyContent.model_validate(payload)
     changed_unit = next(unit for unit in after.units if unit.key == "bfs")
@@ -157,10 +158,10 @@ def test_render_checker_measures_the_real_optional_route(project: Path) -> None:
     from typer.testing import CliRunner
 
     from tum_mcp.cli import app
-    from tum_mcp.study_visuals import render_report, report_path
+    from tum_mcp.course.app.visuals import render_report, report_path
 
     add_explore(project)
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     payload = json.loads(path.read_bytes())
     unit = next(unit for unit in payload["units"] if unit["key"] == "bfs")
     unit["explore"][0]["blocks"].append(
@@ -176,7 +177,7 @@ def test_render_checker_measures_the_real_optional_route(project: Path) -> None:
     )
     path.write_text(json.dumps(payload))
     build(project, publish=False)
-    result = CliRunner().invoke(app, ["study", "visuals", str(project), "--unit", "bfs"])
+    result = CliRunner().invoke(app, ["study", "visuals", str(project), "--unit", "bfs", "--json"])
     assert result.exit_code == 0, result.output
     checked = json.loads(result.output)
     assert checked["passed"], checked["defects"]
@@ -193,12 +194,12 @@ def test_optional_math_and_image_are_exported_without_private_inventory(project:
     from PIL import Image
 
     add_explore(project)
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     payload = json.loads(path.read_bytes())
     unit = next(unit for unit in payload["units"] if unit["key"] == "bfs")
     item = unit["explore"][0]
     item["blocks"][0]["paragraphs"].append(r"An optional expression is \(x^2\).")
-    image = project / "study/figures/explore-only.png"
+    image = project / "app/figures/explore-only.png"
     image.parent.mkdir(exist_ok=True)
     Image.new("RGB", (16, 16), "white").save(image)
     item["blocks"].append(
@@ -222,11 +223,11 @@ def test_optional_math_and_image_are_exported_without_private_inventory(project:
 def test_optional_definition_cannot_supply_core_teaching_or_exercise_prerequisites(
     exercise_project: Path,
 ) -> None:
-    from tum_mcp.exercise_data import check_prerequisites, read_exercises
-    from tum_mcp.study_content import StudyContent
+    from tum_mcp.course.content.exercise_data import check_prerequisites, read_exercises
+    from tum_mcp.course.content.study import StudyContent
 
     add_explore(exercise_project)
-    path = exercise_project / "study/content.json"
+    path = content_file(exercise_project, "study")
     payload = json.loads(path.read_bytes())
     unit = next(unit for unit in payload["units"] if unit["key"] == "bfs")
     unit["explore"][0]["blocks"].append(
@@ -247,7 +248,7 @@ def test_optional_definition_cannot_supply_core_teaching_or_exercise_prerequisit
     exercises["sets"][0]["exercises"][0]["prerequisites"] = [
         {"unit": "bfs", "block": "history", "explanation": "Requires the optional passage."}
     ]
-    from tum_mcp.exercise_content import ExerciseContent
+    from tum_mcp.course.content.exercises import ExerciseContent
 
     with pytest.raises(CampusError, match="does not have"):
         check_prerequisites(ExerciseContent.model_validate(exercises), study)

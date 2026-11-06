@@ -1,7 +1,7 @@
 import pytest
 
-from tum_mcp.video_content import Storyboard
-from tum_mcp.video_lint import lint
+from tum_mcp.course.media.video_content import Storyboard
+from tum_mcp.course.media.video_lint import lint
 
 BOARD = Storyboard.model_validate(
     {

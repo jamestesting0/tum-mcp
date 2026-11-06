@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from documents import content_file
 from playwright.sync_api import Page, expect
 from study_comments_fixture import open_notes, select_passage
 
@@ -38,9 +39,9 @@ def mobile_outline_checks(page: Page, content: dict) -> None:
 
 
 def inline_math_checks(page: Page, project: Path, content: dict) -> None:
-    from tum_mcp.study_build import build
+    from tum_mcp.course.app.build import build
 
-    source = project / "study/content.json"
+    source = content_file(project, "study")
     original = source.read_bytes()
     changed = json.loads(original)
     unit = changed["units"][0]
@@ -90,8 +91,8 @@ def inline_math_checks(page: Page, project: Path, content: dict) -> None:
         page.locator(".flashcard").click()
         assert page.locator(f".card-back :is({EXPRESSIONS})").count() == 2
     finally:
-        from tum_mcp.study_comment_models import Delete
-        from tum_mcp.study_comments import change_comment, read_comments
+        from tum_mcp.course.app.comment_models import Delete
+        from tum_mcp.course.app.comments import change_comment, read_comments
 
         notes = read_comments(project)
         for item in notes["comments"]:

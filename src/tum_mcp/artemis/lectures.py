@@ -152,7 +152,7 @@ class Lectures:
                 break
         saved = None
         if save_original:
-            from tum_mcp.study_store import confined, read_bytes
+            from tum_mcp.course.project.store import confined, read_bytes
 
             relative = (
                 f"downloads/artemis/{self.api.account.id}/course-{course_id}/"

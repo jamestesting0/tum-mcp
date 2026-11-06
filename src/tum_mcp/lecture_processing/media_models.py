@@ -7,8 +7,8 @@ from urllib.parse import parse_qsl, unquote, urlencode, urljoin, urlsplit
 
 from pydantic import Field, SecretStr
 
+from tum_mcp.course.lecture.evidence import Interval
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.settings import Frozen
 
 MAX_PLAYLIST_BYTES: Final = 4 * 1024 * 1024

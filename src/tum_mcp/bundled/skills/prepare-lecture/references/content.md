@@ -1,7 +1,7 @@
 # Authoring contract
 
 Use `tum-mcp study schema lectures` for the installed authoritative schema.
-Keep one course app, in its current app/ or legacy study/ layout. Author only the
+Keep one course app in app/. Author only the
 requested lectures; preserve other workspaces and custom renderer files.
 
 When preparation added/changed safe source receipts:

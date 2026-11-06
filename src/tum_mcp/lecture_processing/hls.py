@@ -6,8 +6,8 @@ from urllib.parse import urljoin
 import m3u8
 from pydantic import SecretStr, ValidationError
 
+from tum_mcp.course.lecture.evidence import Interval
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing.hls_wire import Playlist, Resource, Variant
 from tum_mcp.lecture_processing.media_models import (
     MAX_PLAYLIST_BYTES,

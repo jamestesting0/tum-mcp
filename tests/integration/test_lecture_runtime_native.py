@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tum_mcp.course.lecture.evidence import Interval
 from tum_mcp.errors import CampusError
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing import runtime
 from tum_mcp.lecture_processing.runtime_process import worker_path
 from tum_mcp.lecture_processing.runtime_spec import cuda_host, mac_major, nvidia_devices

@@ -4,16 +4,18 @@ import json
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from knowledge_annotations import annotation, write_registry
 from knowledge_fixture import knowledge_project
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.clients import install_client
+from tum_mcp.course.project.store import load_state, private_path
+from tum_mcp.course.review import loop
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extension_selection import course_memory_enabled
 from tum_mcp.skills import export_pack, inspect_skills
-from tum_mcp.study_store import load_state, private_path
 
 
 @pytest.fixture
@@ -129,32 +131,13 @@ def test_uninstall_preserves_files_and_native_review_then_reinstall_checks_sourc
     write_registry(root, [annotation(root)], reviewed=True)
     sidecar = private_path(root, "knowledge.json")
     before = sidecar.read_bytes()
-    review = json.loads(
-        runner.invoke(app, ["study", "report", str(root), "--section", "review"]).output
-    )["review"]["course"]
-    private_path(root, "review.json").write_text(
-        json.dumps(
-            {
-                "course_key": load_state(root).course.key,
-                "reviews": [],
-                "course": {
-                    "revision": review["revision"],
-                    "knowledge_revision": review["knowledge_revision"],
-                    "reviewed_at": "2026-10-31",
-                    "scores": {d: 3 for d in review["dimensions"]},
-                },
-            }
-        )
-    )
+    with_memory = loop.load(root).items["course"].blocks
+    assert "knowledge" in with_memory
     removed = runner.invoke(app, ["uninstall", "course-memory", "--json"])
     assert removed.exit_code == 0, removed.output or repr(removed.exception)
     assert not course_memory_enabled() and sidecar.read_bytes() == before
     assert not (profile / ".cursor/skills/course-memory").exists()
-    native = json.loads(
-        runner.invoke(app, ["study", "report", str(root), "--section", "review"]).output
-    )["review"]["course"]
-    assert native["status"] == "fresh" and native["revision"] == review["revision"]
-    assert "knowledge_revision" not in native
+    assert loop.load(root).items["course"].blocks == {"structure": with_memory["structure"]}
     for arguments in (
         ["context", str(root), "Observer"],
         ["impact", str(root), "--source", "slides"],
@@ -211,7 +194,7 @@ def test_source_sync_requires_content_and_semantic_review_before_reactivation(
     # Review the changed source and unchanged toy meaning before updating authored receipts.
     source = next(s for s in load_state(root).resources if s.resource.key == "slides")
     assert (root / source.path).read_bytes().endswith(b"% reviewed toy release\n")
-    content = root / "app/content.json"
+    content = content_file(root, "study")
     value = json.loads(content.read_bytes())
     for unit in value["units"]:
         for segment in [unit, *unit.get("explore", [])]:

@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from playwright.sync_api import Browser, sync_playwright
 from typer.testing import CliRunner
 
@@ -52,12 +53,10 @@ def built_project(tmp_path_factory: pytest.TempPathFactory) -> Path:
     )
     assert result.exit_code == 0, result.output
     (root / "app").mkdir()
-    shutil.copyfile(example / "content.json", root / "app/content.json")
-    from tum_mcp.study_build import build
+    content_file(root, "study").write_bytes((example / "content.json").read_bytes())
+    from tum_mcp.course.app.build import build
 
     build(root, publish=False)
-    # Keep the established fixture a legacy project to protect its supported contracts.
-    (root / "app").rename(root / "study")
     return root
 
 
@@ -69,8 +68,8 @@ def project(tmp_path: Path, built_project: Path) -> Path:
 @pytest.fixture
 def exercise_project(project: Path, request: pytest.FixtureRequest) -> Path:
     """Reuse one source-bound exercise fixture across build and browser scenarios."""
-    from tum_mcp.study_build import read_content
-    from tum_mcp.study_store import load_state
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.project.store import load_state
 
     content = read_content(project)
     source = next(unit for unit in content.units if unit.key == "weighted").sources[0]
@@ -91,5 +90,5 @@ def exercise_project(project: Path, request: pytest.FixtureRequest) -> Path:
                 step["check"]["plot"]["sources"] = [source.key]
             if step.get("check", {}).get("kind") == "graph":
                 step["check"]["graph"]["sources"] = [source.key]
-    (project / "study/exercises.json").write_text(json.dumps(payload))
+    (content_file(project, "exercises")).write_text(json.dumps(payload))
     return project

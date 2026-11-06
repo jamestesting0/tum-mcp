@@ -17,7 +17,8 @@ every slide, sheet or exam page you rely on: `tum-mcp study text` finds and quot
 drops figures and scrambles tables and formulas. Open the PDF page if your tools display
 PDFs; otherwise add `--images` and open the image.
 
-You author `app/exam.json` (`study schema exam`); `tum-mcp study build PROJECT`
+You author the files under `app/exam/` (`exam.json`, and one file per concept, pattern
+and mock; `study schema exam`); `tum-mcp study build PROJECT`
 renders it as the Exam workspace beside Study and Exercises. Code derives every
 count, rate, order, map position and blueprint; the schema has no count fields.
 Publishing the course app includes prepared Exam content; original documents and
@@ -49,21 +50,26 @@ source citations stay local. Use publish-course for a publication request.
    workflow step and covers each case once, and a drill that practises every case again
    without steps. Programming tasks follow
    [coding](../prepare-exercises/references/coding.md).
-6. **Practice** ([forecast](references/forecast.md)). Make chosen past papers
-   replayable with guidance; write forecast exams to the real exam's blueprint from
+6. **Practice** ([forecast](references/forecast.md)). Make every in-scope past paper
+   replayable by default (statement and solution; a solution you wrote is labelled as
+   yours), with guidance; a listed paper students cannot practise holds the gate. Where a
+   question's answer is computable, its answer key in `.tum-mcp/checks/` computes the
+   forecast variants' answers too; write forecast exams to the real exam's blueprint from
    `exam-report --section blueprint`, as genuine variants or untested core ideas.
    Every question you write shows its figure, code, diagram, UML diagram, formula, table or
    plot beside the text, and reads as in [writing](../prepare-study/references/writing.md).
-7. **Build and verify** ([verification](references/verification.md)). Edit
-   `exam.json` programmatically by key and preserve unrelated items. Build once per
-   coherent batch, review `exam-report --section targets`, pass the
-   [review gate](../prepare-study/references/review.md), run
-   `tum-mcp study visuals PROJECT --exam` and fix what it reports, then check the app. Solutions
+7. **Build and verify** ([verification](references/verification.md)). Edit each item's
+   own file and preserve unrelated items; plan patterns (their cases) before writing and
+   lint each with `tum-mcp study lint PROJECT --item exam/pattern/KEY`; after editing
+   cheatsheet entries lint the sheet with `--item exam/sheet`. Build once per
+   coherent batch, review `exam-report --section targets`, finish Phase A of the
+   [draft checks](../prepare-study/references/loop.md), run
+   `tum-mcp study visuals PROJECT --exam` and `--interact`, and fix what they report. Solutions
    answer each part once, labelled, in the form the part asks for. When a question needs
    knowledge Study lacks, record it in the [coverage ledger](../prepare-study/references/coverage.md).
-   Review cheatsheet changes from
-   `tum-mcp study review-pack PROJECT --item exam/sheet --pass cheatsheet`; with Study, also
-   run the [course pass](../review-course/references/course.md).
+   Every cheatsheet fact or definition needs a Study flashcard or question that asks for
+   it, so Revision retrieves it. The review loop ([review-course](../review-course/SKILL.md))
+   checks the cheatsheet, each pattern and each mock question with their profiles.
 8. **Report** sittings, questions and their coverage, review items, kept outliers with
    reasons, gaps and checks actually run. Launch with `tum-mcp study`.
 

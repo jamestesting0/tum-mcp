@@ -53,7 +53,7 @@ def test_secondary_browser_smoke_loads_compiled_assets_and_rejects_missing_modul
 ) -> None:
     from browser_consumer_fixture import study_smoke
 
-    site = project / "study"
+    site = project / "app"
     if missing is not None:
         (site / missing).unlink()
         with pytest.raises((AssertionError, BrowserTimeout)):

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from tum_mcp.study_content import Block, has_visual
+from tum_mcp.course.content.study import Block, has_visual
 
 BLOCK = TypeAdapter(Block)
 

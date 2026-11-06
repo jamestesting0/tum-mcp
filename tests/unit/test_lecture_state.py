@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from tum_mcp.course.project.models import Snapshot
 from tum_mcp.settings import (
     Account,
     CourseMapping,
@@ -12,7 +13,6 @@ from tum_mcp.settings import (
     preferences,
     save_account,
 )
-from tum_mcp.study_models import Snapshot
 
 
 def test_legacy_state_keeps_version_and_live_state_requires_new_version() -> None:

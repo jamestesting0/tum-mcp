@@ -4,8 +4,8 @@ import httpx2
 import pytest
 from pydantic import SecretStr
 
+from tum_mcp.course.lecture.evidence import SilenceMarker
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import SilenceMarker
 from tum_mcp.lecture_processing.hls import media_manifest, parse_playlist
 from tum_mcp.lecture_processing.media import MediaCache, acquire
 from tum_mcp.lecture_processing.media_budget import TransferBudget

@@ -7,8 +7,9 @@ from pathlib import Path
 
 from filelock import FileLock, Timeout
 
+from tum_mcp.course.lecture.evidence import Interval, Recording, merge_intervals
+from tum_mcp.course.project.store import confined, digest
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval, Recording, merge_intervals
 from tum_mcp.lecture_processing import runtime
 from tum_mcp.lecture_processing.acquisition import Acquisition
 from tum_mcp.lecture_processing.cached_selection import previous_selection
@@ -37,7 +38,6 @@ from tum_mcp.lecture_processing.receipts import (
 )
 from tum_mcp.lecture_processing.validity import Validity, require_content
 from tum_mcp.moodle.config import private_write
-from tum_mcp.study_store import confined, digest
 from tum_mcp.tum_live.client import TumLive
 from tum_mcp.tum_live.wire import Watch
 

@@ -1,6 +1,6 @@
 import pytest
 
-from tum_mcp.study_math import inline_math, validate_inline
+from tum_mcp.course.content.latex import inline_math, validate_inline
 
 
 def test_inline_code_stays_literal_and_math_beside_it_compiles() -> None:

@@ -7,8 +7,8 @@ from PIL import Image
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.sources.text import document_text, find_sources, page_images
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_text import document_text, find_sources, page_images
 
 
 def test_pdf_text_is_extracted_once_per_hash_and_marks_pages_without_text(
@@ -31,7 +31,7 @@ def test_pdf_text_is_extracted_once_per_hash_and_marks_pages_without_text(
     def no_extraction(*_args: object) -> None:
         raise AssertionError("cached text must not be extracted again")
 
-    monkeypatch.setattr("tum_mcp.study_text._extract", no_extraction)
+    monkeypatch.setattr("tum_mcp.course.sources.text._extract", no_extraction)
     assert document_text(root, "exam-2024") == record
 
 

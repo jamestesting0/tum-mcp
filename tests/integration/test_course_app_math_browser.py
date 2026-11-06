@@ -12,7 +12,7 @@ from playwright.sync_api import Browser, expect
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.study_preview import Handler, PreviewServer
+from tum_mcp.course.app.preview import Handler, PreviewServer
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Explicit owned browser QA."
@@ -101,6 +101,13 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
           box.append(texElement(long, { display: true }));
           document.querySelector('main').append(box);
           const pieces = [...box.querySelectorAll('.tex-part')];
+          const feedback = document.createElement('p');
+          feedback.className = 'feedback';
+          const matrix = String.raw`\begin{pmatrix}1&1\\0&0\end{pmatrix}`;
+          const inline = texElement(`R^2=${matrix}${matrix}=${matrix}=R`);
+          inline.classList.add('inline-math');
+          feedback.append('Multiplying gives ', inline, '.');
+          box.append(feedback);
           return {
             scan: cases.map(c => ({
               parts: formulaParts(c.latex).map(part => part.latex),
@@ -109,6 +116,9 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
             rects: pieces.map(piece => piece.getClientRects().length),
             stacked: pieces[1].getBoundingClientRect().top
               > pieces[0].getBoundingClientRect().bottom - 1,
+            inlineOverflow: feedback.scrollWidth - feedback.clientWidth,
+            inlineRects: inline.querySelector('.tex-part').getClientRects().length,
+            inlineScroll: inline.scrollWidth > inline.clientWidth,
           };
         }""",
         cases,
@@ -119,6 +129,9 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
     # Each part stays on one line; the line breaks at the gap between them.
     assert result["rects"] == [1, 1]
     assert result["stacked"]
+    assert result["inlineOverflow"] <= 1
+    assert result["inlineRects"] == 1
+    assert result["inlineScroll"]
 
 
 @pytest.mark.parametrize("width", [390, 1280])
@@ -138,6 +151,11 @@ def test_derivations_align_on_one_relation_inside_their_section(
             r"G\begin{pmatrix}\cos\phi\\\sin\phi\end{pmatrix}="
             r"\begin{pmatrix}\cos(\phi+\theta)\\\sin(\phi+\theta)\end{pmatrix}",
         ],
+        [
+            r"YZ=iX,\qquad ZY=-iX",
+            r"ZX=iY,\qquad XZ=-iY",
+        ],
+        [r"XY=iZ", r"YZ=iX,\qquad ZY=-iX"],
     ]
     page = course_browser.new_page(viewport={"width": width, "height": 900})
     page.goto(example_url + "#study/components/content")
@@ -162,6 +180,8 @@ def test_derivations_align_on_one_relation_inside_their_section(
             offcentre: [...list.querySelectorAll('.derivation-math')]
               .map(math => centred(math, list.getBoundingClientRect())),
             overflow: list.scrollWidth - list.clientWidth,
+            wholeOverflow: [...list.querySelectorAll('.derivation-whole')]
+              .map(cell => cell.scrollWidth - cell.clientWidth),
             relations: [...list.querySelectorAll('.derivation-relation')]
               .map(cell => cell.textContent.trim() !== ''),
             lefts: [...new Set([...list.querySelectorAll('.derivation-relation')]
@@ -173,11 +193,12 @@ def test_derivations_align_on_one_relation_inside_their_section(
     page.close()
     for found in lists:
         assert found["overflow"] <= 1
+        assert all(overflow <= 1 for overflow in found["wholeOverflow"])
         assert all(found["relations"])
         # Beside a reason column the lines align on their relation; under their reasons each
         # line is a centred row.
         if found["beside"]:
-            assert len(found["lefts"]) == 1
+            assert len(found["lefts"]) == (1 if found["relations"] else 0)
         else:
             assert max(found["offcentre"]) <= 2
 

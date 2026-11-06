@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_validator
 
-from tum_mcp.lecture_evidence import Interval, Seconds
+from tum_mcp.course.lecture.evidence import Interval, Seconds
 from tum_mcp.settings import Frozen
 
 # Where a preflight sample or chunk failed: fetching media, reading a checkpoint, decoding

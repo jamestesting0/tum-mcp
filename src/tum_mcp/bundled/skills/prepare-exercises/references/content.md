@@ -1,10 +1,7 @@
 # Structured exercise input
 
 Run `tum-mcp study schema exercises` for the authoritative schema and `study inspect
-PROJECT` for source freshness. Author app/exercises.json, or study/exercises.json
-when that legacy layout already exists. Never create both folders. Layout upgrades
-are explicit: `study build PROJECT --upgrade-layout` retains a checked backup;
-ordinary legacy builds remain supported.
+PROJECT` for source freshness. Author app/exercises/sets.json and one file per problem, app/exercises/<set>/<problem>.json.
 
 The v1 document binds course_key to one course and contains stable sets with
 exercises. Preserve set/exercise/step keys across edits. Sources use inventory keys
@@ -27,6 +24,12 @@ Steps contain purpose, prompt, optional rich blocks, sources/check, requested hi
 and reviewed explanation. Students answer on paper; the app shows no answer boxes
 except the choice options, the code editor, and the graph and plot controls. Pick the
 check by what the student should compare with:
+
+Every authored question pairs its text with useful code, a diagram, formula, table
+or plot. Shared statement context can support several guide steps; do not copy it
+into each one. Preserve a released statement verbatim, but show its relevant object
+or a concrete application in the guide. A table that only repeats the prompt is
+not supporting material.
 
 | Check | Use and boundaries |
 | --- | --- |
@@ -99,7 +102,7 @@ of its statement; do not add an assumptions or sources passage, because the cita
 button already carries the sources (`study report` flags both). Do not repeat a given
 in the steps. When a statement relies on a slide or figure,
 redraw what it needs beside the statement and cite it with `pages`. Choose the shape as
-in [representations](../../prepare-study/references/review.md#choose-the-representation):
+in [representations](../../prepare-study/references/representations.md#choose-the-representation):
 code or signatures for code, UML for designs and interactions, a diagram or state table
 for structures, a figure for physical setups, a formula for symbols, a table for cases
 and traces, a matrix for two-input rules, a plot for growth. Write prompts, hints and

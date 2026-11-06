@@ -4,8 +4,8 @@ from typing import Literal
 
 from pydantic import Field
 
+from tum_mcp.course.lecture.evidence import Interval, Seconds, SilenceMarker, merge_intervals
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval, Seconds, SilenceMarker, merge_intervals
 from tum_mcp.settings import Frozen
 
 

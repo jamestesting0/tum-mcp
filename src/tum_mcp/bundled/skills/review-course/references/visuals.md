@@ -3,6 +3,9 @@
 Score every drawn visual (diagram, UML diagram, flowchart, plot, figure, table) the way the
 student sees it: from its desktop contact sheet (phone sheets only when asked), with the render
 findings and the cited source page beside it. Never score a visual from its JSON.
+Formulas, derivations and code are absent from these contact sheets. Inspect their
+affected passages and revealed answers in the built app; an empty sheet selection
+does not establish that those blocks render correctly.
 For Video Notes use [media evidence](media.md): entry/middle/exit samples plus
 complete playback, with each `cXX/bXX/key` visual scored on these six criteria.
 A right endpoint cannot repair an incorrect or missing intermediate construction.
@@ -41,7 +44,7 @@ Representation score never exceeds its weakest visual.
 | Criterion | 3 means | 2 | 1 |
 | --- | --- | --- | --- |
 | Fidelity | Says exactly what the source says: every node, edge, direction, label and value; nothing invented or dropped; discrete things drawn discrete; real scales | A simplification the text does not mention | A wrong, invented or dropped element; a misleading scale |
-| Form | The kind of block fits the idea, as in prepare-study's [representation table](../../prepare-study/references/review.md#choose-the-representation); how it is arranged is Layout | A workable but weaker form, such as a table for a decision tree | A form that hides the idea, such as numbered steps for a network |
+| Form | The kind of block fits the idea, as in prepare-study's [representation table](../../prepare-study/references/representations.md#choose-the-representation); how it is arranged is Layout | A workable but weaker form, such as a table for a decision tree | A form that hides the idea, such as numbered steps for a network |
 | Layout | Reading order kept; main path straight; meaningful positions (map, timeline, ring) kept; no crossing or bend the structure does not force | One avoidable crossing, bend or detour | The structure cannot be followed |
 | Legibility | Every label beside its own mark and clear of the others; text at least 12 px on a phone; the drawing fits the phone column, or scrolls only because it cannot be narrower | A phone scroll the content could avoid; crowded labels | A hard-gate finding |
 | Focus | One message; a picture's caption states it, a table of cases may name what it lists; colour and frames mark only what the caption discusses | Two messages, a picture whose caption names it or explains its symbols instead of its point, or a caption whose point the picture does not show | No visible message |

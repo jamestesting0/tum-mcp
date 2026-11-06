@@ -41,9 +41,10 @@ pse-ws26/
     state.json              Course binding, source versions and coverage
     notes/                  Detailed course/agent notes when needed
   app/                      Shared Study, Exercises, Exam and optional Lecture website
-    content.json            Optional source-backed Study content
-    exercises.json          Optional prepared exercise guidance
-    exam.json               Optional prepared Exam content
+    study/                  Study index and one file per unit
+    exercises/              Exercise-set index and one file per problem
+    exam/                   Exam index, concepts and patterns
+    lectures/               Optional Lecture index and entries
   audio/                    Optional category audio derived from the prepared website
   videos/                   Optional explainer videos derived from the prepared website
 ```
@@ -53,8 +54,8 @@ preferences outside it. The guide tells the agent that it works for a student of
 course, which skill handles which kind of request, how to read short requests such as
 "this week" or "the exam", where each kind of course information lives, and how to
 answer as a tutor: from the course's own sources and notation, with the next step
-before a full solution. `study sync` and `study upgrade` replace an outdated guide and
-keep the rest of the file; an edited guide is kept and reported for review.
+before a full solution. `study sync` replaces an outdated guide and
+keeps the rest of the file; an edited guide is kept and reported for review.
 
 The guide sends the agent to `.tum-mcp/course.md` first. That short handbook explains
 the course's goals, lectures/tutorials, weekly work and platforms, assessment/bonus
@@ -71,15 +72,6 @@ reports changed supporting sources and coverage gaps so refreshes can focus on
 affected claims. A reviewed local snapshot does not establish live freshness or
 complete understanding. See the bundled sync-course context reference for the full
 source-review workflow.
-
-To rename existing private `.study/` state explicitly, close other course processes
-and run `tum-mcp study upgrade PROJECT`. It preserves unknown private files,
-comments, publication settings and the full old root instructions as
-`.tum-mcp/legacy-AGENTS.md`. Course identity, materials and browser progress stay the
-same. Existing legacy state remains readable until upgrade; two state folders are
-a conflict to reconcile, never silently merged. This differs from the web-folder
-upgrade below. In a project that already uses `.tum-mcp/`, `study upgrade` only
-refreshes the agent guide in `AGENTS.md`.
 
 ## State-based workflow
 
@@ -114,7 +106,7 @@ restores files when possible and reports any remaining conflict.
 ## Prepare the website
 
 Ask `prepare-study` to create or extend the Study workspace in `app/`. The agent
-writes `app/content.json` from your stored course material, and `tum-mcp study build`
+writes one file per unit under `app/study/` from your stored course material, and `tum-mcp study build`
 installs the shared course app and checks every cited source. Units follow the
 course's lecture or week sequence when useful, or consistent topics, with at most
 one category level. Every unit has:
@@ -156,7 +148,7 @@ matrices, and long inline math that wraps after its relations on a phone. Screen
 readers get KaTeX's MathML copy. Derivation blocks show working line by line, aligned
 on the relation, and can step through it. Code and dollar signs stay literal. The app has light and dark themes and a phone layout.
 
-Content lives in `app/content.json`; shared renderer modules and CSS keep the
+Content lives in one file per item under `app/`; shared renderer modules and CSS keep the
 site extensible. Source hashes identify affected units. A stale source stops a
 build until the explanation is reviewed. Unchanged units retain their revision;
 revised questions receive separate progress. Customized templates are preserved
@@ -192,39 +184,52 @@ published sites contain prepared learning content, not authoring queues.
 
 `study visuals` opens every lesson, practice question, exercise step and Exam
 visual, including exercise Solution, Compare and transfer-answer blocks, in an installed
-Chrome, Edge or Chromium at phone (390 px), narrow (600 px) and
-desktop (1280 px) width. It reports lines through nodes, labels that overlap or sit on a
+Chrome, Edge or Chromium at desktop (1280 px) width; `--phone` adds phone (390 px) and
+narrow (600 px) widths. It reports lines through nodes, labels that overlap or sit on a
 line, text under 12 px, clipped text and drawings that differ from their block, writes
 contact sheets to `.tum-mcp/visuals/` and records the result in
 `.tum-mcp/visual-check.json`. Editing an item or updating the app makes its result stale,
 and `study report` lists items whose check is missing, stale or failing.
 
-Ask `review-course` to score the lessons and exercises the way a student meets them.
-It reads each item in six passes (logic, text, visuals, interaction, intuition and
-structure) and gives each unit, exercise and Exam pattern 1 to 3 points for correctness, clarity, cohesion,
-cognitive load, representation, practice, coverage, intuition, organization and
-redundancy. Each drawn visual gets its own score from the contact sheets for fidelity,
-form, layout, legibility, focus and convention, calibrated against a gallery of rated
-examples (`study visuals --gallery`). A course pass then scores the course as a whole:
-the order of its units and groups, what repeats across units and workspaces, and, when
-Exercises, Exam or Lecture are prepared beside Study, how well they link to
-the passages that teach what they need. `study report --section structure` gives that
-pass a course map and flags terms used before they are taught, odd groups, repeated
-passages and practice, and missing links. The agent names the rubric check behind each
-lost point, saves the scores in `.tum-mcp/review.json`, then fixes the findings and
-scores again.
-Each pass starts from `tum-mcp study review-pack PROJECT --item ITEM --pass NAME`.
-The pack includes report-proven failures and the rubric checks still needing judgement;
-absence of a heuristic warning never proves a semantic check passes. Fresh reviewers hunt
-for defects. Findings name the check, exact passage and its path, fix, severity (1 or 2),
-and verification verdict. Rejections require a reason. Every other check records its closest
-call with a quote, path and reason. The scorecard enforces scores from accepted findings,
-and the report counts checked criteria, missing passes and open prompts. A report prompt
-must be fixed or kept with a reason before the review passes.
-Editing a unit or exercise makes its score stale, and so does changing the course's
-units, groups or links for the course score, so `study report` lists what needs a new
-review and what is still below the bar. A scorecard saved under an earlier rubric still
-loads; the report lists the dimensions it lacks. The scores are not shown in the app.
+Authoring and review are separate. A prepare skill first drafts and checks its work
+(Phase A): it reads each source once into a digest (`.tum-mcp/digests/`, `study digests`),
+writes a structured plan per item (`.tum-mcp/plans/`) that one fresh reader checks before
+any writing (`review run-checker --plans`, or `review plan-record` for a subagent's
+answer), writes an answer key for anything
+computed (`.tum-mcp/checks/<item>.py`, compared with the content by `study verify`), lints
+each item as it is written (`study lint --item`) and finishes with the build, the render
+check and the interaction smoke (`study visuals --interact`, which uses every stepper,
+Guide | Solution pill and the search as a student would). It then asks before the review
+loop.
+
+Ask `review-course` to run the review loop (Phase B, `tum-mcp review`). Each round writes
+one packet per kind of item (study unit, exercise, exam pattern, cheatsheet, mock
+question, lecture entry, course): the checks with a pass and a fail example each
+(`review checklist --profile P`), the items' passages with block ids, the report flags,
+the answer keys' results and the cited sources' digests. Fresh checkers, sessions that did
+not write the content, answer with a verdict per check and quoted findings; `review
+record` refuses answers for changed content or unquoted passages. The maker fixes by
+check (`review fix` is refused while the quoted passage is unchanged), rejects a wrong
+finding with its reason or keeps a score-2 finding the content cannot fix. A verdict holds
+until the blocks it covered change, so a later loop asks only about new and changed
+items. `review close-round` computes the gate and writes `.tum-mcp/loop/scorecard.md`;
+the gate passes an item when correctness and coverage score 3, every teaching check
+passes and the other dimensions are at least 2 with a kept reason. An open invariant flag
+(a disagreeing answer key, arithmetic, typed mathematics, a static trace, an unworked
+result, text-only question, a cited page past the source's end, a paper students cannot practise) holds its
+dimension below 3. The loop stops when the gate passes or its round budget is spent, and
+`review status` always names the next action. Each drawn visual is judged from the
+contact sheets for fidelity, form, layout, legibility, focus and convention, calibrated
+against a gallery of rated examples (`study visuals --gallery`). Scores and findings
+stay in `.tum-mcp/`; the app never shows them.
+
+Checkers rule on advisory flags rather than silently ignoring them. A ruling that
+opens a finding must name the relevant check; an unrelated finding cannot clear it.
+Missing question context is not advisory: authored questions pair their text with
+useful code, a diagram, formula, table or plot, and a checker cannot waive that gate.
+Teaching checks assess every concept, including additions made after planning, and
+objective checks require source evidence rather than promoting illustrative asides.
+The headless checker gets one targeted repair attempt if its answer format is refused.
 
 Workspace profiles keep the shared dimensions but tailor their evidence: exercise
 reviews preserve released statements and assess each part's guide and answer rather
@@ -248,7 +253,7 @@ or an unattended preview, use `tum-mcp study serve ./pse-ws26 --port 8765`.
 If port 8765 is busy, stop the other preview or choose `tum-mcp study --port 8766`.
 Keep the same address and port between sessions so browser progress remains available.
 
-The preview binds `127.0.0.1`, serves `app/` (or the existing legacy `study/`) and saves comments through a bounded
+The preview binds `127.0.0.1`, serves `app/` and saves comments through a bounded
 same-origin endpoint. It makes no campus requests.
 No course credentials are copied into the website. Browser storage holds progress
 locally. Nothing is published by these commands.
@@ -336,13 +341,6 @@ Statistics such as "seen in 4 of 6 exams" are history, never a prediction.
 Prepared Exam content is included in public course-app publication; its original
 documents and private source metadata stay local.
 
-Existing `study/` projects continue to work. New projects use `app/`. To upgrade a
-verified legacy layout explicitly, run `tum-mcp study build PROJECT --upgrade-layout`.
-It keeps the original tree at `.tum-mcp/layout-backup/`, preserves the course identity,
-learning revisions, comments, settings and personal files, and stops on customized
-generated files, an occupied backup or two layouts. Repeating a completed upgrade
-is a no-op. Do not create `app/` alongside an existing `study/` by hand.
-
 ## Publish a study website
 
 Say "publish the study app". The `publish-course` agent handles validation, the
@@ -413,7 +411,7 @@ Create audio notes from this prepared study website, one file per category.
 Keep course outputs under audio/; prefer free ElevenLabs with local Kokoro fallback.
 ```
 
-Audio Notes reads `app/content.json`, retaining the course's language, examples,
+Audio Notes reads the Study files under `app/study/`, retaining the course's language, examples,
 assumptions and limitations. It turns tables, formulas, code and diagram sequences
 into explanations that work without a screen. It does not independently research
 the course or create new subject matter. An audio-only request reuses the prepared
@@ -657,7 +655,7 @@ study, exam, lectures, review) to rank the task's workspace first.
 targets. Unknown and unmapped sources remain explicit. `study report PROJECT --section
 knowledge` performs a full local semantic audit; it is excluded from the default five
 report sections. `study schema knowledge` defines the optional private
-`.tum-mcp/knowledge.json` (legacy `.study/`). No graph database, embeddings, provider call
+`.tum-mcp/knowledge.json`. No graph database, embeddings, provider call
 or persistent index is involved.
 
 For teaching, reuse one narrow packet within the unchanged request, then read its

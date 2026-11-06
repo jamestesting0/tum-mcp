@@ -5,8 +5,8 @@ from material_fixture import material_project, pdf_bytes
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.study_duplicates import near_candidates
-from tum_mcp.study_store import load_state
+from tum_mcp.course.project.store import load_state
+from tum_mcp.course.sources.duplicates import near_candidates
 
 TASK = (
     "Task 1 Apply the observer pattern to the weather station so that every display is "

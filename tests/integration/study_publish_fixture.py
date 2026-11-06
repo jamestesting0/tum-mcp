@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from pydantic import JsonValue
 
-from tum_mcp.study_publish_site import blob_sha
+from tum_mcp.course.app.publish_site import blob_sha
 
 
 @dataclass(frozen=True, slots=True)

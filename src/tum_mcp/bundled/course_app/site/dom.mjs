@@ -90,6 +90,57 @@ export function button(label, handler, className = '') {
   return element;
 }
 export function append(parent, ...children) { parent.append(...children); return parent; }
+// Options side by side with one chosen: toggle buttons (`aria-pressed`) in a labelled group.
+// With `collapsible`, choosing the open option again closes it, leaving none chosen. Arrow
+// keys stay with the page, so they keep paging the guide or walkthrough the group belongs to.
+export function segmented(label, options, onChange, { selected = null, collapsible = false } = {}) {
+  const group = node('div', 'segmented'); group.setAttribute('role', 'group'); group.setAttribute('aria-label', label);
+  let current = selected;
+  const buttons = options.map(option => {
+    const item = studyText('button', 'segment', option.label); item.type = 'button';
+    item.dataset.value = option.value;
+    item.addEventListener('click', () => choose(collapsible && current === option.value ? null : option.value));
+    return item;
+  });
+  function show() { for (const item of buttons) item.setAttribute('aria-pressed', String(item.dataset.value === current)); }
+  function choose(value) { if (value === current) return; current = value; show(); onChange(value); }
+  group.append(...buttons); show();
+  return { element: group, get value() { return current; }, set(value) { current = value; show(); } };
+}
+// Guide and Solution share one pill and one panel: a segment swaps the panel's content in
+// place, and choosing the open segment again closes it. A place with only a Solution shows
+// the one segment as a toggle.
+export function pillPanel(label, segments, { selected = null, onChange = () => {} } = {}) {
+  const box = node('div', 'pill-panel'), panel = node('div', 'disclosure-panel pill-content');
+  panel.id = `pill-${++pills}`;
+  let control;
+  if (segments.length === 1) {
+    const [only] = segments, toggle = studyText('button', 'segment', only.label);
+    toggle.type = 'button'; toggle.setAttribute('aria-controls', panel.id);
+    toggle.addEventListener('click', () => { const value = box.dataset.open ? null : only.value; show(value); onChange(value); });
+    control = { element: append(node('div', 'segmented'), toggle), set() {} };
+    control.mark = value => toggle.setAttribute('aria-expanded', String(value === only.value));
+  } else {
+    control = segmented(label, segments, value => { show(value); onChange(value); }, { selected, collapsible: true });
+    control.mark = () => {};
+  }
+  // Each content gets `open` and a `toggle` event as a disclosure's would, so what mounts on
+  // opening (a video player) works in either.
+  function show(value) {
+    const segment = segments.find(item => item.value === value);
+    for (const item of segments) {
+      const open = item === segment;
+      if (Boolean(item.content.open) !== open) { item.content.open = open; queueMicrotask(() => item.content.dispatchEvent(new Event('toggle'))); }
+    }
+    // Re-showing the open content leaves it attached, so focus inside it stays where it was.
+    if (panel.firstChild !== segment?.content) panel.replaceChildren(...(segment ? [segment.content] : []));
+    panel.hidden = !segment; box.dataset.open = segment ? value : '';
+    control.mark(value);
+  }
+  box.append(control.element, panel); show(selected);
+  return { element: box, open(value) { control.set(value); show(value); } };
+}
+let pills = 0;
 export function preparationDisclosure({ title, entries, noun }) {
   const more = node('details', 'disclosure pending-sheets');
   const count = `${entries.length} ${noun}${entries.length === 1 ? '' : 's'}`;

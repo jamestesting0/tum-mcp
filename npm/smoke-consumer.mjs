@@ -109,8 +109,8 @@ for name in ('cursor','antigravity'):
   const boundStatus = status();
   assert.equal(boundStatus.mode, 'sync');
   assert.equal(boundStatus.course.synthetic, true);
-  const authored = JSON.parse(readFileSync(join(studyProject, 'app/content.json'), 'utf8'));
-  const nativeUnit = authored.units[0];
+  const studyIndex = JSON.parse(readFileSync(join(studyProject, 'app/study/course.json'), 'utf8'));
+  const nativeUnit = JSON.parse(readFileSync(join(studyProject, 'app/study/units', `${studyIndex.units[0]}.json`), 'utf8'));
   assert.equal(boundStatus.course_memory, false);
   const denied = () => spawnSync(process.execPath, [launcher, 'study', 'context', studyProject, 'topic'], { env, encoding: 'utf8', shell: false, timeout: 60000 });
   assert.notEqual(denied().status, 0);
@@ -179,7 +179,10 @@ for name in ('cursor','antigravity'):
       .replace('from study_inline_fixture import inline_math_checks, mobile_outline_checks', inlineFixture)
       .replace('from study_activity_comments_fixture import activity_comment_checks', activityCommentsFixture);
     // Isolated Python intentionally cannot import helpers from the checkout.
-    const combined = fixture.replace('from study_browser_fixture import study_website', studyFixture);
+    const documentsFixture = readFileSync(new URL('../tests/documents.py', import.meta.url), 'utf8');
+    const combined = documentsFixture + '\n' + fixture
+      .replace('from study_browser_fixture import study_website', studyFixture)
+      .replace(/^from documents import (?:\([\s\S]*?\)|[^\r\n]+)\r?\n/gm, '');
     const browserScript = join(root, 'browser-consumer.py');
     writeFileSync(browserScript, combined, { mode: 0o600 });
     browserEvidence = JSON.parse(run(first.python, ['-I', browserScript], 300000, browserEnv));
@@ -216,7 +219,7 @@ anyio.run(check)
   const demoProject = join(root, 'Synthetic course');
   run(process.execPath, [launcher, 'study', 'demo', demoProject]);
   const template = JSON.parse(run(process.execPath, [launcher, 'study', 'template']));
-  assert.equal(template.author, 'app/content.json');
+  assert.equal(template.author, 'app/study/course.json and app/study/units/<unit>.json');
   assert.ok(['flashcards.mjs', 'navigation.mjs', 'revision.mjs'].every(file => template.files.includes(file)));
   assert.match(template.revision, /^[a-f0-9]{64}$/);
   const study = JSON.parse(run(process.execPath, [launcher, 'study', 'inspect', demoProject]));

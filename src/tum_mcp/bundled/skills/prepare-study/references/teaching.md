@@ -7,7 +7,7 @@ how each idea is taught in the unit's [teaching plan](planning.md) before writin
 Explain why the next operation helps and what makes it valid. A procedure without
 its reason leaves students unable to choose it in a new problem.
 
-A prediction before an explanation invites an attempt; it is not a failing grade.
+Study explains; it does not ask for predictions (those belong in Exercises).
 A teaching check asks for one newly explained inference on a fresh case. Later
 practice asks students to select and use the idea without its method in the title.
 Use these when they help; do not insert a question after every paragraph. Keep
@@ -31,7 +31,7 @@ like any filler.
 | Labelled steps, then a worked example | A procedure or calculation with interacting steps: one computed value per step, a `derivation`, or a trace; a `walkthrough` when the state changes line by line | Definitions and single facts: practise them instead |
 | Running example | Several concepts act on one setting; keep its givens unchanged | Independent concepts, or a contrast needs another case |
 | Contrast, non-example or misconception | The idea is easily confused with a neighbour, or students hold a known wrong belief | Nothing nearby to confuse |
-| General rule after the case | A reusable rule exists: a formula block with every symbol, its conditions and when to use it, then one more application | Descriptive or one-off content |
+| General rule after the case | A reusable rule exists: a formula block with every symbol, its conditions and when to use it; another application only if it tests a new condition or misconception | Descriptive or one-off content; extra arithmetic that tests only an already-known operation |
 | Relation sentence | The next idea follows from, or contrasts with, this one and a first-time reader could not infer it | Parallel cases: a table or one framing line |
 | Recap of two to four points | Several ideas to retrieve | A short single-idea unit |
 | Insight (a titled block's `insight`, behind a light bulb) | Optional depth: an application, a deeper why, a link to later topics | Anything needed to follow the page or do the practice |
@@ -46,10 +46,14 @@ Whatever the moves, every unit has:
 
 - A summary: the question it answers, in one or two sentences, never a copy of an objective.
 - Observable objectives (trace, explain, choose, compute) taken from the source's own
-  outcomes in the coverage ledger.
+  outcomes in the coverage ledger, or from an idea the source develops at length. An aside
+  of the slides is not an objective, and every objective has a card or question.
 - A `definition` block right after the passage that introduces each term students must
   learn. It shows inside that passage as the term above its meaning, so the prose does not
-  restate it; later mentions anywhere in the course are `{{term}}`.
+  restate it; later mentions anywhere in the course are `{{term}}`. State the course's
+  fullest form: when a later lecture's digest defines the term with conditions (a rational
+  agent maximises expected performance given its percepts and knowledge), give that form or
+  say where the course makes it precise; `definition_refined` flags a shorter one.
 
 `study report` flags `dense_introduction` (several new symbols or terms before any picture or
 example) and `example_without_rule` (numbers worked without a general rule); read them in
@@ -60,14 +64,22 @@ reuses Again ratings and wrong answers, so every objective needs at least one ca
 or question that a student can genuinely get wrong.
 
 For each new or changed objective, cover the mechanism, its assumptions and a useful
-example, each in the shape it has ([representations](review.md#choose-the-representation)):
+example, each in the shape it has ([representations](representations.md#choose-the-representation)):
 
 - One idea per passage, structured as in [writing](writing.md#structure-before-prose);
   split a passage that holds two ideas. A passage is not automatically a
   top-level section: group a method's cases, examples and limitations beneath that
   method using the [heading hierarchy](content.md#blocks).
 - A procedure or hard argument: labelled steps. An algorithm's run: a trace whose frames
-  carry its state ([traces](review.md#algorithm-traces)).
+  carry its state ([traces](representations.md#algorithm-traces)).
+- A test, procedure or argument the unit teaches is shown at work once, not only named: a
+  test as one run with its verdict (an exchange as a table of questions and answers, not
+  narrated), a logical argument as its premises above its conclusion, each on its own line
+  (a `formula`, `derivation` or list; `inline_steps` flags them run together), an agent as
+  one decision scored by its measure. Each plan
+  concept names that instance and the block that shows it; checkers ask concept by concept.
+- The members of a list (four capabilities, three methods) as a list or table, never a
+  sentence; `inline_list` flags them.
 - Parallel cases: points or a table. A rule with two inputs: a decision matrix.
 - Anything with a physical or spatial shape: a drawn figure.
 - Prose says only what the picture cannot (why it works, when it fails) and names what to

@@ -6,17 +6,16 @@ import tempfile
 import wave
 from pathlib import Path
 
+from tum_mcp.course.lecture.evidence import Interval
+from tum_mcp.course.project.store import confined
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval
 from tum_mcp.lecture_processing.audio_input import joined_input, periods
 from tum_mcp.lecture_processing.decoding import probe, run_decoder
 from tum_mcp.lecture_processing.media import AcquiredSegment
-from tum_mcp.study_store import confined
 
-# Encoders leave tiny gaps between AAC packet timestamps (TUM-Live: about 0.25 ms per 30 s),
-# so a timestamp-trimmed window decodes a few samples short; those are padded with silence.
-# One missing AAC frame is at least 21 ms (341 samples at 16 kHz) and still fails here.
-TIMESTAMP_JITTER = 160
+# Sub-millisecond AAC timestamp gaps accumulate to about 12 ms in a full recognition window.
+# Pad up to 20 ms; one missing AAC frame is at least 21 ms (341 samples at 16 kHz) and fails.
+TIMESTAMP_JITTER = 320
 
 
 def render_audio(segments: tuple[AcquiredSegment, ...], span: Interval, directory: Path) -> Path:

@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import AwareDatetime
 
-from tum_mcp.lecture_evidence import Seconds
+from tum_mcp.course.lecture.evidence import Seconds
 from tum_mcp.settings import Frozen
 from tum_mcp.tum_live.wire import Silence, Slug
 

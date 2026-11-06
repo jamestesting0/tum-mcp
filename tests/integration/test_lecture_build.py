@@ -3,15 +3,15 @@ import shutil
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.course_app_paths import app_folder
+from tum_mcp.course.app.build import build
+from tum_mcp.course.lecture.data import read_lectures
+from tum_mcp.course.project.status import project_status
+from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError
-from tum_mcp.lecture_data import read_lectures
-from tum_mcp.study_build import build
-from tum_mcp.study_status import project_status
-from tum_mcp.study_store import load_state
 
 FIXTURES = Path(__file__).parents[1] / "fixtures/course_app"
 
@@ -25,7 +25,7 @@ def lecture_project(exercise_project: Path, lecture_extension: Path) -> Path:
     payload["lectures"][0]["sources"][0]["sha256"] = source.sha256
     for item in payload["evidence"]:
         item["source_sha256"] = source.sha256
-    (exercise_project / "study/lectures.json").write_text(json.dumps(payload))
+    (content_file(exercise_project, "lectures")).write_text(json.dumps(payload))
     private = exercise_project / ".tum-mcp/lecture-assets"
     shutil.copytree(FIXTURES / "lecture-assets", private)
     return exercise_project
@@ -33,10 +33,7 @@ def lecture_project(exercise_project: Path, lecture_extension: Path) -> Path:
 
 def payload(root: Path) -> dict:
     return json.loads(
-        (root / app_folder(root) / "data.mjs")
-        .read_text()
-        .removeprefix("export default ")
-        .removesuffix(";\n")
+        (root / "app/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
     )
 
 
@@ -60,20 +57,13 @@ def bytes_tree(root: Path) -> dict[str, bytes]:
         ("study", "exercises", "lectures"),
     ],
 )
-@pytest.mark.parametrize("folder", ["app", "study"])
 def test_all_seven_workspace_subsets_build_without_forced_assessments(
-    lecture_project: Path, selected: tuple[str, ...], folder: str
+    lecture_project: Path, selected: tuple[str, ...]
 ) -> None:
     root = lecture_project
-    if folder == "app":
-        (root / "study").rename(root / "app")
-    for workspace, filename in (
-        ("study", "content.json"),
-        ("exercises", "exercises.json"),
-        ("lectures", "lectures.json"),
-    ):
+    for workspace in ("study", "exercises", "lectures"):
         if workspace not in selected:
-            (root / folder / filename).unlink()
+            content_file(root, workspace).unlink()
     report = build(root, publish=False)
     data = payload(root)
     assert data["workspaces"] == list(selected)
@@ -122,7 +112,7 @@ def test_invalid_lecture_inputs_preserve_the_previous_app_and_authored_bytes(
 ) -> None:
     root = lecture_project
     build(root, publish=False)
-    notes_path = root / "study/lectures.json"
+    notes_path = content_file(root, "lectures")
     notes = json.loads(notes_path.read_text())
     highlights = notes["lectures"][0]["highlights"]
     figure = highlights[0]["thumbnail"]
@@ -147,7 +137,7 @@ def test_invalid_lecture_inputs_preserve_the_previous_app_and_authored_bytes(
         asset.rename(original)
         asset.symlink_to(original)
     else:
-        (root / "study/styles.css").write_text("customized")
+        (root / "app/styles.css").write_text("customized")
     notes_path.write_text(json.dumps(notes))
     before = bytes_tree(root)
     with pytest.raises(CampusError):
@@ -166,12 +156,12 @@ def remove_second_highlight(notes: dict) -> None:
 def test_removing_a_highlight_deletes_only_its_managed_thumbnail(lecture_project: Path) -> None:
     root = lecture_project
     build(root, publish=False)
-    path = root / "study/lectures.json"
+    path = content_file(root, "lectures")
     notes = json.loads(path.read_text())
     kept, removed = (
-        root / "study" / item["thumbnail"]["asset"] for item in notes["lectures"][0]["highlights"]
+        root / "app" / item["thumbnail"]["asset"] for item in notes["lectures"][0]["highlights"]
     )
-    custom = root / "study/lecture-assets/my-diagram.png"
+    custom = root / "app/lecture-assets/my-diagram.png"
     custom.write_bytes(b"user image")
     remove_second_highlight(notes)
     path.write_text(json.dumps(notes))
@@ -182,11 +172,11 @@ def test_removing_a_highlight_deletes_only_its_managed_thumbnail(lecture_project
 def test_failure_after_managed_figure_deletion_restores_the_previous_app(
     lecture_project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from tum_mcp import study_store
+    from tum_mcp.course.project import store as study_store
 
     root = lecture_project
     build(root, publish=False)
-    path = root / "study/lectures.json"
+    path = content_file(root, "lectures")
     notes = json.loads(path.read_text())
     remove_second_highlight(notes)
     path.write_text(json.dumps(notes))
@@ -206,9 +196,9 @@ def test_failure_after_managed_figure_deletion_restores_the_previous_app(
 
 def test_note_passage_must_name_a_study_block(lecture_project: Path) -> None:
     # A note's Recall link opened nothing when its Study block did not exist.
-    path = lecture_project / "study/lectures.json"
+    path = content_file(lecture_project, "lectures")
     value = json.loads(path.read_bytes())
-    content_path = lecture_project / "study/content.json"
+    content_path = content_file(lecture_project, "study")
     content = json.loads(content_path.read_bytes())
     unit, block = content["units"][0], "first-block"
     unit["blocks"][0]["key"] = block

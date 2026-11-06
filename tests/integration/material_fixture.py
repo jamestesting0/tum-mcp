@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from tum_mcp.study_sync import sync
+from tum_mcp.course.project.sync import sync
 
 
 def pdf_bytes(pages: list[str]) -> bytes:
@@ -160,7 +160,7 @@ def exam_project(tmp_path: Path) -> Path:
 
 def exam_document(root: Path) -> dict:
     """A rich, valid exam.json covering variants, copies, outdated sittings and forecasts."""
-    from tum_mcp.study_store import load_state
+    from tum_mcp.course.project.store import load_state
 
     state = load_state(root)
     sha = {item.resource.key: item.sha256 for item in state.resources}

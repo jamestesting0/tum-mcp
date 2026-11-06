@@ -9,18 +9,19 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
+from documents import content_file
 from playwright.sync_api import Browser, expect, sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from study_explore_fixture import add_explore
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.build import build
+from tum_mcp.course.app.preview import PreviewServer
+from tum_mcp.course.app.publish_site import export_site
+from tum_mcp.course.project.store import load_state
 from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
 from tum_mcp.moodle.browsers import discover_browsers
-from tum_mcp.study_build import build
-from tum_mcp.study_preview import PreviewServer
-from tum_mcp.study_publish_site import export_site
-from tum_mcp.study_store import load_state
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1",
@@ -56,7 +57,7 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
     site.mkdir(parents=True)
     for name, value in export_site(project).items():
         (site / name).write_bytes(value)
-    content = json.loads((project / "study/content.json").read_bytes())
+    content = json.loads((content_file(project, "study")).read_bytes())
     course_title = load_state(project).course.title
     choices = discover_browsers()
     assert choices, "Install a Chromium browser for the requested hosted-site QA."
@@ -255,7 +256,7 @@ def test_complete_public_app_keeps_learning_panels_and_lecture_timestamp_links(
     mock = data["exam"]["mocks"][0]
     sitting = data["exam"]["sittings"][0]
     variant = sitting["variants"][0]
-    authored_exam = json.loads((root / "app/exam.json").read_bytes())
+    authored_exam = json.loads((content_file(root, "exam")).read_bytes())
     linked_concept = next(item for item in authored_exam["concepts"] if item.get("passages"))
     linked_pattern = next(
         item for item in authored_exam["patterns"] if linked_concept["key"] in item["concepts"]
@@ -328,7 +329,9 @@ def test_complete_public_app_keeps_learning_panels_and_lecture_timestamp_links(
                 )
                 first = page.locator(".lecture-highlight").first
                 expected = lecture["highlights"][0]["url"]
-                expect(first.locator(".lecture-time")).to_have_attribute("href", expected)
+                expect(first.locator(".lecture-when .lecture-time")).to_have_attribute(
+                    "href", expected
+                )
                 expect(first.locator(".lecture-thumb")).to_have_attribute("href", expected)
                 note = page.locator(".lecture-note").first
                 note.locator(".citation summary").click()

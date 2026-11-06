@@ -10,6 +10,7 @@ import { renderDerivation } from './derivation.mjs';
 import { renderUml } from './uml.mjs';
 import { drawGraph } from './graph.mjs';
 import { videoPanel } from './video.mjs';
+import { renderWalkthrough } from './walkthrough.mjs';
 
 // A step or point that opens with a short label ("Initialize: ...") shows the label in bold,
 // so a procedure reads as named stages and an example as named sub-results.
@@ -264,6 +265,7 @@ export function renderBlockBody(block, { term = true } = {}) {
       case 'files': root.append(renderFiles(block)); break;
       case 'tree': root.append(treeBlock(block)); break;
       case 'figure': root.append(figureBlock(block)); break;
+      case 'walkthrough': root.append(renderWalkthrough(block, stage => renderBlockBody(stage))); break;
       default: throw new Error('Unsupported study block. Rebuild the site with a compatible renderer.');
     }
   return root;

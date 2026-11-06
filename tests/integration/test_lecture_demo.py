@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from documents import content_file
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
@@ -10,9 +11,9 @@ def test_base_demo_omits_lecture_until_explicit_option(tmp_path: Path) -> None:
     root = tmp_path / "base"
     result = CliRunner().invoke(app, ["study", "demo", str(root)])
     assert result.exit_code == 0, result.output
-    assert not (root / "app/lectures.json").exists()
+    assert not (content_file(root, "lectures")).exists()
     result = CliRunner().invoke(app, ["study", "demo", str(root), "--lectures"])
-    assert result.exit_code != 0 and not (root / "app/lectures.json").exists()
+    assert result.exit_code != 0 and not (content_file(root, "lectures")).exists()
 
 
 def test_optional_demo_and_edited_asset_preservation(
@@ -22,7 +23,7 @@ def test_optional_demo_and_edited_asset_preservation(
     args = ["study", "demo", str(root), "--lectures"]
     result = CliRunner().invoke(app, args)
     assert result.exit_code == 0, result.output
-    notes = (root / "app/lectures.json").read_bytes()
+    notes = (content_file(root, "lectures")).read_bytes()
     payload = json.loads(
         (root / "app/data.mjs").read_text().removeprefix("export default ").removesuffix(";\n")
     )
@@ -39,4 +40,4 @@ def test_optional_demo_and_edited_asset_preservation(
     result = CliRunner().invoke(app, args)
     assert result.exit_code != 0 and "preserved" in str(result.exception)
     assert thumbnail.read_bytes() == b"Personal altered image"
-    assert (root / "app/lectures.json").read_bytes() == notes
+    assert (content_file(root, "lectures")).read_bytes() == notes

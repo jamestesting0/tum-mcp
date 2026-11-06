@@ -7,12 +7,13 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
+from documents import content_file
 from playwright.sync_api import Browser, expect
 from study_comments_fixture import select_passage
 from study_explore_fixture import add_explore
 
-from tum_mcp.study_build import build
-from tum_mcp.study_comments import read_comments
+from tum_mcp.course.app.build import build
+from tum_mcp.course.app.comments import read_comments
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1",
@@ -22,12 +23,12 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def explore_url(project: Path) -> Iterator[str]:
-    from tum_mcp.study_preview import Handler, PreviewServer
+    from tum_mcp.course.app.preview import Handler, PreviewServer
 
     add_explore(project)
     build(project, publish=False)
     with PreviewServer(
-        ("127.0.0.1", 0), partial(Handler, directory=str(project / "study"))
+        ("127.0.0.1", 0), partial(Handler, directory=str(project / "app"))
     ) as server:
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -146,9 +147,9 @@ def test_duplicate_quotes_and_untitled_continuations_keep_their_optional_owner(
     import copy
     import json
 
-    from tum_mcp.study_store import private_path
+    from tum_mcp.course.project.store import private_path
 
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     payload = json.loads(path.read_bytes())
     unit = next(unit for unit in payload["units"] if unit["key"] == "bfs")
     continuation = {
@@ -217,9 +218,9 @@ def test_matching_video_key_never_attaches_a_core_player_to_explore(
 ) -> None:
     import json
 
-    from tum_mcp.study_store import private_path
+    from tum_mcp.course.project.store import private_path
 
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     payload = json.loads(path.read_bytes())
     unit = next(unit for unit in payload["units"] if unit["key"] == "bfs")
     unit["explore"][0]["key"] = "bfs"
@@ -268,7 +269,7 @@ def test_optional_only_edits_and_removal_preserve_saved_core_ratings(
 ) -> None:
     import json
 
-    from tum_mcp.study_store import private_path
+    from tum_mcp.course.project.store import private_path
 
     with course_browser.new_context() as context:
         page = context.new_page()
@@ -276,7 +277,7 @@ def test_optional_only_edits_and_removal_preserve_saved_core_ratings(
         page.goto(explore_url + "#bfs/flashcards")
         page.locator(".flashcard").click()
         page.locator('[data-card-action="got"]').click()
-        path = project / "study/content.json"
+        path = content_file(project, "study")
         payload = json.loads(path.read_bytes())
         unit = next(unit for unit in payload["units"] if unit["key"] == "bfs")
         unit["explore"][0]["blocks"][0]["paragraphs"] = ["Reviewed, updated optional reading."]

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tum_mcp import video_runtime as runtime
+from tum_mcp.course.media import video_runtime as runtime
 from tum_mcp.errors import CampusError
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tum_mcp.exercise_content import ExerciseContent, exercise_revision
+from tum_mcp.course.content.exercises import ExerciseContent, exercise_revision
 
 
 @pytest.fixture
@@ -14,7 +14,7 @@ def responses() -> dict:
 
 
 def test_all_prepared_response_types_validate_and_compile(responses: dict) -> None:
-    from tum_mcp.exercise_data import render_exercises
+    from tum_mcp.course.content.exercise_data import render_exercises
 
     value = ExerciseContent.model_validate(responses)
     rendered = render_exercises(value)
@@ -70,7 +70,7 @@ def test_invalid_prepared_responses_fail_before_build(responses: dict, failure: 
 
 def test_new_optional_fields_preserve_legacy_learning_revision(responses: dict) -> None:
     # Reconstruct the old canonical algorithm using only pre-existing fields.
-    from tum_mcp.study_store import digest
+    from tum_mcp.course.project.store import digest
 
     raw = copy.deepcopy(responses)
     exercise = raw["sets"][0]["exercises"][0]

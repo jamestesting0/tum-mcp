@@ -4,11 +4,11 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from tum_mcp.course.project.store import confined, digest
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_processing.prepare_visuals import FrameInventory, Preview
 from tum_mcp.lecture_processing.receipts import RECEIPT, PreparedReceipt
 from tum_mcp.lecture_processing.validity import Validity, require_content
-from tum_mcp.study_store import confined, digest
 
 
 def previous_selection(

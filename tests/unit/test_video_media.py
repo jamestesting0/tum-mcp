@@ -4,10 +4,17 @@ from pathlib import Path
 
 import pytest
 
+from tum_mcp.course.media.video_content import BeatTiming, ChapterBound, Cue, StyleProfile, Timing
+from tum_mcp.course.media.video_media import (
+    Probe,
+    captions,
+    chapters,
+    check_media,
+    faststart,
+    parse_vtt,
+)
+from tum_mcp.course.media.video_style import STYLESHEET, resolve
 from tum_mcp.errors import CampusError
-from tum_mcp.video_content import BeatTiming, ChapterBound, Cue, StyleProfile, Timing
-from tum_mcp.video_media import Probe, captions, chapters, check_media, faststart, parse_vtt
-from tum_mcp.video_style import STYLESHEET, resolve
 
 FIXTURES = Path(__file__).parents[1] / "fixtures/video"
 STYLE = Path(__file__).parents[2] / "src/tum_mcp/bundled/video_runtime/vnotes/style.py"
@@ -184,7 +191,7 @@ def test_symbol_colors_are_preserved_but_cannot_disappear_on_canvas() -> None:
 
 
 def test_initial_system_theme_matches_explicit_dark() -> None:
-    from tum_mcp.video_style import _declarations
+    from tum_mcp.course.media.video_style import _declarations
 
     css = STYLESHEET.read_text(encoding="utf-8")
     initial = css.split("@media (prefers-color-scheme: dark)", 1)[1]

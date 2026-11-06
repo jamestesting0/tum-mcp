@@ -1,7 +1,7 @@
 import pytest
 
-from tum_mcp.video_content import ExerciseStoryboard
-from tum_mcp.video_teaching import exercise_errors
+from tum_mcp.course.media.video_content import ExerciseStoryboard
+from tum_mcp.course.media.video_teaching import exercise_errors
 
 
 def walkthrough(kinds: tuple[str, ...], split: int | None = None) -> ExerciseStoryboard:

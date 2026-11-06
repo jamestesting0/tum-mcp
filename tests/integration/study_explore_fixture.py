@@ -3,8 +3,10 @@
 import json
 from pathlib import Path
 
-from tum_mcp.study_models import Resource, ResourceState
-from tum_mcp.study_store import digest, load_state, private_path
+from documents import content_file
+
+from tum_mcp.course.project.models import Resource, ResourceState
+from tum_mcp.course.project.store import digest, load_state, private_path
 
 
 def add_explore(project: Path) -> None:
@@ -26,7 +28,7 @@ def add_explore(project: Path) -> None:
         state.model_copy(update={"resources": (*state.resources, stored)}).model_dump_json(),
         encoding="utf-8",
     )
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     payload = json.loads(path.read_bytes())
     unit = next(unit for unit in payload["units"] if unit["key"] == "bfs")
     unit["explore"] = [
@@ -59,7 +61,6 @@ def add_explore(project: Path) -> None:
                                 "key": "origins",
                                 "text": "Describe the historical background.",
                                 "locator": "Synthetic note",
-                                "status": "covered",
                                 "role": "enrichment",
                                 "classification": {
                                     "basis": "reviewed_enrichment",

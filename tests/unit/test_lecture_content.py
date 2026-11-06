@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tum_mcp.lecture_content import LectureContent
-from tum_mcp.study_models import Resource
+from tum_mcp.course.lecture.content import LectureContent
+from tum_mcp.course.project.models import Resource
 
 FIXTURE = Path(__file__).parents[1] / "fixtures/course_app/lectures.json"
 
@@ -50,6 +50,41 @@ def test_incomplete_processing_cannot_be_declared_complete() -> None:
         LectureContent.model_validate(value)
     value["lectures"][0]["coverage"]["status"] = "partial"
     assert LectureContent.model_validate(value).lectures[0].coverage.missing[0].start_s == 400
+
+
+def test_authored_note_figure_is_preserved_and_validated() -> None:
+    value = fixture()
+    note = value["lectures"][0]["notes"][0]
+    note["figure"] = {
+        "kind": "figure",
+        "alt": "A circle representing one search region.",
+        "svg": '<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="80"/></svg>',
+        "sources": note["sources"],
+    }
+    parsed = LectureContent.model_validate(value)
+    assert (
+        parsed.model_dump(mode="json")["lectures"][0]["notes"][0]["figure"]["svg"]
+        == note["figure"]["svg"]
+    )
+    before = parsed.lectures[0].semantic_revision
+    note["figure"]["svg"] = note["figure"]["svg"].replace('r="80"', 'r="60"')
+    assert LectureContent.model_validate(value).lectures[0].semantic_revision != before
+    note["figure"]["sources"] = ["undeclared"]
+    with pytest.raises(ValidationError):
+        LectureContent.model_validate(value)
+    note["figure"]["sources"] = note["sources"]
+    svg = note["figure"].pop("svg")
+    note["figure"]["image"] = "figures/diagram.png"
+    with pytest.raises(ValidationError, match="requires inline SVG"):
+        LectureContent.model_validate(value)
+    del note["figure"]["image"]
+    note["figure"]["svg"] = svg
+    note["figure"]["svg"] = (
+        '<svg viewBox="0 0 200 200"><script>alert(1)</script>'
+        '<circle cx="100" cy="100" r="80"/></svg>'
+    )
+    with pytest.raises(ValidationError):
+        LectureContent.model_validate(value)
 
 
 def test_undeclared_or_other_recording_evidence_is_rejected() -> None:
@@ -278,3 +313,31 @@ def test_note_context_sets_up_its_message_without_repeating_it() -> None:
     note.pop("context")
     with pytest.raises(ValueError, match="context"):
         LectureContent.model_validate(value)
+
+
+def highlight_steps(*times: float) -> list[dict]:
+    return [{"action": f"Stage {i}.", "why": "It follows.", "at": at} for i, at in enumerate(times)]
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [
+        highlight_steps(21),
+        highlight_steps(21, 60),
+        highlight_steps(25, 21),
+        highlight_steps(21, 21),
+        [{"action": "Untimed.", "why": "It follows."}, *highlight_steps(22)],
+    ],
+)
+def test_highlight_steps_are_timed_inside_the_highlight_in_recording_order(steps) -> None:
+    value = fixture()
+    value["lectures"][0]["highlights"][0]["steps"] = steps
+    with pytest.raises(ValidationError, match="highlight"):
+        LectureContent.model_validate(value)
+
+
+def test_highlight_steps_change_the_teaching_revision() -> None:
+    value = fixture()
+    before = LectureContent.model_validate(value).lectures[0].semantic_revision
+    value["lectures"][0]["highlights"][0]["steps"] = highlight_steps(21, 22)
+    assert LectureContent.model_validate(value).lectures[0].semantic_revision != before

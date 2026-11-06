@@ -10,8 +10,9 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from tum_mcp.course.lecture.evidence import Interval, merge_intervals
+from tum_mcp.course.project.store import confined
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.lecture_evidence import Interval, merge_intervals
 from tum_mcp.lecture_processing.audio import render_audio
 from tum_mcp.lecture_processing.chunk_store import Chunk, StagedError, process_chunk, staged
 from tum_mcp.lecture_processing.media import AcquiredSegment
@@ -26,7 +27,6 @@ from tum_mcp.lecture_processing.transcription import (
 from tum_mcp.lecture_processing.validity import Validity, require_content
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
-from tum_mcp.study_store import confined
 
 
 class AudioResult(Frozen):

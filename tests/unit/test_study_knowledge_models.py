@@ -5,7 +5,7 @@ import copy
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from tum_mcp.study_knowledge_models import Assertion, ItemRef, KnowledgeRegistry, canonical_digest
+from tum_mcp.course.memory.models import Assertion, ItemRef, KnowledgeRegistry, canonical_digest
 
 
 def annotation() -> dict:

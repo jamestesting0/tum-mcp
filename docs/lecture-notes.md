@@ -18,8 +18,9 @@ same course app, alongside Study and Exercises. Notes preserve useful short rema
 conditions, corrections and explicit instructions. Each note names what it concerns, the
 situation it answers (what the slide states, a question asked, the approach it corrects)
 and then its message, so it reads without having attended. Sources sit behind a source
-control; a note may add a meaningful recording frame and a Recall link to the Study
-passage on its subject.
+control; a note may add a meaningful recording frame, a sourced SVG illustration and
+a Recall link to the Study passage on its subject. Authored illustrations use the
+shared figure renderer; recording images retain their frame-evidence checks.
 Highlights are substantial worked explanations worth following: an example, derivation,
 demonstration, method comparison or conceptual explanation that adds to the materials.
 A highlight shows its time range and duration, a frame from the recording, a title,
@@ -146,8 +147,9 @@ tum-mcp study build PROJECT --local-only
 tum-mcp study inspect PROJECT
 ```
 
-The agent authors `app/lectures.json` (schema version 2) using real source hashes and
-coverage; the legacy `study/` layout stays supported. Thumbnails stage in
+The agent authors one file per lecture under `app/lectures/` (schema version 3) using real
+source hashes and coverage. A highlight may carry timestamped `steps` and a Study `passage`
+for Recall. Thumbnails stage in
 `.tum-mcp/lecture-assets/` and copy only when selected. Source freshness and the
 authored content's semantic revision are separate, preserving comments through harmless
 receipt/decorative-thumbnail updates. Note title, context, text and meaningful

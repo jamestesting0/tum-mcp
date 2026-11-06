@@ -8,11 +8,12 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
+from documents import content_file
 from playwright.sync_api import Browser, expect
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.study_preview import Handler, PreviewServer
+from tum_mcp.course.app.preview import Handler, PreviewServer
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Explicit owned browser QA."
@@ -25,7 +26,7 @@ def example_url(tmp_path: Path) -> Iterator[str]:
     result = CliRunner().invoke(app, ["study", "demo", str(root)])
     assert result.exit_code == 0, result.output
     # A second practice question, so there is a next one to page to.
-    path = root / "app/content.json"
+    path = content_file(root, "study")
     content = json.loads(path.read_text(encoding="utf-8"))
     question = content["units"][0]["questions"][0]
     content["units"][0]["questions"].append({**question, "key": question["key"] + "-again"})
@@ -61,7 +62,7 @@ def test_practice_and_guides_page_with_arrow_keys(
     page.keyboard.press("ArrowLeft")
     expect(count).to_contain_text("Question 1 of")
     page.goto(example_url + "#exercises/preview/controls")
-    page.locator("summary", has_text="Guide").first.click()
+    page.locator(".segment", has_text="Guide").first.click()
     step = page.locator(".step-count").first
     expect(step).to_have_text("Step 1 of 5")
     # Right after opening the Guide, its steps follow the arrows.

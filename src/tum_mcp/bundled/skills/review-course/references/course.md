@@ -33,13 +33,15 @@ course Organization, course Redundancy and, when the report lists it, Integratio
 ## Procedure
 
 1. **Outline.** Read the unit titles and groups alone. Say what the course teaches and in
-   what order. Check each group against the course's `organization`; a lone unit beside
-   larger topic groups, a catch-all, a folder around the whole course or a second level
-   for a small group is a finding.
+   what order. Check each group against the course's `organization`; a misleading
+   topic label, a catch-all, a folder around the whole course or a second level
+   for a small group is a finding. Unequal group sizes or one unit in a bounded
+   preparation do not justify adding lessons; record missing coverage separately.
 2. **First-time reader.** Walk Study in course order as a student who knows only what the
    earlier units taught. At every unit, look up its `builds_on` and the results, methods
    and symbols it uses; anything a later unit teaches is a finding. Check that the
-   introduction and the first unit tell the student where the course goes, and that a
+   introduction or entry point tells the student where the prepared material goes.
+   Do not repeat that map in the first lesson. Check that a
    unit which resolves an earlier unit's limitation says so where it opens
    (`.tum-mcp/plans/course.md` records the intended storyline).
 3. **One home per idea.** For every `near_duplicate_passage` flag, and for each idea the
@@ -65,11 +67,10 @@ course Organization, course Redundancy and, when the report lists it, Integratio
    copying; judge filler within the encounter. Codec/evidence bytes do not reorder
    the course, while chapter/coverage link changes do.
 
-## Save
+## Findings
 
-Write the course review under `course` in `.tum-mcp/review.json` with the structure
-`revision` from the report, today's date and a score for every listed dimension
-(`tum-mcp study schema review`). Every finding names its check and the units, exercises,
+The course is one item of the review loop (profile `course`); its packet carries the
+structure map. Every finding names its check and the units, exercises,
 concepts or lectures where it shows: "`integration.prerequisite_links`:
 exercises/sheet-3/heaps needs the sift-down step, but its prerequisite links
 study/priority-queues without a block; link `#sift-down`."

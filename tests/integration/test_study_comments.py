@@ -3,13 +3,14 @@ import os
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from study_comments_data import operation
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.comment_models import Anchor, Create, Delete, Edit, SetStatus
+from tum_mcp.course.app.comments import change_comment, read_comments
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.study_comment_models import Anchor, Create, Delete, Edit, SetStatus
-from tum_mcp.study_comments import change_comment, read_comments
 
 
 def test_comments_are_private_project_files_and_compare_and_swap(project: Path) -> None:
@@ -40,7 +41,7 @@ def test_comments_are_private_project_files_and_compare_and_swap(project: Path) 
         change_comment(project, old_resolution)
     assert caught.value.code == Code.STALE_RESULT
     assert read_comments(project) == updated
-    assert not list((project / "study").glob("*comments*.json"))
+    assert not list((project / "app").glob("*comments*.json"))
 
 
 def test_resolve_edit_reopens_and_delete_preserves_other_notes(project: Path) -> None:
@@ -98,7 +99,7 @@ def test_cli_handoff_reports_changed_content_and_requires_current_revision(
 ) -> None:
     note = operation(project)
     saved = change_comment(project, note)
-    source = project / "study/content.json"
+    source = content_file(project, "study")
     value = json.loads(source.read_bytes())
     value["units"][0]["summary"] += " Reviewed example."
     source.write_text(json.dumps(value), encoding="utf-8")
@@ -205,8 +206,8 @@ def test_explore_comment_targets_reject_stale_content_and_keep_schema_version(
 
     from study_explore_fixture import add_explore
 
-    from tum_mcp.study_build import explore_revision, read_content
-    from tum_mcp.study_comment_models import ExploreAnchor
+    from tum_mcp.course.app.build import explore_revision, read_content
+    from tum_mcp.course.app.comment_models import ExploreAnchor
 
     add_explore(project)
     unit = next(unit for unit in read_content(project).units if unit.key == "bfs")
@@ -251,7 +252,7 @@ def test_explore_comment_targets_reject_stale_content_and_keep_schema_version(
     listing = CliRunner().invoke(app, args)
     assert listing.exit_code == 0, listing.output
     assert json.loads(listing.output)["comments"][0]["content_state"] == "current"
-    path = project / "study/content.json"
+    path = content_file(project, "study")
     payload = json.loads(path.read_bytes())
     owner = next(item for item in payload["units"] if item["key"] == "bfs")
     owner["explore"][0]["blocks"][0]["paragraphs"] = ["A changed supporting passage."]
@@ -278,7 +279,7 @@ def test_explore_comment_targets_reject_stale_content_and_keep_schema_version(
 
 
 def test_build_deletes_comments_whose_unit_is_gone(project: Path) -> None:
-    from tum_mcp.study_build import build
+    from tum_mcp.course.app.build import build
 
     kept = operation(project)
     saved = change_comment(project, kept)

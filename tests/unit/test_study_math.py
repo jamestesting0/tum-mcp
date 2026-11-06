@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tum_mcp.study_content import FormulaBlock
-from tum_mcp.study_math import compile_latex, formula_parts, safe_mathml, split_relation
+from tum_mcp.course.content.latex import compile_latex, formula_parts, safe_mathml, split_relation
+from tum_mcp.course.content.study import FormulaBlock
 
 
 @pytest.mark.parametrize(
@@ -45,7 +45,7 @@ def test_invalid_or_active_latex_is_rejected_instead_of_silently_rendering(latex
         compile_latex(latex)
 
 
-def test_formula_accepts_latex_or_legacy_mathml_without_ambiguous_inputs() -> None:
+def test_formula_accepts_latex_only() -> None:
     base = {
         "kind": "formula",
         "title": "Expression",
@@ -55,9 +55,7 @@ def test_formula_accepts_latex_or_legacy_mathml_without_ambiguous_inputs() -> No
         "conditions": "Real x.",
     }
     assert FormulaBlock.model_validate(base | {"latex": "x^2"}).latex == "x^2"
-    markup = compile_latex("x^2")
-    assert FormulaBlock.model_validate(base | {"mathml": markup}).mathml == markup
-    for expression in ({}, {"latex": "x^2", "mathml": markup}):
+    for expression in ({}, {"latex": "x^2", "mathml": compile_latex("x^2")}):
         with pytest.raises(ValidationError):
             FormulaBlock.model_validate(base | expression)
 

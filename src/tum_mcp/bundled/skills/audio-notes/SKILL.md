@@ -14,7 +14,7 @@ freshness; verify affected facts against sources. Reuse context already read in 
 request. Do not re-read the whole inventory for each authoring step.
 
 
-Use the existing course's AGENTS.md and app/content.json.
+Use the existing course's AGENTS.md and its Study files under app/study/.
 Audio reads prepared Study only; Exercises does not become an audio script.
 Audio is a spoken
 adaptation of the prepared course, not a second course-authoring workflow. Never
