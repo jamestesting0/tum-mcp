@@ -56,7 +56,9 @@ def test_hosted_site_under_project_path_keeps_learning_and_browser_progress(
     site = tmp_path / "host/course"
     site.mkdir(parents=True)
     for name, value in export_site(project).items():
-        (site / name).write_bytes(value)
+        target = site / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(value)
     content = json.loads((content_file(project, "study")).read_bytes())
     course_title = load_state(project).course.title
     choices = discover_browsers()

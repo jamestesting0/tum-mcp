@@ -6,11 +6,12 @@ re-opens exactly the checks that could have changed.
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from pydantic import JsonValue
 
+from tum_mcp.course.content.study import term_markers
 from tum_mcp.course.project.store import confined, read_bytes
 from tum_mcp.course.review.models import SHEET, item_passages, sheet_model
 
@@ -27,6 +28,7 @@ class ReviewItem:
     title: str
     value: dict
     blocks: dict[str, str] = field(default_factory=dict)
+    annotations: dict[str, str] = field(default_factory=dict)
 
     def passages(self) -> list[tuple[str, str]]:
         return item_passages(self.value)
@@ -73,9 +75,22 @@ def collect(
     ledger=None,
 ) -> dict[str, ReviewItem]:
     items: dict[str, ReviewItem] = {}
+    glossary = (
+        {entry.term.lower(): entry.meaning for entry in content.annotations} if content else {}
+    )
 
     def add(key: str, profile: str, title: str, value: dict) -> None:
-        items[key] = _item(root, key, profile, title, value)
+        item = _item(root, key, profile, title, value)
+        if glossary and profile in {"study-unit", "exercise"}:
+            used = {
+                term: glossary[term]
+                for term in sorted(term_markers(value, fold=False) & glossary.keys())
+            }
+            if used:
+                item = replace(
+                    item, blocks=item.blocks | {"@annotations": digest(used)}, annotations=used
+                )
+        items[key] = item
 
     for unit in content.units if content else ():
         add(f"study/{unit.key}", "study-unit", unit.title, unit.model_dump(mode="json"))

@@ -173,13 +173,13 @@ def test_concurrent_publish_cannot_restore_an_older_prepared_snapshot(
     assert b"NEWEST_PUBLIC_CONTENT" in github.files(repository)["data.mjs"]
 
 
+@pytest.mark.parametrize("retired", [RETIRED_TEMPLATE_FILES[0], "reading.mjs"])
 def test_retired_template_files_leave_an_older_publication(
-    project: Path, github: GitHubFixture
+    project: Path, github: GitHubFixture, retired: str
 ) -> None:
     # Given a site published while the template still shipped a now-retired file.
     assert first_publish(project).exit_code == 0
     repository = load_publication(project).repository
-    retired = RETIRED_TEMPLATE_FILES[0]
     github.edit(repository, retired, b"synthetic retired font")
     marker = json.loads(github.files(repository)[MARKER])
     marker["files"][retired] = blob_sha(b"synthetic retired font")

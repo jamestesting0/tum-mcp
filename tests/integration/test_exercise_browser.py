@@ -328,7 +328,9 @@ def test_static_exercises_under_a_project_prefix(
     site = host / "course"
     site.mkdir(parents=True)
     for name, value in export_site(exercise_project).items():
-        (site / name).write_bytes(value)
+        target = site / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(value)
     context = course_browser.new_context(
         viewport={"width": 1440 if exercise_only else 390, "height": 900}
     )
@@ -838,7 +840,7 @@ def test_guides_follow_their_parts_and_keep_nested_context(
         saved = page.evaluate(
             """async () => {
                 const { default: data } = await import('./data.mjs');
-                const { exercisePrefix } = await import('./exercise-state.mjs');
+                const { exercisePrefix } = await import('./runtime/exercises/exercise-state.mjs');
                 const exercise = data.exercises.sets[0].exercises[0];
                 const key = `${exercisePrefix}${exercise.key}:${exercise.revision}`;
                 return JSON.parse(localStorage.getItem(key));

@@ -38,9 +38,13 @@ def test_template_is_available_without_auth_and_fingerprints_packaged_assets(
     result = CliRunner().invoke(app, ["study", "template"])
     assert result.exit_code == 0
     before = json.loads(result.output)
-    assert {"app.mjs", "flashcards.mjs", "navigation.mjs", "revision.mjs", "styles.css"} <= set(
-        before["files"]
-    )
+    assert {
+        "runtime/shell/app.mjs",
+        "runtime/study/flashcards.mjs",
+        "runtime/shell/navigation.mjs",
+        "runtime/study/revision.mjs",
+        "styles.css",
+    } <= set(before["files"])
     assert before["author"] == "app/study/course.json and app/study/units/<unit>.json"
     stylesheet = copied / relative / "styles.css"
     stylesheet.write_text(

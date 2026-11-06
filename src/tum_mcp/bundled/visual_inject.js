@@ -2,8 +2,8 @@
 // so blocks the app shows one at a time (practice questions) or never (the review gallery) are
 // measured and photographed at the reading column's real width. The check loads this as a
 // module script of the page, so it shares the page's modules instead of fetching them again.
-import { renderBlockBody } from './reading.mjs';
-import { studyText } from './dom.mjs';
+import { renderBlockBody } from './runtime/reading/reading.mjs';
+import { studyText } from './runtime/shell/dom.mjs';
 
 window.__visualInject = items => {
   const first = document.querySelector('main [data-block-index]');

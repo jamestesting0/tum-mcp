@@ -164,3 +164,14 @@ from texts with gaps. Keeping the links follows the simplification-versus-elabor
 TESOL Quarterly, 2001; Srikanth and Li, EMNLP 2023 on elaborative simplification). Not adopted:
 classroom scripts, think-alouds, audio narration and interactive fading, which need a
 teacher or features the app deliberately leaves out.
+
+## Explain difficult words in place
+
+Teach assessed and method-critical concepts in the lesson with a worked example and
+practice. For incidental words, use a familiar equivalent when it preserves the meaning.
+When the specialized term matters, add a short plain-text `annotations` entry
+(`term` and `meaning`) in `app/study/course.json` and mark its first useful occurrence
+with `{{term}}`. Keep glosses in Study explanations and Exercise guide or solution
+prose. Leave official wording, headings, choices, code and math as they are.
+Judge difficulty from the learner's prerequisites and the action the sentence asks
+them to take. Use a formal definition when the concept has a Study passage to revisit.

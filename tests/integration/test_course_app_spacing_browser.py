@@ -1,5 +1,6 @@
 """Spacing by relationship: every control sits the same distance after the content it opens."""
 
+import json
 import os
 from collections.abc import Iterator
 from functools import partial
@@ -7,7 +8,7 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
-from playwright.sync_api import Browser
+from playwright.sync_api import Browser, Route, expect
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
@@ -97,3 +98,78 @@ def test_controls_and_practise_items_keep_one_spacing_per_relationship(
     page.close()
     assert any(relation == "related" for _, relation, _, _ in measured)
     assert [m for m in measured if m[2]] == []
+
+
+@pytest.mark.parametrize("width", [390, 1280])
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_completed_outline_title_keeps_its_row_and_scroll(
+    course_browser: Browser, example_url: str, width: int, theme: str, tmp_path: Path
+) -> None:
+    page = course_browser.new_page(viewport={"width": width, "height": 500}, color_scheme=theme)
+    title = "Formulate a search and trace breadth-first search across the map"
+
+    def long_title(route: Route) -> None:
+        response = route.fetch()
+        data = json.loads(response.text().removeprefix("export default ").removesuffix(";\n"))
+        unit = next(unit for unit in data["units"] if unit["key"] == "components")
+        unit.update(title=title, path=["Lecture 1 · A long introduction to search algorithms"])
+        data["units"].extend(
+            unit | {"key": f"extra-{index}", "title": f"{title} {index}"} for index in range(8)
+        )
+        route.fulfill(response=response, body=f"export default {json.dumps(data)};\n")
+
+    def classic_scrollbar(route: Route) -> None:
+        response = route.fetch()
+        route.fulfill(
+            response=response,
+            body=response.text() + "\n.sidebar-body::-webkit-scrollbar { width: 15px }",
+        )
+
+    page.route("**/data.mjs", long_title)
+    if theme == "dark":
+        page.route("**/styles.css", classic_scrollbar)
+    try:
+        page.goto(example_url + "#study/components/content")
+        if width == 390:
+            page.locator(".outline-toggle").click()
+        link = page.get_by_role("link", name=title, exact=True)
+        expect(link).to_be_visible()
+        before = link.bounding_box()
+        assert before is not None
+        link.click(button="right")
+        page.get_by_role("menuitem", name="Mark as completed").click()
+        link = page.get_by_role("link", name=title + " (completed)", exact=True)
+        expect(link).to_be_visible()
+        after = link.bounding_box()
+        marker = link.locator(".done-mark svg").bounding_box()
+        title_box = link.locator(".unit-title").bounding_box()
+        assert after and marker and title_box
+        assert after["height"] == before["height"]
+        assert abs(marker["y"] - title_box["y"]) <= 6
+        assert marker["x"] > title_box["x"] + title_box["width"] / 2
+        capture = os.environ.get("TUM_MCP_QA_CAPTURE") == "1"
+        if capture:
+            page.locator(".sidebar").screenshot(path=tmp_path / "outline.png")
+        scroll = page.locator(".sidebar-body").evaluate(
+            """body => {
+              for (const group of body.querySelectorAll('.unit-group')) group.open = true;
+              const main = document.querySelector('main'), before = main.scrollTop;
+              body.scrollTop = body.scrollHeight;
+              const noOverflow = body.scrollWidth === body.clientWidth;
+              return [body.scrollTop, noOverflow, main.scrollTop === before];
+            }"""
+        )
+        assert scroll[0] > 0 and scroll[1:] == [True, True]
+        expect(page.locator(".sidebar-footer")).to_be_in_viewport()
+        if capture:
+            page.locator(".sidebar").screenshot(path=tmp_path / "outline-end.png")
+        page.reload()
+        if width == 390 and not link.is_visible():
+            page.locator(".outline-toggle").click()
+        expect(link).to_be_visible()
+        link.focus()
+        page.keyboard.press("Shift+F10")
+        page.get_by_role("menuitem", name="Mark as not completed").press("Enter")
+        expect(page.get_by_role("link", name=title, exact=True)).to_be_focused()
+    finally:
+        page.close()

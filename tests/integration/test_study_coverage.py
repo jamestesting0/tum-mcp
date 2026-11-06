@@ -388,3 +388,38 @@ def test_cheatsheet_is_judged_against_source_exam_requirements(
     ledger(project, with_exam([{**requirement, "concepts": ["no-such-entry"]}]))
     with pytest.raises(CampusError, match="does not have"):
         build(project, publish=False)
+
+
+def test_pending_provisional_sheets_are_distinct_in_the_learner_payload(
+    exercise_project: Path,
+) -> None:
+    _, sheet = declare_sheet(exercise_project)
+    state = load_state(exercise_project)
+    second = next(
+        entry.resource.key
+        for entry in state.resources
+        if entry.status == "current" and entry.resource.key != sheet
+    )
+    ledger(
+        exercise_project,
+        [
+            {
+                "source": sheet,
+                "status": {"availability": "provisional", "checked_at": "2026-11-06"},
+                "items": linked({"label": "3"}),
+            },
+            {
+                "source": second,
+                "status": {"availability": "provisional", "checked_at": "2026-11-06"},
+                "items": [{"label": "Full sheet", "status": "not_inspected"}],
+            },
+        ],
+    )
+    build(exercise_project, publish=False)
+    assert [
+        (row["set"], row["labels"], row.get("provisional"))
+        for row in app_data(exercise_project)["pending"]
+    ] == [
+        ("sheet-1", ["3"], True),
+        (None, ["Full sheet"], True),
+    ]

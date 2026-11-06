@@ -48,76 +48,78 @@ from tum_mcp.settings import Frozen
 TEMPLATE_FILES = (
     "index.html",
     "styles.css",
-    "app.mjs",
-    "explore.mjs",
-    "start.mjs",
-    "exercises.mjs",
-    "lectures.mjs",
-    "video.mjs",
-    "exam.mjs",
-    "exam-state.mjs",
-    "exam-sheet.mjs",
-    "exam-entry.mjs",
-    "exam-map.mjs",
-    "exam-patterns.mjs",
-    "exam-mock.mjs",
-    "exercise-state.mjs",
-    "exercise-response.mjs",
-    "graph-response.mjs",
-    "graph.mjs",
-    "plot.mjs",
-    "uml.mjs",
-    "uml-layout.mjs",
-    "elk.bundled.js",
-    "elk-license.txt",
-    "code.mjs",
-    "files.mjs",
-    "dom.mjs",
-    "mathml.mjs",
-    "katex.min.js",
-    "katex.min.css",
-    "katex-license.txt",
-    "katex-AMS-Regular.woff2",
-    "katex-Size3-Regular.woff2",
-    "katex-Main-Regular.woff2",
-    "katex-Math-Italic.woff2",
-    "katex-Size4-Regular.woff2",
-    "katex-Main-Bold.woff2",
-    "katex-Main-BoldItalic.woff2",
-    "katex-Math-BoldItalic.woff2",
-    "katex-Main-Italic.woff2",
-    "katex-Size1-Regular.woff2",
-    "katex-Size2-Regular.woff2",
-    "katex-Caligraphic-Regular.woff2",
-    "reading.mjs",
-    "formulas.mjs",
-    "derivation.mjs",
-    "walkthrough.mjs",
-    "search.mjs",
-    "learning.mjs",
-    "question-review.mjs",
-    "navigation.mjs",
-    "completion.mjs",
-    "reference-panel.mjs",
-    "recall.mjs",
-    "symbols.mjs",
-    "flashcards.mjs",
-    "revision.mjs",
-    "anchors.mjs",
-    "comments.mjs",
-    "comment-ui.mjs",
-    "comment-store.mjs",
-    "comment-popover.mjs",
-    "font-sans-latin.woff2",
-    "font-sans-latin-ext.woff2",
-    "fonts-license.txt",
+    "assets/elk/elk-license.txt",
+    "assets/elk/elk.bundled.js",
+    "assets/fonts/font-sans-latin-ext.woff2",
+    "assets/fonts/font-sans-latin.woff2",
+    "assets/fonts/fonts-license.txt",
+    "assets/katex/katex-AMS-Regular.woff2",
+    "assets/katex/katex-Caligraphic-Regular.woff2",
+    "assets/katex/katex-Main-Bold.woff2",
+    "assets/katex/katex-Main-BoldItalic.woff2",
+    "assets/katex/katex-Main-Italic.woff2",
+    "assets/katex/katex-Main-Regular.woff2",
+    "assets/katex/katex-Math-BoldItalic.woff2",
+    "assets/katex/katex-Math-Italic.woff2",
+    "assets/katex/katex-Size1-Regular.woff2",
+    "assets/katex/katex-Size2-Regular.woff2",
+    "assets/katex/katex-Size3-Regular.woff2",
+    "assets/katex/katex-Size4-Regular.woff2",
+    "assets/katex/katex-license.txt",
+    "assets/katex/katex.min.css",
+    "assets/katex/katex.min.js",
+    "runtime/comments/anchors.mjs",
+    "runtime/comments/comment-popover.mjs",
+    "runtime/comments/comment-store.mjs",
+    "runtime/comments/comment-ui.mjs",
+    "runtime/comments/comments.mjs",
+    "runtime/exam/exam-entry.mjs",
+    "runtime/exam/exam-map.mjs",
+    "runtime/exam/exam-mock.mjs",
+    "runtime/exam/exam-patterns.mjs",
+    "runtime/exam/exam-sheet.mjs",
+    "runtime/exam/exam-state.mjs",
+    "runtime/exam/exam.mjs",
+    "runtime/exercises/exercise-response.mjs",
+    "runtime/exercises/exercise-state.mjs",
+    "runtime/exercises/exercises.mjs",
+    "runtime/exercises/graph-response.mjs",
+    "runtime/lecture/lectures.mjs",
+    "runtime/lecture/video.mjs",
+    "runtime/reading/code.mjs",
+    "runtime/reading/derivation.mjs",
+    "runtime/reading/formulas.mjs",
+    "runtime/reading/mathml.mjs",
+    "runtime/reading/reading.mjs",
+    "runtime/reading/symbols.mjs",
+    "runtime/reading/walkthrough.mjs",
+    "runtime/shell/app.mjs",
+    "runtime/shell/completion.mjs",
+    "runtime/shell/dom.mjs",
+    "runtime/shell/files.mjs",
+    "runtime/shell/navigation.mjs",
+    "runtime/shell/reference-panel.mjs",
+    "runtime/shell/search.mjs",
+    "runtime/shell/start.mjs",
+    "runtime/study/explore.mjs",
+    "runtime/study/flashcards.mjs",
+    "runtime/study/learning.mjs",
+    "runtime/study/question-review.mjs",
+    "runtime/study/recall.mjs",
+    "runtime/study/revision.mjs",
+    "runtime/visuals/graph.mjs",
+    "runtime/visuals/plot.mjs",
+    "runtime/visuals/uml-layout.mjs",
+    "runtime/visuals/uml.mjs",
 )
 # Earlier templates installed these unused files. Builds remove unedited copies and
 # stop managing edited ones; publication removes them from previously managed sites.
+LEGACY_FLAT_FILES = tuple(name.rsplit("/", 1)[-1] for name in TEMPLATE_FILES if "/" in name)
 RETIRED_TEMPLATE_FILES = (
     "font-serif-latin.woff2",
     "font-serif-latin-ext.woff2",
     "font-serif-greek.woff2",
+    *LEGACY_FLAT_FILES,
 )
 
 
@@ -264,6 +266,8 @@ def _app_data(
         else {},
         "incompleteSources": sum(item.status != "complete" for item in state.coverage),
     }
+    if content and content.annotations:
+        payload["annotations"] = [entry.model_dump(mode="json") for entry in content.annotations]
     payload["workspaces"] = (["study"] if content else []) + (["exercises"] if exercises else [])
     if root is not None:
         from tum_mcp.course.ledger.coverage import pending_exercises, read_ledger, study_preparation
@@ -415,6 +419,21 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
             raise CampusError(
                 Code.WORKSPACE_CONFLICT, "Unknown generated site files were preserved."
             )
+        legacy = set(record.files).intersection(LEGACY_FLAT_FILES)
+        if legacy:
+            # A flat custom entry point may still import files in the old locations.
+            changed = [
+                name
+                for name in sorted(legacy | {"index.html", "styles.css"})
+                if (body := read_bytes(app_path(root, name))) is not None
+                and digest(body) != record.files.get(name)
+            ]
+            if changed:
+                raise CampusError(
+                    Code.WORKSPACE_CONFLICT,
+                    "The previous app layout has customized files. Preserve or port them "
+                    "before migrating: " + ", ".join(changed),
+                )
         source = files("tum_mcp") / "bundled/course_app/site"
         desired = {name: (source / name).read_bytes() for name in TEMPLATE_FILES}
         payload = _app_data(state, content, exercises, lectures, root, exam)
@@ -446,6 +465,12 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
             writes.append(Write(f"{folder}/{name}", before, after))
             owned[name] = digest(after)
         updated = BuildRecord(files=owned).model_dump_json(indent=2).encode()
+        if legacy and preserved:
+            raise CampusError(
+                Code.WORKSPACE_CONFLICT,
+                "New app layout paths are already customized. The previous app was preserved: "
+                + ", ".join(preserved),
+            )
         if (exercises or lectures or exam) and preserved:
             raise CampusError(
                 Code.WORKSPACE_CONFLICT,

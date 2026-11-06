@@ -94,7 +94,8 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
     cases = json.loads((Path(__file__).parents[1] / "fixtures/latex_scan.json").read_text())
     result = page.evaluate(
         r"""async cases => {
-          const { texElement, formulaParts, splitRelation } = await import('./mathml.mjs');
+          const { texElement, formulaParts, splitRelation } =
+            await import('./runtime/reading/mathml.mjs');
           const box = document.createElement('div');
           box.style.width = '140px'; box.style.fontSize = '24px';
           const long = String.raw`x_1+x_2+x_3+x_4=1,\qquad y_1+y_2=2`;
@@ -162,7 +163,7 @@ def test_derivations_align_on_one_relation_inside_their_section(
     expect(page.locator(".tex-equation .katex").first).to_be_visible()
     lists = page.evaluate(
         """async groups => {
-          const { renderDerivation } = await import('./derivation.mjs');
+          const { renderDerivation } = await import('./runtime/reading/derivation.mjs');
           const reason = 'Because the bases agree.';
           const lines = latex => ({ lines: latex.map(l => ({ latex: l, reason })) });
           const box = renderDerivation({ groups: groups.map(lines) }, () => null);
@@ -215,7 +216,7 @@ def test_variables_open_their_meaning_by_click_and_keyboard(
     # The app marks exactly what the build's matcher marks (test_variable_meanings).
     marks = page.evaluate(
         """async cases => {
-          const { symbolMarks } = await import('./mathml.mjs');
+          const { symbolMarks } = await import('./runtime/reading/mathml.mjs');
           return cases.map(c => symbolMarks(c.latex, c.symbols)
             .map(([s, e, i]) => [c.latex.slice(s, e), i]));
         }""",
@@ -226,7 +227,7 @@ def test_variables_open_their_meaning_by_click_and_keyboard(
     # and K_j^\dagger never borrows the meaning of K_j.
     block = page.evaluate(
         r"""async () => {
-          const { renderDerivation } = await import('./derivation.mjs');
+          const { renderDerivation } = await import('./runtime/reading/derivation.mjs');
           const symbols = [{ symbol: '\\(K_j\\)', meaning: 'Kraus operator' },
             { symbol: '\\(\\rho\\)', meaning: 'Input state' }];
           const box = renderDerivation({ symbols, groups: [{ lines: [
@@ -245,7 +246,7 @@ def test_variables_open_their_meaning_by_click_and_keyboard(
     # The preview's policy lets KaTeX size the arrow it draws for a vector.
     arrow = page.evaluate(
         """async () => {
-          const { texElement } = await import('./mathml.mjs');
+          const { texElement } = await import('./runtime/reading/mathml.mjs');
           const math = texElement('\\\\vec r', { display: true });
           document.querySelector('main').append(math);
           return math.querySelector('svg').getBoundingClientRect().width;

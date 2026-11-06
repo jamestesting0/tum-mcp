@@ -1,5 +1,5 @@
-@font-face { font-family: 'Atkinson Hyperlegible Next'; font-style: normal; font-weight: 200 800; font-display: swap; src: url('./font-sans-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: 'Atkinson Hyperlegible Next'; font-style: normal; font-weight: 200 800; font-display: swap; src: url('./font-sans-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-style: normal; font-weight: 200 800; font-display: swap; src: url('./assets/fonts/font-sans-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-style: normal; font-weight: 200 800; font-display: swap; src: url('./assets/fonts/font-sans-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 
 /* Tokens. Components use these values; change the look here rather than per component. */
 :root {
@@ -137,7 +137,7 @@ a.course-title:hover, a.course-title[aria-current="page"] { color: var(--accent)
 .course-semester { margin-top: var(--s1); color: var(--muted); font-size: var(--text-small); font-weight: 500; }
 .outline-context { display: none; }
 [data-outline="collapsed"] .course-title { display: none; }
-.sidebar-body { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; gap: var(--s4); }
+.sidebar-body { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; gap: var(--s4); }
 .unit-list { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s3); }
 /* Pages read in the ink color; labels, dates and progress inside them stay muted. */
 .unit-link { display: block; min-height: var(--target); padding: var(--s3) var(--s2); border-radius: var(--r1); color: var(--ink); font-size: var(--text-ui); line-height: 1.45; text-decoration: none; overflow-wrap: anywhere; }
@@ -151,8 +151,8 @@ a.course-title:hover, a.course-title[aria-current="page"] { color: var(--accent)
 .study-unit-link > span { margin: 0; }
 .revision-link { color: var(--ink); font-weight: 500; }
 .unit-group { min-width: 0; }
-.unit-group > summary { display: flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: var(--s2); border-radius: var(--r1); color: var(--ink); font-size: var(--text-ui); font-weight: 500; overflow-wrap: anywhere; }
-.unit-group > summary::before { color: var(--muted); }
+.unit-group > summary { display: flex; align-items: flex-start; gap: var(--s2); min-height: var(--target); padding: var(--s2); border-radius: var(--r1); color: var(--ink); font-size: var(--text-ui); font-weight: 500; overflow-wrap: anywhere; }
+.unit-group > summary::before { margin-block-start: calc((1lh - 6px) / 2); color: var(--muted); }
 .unit-group > summary:hover { background: var(--surface); }
 /* Children align with their folder's label: chevron width plus its gap. */
 .group-children { margin-top: var(--s1); margin-inline-start: calc(6px + var(--s2)); }
@@ -444,6 +444,7 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 button.term { display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; font-weight: inherit; text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: help; }
 button.term[aria-expanded="true"] { color: var(--accent); }
 .term-bubble { position: absolute; z-index: 6; top: calc(100% + var(--s1)); left: 0; display: flex; flex-direction: column; gap: var(--s1); width: min(340px, 80vw); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r2); background: var(--canvas); color: var(--ink); font-size: var(--text-ui); font-weight: 400; line-height: 1.5; text-align: start; }
+.annotation-tip .term-bubble { position: fixed; z-index: 40; max-height: calc(100dvh - 16px); overflow: auto; }
 .term-name { font-weight: 650; }
 .term-condition { color: var(--muted); }
 .term-more { font-size: var(--text-small); }
@@ -1081,9 +1082,11 @@ button.exam-entry-collapse:hover { color: var(--ink); }
 /* The Next link draws its own rule; a second one above it would double the divider. */
 .exam-question:has(+ .next-step) { border-bottom: 0; }
 .exam-marking { margin: var(--s2) 0 0; }
-.done-mark { display: inline-flex; vertical-align: -2px; margin-inline-start: 6px; color: var(--accent); }
+/* Keep the first title line and its completion marker aligned at every row width. */
+.unit-link .completion-title, .unit-link.completion-title { display: grid; grid-template-columns: minmax(0, 1fr) 14px; align-items: start; gap: var(--s1); }
+.unit-link .completion-copy { margin: 0; font-size: inherit; }
+.unit-link .done-mark { display: flex; margin: calc((1lh - 14px) / 2) 0 0; font-size: inherit; color: var(--accent); }
 .done-mark svg { width: 14px; height: 14px; fill: currentColor; }
-.unit-link .done-mark { display: inline-flex; margin: 0 0 0 6px; vertical-align: -2px; }
 .context-menu { position: fixed; z-index: 50; min-width: 200px; padding: var(--s1); border: 1px solid var(--line); border-radius: var(--r1); background: var(--canvas); box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
 .context-menu-item { display: block; width: 100%; min-height: 36px; padding: var(--s2) var(--s3); border: 0; border-radius: 4px; background: none; color: var(--ink); font: inherit; font-size: var(--text-ui); text-align: start; }
 .context-menu-item:hover, .context-menu-item:focus-visible { background: var(--wash); }

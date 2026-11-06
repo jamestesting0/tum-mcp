@@ -224,7 +224,7 @@ anyio.run(check)
   assert.match(template.revision, /^[a-f0-9]{64}$/);
   const study = JSON.parse(run(process.execPath, [launcher, 'study', 'inspect', demoProject]));
   assert.equal(study.course.synthetic, true); assert.deepEqual(study.stale_units, []);
-  assert.ok(readFileSync(join(demoProject, 'app', 'reading.mjs'), 'utf8').includes('renderReading'));
+  assert.ok(readFileSync(join(demoProject, 'app', 'runtime', 'reading', 'reading.mjs'), 'utf8').includes('renderReading'));
   phase('passed');
   console.log(JSON.stringify({ platform: process.platform, architecture: process.arch, setupIdempotent: true, skills: skills.checked_skills.length, studyStateRoutingPassed: true, courseMemoryLifecyclePassed: true, packagedMcpPassed: true, localEncryptedStoragePassed: true, additionalClientSetupPassed: true, browserEvidence, realAccountsUsed: false }));
 } finally { rmSync(root, { recursive: true, force: true }); }

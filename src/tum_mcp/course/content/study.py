@@ -1206,23 +1206,53 @@ class Unit(Frozen):
         return self
 
 
+class TermAnnotation(Frozen):
+    term: Annotated[str, Field(min_length=1, max_length=80, pattern=r"^[^{}\r\n]+$")]
+    meaning: Annotated[str, Field(min_length=1, max_length=240)]
+
+    @model_validator(mode="after")
+    def plain(self) -> "TermAnnotation":
+        if self.term != self.term.strip() or not self.meaning.strip() or "{{" in self.meaning:
+            raise ValueError("An annotation needs a trimmed term and a plain meaning.")
+        return self
+
+
 class StudyContent(Frozen):
     schema_version: Literal[1] = 1
     course_key: Key
     organization: Literal["lectures", "weeks", "topics"]
     introduction: Text
     units: tuple[Unit, ...] = Field(min_length=1, max_length=300)
+    annotations: tuple[TermAnnotation, ...] = Field(
+        default=(), max_length=200, exclude_if=lambda v: not v
+    )
 
     @model_validator(mode="after")
     def unit_keys(self) -> "StudyContent":
         if len({unit.key for unit in self.units}) != len(self.units):
             raise ValueError("Study units must have unique keys.")
         terms = [term.casefold() for term in self.definitions()]
-        if len(set(terms)) != len(terms):
+        names = terms + [entry.term.casefold() for entry in self.annotations]
+        if len(set(names)) != len(names):
             raise ValueError("Define each term once across the course.")
-        if unknown := term_markers(self.model_dump(mode="json")) - set(terms):
-            raise ValueError(f"Marked terms need a definition block: {sorted(unknown)[:5]}.")
+        value = self.model_dump(mode="json", exclude={"annotations"})
+        if unknown := term_markers(value) - set(names):
+            raise ValueError(
+                f"Marked terms need a definition block or annotation: {sorted(unknown)[:5]}."
+            )
+        if misplaced := self.annotation_problems(value):
+            raise ValueError(f"Annotations belong in explanatory prose: {sorted(misplaced)[:5]}.")
+        if unknown := term_markers(value, fold=False) - self.annotation_names():
+            mismatched = {term for term in unknown if term.casefold() in set(names) - set(terms)}
+            if mismatched:
+                raise ValueError(f"Use the annotation's spelling: {sorted(mismatched)[:5]}.")
         return self
+
+    def annotation_names(self) -> set[str]:
+        return {entry.term.lower() for entry in self.annotations}
+
+    def annotation_problems(self, value: JsonValue, *, prose: bool = False) -> set[str]:
+        return misplaced_annotations(value, self.annotation_names(), prose=prose)
 
     def definitions(self) -> dict[str, dict[str, JsonValue]]:
         """Each defined term with where it is taught, for in-place explanations everywhere."""
@@ -1246,20 +1276,55 @@ TERM_MARKER = re.compile(r"\{\{([^{}\n]{1,80})\}\}")
 LITERAL_FIELDS = frozenset({"code", "starter_code", "latex", "mathml", "svg"})
 
 
-def term_markers(value: JsonValue) -> set[str]:
+def term_markers(value: JsonValue, *, fold: bool = True) -> set[str]:
     """Every marked term in authored text, outside code, inline code and math."""
     match value:
         case str():
             text = INLINE_SPANS.sub(" ", value)
-            return {match[1].strip().casefold() for match in TERM_MARKER.finditer(text)}
+            names = (match[1].strip() for match in TERM_MARKER.finditer(text))
+            return {name.casefold() if fold else name.lower() for name in names}
         case list():
-            return {term for item in value for term in term_markers(item)}
+            return {term for item in value for term in term_markers(item, fold=fold)}
         case dict():
             return {
                 term
                 for field, item in value.items()
                 if field not in LITERAL_FIELDS
-                for term in term_markers(item)
+                for term in term_markers(item, fold=fold)
+            }
+        case _:
+            return set()
+
+
+ANNOTATION_PROSE = frozenset(
+    {
+        "paragraphs",
+        "explanation",
+        "note",
+        "hint",
+        "hints",
+        "introduction",
+        "summary",
+    }
+)
+
+
+def misplaced_annotations(value: JsonValue, terms: set[str], *, prose: bool = False) -> set[str]:
+    if not terms:
+        return set()
+    match value:
+        case str():
+            return set() if prose else term_markers(value, fold=False) & terms
+        case list():
+            return {
+                term for entry in value for term in misplaced_annotations(entry, terms, prose=prose)
+            }
+        case dict():
+            return {
+                term
+                for field, entry in value.items()
+                if field not in LITERAL_FIELDS
+                for term in misplaced_annotations(entry, terms, prose=field in ANNOTATION_PROSE)
             }
         case _:
             return set()

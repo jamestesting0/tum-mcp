@@ -47,7 +47,7 @@ def test_local_browser_preserves_defaults_and_disables_windows_port_randomizatio
     assert actual == expected
 
 
-@pytest.mark.parametrize("missing", [None, "flashcards.mjs"])
+@pytest.mark.parametrize("missing", [None, "runtime/study/flashcards.mjs"])
 def test_secondary_browser_smoke_loads_compiled_assets_and_rejects_missing_modules(
     course_browser: Browser, project: Path, missing: str | None
 ) -> None:

@@ -193,7 +193,7 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/course/app/` | Build, preview, visual and interaction checks, comments and publication |
 | `src/tum_mcp/course/memory/`, `media/`, `lecture/` | Course memory, audio and video notes, and the Lecture workspace |
 | `src/tum_mcp/course/cli.py`, `output.py` | The `study` command group and its compact output |
-| `src/tum_mcp/bundled/course_app/site/` | The course app: renderer modules and styles |
+| `src/tum_mcp/bundled/course_app/site/` | Managed course app with feature modules under `runtime/` and vendor files and fonts under `assets/` |
 | `src/tum_mcp/bundled/review/checks.json`, `bundled/exemplars/` | The check registry and the gate-passing exemplar with its plan and answer key |
 | `src/tum_mcp/bundled/skills/` | Canonical versioned source of reading, study, audio and video skills and their references/assets |
 | `bundled/video_runtime/` | The isolated Video Notes render worker |
@@ -242,7 +242,12 @@ relationship shows two values. The preparation skills describe content and point
 of restating its styling, so app changes need no skill edits unless an authored field
 or its meaning changes. Remove a template file by moving it to
 `RETIRED_TEMPLATE_FILES`: builds then delete unedited copies and publication removes
-them from managed sites. The shipped component preview demonstrates the three
+them from managed sites. Existing flat-layout apps migrate on their next build.
+The builder moves only managed, unedited files. If an older runtime or entry point
+was customized, it keeps the old app intact and names the files to port. Authored
+workspaces, URLs and progress identities keep their existing paths.
+
+The shipped component preview demonstrates the three
 heading levels, untitled continuations and guides placed beneath their own exercise
 parts using validated `part_blocks` anchors. Include the optional Lecture
 workspace with `tum-mcp study demo PROJECT --lectures` after selecting the Lecture

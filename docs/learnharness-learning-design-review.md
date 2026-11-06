@@ -377,10 +377,10 @@ All external sources were accessed on 25 October 2026. Repository links below ar
 [local-teaching]: ../src/tum_mcp/bundled/skills/prepare-study/references/teaching.md
 [local-content]: ../src/tum_mcp/bundled/skills/prepare-study/references/content.md
 [local-schema]: ../src/tum_mcp/study_content.py
-[local-app]: ../src/tum_mcp/bundled/course_app/site/app.mjs
-[local-practice]: ../src/tum_mcp/bundled/course_app/site/learning.mjs
-[local-flashcards]: ../src/tum_mcp/bundled/course_app/site/flashcards.mjs
-[local-revision]: ../src/tum_mcp/bundled/course_app/site/revision.mjs
+[local-app]: ../src/tum_mcp/bundled/course_app/site/runtime/shell/app.mjs
+[local-practice]: ../src/tum_mcp/bundled/course_app/site/runtime/study/learning.mjs
+[local-flashcards]: ../src/tum_mcp/bundled/course_app/site/runtime/study/flashcards.mjs
+[local-revision]: ../src/tum_mcp/bundled/course_app/site/runtime/study/revision.mjs
 [local-audio]: ../src/tum_mcp/bundled/skills/audio-notes/references/narration.md
 [research-retrieval]: https://www.psychologicalscience.org/journals/psychological-science/j.1467-9280.2006.01693.x/
 [research-interleaving]: https://eric.ed.gov/?id=EJ786797

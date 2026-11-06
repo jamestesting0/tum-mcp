@@ -87,7 +87,7 @@ def test_recall_opens_the_whole_section_with_one_citation(
     result = page.evaluate(
         """async () => {
           const { default: data } = await import('./data.mjs');
-          const { openReference } = await import('./reference-panel.mjs');
+          const { openReference } = await import('./runtime/shell/reference-panel.mjs');
           const unit = data.units[0], blocks = unit.blocks;
           const start = blocks.findIndex(
             (b, i) => b.title && blocks[i + 1] && !blocks[i + 1].title);

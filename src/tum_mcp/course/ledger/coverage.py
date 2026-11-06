@@ -350,7 +350,12 @@ def pending_exercises(
         ]
         if labels:
             result.append(
-                {"set": owner.get(entry.source), "source": titles[entry.source], "labels": labels}
+                {
+                    "set": owner.get(entry.source),
+                    "source": titles[entry.source],
+                    "labels": labels,
+                    **({"provisional": True} if entry.status.availability == "provisional" else {}),
+                }
             )
     return result
 

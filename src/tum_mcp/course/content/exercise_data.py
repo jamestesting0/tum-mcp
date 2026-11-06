@@ -69,6 +69,24 @@ def check_prerequisites(content: ExerciseContent, study: StudyContent | None) ->
                         f"Exercise {exercise.key} links to block {prerequisite.block}, which "
                         f"unit {prerequisite.unit} does not have.",
                     )
+    names = study.annotation_names()
+    for group in content.sets:
+        if term_markers(group.model_dump(mode="json", exclude={"exercises"}), fold=False) & names:
+            raise CampusError(
+                Code.INVALID_RESPONSE, "Exercise set labels cannot contain annotations."
+            )
+        for exercise in group.exercises:
+            prose = {"steps", "solution"}
+            misplaced = (
+                term_markers(exercise.model_dump(mode="json", exclude=prose), fold=False) & names
+            )
+            misplaced |= study.annotation_problems(exercise.model_dump(mode="json", include=prose))
+            if misplaced:
+                raise CampusError(
+                    Code.INVALID_RESPONSE,
+                    f"Exercise {exercise.key} annotations belong in guide or solution prose: "
+                    f"{sorted(misplaced)[:5]}.",
+                )
     check_terms(content.model_dump(mode="json"), study, "Exercises")
 
 
@@ -77,7 +95,9 @@ def check_terms(value: JsonValue, study: StudyContent | None, workspace: str) ->
     if study is None:
         return
     known = {term.casefold() for term in study.definitions()}
-    if unknown := term_markers(value) - known:
+    annotations = study.annotation_names() if workspace == "Exercises" else set()
+    missing = term_markers(value, fold=False) - annotations
+    if unknown := {term for term in missing if term.casefold() not in known}:
         raise CampusError(
             Code.INVALID_RESPONSE,
             f"{workspace} mark terms that Study does not define: {sorted(unknown)[:5]}.",

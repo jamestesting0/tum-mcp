@@ -47,6 +47,10 @@ optional backlog are demonstrated in the private agent report.
 - **Progress** stays in the student's browser. Passage comments work in the local
   preview only, never on a published site.
 
+The builder keeps the shared renderer under `app/runtime/` and libraries and fonts
+under `app/assets/`. Author content in its workspace directory. A build migrates
+managed flat templates when their files are unedited.
+
 ## Where authored fields appear
 
 | Field | Appears as |
