@@ -196,10 +196,14 @@ def exam_report_command(
 def report(
     project: Path,
     section: Annotated[
-        Literal["quality", "structure", "coverage", "review", "render", "knowledge"] | None,
+        Literal["quality", "structure", "coverage", "review", "render", "knowledge", "readiness"]
+        | None,
         typer.Option(help="Only this part."),
     ] = None,
     full: Annotated[bool, typer.Option("--json", help="Print the whole result.")] = False,
+    preparation: Annotated[
+        str | None, typer.Option(help="Preparation scope ID for readiness.")
+    ] = None,
 ) -> None:
     """Report review flags, the course map, uncovered sources, scorecard and render check."""
     from functools import cache
@@ -217,6 +221,17 @@ def report(
     from tum_mcp.course.review.loop import review_overview
 
     root = project.expanduser().resolve()
+    if section == "readiness":
+        from tum_mcp.course.checks.preparation import assess
+
+        if preparation is None:
+            raise CampusError(
+                Code.ACTION_REQUIRED, "Name a preparation scope with --preparation ID."
+            )
+        emit(root, "readiness", {"readiness": assess(root, preparation).report()}, full=True)
+        return
+    if preparation is not None:
+        raise CampusError(Code.ACTION_REQUIRED, "Use --preparation with --section readiness.")
     if section == "knowledge":
         from tum_mcp.course.memory.report import knowledge_report
 
@@ -352,6 +367,7 @@ def schema(
         "lectures",
         "exam",
         "coverage",
+        "preparation",
         "review",
         "knowledge",
         "audio-manifest",
@@ -386,6 +402,10 @@ def schema(
             from tum_mcp.course.content.exam import ExamContent
 
             result = ExamContent.model_json_schema()
+        case "preparation":
+            from tum_mcp.course.ledger.preparation import Preparation
+
+            result = Preparation.model_json_schema()
         case "coverage":
             from tum_mcp.course.ledger.coverage import CoverageLedger
 
@@ -468,7 +488,14 @@ def visuals(
     from tum_mcp.course.app.visuals import check_interactions, check_visuals
 
     if interact:
-        emit(project.expanduser().resolve(), "interact", check_interactions(project), full=full)
+        emit(
+            project.expanduser().resolve(),
+            "interact",
+            check_interactions(
+                project, tuple(unit or ()), tuple(exercise or ()), exam=exam, phone=phone
+            ),
+            full=full,
+        )
         return
     result = check_visuals(
         project, tuple(unit or ()), tuple(exercise or ()), exam=exam, gallery=gallery, phone=phone
@@ -486,7 +513,7 @@ def verify(
     from tum_mcp.course.review import loop
 
     root = project.expanduser().resolve()
-    results = [r for r in loop.load(root).answer_keys if item in {None, r["item"]}]
+    results = loop.load(root, answer_item=item).answer_keys
     emit(root, "verify", {"passed": all(r["passed"] for r in results), "items": results}, full=full)
 
 
@@ -504,7 +531,9 @@ def lint(
     from tum_mcp.course.review import loop
 
     root = project.expanduser().resolve()
-    context = loop.load(root)
+    from tum_mcp.course.review.items import resolve_item
+
+    context = loop.load(root, answer_item=item)
     ledger = read_ledger(root)
     outcomes = (
         {outcome.key for source in ledger.sources for outcome in source.outcomes}
@@ -519,20 +548,8 @@ def lint(
         }
         result = {"passed": all(r["passed"] for r in results.values()), "items": results}
     else:
-        result = _lint_item(root, context, _item_key(context.items, item), outcomes)
+        result = _lint_item(root, context, resolve_item(context.items, item), outcomes)
     emit(root, "lint", result, full=full)
-
-
-def _item_key(items: dict, item: str) -> str:
-    """The item named exactly, or the one item whose key ends with it (`dfs` for study/dfs)."""
-    if item in items:
-        return item
-    matches = [key for key in items if key.endswith("/" + item)]
-    if len(matches) == 1:
-        return matches[0]
-    known = sorted(items)
-    listed = ", ".join(known[:15]) + (f" and {len(known) - 15} more" if len(known) > 15 else "")
-    raise CampusError(Code.ACTION_REQUIRED, f"No item {item}; the items are {listed or 'none'}.")
 
 
 def _lint_item(root: Path, context, item: str, outcomes: set[str] | None) -> dict:

@@ -62,7 +62,8 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
    batch: build, `tum-mcp study visuals PROJECT` and `--interact`. Review the core path with
    Explore closed before approving a split, the last batch as carefully as the first. Then
    ask before the review loop (Phase B, run by [review-course](../review-course/SKILL.md)),
-   unless the request already asks for review. Code checks do not replace the loop's fresh
+   unless the request already asks for review. If another batch or workspace remains in
+   scope, continue drafting it first. Code checks do not replace the loop's fresh
    checkers, and the session that wrote a unit never scores it. Rebind source hashes only
    after you read the changed content.
 5. **Build.** Run `tum-mcp study build PROJECT`. Do not author duplicate decks,

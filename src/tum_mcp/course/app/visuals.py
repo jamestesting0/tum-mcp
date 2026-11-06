@@ -22,12 +22,21 @@ from pathlib import Path
 from threading import Thread
 from typing import TYPE_CHECKING, Any
 
+from filelock import FileLock
 from pydantic import JsonValue, TypeAdapter
 
+from tum_mcp.course.app.browser_evidence import (
+    browser_choice,
+    browser_identity,
+    cached,
+    result_key,
+    save_receipt,
+)
 from tum_mcp.course.content.store import present
 from tum_mcp.course.project.paths import app_path
 from tum_mcp.course.project.store import private_path
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.config import private_write
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
@@ -35,6 +44,7 @@ if TYPE_CHECKING:
     from tum_mcp.course.content.exam import ExamContent
     from tum_mcp.course.content.exercises import ExerciseContent
     from tum_mcp.course.content.study import Block, StudyContent
+    from tum_mcp.moodle.browsers import BrowserChoice
 
 WIDTHS = {"phone": 390, "narrow": 600, "desktop": 1280}
 # Desktop is checked by default; phone and narrow widths only when asked (`--phone`).
@@ -355,32 +365,32 @@ def _measure(
     visits: list[Visit],
     sheet_stem: str | None = None,
     widths: tuple[str, ...] = tuple(WIDTHS),
-) -> tuple[dict[str, dict[str, Visual]], dict[str, list[str]]]:
+    *,
+    choice: "BrowserChoice | None" = None,
+    stamp: str = "",
+) -> tuple[dict[str, dict[str, Visual]], dict[tuple[str, str], tuple[str, ...]]]:
     from playwright.sync_api import sync_playwright
 
     from tum_mcp.course.app.preview import Handler, PreviewServer
     from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
-    from tum_mcp.moodle.browsers import discover_browsers
 
-    choices = discover_browsers()
-    if not choices:
-        raise CampusError(Code.ACTION_REQUIRED, "Install Chrome, Edge or Chromium for the check.")
+    choice = choice or browser_choice()
     bundled = files("tum_mcp.bundled")
     measure = bundled.joinpath("visual_check.js").read_text(encoding="utf-8")
     inject = bundled.joinpath("visual_inject.js").read_text(encoding="utf-8")
     host = next((visit.route for visit in visits if visit.route.endswith("/content")), "#home")
-    folder = root / ".tum-mcp" / "visuals"
+    folder = root / ".tum-mcp" / "visuals" / stamp
     folder.mkdir(parents=True, exist_ok=True)
     measured: dict[str, dict[str, Visual]] = {}
     shots: dict[str, list[tuple[str, bytes]]] = {}
-    sheets: dict[str, list[str]] = {}
+    sheets: dict[tuple[str, str], tuple[str, ...]] = {}
     server = PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(site)))
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base = f"http://127.0.0.1:{server.server_port}/"
     try:
-        with browser_driver(choices[0]), sync_playwright() as playwright:
-            browser = launch_loopback_browser(playwright.chromium, choices[0])
+        with browser_driver(choice), sync_playwright() as playwright:
+            browser = launch_loopback_browser(playwright.chromium, choice)
             try:
                 for name, pixels in ((name, WIDTHS[name]) for name in widths):
                     photograph = name in SHEET_WIDTHS
@@ -452,7 +462,7 @@ def _measure(
                         sheet_page = context.new_page()
                         for item, taken in shots.items():
                             stem = folder / f"{sheet_stem or item.replace('/', '_')}-{name}"
-                            sheets.setdefault(item, []).extend(
+                            sheets[item, name] = tuple(
                                 str(path.relative_to(root))
                                 for path in _sheets(sheet_page, taken, pixels, stem)
                             )
@@ -486,6 +496,8 @@ def read_report(root: Path) -> dict[str, Any] | None:
         return None
     if not isinstance(report, dict) or report.get("schema_version") != 1:
         return None
+    if not isinstance(report.get("items"), dict) or not isinstance(report.get("app"), str):
+        return None
     return report
 
 
@@ -512,7 +524,7 @@ def check_visuals(
         route = f"#{content.units[0].key}/content" if content and content.units else "#home"
         measured, sheets = _measure(root, site, _gallery(route), "gallery")
         return {
-            "sheets": sheets.get("gallery", []),
+            "sheets": [path for paths in sheets.values() for path in paths],
             "findings": {
                 visual.id: sorted(
                     {
@@ -533,39 +545,152 @@ def check_visuals(
         with_exam=exam,
     )
     widths = tuple(WIDTHS) if phone else DEFAULT_WIDTHS
-    measured, sheets = _measure(root, site, visits, widths=widths) if visits else ({}, {})
-    app = app_revision(site)
-    previous = read_report(root)
-    items: dict[str, Any] = dict(previous["items"]) if previous and previous["app"] == app else {}
-    today = datetime.date.today().isoformat()
-    for item, value in revisions.items():
-        items[item] = {
-            "revision": value,
-            "checked_at": today,
-            "visuals": [asdict(visual) for visual in measured.get(item, {}).values()],
-            "sheets": sheets.get(item, []),
-        }
-    report_path(root).write_text(
-        json.dumps({"schema_version": 1, "app": app, "items": items}, indent=2, ensure_ascii=False)
-        + "\n",
-        encoding="utf-8",
+    choice = browser_choice()
+    identity = browser_identity(root, choice)
+    request = result_key("visual", [*revisions, *units, *exercises], widths)
+    required = tuple(f"visual/{width}/{item}" for width in widths for item in revisions)
+    if previous_result := cached(root, identity, request, required):
+        return previous_result
+    measured, sheets = (
+        _measure(root, site, visits, widths=widths, choice=choice, stamp=identity.build)
+        if visits
+        else ({}, {})
     )
-    checked = {item: items[item] for item in revisions}
-    defects = _defects(checked)
+    items = {
+        item: {
+            "revision": value,
+            "checked_at": datetime.date.today().isoformat(),
+            "visuals": [asdict(visual) for visual in measured.get(item, {}).values()],
+            "sheets": [path for width in widths for path in sheets.get((item, width), ())],
+        }
+        for item, value in revisions.items()
+    }
+    defects = _defects(items)
+    failed = {(defect["item"], defect["width"]) for defect in defects}
+    states = {
+        f"visual/{width}/{item}": (item, width) not in failed
+        for width in widths
+        for item in revisions
+    }
     selected = {item.split("/", 1)[1] for item in revisions if item.startswith("study/")}
-    return {
+    result = {
         "passed": not defects,
         "checked": sorted(revisions),
         "defects": defects,
-        "sheets": sorted(sheet for record in checked.values() for sheet in record["sheets"]),
+        "sheets": sorted(sheet for record in items.values() for sheet in record["sheets"]),
         **({"no_visuals": sorted(set(units) - selected)} if set(units) - selected else {}),
+    }
+    save_receipt(
+        root,
+        identity,
+        states,
+        (request, result),
+        captures={f"visual/{width}/{item}": paths for (item, width), paths in sheets.items()},
+    )
+    with FileLock(str(private_path(root, "update.lock"))):
+        app = app_revision(site)
+        previous = read_report(root)
+        existing = previous["items"] if previous and previous["app"] == app else {}
+        private_write(
+            report_path(root),
+            (
+                json.dumps(
+                    {"schema_version": 1, "app": app, "items": existing | items},
+                    indent=2,
+                    ensure_ascii=False,
+                )
+                + "\n"
+            ).encode(),
+        )
+    return result
+
+
+def interaction_routes(
+    content: "StudyContent | None",
+    exercises: "ExerciseContent | None",
+) -> dict[str, str]:
+    """Stable review item IDs to their normal interactive routes."""
+    return {
+        **{
+            f"study/{unit.key}": f"#{unit.key}/content"
+            for unit in (content.units if content else ())
+        },
+        **{
+            f"exercises/{group.key}/{exercise.key}": f"#exercises/{group.key}/{exercise.key}"
+            for group in (exercises.sets if exercises else ())
+            for exercise in group.exercises
+        },
     }
 
 
-def check_interactions(project: Path) -> dict[str, Any]:
-    """Use every stepping and help control on every page as a student would: walkthrough
-    steps and runs, older steppers, Guide | Solution pills, Compare, and search. Reports each
-    control that does not respond and every script error."""
+def shell_workspace(route: str) -> str:
+    return "study" if route.endswith("/content") else route.lstrip("#").split("/", 1)[0]
+
+
+def shell_routes(routes: list[str]) -> list[str]:
+    by_workspace: dict[str, str] = {}
+    for route in routes:
+        by_workspace.setdefault(shell_workspace(route), route)
+    return list(by_workspace.values())
+
+
+def _outline(page: "Page", width: str) -> list[dict[str, str]]:
+    problems: list[dict[str, str]] = []
+    if width != "desktop":
+        page.locator(".outline-toggle").click()
+    body = page.locator(".sidebar-body")
+    links = body.locator("a.unit-link:not(.revision-link)")
+    link = links.filter(has=page.locator(".unit-title")).first
+    if link.is_visible():
+        before = link.bounding_box()
+        link.click(button="right")
+        action = page.get_by_role("menuitem", name="Mark as completed", exact=True)
+        action.click()
+        after = link.bounding_box()
+        mark = link.locator(".done-mark svg").bounding_box()
+        title = link.locator(".unit-title").bounding_box()
+        if (
+            not before
+            or not after
+            or not mark
+            or not title
+            or abs(mark["y"] - title["y"]) > 6
+            or abs(before["height"] - after["height"]) > 1
+        ):
+            problems.append(
+                {
+                    "control": "outline",
+                    "problem": "Completion changed the row or left the first line.",
+                }
+            )
+        link.focus()
+        page.keyboard.press("Shift+F10")
+        page.get_by_role("menuitem", name="Mark as not completed", exact=True).press("Enter")
+    intact = body.evaluate("""body => {
+      const main = document.querySelector('main'), before = main.scrollTop;
+      body.scrollTop = body.scrollHeight;
+      return body.scrollWidth <= body.clientWidth + 1 && main.scrollTop === before;
+    }""")
+    if not intact:
+        problems.append(
+            {
+                "control": "outline",
+                "problem": "Outline scroll moved the reading pane or overflowed horizontally.",
+            }
+        )
+    return problems
+
+
+def check_interactions(
+    project: Path,
+    units: tuple[str, ...] = (),
+    exercises: tuple[str, ...] = (),
+    *,
+    exam: bool = False,
+    phone: bool = False,
+) -> dict[str, Any]:
+    """Exercise the applicable student routes and preserve exact-build receipts."""
+    from playwright.sync_api import Error as BrowserError
     from playwright.sync_api import sync_playwright
 
     from tum_mcp.course.app.build import read_content
@@ -574,65 +699,117 @@ def check_interactions(project: Path) -> dict[str, Any]:
     from tum_mcp.course.content.exercise_data import read_exercises
     from tum_mcp.course.lecture.data import read_lectures
     from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
-    from tum_mcp.moodle.browsers import discover_browsers
 
     root = project.expanduser().resolve()
     site = app_path(root, "index.html").parent
-    if not (site / "data.mjs").is_file():
-        raise CampusError(Code.ACTION_REQUIRED, "Build the study site first.")
-    choices = discover_browsers()
-    if not choices:
-        raise CampusError(Code.ACTION_REQUIRED, "Install Chrome, Edge or Chromium for the check.")
+    choice = browser_choice()
+    identity = browser_identity(root, choice)
     content = read_content(root) if present(root, "study") else None
-    exercises, exam, lectures = read_exercises(root), read_exam(root), read_lectures(root)
-    routes = [f"#{unit.key}/content" for unit in (content.units if content else ())]
-    routes += [
-        f"#exercises/{group.key}/{exercise.key}"
-        for group in (exercises.sets if exercises else ())
-        for exercise in group.exercises
-    ]
-    if exam:
+    candidates = interaction_routes(content, read_exercises(root))
+    selected = [*(f"study/{key}" for key in units), *(f"exercises/{key}" for key in exercises)]
+    if missing := set(selected) - candidates.keys():
+        raise CampusError(
+            Code.ACTION_REQUIRED, "Unknown browser items: " + ", ".join(sorted(missing))
+        )
+    everything = not (selected or exam)
+    routes = [route for key, route in candidates.items() if everything or key in selected]
+    exam_content = read_exam(root) if everything or exam else None
+    if exam_content:
         routes += ["#exam", "#exam/sheet"]
-        routes += [f"#exam/patterns/{pattern.key}" for pattern in exam.patterns]
-        routes += [f"#exam/mock/{mock.key}" for mock in exam.mocks]
+        routes += [f"#exam/patterns/{pattern.key}" for pattern in exam_content.patterns]
+        routes += [f"#exam/mock/{mock.key}" for mock in exam_content.mocks]
         routes += [
             f"#exam/paper/{variant.key}/exam"
-            for sitting in exam.sittings
+            for sitting in exam_content.sittings
             for variant in sitting.variants
             if variant.replayable
         ]
+    lectures = read_lectures(root) if everything else None
     routes += [f"#lectures/{lecture.key}" for lecture in (lectures.lectures if lectures else ())]
-    query = content.units[0].title.split()[0] if content and content.units else ""
+    widths = tuple(WIDTHS) if phone else DEFAULT_WIDTHS
+    request = result_key("interact", routes, widths)
+    required = (
+        *(f"interact/{width}/{route}" for width in widths for route in routes),
+        *(
+            f"shell/{width}/{theme}/{shell_workspace(route)}"
+            for width in widths
+            for theme in ("light", "dark")
+            for route in shell_routes(routes)
+        ),
+    )
+    if previous_result := cached(root, identity, request, required):
+        return previous_result
+    query = content.units[0].title.split()[0] if content else ""
     script = files("tum_mcp.bundled").joinpath("interaction_check.js").read_text(encoding="utf-8")
     problems: list[dict[str, str]] = []
+    states: dict[str, bool] = {}
     used = 0
-    server = PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(site)))
-    Thread(target=server.serve_forever, daemon=True).start()
-    base = f"http://127.0.0.1:{server.server_port}/"
-    try:
-        with browser_driver(choices[0]), sync_playwright() as playwright:
-            browser = launch_loopback_browser(playwright.chromium, choices[0])
-            try:
-                page = browser.new_context(
-                    viewport={"width": WIDTHS["desktop"], "height": 900}
-                ).new_page()
-                errors: list[str] = []
-                page.on("pageerror", lambda error: errors.append(str(error)))
-                for index, route in enumerate(routes):
-                    _open(page, base + route)
-                    found = page.evaluate(script, {"query": query if index == 0 else ""})
-                    used += found["used"]
-                    problems += [{"route": route, **problem} for problem in found["problems"]]
-                    problems += [
-                        {"route": route, "control": "page", "problem": error} for error in errors
-                    ]
-                    errors.clear()
-            finally:
-                browser.close()
-    finally:
-        server.shutdown()
-        server.server_close()
-    return {"passed": not problems, "pages": len(routes), "controls": used, "problems": problems}
+    with PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(site))) as server:
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base = f"http://127.0.0.1:{server.server_port}/"
+        try:
+            with browser_driver(choice), sync_playwright() as playwright:
+                browser = launch_loopback_browser(playwright.chromium, choice)
+                try:
+                    for width in widths:
+                        with browser.new_context(
+                            viewport={"width": WIDTHS[width], "height": 900}, color_scheme="light"
+                        ) as context:
+                            page = context.new_page()
+                            errors: list[str] = []
+                            page.on("pageerror", lambda error, sink=errors: sink.append(str(error)))
+                            for index, route in enumerate(routes):
+                                try:
+                                    _open(page, base + route)
+                                    found = page.evaluate(
+                                        script, {"query": query if index == 0 else ""}
+                                    )
+                                    used += found["used"]
+                                    issues = found["problems"]
+                                except BrowserError as error:
+                                    issues = [
+                                        {"control": "page", "problem": str(error).splitlines()[0]}
+                                    ]
+                                issues += [
+                                    {"control": "page", "problem": error} for error in errors
+                                ]
+                                states[f"interact/{width}/{route}"] = not issues
+                                problems += [
+                                    {"route": route, "width": width, **issue} for issue in issues
+                                ]
+                                errors.clear()
+                        for theme in ("light", "dark"):
+                            with browser.new_context(
+                                viewport={"width": WIDTHS[width], "height": 620}, color_scheme=theme
+                            ) as context:
+                                page = context.new_page()
+                                for route in shell_routes(routes):
+                                    try:
+                                        _open(page, base + route)
+                                        issues = _outline(page, width)
+                                    except BrowserError as error:
+                                        issues = [
+                                            {
+                                                "control": "outline",
+                                                "problem": str(error).splitlines()[0],
+                                            }
+                                        ]
+                                    states[
+                                        f"shell/{width}/{theme}/{shell_workspace(route)}"
+                                    ] = not issues
+                                    problems += [
+                                        {"route": route, "width": width, "theme": theme, **issue}
+                                        for issue in issues
+                                    ]
+                finally:
+                    browser.close()
+        finally:
+            server.shutdown()
+            thread.join(timeout=3)
+    result = {"passed": not problems, "pages": len(routes), "controls": used, "problems": problems}
+    save_receipt(root, identity, states, (request, result))
+    return result
 
 
 def render_report(

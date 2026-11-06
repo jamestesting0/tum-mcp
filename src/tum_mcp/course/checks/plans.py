@@ -169,12 +169,24 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
     return {"recorded": recorded}
 
 
-def plan_packet(root: Path) -> dict[str, JsonValue]:
-    """The plans not yet approved, for one fresh checker to read before anything is written."""
-    waiting = [plan for plan in plans(root) if gate_status(plan) != "approved"]
+def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]:
+    """Read the requested authoring batch or all plans waiting for a fresh checker."""
+    if items:
+        waiting = []
+        for item in dict.fromkeys(items):
+            plan = read_plan(root, item)
+            if plan is None or plan.item != item:
+                raise CampusError(Code.ACTION_REQUIRED, f"No plan for {item}.")
+            waiting.append(plan)
+    else:
+        waiting = [plan for plan in plans(root) if gate_status(plan) != "approved"]
     return {
         "plans": [
-            {**plan.model_dump(mode="json", exclude={"gate"}), "fingerprint": plan.fingerprint()}
+            {
+                **plan.model_dump(mode="json", exclude={"gate"}),
+                "fingerprint": plan.fingerprint(),
+                **({"status": gate_status(plan)} if items else {}),
+            }
             for plan in waiting
         ],
         "ask": (

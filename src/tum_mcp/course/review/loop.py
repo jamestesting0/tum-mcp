@@ -7,17 +7,18 @@ fixes to verify and the dependents a change reaches, so each round costs less th
 import datetime
 import json
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib.resources import files
 from pathlib import Path
-from typing import Literal
+from typing import Final, Literal
 
 from pydantic import Field, JsonValue, ValidationError
 
 from tum_mcp.course.checks.plans import plan_problems, read_plan
+from tum_mcp.course.checks.preparation import PreparedScope, Readiness, assess
 from tum_mcp.course.project.store import Write, apply, confined, private_name, read_bytes
 from tum_mcp.course.review import registry
-from tum_mcp.course.review.items import ReviewItem, collect, course_item, digest
+from tum_mcp.course.review.items import ReviewItem, collect, course_item, digest, resolve_item
 from tum_mcp.course.review.ledger import (
     LIVE,
     ClosestCall,
@@ -41,6 +42,7 @@ from tum_mcp.course.sources.digests import definition_flags
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
 
+DEFAULT_ROUNDS: Final = 1
 PACKET_CHARS = 60_000
 GATED = ("correctness", "coverage")
 
@@ -50,6 +52,7 @@ class RoundLog(Frozen):
     started: datetime.datetime
     closed: datetime.datetime | None = None
     packets: tuple[str, ...] = ()
+    answered: tuple[str, ...] | None = Field(default=None, exclude_if=lambda value: value is None)
     opened: int = Field(default=0, ge=0)
     resolved: int = Field(default=0, ge=0)
     gate: bool | None = None
@@ -61,6 +64,7 @@ class LoopState(Frozen):
     scope: tuple[str, ...] = Field(max_length=5000)
     status: Literal["running", "passed", "budget_spent"] = "running"
     rounds: tuple[RoundLog, ...] = ()
+    preparation: PreparedScope | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @property
     def round(self) -> int:
@@ -101,6 +105,7 @@ class Context:
     records: dict[str, ItemRecord] = field(default_factory=dict)
     flags_by_item: dict[str, list[dict[str, JsonValue]]] = field(default_factory=dict)
     answer_keys: list[dict[str, JsonValue]] = field(default_factory=list)
+    preparation: Readiness | None = None
 
     def record(self, key: str) -> ItemRecord:
         if key not in self.records:
@@ -108,7 +113,7 @@ class Context:
         return self.records[key]
 
 
-def load(root: Path) -> Context:
+def load(root: Path, *, answer_item: str | None = None) -> Context:
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.app.visuals import visual_ids
     from tum_mcp.course.checks.answers import verify
@@ -198,7 +203,9 @@ def load(root: Path) -> Context:
         ),
     ]
     # An answer key that disagrees with its item is a correctness defect the gate holds on.
-    answer_keys = verify(root, items)
+    answer_keys = verify(
+        root, items, resolve_item(items, answer_item) if answer_item is not None else None
+    )
     flags += [
         {"item": result["item"], "flag": "answer_key", "detail": "; ".join(result["problems"])}
         for result in answer_keys
@@ -219,10 +226,17 @@ def load(root: Path) -> Context:
     return context
 
 
-def covered(item: ReviewItem, covers: tuple[str, ...]) -> str:
-    if "*" in covers:
-        return digest(item.blocks)
-    return digest({block: item.blocks.get(block) for block in covers})
+def covered(item: ReviewItem, covers: tuple[str, ...], check: str = "") -> str:
+    blocks = item.blocks if "*" in covers else {block: item.blocks.get(block) for block in covers}
+    if item.annotations and check.startswith(("clarity.", "correctness.")):
+        blocks = blocks | {"@annotations": item.blocks["@annotations"]}
+    if item.preparation and (check.startswith("coverage.") or check == "correctness.source_match"):
+        return digest([blocks, item.preparation])
+    return digest(blocks)
+
+
+def packet_fingerprint(item: ReviewItem) -> str:
+    return digest([item.blocks, item.preparation]) if item.preparation else digest(item.blocks)
 
 
 def is_current(verdict: Verdict | None, check: registry.Check, item: ReviewItem) -> bool:
@@ -230,7 +244,7 @@ def is_current(verdict: Verdict | None, check: registry.Check, item: ReviewItem)
         verdict is not None
         and verdict.version == check.version
         and all(block == "*" or block in item.blocks for block in verdict.covers)
-        and verdict.fingerprint == covered(item, verdict.covers)
+        and verdict.fingerprint == covered(item, verdict.covers, check.id)
     )
 
 
@@ -277,8 +291,56 @@ def item_tasks(context: Context, key: str) -> dict[str, JsonValue]:
     return {"needs": needs, "verify": verify, "visuals": visuals, "rule": rule}
 
 
-def start(root: Path, budget: int = 5, workspaces: tuple[str, ...] = ()) -> LoopState:
+def _bind_preparation(context: Context, state: LoopState) -> Readiness | None:
+    if state.preparation is None:
+        return None
+    reading = assess(context.root, state.preparation.identifier, context)
+    if reading.scope != state.preparation or set(reading.items) != set(state.scope):
+        reading = reading.model_copy(
+            update={
+                "problems": (
+                    *reading.problems,
+                    "Prepared review scope changed. Record a new scope.",
+                ),
+            }
+        )
+    context.preparation = reading
+    for key, fingerprint in reading.fingerprints.items():
+        context.items[key] = replace(context.items[key], preparation=fingerprint)
+    return reading
+
+
+def _require_ready(readiness: Readiness) -> None:
+    if not readiness.ready:
+        problems = " ".join(readiness.problems[:5])
+        raise CampusError(Code.ACTION_REQUIRED, f"Preparation is not ready. {problems}")
+
+
+def start(
+    root: Path,
+    budget: int = DEFAULT_ROUNDS,
+    workspaces: tuple[str, ...] = (),
+    *,
+    preparation: str | None = None,
+) -> LoopState:
     context = load(root)
+    existing = read_state(context.root)
+    if preparation and workspaces:
+        raise CampusError(Code.ACTION_REQUIRED, "Choose a preparation or workspace filters.")
+    if existing and existing.preparation and existing.status == "running":
+        if preparation == existing.preparation.identifier:
+            if reading := _bind_preparation(context, existing):
+                _require_ready(reading)
+                return existing
+        raise CampusError(
+            Code.ACTION_REQUIRED, "Finish the open prepared review before starting another."
+        )
+    if preparation:
+        readiness = assess(context.root, preparation, context)
+        _require_ready(readiness)
+        state = LoopState(budget=budget, scope=tuple(readiness.items), preparation=readiness.scope)
+        apply(context.root, (_state_write(context.root, state),))
+        return state
     prefixes = {
         "study": ("study/",),
         "exercises": ("exercises/",),
@@ -360,6 +422,9 @@ def next_round(root: Path) -> dict[str, JsonValue]:
         raise CampusError(Code.ACTION_REQUIRED, "Close the current round first.")
     if state.round >= state.budget:
         raise CampusError(Code.ACTION_REQUIRED, "The round budget is spent; extend it to go on.")
+    _bind_preparation(context, state)
+    if context.preparation:
+        _require_ready(context.preparation)
     number = state.round + 1
     groups: dict[str, list[dict[str, JsonValue]]] = {}
     for key in state.scope:
@@ -373,7 +438,19 @@ def next_round(root: Path) -> dict[str, JsonValue]:
             {
                 "item": key,
                 "title": item.title,
-                "fingerprint": digest(item.blocks),
+                "fingerprint": packet_fingerprint(item),
+                **(
+                    {
+                        "preparation": {
+                            "mode": context.preparation.mode,
+                            "cutoff": context.preparation.cutoff,
+                            "demands": context.preparation.items[key],
+                            "item_order": list(state.scope),
+                        }
+                    }
+                    if context.preparation
+                    else {}
+                ),
                 **tasks,
                 "verify": [
                     finding.model_dump(mode="json", exclude={"blocks_at_open"})
@@ -417,6 +494,7 @@ def next_round(root: Path) -> dict[str, JsonValue]:
                 "concepts": _concepts(context.root, key),
                 "blocks": sorted(item.blocks),
                 "passages": _passages(item),
+                **({"annotations": item.annotations} if item.annotations else {}),
             }
         )
     packets: list[str] = []
@@ -448,6 +526,11 @@ def next_round(root: Path) -> dict[str, JsonValue]:
                 .read_text(encoding="utf-8"),
                 "checks": [check.brief() for check in registry.judged(profile)],
                 "items": items,
+                **(
+                    {"scope_dispositions": list(context.preparation.dispositions)}
+                    if context.preparation
+                    else {}
+                ),
                 "answer": ANSWER_FORMAT,
             }
             name = private_name(Path("."), f"review/packets/{packet_id}.json")
@@ -459,7 +542,7 @@ def next_round(root: Path) -> dict[str, JsonValue]:
                 )
             )
             packets.append(packet_id)
-    log = RoundLog(round=number, started=_now(), packets=tuple(packets))
+    log = RoundLog(round=number, started=_now(), packets=tuple(packets), answered=())
     writes.append(
         _state_write(context.root, state.model_copy(update={"rounds": (*state.rounds, log)}))
     )
@@ -572,6 +655,9 @@ def record(
     state = read_state(context.root)
     if state is None or not state.rounds or state.rounds[-1].closed is not None:
         raise CampusError(Code.ACTION_REQUIRED, "Open a round with tum-mcp review next first.")
+    _bind_preparation(context, state)
+    if context.preparation:
+        _require_ready(context.preparation)
     packet_id = str(answers.get("packet", ""))
     body = read_bytes(
         confined(context.root, private_name(Path("."), f"review/packets/{packet_id}.json"))
@@ -589,7 +675,7 @@ def record(
             problems.append(f"{key}: not in packet {packet_id}.")
             continue
         item = context.items.get(key)
-        if item is None or digest(item.blocks) != asked[key]["fingerprint"]:
+        if item is None or packet_fingerprint(item) != asked[key]["fingerprint"]:
             problems.append(f"{key}: the content changed since the packet; take a new round.")
             continue
         recorded = _record_item(context, item, asked[key], answer, number, provenance, problems)
@@ -603,6 +689,7 @@ def record(
         update={
             "opened": state.rounds[-1].opened + opened,
             "resolved": state.rounds[-1].resolved + resolved,
+            "answered": tuple(dict.fromkeys((*(state.rounds[-1].answered or ()), packet_id))),
         }
     )
     apply(
@@ -714,7 +801,7 @@ def _record_item(
             method=str(given.get("method") or "read"),
             round=number,
             provenance=provenance,
-            fingerprint=covered(item, covers),
+            fingerprint=covered(item, covers, check.id),
             covers=covers,
             version=check.version,
             closest=closest,
@@ -932,6 +1019,8 @@ def gate(context: Context, scope: tuple[str, ...]) -> dict[str, list[str]]:
     )
     if course:
         result["course"] = course
+    if context.preparation and context.preparation.problems:
+        result["preparation"] = list(context.preparation.problems)
     if not context.media_passed:
         result["media"] = ["media review incomplete: see study report --section review"]
     return result
@@ -942,6 +1031,7 @@ def close_round(root: Path) -> dict[str, JsonValue]:
     state = read_state(context.root)
     if state is None or not state.rounds or state.rounds[-1].closed is not None:
         raise CampusError(Code.ACTION_REQUIRED, "No open round to close.")
+    _bind_preparation(context, state)
     number = state.round
     blocked = {key: problems for key, problems in gate(context, state.scope).items() if problems}
     passed = not blocked
@@ -977,6 +1067,8 @@ def close_round(root: Path) -> dict[str, JsonValue]:
 def scorecard(
     context: Context, state: LoopState, blocked: dict[str, list[str]] | None = None
 ) -> dict[str, JsonValue]:
+    if context.preparation is None:
+        _bind_preparation(context, state)
     blocked = (
         blocked
         if blocked is not None
@@ -985,11 +1077,25 @@ def scorecard(
     in_scope = [key for key in state.scope if key in context.items]
     rows = []
     failing: Counter[str] = Counter()
+    finding_status: Counter[str] = Counter()
+    provenance: Counter[str] = Counter()
     eye = []
     late = 0
     for key in in_scope:
         record = context.record(key)
-        profile = context.items[key].profile
+        item = context.items[key]
+        profile = item.profile
+        current = {
+            verdict.provenance
+            for check in registry.judged(profile)
+            if (verdict := record.checks.get(check.id)) and is_current(verdict, check, item)
+        }
+        independently_checked = "fresh" in current
+        provisional = bool(current & {"same", "provisional"})
+        provenance["fresh"] += independently_checked
+        provenance["provisional"] += provisional
+        provenance["unreviewed"] += not (independently_checked or provisional)
+        finding_status.update(finding.status for finding in record.findings)
         scores = record.scores(registry.dimensions(profile))
         live = [f for f in record.findings if f.status in LIVE]
         failing.update(f.check for f in live)
@@ -1011,6 +1117,8 @@ def scorecard(
                 "reviews": len(record.history),
                 "last_round": max((v.round for v in record.checks.values()), default=0),
                 "open": len(live),
+                "fresh": independently_checked,
+                "provisional": provisional,
                 "passed": key not in blocked,
             }
         )
@@ -1026,6 +1134,19 @@ def scorecard(
         averages[name] = round(sum(values) / len(values), 2)
     return {
         "gate": not blocked,
+        "scope_type": "prepared" if state.preparation else "ad_hoc",
+        "preparation": (
+            {
+                "identifier": context.preparation.identifier,
+                "mode": context.preparation.mode,
+                "cutoff": context.preparation.cutoff,
+                "ready": context.preparation.ready,
+                "problems": list(context.preparation.problems),
+                "provisional_plans": list(context.preparation.provisional_plans),
+            }
+            if context.preparation
+            else None
+        ),
         "status": state.status,
         "round": state.round,
         "budget": state.budget,
@@ -1033,6 +1154,15 @@ def scorecard(
         "workspaces": workspaces,
         "below_bar": [{"item": key, "problems": problems[:8]} for key, problems in blocked.items()],
         "open_findings_by_check": dict(failing.most_common()),
+        "findings_by_status": dict(finding_status),
+        "items_by_provenance": dict(provenance),
+        "answer_keys": {
+            "checked": sum(result["item"] in in_scope for result in context.answer_keys),
+            "failed": sum(
+                result["item"] in in_scope and not result["passed"]
+                for result in context.answer_keys
+            ),
+        },
         "needs_your_eye": eye,
         "late_findings": late,
         # Fixes made after their item's last check: only another round can verify them.
@@ -1044,6 +1174,8 @@ def scorecard(
                 "round": log.round,
                 "opened": log.opened,
                 "resolved": log.resolved,
+                "packets": len(log.packets),
+                "answered_packets": len(log.answered) if log.answered is not None else None,
                 "gate": log.gate,
                 "minutes": round((log.closed - log.started).total_seconds() / 60, 1)
                 if log.closed
@@ -1069,14 +1201,24 @@ def _markdown(card: dict[str, JsonValue]) -> str:
             if row["item"] == "course"
             for problem in row["problems"]
         ),
-        "| Item | Scores | Reviews | Last round | Open | Passed |",
+        "Current verdicts by item · "
+        + ", ".join(f"{name} {count}" for name, count in card["items_by_provenance"].items()),
+        "",
+        "Findings · "
+        + (
+            ", ".join(f"{name} {count}" for name, count in card["findings_by_status"].items())
+            or "none recorded"
+        ),
+        "",
+        "| Item | Scores | Last round | Open | Evidence | Passed |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
     for row in card["items"]:
         scores = " ".join(f"{k[:5]} {v}" for k, v in row["scores"].items() if v < 3) or "all 3"
+        evidence = ", ".join(label for label in ("fresh", "provisional") if row[label])
         lines.append(
-            f"| {row['item']} | {scores} | {row['reviews']} | {row['last_round']} | "
-            f"{row['open']} | {'yes' if row['passed'] else 'no'} |"
+            f"| {row['item']} | {scores} | {row['last_round']} | "
+            f"{row['open']} | {evidence or 'unreviewed'} | {'yes' if row['passed'] else 'no'} |"
         )
     return "\n".join(lines) + "\n"
 
@@ -1085,13 +1227,17 @@ def status(root: Path) -> dict[str, JsonValue]:
     context = load(root)
     state = read_state(context.root)
     if state is None:
-        return {"loop": None, "next": "tum-mcp review start PROJECT --rounds 5"}
+        return {"loop": None, "next": "tum-mcp review start PROJECT"}
     card = scorecard(context, state)
     open_round = bool(state.rounds) and state.rounds[-1].closed is None
     if state.status == "passed":
-        action = "The gate passed. Report the scorecard."
+        action = (
+            "The gate passed. Report the scorecard."
+            if card["gate"]
+            else "The last loop passed, but current evidence changed. See the scorecard."
+        )
     elif state.status == "budget_spent":
-        action = "The budget is spent: report the scorecard and ask whether to extend it."
+        action = "The budget is spent. Report the scorecard. Extend only if requested."
         if card["fixes_to_verify"]:
             action += (
                 f" {card['fixes_to_verify']} fix(es) wait for a check: "
@@ -1106,6 +1252,8 @@ def status(root: Path) -> dict[str, JsonValue]:
         "budget": state.budget,
         "status": state.status,
         "gate": card["gate"],
+        "scope_type": card["scope_type"],
+        "preparation": card["preparation"],
         "verified": card["verified"],
         "fixes_to_verify": card["fixes_to_verify"],
         "open_round": open_round,
@@ -1137,6 +1285,7 @@ def review_overview(root: Path) -> dict[str, JsonValue]:
         "below_bar": card["below_bar"],
         "open_findings_by_check": card["open_findings_by_check"],
         "needs_your_eye": card["needs_your_eye"],
+        "items_by_provenance": card["items_by_provenance"],
         "course": {"blocks": context.items["course"].blocks} if "course" in context.items else None,
         "media": context.media,
     }

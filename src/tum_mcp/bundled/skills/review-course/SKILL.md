@@ -23,21 +23,29 @@ scores.
 ## The loop
 
 1. **Start.** Phase A of the [draft checks](../prepare-study/references/loop.md) is done
-   (lint, verify, visuals and `--interact` clean). `tum-mcp review start PROJECT
-   --rounds 5` fixes the scope (add `--workspace` to narrow it). A later loop asks only
-   about new and changed items: a verdict holds until the blocks it covered change.
+   (lint, verify, visuals and `--interact` clean). `tum-mcp review start PROJECT` fixes
+   the scope and defaults to one round. For prepared Study or Exercises, use
+   `tum-mcp review start PROJECT --preparation ID` after the readiness report passes.
+   For ad hoc reviews use `--workspace` to narrow the scope. A round that includes Exam
+   uses workspace selectors. Check any prepared Study or Exercises scope first and report
+   its readiness separately from that round. A later loop asks about new and changed items.
+   A verdict holds until the blocks it covered change.
 2. **Each round.**
    1. `tum-mcp review next PROJECT` writes one packet per profile under
       `.tum-mcp/review/packets/`. Each holds its checks with a pass and a fail example,
       the items with their passages and block ids, the report flags, the answer key's
       result, the digests of the cited sources, the findings to verify and the findings
       already rejected with their reasons.
-   2. Give each packet to a fresh checker as its whole brief; it answers in the packet's
+   2. Give each packet to a fresh checker as its whole brief. When the host supports
+      concurrent checker sessions, start independent packets together and leave the draft
+      unchanged until all answers are recorded. The checker answers in the packet's
       `answer` format: a verdict (`pass`, `fail` or `uncertain`) for every check with the
       blocks it read, and for each fail the quoted passage, why it fails and the fix.
-      Checkers look at the cited source pages for logic checks (`tum-mcp study text --key K
-      --pages N --images`), not only the digest. Every report flag marked `needs_ruling`
-      gets a ruling in `flags`: a finding about it, or `not_applicable` with why; the gate
+      Checkers look at cited source pages for logic checks as well as the digest.
+      Reuse matching page images under `.tum-mcp/cache/pages/<sha256>/` in read-only
+      sessions. The author can render a missing cited page with
+      `tum-mcp study text PROJECT --key K --pages N --images`. Every report flag marked
+      `needs_ruling` gets a ruling in `flags`: a finding about it, or `not_applicable` with why; the gate
       holds until each has one. `intuition.concepts_instanced` is answered concept by
       concept from the packet's `concepts`. A finding is resolved only with the rewritten
       passage quoted, and only when that passage reads well on its own.
@@ -46,21 +54,22 @@ scores.
       source outcome or developed explanation, not an illustrative aside.
    3. `tum-mcp review record PROJECT --file ANSWER --provenance fresh`. It refuses answers
       for content that changed since the packet, unknown blocks and unquoted passages.
-   4. Fix by check, not item by item: the same check failing in several items has one
-      cause. Rewrite the whole passage a finding sits in, never splice a sentence
+   4. Group findings that share a cause and make one coherent repair. Rewrite the whole
+      passage a finding sits in, never splice a sentence
       ([writing](../prepare-study/references/writing.md#fix-the-passage-not-the-sentence)).
       Edit the item files, then `tum-mcp review fix PROJECT --item ITEM --finding F`
       (refused while the quoted passage is unchanged; name `--block` when you fixed it
       elsewhere). A finding that is wrong: `review reject` with the reason the content is
       right; the next checker sees it. A score-2 finding the content cannot fix (the
       source gives no smaller example): `review keep` with the reason.
-   5. Re-run the code checks on what changed: `tum-mcp study lint PROJECT --item ITEM`,
-      `study build`, `study visuals` (`--unit`, `--exercise`, `--exam`) and `--interact`.
+   5. Lint changed items with `tum-mcp study lint PROJECT --item ITEM`. After the repair
+      batch, rebuild once and recheck the affected visuals and interactions. Inspect the
+      changed rendering, including any formulas or code outside the contact sheets.
    6. `tum-mcp review close-round PROJECT` computes the gate and writes
       `.tum-mcp/loop/scorecard.md`.
 3. **Stop** when the gate passes, when the budget is spent, or when the student stops. A
-   spent budget lists the open findings and asks whether to go on
-   (`tum-mcp review extend PROJECT`). `uncertain` verdicts go to the student under "needs
+   spent budget lists the findings, fixes, review provenance and what still needs
+   verification. Use `tum-mcp review extend PROJECT` if the student requests another round. `uncertain` verdicts go to the student under "needs
    your eye"; record their decision with `tum-mcp review resolve`.
 4. **Resume** any time with `tum-mcp review status PROJECT`: where the loop stands and the
    one next action.

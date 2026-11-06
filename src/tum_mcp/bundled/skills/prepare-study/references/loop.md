@@ -10,7 +10,14 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    (`tum-mcp study report PROJECT --section coverage`) and `tum-mcp study schedule PROJECT`
    ("this week" and what has been taught). Bonus problems are out unless the student asks
    for them; prepared ones stay and are reviewed. Material released while you work waits
-   for the next round of work.
+   for the next round of work. For Study or Exercises, write
+   `.tum-mcp/preparation/ID.json` using `tum-mcp study schema preparation`.
+   Account for all relevant inventory through the cutoff, including the first lecture,
+   or name a bounded selection and its exclusions. Keep teaching dates, release dates
+   and reports of a session distinct. Put future semester outcomes in the roadmap.
+   Record each required outcome clause or exercise demand and its source locator first.
+   A missing date, unavailable source or provisional sheet may leave the original
+   cutoff unresolved even while a selected subset is ready.
 2. **Read each source once into a digest.** `.tum-mcp/digests/<source>.json` holds its
    stated outcomes, worked examples, definitions and figures with their pages, and the
    source's `sha256` from `.tum-mcp/state.json`. `tum-mcp study digests PROJECT` lists
@@ -28,7 +35,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
 4. **Pass the plan gate.** `tum-mcp review plans PROJECT` gives the plans waiting for a
    check, and one fresh session reads them: `tum-mcp review run-checker PROJECT --plans`
    (a headless host session, recorded as fresh), or a subagent whose answer you record with
-   `tum-mcp review plan-record PROJECT --file ANSWER --provenance fresh`. Checking your own
+   `tum-mcp review plan-record PROJECT --file ANSWER --provenance fresh`. Read only this batch
+   with `tum-mcp review plans PROJECT --item ITEM` (repeat `--item`). Checking your own
    plans records them as provisional. A changed plan needs a new check. Rework a rejected
    plan before writing.
 5. **Solve first.** For anything computed (a trace, a result, a mock question), write the
@@ -49,12 +57,28 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    search must respond). Contact sheets cover drawings and tables, not formulas,
    derivations or code. Open affected excluded blocks in the built app, including
    revealed answers; inspect clipping and readability at the requested widths.
-8. **Ask.** Show what was drafted and the estimated first-round workload, then ask:
-   "Run the review loop? Budget: 5 rounds." Ask in the student's terms; do not cite skill
-   files or workflow names. Skip the question when the request already asks for a review,
+8. **Check the whole requested draft before asking.** Fill the scope's teaching,
+   practice and answer mappings. Check that each learner action actually exercises
+   the recorded demand, and that the outline and introductory copy agree. Persist
+   executable answer keys for computed demands, including results first checked in scratch work.
+   Build and run `tum-mcp study visuals PROJECT --phone` and
+   `tum-mcp study visuals PROJECT --interact --phone`. Narrow both invocations with the
+   same `--unit` and `--exercise` selectors for a bounded scope. Read
+   `tum-mcp study report PROJECT --section readiness --preparation ID`.
+   Resolve required gaps before asking for formal review. Name the verified cutoff or
+   selected subset, the workload and any excluded or unresolved sources, then ask:
+   Ask whether to run one review round, using the student's terms. Report the findings,
+   fixes and any remaining verification when it ends. Extend the budget only if requested. Skip the question when the request already asks for a review,
    and do not ask again in the same session once the student has answered.
 
 ## Phase B: the review loop
+
+For a ready Study or Exercises scope, start `tum-mcp review start PROJECT --preparation ID`.
+Use ordinary workspace filters for an ad hoc review. Keep author-only findings provisional.
+At handoff, reconcile the handbook and final summary with the scope report, including
+provisional sheets and unknown lecture dates. Give counts for checked computations,
+browser routes and reviewed items separately. For an already-running local preview,
+compare its served `data.mjs` with this project's build before linking the stable origin.
 
 review-course drives `tum-mcp review`: fresh checkers read packets, the maker fixes by
 check, code re-runs the checks above, and the gate passes when correctness and coverage are

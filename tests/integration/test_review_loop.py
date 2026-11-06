@@ -252,8 +252,16 @@ def test_the_gate_wants_fresh_checkers_for_correctness(project: Path) -> None:
     assert not any("unrecorded_sources" in problem for problem in held[unit])
 
 
+def test_cli_uses_one_round_unless_a_budget_is_requested(project: Path) -> None:
+    runner = CliRunner()
+    assert json.loads(runner.invoke(app, ["review", "start", str(project)]).output)["budget"] == 1
+    result = runner.invoke(app, ["review", "start", str(project), "--rounds", "3"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["budget"] == 3
+
+
 def test_a_spent_budget_stops_and_extending_continues(project: Path) -> None:
-    loop.start(project, budget=1)
+    assert loop.start(project).budget == 1
     check_all(project, fail={})
     edit_first_block(project)
     card = loop.close_round(project)

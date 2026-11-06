@@ -187,7 +187,7 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/course/project/` | Course state, paths, init, sync, status, the agent guide and the recorded schedule |
 | `src/tum_mcp/course/sources/` | Page text, search, imports, duplicates and source digests |
 | `src/tum_mcp/course/content/` | Per-workspace content models (study blocks, exercises, exam, responses) and the one per-item file loader (`store.py`) |
-| `src/tum_mcp/course/ledger/` | Coverage ledger and the preparation states derived from its links |
+| `src/tum_mcp/course/ledger/` | Coverage ledger and private, dated or selected preparation scopes |
 | `src/tum_mcp/course/checks/` | Report flags, structure map, answer keys (`answers.py`) and structured plans (`plans.py`) |
 | `src/tum_mcp/course/review/` | Review loop: check registry, items and fingerprints, ledger v2, packets, checker runner, scorecard and the `review` CLI |
 | `src/tum_mcp/course/app/` | Build, preview, visual and interaction checks, comments and publication |
@@ -246,6 +246,14 @@ them from managed sites. Existing flat-layout apps migrate on their next build.
 The builder moves only managed, unedited files. If an older runtime or entry point
 was customized, it keeps the old app intact and names the files to port. Authored
 workspaces, URLs and progress identities keep their existing paths.
+
+For dated Study or Exercises preparation, the author records the source scope with
+`tum-mcp study schema preparation` in `.tum-mcp/preparation/ID.json`. Check the
+draft with `tum-mcp study report PROJECT --section readiness --preparation ID`.
+The gate requires current build and browser evidence for the mapped items, including
+the phone and narrow checks from `study visuals --phone` and `--interact --phone`.
+Use `review start PROJECT --preparation ID` to review that scope. A new loop defaults
+to one round. Existing review scopes and explicitly requested budgets stay usable.
 
 The shipped component preview demonstrates the three
 heading levels, untitled continuations and guides placed beneath their own exercise

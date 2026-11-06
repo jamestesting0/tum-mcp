@@ -56,7 +56,12 @@ changes, so the review loop checks it again; new sources join the next loop's sc
 
 Report the course, imported/indexed/changed material, handbook review, coverage and conflicts.
 Inspect stale Study units and Exercises once when relevant. Continue with the
-requested prepare-study, prepare-exercises or prepare-exams workspace. For configured automatic
+requested prepare-study, prepare-exercises or prepare-exams workspace. For a dated
+Study or Exercises request, reconcile the cutoff before authoring. Compare the
+inventory with schedule and announcements, and make one targeted follow-up check
+for an unexplained lecture number or week. Keep a reported
+teaching date distinct from the official schedule, and carry uncertainty into the
+preparation scope and final handoff. For configured automatic
 publication, review only affected existing included content; do not invent a new
 workspace or new guidance as a side effect of syncing. Carry source paths, hashes,
 locators, gaps and changed IDs without repeating source checks. Review dependencies

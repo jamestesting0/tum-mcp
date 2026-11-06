@@ -22,7 +22,10 @@ separate from outcomes, and the report lists them under `cheatsheet`.
 unavailable, unknown), whether it was taught (yes, no, unknown), the source's semester,
 the evidence and the date checked. A file on Moodle is not proof that it was taught, and a
 calendar date is not proof of coverage; leave `unknown` until a schedule, announcement or
-the user says otherwise. Never infer a student's own progress.
+the user says otherwise. For a dated scope, use the first recorded official session
+for each source. When using a release proxy, record it in the schedule as a release date.
+Keep independently corroborated dates with their locators in the preparation scope.
+Never infer a student's own progress.
 
 ## While authoring
 

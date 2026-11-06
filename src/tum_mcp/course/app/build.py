@@ -305,6 +305,22 @@ def _app_data(
     return payload
 
 
+def data_module(payload: dict[str, JsonValue]) -> bytes:
+    data = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+    return ("export default " + data + ";\n").encode()
+
+
+def current_data(root: Path) -> bytes:
+    """Project the current authoring inputs without writing or publishing the app."""
+    from tum_mcp.course.content.exam_data import read_exam
+
+    state = load_state(root)
+    content = read_content(root) if present(root, "study") else None
+    return data_module(
+        _app_data(state, content, read_exercises(root), read_lectures(root), root, read_exam(root))
+    )
+
+
 def _exam_contexts(value: dict) -> list[object]:
     # Meanings stay within a pattern or one exam question.
     questions = [
@@ -439,8 +455,7 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
         payload = _app_data(state, content, exercises, lectures, root, exam)
         for image in sorted(set(figure_images(payload))):
             figure_bytes(app_path(root, image))
-        data = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
-        desired["data.mjs"] = ("export default " + data + ";\n").encode()
+        desired["data.mjs"] = data_module(payload)
         writes: list[Write] = []
         owned = {
             name: value

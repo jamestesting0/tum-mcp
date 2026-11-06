@@ -22,7 +22,10 @@ HOSTS = {
 }
 PROMPT = (
     "You are a fresh course reviewer. You did not write this content. Read the review packet "
-    "at {packet} and the course files it names. "
+    "at {packet} and the course files it names. For cited PDF pages, look up the source "
+    "path and revision in .tum-mcp/state.json. If the revisions match, open any existing "
+    ".tum-mcp/cache/pages/<sha256>/<page>.png with your image tool before trying to render "
+    "the PDF again. The project is read-only. Report limits on the evidence you could inspect. "
     "Before judging, apply the packet's `guidance` for its `profile` when interpreting the "
     "shared checks. For every item, answer every check in its "
     "`needs`, verify every finding in its `verify` and score every visual in its `visuals`, "

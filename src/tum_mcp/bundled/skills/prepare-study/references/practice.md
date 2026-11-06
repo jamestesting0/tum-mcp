@@ -1,8 +1,12 @@
 # Practice that tests a useful decision
 
 Start with the reasoning demand, then solve the item independently before writing
-options. Add an item for a distinct objective, misconception or transfer demand;
-remove paraphrases that test the same decision. No fixed bank size or difficulty quota.
+options. Check the shortest valid solution against the objective. If it bypasses a
+named action, revise the question or narrow the objective. Choosing the next queue
+entry does not test recovering a path from parents. An already supplied eigenvector
+can let a student compute the action of an exponential without diagonalizing a matrix.
+Add an item for a distinct objective, misconception or transfer demand. Remove
+paraphrases that test the same decision. No fixed bank size or difficulty quota.
 
 Choose the demand that fits the goal:
 

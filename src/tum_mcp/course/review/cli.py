@@ -19,14 +19,17 @@ def _echo(value: object) -> None:
 @app.command()
 def start(
     project: Path,
-    rounds: Annotated[int, typer.Option(min=1, max=20, help="Round budget.")] = 5,
+    rounds: Annotated[int, typer.Option(min=1, max=20, help="Round budget.")] = loop.DEFAULT_ROUNDS,
     workspace: Annotated[
         list[str] | None,
         typer.Option(help="Only study, exercises, exam, lectures or course; repeatable."),
     ] = None,
+    preparation: Annotated[
+        str | None, typer.Option(help="Review a ready preparation scope ID.")
+    ] = None,
 ) -> None:
     """Fix the scope and the round budget for a new review loop."""
-    state = loop.start(project, rounds, tuple(workspace or ()))
+    state = loop.start(project, rounds, tuple(workspace or ()), preparation=preparation)
     _echo({"items": len(state.scope), "budget": state.budget, "next": "tum-mcp review next"})
 
 
@@ -174,11 +177,16 @@ def checklist(
 
 
 @app.command()
-def plans(project: Path) -> None:
-    """The plans waiting for the plan gate, as one packet for a fresh checker."""
+def plans(
+    project: Path,
+    item: Annotated[
+        list[str] | None, typer.Option(help="Exact plan item to read. Repeat for a batch.")
+    ] = None,
+) -> None:
+    """Read a batch of plans or all plans awaiting a fresh checker."""
     from tum_mcp.course.checks.plans import plan_packet
 
-    _echo(plan_packet(project.expanduser().resolve()))
+    _echo(plan_packet(project.expanduser().resolve(), tuple(item or ())))
 
 
 @app.command(name="plan-record")

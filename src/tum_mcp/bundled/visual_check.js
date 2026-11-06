@@ -32,9 +32,9 @@
     const section = root.closest('[data-block-index]'), index = section?.dataset.blockIndex ?? '0';
     const optional = root.closest('[data-explore-key]');
     if (optional) return `explore:${optional.dataset.exploreKey}:${index}`;
-    if (root.closest('#exercise-question')) return `statement:${index}`;
     const body = root.closest('.step-body');
     if (body) return section && body.contains(section) ? `step:${step}:${index}` : `step:${step}:check`;
+    if (root.closest('#exercise-question')) return `statement:${index}`;
     return `block:${index}`;
   };
   const roots = [...document.querySelectorAll('main svg.graph, main .uml-region, main .plot-drawing > svg, main figure.figure > svg, main figure.figure > img, main .table-region')]

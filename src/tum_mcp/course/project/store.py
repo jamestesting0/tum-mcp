@@ -107,13 +107,14 @@ local state, choose the workflow below and finish it.
 
 A large request chains the relevant workflows: sync-course only when new upstream
 material is needed, then the workspaces the request needs. Exercises may come first and
-missing workspaces need not be invented. Each prepare skill drafts and checks its own
-work, then asks before the review loop. Load a skill when its step starts, and read only
-the references that step needs.
+missing workspaces need not be invented. When setup and authoring were both requested,
+continue after the binding is ready. For Study and Exercises, record the requested
+preparation scope before drafting. Check `tum-mcp study report . --section readiness
+--preparation ID` before asking about one review round. Load each skill as its step starts.
 
 ### Read vague requests
 - "This week" or "the current lecture": `tum-mcp study schedule .`; without a recorded
-  schedule, the newest lecture in the inventory.
+  schedule, reconcile release or corroborating evidence and keep unknown dates visible.
 - "The exam": the next assessment in course.md.
 - "Everything" or "the course": every source in scope of the coverage report.
 - Before multi-step work, state the scope and defaults you chose in one line, then

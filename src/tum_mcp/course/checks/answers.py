@@ -130,6 +130,17 @@ def verify(root: Path, items: dict, only: str | None = None) -> list[dict[str, J
         if not compared:
             problems.append("the answer key compares nothing")
         results.append(
-            {"item": key, "passed": not problems, "compared": compared, "problems": problems}
+            {
+                "item": key,
+                "passed": not problems,
+                "compared": compared,
+                "problems": problems,
+                "values": sorted(output.get("values") or {}),
+                "walkthroughs": sorted(
+                    name
+                    for name, steps in (output.get("walkthroughs") or {}).items()
+                    if steps and all(steps)
+                ),
+            }
         )
     return results

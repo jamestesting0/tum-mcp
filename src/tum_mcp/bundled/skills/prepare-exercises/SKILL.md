@@ -29,7 +29,11 @@ template, not necessarily a good model for teaching or question design.
    read-content. See [sources](references/sources.md) for incomplete/released material.
 2. Fix the scope as in [draft checks](../prepare-study/references/loop.md): a sheet's
    problems marked bonus get `role: bonus` and are skipped unless the student asks for
-   them; prepared ones stay. Preserve original numbering, statement, subparts and all required givens. Group
+   them; prepared ones stay. For a selected subset of one sheet, record unselected core ledger
+   entry labels that are still in the course scope under the source's `deferred_items` in the preparation scope. Leave their
+   course-wide coverage status intact. Preserve the original part label in both the demand
+   and its authored mapping, even when you select a single part.
+   Preserve original numbering, statement, subparts and all required givens. Group
    by the course's weeks/sheets, with at most one category level. Keep each exercise
    directly selectable; do not create category landing-page chains.
 3. Plan each problem (parts, answers, methods) and solve it first: an answer key in
@@ -54,8 +58,9 @@ template, not necessarily a good model for teaching or question design.
    batch, run `tum-mcp study visuals PROJECT --exercise SET/KEY` and `--interact`, and
    link every problem of each sheet in the
    [coverage ledger](../prepare-study/references/coverage.md) (its set declares the
-   sheet it covers). Then ask before the review loop, unless the request already asks for
-   review; [review-course](../review-course/SKILL.md) runs it. Resolve stale dependencies;
+   sheet it covers). Keep provisional sheets separate from assigned coursework. Check
+   the preparation scope for both workspaces if both were requested, then ask once before
+   the review loop unless the request already asks for review; [review-course](../review-course/SKILL.md) runs it. Resolve stale dependencies;
    never rebind a hash without reading its changed source.
 6. Verify the generated student journey using [verification](references/verification.md).
    For passage feedback, list `study comments list PROJECT --view exercises`, review

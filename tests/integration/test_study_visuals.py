@@ -226,3 +226,38 @@ def test_every_stepper_pill_and_search_on_the_demo_responds(tmp_path: Path) -> N
     result = invoke("visuals", str(project), "--interact", "--json")
     # Then every control responds, with no script errors.
     assert result["problems"] == [] and result["controls"] >= 10
+
+
+@browser
+def test_visuals_find_a_guide_block_nested_under_its_statement(exercise_project: Path) -> None:
+    # A per-part guide lives inside the exercise statement in the rendered app.
+    path = content_file(exercise_project, "exercises")
+    payload = json.loads(path.read_bytes())
+    exercise = payload["sets"][0]["exercises"][0]
+    exercise["parts"] = ["(a)"]
+    exercise["part_blocks"] = {"(a)": "question"}
+    exercise["statement"][0]["key"] = "question"
+    exercise["solution"]["answers"][0]["label"] = "(a)"
+    for step in exercise["steps"]:
+        step["part"] = "(a)"
+    step = exercise["steps"][1]
+    step["blocks"] = [
+        {
+            "kind": "table",
+            "caption": "Path costs",
+            "sources": exercise["statement"][0]["sources"],
+            "columns": ["Existing", "Candidate"],
+            "rows": [["5", "3"]],
+        }
+    ]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    build(exercise_project, publish=False)
+
+    result = invoke(
+        "visuals", str(exercise_project), "--exercise", "sheet-1/sample-relaxation", "--json"
+    )
+    assert result["passed"], result["defects"]
+    record = json.loads(report_path(exercise_project).read_bytes())["items"][
+        "exercises/sheet-1/sample-relaxation"
+    ]
+    assert f"step:{step['key']}:0" in {visual["id"] for visual in record["visuals"]}

@@ -14,6 +14,7 @@ from pydantic import JsonValue
 from tum_mcp.course.content.study import term_markers
 from tum_mcp.course.project.store import confined, read_bytes
 from tum_mcp.course.review.models import SHEET, item_passages, sheet_model
+from tum_mcp.errors import CampusError, Code
 
 
 def digest(value: JsonValue) -> str:
@@ -28,10 +29,23 @@ class ReviewItem:
     title: str
     value: dict
     blocks: dict[str, str] = field(default_factory=dict)
+    preparation: str | None = None
     annotations: dict[str, str] = field(default_factory=dict)
 
     def passages(self) -> list[tuple[str, str]]:
         return item_passages(self.value)
+
+
+def resolve_item(items: dict[str, ReviewItem], item: str) -> str:
+    """The item named exactly, or the one item whose key ends with it (`dfs` for study/dfs)."""
+    if item in items:
+        return item
+    matches = [key for key in items if key.endswith("/" + item)]
+    if len(matches) == 1:
+        return matches[0]
+    known = sorted(items)
+    listed = ", ".join(known[:15]) + (f" and {len(known) - 15} more" if len(known) > 15 else "")
+    raise CampusError(Code.ACTION_REQUIRED, f"No item {item}; the items are {listed or 'none'}.")
 
 
 def blocks_of(value: dict) -> dict[str, str]:

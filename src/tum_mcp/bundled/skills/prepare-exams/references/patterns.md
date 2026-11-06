@@ -99,6 +99,8 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   for a full problem, a worked `solution`; only a multiple choice is checked on screen.
   A `self_check` already shows its full `model_answer` in that panel. Omit `solution`
   when it would repeat that answer; both fields are visible together.
+  Try solving the drill without its key workflow step. Ask for the relevant working
+  or change the givens if a student can get full credit while skipping that step.
   Order items so neighbours need different cases.
 
 Every question you write here, worked practice and drills included, shows its

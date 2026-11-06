@@ -8,6 +8,32 @@ async ({ query }) => {
   const visible = element => Boolean(element && element.getClientRects().length && !element.closest('[hidden]'));
   const label = element => (element.closest('section')?.querySelector('h2, h3, h4')?.textContent || '').trim().slice(0, 60);
 
+  function inspectReading(root) {
+    for (const region of root.querySelectorAll('.equation, .derivation, .code-region, .term-bubble')) {
+      if (!visible(region) || region.scrollWidth <= region.clientWidth + 2) continue;
+      const overflow = getComputedStyle(region).overflowX;
+      if (overflow === 'hidden' || overflow === 'clip') say('reading', 'Clipped content in ' + (label(region) || region.className));
+    }
+    for (const term of root.querySelectorAll('button.term')) {
+      if (!visible(term)) continue;
+      used++;
+      term.scrollIntoView({ block: 'center', inline: 'nearest' });
+      term.click();
+      const bubble = term.parentElement.querySelector('.term-bubble');
+      if (!bubble?.textContent.trim()) say('term', 'The term opened without a meaning');
+      if (term.closest('.annotation-tip') && bubble) {
+        const box = bubble.getBoundingClientRect();
+        if (box.left < 0 || box.right > innerWidth || box.top < 0 || box.bottom > innerHeight) {
+          say('term', 'The annotation extends beyond the viewport');
+        }
+      }
+      term.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      if (term.getAttribute('aria-expanded') === 'true') say('term', 'Escape did not close the meaning');
+    }
+  }
+
+  inspectReading(document.querySelector('main') || document.body);
+
   for (const walk of document.querySelectorAll('.walk')) {
     used++;
     const name = `walkthrough '${label(walk)}'`, next = walk.querySelector('[aria-label="Next step"]');
@@ -51,10 +77,12 @@ async ({ query }) => {
     for (const segment of pill.querySelectorAll(':scope > .segmented .segment')) {
       segment.click(); await frame();
       if (panel.hidden || !panel.textContent.trim()) say(name, `${segment.textContent} opened an empty panel`);
+      inspectReading(panel);
       const action = panel.querySelector('.exercise-actions .primary');
       if (action && /Compare/.test(action.textContent)) {
         action.click(); await frame();
         if (!panel.querySelector('.feedback')) say(name, 'Compare showed no answer');
+        else inspectReading(panel.querySelector('.feedback'));
       }
       segment.click(); await frame();
       if (!panel.hidden) say(name, `choosing the open ${segment.textContent} again did not close it`);
