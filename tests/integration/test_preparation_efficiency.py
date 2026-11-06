@@ -16,7 +16,10 @@ def test_scoped_checks_skip_unrelated_answer_keys(project: Path, command: str) -
     checks = project / ".tum-mcp/checks/study"
     checks.mkdir(parents=True, exist_ok=True)
     stamp = project / "unrelated-key-ran"
-    (checks / "dfs.py").write_text(f"from pathlib import Path\nPath({str(stamp)!r}).touch()\n")
+    (checks / "dfs.py").write_text(
+        f"from pathlib import Path\nPath({str(stamp)!r}).touch()\n",
+        encoding="utf-8",
+    )
     result = CliRunner().invoke(app, ["study", command, str(project), "--item", "bfs", "--json"])
     assert result.exit_code == 0, result.output
     assert not stamp.exists()
