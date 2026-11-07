@@ -349,6 +349,7 @@ document.addEventListener('keydown', event => {
 });
 // The pager the arrows go to when focus rests on the page, such as a guide just opened.
 export function usePager(region) { activePager = region; }
+export const cycleIndex = (index, length) => (index + length) % length;
 export function arrowPaging(region, previous, next, { active = false } = {}) {
   pagers.set(region, { previous, next });
   const use = () => { activePager = region; };

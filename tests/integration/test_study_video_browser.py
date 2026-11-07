@@ -449,7 +449,7 @@ def test_exam_guided_solution_never_requests_video_index(
             requests = []
             page.on("request", lambda request: requests.append(request.url))
             page.goto(f"http://127.0.0.1:{running.server_port}/#exam/paper/ws23-a")
-            page.locator(".exam-card", has_text="Guide").click()
+            page.locator(".exam-card").first.click()
             page.get_by_role("heading", name="Question 1", exact=True).first.wait_for()
             page.get_by_role("button", name="Solution", exact=True).last.click()
             assert page.locator(".video-note").count() == 0

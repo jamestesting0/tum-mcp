@@ -61,8 +61,22 @@ Use tier `core` for what every student must know and `supporting` for the rest. 
 - **path**: one or two section labels inside the topic ("Linear structures"), so related
   references sit together. Group by subject, never by form ("Formulas", "Code").
 
-A complete one-line fact needs no details: the app shows it without a disclosure. Do not
-pad an entry to give it something to open.
+A complete one-line fact needs no padded details. Related links and citations stay
+inside its expansion; the closed row shows only the title, claim/formula and status.
+
+Use three depths of recall: the closed `line` states the short claim or recognition
+cue with any essential applicability condition; opening it gives a compact rule,
+conditions, meaningful steps or a likely mistake; its links lead to the complete
+prepared Study passage and related practice. A method's title plus a slogan and
+links is incomplete. Use `details`, formula conditions, `trigger` and `pitfall`, or
+reuse a short `workflow_from`; a long workflow is better summarized in details
+with its complete practice linked. Keep the expansion useful without copying a
+whole lesson. Populate `passages` for the precise taught block when one exists,
+and name the patterns that supply its practice. Do not invent a Study link for
+material outside the requested preparation scope.
+When a prepared weekly exercise actually trains this entry, add its precise
+`exercises` reference (`set` and `exercise`). The build checks these links; a shared
+lecture topic alone is not enough to claim that an exercise practises the concept.
 
 | What the student retrieves | Form |
 | --- | --- |

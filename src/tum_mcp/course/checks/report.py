@@ -21,6 +21,7 @@ from tum_mcp.course.content.latex import (
 )
 from tum_mcp.course.content.study import (
     LITERAL_FIELDS,
+    MARKS,
     CodeBlock,
     DerivationBlock,
     DiagramBlock,
@@ -500,6 +501,39 @@ INLINE_LIST = re.compile(
 INLINE_STEPS = re.compile(r"(?:^|[.;]\s+)(?:[A-Z][a-z]+(?: \d+)?): ")
 
 
+def visual_state_flags(item: str, value: JsonValue) -> list[dict[str, JsonValue]]:
+    """A staged walkthrough needs changing marks, not only changing prose."""
+    flags: list[dict[str, JsonValue]] = []
+
+    def visit(value: JsonValue) -> None:
+        if isinstance(value, list):
+            for child in value:
+                visit(child)
+        elif isinstance(value, dict):
+            if value.get("kind") == "walkthrough" and isinstance(stage := value.get("stage"), dict):
+                marks = MARKS[str(stage["kind"])]
+                variant = value.get("variant")
+                runs = [value, *([variant] if isinstance(variant, dict) else [])]
+                for run in runs:
+                    states = [{key: step.get(key) for key in marks} for step in run["steps"]]
+                    if all(state == states[0] for state in states[1:]):
+                        flags.append(
+                            {
+                                "item": item,
+                                "flag": "static_walkthrough",
+                                "detail": f"Walkthrough '{value.get('title') or value.get('key')}' "
+                                f"changes its text but not its {stage['kind']} stage. "
+                                f"Show the actual step state with {', '.join(sorted(marks))}, "
+                                "or present an intentionally static figure outside a walkthrough.",
+                            }
+                        )
+            for child in value.values():
+                visit(child)
+
+    visit(value)
+    return flags
+
+
 def quality_flags(
     content: StudyContent | None, exercises: ExerciseContent | None
 ) -> list[dict[str, JsonValue]]:
@@ -523,6 +557,7 @@ def quality_flags(
     seen_terms: set[str] = set()
     for unit in units:
         flags.extend(variable_flags(unit.key, unit.model_dump(mode="json")))
+        flags.extend(visual_state_flags(unit.key, unit.model_dump(mode="json")))
         opening, symbols, terms = _opening(unit.blocks, seen_symbols, seen_terms)
         if len(opening) >= OPENING_NEW_IDEAS:
             flag(
@@ -826,6 +861,7 @@ def quality_flags(
             )
         for exercise in group.exercises:
             flags.extend(variable_flags(exercise.key, exercise.model_dump(mode="json"), task=True))
+            flags.extend(visual_state_flags(exercise.key, exercise.model_dump(mode="json")))
             guided = (*exercise.statement, *(b for step in exercise.steps for b in step.blocks))
             if not has_visual(guided):
                 flag(

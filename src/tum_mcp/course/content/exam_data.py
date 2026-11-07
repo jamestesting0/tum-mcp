@@ -19,6 +19,7 @@ from tum_mcp.course.checks.report import (
     slash_quotients,
     typed_math_labels,
     unexplained_variables,
+    visual_state_flags,
 )
 from tum_mcp.course.content.exam import (
     CONSIDERED,
@@ -33,6 +34,7 @@ from tum_mcp.course.content.exam import (
     similarity,
     variant_revision,
 )
+from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.latex import inline_math
 from tum_mcp.course.content.store import locate, read_json
 from tum_mcp.course.content.study import StudyContent, compile_formulas, has_visual
@@ -116,6 +118,22 @@ def stale_exam(root: Path, state: StudyState, content: ExamContent) -> tuple[str
         if not all(fresh(source.key, source.sha256) for source in variant.sources)
     )
     return tuple(stale)
+
+
+def check_exercise_links(content: ExamContent, exercises: ExerciseContent | None) -> None:
+    available = {
+        (group.key, exercise.key)
+        for group in (exercises.sets if exercises else ())
+        for exercise in group.exercises
+    }
+    for concept in content.concepts:
+        for link in concept.exercises:
+            if (link.set, link.exercise) not in available:
+                raise CampusError(
+                    Code.INVALID_RESPONSE,
+                    f"Cheatsheet entry {concept.key} links to an unprepared exercise: "
+                    f"{link.set}/{link.exercise}.",
+                )
 
 
 def check_unit_links(content: ExamContent, study: StudyContent | None) -> None:
@@ -319,6 +337,10 @@ def sheet_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
         for target in exam_report(content)["targets"]
         if str(target["item"]).startswith("concept:")
         and (measure := str(target["measure"])) in SHEET_FLAGS
+    ] + [
+        flag
+        for concept in content.concepts
+        for flag in visual_state_flags(f"concept:{concept.key}", concept.model_dump(mode="json"))
     ]
 
 
@@ -328,8 +350,7 @@ RETRIEVED_KINDS = frozenset({"definition", "fact", "theorem", "formula"})
 def retrieval_flags(
     exam: ExamContent | None, study: StudyContent | None
 ) -> list[dict[str, JsonValue]]:
-    """Cheatsheet facts and definitions whose title no Study flashcard or question mentions:
-    Revision never asks for them. A prompt for the checker; wording may differ."""
+    """Check retrieval in prepared Study passages linked to an entry, within that scope."""
     if exam is None or study is None:
         return []
     asked: dict[str, str] = {
@@ -348,7 +369,9 @@ def retrieval_flags(
     for concept in exam.concepts:
         if concept.kind not in RETRIEVED_KINDS:
             continue
-        units = {*concept.units, *(passage.unit for passage in concept.passages)} or asked.keys()
+        units = {*concept.units, *(passage.unit for passage in concept.passages)}
+        if not units:
+            continue
         if not any(concept.title.casefold() in asked.get(unit, "") for unit in units):
             flags.append(
                 {
@@ -360,9 +383,87 @@ def retrieval_flags(
     return flags
 
 
+def practice_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
+    """Prepared practice keeps its optional guidance and visual state usable."""
+    if content is None:
+        return []
+
+    def line_identity(text: str) -> str:
+        return " ".join(text.lower().split()).rstrip(".;:!?")
+
+    flags: list[dict[str, JsonValue]] = []
+    for mock in content.mocks:
+        for question in mock.questions:
+            flags.extend(
+                visual_state_flags(
+                    f"exam/mock/{mock.key}/{question.key}", question.model_dump(mode="json")
+                )
+            )
+    for pattern in content.patterns:
+        for number, step in enumerate(pattern.workflow, 1):
+            applications = [
+                (f"step {number}", step.do, step.apply),
+                *(
+                    (f"step {number}, case {index}", case.then, case.apply)
+                    for index, case in enumerate(step.cases, 1)
+                ),
+            ]
+            for location, summary, applied in applications:
+                if (
+                    applied
+                    and applied.text
+                    and not (applied.math or applied.code)
+                    and line_identity(applied.text) == line_identity(summary)
+                ):
+                    flags.append(
+                        {
+                            "item": f"exam/pattern/{pattern.key}",
+                            "flag": "redundant_workflow_detail",
+                            "detail": f"Workflow {location} expands to its own summary. "
+                            "Omit apply when the one-line rule is complete, or add the "
+                            "missing formula, code, condition or useful working detail.",
+                        }
+                    )
+        flags.extend(
+            visual_state_flags(f"exam/pattern/{pattern.key}", pattern.model_dump(mode="json"))
+        )
+        for item in pattern.drill:
+            if not item.guide:
+                flags.append(
+                    {
+                        "item": f"exam/pattern/{pattern.key}",
+                        "flag": "unguided_practice",
+                        "detail": f"Practice '{item.key}' has a solution but no optional guide. "
+                        "Prepare staged prompts, hints and explained answers in guide; "
+                        "keep help hidden for the initial attempt.",
+                    }
+                )
+        for sitting, _, question in content.past_questions().values():
+            if (
+                sitting.relevance in CONSIDERED
+                and question.status == "classified"
+                and pattern.key in question.patterns
+            ):
+                flags.extend(
+                    visual_state_flags(
+                        f"exam/pattern/{pattern.key}", question.model_dump(mode="json")
+                    )
+                )
+                if question.guidance is None:
+                    flags.append(
+                        {
+                            "item": f"exam/pattern/{pattern.key}",
+                            "flag": "unguided_practice",
+                            "detail": f"Past question '{question.key}' has no prepared guidance. "
+                            "Write task-specific guidance.steps with prompts, hints and explained "
+                            "checks; a generic solve-the-question step is not a guide.",
+                        }
+                    )
+    return flags
+
+
 def meta_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
-    """Bookkeeping in the exam and variant labels a pattern page shows (its history line and
-    past-exam table), flagged on that pattern."""
+    """Bookkeeping in the exam and variant labels a pattern page shows."""
     from tum_mcp.course.checks.report import META_REFERENCE, PROVENANCE
 
     if content is None:

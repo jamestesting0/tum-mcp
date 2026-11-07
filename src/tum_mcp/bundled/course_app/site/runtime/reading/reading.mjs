@@ -1,6 +1,6 @@
 import data from '../../data.mjs';
 import { node, studyText, append, sourcesNote, plainText, toggletip } from '../shell/dom.mjs';
-import { iconButton, iconGlyph } from '../shell/navigation.mjs';
+import { iconButton, iconGlyph, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 import { renderPlot } from '../visuals/plot.mjs';
 import { renderCode, languageName, lineSet, markLines } from './code.mjs';
 import { renderFiles, fileIcon } from '../shell/files.mjs';
@@ -50,8 +50,8 @@ export function diagram(block) {
   state.append(caption, rows, frontier);
   const lines = [...graph.querySelectorAll('[data-edge-key], [data-arrow-key]')];
   let index = 0;
-  const prev = iconButton('Previous step', 'left', () => { index--; update(); });
-  const next = iconButton('Next step', 'right', () => { index++; update(); });
+  const prev = iconButton('Previous step', 'left', () => { index = cycleIndex(index - 1, block.frames.length); update(); });
+  const next = iconButton('Next step', 'right', () => { index = cycleIndex(index + 1, block.frames.length); update(); });
   const counter = node('span', 'small');
   const controls = append(node('div', 'diagram-controls'), prev, counter, next);
   function update() {
@@ -59,7 +59,10 @@ export function diagram(block) {
     for (const [key, group] of groups) {
       group.classList.toggle('active', frame.active.includes(key)); group.classList.toggle('visited', frame.visited.includes(key) && !frame.active.includes(key));
     }
-    const marked = new Set((frame.edges || []).flatMap(edge => [`${edge.start}--${edge.end}`, `${edge.end}--${edge.start}`]));
+    const marked = new Set(block.edges.filter(edge => (frame.edges || []).some(mark =>
+      (mark.start === edge.start && mark.end === edge.end) ||
+      (!edge.directed && mark.start === edge.end && mark.end === edge.start)
+    )).map(edge => `${edge.start}--${edge.end}`));
     for (const line of lines) line.classList.toggle('active', marked.has(line.dataset.edgeKey || line.dataset.arrowKey));
     caption.replaceChildren(...studyText('span', '', frame.caption).childNodes);
     // The algorithm's own state (a queue, the domains) at this step; what changed since the last step is marked.
@@ -73,11 +76,12 @@ export function diagram(block) {
     frontier.hidden = Boolean(frame.state?.length) || block.state_labels === 'caption' || (block.frames.length === 1 && !frame.frontier.length && !frame.visited.length);
     frontier.textContent = `Frontier: ${frame.frontier.map(key => nodes.get(key).label).join(', ') || 'empty'} · Seen: ${frame.visited.map(key => nodes.get(key).label).join(', ') || 'none'}`;
     counter.textContent = `Step ${index + 1} of ${block.frames.length}`;
-    prev.disabled = index === 0; next.disabled = index === block.frames.length - 1;
+    prev.disabled = next.disabled = block.frames.length < 2;
   }
   const region = node('div', 'graph-region');
   region.append(graph);
   update(); controls.hidden = block.frames.length < 2; box.append(description, region, state, controls);
+  arrowPaging(box, prev, next);
   // A single picture says it once: its caption is visible, its description stays the image's name.
   if (block.frames.length < 2) { box.classList.add('static'); description.hidden = true; }
   return box;
@@ -95,17 +99,19 @@ function codeBlock(block) {
   const counter = node('span', 'small code-walk-count'), note = node('p', 'code-walk-note'); note.setAttribute('aria-live', 'polite');
   const prev = iconButton('Previous stop', 'left', () => show(at - 1)), next = iconButton('Next stop', 'right', () => show(at + 1));
   function show(index) {
-    at = index; const step = steps[at];
+    at = cycleIndex(index, steps.length); const step = steps[at];
     markLines(pre, lineSet(step.lines));
     const [first, last = first] = step.lines.split('-');
     counter.textContent = `Step ${at + 1} of ${steps.length} · ${first === last ? `line ${first}` : `lines ${first}–${last}`}`;
     note.replaceChildren(studyText('span', '', step.note));
-    prev.disabled = at === 0; next.disabled = at === steps.length - 1;
+    prev.disabled = next.disabled = steps.length < 2;
     const marked = pre.querySelector('.code-line.marked');
     if (marked && region.scrollHeight > region.clientHeight) region.scrollTop = Math.max(0, marked.offsetTop - region.clientHeight / 3);
   }
   show(0);
-  return append(node('div', 'code-walkthrough'), region, append(node('div', 'code-walk'), append(node('div', 'code-walk-controls'), prev, counter, next), note));
+  const box = append(node('div', 'code-walkthrough'), region, append(node('div', 'code-walk'), append(node('div', 'code-walk-controls'), prev, counter, next), note));
+  arrowPaging(box, prev, next);
+  return box;
 }
 
 // The heading element for a titled block: level 1 sits one below the enclosing heading.

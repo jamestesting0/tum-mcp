@@ -1,5 +1,5 @@
 import { node, studyText, append, plainText, segmented } from '../shell/dom.mjs';
-import { iconButton, arrowPaging } from '../shell/navigation.mjs';
+import { iconButton, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 import { drawGraph } from '../visuals/graph.mjs';
 import { renderCode, languageName, lineSet, markLines } from './code.mjs';
 import { renderDerivation } from './derivation.mjs';
@@ -29,7 +29,10 @@ function stageView(stage, renderBody, steps) {
           group.classList.toggle('visited', !active && step.visited.includes(key));
           group.classList.toggle('frontier', !active && step.frontier.includes(key));
         }
-        const marked = new Set(step.edges.flatMap(edge => [`${edge.start}--${edge.end}`, `${edge.end}--${edge.start}`]));
+        const marked = new Set(stage.edges.filter(edge => step.edges.some(mark =>
+          (mark.start === edge.start && mark.end === edge.end) ||
+          (!edge.directed && mark.start === edge.end && mark.end === edge.start)
+        )).map(edge => `${edge.start}--${edge.end}`));
         for (const line of lines) line.classList.toggle('active', marked.has(line.dataset.edgeKey || line.dataset.arrowKey));
       } };
     }
@@ -167,7 +170,7 @@ export function renderWalkthrough(block, renderBody) {
     return false;
   };
 
-  function go(position) { index = position; update(); }
+  function go(position) { index = cycleIndex(position, runs[run].steps.length); update(); }
   function drawDots(steps) {
     dots.replaceChildren();
     let group = null;
@@ -196,7 +199,7 @@ export function renderWalkthrough(block, renderBody) {
     trace.replaceChildren(...(all ? [traceTable(steps)] : []));
     whole.textContent = all ? 'Step through' : 'All steps';
     whole.setAttribute('aria-pressed', String(all));
-    prev.disabled = index === 0; next.disabled = index === steps.length - 1;
+    prev.disabled = next.disabled = steps.length < 2;
     if (all) return;
     const eyebrow = node('p', 'eyebrow walk-eyebrow', `Step ${index + 1} of ${steps.length}`);
     if (step.subgoal) eyebrow.append(' · ', studyText('span', '', step.subgoal));

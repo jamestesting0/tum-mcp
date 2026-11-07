@@ -46,11 +46,23 @@ optional worked solution in one panel, so repeating the same working there is a 
 
 ## Exam
 
+For pattern practice, judge both ways of using the task: an initial attempt with
+help closed, and the optional Guide with staged prompts, useful hints and explained
+answers. The complete Solution must work alone. Guidance supports the current
+question rather than exposing its result in the prompt or copying the full solution
+into a hint. Missing author-prepared guidance is a gap even though its use is optional
+for the student. Cheatsheet expansions must add usable recall rather than only links.
+
 Exam patterns are scored items (`exam/pattern/<key>`) with the ten dimensions. The
 cheatsheet is one item (`exam/sheet`) read in the single `cheatsheet` pass on six
-dimensions with the rubric's [Cheatsheet](rubric.md#cheatsheet) checks. Past papers and
-practice exams are not items: use `study exam-report` as evidence and record their
-findings in the course pass; do not invent item keys for them.
+dimensions with the rubric's [Cheatsheet](rubric.md#cheatsheet) checks. Each forecast
+question is an `exam-mock-question` item (`exam/mock/MOCK/QUESTION`). A pattern packet's
+`past_questions` includes every current classified paper question assigned to that
+pattern, even when its worked examples are synthetic. Read every member's actual
+statement, solution and guidance against its cited source, using the existing fidelity,
+coverage, correctness and teaching checks. A changed member invalidates the pattern's
+review. Do not replace this with checking only exam-report metadata. The course pass
+checks paper organization and links, without inventing separate past-question item keys.
 
 Read as a revising student who has studied the material. Exam stays concise and never
 re-teaches: depth is one tap away through Recall, which must open the passage that
@@ -63,6 +75,9 @@ because recognising the pattern is the skill they practise.
   complete one-line fact needs no expansion; a method needs its steps, a formula its
   meanings, a comparison its table. A correct entry need not introduce its concept with a
   worked example.
+- Pattern: compare each workflow line with its expanded Apply. The expansion must add
+  usable information; a complete one-line verbal rule needs no Apply. An exact or
+  paraphrased repeat is a redundancy finding, not evidence that the rule was shown.
 - Pattern: before scoring, answer: does a listed exam question need each decision step and
   each case (`cognitive_load.moves_fit`)? Do the cases share the steps around them, or is
   each a different method that needs its own pattern (`organization.fork_placement`)? Does
@@ -80,7 +95,7 @@ because recognising the pattern is the skill they practise.
   | Clarity | Cues name what the question shows, never the concept; each case reads as a visible condition and one move (`clarity.case_observable`); every applied formula's variables open their meaning in this pattern, and every cheatsheet formula lists its variables' general meanings (`clarity.symbols_recall`, strict). |
   | Cohesion | Only `cohesion.one_term` and no unexplained jump between steps; no linking sentences. |
   | Cognitive load | Workflow steps, cases and pitfall lines stay one line each; no case the exams do not need. |
-  | Representation | Every step or case whose move uses a formula, rule or code shows it under `apply`, written as the answer uses it; pitfalls show the wrong working or code itself, in the task moment where it happens (`representation.shown_not_described`). |
+  | Representation | A named formula, rule or code that the student still needs to see appears under `apply`, written as the answer uses it. A complete one-line verbal rule may stand alone. Pitfalls show the wrong working or code itself, in the task moment where it happens (`representation.shown_not_described`). |
   | Practice | Which-case feedback names what decides each case (`practice.case_feedback`); Practise items are new settings and neighbours need different cases (`practice.interleaved`). |
   | Intuition | Each step and case says why its move fits; each pitfall names the rule its wrong line breaks; conditions are checked where the method has them (`intuition.reasons`, `intuition.limits`). |
   | Organization | Lookups stay in the cheatsheet, forks are decision steps, different first moves are separate patterns (`organization.fork_placement`); examples are shaped like the exam's questions (`organization.example_shape`). |
@@ -90,6 +105,14 @@ because recognising the pattern is the skill they practise.
   recording missing evidence rather than presenting historical frequency as a prediction.
 
 ## Lecture
+
+Each recording also has one `lecture-selection` item, including recordings with no
+selected additions. Its evidence contains the full retained transcript without
+word-level alignment. Read all of it and the author's selection decisions, then
+compare the reasoning with the cited materials. Check omitted explanations as
+carefully as selected ones. Repeated topic titles alone cannot justify omission.
+Confirm each clip earns its watching time and each brief conclusion fits a note.
+Missing comparison material stays an evidence limitation. Use no highlight quota.
 
 Each note and highlight is a separate `lecture-entry` item. Record its findings
 against that item and check the recording/transcript evidence before judging fidelity.

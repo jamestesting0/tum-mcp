@@ -48,6 +48,19 @@ Lecture has no quizzes or flashcards; broader teaching/practice stays in Study.
    minutes and include their setup through their conclusion; never pad a passage.
    Compare the explanations, not just matching topic names: a printed question may
    lack the reasoning supplied live. Missing materials mean comparison is unavailable.
+   Each private decision names what the material already explains, what the recording
+   adds and why that addition helps a student. Audit omissions for useful corrections,
+   conditions and practical remarks; preserve the setup and any later correction in
+   selected highlights. A fully worked duplicate does not earn a clip, and no minimum
+   note or highlight count applies. A brief explanation that makes a printed formula
+   or diagram understandable to a newcomer can still be a useful addition.
+   Save `.tum-mcp/lecture-review/RECORDING_KEY.json` with `study schema lecture-selection`.
+   Decisions partition the full eligible timeline and cite the checked materials;
+   unresolved comparison limits keep a combined batch unready. The recording selection
+   receives its own review against the compact full transcript, including omitted
+   passages, even when no notes or highlights were selected.
+   Readiness also refuses retained entries whose speech or clip includes time marked
+   omitted; a note and a highlight may share retained context for distinct purposes.
 4. Capture one recording frame per highlight, chosen from the transcript, and look at
    each one: it confirms the topic and notation; speech establishes clip boundaries. `lecture
    thumbnail` stages it as a 960 px thumbnail. No default previews or frame-by-frame

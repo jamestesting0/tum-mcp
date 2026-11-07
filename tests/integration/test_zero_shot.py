@@ -100,6 +100,28 @@ def test_lint_reports_one_items_plan_links_and_kind_defaults(demo: Path) -> None
     assert "example or case" in plan_problems(defined, shown, None)[0]
     term["blocks"] = ["agent", "use"]
     assert plan_problems(Plan.model_validate({"item": item, "concepts": [term]}), shown, None) == []
+    transfer = Plan.model_validate(
+        {
+            "item": item,
+            "practice": [
+                {
+                    "question": "cycle",
+                    "contrast": "The worked tree has a reachable goal; this cyclic graph has none.",
+                    "answer": "With visited-state tracking, the finite frontier empties "
+                    "and returns failure.",
+                }
+            ],
+        }
+    )
+    assert plan_problems(transfer, {"questions": []}, None) == [
+        "cycle: planned practice question is missing"
+    ]
+    assert plan_problems(transfer, {"questions": [{"key": "cycle"}]}, None) == []
+    term["blocks"] = ["use"]
+    assert (
+        "definition block"
+        in plan_problems(Plan.model_validate({"item": item, "concepts": [term]}), shown, None)[0]
+    )
     # A bare key names its one item, and without --item every item is linted.
     assert invoke("study", "lint", str(demo), "--item", unit["key"])["item"] == item
     assert item in invoke("study", "lint", str(demo))["items"]
@@ -134,9 +156,27 @@ def test_the_plan_gate_holds_only_for_the_plan_it_read(demo: Path, tmp_path: Pat
         "print(json.dumps({'items': items}))\n"
     )
     command = shlex.join([sys.executable, str(script), "{prompt}"])
-    assert invoke("review", "run-checker", str(demo), "--plans", "--command", command)[
-        "recorded"
-    ] == [item]
+    batch_folder = demo / ".tum-mcp/batches"
+    batch_folder.mkdir()
+    (batch_folder / "complete.json").write_text(
+        json.dumps(
+            {
+                "course_key": read_document(demo, "study")["course_key"],
+                "request": "Prepare both lessons.",
+                "items": [item, "study/other"],
+            }
+        )
+    )
+    incomplete = CliRunner().invoke(
+        app, ["review", "run-checker", str(demo), "--plans", "--command", command]
+    )
+    assert incomplete.exit_code != 0 and "complete batch plans" in str(incomplete.exception)
+    (path.parent / "other.json").write_text(
+        json.dumps({"item": "study/other", "cases": ["A second lesson."]})
+    )
+    assert set(
+        invoke("review", "run-checker", str(demo), "--plans", "--command", command)["recorded"]
+    ) == {item, "study/other"}
     stored = Plan.model_validate_json(path.read_bytes())
     assert gate_status(stored) == "approved" and invoke("review", "plans", str(demo))["plans"] == []
     # Editing the plan after its check reopens the gate.

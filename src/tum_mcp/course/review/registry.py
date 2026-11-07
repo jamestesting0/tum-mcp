@@ -12,6 +12,7 @@ PROFILES = (
     "exam-sheet",
     "exam-mock-question",
     "lecture-entry",
+    "lecture-selection",
     "course",
 )
 

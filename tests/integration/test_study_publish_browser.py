@@ -319,7 +319,15 @@ def test_complete_public_app_keeps_learning_panels_and_lecture_timestamp_links(
                 ).to_have_attribute("href", f"#{passage['unit']}/content/{passage['block']}")
                 page.get_by_role("button", name="Close", exact=True).click()
             elif name == "exam-sheet":
-                page.locator(".exam-entry-row").first.click()
+                # Related links stay behind the entry even when the fact needs no detail.
+                fact = page.locator("#concept-fifo")
+                expect(fact.locator("details")).to_have_count(1)
+                expect(fact.locator(".exam-entry-links a").first).not_to_be_visible()
+                fact.locator("summary").click()
+                expect(fact.locator(".exam-entry-links a").first).to_be_visible()
+                fact.locator("summary").click()
+                expect(fact.locator(".exam-entry-links a").first).not_to_be_visible()
+                page.locator("#concept-queue > details > summary").click()
                 expect(page.locator(".exam-entry-body:visible")).not_to_have_count(0)
             elif name == "lectures":
                 # Thumbnails load lazily; on a phone the notes push them below the fold.

@@ -9,6 +9,7 @@ import { examRecall } from '../study/recall.mjs';
 import { fitMath, texElement } from '../reading/mathml.mjs';
 import { renderCode } from '../reading/code.mjs';
 import { withMeanings } from '../reading/symbols.mjs';
+import { iconButton, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 
 const plain = text => plainText(text || '');
 
@@ -61,13 +62,41 @@ function solutionPanel(...content) {
   return pillPanel('Solution', [{ value: 'solution', label: 'Solution', content: append(node('div'), ...content) }]).element;
 }
 
-// Practice without steps. Every item is worked on paper and opens its Solution, like a
-// Worked practice question; only a multiple choice is checked on screen.
+function drillGuide(item, pattern) {
+  const panel = node('div', 'exam-drill-guide');
+  const cards = item.guide.map((step, index) => guidedCard(pattern, step, `drill:${item.key}:${index}`, index, item.guide.length, filesIn(item.blocks || [])));
+  let index = 0;
+  const prev = iconButton('Previous step', 'left', () => show(index - 1));
+  const next = iconButton('Next step', 'right', () => show(index + 1));
+  const count = node('span', 'small');
+  panel.append(append(node('ol', 'exam-guided'), ...cards), append(node('div', 'diagram-controls'), prev, count, next));
+  arrowPaging(panel, prev, next);
+  function show(position) {
+    index = cycleIndex(position, cards.length);
+    cards.forEach((card, at) => { card.hidden = at !== index; });
+    prev.disabled = next.disabled = cards.length < 2;
+    count.textContent = `Step ${index + 1} of ${cards.length}`;
+  }
+  show(0);
+  return panel;
+}
+
+// The complete task is attempted first; prepared help opens only on request.
 function drillItem(item, pattern) {
   const root = node('div', 'exam-drill-item'), identity = `drill-${pattern.key}-${item.key}`;
   root.append(annotateExam(studyText('p', 'exam-drill-prompt', item.prompt), `pattern:${pattern.key}`, pattern.revision, `drill:${item.key}`));
   if (item.blocks?.length) root.append(blocksWithoutTitles(item.blocks));
   const explanation = studyText('p', '', item.explanation), worked = item.solution?.length ? [blocksWithoutTitles(item.solution)] : [];
+  if (item.guide?.length) {
+    if (item.check?.kind === 'choice') root.append(...answerControls(item.check, identity, studyText('p', '', item.explanation)));
+    else root.append(renderResponse(item.check, '', () => {}, identity).root);
+    const solution = append(node('div'), ...(item.check ? [expectedAnswer(item.check)] : []), explanation, ...worked);
+    root.append(pillPanel('Help', [
+      { value: 'guide', label: 'Guide', content: drillGuide(item, pattern) },
+      { value: 'solution', label: 'Solution', content: solution },
+    ]).element);
+    return root;
+  }
   if (item.check?.kind === 'choice') {
     root.append(...answerControls(item.check, identity, explanation));
     if (worked.length) root.append(solutionPanel(...worked));
@@ -83,9 +112,10 @@ function drillItem(item, pattern) {
 // what the student sees and the move it calls for, before the step's reason.
 // What a step or case applies opens under it on a click: the rule, the formula, the code.
 // Closed, the workflow reads as a procedure to recall; open, it shows exactly what to write.
-function applyPanel(apply) {
+const lineIdentity = text => (text || '').trim().replace(/\s+/g, ' ').replace(/[.;:!?]+$/u, '').toLowerCase();
+function applyPanel(apply, summary) {
   const panel = node('div', 'disclosure-panel apply-panel');
-  if (apply.text) panel.append(studyText('p', 'apply-text', apply.text));
+  if (apply.text && lineIdentity(apply.text) !== lineIdentity(summary)) panel.append(studyText('p', 'apply-text', apply.text));
   const seen = new Set();
   for (const latex of apply.math || []) {
     const math = append(node('div', 'apply-math'), texElement(latex, { display: true, symbols: (apply.symbols || []).map(item => item.symbol), seen }) || node('code', '', latex));
@@ -110,9 +140,9 @@ function withChevron(element) {
 }
 
 function applicable(tag, className, text, apply) {
-  if (!apply) return studyText(tag, className, text);
+  if (!apply || (!apply.math?.length && !apply.code && lineIdentity(apply.text) === lineIdentity(text))) return studyText(tag, className, text);
   const details = node('details', `workflow-apply ${className}`);
-  details.append(append(node('summary'), withChevron(studyText('span', '', text))), applyPanel(apply));
+  details.append(append(node('summary'), withChevron(studyText('span', '', text))), applyPanel(apply, text));
   return details;
 }
 

@@ -10,6 +10,7 @@ from documents import content_file
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.browser_evidence import BrowserBuild, build_files, save_receipt
 from tum_mcp.course.review import loop, registry
 from tum_mcp.course.review.models import CRITERIA
 from tum_mcp.errors import CampusError
@@ -109,6 +110,37 @@ def edit_first_block(project: Path) -> str:
     block["paragraphs"] = [block["paragraphs"][0] + " Each step names its reason."]
     path.write_text(json.dumps(document))
     return f"study/{unit['key']}"
+
+
+@pytest.mark.parametrize("evidence", ["current", "stale-draft", "missing-phone"])
+def test_visual_packet_links_the_current_captures(project: Path, evidence: str) -> None:
+    key = next(key for key, visuals in loop.load(project).visuals.items() if visuals)
+    build, managed = build_files(project)
+    identity = BrowserBuild(build=build, checks="a" * 64, browser="b" * 64, managed=managed)
+    directory = project / ".tum-mcp/visuals"
+    directory.mkdir()
+    sheets = {}
+    for width in ("phone", "desktop"):
+        sheet = directory / f"{width}.png"
+        sheet.touch()
+        sheets[f"visual/{width}/{key}"] = (sheet.relative_to(project).as_posix(),)
+    save_receipt(project, identity, dict.fromkeys(sheets, True), captures=sheets)
+    if evidence == "stale-draft":
+        edit_first_block(project)
+    if evidence == "missing-phone":
+        (directory / "phone.png").unlink()
+
+    loop.start(project, workspaces=("study",))
+    sent = packets(project, loop.next_round(project))
+
+    entry = next(e for packet in sent for e in packet["items"] if e["item"] == key)
+    assert entry["visuals"]
+    expected = {
+        state.split("/")[1]: list(paths)
+        for state, paths in sheets.items()
+        if (project / paths[0]).is_file()
+    }
+    assert entry.get("visual_sheets", {}) == ({} if evidence == "stale-draft" else expected)
 
 
 def test_reordering_named_blocks_invalidates_an_open_packet(project: Path) -> None:
@@ -237,6 +269,26 @@ def test_answers_that_skip_evidence_are_refused(project: Path, damage: str) -> N
         loop.record(project, answers, "fresh")
 
 
+def test_recording_an_answered_packet_again_cannot_duplicate_findings(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    key = packet["items"][0]["item"]
+    response = answer(packet, fail={key: "clarity.one_reading"})
+    loop.record(project, response, "fresh")
+    before = loop.load(project).record(key)
+    state = loop.read_state(project)
+    assert len(before.findings) == 1
+
+    repeated = loop.record(project, response, "fresh")
+
+    assert repeated["opened"] == 0
+    assert loop.load(project).record(key) == before
+    assert loop.read_state(project) == state
+    response["items"][0]["findings"][0]["why"] = "A distinct defect in the same passage."
+    assert loop.record(project, response, "fresh")["opened"] == 1
+    assert len(loop.load(project).record(key).findings) == 2
+
+
 def test_the_gate_wants_fresh_checkers_for_correctness(project: Path) -> None:
     loop.start(project, budget=5)
     for packet in packets(project, loop.next_round(project)):
@@ -258,6 +310,43 @@ def test_cli_uses_one_round_unless_a_budget_is_requested(project: Path) -> None:
     result = runner.invoke(app, ["review", "start", str(project), "--rounds", "3"])
     assert result.exit_code == 0, result.output
     assert json.loads(result.output)["budget"] == 3
+
+
+def test_closing_with_unanswered_packets_requires_an_explicit_choice(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    opened = loop.next_round(project)
+    pending = [packet["packet"] for packet in opened["packets"]]
+    runner = CliRunner()
+    args = ["review", "close-round", str(project)]
+
+    attempt = runner.invoke(app, args)
+
+    assert attempt.exit_code != 0
+    assert all(packet in str(attempt.exception) for packet in pending)
+    status = loop.status(project)
+    assert status["pending_packets"] == pending and status["open_round"]
+    explicit = runner.invoke(app, [*args, "--incomplete"])
+    assert explicit.exit_code == 0, explicit.output
+    card = json.loads(explicit.output)
+    assert card["status"] == "budget_spent" and not card["gate"]
+    assert card["rounds"][0]["answered_packets"] == 0
+    assert card["averages"] == {} and all(row["scores"] == {} for row in card["items"])
+    assert card["score_coverage"] == {"scored_items": 0, "in_scope_items": 5, "complete": False}
+    markdown = (project / ".tum-mcp/loop/scorecard.md").read_text(encoding="utf-8")
+    assert "all 3" not in markdown and "unreviewed" in markdown
+
+
+def test_incomplete_checker_answers_report_the_entire_missing_verdict_set(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    response = answer(packet)
+    for item in response["items"]:
+        item["checks"] = {}
+    with pytest.raises(CampusError) as refused:
+        loop.record(project, response, "fresh")
+    required = {check for item in packet["items"] for check in item["needs"]}
+    assert len(required) > 20
+    assert all(check in refused.value.message for check in required)
 
 
 def test_a_spent_budget_stops_and_extending_continues(project: Path) -> None:
@@ -309,6 +398,38 @@ def test_a_headless_checker_is_recorded_as_fresh(project: Path, tmp_path: Path) 
     saved = json.loads((project / f".tum-mcp/review/packets/{packet_id}.answer.json").read_bytes())
     assert saved["packet"] == packet_id
     assert {item["item"] for item in saved["items"]} == set(recorded)
+
+
+def test_duplicate_checker_waits_for_the_existing_packet_run(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    from tum_mcp.course.review import runner
+
+    loop.start(project)
+    packet = packets(project, loop.next_round(project))[0]
+    started, release = Event(), Event()
+    calls = []
+
+    def check(*args) -> dict:
+        calls.append(args)
+        started.set()
+        assert release.wait(timeout=10)
+        return answer(packet)
+
+    monkeypatch.setattr(runner, "_ask", check)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        first = pool.submit(runner.run, project, packet["id"], "codex")
+        try:
+            assert started.wait(timeout=5)
+            with pytest.raises(CampusError, match="already being checked"):
+                runner.run(project, packet["id"], "codex")
+        finally:
+            release.set()
+        assert first.result(timeout=5)["recorded"]
+    assert len(calls) == 1
 
 
 def test_advisory_flags_hold_the_gate_until_a_fresh_checker_rules(project: Path) -> None:
@@ -425,3 +546,15 @@ def test_a_refused_checker_answer_gets_one_repair_pass(
     saved = json.loads((folder / f"{packet_id}.answer.json").read_bytes())
     expected = sent["items"][0]["needs"]
     assert set(saved["items"][0]["checks"]) == set(expected if repair_valid else expected[:-1])
+
+
+def test_partial_current_verdicts_do_not_look_like_a_complete_perfect_score(project: Path) -> None:
+    loop.start(project, workspaces=("study", "course"))
+    check_all(project, fail={})
+    edit_first_block(project)
+    context = loop.load(project)
+    card = loop.scorecard(context, loop.read_state(project))
+    study = next(row for row in card["items"] if row["item"] == "study/graphs")
+    assert study["scores"] == {}
+    assert not card["score_coverage"]["complete"]
+    assert card["score_coverage"]["scored_items"] < card["score_coverage"]["in_scope_items"]

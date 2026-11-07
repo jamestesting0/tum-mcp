@@ -54,9 +54,11 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   click. `do` or `then` names the move in one line; `apply` shows it: `text` (the rule in
   words, inline math allowed), `math` (up to four display formulas, written exactly as
   the answer uses them) and `code` with its `language` (the lines this step writes). Give
-  it wherever a move uses a formula, a rule, an answer frame or code, so a line such as
-  "form the weighted projectors" never stands alone; a step that only reads the question
-  needs none. The answer's shape (a proof frame, a table to fill, a code skeleton) is
+  it when the visible line names a formula, rule, answer frame or code the student still
+  needs to see, so "form the weighted projectors" never stands alone. A complete one-line
+  verbal rule can stand alone. An expansion adds a missing formula, code, condition or
+  useful working detail; never copy or merely paraphrase `do` or `then` into `apply.text`.
+  Omit `apply` when opening it would add nothing. The answer's shape (a proof frame, a table to fill, a code skeleton) is
   split over the steps that write it; there is no separate template. An applied formula
   gives its variables' meanings in this pattern (`symbols`, required; a meaning written once
   serves every formula of the pattern), following
@@ -93,9 +95,15 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
     or code, the data as a table, a programming task's files as a `files` block that
     steps point into with `code` references. A step that expects a new name gives it
     ("call it `Unit`"). Solve it yourself; record an official solution only when it is one.
-- **Drill** (required): items solved without steps, each self-contained like the worked
+- **Drill** (required): items attempted without help, each self-contained like the worked
   practice. Every case is practised again here in a new setting; name it in `cases`
-  (never shown). Each item opens a Solution with its expected answer, the explanation and,
+  (never shown). Prepare an optional `guide` using the same step fields as worked
+  practice: a specific `prompt`, an optional useful `hint`, a check where appropriate
+  and explained `answer` blocks, linked to the relevant workflow `step`. Guide stays
+  closed for the initial attempt; it opens one move at a time in a Guide | Solution
+  panel. Hints give a next move without giving the result. Keep each prompt aligned
+  with the actual question, and retain a complete standalone Solution.
+  Each item opens a Solution with its expected answer, the explanation and,
   for a full problem, a worked `solution`; only a multiple choice is checked on screen.
   A `self_check` already shows its full `model_answer` in that panel. Omit `solution`
   when it would repeat that answer; both fields are visible together.

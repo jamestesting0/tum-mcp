@@ -65,6 +65,49 @@ links/locators and checked dates; unknowns and conflicting announcements stay vi
 Detailed source content remains in materials/. All TUM MCP course state, plans and
 agent notes live under .tum-mcp/.
 
+For requests spanning workspaces, the agent records the original request and expected
+outputs in `.tum-mcp/batches/ID.json` (`study schema batch`) before drafting.
+Forecast questions use `exam/mock/MOCK/QUESTION` item keys. A pattern batch also
+checks its visible cheatsheet. Write every declared Study, Exercise and pattern plan
+before launching the fresh plan checker; it checks the pending plans together.
+Study and Exercise source requirements first pass
+`study report PROJECT --section coverage-plan --preparation ID`, independently of
+authored content. Plans name that `preparation`; their approval records its fingerprint
+so later scope changes require a fresh plan check. Study and
+Exercise demand mappings, approved plans, computed checks and current browser evidence
+must pass `study report PROJECT --section readiness --batch ID` before the combined
+`review start PROJECT --batch ID`. Missing outputs do not consume the review round.
+The independent review then checks the quality and meaning of those mappings; a ready
+draft is not a claim that every teaching decision is already correct.
+Mixed batches also review course structure and links between their workspaces.
+Content preparation stops there and asks whether to review, unless review was already
+requested. Approval defaults to one review-and-repair round; its report includes scores,
+repairs and unresolved verification. Score coverage identifies how many current items
+have complete checks; averages over that subset are not an overall repaired-batch score.
+Extra rounds require the student's request.
+
+Before moving on from an authored item, the agent follows its published procedure
+on the worked input and a relevant boundary case, and reads an Exercise solution
+without its guide. A correct trace or executable answer key does not prove that
+the displayed instructions include their loops, branches and exits. This author
+check happens before browser readiness and the optional formal review; it adds no
+review round. The assembled draft then checks prerequisites and cross-item consistency.
+
+Packaged completion hooks enforce this stopping point in Codex, Claude Code, Cursor
+and Antigravity using each host's native lifecycle. Setup installs the guard and
+checks registration. Codex setup asks its runtime for the exact owned hook hashes,
+records only those trust entries, then verifies them. It never enables all hooks or
+changes approval/sandbox policy. Other hosts use their own hook configuration;
+workspace trust and administrator settings still apply. The bridge requires Node.js,
+as supplied by the npm installation. An author registers an explicit
+batch with `study task start PROJECT --batch ID`; review is off unless its requested
+budget is supplied with `--review-rounds`. Use the `--owner HOST:ID` supplied by
+the host context when starting, finishing or pausing a task.
+`study task finish PROJECT` checks current
+evidence before handoff. The guard only continues a task owned by that chat. User
+interruptions pause it; three continuations with no file progress stop it as stalled,
+with incomplete work still reported. Completed tasks do not restart on later edits.
+
 `sync-course` reads the relevant authoritative sources and maintains the handbook;
 the CLI scaffolds it without pretending to understand the course. Its review receipt
 records the local generation and hashes of supporting sources. `study inspect`
@@ -223,6 +266,12 @@ contact sheets for fidelity, form, layout, legibility, focus and convention, cal
 against a gallery of rated examples (`study visuals --gallery`). Scores and findings
 stay in `.tum-mcp/`; the app never shows them.
 
+A repair can split an overloaded item while retaining its original key for one part.
+After the complete repaired batch passes its draft checks, `review repair-scope` includes
+the added items in the same round and records why. It preserves source coverage and
+the approved budget. Added items await independent review; their scores are never copied
+from the original item. The final report distinguishes the repair from its verification.
+
 Checkers rule on advisory flags rather than silently ignoring them. A ruling that
 opens a finding must name the relevant check; an unrelated finding cannot clear it.
 Missing question context is not advisory: authored questions pair their text with
@@ -236,7 +285,10 @@ reviews preserve released statements and assess each part's guide and answer rat
 than requiring a second lesson. Exam checks distinguish cheatsheets, patterns and papers;
 Lecture checks recording fidelity and added explanation without requiring quizzes.
 Exam patterns and the cheatsheet have item scores (the cheatsheet in one pass against the
-sources' exam requirements); past papers and Lecture belong to the course pass.
+sources' exam requirements). Every current classified past question appears in its
+pattern packet, with statement, solution and guide; changing one reopens the affected
+checks. Forecast questions, Lecture selection
+and Lecture entries have their own checks; the course pass checks their organization.
 
 ## Preview the app
 
@@ -321,19 +373,28 @@ different places count once.
 
 - **Cheatsheet**: a semester map of the exam-relevant ideas and one-line entries
   grouped by topic and section: facts, rules, comparisons, code and frameworks as well as
-  formulas and methods. Open an entry for its details (a table, list, code, diagram, a
-  formula's variable meanings or a method's steps); a complete one-line fact has nothing
+  formulas and methods. Open an entry for compact recall detail: the rule, conditions,
+  decision or common mistake, followed by links to the exact prepared Study passage
+  and related practice. Entries can also name prepared Exercises using
+  `exercises: [{"set": "sheet-key", "exercise": "question-key"}]`; builds reject missing
+  targets. A method can reuse a pattern's workflow. A complete one-line fact has nothing
   to open. Click a map node to read the same entry under the map and expand it; a long
   entry ends with Collapse. The map can be dragged, zoomed and opened full screen, where
   the entry sits beside it.
 - **Exam patterns**: recurring question types with recognition cues, a solving workflow
   whose steps open to the exact formula, rule or code they apply (click a variable for
   its meaning), marking points, a worked practice that applies each workflow step,
-  and drills whose answers you can open at any time.
+  and drills with help initially hidden. Open Guide for staged prompts, optional hints
+  and explained answers, or Solution for the complete answer. Previously prepared
+  drills without guides remain readable; fresh preparation requires a guide.
 - **Practice exams**: work through real past papers question by question with
   guidance, or read a whole paper and open each question's solution to check yourself;
   forecast practice exams follow the real exam's length and weighting with new
   variants and untested topics.
+
+Fresh past-paper preparation requires task-specific guides. Older questions without
+guides remain accessible with their solutions and an explicit missing-guidance note;
+the app does not invent a generic Guide for them.
 
 Right-click any entry in the sidebar, in any workspace, to mark it as completed.
 

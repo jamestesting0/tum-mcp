@@ -8,7 +8,7 @@ import typer
 from pydantic import ValidationError
 
 from tum_mcp.course.lecture.evidence import Crop, merge_intervals
-from tum_mcp.course.project.store import confined, digest, load_state, private_path
+from tum_mcp.course.project.store import digest, load_state, private_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import require_lecture
 from tum_mcp.lecture_processing.prepare_visuals import FrameInventory
@@ -236,27 +236,25 @@ def read_frames(
         raise CampusError(Code.SCOPE_DENIED, "The evidence interval must have positive duration.")
     inventory = FrameInventory.model_validate_json(evidence_bytes(root, recording, "frames.json"))
     values = [
-        (item.approximate_s, "approximate_preview", item) for item in inventory.candidates
-    ] + [(item.captured_at_s, "measured_source_frame", item) for item in inventory.captured]
+        (item.approximate_s, "approximate_preview", "previews", item)
+        for item in inventory.candidates
+    ] + [
+        (item.captured_at_s, "measured_source_frame", "frames", item) for item in inventory.captured
+    ]
     selected = sorted(
         (value for value in values if start <= value[0] < end), key=lambda value: value[0]
     )
     page = []
-    for timestamp, kind, item in selected[offset : offset + limit]:
-        try:
-            relative = item.path.relative_to(private_path(root, f"lectures/{recording}"))
-        except ValueError:
-            raise CampusError(
-                Code.SCOPE_DENIED, "Cached frame path leaves this recording."
-            ) from None
-        path = confined(private_path(root, f"lectures/{recording}"), relative.as_posix())
+    for timestamp, kind, directory, item in selected[offset : offset + limit]:
+        path = private_path(root, f"lectures/{recording}/{directory}/{item.sha256}.png")
         if (
             not path.is_file()
             or path.stat().st_size > 32 * 1024**2
             or digest(path.read_bytes()) != item.sha256
         ):
             raise CampusError(Code.STALE_RESULT, "Cached recording image changed or is missing.")
-        page.append({"kind": kind, "timestamp_s": timestamp, **item.model_dump(mode="json")})
+        data = item.model_copy(update={"path": path}).model_dump(mode="json")
+        page.append({"kind": kind, "timestamp_s": timestamp, **data})
     typer.echo(
         json.dumps(
             {

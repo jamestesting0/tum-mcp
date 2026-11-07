@@ -7,7 +7,7 @@ from pathlib import Path
 
 from filelock import FileLock, Timeout
 
-from tum_mcp.course.lecture.evidence import Interval, Recording, merge_intervals
+from tum_mcp.course.lecture.evidence import Recording, merge_intervals
 from tum_mcp.course.project.store import confined, digest
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_processing import runtime
@@ -27,7 +27,7 @@ from tum_mcp.lecture_processing.prepare_source import (
     select,
     validity,
 )
-from tum_mcp.lecture_processing.prepare_visuals import FrameInventory, previews, selected_frame
+from tum_mcp.lecture_processing.prepare_visuals import FrameInventory, capture_at, previews
 from tum_mcp.lecture_processing.progress import disk_guard, write_progress
 from tum_mcp.lecture_processing.receipts import (
     PreparedReceipt,
@@ -178,15 +178,7 @@ def _evidence(
         for seconds in sorted(set(frame_at)):
             try:
                 disk_guard(directory, reserve=128 * 1024**2)
-                candidates = acquisition.span(
-                    Interval(start_s=seconds, end_s=min(seconds + 0.001, high.duration_s))
-                )
-                item = next(
-                    segment
-                    for segment in candidates
-                    if segment.segment.span.start_s <= seconds < segment.segment.span.end_s
-                )
-                captured.append(selected_frame(item, seconds, confined(directory, "frames")))
+                captured.append(capture_at(acquisition, seconds, confined(directory, "frames")))
             except CampusError:
                 issues.append(f"selected_frame_unresolved_at_{seconds:g}s")
     inventory = inventory.model_copy(update={"captured": tuple(captured)})

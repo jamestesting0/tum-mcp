@@ -55,8 +55,11 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
    their cases/examples, and any necessary detail. Set levels by those relationships
    rather than making every passage a level-1 section. On a new site, prove one unit
    with the hardest required formats, then author the rest in batches. Record changed
-   decisions in the plan. Never fill gaps with invented course facts. Write an answer key
-   for every trace or computed result first, and run
+   decisions in the plan. Before writing options, solve each [practice question](references/practice.md)
+   and check that the shortest valid solution exercises every action in its objective.
+   Use familiar words for incidental jargon or give it an [in-place gloss](references/writing.md#explain-difficult-words-in-place).
+   Never fill gaps with invented course facts. Write an answer key for every trace or
+   computed result first, and run
    `tum-mcp study lint PROJECT --item study/<key>` after each unit.
 4. **Check, then ask.** Finish Phase A of the [draft checks](references/loop.md) for each
    batch: build, `tum-mcp study visuals PROJECT` and `--interact`. Review the core path with

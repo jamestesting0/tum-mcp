@@ -125,6 +125,29 @@ def read_receipt(root: Path) -> BrowserReceipt | None:
     return None
 
 
+def current_sheets(root: Path) -> dict[str, dict[str, JsonValue]]:
+    """Link captured sheets only when the rendered build still matches the draft."""
+    from tum_mcp.course.app.build import current_data
+
+    receipt = read_receipt(root)
+    if receipt is None or not receipt.identity.managed or not receipt.captures:
+        return {}
+    try:
+        if read_bytes(confined(root, "app/data.mjs")) != current_data(root):
+            return {}
+        if build_files(root) != (receipt.identity.build, True):
+            return {}
+    except CampusError:
+        return {}
+
+    sheets: dict[str, dict[str, JsonValue]] = {}
+    for key, paths in receipt.captures.items():
+        if key.startswith(("visual/phone/", "visual/desktop/")) and receipt.evidence(root, key):
+            _, width, item = key.split("/", 2)
+            sheets.setdefault(item, {})[width] = list(paths)
+    return sheets
+
+
 def save_receipt(
     root: Path,
     identity: BrowserBuild,

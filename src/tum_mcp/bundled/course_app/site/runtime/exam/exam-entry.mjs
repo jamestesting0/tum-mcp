@@ -79,23 +79,36 @@ export function entryBody(concept, { mark = element => element, base = 3 } = {})
 export function entryLinks(concept) {
   const links = node('p', 'small exam-entry-links');
   const add = link => { if (links.childNodes.length) links.append(' · '); links.append(link); };
+  const linked = new Set();
+  for (const passage of concept.passages || []) {
+    const unit = data.units.find(item => item.key === passage.unit);
+    const block = unit?.blocks.find(item => item.key === passage.block);
+    if (!block) continue;
+    add(quietLink(`Study: ${block.title || block.term || unit.title}`, `#study/${unit.key}/content/${block.key}`));
+    linked.add(unit.key);
+  }
   for (const key of concept.units || []) {
     const unit = data.units.find(item => item.key === key);
-    if (unit) add(quietLink(`Study: ${unit.title}`, `#study/${unit.key}/content`));
+    if (unit && !linked.has(key)) add(quietLink(`Study: ${unit.title}`, `#study/${unit.key}/content`));
+  }
+  for (const target of concept.exercises || []) {
+    const group = data.exercises?.sets.find(item => item.key === target.set);
+    const exercise = group?.exercises.find(item => item.key === target.exercise);
+    if (exercise) add(quietLink(`Exercise: ${exercise.title}`, `#exercises/${group.key}/${exercise.key}`));
   }
   for (const pattern of exam.patterns) {
-    if (pattern.key !== concept.workflow_from && pattern.concepts.includes(concept.key)) add(quietLink(`Pattern: ${pattern.title}`, `#exam/patterns/${pattern.key}`));
+    if (pattern.key !== concept.workflow_from && pattern.concepts.includes(concept.key)) add(quietLink(`Practise: ${pattern.title}`, `#exam/patterns/${pattern.key}/practise`));
   }
   return links.childNodes.length ? links : null;
 }
 
-// An entry with a disclosure when opening it adds something, else a plain row: a complete
-// one-line fact is not padded with an empty expansion.
+// Related links and citations belong inside the expansion, including for one-line facts.
 export function entry(concept, { cite = false, mark = element => element, base = 3, id = true } = {}) {
   const article = node('article', `exam-entry ${concept.tier}`);
   if (id) { article.id = `concept-${concept.key}`; article.dataset.concept = concept.key; }
   const line = mark(studyText('span', 'exam-entry-line', concept.line), 'line');
   const body = entryBody(concept, { mark, base });
+  const recall = body.childNodes.length > 0;
   const footer = node('div', 'exam-entry-footer');
   const links = entryLinks(concept); if (links) footer.append(links);
   if (cite) footer.append(sourcesNote(citedBy(concept), data.sources, data.course.synthetic, concept.title));
@@ -104,7 +117,7 @@ export function entry(concept, { cite = false, mark = element => element, base =
     article.append(append(node('div', 'exam-entry-row static'), entryHead(concept), line));
     return { article, details: null };
   }
-  const details = node('details', 'exam-entry-details');
+  const details = node('details', `exam-entry-details${recall ? ' has-recall' : ''}`);
   const summary = append(node('summary', 'exam-entry-row'), entryHead(concept), line);
   // An entry taller than the screen ends with a way to close it, so the student need not
   // scroll back to its title; closing returns to that title.

@@ -86,6 +86,7 @@ def test_notes_schema_inspect_and_status_report_authored_lectures(lecture_projec
     build(lecture_project, publish=False)
     runner = CliRunner()
     schema = runner.invoke(app, ["study", "schema", "lectures"])
+    assert "app/lectures/lectures/KEY.json" in json.loads(schema.output)["$comment"]
     inspected = runner.invoke(app, ["study", "inspect", str(lecture_project)])
     assert schema.exit_code == inspected.exit_code == 0
     definitions = json.loads(schema.output)["$defs"]

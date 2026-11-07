@@ -5,13 +5,23 @@ from pathlib import Path
 
 from pydantic import Field, ValidationError
 
+from tum_mcp.course.lecture.evidence import Interval
 from tum_mcp.course.project.store import confined, digest
 from tum_mcp.errors import CampusError, Code
+from tum_mcp.lecture_processing.acquisition import Acquisition
 from tum_mcp.lecture_processing.media import AcquiredSegment
 from tum_mcp.lecture_processing.validity import Validity, require_content
-from tum_mcp.lecture_processing.visuals import SourceFrame, capture_frame, raster, sprite_frame
+from tum_mcp.lecture_processing.visuals import (
+    NoFrameAtTime,
+    SourceFrame,
+    capture_frame,
+    raster,
+    sprite_frame,
+)
 from tum_mcp.moodle.config import private_write
 from tum_mcp.settings import Frozen
+
+MAX_BOUNDARY_SEEK_S = 0.5
 
 
 class Preview(Frozen):
@@ -85,3 +95,37 @@ def selected_frame(segment: AcquiredSegment, seconds: float, directory: Path) ->
     frame = capture_frame(segment, seconds, directory)
     private_write(receipt, frame.model_dump_json().encode())
     return frame
+
+
+def capture_at(acquisition: Acquisition, seconds: float, directory: Path) -> SourceFrame:
+    candidates = acquisition.span(
+        Interval(start_s=seconds, end_s=min(seconds + 0.001, acquisition.manifest.duration_s))
+    )
+    segment = next(
+        (
+            item
+            for item in candidates
+            if item.segment.span.start_s <= seconds < item.segment.span.end_s
+        ),
+        None,
+    )
+    if segment is None:
+        raise NoFrameAtTime()
+    try:
+        return selected_frame(segment, seconds, directory)
+    except NoFrameAtTime:
+        boundary = segment.segment.span.end_s
+        if boundary - seconds > MAX_BOUNDARY_SEEK_S or not any(
+            span.start_s <= seconds < boundary < span.end_s for span in acquisition.valid.eligible
+        ):
+            raise
+        # The requested instant can fall after this segment's last video frame.
+        following = next(
+            (item for item in candidates if item.segment.span.start_s == boundary), None
+        )
+        if following is None:
+            raise
+        frame = selected_frame(following, boundary, directory)
+        if frame.captured_at_s - seconds > MAX_BOUNDARY_SEEK_S:
+            raise
+        return frame.model_copy(update={"requested_at_s": seconds})

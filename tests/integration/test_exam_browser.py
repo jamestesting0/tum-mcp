@@ -24,6 +24,40 @@ def exam_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     root = exam_project(tmp_path_factory.mktemp("exam-browser"))
     (root / "app").mkdir()
     document = with_guided_paper(exam_document(root))
+    document["profile"]["notes"] = "Based on the latest available paper: February 2024."
+    cases = document["patterns"][0]["workflow"][1]["cases"]
+    cases[0]["apply"]["text"] = cases[0]["then"]
+    cases[1]["apply"] = {"text": cases[1]["then"]}
+    strategy = document["patterns"][1]["workflow"][0]
+    strategy["apply"] = {"text": strategy["do"]}
+    document["patterns"][0]["drill"][1]["guide"] = [
+        {
+            "step": 1,
+            "prompt": "Which object owns the changing state?",
+            "hint": "Look at the fields the map and gauge need.",
+            "answer": [
+                {
+                    "kind": "text",
+                    "sources": ["slides"],
+                    "paragraphs": ["The ship owns position and speed."],
+                }
+            ],
+        },
+        {
+            "step": 2,
+            "prompt": "Do the two views need the same field?",
+            "hint": "Compare position with speed.",
+            "answer": [
+                {
+                    "kind": "text",
+                    "sources": ["slides"],
+                    "paragraphs": [
+                        "They need different fields: pass the ship so each view can pull its value."
+                    ],
+                }
+            ],
+        },
+    ]
     # Exam replay accepts labelled steps without the exercise-only part-block contract.
     for step in document["sittings"][0]["variants"][0]["questions"][0]["guidance"]["steps"]:
         step["part"] = "(a)"
@@ -63,6 +97,9 @@ def test_cheatsheet_scans_filters_flags_and_maps(
     errors: list[str] = []
     page = open_page(course_browser, exam_url, width, errors)
     expect(page.locator(".exam-profile")).to_contain_text("90 minutes")
+    expect(page.locator(".exam-profile-note")).to_have_text(
+        "Based on the latest available paper: February 2024."
+    )
     page.locator(".exam-list a", has_text="Cheatsheet").click()
     page.get_by_role("heading", name="Cheatsheet", exact=True).wait_for()
     entries = page.locator(".exam-entry")
@@ -188,6 +225,7 @@ def test_patterns_drills_and_worked_practice(
         applies.nth(index).locator("summary").click()
     expect(applies.nth(0).locator(".apply-panel code.inline-code")).to_have_text("List<Observer>")
     expect(page.locator(".workflow-cases .apply-panel")).to_contain_text("o.update(state)")
+    expect(page.locator(".workflow-cases .apply-text")).to_have_count(0)
     expect(applies.nth(2).locator(".apply-math .katex")).to_be_visible()
     # An applied formula's variables open their meaning in this pattern.
     applies.nth(2).locator(".apply-math [data-v]").first.click()
@@ -201,7 +239,7 @@ def test_patterns_drills_and_worked_practice(
     expect(pitfall.locator(".pitfall-line")).to_have_text(
         ["Incorrect: notify() inside update()", "Correct: notify() after the state changes"]
     )
-    # Practice without steps: every item, short or full, opens the same Solution panel.
+    # Legacy practice remains readable; prepared guidance stays optional for a new task.
     drill = page.locator(".exam-drill-item").first
     expect(drill.locator("code.inline-code")).to_have_text("List<Display>")
     expect(drill.get_by_label("Your answer")).to_have_count(0)
@@ -211,8 +249,33 @@ def test_patterns_drills_and_worked_practice(
     expect(drill.locator(".expected-value")).to_have_text("Subject")
     expect(drill.locator(".disclosure-panel")).to_contain_text("The subject owns registrations")
     full = page.locator(".exam-drill-item").nth(1)
+    expect(full.locator(".pill-content")).to_be_hidden()
+    full.get_by_role("button", name="Guide", exact=True).click()
+    guide = full.locator(".exam-drill-guide")
+    expect(guide.locator(".exam-guided-step:visible")).to_have_count(1)
+    guide.get_by_role("button", name="Previous step", exact=True).click()
+    expect(guide.locator(".exam-guided-step:visible")).to_contain_text(
+        "Do the two views need the same field?"
+    )
+    guide.get_by_role("button", name="Next step", exact=True).click()
+    expect(guide.locator(".exercise-feedback").first).to_be_empty()
+    guide.get_by_role("button", name="Hint", exact=True).click()
+    expect(guide).to_contain_text("Look at the fields the map and gauge need.")
+    guide.get_by_role("button", name="Compare", exact=True).click()
+    expect(guide.locator(".exercise-feedback").first).to_contain_text(
+        "The ship owns position and speed."
+    )
+    guide.get_by_role("button", name="Next step", exact=True).click()
+    expect(guide.locator(".exam-guided-step:visible")).to_contain_text(
+        "Do the two views need the same field?"
+    )
+    guide.get_by_role("button", name="Previous step", exact=True).click()
+    expect(guide.locator(".exercise-feedback").first).to_contain_text(
+        "The ship owns position and speed."
+    )
     full.locator(".segment", has_text="Solution").click()
     expect(full.locator(".disclosure-panel")).to_contain_text("update(Ship s)")
+    expect(full.locator(".exam-drill-guide")).to_have_count(0)
     # One example at a time; the which-case question uses the workflow's cases.
     practice = page.locator(".pattern-example:visible .exam-guided-step")
     expect(practice).to_have_count(3)
@@ -227,6 +290,8 @@ def test_patterns_drills_and_worked_practice(
     expect(practice.nth(0)).to_contain_text("Which object changes?")
     page.get_by_role("button", name="Example 1").click()
     expect(which.locator(".feedback")).to_contain_text("No display needs another field.")
+    page.goto(exam_url + "#exam/patterns/strategy-swap")
+    expect(page.locator(".exam-workflow .workflow-apply")).to_have_count(0)
     no_overflow(page)
     assert errors == []
 
@@ -256,10 +321,15 @@ def test_guided_past_paper_uses_exercise_steps(
     errors: list[str] = []
     page = open_page(course_browser, exam_url, width, errors)
     page.goto(exam_url + "#exam/paper/ws23-a")
-    page.locator(".exam-card", has_text="Guide").click()
+    expect(page.locator(".exam-card").first).to_contain_text("Questions")
+    page.locator(".exam-card").first.click()
     page.get_by_role("heading", name="Question 1", exact=True).first.wait_for()
     page.locator(".segment", has_text="Guide").first.click()
     page.get_by_role("button", name="Compare").click()
+    expect(page.locator(".exercise-feedback .expected-value")).to_have_text("station")
+    page.get_by_role("button", name="Previous step", exact=True).click()
+    page.get_by_role("heading", name="Write notifyObservers().").wait_for()
+    page.get_by_role("button", name="Next step", exact=True).click()
     expect(page.locator(".exercise-feedback .expected-value")).to_have_text("station")
     page.locator("button.primary", has_text="Next step").click()
     page.get_by_role("heading", name="Write notifyObservers().").wait_for()
@@ -267,6 +337,11 @@ def test_guided_past_paper_uses_exercise_steps(
     expect(editor).to_have_value("public void notifyObservers() {\n    // your code\n}")
     page.get_by_role("button", name="Compare").click()
     expect(page.locator(".model-code")).to_contain_text("o.update(temperature);")
+    page.goto(exam_url + "#exam/paper/ws23-a/ws23-a-2")
+    expect(page.locator("main")).to_contain_text("Guidance has not been prepared")
+    expect(page.get_by_role("button", name="Guide", exact=True)).to_have_count(0)
+    page.get_by_role("button", name="Solution", exact=True).click()
+    expect(page.locator(".pill-content")).to_contain_text("Introduce a SortStrategy interface.")
     no_overflow(page)
     assert errors == []
 

@@ -31,6 +31,7 @@ class ReviewItem:
     blocks: dict[str, str] = field(default_factory=dict)
     preparation: str | None = None
     annotations: dict[str, str] = field(default_factory=dict)
+    evidence: dict[str, JsonValue] = field(default_factory=dict)
 
     def passages(self) -> list[tuple[str, str]]:
         return item_passages(self.value)
@@ -117,12 +118,28 @@ def collect(
                 exercise.model_dump(mode="json"),
             )
     if exam is not None:
+        from tum_mcp.course.content.exam import CONSIDERED
+
+        past = exam.past_questions()
         for pattern in exam.patterns:
+            value = pattern.model_dump(mode="json")
+            referenced = {example.question for example in pattern.examples if example.question}
+            value["past_questions"] = [
+                question.model_dump(mode="json")
+                | {"source_versions": [s.model_dump(mode="json") for s in variant.sources]}
+                for sitting, variant, question in past.values()
+                if question.key in referenced
+                or (
+                    sitting.relevance in CONSIDERED
+                    and question.status == "classified"
+                    and pattern.key in question.patterns
+                )
+            ]
             add(
                 f"exam/pattern/{pattern.key}",
                 "exam-pattern",
                 pattern.title,
-                pattern.model_dump(mode="json"),
+                value,
             )
         if exam.concepts:
             add(
@@ -137,6 +154,10 @@ def collect(
                     question.model_dump(mode="json"),
                 )
     for lecture in lectures.lectures if lectures else ():
+        from tum_mcp.course.lecture.selection import selection_item
+
+        selection = selection_item(root, lecture)
+        items[selection.key] = selection
         for entry in lecture.entries:
             add(
                 f"lecture/{lecture.key}/{entry.key}",

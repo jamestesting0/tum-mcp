@@ -33,10 +33,42 @@ and a highlight description saying the same thing; retain both only for distinct
 purposes, such as a condition to remember and a walkthrough applying it.
 
 Missing comparison materials mean "comparison unavailable", not "absent from slides".
+Different page counts, numbering or editions are not enough to establish this limit.
+Compare the matching examples, notation, diagrams and intermediate reasoning directly;
+cite the physical pages of the available material. Resolve each remaining interval's
+selection rather than stopping at an edition mismatch. A frame capture failure also
+leaves a candidate pending; retry a nearby useful time before deciding its treatment.
 Do not infer exam predictions from emphasis. Include consequential administrative
 instructions only when explicit and not already adequately available in course sources.
 Notes-only, highlights-only and no selected additions are valid outcomes. Record
 omission reasons in the private review map, not as filler on the page.
+
+## Compare the contribution before choosing its format
+
+For each candidate, put three concrete facts into its private selection `reason`:
+what the cited material already explains (including intermediate working and its
+page), what the recording adds, and what the student gains from keeping that addition.
+Do this comparison before choosing note or highlight, then write only the useful
+addition for the student. A topic label or "live explanation" is not a contribution.
+Added teaching need not be a new fact: explaining compressed notation, a diagram's
+meaning or an unstated connection can make a printed result usable to a newcomer.
+Name that missing learner inference; do not omit it merely because the formula or
+final answer is already printed. Compare how fully each source explains it.
+If the material already works through the same example and justification, repeating
+it aloud does not earn a highlight. A practical constraint, correction or qualified
+trade-off can earn a note even when it introduces no new formula. Do not replace
+these with a visually appealing but redundant clip.
+
+Check the omitted spans once more for useful conditions, corrections and application
+remarks. For each retained highlight, identify the sequence of reasoning the student
+needs to follow that the materials do not already supply. If its whole contribution
+fits a concise note, prefer the note; if no addition survives comparison, omit it.
+A numerical example in the recording is not automatically extra working. Keep any
+later correction inside the selected context, and qualify claims whose scope is
+narrower than the lecturer's wording.
+Keep the selection map consistent with the actual evidence: speech cited by a note
+and every part of a highlight's range must be retained, not marked omitted. Shared
+retained context can support a note and a highlight with distinct purposes.
 
 ## Size and boundaries
 

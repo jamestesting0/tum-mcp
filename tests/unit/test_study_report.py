@@ -19,6 +19,29 @@ def exercises() -> dict:
     return json.loads((FIXTURES / "exercises.json").read_bytes())
 
 
+def test_a_graph_walkthrough_cannot_change_only_its_text() -> None:
+    from importlib.resources import files
+
+    value = json.loads((files("tum_mcp") / "bundled/course_app/example/content.json").read_bytes())
+    unit = value["units"][0]
+    graph = next(b for b in unit["blocks"] if b.get("key") == "walkthrough-graph")
+    graph.pop("variant", None)
+    graph.pop("label", None)
+    graph.pop("contrast", None)
+    for step in graph["steps"]:
+        for mark in ("active", "frontier", "visited", "edges"):
+            step.pop(mark, None)
+    content = StudyContent.model_validate(value)
+    assert any(flag["flag"] == "static_walkthrough" for flag in quality_flags(content, None))
+
+    graph["steps"][0]["active"] = [graph["stage"]["nodes"][0]["key"]]
+    graph["steps"][1]["active"] = [graph["stage"]["nodes"][1]["key"]]
+    assert not any(
+        flag["flag"] == "static_walkthrough"
+        for flag in quality_flags(StudyContent.model_validate(value), None)
+    )
+
+
 def test_arithmetic_in_prose_is_recomputed_outside_math_and_code() -> None:
     # The MDP return that a generated lesson once stated as 4.5.
     assert arithmetic_errors("B returns 1 + 0.5 × 6 = 4.5 in total.") == [
@@ -535,15 +558,18 @@ def test_a_cited_page_past_the_end_of_its_source_is_flagged(monkeypatch, tmp_pat
     ] == ["graphs"]
 
 
-def test_a_cheatsheet_fact_no_card_asks_for_is_flagged() -> None:
+def test_a_linked_cheatsheet_fact_no_card_asks_for_is_flagged() -> None:
     from importlib.resources import files
 
     from tum_mcp.course.content.exam import ExamContent
     from tum_mcp.course.content.exam_data import retrieval_flags
 
     folder = files("tum_mcp") / "bundled/course_app/example"
-    exam = ExamContent.model_validate_json((folder / "exam.json").read_bytes())
+    raw = json.loads((folder / "exam.json").read_bytes())
     study = json.loads((folder / "content.json").read_bytes())
+    entry = next(c for c in raw["concepts"] if c["kind"] == "definition")
+    entry["units"] = [study["units"][0]["key"]]
+    exam = ExamContent.model_validate(raw)
     concept = next(c for c in exam.concepts if c.kind == "definition")
     flagged = {flag["item"] for flag in retrieval_flags(exam, StudyContent.model_validate(study))}
     assert f"concept:{concept.key}" in flagged

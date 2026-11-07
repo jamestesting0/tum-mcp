@@ -36,6 +36,12 @@ template, not necessarily a good model for teaching or question design.
    Preserve original numbering, statement, subparts and all required givens. Group
    by the course's weeks/sheets, with at most one category level. Keep each exercise
    directly selectable; do not create category landing-page chains.
+   When the request asks for one unspecified exercise alongside a bounded Study scope,
+   choose the earliest released core problem that practises those prepared topics,
+   using the source's numbering to break ties. Keep all of that problem's subparts.
+   A named exercise or requested week takes priority. If none matches, record the
+   missing prerequisite before planning rather than silently choosing a later topic
+   or inventing a Study link.
 3. Plan each problem (parts, answers, methods) and solve it first: an answer key in
    `.tum-mcp/checks/` for anything computed. Then prepare only useful conceptual steps, requested hints,
    specific feedback and a direct worked solution. Read [guidance](references/guidance.md).
