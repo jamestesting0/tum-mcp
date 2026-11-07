@@ -48,6 +48,7 @@ def run_selector(
         "def connected(services,on_connected=None,browser=None):\n"
         " print('SELECTED='+','.join(service.value for service in services))\n"
         " print('BROWSER='+browser.executable)\n"
+        " print('PROFILE='+(browser.profile.id if browser.profile else 'temporary'))\n"
         " results=tuple(ConnectionResult(service) for service in services)\n"
         " for result in results:\n"
         "  if on_connected: on_connected(result)\n"
@@ -100,12 +101,16 @@ def run_selector(
                 elif (
                     sent
                     and not browser_sent
-                    and browser_keys
-                    and (b"Browser number:" if terminal == "dumb" else b"Browser") in plain
+                    and command == "login"
+                    and (
+                        b"Selection [1]: " in plain
+                        if terminal == "dumb"
+                        else b"Choose browser" in plain and b"\x1b[?25l" in chunk
+                    )
                 ):
                     if browser_keys == b"\x1b":
                         cancel_started = time.monotonic()
-                    os.write(master, browser_keys)
+                    os.write(master, browser_keys or b"\r")
                     browser_sent = True
             if process.poll() is not None:
                 break

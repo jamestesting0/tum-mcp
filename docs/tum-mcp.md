@@ -124,8 +124,9 @@ are preselected; other services remain opt-in. Move with up/down, toggle
 services with Space, and press Enter. Missing, stale (8-hour) or invalidated
 verification triggers a live identity check before the selector opens. Fresh
 results are reused. `doctor` checks again.
-Choose a browser when more than one is
-installed. Only selected tabs open in one temporary browser context. Moodle,
+Choose a temporary browser or an optional saved dedicated profile. The last
+selected browser/profile appears first and is selected by default when available.
+Only selected tabs open in the browser context. Moodle,
 Artemis, Zulip and TUMonline all follow this flow.
 Sign-in/MFA stays in the browser. `TERM=dumb` uses numbered prompts: Enter accepts
 the displayed defaults, and entering numbers replaces them. Esc
@@ -141,8 +142,14 @@ Detection covers Chrome, Edge, Brave, Chromium, Vivaldi, Opera and selected
 preview channels. Set `TUM_MCP_BROWSER` to an executable path for another
 compatible Chromium build. Browsers must permit Playwright automation. Firefox
 and Safari use different protocols and are outside this integration.
-Only service-owned cookies are saved; identity-provider cookies are discarded
-when the temporary browser closes. Existing browser profiles are never imported.
+Service connections retain only service-owned cookies. Temporary login discards
+identity-provider cookies when the browser closes. Optional saved profiles retain
+browser state and an encrypted campus-cookie copy, including shared TUM sign-in,
+so session-only cookies survive restart. Unrelated site cookies are excluded from
+that copy. `tum-mcp manage browsers` creates, renames and removes these dedicated
+profiles. Existing profiles cannot be added, and other browser data is not changed.
+Interactive logout offers to clear selected services and shared TUM sign-in from
+available saved profiles. [Setup and storage details](setup.md#login).
 
 Zulip uses its read-only `/json/` routes with the browser session; no API key is
 required. Reconnect through the same selector when a session expires.

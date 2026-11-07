@@ -38,9 +38,20 @@ def _secure_windows_path(path: Path) -> None:
         "else{[System.IO.File]::SetAccessControl($path,$acl)}"
     )
     try:
+        environment = {**os.environ, "TUM_MCP_PRIVATE_DIRECTORY": str(path)}
+        if os.name != "nt":
+            environment["WSLENV"] = ":".join(
+                filter(
+                    None,
+                    (
+                        os.environ.get("WSLENV", ""),
+                        "TUM_MCP_PRIVATE_DIRECTORY",
+                    ),
+                )
+            )
         subprocess.run(  # noqa: S603
             [powershell, "-NoProfile", "-NonInteractive", "-Command", script],
-            env={**os.environ, "TUM_MCP_PRIVATE_DIRECTORY": str(path)},
+            env=environment,
             capture_output=True,
             timeout=10,
             check=True,

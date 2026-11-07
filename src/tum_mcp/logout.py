@@ -78,3 +78,22 @@ def choose_logout() -> None:
             case unreachable:
                 assert_never(unreachable)
         console.print(f"Disconnected {target.service.label}.")
+    from tum_mcp.browser_profiles import read_preferences
+    from tum_mcp.commands.choices import choose
+    from tum_mcp.profile_logout import clear_saved_signins
+
+    if read_preferences().profiles:
+        console.print("Clearing saved browser sign-in also clears shared TUM sign-in.")
+        try:
+            clear = choose(
+                "Saved browser sign-in",
+                (
+                    (False, "Keep"),
+                    (True, "Clear for the selected services"),
+                ),
+            )
+        except (KeyboardInterrupt, EOFError):
+            clear = False
+        if clear:
+            clear_saved_signins(tuple(target.service for target in selected))
+            console.print("Saved browser sign-in cleared.")

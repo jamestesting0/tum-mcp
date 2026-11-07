@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 import httpx2
 import pytest
 
-from tum_mcp import connect
+from tum_mcp import browser_profiles, connect
 from tum_mcp.connect import ServiceChoice
 from tum_mcp.credentials import Credential, Vault
 from tum_mcp.errors import CampusError
@@ -147,8 +147,9 @@ def test_pending_sign_in_failure_names_the_service_and_preserves_completed_conne
     browser.close.assert_called_once()
 
 
+@pytest.mark.parametrize("saved", [False, True])
 def test_browser_closing_during_cleanup_keeps_successful_login(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, saved: bool
 ) -> None:
     monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path))
     manager = MagicMock()
@@ -159,11 +160,16 @@ def test_browser_closing_during_cleanup_keeps_successful_login(
         {"name": "session", "value": "synthetic-only", "domain": "www.moodle.tum.de"}
     ]
     browser.close.side_effect = connect.BrowserError("closed")
+    choice = BrowserChoice("Synthetic", "unused")
+    if saved:
+        choice = browser_profiles.create_profile(choice, "Study")
+        engine = manager.return_value.__enter__.return_value.chromium
+        engine.launch_persistent_context.return_value = context
+        context.browser.is_connected.return_value = True
+        context.close.side_effect = connect.BrowserError("closed")
     monkeypatch.setattr(connect, "sync_playwright", manager)
 
-    (completed,) = connect.connect_services(
-        (ServiceChoice.MOODLE,), browser=BrowserChoice("Synthetic", "unused")
-    )
+    (completed,) = connect.connect_services((ServiceChoice.MOODLE,), browser=choice)
 
     assert completed.service == ServiceChoice.MOODLE
     assert SessionStore(Paths.default(), storage="file").load().cookies[0].value == "synthetic-only"

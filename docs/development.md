@@ -134,7 +134,30 @@ the fix; do not add another test that only checks the same implementation text.
 CI runs macOS, Windows and Linux, plus both distribution engines on WSL 3.x.
 Consumer checks install the actual npm artifact, discover tools, build a study
 site and test available Chromium browsers with temporary profiles and synthetic
-pages. WSL verifies Windows browser transport. No live account is used.
+pages. Every discovered browser also runs a saved-profile restart journey:
+encrypted campus-session retention, exclusion of
+unrelated cookies, scoped sign-in clearing, temporary-context isolation and removal.
+The same journey runs from the installed wheel on all desktop OSes and both WSL
+engines. WSL verifies Windows browser transport and Windows-side saved-profile
+paths/permissions. No live account is used. Source coverage additionally checks
+profile creation/ownership, unavailable-choice fallback and last-selection
+defaults in real terminals. Run focused checks with:
+
+```sh
+uv run pytest -q tests/unit/test_browser_profiles.py tests/integration/test_cli_terminal.py
+TUM_MCP_BROWSER_INTEGRATION=1 uv run pytest -q tests/integration/test_saved_browser_profiles.py
+```
+
+Saved profile registrations and the last browser/profile selection live in
+`config/browsers.json`. Managed browser directories are owner-restricted; WSL
+Windows browsers use Windows LocalAppData, while their encrypted campus-cookie
+copies stay with the WSL credentials. Existing profiles cannot be added. Every
+WSL persistent launch uses a Windows device path that is absolute to both the
+POSIX Python client and Windows Node driver; regression tests exercise both
+libraries' path normalization for drive-letter and UNC paths. Every
+saved directory is checked against its application-owned location before use or
+deletion. Credential forgetting deletes managed browser data and encrypted profile
+sessions, retaining other browser data. The browser owns its native profile storage.
 Upgrade checks start from public 0.9.0 and cover all five clients, optional-extension
 retention, customized-file conflicts, failed preparation, runtime repair and
 removal that preserves work/credentials. Earlier releases are outside this matrix.
