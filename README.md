@@ -18,6 +18,10 @@ tum-mcp login
 tum-mcp doctor
 ```
 
+Doctor reuses successful client checks for 24 hours while checking local
+registration and hooks every time. Use `tum-mcp doctor --refresh-clients` for a
+fresh client probe.
+
 Then create a folder for one course, open an agent chat in it and run `$sync-course`
 (Codex) or `/sync-course` (Claude Code). You are all set: the agent collects the
 course's materials and you get your own learning harness for that course.
