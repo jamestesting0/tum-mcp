@@ -17,7 +17,7 @@ from tum_mcp.clients.config import client_config_path
 from tum_mcp.clients.installs import Installation, receipt_path
 from tum_mcp.commands.ui import State
 from tum_mcp.moodle.config import private_write
-from tum_mcp.settings import Frozen
+from tum_mcp.settings import Frozen, config_path
 
 MAX_AGE: Final = 24 * 60 * 60
 
@@ -30,8 +30,10 @@ class Result(Frozen):
 
 
 def path_for(receipt: Installation) -> Path:
-    return receipt_path(receipt.client, receipt.host, receipt.home).with_suffix(
-        ".verification.json"
+    return (
+        config_path()
+        / "client-verification"
+        / receipt_path(receipt.client, receipt.host, receipt.home).name
     )
 
 
@@ -97,4 +99,5 @@ def load(path: Path, identity: str) -> tuple[State, str] | None:
 def save(path: Path, identity: str, state: State, detail: str) -> None:
     if state in {State.READY, State.CONFIGURED}:
         result = Result(fingerprint=identity, checked_at=time.time(), state=state, detail=detail)
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         private_write(path, result.model_dump_json().encode())

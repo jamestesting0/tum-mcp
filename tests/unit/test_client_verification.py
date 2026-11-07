@@ -113,6 +113,9 @@ def test_live_transport_cannot_be_reported_as_native_host_activation(
     assert called == [True]
     assert cached_state == State.CONFIGURED and "unverified" in cached_detail
     assert "Cached client check" in cached_detail
+    from tum_mcp.updates import installation_targets
+
+    assert installation_targets()[1] == []
 
     settings = home / ".gemini/config/mcp_config.json"
     value = json.loads(settings.read_bytes())
