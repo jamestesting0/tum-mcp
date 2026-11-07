@@ -486,10 +486,11 @@ def test_workspace_picker_is_single_keyboard_operable_and_pinned(
 
 
 @pytest.mark.parametrize("exercise_project", ["responses"], indirect=True)
+@pytest.mark.parametrize("width", [390, 1440])
 def test_line_graph_tap_keyboard_coordinates_and_saved_comparison(
-    course_browser: Browser, exercise_url: str
+    course_browser: Browser, exercise_url: str, width: int
 ) -> None:
-    context = course_browser.new_context(viewport={"width": 390, "height": 844}, has_touch=True)
+    context = course_browser.new_context(viewport={"width": width, "height": 844}, has_touch=True)
     try:
         page = context.new_page()
         errors = []
@@ -499,10 +500,11 @@ def test_line_graph_tap_keyboard_coordinates_and_saved_comparison(
         left.fill("0")
         right.fill("2")
         graph = page.locator(".plot-response svg[role=group]")
-        box = graph.bounding_box()
+        # The fixture's vertical axis midpoint is x=0,y=1 at every responsive chart size.
+        graph.scroll_into_view_if_needed()
+        box = graph.locator(".plot-area").bounding_box()
         assert box
-        # The actual chart maps x=0,y=1 to (324,158) in its 600x360 viewBox.
-        graph.click(position={"x": box["width"] * 324 / 600, "y": box["height"] * 158 / 360})
+        page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
         expect(middle).to_have_value("1")
         page.get_by_role("button", name="Compare", exact=True).click()
         expect(page.locator(".expected-answer tbody tr")).to_have_count(3)
