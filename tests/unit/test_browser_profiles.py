@@ -22,6 +22,7 @@ def test_saved_profile_management_remembers_the_exact_profile(
     assert len(profiles.read_preferences().profiles) == 2
     profiles.rename_profile(saved, "University")
     assert profiles.browser_choices((chrome, edge))[0].profile.name == "University"
+    assert profiles.browser_choices((chrome, edge))[0].login_label == "Chrome - saved (University)"
     profiles.remove_profile(saved)
     assert not Path(saved.profile.root).exists()
     assert Path(other.profile.root).is_dir()

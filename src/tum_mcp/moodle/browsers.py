@@ -37,7 +37,7 @@ class BrowserChoice:
 
     @property
     def login_label(self) -> str:
-        return self.label + (" - saved" if self.profile else " - temporary")
+        return self.label + (f" - saved ({self.profile.name})" if self.profile else " - temporary")
 
 
 @dataclass(frozen=True, slots=True)

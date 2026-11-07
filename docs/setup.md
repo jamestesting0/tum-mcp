@@ -114,7 +114,7 @@ A dumb terminal uses numbered prompts, with Enter accepting the first browser.
 Choose **Set up a saved profile…** to create a dedicated Chromium profile.
 Setup asks for its browser and name; complete sign-in
 in the opened window. Later, choose `Google Chrome - saved` (or your browser) to
-reuse its sign-in. Multiple saved profiles for one browser show their names.
+reuse its sign-in. Every saved choice shows its profile name in parentheses.
 No browser skill or extension is required. Saved profiles do not inherit passwords
 from your everyday profile, and expired sessions still require sign-in or MFA.
 

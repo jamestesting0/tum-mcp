@@ -27,31 +27,11 @@ class Action(Enum):
     DONE = "done"
 
 
-def saved_labels(browsers: tuple[BrowserChoice, ...]) -> tuple[tuple[BrowserChoice, str], ...]:
-    return tuple(
-        (
-            browser,
-            browser.login_label
-            + (
-                f" ({browser.profile.name})"
-                if browser.profile
-                and sum(
-                    item.profile is not None and item.executable == browser.executable
-                    for item in browsers
-                )
-                > 1
-                else ""
-            ),
-        )
-        for browser in browsers
-    )
-
-
 def choose_login_browser(browsers: tuple[BrowserChoice, ...]) -> BrowserChoice:
     if not browsers:
         return select_browser(browsers)
     entries: list[tuple[BrowserChoice | Action, str]] = list(
-        saved_labels(browser_choices(browsers))
+        (browser, browser.login_label) for browser in browser_choices(browsers)
     )
     entries.append((Action.SETUP, "Set up a saved profile…"))
     selected = choose("Choose browser", tuple(entries))
@@ -92,8 +72,12 @@ def manage_browsers() -> None:
             saved = tuple(item.browser for item in read_preferences().profiles)
             available = {item.profile.id for item in browser_choices(browsers) if item.profile}
             entries: list[tuple[BrowserChoice | Action, str]] = [
-                (item, label + (" - unavailable" if item.profile.id not in available else ""))
-                for item, label in saved_labels(saved)
+                (
+                    item,
+                    item.login_label
+                    + (" - unavailable" if item.profile.id not in available else ""),
+                )
+                for item in saved
             ]
             entries.extend(((Action.SETUP, "Set up a saved profile…"), (Action.DONE, "Done")))
             selected = choose("Saved browsers", tuple(entries))
