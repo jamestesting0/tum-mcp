@@ -135,3 +135,53 @@ def test_profile_ownership_cannot_be_redirected_to_an_external_directory(tmp_pat
     with pytest.raises(BrowserSetupError, match="ownership"):
         profiles.remove_profile(replace(browser, profile=profile))
     assert (root / "keep.txt").read_text(encoding="utf-8") == "unrelated data"
+
+
+@pytest.mark.parametrize(
+    "windows_path", [r"D:\Profiles\Synthetic User", r"\\synthetic-host\profiles\Study"]
+)
+def test_wsl_persistent_profile_path_survives_python_and_windows_node_normalization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    windows_path: str,
+) -> None:
+    import os
+    import subprocess
+    from unittest.mock import AsyncMock
+
+    import playwright
+    from playwright.sync_api import Error, sync_playwright
+
+    from tum_mcp import profile_session
+
+    profile = profiles.BrowserProfile(
+        id="a" * 32, executable="unused", root=windows_path, name="Synthetic"
+    )
+    browser = BrowserChoice("Windows browser", "unused", True, profile)
+    root = tmp_path / profile.id
+    root.mkdir()
+    monkeypatch.setattr(profile_paths, "managed_root", lambda _: tmp_path)
+    monkeypatch.setattr(profile_paths, "local_path", lambda *_: root)
+    monkeypatch.setattr(profile_session, "protect_directory", lambda *_: None)
+    probe = AsyncMock(side_effect=Error("Synthetic protocol capture; no browser is launched."))
+    with sync_playwright() as driver:
+        monkeypatch.setattr(driver.chromium._impl_obj._channel, "send_return_as_dict", probe)
+        with pytest.raises(BrowserSetupError):
+            with profile_session.login_context(driver.chromium, browser, headless=True):
+                pytest.fail("The synthetic protocol capture must stop before launch.")
+    transmitted = probe.call_args.args[2]["userDataDir"]
+    node = Path(playwright.__file__).parent / "driver" / ("node.exe" if os.name == "nt" else "node")
+    result = subprocess.run(  # noqa: S603
+        [
+            str(node),
+            "--eval",
+            "process.stdout.write(require('node:path').win32.resolve(process.argv[1]))",
+            transmitted,
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=10,
+    )
+    resolved = result.stdout.replace("\\\\?\\UNC\\", "\\\\", 1).removeprefix("\\\\?\\")
+    assert PureWindowsPath(resolved) == PureWindowsPath(windows_path)

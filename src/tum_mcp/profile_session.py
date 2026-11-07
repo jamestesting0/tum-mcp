@@ -7,7 +7,7 @@ from playwright.sync_api import BrowserContext, BrowserType, Error
 from tum_mcp.browser_profiles import profile_lock
 from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError
 from tum_mcp.profile_cookies import restore_cookies, retain_cookies
-from tum_mcp.profile_paths import profile_root, protect_directory
+from tum_mcp.profile_paths import profile_root, protect_directory, windows_driver_path
 
 
 @contextmanager
@@ -31,7 +31,9 @@ def login_context(
         with profile_lock(browser):
             protect_directory(browser, root)
             context = engine.launch_persistent_context(
-                user_data_dir=profile.root,
+                user_data_dir=windows_driver_path(profile.root)
+                if browser.windows_host
+                else profile.root,
                 executable_path=browser.executable,
                 headless=headless,
                 args=[f"--profile-directory={profile.directory}"],

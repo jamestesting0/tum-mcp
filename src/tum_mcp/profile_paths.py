@@ -33,6 +33,14 @@ def launch_path(browser: BrowserChoice, path: Path) -> str:
     return wsl_path(str(path), windows=True) if browser.windows_host else str(path)
 
 
+def windows_driver_path(path: str) -> str:
+    # Python must see an absolute POSIX path before the Windows driver receives it.
+    value = PureWindowsPath(path).as_posix()
+    if value.startswith("//"):
+        return "//?/UNC/" + value.removeprefix("//")
+    return "//?/" + value
+
+
 def protect_directory(browser: BrowserChoice, path: Path) -> None:
     if browser.windows_host:
         if path.is_symlink():

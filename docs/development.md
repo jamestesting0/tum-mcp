@@ -152,6 +152,9 @@ Saved profile registrations and the last browser/profile selection live in
 `config/browsers.json`. Managed browser directories are owner-restricted; WSL
 Windows browsers use Windows LocalAppData, while their encrypted campus-cookie
 copies stay with the WSL credentials. Existing profiles cannot be added. Every
+WSL persistent launch uses a Windows device path that is absolute to both the
+POSIX Python client and Windows Node driver; regression tests exercise both
+libraries' path normalization for drive-letter and UNC paths. Every
 saved directory is checked against its application-owned location before use or
 deletion. Credential forgetting deletes managed browser data and encrypted profile
 sessions, retaining other browser data. The browser owns its native profile storage.

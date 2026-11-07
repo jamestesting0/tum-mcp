@@ -21,7 +21,7 @@ from tum_mcp.browser_profiles import create_profile, remove_profile
 from tum_mcp.connect import ServiceChoice
 from tum_mcp.moodle.auth import Cookie, Session, SessionStore
 from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
-from tum_mcp.moodle.browsers import BrowserChoice, discover_browsers, is_wsl
+from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError, discover_browsers, is_wsl
 from tum_mcp.moodle.config import Paths
 from tum_mcp.moodle.secret_files import local_cipher
 from tum_mcp.profile_cookies import ProfileCookies, cookie_file
@@ -106,6 +106,10 @@ def saved_profile_journey(engine: BrowserType, choice: BrowserChoice) -> None:
             ] == [("artemis", "synthetic-other-service")]
         with login_context(engine, choice, headless=True) as context:
             assert context.cookies("https://www.moodle.tum.de/") == []
+    except BrowserSetupError as error:
+        raise AssertionError(
+            "Synthetic saved-profile journey failed: " + error.message
+        ) from error.__context__
     finally:
         remove_profile(saved)
     assert not cookie_file(saved.profile).exists()
