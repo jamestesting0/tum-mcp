@@ -8,7 +8,7 @@ from playwright.sync_api import Page, sync_playwright
 from tum_mcp.browser_profiles import create_profile, profile_lock, remove_profile
 from tum_mcp.commands import browser_profiles as manager
 from tum_mcp.moodle.browser_runtime import browser_driver
-from tum_mcp.moodle.browsers import BrowserChoice, discover_browsers
+from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError, discover_browsers
 
 
 @pytest.mark.skipif(
@@ -71,5 +71,9 @@ def test_manage_opens_profile_and_keeps_it_locked_until_its_windows_close(
         assert closed == [True]
         with profile_lock(selected):
             pass
+    except BrowserSetupError as error:
+        raise AssertionError(
+            "Synthetic profile window failed: " + error.message
+        ) from error.__context__
     finally:
         remove_profile(selected)
