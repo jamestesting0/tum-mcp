@@ -308,7 +308,14 @@ interrupted, run `tum-mcp setup --client NAME` to recover before reuse.
 
 ### Client verification boundaries
 
-`doctor` initializes the owned MCP registration and lists its tools without a model
+`doctor` reuses successful client checks for up to 24 hours, showing their age.
+Registration, installed-file, hook and host configuration checks still run every
+time. Configuration, environment, package or executable changes invalidate the
+cache; failed checks retry immediately. Use `tum-mcp doctor --refresh-clients` to
+force a fresh check. Setup always checks afresh. Cached transport success never
+promotes unverified native host loading to Ready.
+
+When a fresh check is needed, `doctor` initializes the owned MCP registration and lists its tools without a model
 request or campus tool call. It checks installed-file ownership before executing
 the launcher. Codex additionally reports native plugin loading and hook trust;
 Claude Code health-checks its TUM registration through `claude mcp get tum`, and

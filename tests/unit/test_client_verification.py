@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tum_mcp.clients import codex_runtime, install_client, verification
+from tum_mcp.clients import codex_runtime, install_client, verification, verification_cache
 from tum_mcp.clients.hosts import ClientHost
 from tum_mcp.commands.ui import State
 from tum_mcp.errors import CampusError
@@ -102,9 +102,17 @@ def test_live_transport_cannot_be_reported_as_native_host_activation(
         called.append(True)
 
     monkeypatch.setattr(verification, "transport", connected)
-    state, detail = verification.inspect("antigravity", home, ClientHost.LOCAL, live=True)
+    state, detail = verification.inspect(
+        "antigravity", home, ClientHost.LOCAL, live=True, refresh=True
+    )
     assert called == [True]
     assert state == State.CONFIGURED and "unverified" in detail
+    cached_state, cached_detail = verification.inspect(
+        "antigravity", home, ClientHost.LOCAL, live=True
+    )
+    assert called == [True]
+    assert cached_state == State.CONFIGURED and "unverified" in cached_detail
+    assert "Cached client check" in cached_detail
 
     settings = home / ".gemini/config/mcp_config.json"
     value = json.loads(settings.read_bytes())
@@ -113,6 +121,120 @@ def test_live_transport_cannot_be_reported_as_native_host_activation(
     called.clear()
     assert verification.inspect("antigravity", home, ClientHost.LOCAL, live=True)[0] == State.ACTION
     assert called == []
+
+
+@pytest.mark.parametrize(
+    ("change", "probes"),
+    [
+        ("fresh", 1),
+        ("directory", 1),
+        ("almost-expired", 1),
+        ("expired", 2),
+        ("future", 2),
+        ("refresh", 2),
+        ("config", 2),
+        ("environment", 2),
+        ("executable", 2),
+        ("corrupt", 2),
+    ],
+)
+def test_client_cache_reuses_only_fresh_matching_success(
+    profile: Path, monkeypatch: pytest.MonkeyPatch, change: str, probes: int
+) -> None:
+    from tum_mcp.clients.installs import load_receipt
+
+    now = [100_000.0]
+    calls = []
+    executable = profile / "native-cli"
+    executable.write_text("first")
+    monkeypatch.setattr(verification_cache.time, "time", lambda: now[0])
+    monkeypatch.setattr(verification_cache.shutil, "which", lambda _: str(executable))
+    monkeypatch.setattr(codex_runtime, "verify", lambda *args: "Native hooks verified.")
+
+    async def connected(*args):
+        calls.append(True)
+
+    monkeypatch.setattr(verification, "transport", connected)
+    assert verification.inspect("codex", profile, ClientHost.LOCAL, live=True)[0] == State.READY
+    match change:
+        case "almost-expired":
+            now[0] += 86_399
+        case "expired":
+            now[0] += 86_400
+        case "future":
+            now[0] -= 1
+        case "config":
+            (profile / ".codex/config.toml").write_text("[features]\nhooks = true\n")
+        case "environment":
+            monkeypatch.setenv("TUM_CACHE_TEST", "changed")
+        case "directory":
+            monkeypatch.setenv("PWD", str(profile / "another course"))
+        case "executable":
+            executable.write_text("upgraded executable")
+        case "corrupt":
+            receipt = load_receipt("codex", ClientHost.LOCAL, profile)
+            assert receipt is not None
+            verification_cache.path_for(receipt).write_text("not-json")
+        case "fresh" | "refresh":
+            pass
+        case _:
+            pytest.fail("Unknown cache scenario")
+    state, detail = verification.inspect(
+        "codex", profile, ClientHost.LOCAL, live=True, refresh=change == "refresh"
+    )
+    assert state == State.READY
+    assert len(calls) == probes
+    assert ("Cached client check" in detail) == (probes == 1)
+    (profile / ".codex/plugins/local/tum-mcp/scripts/course-task.mjs").write_text("changed")
+    assert verification.inspect("codex", profile, ClientHost.LOCAL, live=True)[0] == State.ACTION
+    assert len(calls) == probes
+
+
+def test_failed_refresh_discards_prior_success_and_retries(
+    profile: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = []
+
+    async def probe(*args):
+        calls.append(True)
+        if len(calls) > 1:
+            raise OSError("Synthetic unavailable transport")
+
+    monkeypatch.setattr(verification, "transport", probe)
+    monkeypatch.setattr(codex_runtime, "verify", lambda *args: "Native hooks verified.")
+    assert verification.inspect("codex", profile, ClientHost.LOCAL, live=True)[0] == State.READY
+    assert (
+        verification.inspect("codex", profile, ClientHost.LOCAL, live=True, refresh=True)[0]
+        == State.ACTION
+    )
+    assert verification.inspect("codex", profile, ClientHost.LOCAL, live=True)[0] == State.ACTION
+    assert len(calls) == 3
+
+
+def test_doctor_refresh_clients_bypasses_cache_but_static_never_probes(
+    profile: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from typer.testing import CliRunner
+
+    from tum_mcp.cli import app
+
+    calls = []
+
+    async def probe(*args):
+        calls.append(True)
+
+    monkeypatch.setattr(verification, "transport", probe)
+    monkeypatch.setattr(codex_runtime, "verify", lambda *args: "Native hooks verified.")
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: profile))
+    runner = CliRunner()
+    for options, count in [([], 1), ([], 1), (["--refresh-clients"], 2), (["--static"], 2)]:
+        result = runner.invoke(app, ["doctor", "--json", *options])
+        assert result.exit_code == 0, result.output
+        codex = next(row for row in json.loads(result.output)["clients"] if row["label"] == "Codex")
+        assert codex["state"] == (State.CONFIGURED if "--static" in options else State.READY)
+        assert len(calls) == count
+    assert runner.invoke(app, ["doctor", "--static", "--refresh-clients"]).exit_code == 2
+    assert len(calls) == 2
 
 
 @pytest.mark.parametrize("state", [State.READY, State.ACTION, State.CONFIGURED])

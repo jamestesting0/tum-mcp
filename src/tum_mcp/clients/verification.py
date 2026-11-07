@@ -16,7 +16,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from tum_mcp.clients import hook_config
 from tum_mcp.clients.config import client_config_path, read_client_config
 from tum_mcp.clients.hosts import ClientHost
-from tum_mcp.clients.installs import load_receipt, read_owned_file
+from tum_mcp.clients.installs import Installation, load_receipt, read_owned_file
 from tum_mcp.commands.ui import State
 from tum_mcp.errors import CampusError, Code
 
@@ -42,7 +42,9 @@ async def transport(server: dict, root: Path, errors: TextIO) -> None:
                     )
 
 
-def inspect(name: str, home: Path, host: ClientHost, *, live: bool) -> tuple[State, str]:
+def inspect(
+    name: str, home: Path, host: ClientHost, *, live: bool, refresh: bool = False
+) -> tuple[State, str]:
     receipt = load_receipt(name, host, home)
     if receipt is None:
         return (
@@ -89,6 +91,21 @@ def inspect(name: str, home: Path, host: ClientHost, *, live: bool) -> tuple[Sta
             "Windows registration and hooks match; "
             "run doctor on Windows for live host verification.",
         )
+    from tum_mcp.clients import verification_cache
+
+    path = verification_cache.path_for(receipt)
+    identity = verification_cache.fingerprint(receipt)
+    if not refresh and (cached := verification_cache.load(path, identity)) is not None:
+        return cached
+    path.unlink(missing_ok=True)
+    state, detail = _inspect_live(name, home, host, receipt)
+    verification_cache.save(path, identity, state, detail)
+    return state, detail
+
+
+def _inspect_live(
+    name: str, home: Path, host: ClientHost, receipt: Installation
+) -> tuple[State, str]:
     root = home / ".codex/plugins/local/tum-mcp"
     try:
         with open(os.devnull, "w") as errors:
@@ -154,7 +171,7 @@ def setup_check(name: str, home: Path, host: ClientHost) -> tuple[State, str]:
             from tum_mcp.clients.codex_runtime import verify
 
             verify(home, host, install=True)
-        return inspect(name, home, host, live=True)
+        return inspect(name, home, host, live=True, refresh=True)
     except CampusError as error:
         return (
             State.ACTION,

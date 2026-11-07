@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Doctor reuses successful client probes for 24 hours while checking local
+  registration and hooks every time. Changed configuration, runtime or environment
+  invalidates the cache; `--refresh-clients` forces a fresh probe and failures retry.
+
 ## 0.19.0 — 2026-11-07
 
 - Preparation determines source coverage before drafting and checks the complete

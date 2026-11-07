@@ -286,7 +286,12 @@ def collect_services(*, live: bool | Literal["stale"] = False) -> ServiceReport:
 
 
 def client_check(
-    name: str, *, home: Path, host: ClientHost = ClientHost.LOCAL, live: bool | None = None
+    name: str,
+    *,
+    home: Path,
+    host: ClientHost = ClientHost.LOCAL,
+    live: bool | None = None,
+    refresh_clients: bool = False,
 ) -> Check:
     """Inspect one registration without creating config directories or loading secrets."""
     path = (
@@ -321,7 +326,7 @@ def client_check(
         if registered and live is not None:
             from tum_mcp.clients.verification import inspect
 
-            state, detail = inspect(name, home, host, live=live)
+            state, detail = inspect(name, home, host, live=live, refresh=refresh_clients)
     except CampusError as error:
         detail, state = error.message, State.FAILED
     except (OSError, ValueError, subprocess.TimeoutExpired):
@@ -343,13 +348,14 @@ def available_client_checks(
     host: ClientHost = ClientHost.LOCAL,
     include_generic: bool = False,
     live: bool | None = None,
+    refresh_clients: bool = False,
 ) -> tuple[tuple[ClientName, Check], ...]:
     """Show installed clients and existing registrations; setup also offers Generic."""
     from tum_mcp.clients.discovery import client_installed
 
     checks = []
     for name in CLIENTS:
-        check = client_check(name, home=home, host=host, live=live)
+        check = client_check(name, home=home, host=host, live=live, refresh_clients=refresh_clients)
         if (
             check.state != State.UNCONFIGURED
             or (include_generic and name == "generic")
@@ -359,7 +365,9 @@ def available_client_checks(
     return tuple(checks)
 
 
-def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> DoctorReport:
+def collect_diagnostics(
+    *, live: bool = False, home: Path | None = None, refresh_clients: bool = False
+) -> DoctorReport:
     base = home or Path.home()
     data = data_path()
     config = config_path()
@@ -379,7 +387,10 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
             runtime.append(Check(label="Windows clients", state=State.ACTION, detail=error.message))
     for host, profile in profiles:
         clients.extend(
-            check for _, check in available_client_checks(home=profile, host=host, live=live)
+            check
+            for _, check in available_client_checks(
+                home=profile, host=host, live=live, refresh_clients=refresh_clients
+            )
         )
     if not any(item.state in {State.CONFIGURED, State.READY} for item in clients):
         next_steps.append("tum-mcp setup — choose a detected client or generic configuration")

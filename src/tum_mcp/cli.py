@@ -211,6 +211,12 @@ def logout(
 
 @app.command()
 def doctor(
+    refresh_clients: Annotated[
+        bool,
+        typer.Option(
+            "--refresh-clients", help="Recheck clients even when their 24-hour cache is fresh."
+        ),
+    ] = False,
     json_output: Annotated[
         bool, typer.Option("--json", help="Print machine-readable diagnostics.")
     ] = False,
@@ -228,7 +234,9 @@ def doctor(
     from tum_mcp.commands.ui import heading, section, status_rows, terminal_console
     from tum_mcp.diagnostics import collect_diagnostics
 
-    report = collect_diagnostics(live=live)
+    if refresh_clients and not live:
+        raise typer.BadParameter("--refresh-clients requires live checks; omit --static.")
+    report = collect_diagnostics(live=live, refresh_clients=refresh_clients)
     if json_output:
         typer.echo(report.model_dump_json(indent=2))
         return

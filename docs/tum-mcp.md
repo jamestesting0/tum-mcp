@@ -263,6 +263,10 @@ prerequisites. Setup installs the native course completion guard and verifies ow
 registrations where the client runtime supports it. Doctor distinguishes matching
 files, initialized MCP transport and native host loading; see the
 [client verification boundaries](setup.md#client-verification-boundaries).
+Successful client probes are cached for 24 hours, independently of the eight-hour
+campus verification lifetime. Changed local configuration, hooks, runtime or
+environment invalidates the client cache. `doctor --refresh-clients` forces a new
+client probe; `--static` continues to perform only local checks.
 
 The default `doctor` and explicit `doctor --live` use bounded authenticated
 identity checks on saved local sessions. Campus checks read Moodle's
