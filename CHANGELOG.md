@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## 0.19.0 — 2026-11-07
+
+- Preparation determines source coverage before drafting and checks the complete
+  draft before offering review. Review defaults to one approved round of review
+  and repair, with a final score and support for explicitly requested extra rounds.
+- Teaching guidance strengthens concise concept definitions, unfamiliar-term
+  annotations, transfer practice and complete solving procedures. Structural
+  repairs preserve the approved scope and identify newly added content for review.
+- Walkthroughs support synchronized diagram highlights and wraparound navigation.
+  Exam practice includes guidance, cheatsheet entries reveal recall details and
+  links progressively, and exam metadata uses the latest dated paper.
+- Setup installs course completion guards for Codex, Claude Code, Cursor and
+  Antigravity, explains host-specific trust requirements and verifies client
+  registration. Codex trust is limited to the installed hooks' exact identities.
+- Doctor performs live verification by default; `--static` uses local checks.
+  Successful account verification remains current for eight hours.
+- Login can reuse optional dedicated Chromium profiles and remembers the last
+  choice. Managed profiles retain encrypted campus sessions, support scoped
+  logout and removal, and work with Windows browsers through both WSL engines.
+- Completed connections remain successful if the browser closes during cleanup;
+  incomplete sign-in errors identify pending services. App modules and server
+  sources are grouped for easier navigation.
+
 ## 0.18.0 — 2026-11-06
 
 - Escape cancels CLI selectors promptly in both interactive and numbered terminal prompts.

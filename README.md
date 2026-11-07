@@ -49,6 +49,8 @@ Each project holds one course. Run `tum-mcp study` in its folder to open the app
 Ask the agent to refresh it when sources change or address comments left in the
 app. For your own resources, such as past exams from other websites, create a
 temporary folder, put them all there and ask the agent to sort them into the course.
+Preparation checks coverage and completes the draft before offering review.
+Approve review for one round of checking and repair, or request more rounds.
 [Study guide and demo](docs/study.md).
 
 TUMonline provides study names/degrees, public course catalog metadata and partial
