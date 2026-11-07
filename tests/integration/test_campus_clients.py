@@ -29,6 +29,9 @@ def test_skills_and_client_configuration_use_utf8_with_a_legacy_locale(
     # When the pack is validated and the client registration is installed and removed.
     report = validate_skills()
     install_client("claude", home)
+    expected = json.loads(config.read_text(encoding="utf-8"))
+    expected["mcpServers"].pop("tum")
+    assert all(expected[key] == value for key, value in original.items())
     uninstall_client("claude", home)
 
     # Then every skill remains readable and unrelated Unicode settings survive.
@@ -36,7 +39,7 @@ def test_skills_and_client_configuration_use_utf8_with_a_legacy_locale(
 
     assert set(report.checked_skills) == set(CURRENT_SKILLS)
     assert report.errors == ()
-    assert json.loads(config.read_text(encoding="utf-8")) == original
+    assert json.loads(config.read_text(encoding="utf-8")) == expected
 
 
 def test_claude_install_preserves_other_settings_and_customized_skills(
@@ -92,18 +95,21 @@ def test_personal_skill_override_survives_package_export(
     manifest = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
     assert manifest["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
     assert len(manifest["extensions"]["com.openai"]["interface"]["shortDescription"]) <= 30
-    # Codex keeps its plugin cache while the version is unchanged; the version follows the skills.
+    # The cached package identity includes the skills and the completion hook.
     from tum_mcp.clients.rendering import codex_cache_note, plugin_version
 
-    assert manifest["version"] == plugin_version(root / "skills")
+    assert manifest["version"] == plugin_version(root)
     changed = tmp_path / "changed-skills"
     shutil.copytree(root / "skills", changed)
     (changed / "read-content/SKILL.md").write_text("changed", encoding="utf-8")
     assert plugin_version(changed) != manifest["version"]
+    hooks = json.loads((home / ".codex/hooks.json").read_bytes())["hooks"]
+    assert set(hooks) == {"UserPromptSubmit", "Stop", "Interrupt"}
+    assert "study" in (root / "scripts/course-task.mjs").read_text()
     cache = home / ".codex/plugins/cache/personal-local/tum-mcp"
-    (cache / manifest["version"]).mkdir(parents=True)
+    (cache / manifest["version"]).mkdir(parents=True, exist_ok=True)
     assert codex_cache_note(home) is None
-    (cache / manifest["version"]).rmdir()
+    shutil.rmtree(cache / manifest["version"])
     (cache / "0.0.0+stale").mkdir()
     assert "codex plugin remove tum-mcp@personal-local" in (codex_cache_note(home) or "")
     mcp = json.loads((root / "mcp.json").read_text(encoding="utf-8"))

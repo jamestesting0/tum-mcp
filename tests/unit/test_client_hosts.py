@@ -54,6 +54,9 @@ def test_windows_profile_registration_is_repeatable_and_conflict_safe(
     )
     monkeypatch.setattr(clients, "client_home", lambda host, home: profile)
     monkeypatch.setattr(clients, "client_launch", lambda host: launch)
+    monkeypatch.setattr(
+        client_hosts, "wsl_path", lambda path, *, windows=False: f"C:/fixture/{Path(path).name}"
+    )
     monkeypatch.setattr(uninstall, "client_home", lambda host, home: profile)
     monkeypatch.setattr(uninstall, "client_launch", lambda host: launch)
     path = client_config_path(name, profile, host=ClientHost.WINDOWS)
@@ -75,7 +78,8 @@ def test_windows_profile_registration_is_repeatable_and_conflict_safe(
             (profile / skill_root / skill / "SKILL.md").is_file() for skill in CURRENT_SKILLS
         )
     if name == "codex":
-        assert not (path.parent / "scripts").exists()
+        assert not (path.parent / "scripts/serve.mjs").exists()
+        assert (path.parent / "scripts/course-task.mjs").is_file()
     else:
         changed = json.loads(before)
         changed["mcpServers"]["tum"]["command"] = "custom-launcher"

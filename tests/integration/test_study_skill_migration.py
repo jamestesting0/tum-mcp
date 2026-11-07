@@ -39,7 +39,11 @@ def test_managed_old_skills_are_replaced_by_one_complete_sync_skill(
     with monkeypatch.context() as old_source:
         old_source.setattr(skills, "bundled", lambda: old)
         install_client(client, home, announce=False)
-    old_entries = list(home.rglob("init-study/SKILL.md"))
+    old_entries = [
+        path
+        for path in home.rglob("init-study/SKILL.md")
+        if not path.is_relative_to(home / ".codex/plugins/cache")
+    ]
     assert len(old_entries) == 1
     parent = old_entries[0].parent.parent
     extra = parent / "init-study/personal-note.txt"
@@ -57,9 +61,23 @@ def test_managed_old_skills_are_replaced_by_one_complete_sync_skill(
     assert {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()} == {
         p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()
     }
-    first = {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()}
+
+    def installed_files():
+        paths = list(parent.rglob("*"))
+        paths.extend(
+            home / name
+            for name in (
+                ".claude.json",
+                ".claude/settings.json",
+                ".codex/hooks.json",
+                ".agents/plugins/marketplace.json",
+            )
+        )
+        return {p.relative_to(home): p.read_bytes() for p in paths if p.is_file()}
+
+    first = installed_files()
     install_client(client, home, announce=False)
-    assert {p.relative_to(home): p.read_bytes() for p in home.rglob("*") if p.is_file()} == first
+    assert installed_files() == first
 
 
 @pytest.mark.parametrize("client", ["codex", "claude"])

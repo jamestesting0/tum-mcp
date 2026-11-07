@@ -51,7 +51,9 @@ try {
   const skills = JSON.parse(run(process.execPath, [launcher, 'skills', 'validate', '--json']));
   assert.deepEqual(skills.checked_skills.toSorted(), ['prepare-exams', 'prepare-exercises', 'prepare-study', 'publish-course', 'read-content', 'review-course', 'sync-course']);
   assert.deepEqual(skills.errors, []);
-  const diagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--json']));
+  const liveDiagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--json']));
+  assert.equal(liveDiagnostics.live_authentication, 'checked_saved_local_sessions');
+  const diagnostics = JSON.parse(run(process.execPath, [launcher, 'doctor', '--static', '--json']));
   assert.equal(diagnostics.live_authentication, 'not_checked');
   assert.equal(diagnostics.remote_actions, 'disabled');
   assert.ok(diagnostics.services.every(service => service.state !== 'Ready'));
@@ -94,7 +96,12 @@ for name in ('cursor','antigravity'):
     assert {path.name for path in skills.iterdir()}==set(CURRENT_SKILLS)
     for skill in CURRENT_SKILLS:
         source=bundled()/skill
-        assert {path.relative_to(source):path.read_bytes() for path in source.rglob('*') if path.is_file()}=={path.relative_to(skills/skill):path.read_bytes() for path in (skills/skill).rglob('*') if path.is_file()}
+        expected={path.relative_to(source):path.read_bytes() for path in source.rglob('*') if path.is_file()}
+        actual={path.relative_to(skills/skill):path.read_bytes() for path in (skills/skill).rglob('*') if path.is_file()}
+        if skill=='prepare-study':
+            bridge=actual.pop(Path('references/course-task.mjs'))
+            assert ('"--host", "'+name+'"').encode() in bridge
+        assert expected==actual
     uninstall_client(name,home)
     assert not any((skills/skill).exists() for skill in CURRENT_SKILLS)
 `;

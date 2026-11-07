@@ -121,9 +121,9 @@ tum-mcp study build --help
 
 `login` takes no arguments or connection options. Services marked Action needed
 are preselected; other services remain opt-in. Move with up/down, toggle
-services with Space, and press Enter. Missing, stale (12-hour) or invalidated
+services with Space, and press Enter. Missing, stale (8-hour) or invalidated
 verification triggers a live identity check before the selector opens. Fresh
-results are reused; `doctor --live` forces another check.
+results are reused. `doctor` checks again.
 Choose a browser when more than one is
 installed. Only selected tabs open in one temporary browser context. Moodle,
 Artemis, Zulip and TUMonline all follow this flow.
@@ -242,24 +242,27 @@ The tools resolve one exact mapping; ambiguity never grants broader access.
 
 ## Diagnostics
 
-`doctor` reads local configuration and checks runtime prerequisites. It does not
-open a browser, contact campus services, decrypt sessions, or read native stores.
-Saved sessions are **Not verified** until checked. Live campus results are saved
-locally with a timestamp and reused by `doctor` and the `login` selector for
-12 hours. Expiry means verification is stale, not that the session is disconnected.
+`doctor` checks local configuration and runtime prerequisites, verifies saved
+campus sessions, and checks optional GitHub CLI authentication. Use `--static`
+for local checks and cached session status. Successful campus verification is saved
+locally with a timestamp and reused by local status readers and the `login` selector
+for 8 hours. After expiry, the session appears as **Not verified** until a fresh check.
+The saved session remains available for that check.
 A fresh live check replaces the previous result, including failures. Replacing
 credentials or logging out invalidates their saved verification. Only the result,
 timestamp and file metadata are recorded, not credentials or campus responses.
 Git and Docker are not
-prerequisites. Client registration is distinguished
-from activation; the host must confirm a running MCP connection after setup.
+prerequisites. Setup installs the native course completion guard and verifies owned
+registrations where the client runtime supports it. Doctor distinguishes matching
+files, initialized MCP transport and native host loading; see the
+[client verification boundaries](setup.md#client-verification-boundaries).
 
-Use `doctor --live` for bounded authenticated identity checks on saved local
-sessions and optional GitHub CLI authentication. Campus checks read Moodle's
+The default `doctor` and explicit `doctor --live` use bounded authenticated
+identity checks on saved local sessions. Campus checks read Moodle's
 course overview and Artemis/Zulip identity only;
 it does not change server permissions. `doctor --json` emits schema-versioned JSON
-without terminal styling; combine both flags for live automation. Paths appear
-in JSON for troubleshooting. Default diagnostics do not create state folders.
+without terminal styling. Add `--static` for local automation. Paths appear
+in JSON for troubleshooting. Local diagnostics do not create state folders.
 
 ## Study workflows
 

@@ -7,6 +7,7 @@ from filelock import FileLock
 from pydantic import ValidationError
 
 from tum_mcp import __version__
+from tum_mcp.clients import hook_config
 from tum_mcp.clients.config import Marketplace, client_config_path, read_client_config
 from tum_mcp.clients.hosts import ClientHost, client_home, client_launch
 from tum_mcp.clients.installs import (
@@ -66,6 +67,7 @@ def _uninstall_client(name: ClientName, home: Path | None, *, host: ClientHost) 
     if previous is None or entry is not None and entry != previous.server:
         raise CampusError(Code.WORKSPACE_CONFLICT, "A customized MCP configuration was preserved.")
     writes = list(managed_writes(base, {}, previous))
+    writes.extend(hook_config.writes(name, base, {}, previous.hooks))
     config.mcpServers.pop("tum", None)
     value = config.model_dump()
     after = config.model_dump_json(indent=2).encode()

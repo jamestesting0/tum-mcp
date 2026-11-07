@@ -127,6 +127,15 @@ def setup(
         return
     console = terminal_console()
     heading(console, "Setup", "Choose coding clients to configure or refresh.")
+    console.print(
+        "Setup adds TUM tools, learning skills and a course completion guard. "
+        "The guard keeps a requested draft moving until its checks pass; "
+        "review starts only when requested."
+    )
+    console.print(
+        "Existing client settings and other hooks are preserved. "
+        "For Codex, setup trusts only the exact TUM guard definitions and verifies them."
+    )
     selected = tuple(client or ())
     if not selected:
         if not sys.stdin.isatty():
@@ -154,17 +163,14 @@ def setup(
             console.print("Cancelled. Client registrations were not changed.")
             raise typer.Exit(130)
     for name in selected:
-        install_client(name, host=host, announce=False)
-        status_rows(
-            console,
-            [
-                (
-                    name.title(),
-                    State.UPDATED,
-                    "Managed registration saved; reload or restart the client.",
-                )
-            ],
-        )
+        state, detail = install_client(name, host=host, announce=False)
+        status_rows(console, [(name.title(), state, detail)])
+    console.print(
+        "Reload or restart the selected clients, then open a new chat. "
+        "Run tum-mcp doctor to recheck registration and hooks. "
+        "An unverified host is shown above with its next step; "
+        "disabled hooks and host policy are preserved."
+    )
     typer.echo("Runtime ready. Run tum-mcp login to sign in to the services you select.")
     from tum_mcp.moodle.browsers import is_wsl
 

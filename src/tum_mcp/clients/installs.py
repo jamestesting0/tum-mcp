@@ -32,6 +32,7 @@ class Installation(Frozen):
     server: dict[str, JsonValue]
     files: dict[str, str] = Field(default_factory=dict, max_length=1000)
     catalog: dict[str, JsonValue] | None = None
+    hooks: dict[str, JsonValue] = Field(default_factory=dict, exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
     def confined_files(self) -> "Installation":

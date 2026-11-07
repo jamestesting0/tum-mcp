@@ -51,7 +51,7 @@ export function lectureLifecycle(root, command) {
   assert.deepEqual(both.errors, []);
   command(['install', 'video-notes']);
   assert.equal(JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.length, 10);
-  assert.equal(JSON.parse(command(['doctor', '--json'])).extensions.find(row => row.label === 'Video Notes').state, 'Enabled');
+  assert.equal(JSON.parse(command(['doctor', '--static', '--json'])).extensions.find(row => row.label === 'Video Notes').state, 'Enabled');
   command(['uninstall', 'video-notes']);
   assert.ok(!JSON.parse(command(['skills', 'validate', '--json'])).checked_skills.includes('video-notes'));
   command(['uninstall', 'audio-notes']);

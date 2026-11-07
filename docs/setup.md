@@ -95,8 +95,8 @@ Run **`tum-mcp login`**, with no arguments, in an interactive terminal:
 
 In a numbered prompt, Enter accepts the displayed defaults; entering numbers
 replaces them. Esc cancels. Login verifies saved sessions when their diagnostic
-result is missing or older than 12 hours, or the credential key has changed.
-Fresh results are reused; `tum-mcp doctor --live` forces another check.
+result is missing or at least 8 hours old, or the credential key has changed.
+Fresh results are reused. `tum-mcp doctor` checks again.
 
 Run `tum-mcp logout` to choose saved connections to remove. It refreshes stale
 verification in the same way, but preselects nothing. Removing a connection clears
@@ -173,11 +173,25 @@ browser discovery still requires functioning interop.
 ## Diagnose and reconnect
 
 - `tum-mcp doctor` shows services, client registrations, browsers and optional
-  tools. Saved sessions are **Not verified** until checked; registration alone
-  does not prove a desktop client is running the server.
-- `tum-mcp doctor --live` verifies saved local sessions with bounded service
-  reads and checks optional GitHub CLI authentication. `--json` provides structured
-  output; combine the flags if needed. Default doctor checks only CLI availability.
+  tools. It verifies saved sessions with bounded service reads and checks optional
+  GitHub CLI authentication. `--live` remains an explicit way to request this default.
+- `tum-mcp doctor --static` uses cached verification and local checks. Successful
+  verification remains current for 8 hours. After that, the session appears as
+  **Not verified** until a fresh check. `--json` provides structured output with
+  either mode.
+  Setup also installs course completion hooks for Codex, Claude Code, Cursor and
+  Antigravity, preserves unrelated hooks, and checks the owned MCP transport.
+  Codex setup obtains hook identities from the installed runtime and registers only
+  those exact trust hashes, then verifies that they are enabled and trusted. It does
+  not use a global trust bypass. Other clients use native settings without Codex
+  trust entries. Workspace trust, explicit disabling and administrator policies
+  remain in effect. Unsupported runtimes receive a specific next step; manual hook
+  approval is only needed when the host cannot complete that setup automatically.
+  Setup explains the guard before client selection and prints the actual verification
+  result for each client, including any action still needed. Reload the client and
+  open a new chat after setup; `tum-mcp doctor` rechecks the registration and hooks.
+  The guard continues only a batch owned by that chat, preserves its approved
+  review budget and pauses on interruption.
 - For optional study publishing, install GitHub CLI and complete
   `gh auth login --hostname github.com` interactively on the agent's execution host.
   The [publishing workflow](study.md#publish-a-study-website) uses private repositories
@@ -263,3 +277,30 @@ speech models/runtimes also remain.
 Remove a shared speech cache only when explicitly requested and no other course
 needs it; its host paths are documented in the audio skill. If removal is
 interrupted, run `tum-mcp setup --client NAME` to recover before reuse.
+
+### Client verification boundaries
+
+`doctor` initializes the owned MCP registration and lists its tools without a model
+request or campus tool call. It checks installed-file ownership before executing
+the launcher. Codex additionally reports native plugin loading and hook trust;
+Claude Code health-checks its TUM registration through `claude mcp get tum`, and
+Cursor uses `cursor-agent mcp list-tools tum` when that CLI is already installed.
+Doctor never installs a client CLI, signs in, enables a disabled hook, or writes
+trust entries. Native CLIs may maintain their own normal metadata and cache logs
+while performing these health checks. `--static` launches none of these checks.
+
+A working transport alone is reported as **Not verified** when native host loading
+cannot be checked, including an unavailable Antigravity CLI. WSL can inspect Windows
+registration files; run doctor on the Windows host for its native live result.
+These global registration checks do not prove workspace-specific permissions or
+that a model will select the right skill.
+
+The installer uses documented native configuration for
+[Claude Code](https://code.claude.com/docs/en/hooks),
+[Cursor](https://cursor.com/docs/hooks) and
+[Antigravity](https://antigravity.google/docs/hooks). Codex's exact-hash trust state
+is obtained through its installed app-server protocol rather than duplicating the
+hash algorithm. User-level hooks avoid bundled-hook discovery incompatibility in
+Codex 0.164.0; the managed bridge remains inside the local TUM package. If that
+runtime API is unavailable, setup preserves the files and identifies the required
+[Codex hook review](https://learn.chatgpt.com/docs/hooks).

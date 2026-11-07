@@ -154,13 +154,19 @@ def connect() -> None:
         console.print("Sessions stay encrypted in WSL; no browser debugging port is opened.")
     console.print("Campus sessions are encrypted locally with an owner-restricted key file.")
     console.print()
+    pending = dict.fromkeys(selected)
 
     def connected(result: ConnectionResult) -> None:
+        del pending[result.service]
         console.print(
             Text.assemble(("● ", "ready"), (f"Connected  {result.service.label}", "bold"))
         )
         if result.account is not None:
             console.print(Text(f"Account ID: {result.account.id}"))
+        if pending:
+            remaining = ", ".join(service.label for service in pending)
+            console.print(Text(f"Waiting for {remaining} sign-in."))
+            console.print("Press Ctrl+C to stop waiting. Completed connections are saved.")
 
     try:
         results = connect_services(selected, on_connected=connected, browser=browser)
@@ -207,9 +213,10 @@ def doctor(
     live: Annotated[
         bool,
         typer.Option(
-            "--live", help="Verify saved campus sessions and optional GitHub authentication."
+            "--live/--static",
+            help="Verify saved campus sessions and optional GitHub authentication.",
         ),
-    ] = False,
+    ] = True,
 ) -> None:
     """Show connections, extensions and relevant client/runtime health."""
     from rich.text import Text
@@ -226,7 +233,7 @@ def doctor(
         console,
         "Doctor",
         "Local readiness checks"
-        + (" and requested live authentication." if live else ". No login or Keychain access."),
+        + (" and live authentication." if live else ". No login or Keychain access."),
     )
     for title, items in (
         ("Services", report.services),

@@ -117,8 +117,9 @@ def test_invalid_selection_cannot_launch_a_browser(
         connect.connect_services(selected)
 
 
-def test_timeout_preserves_completed_connections_and_closes_browser(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("browser_closed", [False, True])
+def test_pending_sign_in_failure_names_the_service_and_preserves_completed_connections(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, browser_closed: bool
 ) -> None:
     monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path))
     manager = MagicMock()
@@ -133,13 +134,39 @@ def test_timeout_preserves_completed_connections_and_closes_browser(
     ticks = iter((0, 1, 601))
     monkeypatch.setattr(connect.time, "monotonic", lambda: next(ticks))
     monkeypatch.setattr(connect, "sync_playwright", manager)
-    with pytest.raises(CampusError, match="completed connections were saved"):
+    if browser_closed:
+        context.new_page.return_value.wait_for_timeout.side_effect = connect.BrowserError("closed")
+    with pytest.raises(CampusError, match="Zulip") as failure:
         connect.connect_services(
             (ServiceChoice.MOODLE, ServiceChoice.ZULIP),
             browser=BrowserChoice("Synthetic", "unused"),
         )
+    assert "Moodle" not in failure.value.message
+    assert "completed connections were saved" in failure.value.message.lower()
     assert SessionStore(Paths.default(), storage="file").load().cookies[0].value == "synthetic-only"
     browser.close.assert_called_once()
+
+
+def test_browser_closing_during_cleanup_keeps_successful_login(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path))
+    manager = MagicMock()
+    browser = manager.return_value.__enter__.return_value.chromium.launch.return_value
+    context = browser.new_context.return_value
+    context.request.get.return_value = MagicMock(status=200, **{"body.return_value": b"logout.php"})
+    context.cookies.return_value = [
+        {"name": "session", "value": "synthetic-only", "domain": "www.moodle.tum.de"}
+    ]
+    browser.close.side_effect = connect.BrowserError("closed")
+    monkeypatch.setattr(connect, "sync_playwright", manager)
+
+    (completed,) = connect.connect_services(
+        (ServiceChoice.MOODLE,), browser=BrowserChoice("Synthetic", "unused")
+    )
+
+    assert completed.service == ServiceChoice.MOODLE
+    assert SessionStore(Paths.default(), storage="file").load().cookies[0].value == "synthetic-only"
 
 
 def test_reconnect_preserves_settings_changed_during_sign_in(

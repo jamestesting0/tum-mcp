@@ -72,9 +72,7 @@ def test_configured_client_is_shown_even_without_installation_evidence(profile: 
     config.parent.mkdir(parents=True)
     config.write_text('{"mcpServers":{"tum":{"command":"custom-launcher"}}}', encoding="utf-8")
     report = diagnostics.collect_diagnostics(home=profile)
-    assert [(check.label, check.state) for check in report.clients] == [
-        ("Cursor", State.CONFIGURED)
-    ]
+    assert [(check.label, check.state) for check in report.clients] == [("Cursor", State.ACTION)]
 
 
 @pytest.mark.parametrize("host", [ClientHost.LOCAL, ClientHost.WINDOWS])

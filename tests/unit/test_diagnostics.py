@@ -33,6 +33,10 @@ def saved_service(
     service = ServiceChoice(request.param)
     monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "moodle"))
     monkeypatch.setattr("tum_mcp.diagnostics.time.time", lambda: 100_000)
+    original_which = shutil.which
+    monkeypatch.setattr(
+        shutil, "which", lambda name: None if name == "gh" else original_which(name)
+    )
     monkeypatch.setattr(auth, "system_keyring", lambda: pytest.fail("No Keychain access"))
     for method in (
         "tum_mcp.moodle.http_client.MoodleHTTP.get",
@@ -70,15 +74,18 @@ def saved_service(
     return service, root / f"{owner.id}.enc", root / "session.key"
 
 
-def test_live_result_survives_in_doctor_json_and_login_selector_without_remote_calls(
-    saved_service: tuple[ServiceChoice, Path, Path], monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("options", [[], ["--live"]])
+def test_default_doctor_verifies_and_local_readers_reuse_the_result(
+    saved_service: tuple[ServiceChoice, Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    options: list[str],
 ) -> None:
     # Given a service freshly checked through the CLI.
     from tum_mcp.commands import ui
 
     service, session, _ = saved_service
     runner = CliRunner()
-    live = runner.invoke(app, ["doctor", "--live", "--json"])
+    live = runner.invoke(app, ["doctor", *options, "--json"])
     assert live.exit_code == 0, live.output
     record = json.loads(session.with_suffix(".verification.json").read_bytes())
     assert record["checked_at"] == 100_000 and record["succeeded"]
@@ -98,8 +105,8 @@ def test_live_result_survives_in_doctor_json_and_login_selector_without_remote_c
         return None
 
     monkeypatch.setattr(ui, "select_many", select)
-    # When independent doctor and login status readers run without --live.
-    local = runner.invoke(app, ["doctor", "--json"])
+    # When doctor explicitly skips the network and login reads fresh verification.
+    local = runner.invoke(app, ["doctor", "--static", "--json"])
     ui.select_services()
     # Then both retain the verified service status.
     assert local.exit_code == 0, local.output
@@ -108,8 +115,8 @@ def test_live_result_survives_in_doctor_json_and_login_selector_without_remote_c
     assert next(row[2] for row in choices if row[0] == service) == State.READY
 
 
-@pytest.mark.parametrize("age", [43_199, 43_200, 43_201, -1])
-def test_saved_live_verification_expires_at_twelve_hours(
+@pytest.mark.parametrize("age", [28_799, 28_800, 28_801, -1])
+def test_saved_live_verification_expires_at_eight_hours(
     saved_service: tuple[ServiceChoice, Path, Path], monkeypatch: pytest.MonkeyPatch, age: int
 ) -> None:
     # Given a successful check at a fixed time.
@@ -121,7 +128,7 @@ def test_saved_live_verification_expires_at_twelve_hours(
     # When local status reads the result at the expiry boundary.
     result = next(s for s in collect_services().services if s.label == service.label)
     # Then an expired (or future-dated) result is unverified, not disconnected.
-    assert result.state == (State.READY if 0 <= age < 43_200 else State.CONFIGURED)
+    assert result.state == (State.READY if 0 <= age < 28_800 else State.CONFIGURED)
 
 
 def test_failed_live_check_replaces_saved_success(
@@ -415,7 +422,7 @@ def test_doctor_json_contains_no_ansi_and_does_not_claim_saved_sessions_are_live
     monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path / "config"))
     monkeypatch.setenv("TUM_MOODLE_DATA_DIR", str(tmp_path / "moodle"))
-    result = CliRunner().invoke(app, ["doctor", "--json"])
+    result = CliRunner().invoke(app, ["doctor", "--static", "--json"])
     assert result.exit_code == 0, result.output
     assert '"schema_version": 1' in result.output
     assert '"live_authentication": "not_checked"' in result.output
@@ -586,7 +593,8 @@ def test_wsl_doctor_reports_both_client_profiles_without_creating_state(
     target.write_text('{"mcpServers":{"tum":{"command":"wsl.exe","args":[]}}}', encoding="utf-8")
     report = diagnostics.collect_diagnostics(home=tmp_path / "Linux user")
     clients = {item.label: item for item in report.clients}
-    assert clients["Cursor (Windows)"].state == State.CONFIGURED
+    assert clients["Cursor (Windows)"].state == State.ACTION
+    assert "ownership receipt" in clients["Cursor (Windows)"].detail
     assert clients["Cursor"].state == State.UNCONFIGURED
     assert "--host windows" in clients["Claude (Windows)"].detail
     assert not (tmp_path / "data").exists()
