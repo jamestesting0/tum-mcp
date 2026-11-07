@@ -43,85 +43,13 @@ def protect_directory(browser: BrowserChoice, path: Path) -> None:
         secure_directory(path)
 
 
-def everyday_roots(browser: BrowserChoice) -> tuple[Path, ...]:
-    """Exclude normal browser data, including other brands and preview channels."""
-    if browser.windows_host or sys.platform == "win32":
-        if browser.windows_host:
-            host = windows_host()
-            local = Path(wsl_path(str(host.local_data)))
-            roaming = Path(wsl_path(str(host.home / "AppData/Roaming")))
-        else:
-            local = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local"))
-            roaming = Path(os.environ.get("APPDATA", Path.home() / "AppData/Roaming"))
-        roots = [
-            local / suffix
-            for suffix in (
-                "Google/Chrome/User Data",
-                "Google/Chrome Beta/User Data",
-                "Google/Chrome Dev/User Data",
-                "Google/Chrome SxS/User Data",
-                "Microsoft/Edge/User Data",
-                "Microsoft/Edge Beta/User Data",
-                "Microsoft/Edge Dev/User Data",
-                "Microsoft/Edge SxS/User Data",
-                "BraveSoftware/Brave-Browser/User Data",
-                "Chromium/User Data",
-                "Vivaldi/User Data",
-            )
-        ]
-        roots.extend(
-            roaming / "Opera Software" / name for name in ("Opera Stable", "Opera GX Stable")
-        )
-        return tuple(roots)
-    if sys.platform == "darwin":
-        base = Path.home() / "Library/Application Support"
-        names = (
-            "Google/Chrome",
-            "Google/Chrome Beta",
-            "Google/Chrome Dev",
-            "Google/Chrome Canary",
-            "Microsoft Edge",
-            "Microsoft Edge Beta",
-            "Microsoft Edge Dev",
-            "Microsoft Edge Canary",
-            "BraveSoftware/Brave-Browser",
-            "Chromium",
-            "Vivaldi",
-            "com.operasoftware.Opera",
-            "com.operasoftware.OperaGX",
-        )
-    else:
-        base = Path(
-            os.environ.get("CHROME_CONFIG_HOME")
-            or os.environ.get("XDG_CONFIG_HOME")
-            or Path.home() / ".config"
-        )
-        names = (
-            "google-chrome",
-            "google-chrome-beta",
-            "google-chrome-unstable",
-            "google-chrome-canary",
-            "microsoft-edge",
-            "microsoft-edge-beta",
-            "microsoft-edge-dev",
-            "BraveSoftware/Brave-Browser",
-            "chromium",
-            "vivaldi",
-            "opera",
-            "opera-gx",
-        )
-    roots = tuple(base / name for name in names)
-    override = os.environ.get("CHROME_USER_DATA_DIR")
-    return (*roots, Path(override).expanduser()) if override else roots
-
-
-def validate_root(browser: BrowserChoice, path: Path) -> Path:
-    root = path.resolve()
-    if any(
-        root.is_relative_to(item.resolve()) or item.resolve().is_relative_to(root)
-        for item in everyday_roots(browser)
-    ):
-        raise BrowserSetupError(
-            "Everyday browser profiles cannot be used. Choose a dedicated profile."
-        )
+def profile_root(browser: BrowserChoice) -> Path:
+    profile = browser.profile
+    if profile is None:
+        raise BrowserSetupError("Choose a saved profile first.")
+    source = local_path(browser, profile.root)
+    root = source.resolve()
+    expected = managed_root(browser).resolve() / profile.id
+    if source.is_symlink() or root != expected:
+        raise BrowserSetupError("Profile ownership changed; browser data was preserved.")
     return root

@@ -111,31 +111,24 @@ required. Temporary login uses a fresh profile.
 Ctrl+C closes the window and preserves connections that already completed.
 A dumb terminal uses numbered prompts, with Enter accepting the first browser.
 
-Choose **Set up a saved profile…** to create a dedicated Chromium profile or add an
-existing one. Creating a profile asks for its browser and name; complete sign-in
+Choose **Set up a saved profile…** to create a dedicated Chromium profile.
+Setup asks for its browser and name; complete sign-in
 in the opened window. Later, choose `Google Chrome - saved` (or your browser) to
 reuse its sign-in. Multiple saved profiles for one browser show their names.
 No browser skill or extension is required. Saved profiles do not inherit passwords
 from your everyday profile, and expired sessions still require sign-in or MFA.
 
-**Add existing profile…** detects dedicated profiles previously created for that
-browser by TUM MCP. **Choose folder…** accepts another browser data directory, or
-one of its profile subfolders, and lists the profiles found there. This reads only
-profile metadata, not password or cookie databases. Everyday browser data
-directories are excluded. Close other windows using the dedicated directory
-before connecting; TUM MCP also locks the whole directory against concurrent use.
-Added profiles use the browser's native password store; the browser may ask you
-to unlock it. TUM MCP does not read saved passwords.
+Profiles are created and managed only by TUM MCP; existing browser profiles cannot
+be added. TUM MCP locks each saved directory against concurrent use and never
+reads saved passwords.
 
-Run **`tum-mcp manage browsers`** to create, add, rename or remove profiles.
-Removing a profile created by TUM MCP deletes its browser data and encrypted
-session copy. Removing an added profile unregisters it and removes TUM MCP's
-encrypted session copy; the original browser data remains. Interactive logout
+Run **`tum-mcp manage browsers`** to create, rename or remove profiles.
+Removing a profile deletes its browser data and encrypted session copy. Interactive logout
 offers to clear the selected services' sign-in from available saved profiles too,
 including shared TUM sign-in. Otherwise profiles remain signed in and can reconnect.
 Explicit `logout PROVIDER ACCOUNT_ID` retains browser profiles. Uninstalling with
-`--all --forget-credentials` removes managed profiles and TUM MCP's saved sessions;
-externally added browser data is retained.
+`--all --forget-credentials` removes managed profiles and TUM MCP's saved sessions.
+Other browser profiles are never changed.
 
 Managed browser data uses owner-only permissions and the browser's native storage.
 TUM MCP additionally encrypts campus cookies so session-only sign-ins survive a

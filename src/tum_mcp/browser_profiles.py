@@ -1,7 +1,7 @@
 import shutil
 from dataclasses import replace
 from pathlib import Path, PureWindowsPath
-from typing import Annotated, Literal
+from typing import Literal
 from uuid import uuid4
 
 from filelock import FileLock
@@ -15,12 +15,10 @@ from tum_mcp.profile_paths import (
     launch_path,
     local_path,
     managed_root,
+    profile_root,
     protect_directory,
-    validate_root,
 )
 from tum_mcp.settings import Frozen, config_dir
-
-ProfileDirectory = Annotated[str, Field(pattern=r"^[^/\\.:\x00-\x1f][^/\\:\x00-\x1f]*$")]
 
 
 class BrowserProfile(Frozen):
@@ -29,9 +27,9 @@ class BrowserProfile(Frozen):
     browser_name: str = "Browser"
     windows_host: bool = False
     root: str
-    directory: ProfileDirectory = "Default"
+    directory: Literal["Default"] = "Default"
     name: str = Field(min_length=1, max_length=80)
-    managed: bool = False
+    managed: Literal[True] = True
 
     @property
     def browser(self) -> BrowserChoice:
@@ -50,18 +48,6 @@ class BrowserPreferences(Frozen):
     profiles: tuple[BrowserProfile, ...] = ()
     last_browser: str | None = None
     last_profile: str | None = None
-
-
-class ProfileInfo(Frozen, extra="ignore"):
-    name: str = ""
-
-
-class ProfileCache(Frozen, extra="ignore"):
-    info_cache: dict[ProfileDirectory, ProfileInfo] = Field(default_factory=dict)
-
-
-class LocalState(Frozen, extra="ignore"):
-    profile: ProfileCache = Field(default_factory=ProfileCache)
 
 
 def read_preferences() -> BrowserPreferences:
@@ -88,12 +74,6 @@ def browser_choices(browsers: tuple[BrowserChoice, ...]) -> tuple[BrowserChoice,
             if (
                 profile.executable == browser.executable
                 and local_path(browser, profile.root).is_dir()
-                and (
-                    profile.managed
-                    or (
-                        local_path(browser, profile.root) / profile.directory / "Preferences"
-                    ).is_file()
-                )
             ):
                 choices.append(replace(browser, profile=profile))
     choices.sort(
@@ -119,37 +99,6 @@ def remember_browser(browser: BrowserChoice) -> None:
         )
 
 
-def profiles_in(browser: BrowserChoice, value: str) -> tuple[BrowserProfile, ...]:
-    """Read profile names only; never inspect password or cookie databases."""
-    root = validate_root(browser, local_path(browser, value))
-    if (root / "Preferences").is_file():
-        root = validate_root(browser, root.parent)
-    try:
-        state = LocalState.model_validate_json((root / "Local State").read_bytes())
-    except (OSError, ValidationError):
-        raise BrowserSetupError(
-            "Choose a browser data folder containing a readable Local State file."
-        ) from None
-    profiles = []
-    for directory, info in state.profile.info_cache.items():
-        if (root / directory / "Preferences").is_file():
-            profiles.append(
-                BrowserProfile(
-                    id=uuid4().hex,
-                    executable=browser.executable,
-                    browser_name=browser.name,
-                    windows_host=browser.windows_host,
-                    root=launch_path(browser, root),
-                    directory=directory,
-                    name="".join(char for char in info.name if char.isprintable()).strip()[:80]
-                    or directory[:80],
-                )
-            )
-    if not profiles:
-        raise BrowserSetupError("No browser profiles were found in that folder.")
-    return tuple(profiles)
-
-
 def create_profile(browser: BrowserChoice, name: str) -> BrowserChoice:
     profile_id = uuid4().hex
     root = managed_root(browser) / profile_id
@@ -163,32 +112,13 @@ def create_profile(browser: BrowserChoice, name: str) -> BrowserChoice:
         name=name,
         managed=True,
     )
-    return register_profile(replace(browser, profile=profile))
-
-
-def register_profile(browser: BrowserChoice) -> BrowserChoice:
-    profile = browser.profile
-    if profile is None:
-        raise BrowserSetupError("Choose a saved profile to register.")
-    root = validate_root(browser, local_path(browser, profile.root))
-    if not root.is_dir():
-        raise BrowserSetupError("The saved browser folder is missing.")
-    if not profile.managed and not (root / profile.directory / "Preferences").is_file():
-        raise BrowserSetupError("The selected browser profile is missing.")
     secure_directory(config_dir())
     with FileLock(str(config_dir() / "browsers.lock")):
         preferences = read_preferences()
-        for previous in preferences.profiles:
-            if (
-                previous.executable == profile.executable
-                and local_path(browser, previous.root) == root
-                and previous.directory == profile.directory
-            ):
-                return replace(browser, profile=previous)
         write_preferences(
             preferences.model_copy(update={"profiles": (*preferences.profiles, profile)})
         )
-    return browser
+    return replace(browser, profile=profile)
 
 
 def rename_profile(browser: BrowserChoice, name: str) -> None:
@@ -211,7 +141,7 @@ def rename_profile(browser: BrowserChoice, name: str) -> None:
 def profile_lock(browser: BrowserChoice) -> FileLock:
     if browser.profile is None:
         raise BrowserSetupError("Choose a saved profile first.")
-    root = validate_root(browser, local_path(browser, browser.profile.root))
+    root = profile_root(browser)
     return FileLock(str(root.parent / f".tum-mcp-{root.name}.lock"), timeout=0)
 
 
@@ -243,11 +173,7 @@ def remove_profile_data(browser: BrowserChoice) -> None:
     profile = browser.profile
     if profile is None:
         raise BrowserSetupError("Choose a saved profile to remove.")
-    source = local_path(browser, profile.root)
-    root = validate_root(browser, source)
-    if profile.managed and root.exists():
-        expected = managed_root(browser).resolve() / profile.id
-        if root != expected or source.is_symlink():
-            raise BrowserSetupError("Profile ownership changed; browser data was preserved.")
+    root = profile_root(browser)
+    if root.exists():
         shutil.rmtree(root)
     cookie_file(profile).unlink(missing_ok=True)

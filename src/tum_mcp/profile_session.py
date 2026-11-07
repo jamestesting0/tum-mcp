@@ -7,7 +7,7 @@ from playwright.sync_api import BrowserContext, BrowserType, Error
 from tum_mcp.browser_profiles import profile_lock
 from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError
 from tum_mcp.profile_cookies import restore_cookies, retain_cookies
-from tum_mcp.profile_paths import local_path, protect_directory, validate_root
+from tum_mcp.profile_paths import profile_root, protect_directory
 
 
 @contextmanager
@@ -22,28 +22,19 @@ def login_context(
         finally:
             instance.close()
         return
-    root = validate_root(browser, local_path(browser, profile.root))
+    root = profile_root(browser)
     if not root.is_dir():
         raise BrowserSetupError(
             "Saved browser profile is missing. Set it up again or use temporary."
         )
-    if not profile.managed and not (root / profile.directory / "Preferences").is_file():
-        raise BrowserSetupError("The selected browser profile is missing. Add it again.")
     try:
         with profile_lock(browser):
-            if profile.managed:
-                protect_directory(browser, root)
+            protect_directory(browser, root)
             context = engine.launch_persistent_context(
                 user_data_dir=profile.root,
                 executable_path=browser.executable,
                 headless=headless,
                 args=[f"--profile-directory={profile.directory}"],
-                ignore_default_args=None
-                if profile.managed
-                else [
-                    "--use-mock-keychain",
-                    "--password-store=basic",
-                ],
             )
             try:
                 restore_cookies(context, profile)

@@ -146,9 +146,8 @@ Service connections retain only service-owned cookies. Temporary login discards
 identity-provider cookies when the browser closes. Optional saved profiles retain
 browser state and an encrypted campus-cookie copy, including shared TUM sign-in,
 so session-only cookies survive restart. Unrelated site cookies are excluded from
-that copy. `tum-mcp manage browsers` manages profiles. Existing dedicated browser
-data directories can be registered without copying their databases; everyday
-profile directories are excluded. Removal preserves externally added browser data.
+that copy. `tum-mcp manage browsers` creates, renames and removes these dedicated
+profiles. Existing profiles cannot be added, and other browser data is not changed.
 Interactive logout offers to clear selected services and shared TUM sign-in from
 available saved profiles. [Setup and storage details](setup.md#login).
 

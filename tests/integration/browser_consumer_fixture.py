@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 from playwright.sync_api import Browser, BrowserType, Route, expect, sync_playwright
 from study_browser_fixture import study_website
 
-from tum_mcp.browser_profiles import create_profile, profiles_in, remove_profile
+from tum_mcp.browser_profiles import create_profile, remove_profile
 from tum_mcp.connect import ServiceChoice
 from tum_mcp.moodle.auth import Cookie, Session, SessionStore
 from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
@@ -91,9 +91,6 @@ def saved_profile_journey(engine: BrowserType, choice: BrowserChoice) -> None:
             ("session", "www.moodle.tum.de"),
             ("artemis", "artemis.tum.de"),
             ("sso", ".tum.de"),
-        }
-        assert saved.profile.directory in {
-            item.directory for item in profiles_in(choice, saved.profile.root)
         }
         with login_context(engine, saved, headless=True) as context:
             cookies = context.cookies("https://www.moodle.tum.de/")

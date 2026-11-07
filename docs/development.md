@@ -134,13 +134,13 @@ the fix; do not add another test that only checks the same implementation text.
 CI runs macOS, Windows and Linux, plus both distribution engines on WSL 3.x.
 Consumer checks install the actual npm artifact, discover tools, build a study
 site and test available Chromium browsers with temporary profiles and synthetic
-pages. Every discovered browser also runs a saved-profile restart journey: real
-profile metadata discovery, encrypted campus-session retention, exclusion of
+pages. Every discovered browser also runs a saved-profile restart journey:
+encrypted campus-session retention, exclusion of
 unrelated cookies, scoped sign-in clearing, temporary-context isolation and removal.
 The same journey runs from the installed wheel on all desktop OSes and both WSL
 engines. WSL verifies Windows browser transport and Windows-side saved-profile
 paths/permissions. No live account is used. Source coverage additionally checks
-profile registration/ownership, unavailable-choice fallback and last-selection
+profile creation/ownership, unavailable-choice fallback and last-selection
 defaults in real terminals. Run focused checks with:
 
 ```sh
@@ -151,11 +151,10 @@ TUM_MCP_BROWSER_INTEGRATION=1 uv run pytest -q tests/integration/test_saved_brow
 Saved profile registrations and the last browser/profile selection live in
 `config/browsers.json`. Managed browser directories are owner-restricted; WSL
 Windows browsers use Windows LocalAppData, while their encrypted campus-cookie
-copies stay with the WSL credentials. Profile metadata discovery reads `Local State`
-and checks profile-folder existence; it does not inspect cookie/password databases.
-Adding an external profile never transfers ownership to TUM MCP. Credential
-forgetting deletes managed browser data and encrypted profile sessions, retaining
-external browser data. The real browser owns its own native profile storage.
+copies stay with the WSL credentials. Existing profiles cannot be added. Every
+saved directory is checked against its application-owned location before use or
+deletion. Credential forgetting deletes managed browser data and encrypted profile
+sessions, retaining other browser data. The browser owns its native profile storage.
 Upgrade checks start from public 0.9.0 and cover all five clients, optional-extension
 retention, customized-file conflicts, failed preparation, runtime repair and
 removal that preserves work/credentials. Earlier releases are outside this matrix.

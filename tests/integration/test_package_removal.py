@@ -63,9 +63,7 @@ def test_credential_forgetting_deletes_only_local_service_records(
     local.mkdir(parents=True)
     (local / ("a" * 64 + ".enc")).write_bytes(b"synthetic-ciphertext")
     (local / "session.key").write_bytes(b"synthetic-key")
-    from dataclasses import replace
-
-    from tum_mcp.browser_profiles import create_profile, profiles_in, register_profile
+    from tum_mcp.browser_profiles import create_profile
     from tum_mcp.moodle.browsers import BrowserChoice
 
     browser = BrowserChoice("Synthetic browser", "unused")
@@ -73,8 +71,6 @@ def test_credential_forgetting_deletes_only_local_service_records(
     imported = tmp_path / "external-browser"
     (imported / "Default").mkdir(parents=True)
     (imported / "Default/Preferences").write_text("{}", encoding="utf-8")
-    (imported / "Local State").write_text('{"profile":{"info_cache":{"Default":{"name":"Keep"}}}}')
-    register_profile(replace(browser, profile=profiles_in(browser, str(imported))[0]))
     moodle = tmp_path / "moodle"
     (moodle / "local-session").mkdir(parents=True)
     (moodle / "session.enc").write_bytes(b"legacy-record-to-preserve")
