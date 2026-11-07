@@ -34,7 +34,10 @@ skills_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=Fal
 app.add_typer(skills_app, name="skills", help="Inspect and validate workflow skills.")
 from tum_mcp.tumonline.manage import app as manage_app  # noqa: E402
 
-app.add_typer(manage_app, name="manage", help="Manage provider permissions.")
+app.add_typer(manage_app, name="manage", help="Manage provider permissions and saved browsers.")
+from tum_mcp.commands.browser_profiles import manage_browsers  # noqa: E402
+
+manage_app.command("browsers")(manage_browsers)
 from tum_mcp.course.cli import app as study_app  # noqa: E402
 
 app.add_typer(study_app, name="study", help="Prepare, preview and publish a course app.")
@@ -120,7 +123,8 @@ def connect() -> None:
     """Choose services and complete sign-in."""
     from rich.text import Text
 
-    from tum_mcp.commands.ui import heading, select_browser, select_services, terminal_console
+    from tum_mcp.commands.browser_profiles import choose_login_browser
+    from tum_mcp.commands.ui import heading, select_services, terminal_console
     from tum_mcp.connect import ConnectionResult, ServiceChoice, connect_services
     from tum_mcp.moodle.browsers import discover_browsers
 
@@ -142,11 +146,11 @@ def connect() -> None:
                 "All MCP clients sharing this configuration use the same permission; "
                 "manage it with tum-mcp manage tumonline."
             )
-        browser = select_browser(discover_browsers())
+        browser = choose_login_browser(discover_browsers())
     except (KeyboardInterrupt, EOFError):
         console.print("Cancelled. No browser was opened.")
         raise typer.Exit(130) from None
-    console.print(Text(f"Browser: {browser.label}"))
+    console.print(Text(f"Browser: {browser.login_label}"))
     console.print(Text("Opening " + ", ".join(value.label for value in selected) + "."))
     console.print("Complete TUM sign-in/MFA in the browser window.")
     if browser.windows_host:

@@ -30,6 +30,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         ["doctor"],
         ["uninstall"],
         ["manage", "tumonline"],
+        ["manage", "browsers"],
         ["skills", "validate"],
         ["study", "build"],
         ["lecture", "runtime", "status"],

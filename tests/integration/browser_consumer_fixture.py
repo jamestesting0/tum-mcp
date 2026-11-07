@@ -14,13 +14,19 @@ from pathlib import Path
 from typing import TypedDict
 from urllib.parse import urlsplit
 
-from playwright.sync_api import Browser, Route, expect, sync_playwright
+from playwright.sync_api import Browser, BrowserType, Route, expect, sync_playwright
 from study_browser_fixture import study_website
 
+from tum_mcp.browser_profiles import create_profile, profiles_in, remove_profile
+from tum_mcp.connect import ServiceChoice
 from tum_mcp.moodle.auth import Cookie, Session, SessionStore
 from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
-from tum_mcp.moodle.browsers import discover_browsers, is_wsl
+from tum_mcp.moodle.browsers import BrowserChoice, discover_browsers, is_wsl
 from tum_mcp.moodle.config import Paths
+from tum_mcp.moodle.secret_files import local_cipher
+from tum_mcp.profile_cookies import ProfileCookies, cookie_file
+from tum_mcp.profile_logout import clear_campus_signins
+from tum_mcp.profile_session import login_context
 
 HTML = """<!doctype html><title>Synthetic local sign-in</title>
 <button onclick="document.cookie='MoodleSession=synthetic-browser-only; path=/; secure';
@@ -37,6 +43,75 @@ class SmokeEvidence(TypedDict):
     passed: bool
     views: list[str]
     widths: list[int]
+
+
+def saved_profile_journey(engine: BrowserType, choice: BrowserChoice) -> None:
+    saved = create_profile(choice, "Synthetic profile")
+    assert saved.profile is not None
+    try:
+        with login_context(engine, saved, headless=True) as context:
+            context.add_cookies(
+                [
+                    {
+                        "name": "session",
+                        "value": "synthetic-only",
+                        "domain": "www.moodle.tum.de",
+                        "path": "/",
+                        "secure": True,
+                    },
+                    {
+                        "name": "unrelated",
+                        "value": "never-copy-this",
+                        "domain": "unrelated.invalid",
+                        "path": "/",
+                        "secure": True,
+                    },
+                    {
+                        "name": "artemis",
+                        "value": "synthetic-other-service",
+                        "domain": "artemis.tum.de",
+                        "path": "/",
+                        "secure": True,
+                    },
+                    {
+                        "name": "sso",
+                        "value": "synthetic-shared-signin",
+                        "domain": ".tum.de",
+                        "path": "/",
+                        "secure": True,
+                    },
+                ]
+            )
+        encrypted = cookie_file(saved.profile).read_bytes()
+        assert b"synthetic-only" not in encrypted and b"never-copy-this" not in encrypted
+        retained = ProfileCookies.model_validate_json(
+            local_cipher(cookie_file(saved.profile).parent).decrypt(encrypted)
+        )
+        assert {(cookie.name, cookie.domain) for cookie in retained.cookies} == {
+            ("session", "www.moodle.tum.de"),
+            ("artemis", "artemis.tum.de"),
+            ("sso", ".tum.de"),
+        }
+        assert saved.profile.directory in {
+            item.directory for item in profiles_in(choice, saved.profile.root)
+        }
+        with login_context(engine, saved, headless=True) as context:
+            cookies = context.cookies("https://www.moodle.tum.de/")
+            assert {(cookie["name"], cookie["value"]) for cookie in cookies} == {
+                ("session", "synthetic-only"),
+                ("sso", "synthetic-shared-signin"),
+            }
+            clear_campus_signins(context, (ServiceChoice.MOODLE,))
+        with login_context(engine, saved, headless=True) as context:
+            assert context.cookies("https://www.moodle.tum.de/") == []
+            assert [
+                (item["name"], item["value"]) for item in context.cookies("https://artemis.tum.de/")
+            ] == [("artemis", "synthetic-other-service")]
+        with login_context(engine, choice, headless=True) as context:
+            assert context.cookies("https://www.moodle.tum.de/") == []
+    finally:
+        remove_profile(saved)
+    assert not cookie_file(saved.profile).exists()
 
 
 def study_smoke(browser: Browser, site: Path, unit: str) -> SmokeEvidence:
@@ -119,6 +194,7 @@ def main() -> None:
     for index, choice in enumerate(browsers):
         print(f"Verifying owned browser: {choice.label}", file=sys.stderr, flush=True)
         with browser_driver(choice), sync_playwright() as playwright:
+            saved_profile_journey(playwright.chromium, choice)
             browser = launch_loopback_browser(playwright.chromium, choice)
             try:
                 context = browser.new_context()
@@ -176,6 +252,7 @@ def main() -> None:
                         "platform": platform,
                         "pipeTransport": True,
                         "encryptedSession": True,
+                        "savedProfile": True,
                         "studyWebsite": study,
                         "studyCoverage": "full" if full_journey else "smoke",
                         "studySeconds": round(time.monotonic() - started, 3),

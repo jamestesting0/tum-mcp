@@ -1,5 +1,7 @@
 """Installed Chromium browsers and Windows-host paths, without opening user profiles."""
 
+from __future__ import annotations
+
 import base64
 import binascii
 import os
@@ -10,7 +12,10 @@ import sys
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path, PureWindowsPath
-from typing import Final
+from typing import TYPE_CHECKING, Final
+
+if TYPE_CHECKING:
+    from tum_mcp.browser_profiles import BrowserProfile
 
 
 class BrowserSetupError(RuntimeError):
@@ -24,10 +29,15 @@ class BrowserChoice:
     name: str
     executable: str
     windows_host: bool = False
+    profile: BrowserProfile | None = None
 
     @property
     def label(self) -> str:
         return self.name + (" (Windows)" if self.windows_host else "")
+
+    @property
+    def login_label(self) -> str:
+        return self.label + (" - saved" if self.profile else " - temporary")
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,0 +1,170 @@
+import sys
+from dataclasses import replace
+from enum import Enum
+
+import typer
+from filelock import Timeout
+from pydantic import ValidationError
+
+from tum_mcp.browser_profiles import (
+    browser_choices,
+    create_profile,
+    profiles_in,
+    read_preferences,
+    register_profile,
+    remember_browser,
+    remove_profile,
+    rename_profile,
+)
+from tum_mcp.commands.choices import choose
+from tum_mcp.commands.terminal_input import numbered_input
+from tum_mcp.commands.ui import heading, select_browser, terminal_console
+from tum_mcp.errors import CampusError, Code
+from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError, discover_browsers
+from tum_mcp.profile_paths import managed_root
+
+
+class Action(Enum):
+    SETUP = "setup"
+    CREATE = "create"
+    EXISTING = "existing"
+    RENAME = "rename"
+    REMOVE = "remove"
+    DONE = "done"
+
+
+def saved_labels(browsers: tuple[BrowserChoice, ...]) -> tuple[tuple[BrowserChoice, str], ...]:
+    return tuple(
+        (
+            browser,
+            browser.login_label
+            + (
+                f" ({browser.profile.name})"
+                if browser.profile
+                and sum(
+                    item.profile is not None and item.executable == browser.executable
+                    for item in browsers
+                )
+                > 1
+                else ""
+            ),
+        )
+        for browser in browsers
+    )
+
+
+def choose_login_browser(browsers: tuple[BrowserChoice, ...]) -> BrowserChoice:
+    if not browsers:
+        return select_browser(browsers)
+    entries: list[tuple[BrowserChoice | Action, str]] = list(
+        saved_labels(browser_choices(browsers))
+    )
+    entries.append((Action.SETUP, "Set up a saved profile…"))
+    selected = choose("Choose browser", tuple(entries))
+    match selected:
+        case BrowserChoice():
+            browser = selected
+        case Action.SETUP:
+            browser = setup_profile(browsers)
+        case _:
+            raise BrowserSetupError("Choose a browser or set up a saved profile.")
+    remember_browser(browser)
+    return browser
+
+
+def profile_name(default: str) -> str:
+    name = numbered_input(f"Profile name [{default}]: ").strip() or default
+    if len(name) > 80:
+        raise BrowserSetupError("Profile names must contain at most 80 characters.")
+    return name
+
+
+def setup_profile(browsers: tuple[BrowserChoice, ...]) -> BrowserChoice:
+    action = choose(
+        "Set up a saved profile",
+        (
+            (Action.CREATE, "Create a new profile"),
+            (Action.EXISTING, "Add existing profile…"),
+        ),
+    )
+    last = read_preferences().last_browser
+    browser = select_browser(tuple(sorted(browsers, key=lambda item: item.executable != last)))
+    match action:
+        case Action.CREATE:
+            return create_profile(browser, profile_name(browser.name))
+        case Action.EXISTING:
+            return add_existing(browser)
+        case _:
+            raise KeyboardInterrupt
+
+
+def add_existing(browser: BrowserChoice) -> BrowserChoice:
+    console = terminal_console()
+    console.print("Choose a dedicated browser data folder. Everyday profiles cannot be used.")
+    candidates = []
+    root = managed_root(browser)
+    if root.is_dir():
+        for path in sorted(root.iterdir()):
+            if (path / "Local State").is_file():
+                candidates.extend(profiles_in(browser, str(path)))
+    entries = [(item, item.name) for item in candidates]
+    selected = choose("Choose profile", (*entries, (Action.EXISTING, "Choose folder…")))
+    if selected == Action.EXISTING:
+        path = numbered_input("Browser data folder: ").strip().strip('"')
+        if not path:
+            raise KeyboardInterrupt
+        profiles = profiles_in(browser, path)
+        selected = choose("Choose profile", tuple((item, item.name) for item in profiles))
+    return register_profile(replace(browser, profile=selected))
+
+
+def manage_browsers() -> None:
+    if not sys.stdin.isatty():
+        raise CampusError(
+            Code.ACTION_REQUIRED, "Run tum-mcp manage browsers in your interactive terminal."
+        )
+    console = terminal_console()
+    heading(console, "Browsers", "Set up and manage saved browser profiles.")
+    try:
+        browsers = discover_browsers()
+        while True:
+            saved = tuple(item.browser for item in read_preferences().profiles)
+            available = {item.profile.id for item in browser_choices(browsers) if item.profile}
+            entries: list[tuple[BrowserChoice | Action, str]] = [
+                (item, label + (" - unavailable" if item.profile.id not in available else ""))
+                for item, label in saved_labels(saved)
+            ]
+            entries.extend(((Action.SETUP, "Set up a saved profile…"), (Action.DONE, "Done")))
+            selected = choose("Saved browsers", tuple(entries))
+            match selected:
+                case Action.DONE:
+                    return
+                case Action.SETUP:
+                    if not browsers:
+                        select_browser(browsers)
+                    setup_profile(browsers)
+                    console.print("Profile saved. Use tum-mcp login to sign in.")
+                case BrowserChoice(profile=profile) if profile is not None:
+                    action = choose(
+                        profile.name, ((Action.RENAME, "Rename"), (Action.REMOVE, "Remove"))
+                    )
+                    if action == Action.RENAME:
+                        rename_profile(selected, profile_name(profile.name))
+                    else:
+                        message = (
+                            "Remove this profile and its saved browser data?"
+                            if profile.managed
+                            else "Remove this profile from TUM MCP? Browser data will be retained."
+                        )
+                        if choose(message, ((False, "Cancel"), (True, "Remove"))):
+                            remove_profile(selected)
+                            console.print("Profile removed.")
+                case _:
+                    raise KeyboardInterrupt
+    except (EOFError, KeyboardInterrupt):
+        console.print("Cancelled.")
+        raise typer.Exit(130) from None
+    except Timeout:
+        raise BrowserSetupError("Saved profile is in use. Close it and retry.") from None
+    except ValidationError:
+        raise BrowserSetupError("Profile settings are invalid.") from None

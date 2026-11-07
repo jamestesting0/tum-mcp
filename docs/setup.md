@@ -89,7 +89,9 @@ Run **`tum-mcp login`**, with no arguments, in an interactive terminal:
 
 1. Services marked Action needed are preselected. Use up/down to move and Space to
    change the selection. Installed Lecture adds TUM-Live.
-2. Press Enter. If several browsers are installed, choose one and press Enter.
+2. Press Enter, choose a browser and press Enter. Choices end in `- temporary` or
+   `- saved`. Your last selected browser or profile appears first and is selected
+   by default; if it is unavailable, the first available choice is selected.
 3. Complete TUM sign-in/MFA in the opened window. Only selected service tabs open.
 4. Return to the terminal for the saved-connection result.
 
@@ -104,10 +106,40 @@ its local credentials, retaining settings, TUMonline permissions, downloads and
 other connections. Remote sessions are not revoked. The explicit
 `tum-mcp logout PROVIDER ACCOUNT_ID` form remains available for scripts.
 
-Campus services use temporary-browser sign-in and encrypted session storage.
-No API key or native credential-store prompt is needed. A temporary browser
-profile keeps the connection separate from your everyday browser. Ctrl+C closes it and preserves
-connections that already completed. A dumb terminal uses numbered prompts.
+Campus services use browser sign-in and encrypted session storage. No API key is
+required. Temporary login uses a fresh profile.
+Ctrl+C closes the window and preserves connections that already completed.
+A dumb terminal uses numbered prompts, with Enter accepting the first browser.
+
+Choose **Set up a saved profile…** to create a dedicated Chromium profile or add an
+existing one. Creating a profile asks for its browser and name; complete sign-in
+in the opened window. Later, choose `Google Chrome - saved` (or your browser) to
+reuse its sign-in. Multiple saved profiles for one browser show their names.
+No browser skill or extension is required. Saved profiles do not inherit passwords
+from your everyday profile, and expired sessions still require sign-in or MFA.
+
+**Add existing profile…** detects dedicated profiles previously created for that
+browser by TUM MCP. **Choose folder…** accepts another browser data directory, or
+one of its profile subfolders, and lists the profiles found there. This reads only
+profile metadata, not password or cookie databases. Everyday browser data
+directories are excluded. Close other windows using the dedicated directory
+before connecting; TUM MCP also locks the whole directory against concurrent use.
+Added profiles use the browser's native password store; the browser may ask you
+to unlock it. TUM MCP does not read saved passwords.
+
+Run **`tum-mcp manage browsers`** to create, add, rename or remove profiles.
+Removing a profile created by TUM MCP deletes its browser data and encrypted
+session copy. Removing an added profile unregisters it and removes TUM MCP's
+encrypted session copy; the original browser data remains. Interactive logout
+offers to clear the selected services' sign-in from available saved profiles too,
+including shared TUM sign-in. Otherwise profiles remain signed in and can reconnect.
+Explicit `logout PROVIDER ACCOUNT_ID` retains browser profiles. Uninstalling with
+`--all --forget-credentials` removes managed profiles and TUM MCP's saved sessions;
+externally added browser data is retained.
+
+Managed browser data uses owner-only permissions and the browser's native storage.
+TUM MCP additionally encrypts campus cookies so session-only sign-ins survive a
+browser restart. Unrelated site cookies are not copied into that encrypted store.
 
 Chrome, Edge, Brave, Chromium, Vivaldi and Opera are detected in their standard
 locations. Selected preview channels and Opera GX are detected where installed.
@@ -159,9 +191,12 @@ Connect detects Windows Chromium browsers and opens them on the Windows desktop.
 First use downloads a private, checksum-verified Windows Node driver from
 nodejs.org into Windows LocalAppData. A separate Windows Python or Node install
 is unnecessary. The backend, session keys and encrypted sessions stay in WSL.
-The bridge uses binary pipes and a temporary browser profile, without a remote
+The bridge uses binary pipes, without a remote
 debugging TCP port. Transport is selected by a runtime pipe test, not a version
 string, so a WSL package update does not change that assumption.
+Saved Windows-browser profiles live under Windows LocalAppData; their extra
+encrypted campus-session copies and keys stay in WSL. Both WSL engines use the
+same path translation and Windows owner-only ACL protection.
 
 Windows interop and its PATH integration must be enabled: `powershell.exe` (or
 `pwsh.exe`) and `wslpath` must be available from WSL. Drive paths are translated

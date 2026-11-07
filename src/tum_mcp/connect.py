@@ -4,7 +4,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import assert_never
+from typing import Final, assert_never
 from urllib.parse import urlsplit
 
 from playwright.sync_api import Error as BrowserError
@@ -19,6 +19,7 @@ from tum_mcp.moodle.browser_runtime import browser_driver
 from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError, discover_browsers
 from tum_mcp.moodle.config import BASE_URL, Paths
 from tum_mcp.parsing import decode
+from tum_mcp.profile_session import login_context
 from tum_mcp.settings import ARTEMIS, TUM_LIVE, ZULIP, Account, Provider, preferences, save_account
 from tum_mcp.transport import API, MAX_RESPONSE
 from tum_mcp.tum_live.wire import Identity as LiveIdentity
@@ -74,6 +75,15 @@ class ConnectionResult:
     account: Account | AccountRef | None = None
 
 
+SERVICE_ORIGINS: Final = {
+    ServiceChoice.MOODLE: BASE_URL,
+    ServiceChoice.ARTEMIS: ARTEMIS,
+    ServiceChoice.ZULIP: ZULIP,
+    ServiceChoice.TUMONLINE: "https://campus.tum.de/tumonline/ee/ui/ca2/app/desktop/",
+    ServiceChoice.TUM_LIVE: TUM_LIVE,
+}
+
+
 def connect_browser(providers: tuple[Provider, ...]) -> tuple[Account, ...]:
     results = connect_services(tuple(ServiceChoice(provider.value) for provider in providers))
     return tuple(result.account for result in results if result.account is not None)
@@ -85,7 +95,6 @@ def connect_services(
     *,
     browser: BrowserChoice | None = None,
 ) -> tuple[ConnectionResult, ...]:
-    """Connect the selected campus services in one temporary browser."""
     return _connect_campus_services(services, on_connected, browser=browser)
 
 
@@ -95,7 +104,6 @@ def _connect_campus_services(
     *,
     browser: BrowserChoice | None = None,
 ) -> tuple[ConnectionResult, ...]:
-    """Open only selected services in one temporary context, without native-store access."""
     if not services or len(set(services)) != len(services):
         raise CampusError(Code.SCOPE_DENIED, "Select each service exactly once.")
     if ServiceChoice.TUM_LIVE in services:
@@ -106,13 +114,6 @@ def _connect_campus_services(
     if not available:
         raise BrowserSetupError("Install a Chromium browser, then run tum-mcp login.")
     selected_browser = available[0]
-    origins = {
-        ServiceChoice.MOODLE: BASE_URL,
-        ServiceChoice.ARTEMIS: ARTEMIS,
-        ServiceChoice.ZULIP: ZULIP,
-        ServiceChoice.TUMONLINE: "https://campus.tum.de/tumonline/ee/ui/ca2/app/desktop/",
-        ServiceChoice.TUM_LIVE: TUM_LIVE,
-    }
     connected: dict[ServiceChoice, ConnectionResult] = {}
     attempt: str | None = None
     if ServiceChoice.TUMONLINE in services:
@@ -121,16 +122,15 @@ def _connect_campus_services(
         attempt = begin_login()
     try:
         with browser_driver(selected_browser), sync_playwright() as playwright:
-            instance = playwright.chromium.launch(
-                executable_path=selected_browser.executable, headless=False
-            )
-            try:
-                context = instance.new_context()
+            with login_context(playwright.chromium, selected_browser) as context:
                 pages: dict[ServiceChoice, Page] = {}
+                startup_pages = iter(context.pages)
                 for service in services:
-                    page = context.new_page()
-                    page.goto(origins[service], wait_until="domcontentloaded")
+                    page = next(startup_pages, None) or context.new_page()
+                    page.goto(SERVICE_ORIGINS[service], wait_until="domcontentloaded")
                     pages[service] = page
+                for page in startup_pages:
+                    page.close()
                 deadline = time.monotonic() + 600
                 while time.monotonic() < deadline:
                     for service in services:
@@ -151,7 +151,7 @@ def _connect_campus_services(
                             if on_connected:
                                 on_connected(result)
                             continue
-                        origin = origins[service]
+                        origin = SERVICE_ORIGINS[service]
                         identity_path = {
                             ServiceChoice.MOODLE: "/my/courses.php",
                             ServiceChoice.ARTEMIS: "/api/core/public/account",
@@ -198,8 +198,6 @@ def _connect_campus_services(
                 raise CampusError(
                     Code.AUTH_REQUIRED, "Sign-in timed out; completed connections were saved."
                 )
-            finally:
-                instance.close()
     except BrowserError:
         raise CampusError(
             Code.AUTH_REQUIRED,
