@@ -44,6 +44,9 @@ def test_additional_client_setup_is_idempotent_and_preserves_other_entries(
             for p in (skills / skill).rglob("*")
             if p.is_file()
         }
+        if skill == "prepare-study":
+            bridge = actual.pop(Path("references/course-task.mjs"))
+            assert f'--host", "{name}'.encode() in bridge
         assert actual == expected
     uninstall_client(name, home)
     assert json.loads(path.read_text(encoding="utf-8")) == original

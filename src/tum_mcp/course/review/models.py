@@ -261,14 +261,18 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "prose_calculation": "representation",
     "compressed_working": "representation",
     "static_trace": "representation",
+    "static_walkthrough": "representation",
     "unworked_result": "representation",
     "text_only_question": "representation",
     "meta_reference": "clarity",
     "statement_framing": "clarity",
     "summary_repeats_objective": "redundancy",
+    "redundant_workflow_detail": "redundancy",
     # The cheatsheet: typed mathematics, and sources read for it without exam requirements.
     "sheet_plain_math": "representation",
     "sheet_dense_paragraph": "clarity",
+    "method_without_steps": "coverage",
+    "unguided_practice": "intuition",
     "unrecorded_sources": "coverage",
     # A listed past paper students cannot practise.
     "unreplayable_paper": "coverage",
@@ -356,6 +360,7 @@ def sheet_model(exam: "ExamContent", ledger: CoverageLedger | None) -> Sheet:
 _UNREAD = {
     "key",
     "sources",
+    "source_versions",
     "pages",
     "svg",
     "mathml",

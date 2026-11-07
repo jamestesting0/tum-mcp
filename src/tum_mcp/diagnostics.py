@@ -1,4 +1,4 @@
-"""Read-only local diagnostics, with explicitly requested live authentication checks."""
+"""Read-only diagnostics with optional live authentication checks."""
 
 import platform
 import re
@@ -70,13 +70,13 @@ def session_check(
             )
         if cached is not None and cached.key_stamp == file_stamp(key):
             age = time.time() - cached.checked_at
-            if 0 <= age < 12 * 60 * 60:
+            if 0 <= age < 8 * 60 * 60:
                 timestamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(cached.checked_at))
                 return check.model_copy(
                     update={
                         "state": State.READY if cached.succeeded else State.ACTION,
                         "detail": (
-                            f"Live session verified at {timestamp} (valid for 12 hours)."
+                            f"Live session verified at {timestamp} (valid for 8 hours)."
                             if cached.succeeded
                             else f"Live check failed at {timestamp}; "
                             "run tum-mcp doctor --live to retry."
@@ -285,7 +285,9 @@ def collect_services(*, live: bool | Literal["stale"] = False) -> ServiceReport:
     )
 
 
-def client_check(name: str, *, home: Path, host: ClientHost = ClientHost.LOCAL) -> Check:
+def client_check(
+    name: str, *, home: Path, host: ClientHost = ClientHost.LOCAL, live: bool | None = None
+) -> Check:
     """Inspect one registration without creating config directories or loading secrets."""
     path = (
         config_path() / "mcp.json"
@@ -316,8 +318,17 @@ def client_check(name: str, *, home: Path, host: ClientHost = ClientHost.LOCAL) 
                 state, detail = State.ACTION, note
         if entry is not None and not registered:
             state, detail = State.FAILED, "Invalid tum server entry; review client configuration."
+        if registered and live is not None:
+            from tum_mcp.clients.verification import inspect
+
+            state, detail = inspect(name, home, host, live=live)
     except CampusError as error:
         detail, state = error.message, State.FAILED
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        detail, state = (
+            "Client verification could not finish; registration was not changed.",
+            State.ACTION,
+        )
     return Check(
         label=name.title() + (" (Windows)" if host == ClientHost.WINDOWS else ""),
         state=state,
@@ -327,14 +338,18 @@ def client_check(name: str, *, home: Path, host: ClientHost = ClientHost.LOCAL) 
 
 
 def available_client_checks(
-    *, home: Path, host: ClientHost = ClientHost.LOCAL, include_generic: bool = False
+    *,
+    home: Path,
+    host: ClientHost = ClientHost.LOCAL,
+    include_generic: bool = False,
+    live: bool | None = None,
 ) -> tuple[tuple[ClientName, Check], ...]:
     """Show installed clients and existing registrations; setup also offers Generic."""
     from tum_mcp.clients.discovery import client_installed
 
     checks = []
     for name in CLIENTS:
-        check = client_check(name, home=home, host=host)
+        check = client_check(name, home=home, host=host, live=live)
         if (
             check.state != State.UNCONFIGURED
             or (include_generic and name == "generic")
@@ -363,8 +378,10 @@ def collect_diagnostics(*, live: bool = False, home: Path | None = None) -> Doct
         except BrowserSetupError as error:
             runtime.append(Check(label="Windows clients", state=State.ACTION, detail=error.message))
     for host, profile in profiles:
-        clients.extend(check for _, check in available_client_checks(home=profile, host=host))
-    if not any(item.state == State.CONFIGURED for item in clients):
+        clients.extend(
+            check for _, check in available_client_checks(home=profile, host=host, live=live)
+        )
+    if not any(item.state in {State.CONFIGURED, State.READY} for item in clients):
         next_steps.append("tum-mcp setup — choose a detected client or generic configuration")
 
     runtime.append(

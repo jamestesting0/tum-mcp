@@ -9,6 +9,7 @@ import shlex
 import subprocess
 from pathlib import Path
 
+from filelock import FileLock, Timeout
 from pydantic import JsonValue
 
 from tum_mcp.course.checks.plans import plan_packet, record_gate
@@ -20,6 +21,11 @@ HOSTS = {
     "claude": ["claude", "-p", "{prompt}", "--allowedTools", "Read,Grep,Glob"],
     "codex": ["codex", "exec", "--sandbox", "read-only", "--skip-git-repo-check", "{prompt}"],
 }
+VISUAL_GUIDANCE = (
+    "For requested visuals, open the item's current phone and desktop captures under "
+    "`visual_sheets` before scoring. Use all six criteria with integer scores of 1, 2 or 3 "
+    "when supported by the evidence. Never guess a score for a capture you could not inspect."
+)
 PROMPT = (
     "You are a fresh course reviewer. You did not write this content. Read the review packet "
     "at {packet} and the course files it names. For cited PDF pages, look up the source "
@@ -27,9 +33,17 @@ PROMPT = (
     ".tum-mcp/cache/pages/<sha256>/<page>.png with your image tool before trying to render "
     "the PDF again. The project is read-only. Report limits on the evidence you could inspect. "
     "Before judging, apply the packet's `guidance` for its `profile` when interpreting the "
-    "shared checks. For every item, answer every check in its "
+    "shared checks. Audit source coverage using each item's preparation.demands and the "
+    "packet's scope_dispositions, reading .tum-mcp/coverage.json and the source pages when "
+    "needed. Do not regenerate coverage reports or browser receipts in this read-only "
+    "session; the packet already contains current deterministic results. "
+    "For lecture-selection, read the full compact transcript in the item's "
+    "`evidence`, check every selection and omission, and inspect the comparison materials. "
+    "For every item, answer every check in its "
     "`needs`, verify every finding in its `verify` and score every visual in its `visuals`, "
-    "exactly in the packet's `answer` format. Rule on every `report` flag marked "
+    "exactly in the packet's `answer` format. "
+    f"{VISUAL_GUIDANCE} "
+    "Rule on every `report` flag marked "
     "`needs_ruling` in `flags`. Every pass with `default_fail: true` needs its own `evidence` "
     "field. For intuition.concepts_instanced, put every planned concept name and its instance's "
     "block in that field, not only in `reason`. Resolve a finding only by quoting the rewritten "
@@ -40,8 +54,13 @@ PROMPT = (
 )
 REPAIR_PROMPT = (
     "You are the course reviewer whose answers at {answer} for the packet at {packet} were "
-    "refused: {problems} Correct only what is named, keep every other verdict, and reply with "
-    "only the full corrected answers JSON object."
+    "refused: {problems} Preserve valid existing verdicts and correct supplied entries only "
+    "where the error identifies a defect. Complete every omitted check, finding verification, "
+    "flag ruling and visual requested by the packet, including omissions beyond the error "
+    "summary. Never substitute a blanket pass or omit a required check: use uncertain with "
+    "the evidence limit if it cannot be judged. Reply with only the full corrected answers "
+    "JSON object. "
+    f"{VISUAL_GUIDANCE}"
 )
 PLAN_PROMPT = (
     "You are a fresh plan checker. You did not write these plans. Read the plan packet at "
@@ -70,10 +89,14 @@ def run(
 ) -> dict[str, JsonValue]:
     root = project.expanduser().resolve()
     if plans:
+        from tum_mcp.course.checks.batch import require_batch_plans
+        from tum_mcp.course.review.items import digest
+
         waiting = plan_packet(root)
         if not waiting["plans"]:
             return {"recorded": [], "next": "No plan waits for the gate."}
-        name = private_name(Path("."), "review/packets/plans.json")
+        require_batch_plans(root, {plan["item"] for plan in waiting["plans"]})
+        name = private_name(Path("."), f"review/packets/plans-{digest(waiting)}.json")
         path = confined(root, name)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(waiting, indent=2), encoding="utf-8")
@@ -82,6 +105,18 @@ def run(
     name = private_name(Path("."), f"review/packets/{packet}.json")
     if not confined(root, name).is_file():
         raise CampusError(Code.ACTION_REQUIRED, f"No packet {packet}; run tum-mcp review next.")
+    try:
+        with FileLock(str(confined(root, name).with_suffix(".lock")), timeout=0):
+            return _run_packet(root, name, packet, host, command)
+    except Timeout:
+        raise CampusError(
+            Code.ACTION_REQUIRED,
+            f"Packet {packet} is already being checked. Wait for its existing run; "
+            "use review status rather than starting another checker.",
+        ) from None
+
+
+def _run_packet(root: Path, name: str, packet: str, host: str, command: str | None) -> dict:
     answers = _ask(root, PROMPT.format(packet=name), host, command)
     answers["packet"] = packet
     saved = private_name(Path("."), f"review/packets/{packet}.answer.json")

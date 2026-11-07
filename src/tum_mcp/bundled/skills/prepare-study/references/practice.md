@@ -22,11 +22,31 @@ Ask only what the lesson teaches: every term, rule and fact a card or question n
 appears in the lesson's blocks first. A card whose answer lives only in the source
 teaches the source, not the lesson; add the idea to the lesson or drop the card.
 
-Never re-ask a case the lesson works: a question with the worked example's numbers
-checks recall of that example, not the method. Changing names or numbers while naming
-the same method does not establish transfer either.
+Do not count replay of a worked input and answer as application evidence. A new input
+that requires the student to calculate or decide is valid routine application. A deeper
+transfer demand needs a consequential change in conditions, representation or decision;
+cosmetic renaming alone does not establish it. Choose the demand the objective needs,
+without requiring every beginner question to be a transfer problem.
 A useful progression might pair a trace with a choice of method and a changed
 assumption. Keep only the members that teach or test different decisions.
+
+Use the checked plan's `practice` contrasts and solved answers. Before submitting the
+draft, compare each application question with the actual worked blocks: could a student
+answer by remembering their final state or copying worked intermediate states unchanged? If yes,
+change the condition or decision and solve again. Check that the shortest valid solution
+still needs the intended learning, and that all prerequisites are taught. A new graph
+alone does not prove transfer; a familiar graph with a consequentially changed condition
+may test it well. Keep this check in the author's existing polish pass.
+
+Reserve the planned assessment cases while writing the lesson. Do not turn their inputs
+or solved answers into worked examples, including untitled continuations and variants.
+If teaching consumes a reserved case, replace and solve the assessment case. Check that
+the claimed contrast remains true of the finished lesson. Compare against actual solved
+inputs and answers, not general rules: teaching a tie rule does not solve every future
+tie problem. Shared numbers or a familiar graph are not defects by themselves when the
+student must derive a new result or eligible set. Retain useful routine application and
+add substantive transfer where the objective calls for it. Do not invent a new prerequisite
+merely to make a question different.
 
 Every question must stand alone in both topic Practice and pooled Revision. When it is
 about a situation, show that situation in the question's `blocks` (the graph with its

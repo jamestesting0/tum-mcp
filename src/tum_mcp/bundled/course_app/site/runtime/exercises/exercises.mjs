@@ -1,7 +1,7 @@
 import data from '../../data.mjs';
 import { node, studyText, button, append, announce, sourcesNote, shareCitations, focusHeading, scrollReadingTo, preparationDisclosure, topicRow, shuffled, pillPanel } from '../shell/dom.mjs';
 import { renderReading, renderBlockBody, renderAnswers } from '../reading/reading.mjs';
-import { arrowPaging, usePager, iconButton, iconGlyph, nextStep } from '../shell/navigation.mjs';
+import { arrowPaging, usePager, iconButton, iconGlyph, nextStep, cycleIndex } from '../shell/navigation.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExercise } from '../comments/anchors.mjs';
 import { markCompleted, isCompleted } from '../shell/completion.mjs';
@@ -221,13 +221,13 @@ export function exercisePage(exercise, options) {
     let index = steps.findIndex(item => item.key === (stepKey || value.lastStep));
     if (index < 0) index = 0;
     const navigation = node('div', 'step-navigation'), counter = node('span', 'step-count');
-    const prev = iconButton('Previous step', 'left', event => { event.currentTarget.focus({ preventScroll: true }); location.hash = options.link(steps[index - 1].key); });
+    const prev = iconButton('Previous step', 'left', event => { event.currentTarget.focus({ preventScroll: true }); location.hash = options.link(steps[cycleIndex(index - 1, steps.length)].key); });
     const next = iconButton('Next step', 'right', event => {
       event.currentTarget.focus({ preventScroll: true });
       const savedStep = value.steps[steps[index].key];
       if (savedStep.checked === null && !savedStep.compared) savedStep.skipped = true;
       state.save(exercise);
-      location.hash = options.link(steps[index + 1].key);
+      location.hash = options.link(steps[cycleIndex(index + 1, steps.length)].key);
     });
     navigation.append(append(node('p', 'small'), counter), prev, next);
     const body = node('div', 'step-body'); panel.append(navigation, body);
@@ -236,7 +236,7 @@ export function exercisePage(exercise, options) {
       const step = steps[index], saved = value.steps[step.key];
       value.lastStep = step.key; body.replaceChildren();
       counter.textContent = `Step ${index + 1} of ${steps.length}`;
-      prev.disabled = index === 0; next.disabled = index === steps.length - 1;
+      prev.disabled = next.disabled = steps.length < 2;
       const title = target(studyText(`h${Math.min(6, guideLevel)}`, '', step.prompt), 'prompt', step.key);
       title.dataset.stepPrompt = '';
       const citations = step.sources?.length ? step.sources : step.check?.graph?.sources || step.check?.plot?.sources || exercise.sources.map(item => item.key);

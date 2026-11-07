@@ -60,7 +60,8 @@ function home() {
     add('Total points', profile.total_points && String(profile.total_points));
     add('Allowed aids', profile.allowed_aids);
     if (profile.languages?.length) add(profile.languages.length === 1 ? 'Language' : 'Languages', profile.languages.join(', '));
-    root.append(append(node('section', 'exam-section'), facts));
+    root.append(append(node('section', 'exam-section'), facts,
+      ...(profile.notes ? [studyText('p', 'small exam-profile-note', profile.notes)] : [])));
   }
   const stats = exam.statistics;
   // The evidence line only appears when past exams exist; without them there is nothing to report.
@@ -75,7 +76,7 @@ function home() {
   const practice = [
     ...replayable().map(({ variant }) => {
       const paper = paperFor('paper', variant.key);
-      const started = paper.questions.some(question => exerciseStarted(guided.get(guidedExercise(paper, question))));
+      const started = paper.questions.some(question => question.guidance && exerciseStarted(guided.get(guidedExercise(paper, question))));
       return { href: `#exam/paper/${variant.key}`, title: paper.title, details: ['Past paper'], started };
     }),
     ...exam.mocks.map(mock => ({ href: `#exam/mock/${mock.key}`, title: paperFor('mock', mock.key).title, details: ['Practice exam'] })),
@@ -106,7 +107,7 @@ function paperOverview(variantKey) {
   const { box, heading } = header(paper.title, 'Past paper');
   const root = node('div', 'exam-paper'); root.append(box);
   const modes = node('ul', 'exam-cards');
-  modes.append(card(`#exam/paper/${variantKey}/${paper.questions[0].key}`, 'Guide', 'One question at a time'));
+  modes.append(card(`#exam/paper/${variantKey}/${paper.questions[0].key}`, paper.questions.every(question => question.guidance) ? 'Guide' : 'Questions', 'One question at a time'));
   modes.append(card(`#exam/paper/${variantKey}/exam`, 'Whole paper', 'All questions on one page'));
   root.append(modes);
   const list = node('ol', 'exam-paper-questions');
@@ -117,10 +118,9 @@ function paperOverview(variantKey) {
   return { root, heading, title: paper.title, items: [] };
 }
 
-// A past question becomes an exercise: its guidance, or its solution as a single step.
+// A prepared past-question guide uses the same interaction as an exercise.
 function guidedExercise(paper, question) {
-  const steps = question.guidance?.steps?.length ? question.guidance.steps
-    : [{ key: 'solve', purpose: 'Solve', prompt: 'Solve the question.', hints: [], explanation: 'The solution is below.', check: question.check || null, blocks: [] }];
+  const steps = question.guidance.steps;
   return {
     key: question.key, label: `Question ${question.number}`, title: `Question ${question.number}`,
     revision: paper.revision, statement: question.statement, parts: [], objectives: question.guidance?.objectives || [],
@@ -134,6 +134,13 @@ function guidedQuestion(variantKey, questionKey, stepKey) {
   const index = paper?.questions.findIndex(question => question.key === questionKey) ?? -1;
   if (index < 0) return null;
   const question = paper.questions[index], following = paper.questions[index + 1];
+  if (!question.guidance) {
+    const page = renderPaper({ ...paper, title: `${paper.title} · Question ${question.number}`, questions: [question] });
+    page.root.querySelector('.unit-header').append(node('p', 'small', 'Guidance has not been prepared for this question.'));
+    page.root.append(nextStep(following ? { href: `#exam/paper/${variantKey}/${following.key}`, title: `Question ${following.number}`, detail: paper.title }
+      : { href: `#exam/paper/${variantKey}/exam`, title: 'See the whole paper', detail: paper.title }));
+    return page;
+  }
   const exercise = guidedExercise(paper, question);
   const page = exercisePage(exercise, {
     state: guided, stepKey, untitledStatement: true,

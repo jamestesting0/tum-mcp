@@ -13,10 +13,12 @@ from tum_mcp.course.app.publish_cli import app as publish_app
 from tum_mcp.course.content.store import document_writes, index_name, present, read_document
 from tum_mcp.course.memory.cli import register as register_knowledge
 from tum_mcp.course.output import emit
+from tum_mcp.course.workflow.cli import app as task_app
 from tum_mcp.errors import CampusError, Code
 
 app = typer.Typer(invoke_without_command=True, pretty_exceptions_show_locals=False)
 register_knowledge(app)
+app.add_typer(task_app, name="task", help="Track a complete local course request.")
 app.add_typer(
     comments_app,
     name="comments",
@@ -196,13 +198,25 @@ def exam_report_command(
 def report(
     project: Path,
     section: Annotated[
-        Literal["quality", "structure", "coverage", "review", "render", "knowledge", "readiness"]
+        Literal[
+            "quality",
+            "structure",
+            "coverage",
+            "review",
+            "render",
+            "knowledge",
+            "readiness",
+            "coverage-plan",
+        ]
         | None,
         typer.Option(help="Only this part."),
     ] = None,
     full: Annotated[bool, typer.Option("--json", help="Print the whole result.")] = False,
     preparation: Annotated[
         str | None, typer.Option(help="Preparation scope ID for readiness.")
+    ] = None,
+    batch: Annotated[
+        str | None, typer.Option(help="Batch ID for combined draft readiness.")
     ] = None,
 ) -> None:
     """Report review flags, the course map, uncovered sources, scorecard and render check."""
@@ -221,17 +235,37 @@ def report(
     from tum_mcp.course.review.loop import review_overview
 
     root = project.expanduser().resolve()
+    if section == "coverage-plan":
+        from tum_mcp.course.checks.coverage_plan import assess_plan
+
+        if not preparation or batch:
+            raise CampusError(
+                Code.ACTION_REQUIRED, "Use --preparation ID for a source coverage plan."
+            )
+        emit(
+            root,
+            "coverage-plan",
+            {"coverage_plan": assess_plan(root, preparation).report()},
+            full=True,
+        )
+        return
     if section == "readiness":
         from tum_mcp.course.checks.preparation import assess
 
-        if preparation is None:
-            raise CampusError(
-                Code.ACTION_REQUIRED, "Name a preparation scope with --preparation ID."
-            )
-        emit(root, "readiness", {"readiness": assess(root, preparation).report()}, full=True)
+        if batch and preparation:
+            raise CampusError(Code.ACTION_REQUIRED, "Choose --batch or --preparation.")
+        if batch:
+            from tum_mcp.course.checks.batch import assess_batch
+
+            reading = assess_batch(root, batch)
+        elif preparation:
+            reading = assess(root, preparation)
+        else:
+            raise CampusError(Code.ACTION_REQUIRED, "Name --batch ID or --preparation ID.")
+        emit(root, "readiness", {"readiness": reading.report()}, full=True)
         return
-    if preparation is not None:
-        raise CampusError(Code.ACTION_REQUIRED, "Use --preparation with --section readiness.")
+    if preparation is not None or batch is not None:
+        raise CampusError(Code.ACTION_REQUIRED, "Use scope selectors with --section readiness.")
     if section == "knowledge":
         from tum_mcp.course.memory.report import knowledge_report
 
@@ -368,6 +402,8 @@ def schema(
         "exam",
         "coverage",
         "preparation",
+        "batch",
+        "lecture-selection",
         "review",
         "knowledge",
         "audio-manifest",
@@ -386,6 +422,14 @@ def schema(
     from tum_mcp.course.project.models import Snapshot
 
     match kind:
+        case "batch":
+            from tum_mcp.course.checks.batch import Batch
+
+            result = Batch.model_json_schema()
+        case "lecture-selection":
+            from tum_mcp.course.lecture.selection import Selection
+
+            result = Selection.model_json_schema()
         case "knowledge":
             from tum_mcp.course.memory.models import KnowledgeRegistry
 
@@ -456,6 +500,24 @@ def schema(
                 f"Unknown definition {definition}; choose from {', '.join(sorted(definitions))}.",
             )
         result = definitions[definition]
+    elif kind in {"content", "exercises", "exam", "lectures"}:
+        from tum_mcp.course.content.store import LAYOUTS, index_name
+
+        workspace = "study" if kind == "content" else kind
+        layout = LAYOUTS[workspace]
+        paths = (
+            "sets[].exercises lists keys stored in app/exercises/SET/KEY.json."
+            if workspace == "exercises"
+            else " ".join(
+                f"{field} lists keys stored in app/{layout.folder}/{field}/KEY.json."
+                for field in layout.collections
+            )
+        )
+        result["$comment"] = (
+            f"Assembled workspace schema. On disk the index is {index_name(workspace)}. "
+            + paths
+            + " Keep shared metadata in the index, and each item object in its own file."
+        )
     typer.echo(json.dumps(result, indent=2))
 
 
@@ -560,7 +622,7 @@ def _lint_item(root: Path, context, item: str, outcomes: set[str] | None) -> dic
     plan = read_plan(root, item)
     plan_state = (
         {
-            "status": gate_status(plan),
+            "status": gate_status(plan, root),
             "problems": plan_problems(plan, context.items[item].value, outcomes),
         }
         if plan

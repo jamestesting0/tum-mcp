@@ -22,31 +22,54 @@ Keep it to a few lines. An unknown stays "not yet established".
 
 ## Teaching plan
 
-Write `.tum-mcp/plans/<unit-key>.md` before you author a new unit; reorder, merge or split
-units; or rewrite a unit for flow or intuition findings. A wording fix needs no plan. The plan
-is as long as the unit needs: a one-idea unit may need ten lines.
+Write `.tum-mcp/plans/study/<unit-key>.json` before you author a new unit; reorder,
+merge or split units; or rewrite a unit for flow or intuition findings. Use
+`tum-mcp study schema plan` and the [plan gate](loop.md). A wording fix needs no new
+plan. This JSON is the checked teaching plan; a second Markdown copy is not required.
 
-```markdown
-# <unit title>
+Name the source preparation, outcomes and concepts in teaching order. For each concept,
+choose its kind, a concrete instance with its result, and the block keys that will teach
+it. Use `skip` only to explain why the kind's default representation does not fit.
+For example:
 
-Student: what they bring (profile prerequisites, earlier units) and what is new or hard here.
-Through-line: the question this unit answers, and its story in two or three sentences.
-
-## Concepts, in teaching order
-- <concept>: why it is hard (new notation, many interacting parts, counter-intuitive,
-  confused with X, long procedure) or "simple".
-  Moves: <...> because <...>. Relation to the previous concept: follows from / contrasts /
-  parallel / none. Representation: <...> because <...>. Practice: <the decision it tests>.
-
-Examples: one running example, several, or none, and why.
-Left out or moved to Explore: <...>, and why.
-Changed while authoring: <decision>, and why.
+```json
+{
+  "item": "study/four-views",
+  "preparation": "first-two",
+  "outcomes": ["views"],
+  "concepts": [{
+    "name": "Human likeness and rationality",
+    "kind": "comparison",
+    "instance": "A model that reproduces human reasoning errors is thinking humanly; a sound theorem prover is thinking rationally. Classify their aims, not whether they use a computer.",
+    "outcomes": ["views"],
+    "blocks": ["four-views", "four-views-cases"]
+  }]
+}
 ```
 
-Write each decision with its reason. When authoring shows a better decision, change the plan
-too; review-course checks the unit against it. For a whole-course build, also write
+Before sending the complete batch to the fresh checker, read it once using the questions
+below and repair all identifiable gaps together. A conceptual instance can be a concrete
+classification or counterexample with its explanation; a multi-step computation is needed
+only when the idea calls for one. Keep prerequisite assumptions in the teaching profile
+and exclusions in the preparation scope. Add narrative notes only for decisions those
+records cannot express. When authoring changes a checked decision, update its plan too.
+Reuse unchanged approvals. For a whole-course build, also write
 `.tum-mcp/plans/course.md`: the unit order and the question each unit answers, with the earlier
 unit whose limitation it resolves.
+
+For application/reasoning objectives, also plan the questions in `practice`, before
+writing options. Each entry has `question` (its stable question key), `contrast` (the
+worked case it differs from and the unworked input or decision), and `answer` (the new
+input, result and shortest valid reasoning). For example, after a DFS trace that reaches
+a goal, ask about an unreachable goal behind a cycle: the student must decide whether
+visited-state tracking permits termination, rather than replay the demonstrated pop
+order. Solve that new case now. A changed start/goal on the same graph can work when it
+changes the reasoning; different names or numbers alone are insufficient.
+Recall-only objectives need no invented transfer case. Released exercise statements
+remain faithful to their source. This is part of the existing plan check, not another
+checker or a separate planning document.
+Routine application may use new values without becoming a deeper transfer task.
+Judge the required calculation or decision, not shared vocabulary or numbers alone.
 
 ## Check the plan before writing
 
@@ -74,4 +97,5 @@ When an answer is no, fix the plan before you write blocks.
   reason on each line. No bridging sentences where the algebra already connects the steps.
 - **Thinking, acting and rationality (conceptual).** Through-line: four ways to define AI and
   why the course takes the rational-agent view. Cases and non-examples, and a decision matrix
-  for the two axes. No worked or running example: nothing here has interacting steps.
+  for the two axes. Classify concrete systems with reasons and distinguish a behavioral
+  test from a claim about internal reasoning.

@@ -8,7 +8,8 @@ shape each idea has; prose says only what the picture cannot.
 | The idea is | Show it as |
 | --- | --- |
 | A term students must learn | A `definition` block; mark later mentions `{{term}}` |
-| An algorithm or process over time | A `walkthrough` over the graph, table, code, working, plot or figure it changes: each step an action with its `why`, the `state` rows the student would otherwise track; its "All steps" view is the trace table |
+| A reusable procedure or algorithm | Labelled steps with explicit repeat ranges, source-style pseudocode or a flowchart; preserve all branches and exits |
+| A concrete run of an algorithm or process | A `walkthrough` over the graph, table, code, working, plot or figure it changes: each step an action with its `why`, the `state` rows the student would otherwise track; its "All steps" view is the trace table |
 | Parallel cases (games, environments, designs) | A table with one row per case, or a list |
 | A rule or value that depends on two inputs | A decision matrix: one input down the side, the other across the top, the result in each cell |
 | Something with a physical or spatial shape (an arm and its angles, rooms, a map, a mechanism) | A `figure` drawn as in [figures](figures.md), or an image |
@@ -36,6 +37,26 @@ context method as well as interface and state methods; naming the new class alon
 does not show how a caller reaches it.
 
 ## Algorithm traces
+
+Give the reusable procedure separately from its worked trace. Use source-style
+pseudocode, a flowchart or explicit numbered control flow when repetition or branches
+matter. A trace of one successful input cannot supply a missing loop or failure exit.
+Before declaring the draft ready, follow the published procedure on one ordinary
+input and the relevant boundary case (an empty/exhausted search, initial success,
+zero pivot or invalid precondition). Every transition must be licensed by an explicit
+instruction. Use the procedure shown to the student when checking executable examples;
+an independent hidden implementation does not check missing published instructions.
+This is a small author dry run of the existing example, not another formal review.
+
+A staged walkthrough shows the state of its picture, not only a new caption. On
+graphs, set each step's `active`, `frontier`, `visited` and relevant `edges` from the
+actual run; use the stage's node keys. Code marks its running `lines`, tables their
+`shown` rows or changed `cells`, derivations their `shown` lines, plots their `series`
+and SVG figures their `layers`. Clear marks that no longer apply when stepping back
+or switching runs. Derive graph marks and displayed state from the same computed
+trace, and include visual values in the answer key when computed. Do not invent a
+changing highlight just to clear `static_walkthrough`. An intentionally fixed
+picture belongs beside ordinary explanation, outside a staged walkthrough.
 
 Use one small instance in a `walkthrough`. Each step does one operation: its `action` says
 what, its `why` says why it is allowed or chosen, and `note` names the mistake a student

@@ -13,6 +13,7 @@ from pydantic import JsonValue
 
 from tum_mcp import __version__
 from tum_mcp.clients.config import Marketplace, client_config_path, read_client_config
+from tum_mcp.clients.hooks import launcher
 from tum_mcp.clients.hosts import ClientHost, StdioLaunch, client_launch, storage_environment
 from tum_mcp.clients.installs import MANAGED_ROOTS
 from tum_mcp.errors import CampusError, Code
@@ -28,9 +29,13 @@ def same_tree(left: Path, right: Path) -> bool:
 
 
 def plugin_version(skills: Path) -> str:
-    """Codex reuses its plugin cache while the version is unchanged; name the skills in it."""
+    """Change the plugin cache identity when its skills, launchers or hooks change."""
     digest = hashlib.sha256()
-    for path in sorted(item for item in skills.rglob("*") if item.is_file()):
+    for path in sorted(
+        item
+        for item in skills.rglob("*")
+        if item.is_file() and item not in {skills / "plugin.json", skills / "mcp.json"}
+    ):
         digest.update(path.relative_to(skills).as_posix().encode() + b"\0")
         digest.update(path.read_bytes() + b"\0")
     return f"{__version__}+{digest.hexdigest()[:12]}"
@@ -171,6 +176,12 @@ def install_codex(staged: Path, home: Path, *, launch: StdioLaunch | None = None
         encoding="utf-8",
     )
     destination = home / ".codex/plugins/local/tum-mcp"
+    (staged / "scripts").mkdir(exist_ok=True)
+    (staged / "scripts/course-task.mjs").write_bytes(
+        launcher(launch or client_launch(ClientHost.LOCAL), "codex")
+    )
+    manifest["version"] = plugin_version(staged)
+    (staged / "plugin.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     if destination.exists() and not same_tree(staged, destination):
         raise CampusError(
             Code.WORKSPACE_CONFLICT,
@@ -200,6 +211,7 @@ def install_codex(staged: Path, home: Path, *, launch: StdioLaunch | None = None
     print("Install/enable TUM MCP from your personal source in Codex Plugins and restart.")
     print("Disable the legacy TUM Moodle plugin when switching, to avoid duplicate tools/skills.")
     print("Client activation and skill routing still need a live verification.")
+    print("Setup registers the course guard in Codex user hooks and verifies its exact trust.")
 
 
 def install_claude(staged: Path, home: Path, *, launch: StdioLaunch | None = None) -> None:

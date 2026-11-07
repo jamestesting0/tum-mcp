@@ -23,14 +23,15 @@ def test_claude_uninstall_preserves_unrelated_user_state(
         encoding="utf-8",
     )
     install_client("claude", home)
+    expected = json.loads(config.read_text(encoding="utf-8"))
+    expected["mcpServers"].pop("tum")
     # When the integration is removed twice.
     uninstall_client("claude", home)
     uninstall_client("claude", home)
     # Then only its managed registration/skills disappear and the profile remains intact.
-    assert json.loads(config.read_text(encoding="utf-8")) == {
-        "customSetting": 42,
-        "mcpServers": {"other": {"command": "keep"}},
-    }
+    assert json.loads(config.read_text(encoding="utf-8")) == expected
+    assert expected["customSetting"] == 42
+    assert expected["mcpServers"] == {"other": {"command": "keep"}}
     assert not (home / ".claude/skills/read-content").exists()
 
 

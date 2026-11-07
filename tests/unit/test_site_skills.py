@@ -120,7 +120,11 @@ def test_audio_workflow_installs_with_its_complete_reference_bundle(
     # When the host installs its managed study skills.
     install_client(name, home)
     # Then the audio skill is discoverable and its linked resources survive export.
-    entries = list(home.rglob(f"{workflow}/SKILL.md"))
+    entries = [
+        path
+        for path in home.rglob(f"{workflow}/SKILL.md")
+        if not path.is_relative_to(home / ".codex/plugins/cache")
+    ]
     assert len(entries) == 1
     entry = entries[0]
     frontmatter = yaml.safe_load(entry.read_text(encoding="utf-8").split("---", 2)[1])

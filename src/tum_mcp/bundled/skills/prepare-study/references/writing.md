@@ -9,9 +9,16 @@ that only talks about the material, the page or the writing is removed.
 Working memory holds only a few new elements, so a learner studies a procedure one stage at
 a time. Prose frames an idea in one or two sentences; everything else is structure.
 
-- **Procedure or algorithm**: one lead sentence saying what it computes, then `steps`, one
-  action each, opened by a short label: "Initialize: …", "Back up: …", "Stop: …".
-  Conditions and guarantees follow as labelled `points`: "Converges when: …",
+- **Procedure or algorithm**: one lead sentence saying what it computes, then a complete
+  procedure: labelled `steps`, source-style pseudocode or a flowchart. Choose the form
+  that makes its control flow clear, separately from the worked example.
+  Preserve the complete control flow in the core procedure: initialize its state,
+  state what repeats and until when, show each branch, and return the result or failure.
+  A condition that governs a move stays with that move. In numbered steps, name the
+  repeated range and the return point, for example "Repeat steps 2–4 while …";
+  an isolated "while" before one action does not clearly scope later steps.
+  In pseudocode, indentation shows that scope. Keep stages short without deleting
+  their governing instructions. Conditions and guarantees follow as labelled `points`: "Converges when: …",
   "Approximation: …". The app shows each label in bold.
 - **Worked example**: its own section after the procedure. Give the setting first (a
   table, points or a figure), then one computed value per step, labelled with the
@@ -19,8 +26,9 @@ a time. Prose frames an idea in one or two sentences; everything else is structu
   "First backup: \(Q(\mathrm{continue}) = 1 + 0.5 \times 3 = 2.5\), below 3."
   End with the conclusion as the last step. Several states over several rounds are a
   `walkthrough`, each step with its reason ([representations](representations.md#algorithm-traces)).
-- **Cases, conditions, comparisons**: points or a table, never a sentence joined by
-  "and", "while" or "whereas".
+- **Cases, conditions, comparisons**: use points or a table when it helps comparison.
+  Keep logical connectives when they carry meaning; "and", "or" and "while" are valid
+  in conditions and control flow. Formatting must preserve the rule, not shorten it.
 - **Calculation the student should redo**: a `derivation` block, one transformation per
   line, each with the reason it follows; separate requested results get labelled groups.
 - **An object with a shape** (a matrix, vector, table, graph, state): show it. Text that

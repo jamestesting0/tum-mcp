@@ -160,12 +160,17 @@ def check_page(page, server: str) -> None:  # noqa: ANN001 - Playwright page
     # Captions are drawn by the app, so turning them on must show the current cue.
     panel.get_by_role("button", name="Captions").click()
     panel.locator(".player-caption span").first.wait_for()
-    cues = page.evaluate(
-        "() => new Promise(resolve => { const track = document.querySelector('.video-note track');"
-        " track.track.mode = 'hidden';"
-        " const done = () => resolve(track.track.cues ? track.track.cues.length : 0);"
-        " if (track.readyState === 2) done(); else track.addEventListener('load', done); })"
+    page.wait_for_function(
+        "() => { const track = document.querySelector('.video-note track');"
+        " track.track.mode = 'hidden'; return track.readyState === 2 || track.readyState === 3; }",
+        timeout=15000,
     )
+    captions = page.evaluate(
+        "() => { const track = document.querySelector('.video-note track');"
+        " return {state: track.readyState, cues: track.track.cues?.length ?? 0}; }"
+    )
+    assert captions["state"] == 2, captions
+    cues = captions["cues"]
     assert cues > 0
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     assert errors == []
@@ -444,7 +449,7 @@ def test_exam_guided_solution_never_requests_video_index(
             requests = []
             page.on("request", lambda request: requests.append(request.url))
             page.goto(f"http://127.0.0.1:{running.server_port}/#exam/paper/ws23-a")
-            page.locator(".exam-card", has_text="Guide").click()
+            page.locator(".exam-card").first.click()
             page.get_by_role("heading", name="Question 1", exact=True).first.wait_for()
             page.get_by_role("button", name="Solution", exact=True).last.click()
             assert page.locator(".video-note").count() == 0

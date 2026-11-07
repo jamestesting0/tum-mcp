@@ -111,6 +111,23 @@ missing workspaces need not be invented. When setup and authoring were both requ
 continue after the binding is ready. For Study and Exercises, record the requested
 preparation scope before drafting. Check `tum-mcp study report . --section readiness
 --preparation ID` before asking about one review round. Load each skill as its step starts.
+For prepared content, record the whole request and expected outputs with
+`study schema batch` before drafting. Continue through all requested workspaces and
+local repairs until `study report . --section readiness --batch ID` passes.
+Immediately register `study task start . --batch ID`; add `--review-rounds N` only
+when review is already authorized. The default stops at a complete draft and asks
+about review. Run `study task finish .` before the final report. A trusted Codex
+completion hook continues an unfinished registered task. Use `study task pause .
+--reason REASON` for a user pause or a concrete external blocker needing their input.
+Determine source coverage before authoring with `study report . --section coverage-plan
+--preparation ID`; Study/Exercise plans name that ID as `preparation`.
+Before a final response read readiness. If it is false and tools remain usable, perform
+its next action and continue. A partial draft or failed lint is not a handoff point.
+Then run the authorized combined review with `review start . --batch ID`.
+Content preparation alone stops after the complete draft passes its internal checks:
+ask whether to run one review-and-repair round. If review was already requested,
+continue without asking again. After the round report scores, fixes and unresolved
+verification; extend the round budget only when the student requests it.
 
 ### Read vague requests
 - "This week" or "the current lecture": `tum-mcp study schedule .`; without a recorded

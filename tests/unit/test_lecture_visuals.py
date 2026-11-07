@@ -9,15 +9,18 @@ import pytest
 from PIL import Image, ImageDraw
 from pydantic import SecretStr
 
-from tum_mcp.course.lecture.evidence import Crop, Interval
+from tum_mcp.course.lecture.evidence import Crop, Interval, SilenceMarker
 from tum_mcp.errors import CampusError
-from tum_mcp.lecture_processing.media import MediaCache, acquire
+from tum_mcp.lecture_processing.acquisition import Acquisition
+from tum_mcp.lecture_processing.media import MediaCache
 from tum_mcp.lecture_processing.media_budget import TransferBudget
 from tum_mcp.lecture_processing.media_http import MediaHTTP
 from tum_mcp.lecture_processing.media_models import MediaGrant
 from tum_mcp.lecture_processing.playlists import load_manifest
+from tum_mcp.lecture_processing.prepare_visuals import capture_at
 from tum_mcp.lecture_processing.validity import RecordingTiming, evaluate
 from tum_mcp.lecture_processing.visuals import (
+    NoFrameAtTime,
     app_frame,
     capture_frame,
     changed_fraction,
@@ -147,7 +150,30 @@ def test_native_frame_uses_decoded_pts_not_requested_off_grid_time(
     with MediaHTTP(grant, TransferBudget(), httpx2.MockTransport(respond)) as client:
         manifest = load_manifest(client)
         validity = evaluate(RecordingTiming(duration_s=manifest.duration_s))
-        acquired = acquire(manifest, MediaCache(tmp_path / "cache", client), validity)
+        cache = MediaCache(tmp_path / "cache", client)
+        acquisition = Acquisition(manifest, cache, validity)
+        acquired = acquisition.span(Interval(start_s=0, end_s=manifest.duration_s))
+        boundary = acquired[0].segment.span.end_s
+        requested = boundary - 0.02
+        with pytest.raises(NoFrameAtTime):
+            capture_frame(acquired[0], requested, tmp_path / "before-boundary")
+        next_frame = capture_at(acquisition, requested, tmp_path / "boundary-frames")
+        assert next_frame.requested_at_s == requested
+        assert boundary <= next_frame.captured_at_s <= boundary + 0.1
+        with raster(next_frame.path.read_bytes()) as image:
+            red, green, blue = image.getpixel((160, 90))
+            assert red > 200 and green < 40 and blue < 40
+        assert len(requests) == len(manifest.segments) + 1 + int(
+            acquired[0].initialization is not None
+        )
+        cut = evaluate(
+            RecordingTiming(
+                duration_s=manifest.duration_s,
+                silences=(SilenceMarker(start=boundary - 0.01, end=boundary),),
+            )
+        )
+        with pytest.raises(NoFrameAtTime):
+            capture_at(Acquisition(manifest, cache, cut), requested, tmp_path / "cut-frames")
     segment = next(
         item for item in acquired if item.segment.span.start_s <= 3.55 < item.segment.span.end_s
     )
@@ -174,7 +200,6 @@ def test_native_frame_uses_decoded_pts_not_requested_off_grid_time(
     with raster(frame.path.read_bytes()) as image:
         red, green, blue = image.getpixel((160, 90))
         assert red > 200 and green < 40 and blue < 40
-    assert len(requests) == len(manifest.segments) + 1 + int(segment.initialization is not None)
     with pytest.raises(CampusError, match="excluded"):
         capture_frame(
             segment.model_copy(update={"retained": (Interval(start_s=3.5, end_s=3.57),)}),

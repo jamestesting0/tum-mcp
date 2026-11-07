@@ -55,6 +55,35 @@ Whatever the moves, every unit has:
   agent maximises expected performance given its percepts and knowledge), give that form or
   say where the course makes it precise; `definition_refined` flags a shorter one.
 
+## Give a concept its meaning, then show what it decides
+
+Identify the new course concepts and properties a student must distinguish or use,
+including terms in headings, comparison tables, guarantees and questions. Give each
+its concise, source-faithful general meaning in a `definition` block at its first
+teaching use, or link its verified earlier definition. Formal English is sufficient;
+preserve the defining conditions and words such as every, some, if and only if.
+A heading, one successful example or the conditions for one algorithm's guarantee
+does not state the property's meaning.
+
+For example, completeness means a solution is guaranteed to be found whenever one
+exists in the stated problem class. Finite branching and shallowest-goal depth are
+conditions under which BFS has that property; the finite-layer argument explains why.
+Keep those distinct. A complete search need not return the cheapest path or enumerate
+every solution. Use the course's actual conventions when teaching these claims.
+
+Connect the definition to a concrete case and, where confusion is likely, a nearby
+nonexample or changed condition that exposes its boundary. Reuse a suitable worked
+case instead of adding another merely to fill a template. A fresh application or
+explanation checks the distinction; a recall card alone checks only its wording.
+An unfamiliar incidental word needs a short gloss, not a new assessed concept. For
+an abstract idea, a motivating case may come first, but its general meaning must be
+clear before a student is asked to use it.
+
+These choices follow [IES guidance on abstract/concrete connections and explanatory
+questions](https://ies.ed.gov/ncee/wwc/PracticeGuide/1) and
+[concept analysis with discriminating examples](https://pmc.ncbi.nlm.nih.gov/articles/PMC8458507/).
+They are teaching tools, not a fixed number of definition cards or examples.
+
 `study report` flags `dense_introduction` (several new symbols or terms before any picture or
 example) and `example_without_rule` (numbers worked without a general rule); read them in
 place, since some topics have no reusable rule.
@@ -70,7 +99,9 @@ example, each in the shape it has ([representations](representations.md#choose-t
   split a passage that holds two ideas. A passage is not automatically a
   top-level section: group a method's cases, examples and limitations beneath that
   method using the [heading hierarchy](content.md#blocks).
-- A procedure or hard argument: labelled steps. An algorithm's run: a trace whose frames
+- A procedure: complete labelled steps, pseudocode or a flowchart with explicit control
+  flow ([procedures](writing.md#structure-before-prose)). A hard argument: labelled steps.
+  An algorithm's run: a trace whose frames
   carry its state ([traces](representations.md#algorithm-traces)).
 - A test, procedure or argument the unit teaches is shown at work once, not only named: a
   test as one run with its verdict (an exchange as a table of questions and answers, not

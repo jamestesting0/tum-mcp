@@ -41,11 +41,12 @@ async ({ query }) => {
     for (const run of runs.length ? runs : [null]) {
       if (run) { run.click(); await frame(); }
       walk.querySelector('.walk-dot')?.click(); await frame();
-      const seen = new Set([walk.querySelector('.walk-card').innerText]);
+      const first = walk.querySelector('.walk-card').innerText, seen = new Set([first]);
       let guard = 0;
       while (!next.disabled && guard++ < 60) {
         next.click(); await frame();
         const text = walk.querySelector('.walk-card').innerText;
+        if (text === first && seen.size > 1) break;
         if (seen.has(text)) { say(name, 'Next did not change the step card'); break; }
         seen.add(text);
       }
@@ -64,9 +65,11 @@ async ({ query }) => {
     const next = controls.querySelector('[aria-label="Next step"], [aria-label="Next stop"]');
     const counter = controls.querySelector('.small, .code-walk-count');
     let guard = 0, before = counter?.textContent;
+    const first = before;
     while (next && !next.disabled && guard++ < 120) {
       next.click(); await frame();
       if (counter && counter.textContent === before) { say(`stepper '${label(controls)}'`, 'Next did not advance'); break; }
+      if (counter && counter.textContent === first) break;
       before = counter?.textContent;
     }
   }

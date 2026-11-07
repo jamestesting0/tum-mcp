@@ -43,6 +43,9 @@ class Readiness(Frozen):
     scope: PreparedScope | None = None
     mode: Literal["through_date", "selected_sources"] | None = None
     cutoff: str | None = None
+    request: dict[str, JsonValue] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     problems: tuple[str, ...] = ()
     dispositions: tuple[dict[str, JsonValue], ...] = ()
     items: dict[str, list[dict[str, JsonValue]]] = Field(default_factory=dict)
@@ -54,7 +57,15 @@ class Readiness(Frozen):
         return bool(self.items) and not self.problems
 
     def report(self) -> dict[str, JsonValue]:
-        return self.model_dump(mode="json", exclude={"fingerprints"}) | {"ready": self.ready}
+        return self.model_dump(mode="json", exclude={"fingerprints"}) | {
+            "ready": self.ready,
+            "next_action": (
+                "The checks passed; continue to the requested next stage."
+                if self.ready
+                else "Continue authoring and repairing the first unresolved requirement: "
+                + (self.problems[0] if self.problems else "No requested items are mapped yet.")
+            ),
+        }
 
 
 def _study_problem(
@@ -244,6 +255,12 @@ def assess(root: Path, identifier: str, context: "Context | None" = None) -> Rea
         if plan is None or plan.item != key or gate_status(plan) not in {"approved", "provisional"}:
             problems.append(f"{key}: check the current teaching plan.")
         else:
+            if plan.preparation and (
+                plan.preparation != identifier
+                or plan.gate is None
+                or gate_status(plan, root) == "changed"
+            ):
+                problems.append(f"{key}: source coverage changed; check the plan against it again.")
             problems.extend(
                 f"{key}: {problem}"
                 for problem in plan_problems(plan, context.items[key].value, outcomes)

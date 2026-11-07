@@ -85,13 +85,14 @@ def refresh_clients() -> UpdateSummary:
                 )
                 continue
             # The adapter preflights every managed file before applying any change.
-            install_client(name, home, host=host, announce=False)
+            state, detail = install_client(name, home, host=host, announce=False)
             results.append(
                 ClientUpdate(
                     name,
                     host.value,
                     "updated",
-                    "Managed registration refreshed. Reload/restart the client.",
+                    f"Managed registration refreshed. {state.value}: {detail} "
+                    "Reload/restart the client.",
                 )
             )
         except (CampusError, BrowserSetupError) as error:

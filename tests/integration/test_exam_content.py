@@ -6,7 +6,7 @@ import pytest
 from material_fixture import exam_document, exam_project
 from pydantic import ValidationError
 
-from tum_mcp.course.content.exam import ExamContent, concept_revision
+from tum_mcp.course.content.exam import ExamContent, concept_revision, pattern_revision
 
 
 @pytest.fixture(scope="module")
@@ -19,6 +19,31 @@ def test_the_synthetic_exam_document_is_valid(document: dict) -> None:
     assert len(content.past_questions()) == 7
     assert content.concept_coverage()["observer"] == {"ws23", "ws22"}
     assert "composite" in content.concept_coverage()
+
+
+def test_optional_drill_guides_are_source_bound_and_do_not_change_legacy_revisions(
+    document: dict,
+) -> None:
+    value = copy.deepcopy(document)
+    original = ExamContent.model_validate(value).patterns[0]
+    pattern = value["patterns"][0]
+    pattern["drill"][0]["guide"] = []
+    assert pattern_revision(ExamContent.model_validate(value).patterns[0]) == pattern_revision(
+        original
+    )
+    pattern["drill"][0]["guide"] = copy.deepcopy(pattern["examples"][0]["steps"])
+    guided = ExamContent.model_validate(value).patterns[0]
+    assert guided.drill[0].guide
+    assert pattern_revision(guided) != pattern_revision(original)
+
+    guide = pattern["drill"][0]["guide"][0]
+    guide["step"] = len(pattern["workflow"]) + 1
+    with pytest.raises(ValidationError, match="guide.*workflow"):
+        ExamContent.model_validate(value)
+    guide["step"] = 1
+    guide["answer"][0]["sources"] = ["not-a-pattern-source"]
+    with pytest.raises(ValidationError, match="pattern's sources"):
+        ExamContent.model_validate(value)
 
 
 def change(document: dict, mutate: Callable[[dict], None]) -> dict:

@@ -20,6 +20,66 @@ def content(project: Path) -> ExamContent:
     return ExamContent.model_validate(exam_document(project))
 
 
+def test_current_past_questions_need_prepared_guidance(project: Path) -> None:
+    from material_fixture import with_guided_paper
+
+    from tum_mcp.course.content.exam_data import practice_flags
+
+    raw = exam_document(project)
+    before = practice_flags(ExamContent.model_validate(raw))
+    assert any("ws23-a-1" in flag["detail"] for flag in before)
+    after = practice_flags(ExamContent.model_validate(with_guided_paper(raw)))
+    assert not any("ws23-a-1" in flag["detail"] for flag in after)
+
+
+def test_workflow_expansions_must_add_to_the_step_or_case(project: Path) -> None:
+    from tum_mcp.course.content.exam_data import practice_flags
+
+    raw = exam_document(project)
+    steps = raw["patterns"][0]["workflow"]
+    steps[0]["apply"] = {"text": steps[0]["do"] + "."}
+    case = steps[1]["cases"][0]
+    case["apply"] = {"text": case["then"]}
+    flags = practice_flags(ExamContent.model_validate(raw))
+    repeats = [flag for flag in flags if flag["flag"] == "redundant_workflow_detail"]
+    assert len(repeats) == 2
+    assert all(flag["item"] == "exam/pattern/observer-design" for flag in repeats)
+
+    steps[0]["apply"] = {"text": "The subject owns state; observers react to its changes."}
+    case["apply"] = {"text": case["then"], "code": "o.update(state)", "language": "java"}
+    assert not any(
+        flag["flag"] == "redundant_workflow_detail"
+        for flag in practice_flags(ExamContent.model_validate(raw))
+    )
+
+
+def test_exam_retrieval_does_not_expand_a_bounded_study_request(project: Path) -> None:
+    from material_fixture import minimal_unit
+
+    from tum_mcp.course.content.exam_data import retrieval_flags
+    from tum_mcp.course.content.study import StudyContent
+
+    raw = exam_document(project)
+    raw["concepts"][0]["units"] = ["observer"]
+    slides = raw["concepts"][0]["sources"][0]
+    unit = minimal_unit("observer", slides["key"], slides["sha256"])
+    study = {
+        "course_key": raw["course_key"],
+        "organization": "topics",
+        "introduction": "Observer only.",
+        "units": [unit],
+    }
+    flags = retrieval_flags(ExamContent.model_validate(raw), StudyContent.model_validate(study))
+    assert {flag["item"] for flag in flags} == {"concept:observer"}
+    unit["flashcards"][0].update(
+        front="What does Observer mean?",
+        back="Subjects notify registered observers when state changes.",
+    )
+    assert (
+        retrieval_flags(ExamContent.model_validate(raw), StudyContent.model_validate(study)) == []
+    )
+
+
 def test_frequencies_count_each_exam_once_and_skip_outdated_sittings(content: ExamContent) -> None:
     stats = exam_statistics(content)
     observer = stats["patterns"]["observer-design"]

@@ -232,6 +232,11 @@ class StudyPassage(Frozen):
     block: Key
 
 
+class ExerciseLink(Frozen):
+    set: Key
+    exercise: Key
+
+
 class Concept(Frozen):
     key: Key
     topic: Key
@@ -257,6 +262,9 @@ class Concept(Frozen):
     on_map: bool = True
     units: tuple[Key, ...] = Field(default=(), max_length=20)
     passages: tuple[StudyPassage, ...] = Field(default=(), max_length=10)
+    exercises: tuple[ExerciseLink, ...] = Field(
+        default=(), max_length=10, exclude_if=lambda value: not value
+    )
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=20)
     details: tuple[Block, ...] = Field(default=(), max_length=20)
     # The pattern whose workflow is this entry's method; the entry shows that workflow.
@@ -314,7 +322,11 @@ class Link(Frozen):
 class Apply(Frozen):
     """What a workflow step or case applies: the rule in words, the formula, or the code."""
 
-    text: Text | None = None
+    text: Text | None = Field(
+        default=None,
+        description="Useful detail beyond the visible workflow line. Do not repeat or "
+        "paraphrase the step's do or case's then; omit apply if the line is complete.",
+    )
     math: tuple[Annotated[str, Field(min_length=1, max_length=2000)], ...] = Field(
         default=(), max_length=4
     )
@@ -387,6 +399,10 @@ class DrillItem(Frozen):
     explanation: Text
     # A full problem shows its worked solution; the cases it practises are never shown.
     solution: tuple[Block, ...] = Field(default=(), max_length=10)
+    # Optional help stays hidden while the student attempts the complete problem.
+    guide: tuple["GuidedStep", ...] = Field(
+        default=(), max_length=40, exclude_if=lambda value: not value
+    )
     cases: tuple[CaseRef, ...] = Field(default=(), max_length=6)
 
     @model_validator(mode="after")
@@ -468,7 +484,15 @@ class Pattern(Frozen):
         keys = {item.key for item in self.sources}
         blocks = (
             *(block for example in self.examples for block in example.blocks_cited()),
-            *(block for item in self.drill for block in (*item.blocks, *item.solution)),
+            *(
+                block
+                for item in self.drill
+                for block in (
+                    *item.blocks,
+                    *item.solution,
+                    *(b for s in item.guide for b in s.answer),
+                )
+            ),
         )
         if any(not set(block.sources) <= keys for block in blocks):
             raise ValueError("Pattern content cites only the pattern's sources.")
@@ -478,6 +502,19 @@ class Pattern(Frozen):
             raise ValueError("Drill keys repeat within a pattern.")
         if any(p.step is not None and p.step > len(self.workflow) for p in self.pitfalls):
             raise ValueError("A pitfall names a step of the workflow.")
+        for item in self.drill:
+            files = project_files(item.blocks)
+            for step in item.guide:
+                if step.step > len(self.workflow):
+                    raise ValueError(f"Drill {item.key}: a guide names a missing workflow step.")
+                cases = self.workflow[step.step - 1].cases
+                if step.case and (step.case > len(cases) or len(step.case_feedback) != len(cases)):
+                    raise ValueError(
+                        f"Drill {item.key}: a guide gives feedback for its workflow cases."
+                    )
+                check_code_refs(files, step.code)
+                if step.check and step.check.kind == "self_check" and step.check.file:
+                    check_target_file(files, step.check.file)
         self._cases_covered()
         self._applied_formulas_explained()
         return self

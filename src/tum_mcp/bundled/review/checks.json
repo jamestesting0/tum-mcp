@@ -4,7 +4,7 @@
     {
       "id": "correctness.source_match",
       "dimension": "correctness",
-      "rule": "every definition, claim and value agrees with the cited page.",
+      "rule": "every definition, claim and value agrees with the cited page. A taught procedure preserves initialization, explicitly scoped repetition, branches and result or failure exits; a correct worked trace or separate answer-key implementation cannot supply instructions missing from the published procedure.",
       "pass": "The heuristic definition matches slide 4 word for word in meaning.",
       "fail": "The unit says A* expands the highest f first; the cited slide says lowest.",
       "profiles": [
@@ -12,10 +12,11 @@
         "exam-pattern",
         "exercise",
         "lecture-entry",
-        "study-unit"
+        "study-unit",
+        "lecture-selection"
       ],
       "scope": "block",
-      "version": 1,
+      "version": 2,
       "default_fail": true
     },
     {
@@ -109,7 +110,7 @@
     {
       "id": "clarity.terms_defined",
       "dimension": "clarity",
-      "rule": "each term is defined where it is introduced; later marking with {{term}} is checked by code (forward_term).",
+      "rule": "each new core concept or property has a concise source-faithful general definition at first teaching use, or a link to its verified earlier definition. Preserve defining conditions and quantifiers; a heading, one example or the conditions for one method's guarantee is not the property's meaning. A useful case or boundary makes the distinction usable. Incidental jargon may use a short gloss. Later marking with {{term}} is checked by code (forward_term).",
       "pass": "'Frontier' is defined in the section that first uses it.",
       "fail": "'Reached set' is used three sections before any definition.",
       "profiles": [
@@ -118,7 +119,7 @@
         "exam-pattern"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "clarity.notation_unpacked",
@@ -179,7 +180,7 @@
     {
       "id": "clarity.no_meta",
       "dimension": "clarity",
-      "rule": "no line about the material itself (\"the lecture groups…\", \"Authored example:\") or that tells the student to work ([writing](../../prepare-study/references/writing.md)).",
+      "rule": "Explanatory prose teaches directly without commentary about authoring or the material. Task prompts and procedural instructions are valid. A short instruction that introduces a completed concrete example is not by itself a clarity defect.",
       "pass": "'A* combines cost so far with an estimate.'",
       "fail": "'The lecture groups these algorithms by...' or 'Authored example:'",
       "profiles": [
@@ -190,7 +191,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "cohesion.familiar_first",
@@ -308,7 +309,7 @@
     {
       "id": "cognitive_load.short_prose",
       "dimension": "cognitive_load",
-      "rule": "no paragraph longer than two sentences or 45 words; a procedure comes as labelled steps and a worked example as one computed value per step.",
+      "rule": "no paragraph longer than two sentences or 45 words; a procedure uses complete labelled steps, scoped pseudocode or a flowchart, and a worked example has one computed value per step. Compact formatting must preserve loop scope, conditions and exits.",
       "pass": "Two short sentences per paragraph.",
       "fail": "A paragraph of four sentences and 80 words.",
       "profiles": [
@@ -317,7 +318,7 @@
         "exam-pattern"
       ],
       "scope": "item",
-      "version": 1,
+      "version": 2,
       "decided_by": "dense_paragraph"
     },
     {
@@ -378,7 +379,7 @@
     {
       "id": "representation.shape_fits",
       "dimension": "representation",
-      "rule": "procedures are traces with their state, parallel cases tables or lists, two-input rules matrices, physical or spatial ideas drawn figures, symbols formulas with each symbol explained, structures diagrams or trees, a logical argument its premises and conclusion on separate lines or as a formula, and the members of a list a list.",
+      "rule": "a reusable procedure has explicit control flow in labelled steps, pseudocode or a flowchart; its concrete run is a separate trace with its state. Parallel cases use tables or lists, two-input rules matrices, physical or spatial ideas drawn figures, symbols formulas with each symbol explained, structures diagrams or trees, a logical argument its premises and conclusion on separate lines or as a formula, and the members of a list a list.",
       "pass": "A two-input rule is a decision matrix.",
       "fail": "Parallel cases, or four capabilities, are written as one long sentence.",
       "profiles": [
@@ -388,7 +389,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 2
+      "version": 3
     },
     {
       "id": "representation.shown_not_described",
@@ -437,15 +438,15 @@
     {
       "id": "practice.new_case",
       "dimension": "practice",
-      "rule": "authored application questions use a case the lesson did not work; re-asking a worked example with its numbers tests recall of that example. Retrieval cards and released exercise statements are not subject to this check.",
-      "pass": "The question uses a graph the lesson did not trace.",
-      "fail": "The question re-asks the worked example with the same numbers.",
+      "rule": "authored application questions require solving an unworked input or making an unworked decision. Replaying an unchanged worked input and answer tests recall. Routine application with new values is valid; require substantive transfer when the objective calls for it. Teaching a general rule does not work every later instance of it. Shared numbers or graph structure alone do not establish replay: compare the actual inputs, requested result and reasoning. Retrieval cards and released exercise statements are not subject to this check.",
+      "pass": "After a worked two-node priority choice, a three-node frontier requires calculating priorities and identifying two eligible minima; the general tie rule has been taught but that case has not been solved.",
+      "fail": "The question reproduces the worked graph, start, goal and ordering and asks for its already stated path. Renaming the nodes does not create a new application.",
       "profiles": [
         "study-unit",
         "exercise"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "practice.plausible_options",
@@ -748,7 +749,7 @@
     {
       "id": "redundancy.said_once",
       "dimension": "redundancy",
-      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat.",
+      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A workflow expansion adds usable information beyond its visible step or case; copying or paraphrasing that line adds nothing, and a complete one-line verbal rule needs no expansion. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat.",
       "pass": "The rule is explained once and linked elsewhere.",
       "fail": "The same derivation appears in full in two sections.",
       "profiles": [
@@ -758,7 +759,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "redundancy.text_restates_picture",
@@ -974,15 +975,15 @@
     {
       "id": "integration.lecture_links",
       "dimension": "integration",
-      "rule": "units link the Lecture of the lectures they teach, and each lecture highlight links the Study passage it explains.",
-      "pass": "Units and lecture highlights link each other.",
-      "fail": "A highlight explains A* with no Recall to the A* unit.",
+      "rule": "Units and Lecture entries link to the matching prepared passage when one exists. Missing unrelated Study content is not a link defect and does not authorize expanding the requested scope.",
+      "pass": "A matching prepared passage opens beside the entry; an unrelated topic needs no invented Recall link.",
+      "fail": "A matching prepared explanation exists but its entry omits the link.",
       "profiles": [
         "course",
         "lecture-entry"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "integration.same_notation",
@@ -999,14 +1000,14 @@
     {
       "id": "integration.difficulty_climbs",
       "dimension": "integration",
-      "rule": "Study practice, exercises and exam patterns each ask more transfer than the last; none repeats another's question unchanged.",
-      "pass": "Exercises ask more transfer than Study practice.",
-      "fail": "The exam pattern repeats a Study question unchanged.",
+      "rule": "The prepared sequence supports transfer without copying authored questions unchanged. Preserve the level and wording of released exercises; individual items need not increase monotonically in difficulty. Never weaken useful Study practice or add unrequested material merely to force a difficulty ladder.",
+      "pass": "Study supports the selected released exercise and exam transfer; an easier released subpart can remain easier.",
+      "fail": "An exam practice item duplicates a Study question unchanged without a new learning purpose.",
       "profiles": [
         "course"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "integration.media_links",
@@ -1049,14 +1050,14 @@
     {
       "id": "clarity.sheet_sufficient",
       "dimension": "clarity",
-      "rule": "each entry can be used as read: its line states the claim with the condition that makes it true; a formula opens its variables' meanings; a method opens its steps (details or `workflow_from`); a list or comparison is complete.",
+      "rule": "each entry supports three useful depths: a concise scannable claim with essential applicability conditions; expandable recall with the rule, meanings, compact steps or pitfall needed to use it; then links to the actual prepared Study passage and relevant practice. A method needs steps in details or a short workflow_from. A title, slogan and links alone are incomplete. A genuinely complete one-line fact needs no padded expansion.",
       "pass": "A formula entry opens its variables' meanings.",
       "fail": "A method entry with no steps.",
       "profiles": [
         "exam-sheet"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "clarity.sheet_concise",
@@ -1109,19 +1110,19 @@
     {
       "id": "redundancy.sheet_expansion",
       "dimension": "redundancy",
-      "rule": "an expanded entry adds substance (conditions, meanings, steps, the table or code itself); it does not repeat its line, another entry or the Study lesson, and no entry is padded to justify expanding.",
+      "rule": "an expanded entry adds compact recall substance (conditions, meanings, steps, the table or code itself), followed by prepared lesson/practice links. Links alone are not explanatory detail. It does not repeat its line, another entry or a full Study lesson, and no entry is padded to justify expanding.",
       "pass": "The expansion adds conditions and steps.",
       "fail": "The expansion repeats its line.",
       "profiles": [
         "exam-sheet"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "representation.process_shown",
       "dimension": "representation",
-      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state (a walkthrough or derivation), never only as a finished table or number.",
+      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it.",
       "pass": "The A* run is a walkthrough: each step shows the frontier and why the next node is chosen.",
       "fail": "A finished table of frontiers, or 'Manhattan distance is 18' with no counting shown.",
       "profiles": [
@@ -1131,7 +1132,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 1,
+      "version": 2,
       "default_fail": true,
       "teaching": true,
       "replaces": [
@@ -1155,14 +1156,14 @@
     {
       "id": "coverage.sheet_retrievable",
       "dimension": "coverage",
-      "rule": "each cheatsheet fact or definition entry has a Study flashcard or question, so Revision retrieves it.",
-      "pass": "Each cheatsheet fact has a Study flashcard or question.",
-      "fail": "A cheatsheet definition no card or question ever asks for.",
+      "rule": "For cheatsheet facts or definitions taught in the requested prepared Study, a corresponding Study flashcard or question retrieves them. For Exam topics outside that bounded Study scope, judge retrieval through prepared Exam practice; never require unrequested Study units to clear this check. A missing link to a relevant prepared Study passage is still a navigation gap.",
+      "pass": "Linked Study concepts have retrieval practice; later Exam topics are retrieved in their prepared Exam tasks without expanding the Study request.",
+      "fail": "A concept taught in prepared Study is never retrieved, or an Exam topic has no useful retrieval task in its prepared practice.",
       "profiles": [
         "exam-sheet"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "practice.student_control",
@@ -1227,6 +1228,32 @@
       ],
       "scope": "item",
       "version": 2,
+      "default_fail": true
+    },
+    {
+      "id": "coverage.lecture_selection",
+      "dimension": "coverage",
+      "rule": "Read the complete retained transcript and the selection map, including omissions. Every consequential clarification, correction and useful worked explanation is selected or has a specific defensible omission reason. Compare reasoning, assumptions and interpretation with the matching materials. A shared topic title alone does not justify omission. Report unavailable comparison evidence.",
+      "pass": "The whole eligible timeline is accounted for. Repeated numerical working is omitted because the cited slide already gives those steps; a new failure diagnosis is retained.",
+      "fail": "A map calls a sustained worked explanation 'same topic as slide' without comparing the reasoning, or the review reads only the two chosen entries.",
+      "profiles": [
+        "lecture-selection"
+      ],
+      "scope": "item",
+      "version": 1,
+      "default_fail": true
+    },
+    {
+      "id": "representation.lecture_selection",
+      "dimension": "representation",
+      "rule": "Each choice earns its format. A short conclusion is a note. A highlight preserves a useful explanation from setup through conclusion and adds enough learning value to justify watching. Reject a clip that merely reads or repeats an already complete source solution. Use no count or watching-time quota.",
+      "pass": "Two concise notes are enough when they preserve every useful addition; a longer demonstration is retained when the spoken reasoning fills a source gap.",
+      "fail": "A 30-second repetition of a fully worked slide is labelled a highlight, while a useful demonstration is omitted only because a frame request failed.",
+      "profiles": [
+        "lecture-selection"
+      ],
+      "scope": "item",
+      "version": 1,
       "default_fail": true
     }
   ],

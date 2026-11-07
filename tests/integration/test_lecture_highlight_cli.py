@@ -1,5 +1,6 @@
 import io
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -28,6 +29,35 @@ def prepared(tmp_path: Path, lecture_extension: Path) -> Prepared:
 
 def run(*args: str):
     return CliRunner().invoke(app, ["lecture", *args])
+
+
+def test_frames_read_the_current_project_after_copy(prepared: Prepared, tmp_path: Path) -> None:
+    frame = prepared.add_frame(frame_png(), (1920, 1080), 30.0)
+    copied = tmp_path / "copied-project"
+    shutil.copytree(prepared.root, copied)
+    args = (
+        "frames",
+        str(copied),
+        "--recording",
+        prepared.recording.key,
+        "--start",
+        "30",
+        "--end",
+        "31",
+    )
+
+    result = run(*args)
+
+    assert result.exit_code == 0, result.exception
+    (listed,) = json.loads(result.output)["frames"]
+    copied_frame = copied / frame.path.relative_to(prepared.root)
+    assert Path(listed["path"]) == copied_frame
+    assert listed["timestamp_s"] == frame.captured_at_s
+
+    copied_frame.write_bytes(b"changed")
+    tampered = run(*args)
+    assert tampered.exit_code != 0
+    assert "Cached recording image changed or is missing" in str(tampered.exception)
 
 
 @pytest.mark.parametrize("crop,size", [("", (960, 540)), ("0,0,960,1080", (853, 960))])

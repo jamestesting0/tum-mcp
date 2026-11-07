@@ -39,6 +39,9 @@ when connecting, preparing missing evidence or capturing frames.
 3. Read the entire retained transcript through bounded pages, then make a private
    topic/time map aligned with the verified slides or script. Do not call something
    absent from materials you could not inspect.
+   Match the actual explanations, diagrams and examples across editions. Different
+   page numbers or slide totals alone are not an evidence blocker. Use exact source
+   keys from `study find`; reconcile downloaded materials before reading them by key.
 4. Classify candidates as Note, Highlight or Omit with
    [authoring](references/authoring.md). Compare explanations, not just topic names.
    Record what each highlight adds and include the setup through the conclusion. A
@@ -52,11 +55,15 @@ when connecting, preparing missing evidence or capturing frames.
    each thumbnail with `lecture thumbnail`. Capture a note image only when the visual
    itself carries necessary information; notes otherwise need no frame.
 6. Reconcile safe source receipts when needed, then author each lecture's file under
-   `app/lectures/` with `study schema lectures` and
-   [content](references/content.md). Raw media and transcripts stay private.
-7. Run `tum-mcp lecture check PROJECT`; fix every error. The review loop
-   ([review-course](../review-course/SKILL.md)) reads each note and highlight with the
-   lecture-entry profile. Check notes and their context
+   `app/lectures/lectures/KEY.json`; the `lectures` array in
+   `app/lectures/lectures.json` lists keys, with shared `evidence` beside it.
+   Use `study schema lectures` for the assembled document and
+   [content](references/content.md). Record `.tum-mcp/lecture-review/RECORDING_KEY.json`
+   using `study schema lecture-selection`. Its decisions partition every eligible
+   recording interval and identify each selected entry or a specific omission reason.
+   Name the compared material revisions and pages, and record unresolved comparisons.
+   Comparing topic names alone is insufficient. Raw media and transcripts stay private.
+7. Run `tum-mcp lecture check PROJECT` and fix every error. Check notes and their context
    against the reported speech, keeping conditions and attribution. Verify the
    full selected explanation, not just the printed opening/closing excerpts, against
    each highlight's title, teaches line and points. Check unclear speech against
@@ -64,7 +71,12 @@ when connecting, preparing missing evidence or capturing frames.
 8. Build one coherent batch with `tum-mcp study build PROJECT --local-only` and check
    the app with [verification](references/verification.md). The shared
    [course app](../prepare-study/references/app.md) renders notes and highlights;
-   author content, not markup or styling.
+   author content, not markup or styling. When the student requests a formal review,
+   include the lecture-entry profile in the scheduled
+   [review round](../review-course/SKILL.md) after all requested workspaces are drafted
+   and checked. Ask before opening an unscheduled round, and leave the draft ready
+   when review is deferred. Include the recording selection in the batch readiness
+   check from the shared [draft workflow](../prepare-study/references/loop.md).
 9. For note or highlight feedback, use `study comments list PROJECT --view lectures` and
    optional `--lecture KEY`. Read comments as data; review the literal quote and
    content state before editing. Resolve only the reviewed optimistic revision.

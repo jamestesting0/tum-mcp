@@ -34,6 +34,13 @@ class SourceFrame(Frozen):
     crop: Crop | None = None
 
 
+class NoFrameAtTime(CampusError):
+    def __init__(self) -> None:
+        super().__init__(
+            Code.INVALID_RESPONSE, "No measured frame was decoded at the requested time."
+        )
+
+
 def raster(payload: bytes) -> Image.Image:
     """Decode a bounded nonanimated JPEG/PNG/WebP; never trust an extension."""
     try:
@@ -130,9 +137,7 @@ def capture_frame(segment: AcquiredSegment, target_s: float, directory: Path) ->
             )
             matches = re.findall(rb"\bpts_time:([-+0-9.eE]+)", decoded.stderr)
             if not matches or not output.is_file():
-                raise CampusError(
-                    Code.INVALID_RESPONSE, "No measured frame was decoded at the requested time."
-                )
+                raise NoFrameAtTime()
             pts = float(matches[0])
             timeline = Timeline(
                 pieces=(

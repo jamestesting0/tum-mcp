@@ -211,7 +211,13 @@ def scope_problems(
             if len([d for d in demands if isinstance(d, StudyDemand)]) != len(demands) or (
                 mapped & deferred or (mapped | deferred) - outcomes
             ):
-                problems.append(f"{key}: demand does not resolve to a core outcome of this source.")
+                problems.append(
+                    f"{key}: invalid outcome mapping. "
+                    f"Unknown IDs: {', '.join(sorted((mapped | deferred) - outcomes)) or 'none'}; "
+                    "both required and deferred: "
+                    f"{', '.join(sorted(mapped & deferred)) or 'none'}. "
+                    f"Use Study demands with core outcome IDs: {', '.join(sorted(outcomes))}."
+                )
         else:
             items = {
                 item.label

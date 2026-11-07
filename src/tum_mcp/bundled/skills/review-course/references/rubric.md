@@ -199,9 +199,12 @@ Representation never scores higher than the item's weakest visual; the scorecard
 
 Cards, questions and exercise steps make the student use the outcomes.
 
-- `practice.new_case`: authored application questions use a case the lesson did not work;
-  re-asking a worked example with its numbers tests recall of that example. Retrieval
-  cards and released exercise statements are not subject to this check.
+- `practice.new_case`: authored application questions require an unworked input or
+  decision. Replaying an unchanged worked input and answer is recall. Routine application
+  with new values is useful; require substantive transfer when the objective calls for
+  it. A taught general rule does not solve every later instance. Compare the actual
+  inputs and requested result; shared numbers or graph structure alone are insufficient
+  evidence of replay. Retrieval cards and released statements are exempt.
 - `practice.plausible_options`: options are plausible, and each wrong option's feedback
   names its mistake.
 - `practice.hint_ladder`: hints go from a pointer to the first operation to Compare and

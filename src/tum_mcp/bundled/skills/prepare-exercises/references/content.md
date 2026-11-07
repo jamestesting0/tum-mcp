@@ -146,4 +146,4 @@ Semantic exercise changes start fresh progress while retaining old browser recor
 reviewing source hashes or changing group labels alone preserves learning revision.
 Do not copy student responses into authored data. Keep comments in .tum-mcp/comments.json.
 The single builder installs shared assets and one payload, exposing only authored
-workspaces. Preserve content.json and unchanged exercises byte-for-byte when possible.
+workspaces. Preserve unaffected Study unit files and unchanged exercises byte-for-byte when possible.

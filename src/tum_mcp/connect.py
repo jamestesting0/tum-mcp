@@ -193,19 +193,27 @@ def _connect_campus_services(
                         if on_connected:
                             on_connected(result)
                     if len(connected) == len(services):
-                        return tuple(connected[service] for service in services)
+                        break
                     next(iter(pages.values())).wait_for_timeout(1000)
-                raise CampusError(
-                    Code.AUTH_REQUIRED, "Sign-in timed out; completed connections were saved."
-                )
+                else:
+                    pending = ", ".join(
+                        service.label for service in services if service not in connected
+                    )
+                    raise CampusError(
+                        Code.AUTH_REQUIRED,
+                        f"Sign-in timed out for {pending}. Completed connections were saved.",
+                    )
             finally:
                 instance.close()
     except BrowserError:
-        raise CampusError(
-            Code.AUTH_REQUIRED,
-            "The browser closed or could not complete sign-in. Completed connections were saved; "
-            "run tum-mcp login to retry or choose another browser.",
-        ) from None
+        pending = ", ".join(service.label for service in services if service not in connected)
+        if pending:
+            raise CampusError(
+                Code.AUTH_REQUIRED,
+                f"The browser closed or could not complete sign-in for {pending}. "
+                "Completed connections were saved. Run tum-mcp login to retry.",
+            ) from None
+    return tuple(connected[service] for service in services)
 
 
 def _save_connection(

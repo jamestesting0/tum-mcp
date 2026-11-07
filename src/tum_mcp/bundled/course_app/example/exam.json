@@ -806,6 +806,24 @@
               ],
               "caption": "Undo removes \"b\", the newest action."
             }
+          ],
+          "guide": [
+            {
+              "step": 1,
+              "prompt": "Which end of the history loses an action when you undo?",
+              "hint": "Compare the last two rows of the table.",
+              "answer": [
+                {
+                  "kind": "text",
+                  "sources": [
+                    "components"
+                  ],
+                  "paragraphs": [
+                    "The newest action leaves first: last in, first out (LIFO)."
+                  ]
+                }
+              ]
+            }
           ]
         }
       ],
@@ -1352,6 +1370,24 @@
               "step": 1,
               "case": 1
             }
+          ],
+          "guide": [
+            {
+              "step": 1,
+              "prompt": "After fetching news, which waiting page was found first?",
+              "hint": "Compare when shop and sport entered the frontier.",
+              "answer": [
+                {
+                  "kind": "text",
+                  "sources": [
+                    "components"
+                  ],
+                  "paragraphs": [
+                    "shop entered before sport. Taking the oldest waiting page requires a FIFO queue."
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
@@ -1450,6 +1486,40 @@
             {
               "step": 1,
               "case": 2
+            }
+          ],
+          "guide": [
+            {
+              "step": 1,
+              "prompt": "When B then C are pushed, which node does a stack take next?",
+              "hint": "The last pushed node is on top.",
+              "answer": [
+                {
+                  "kind": "text",
+                  "sources": [
+                    "components"
+                  ],
+                  "paragraphs": [
+                    "C is taken next, because it was pushed after B."
+                  ]
+                }
+              ]
+            },
+            {
+              "step": 2,
+              "prompt": "Continue the stack until no node remains.",
+              "hint": "Mark each node when pushed and skip neighbours already seen.",
+              "answer": [
+                {
+                  "kind": "text",
+                  "sources": [
+                    "components"
+                  ],
+                  "paragraphs": [
+                    "Take A, then C, then B, then D. After each expansion the stacks are [B, C], [B], [D], then empty."
+                  ]
+                }
+              ]
             }
           ]
         }

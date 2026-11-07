@@ -206,6 +206,9 @@ def test_dumb_terminal_browser_picker(tmp_path: Path) -> None:
     code, output = run_selector(tmp_path, b"1,2\n", browser_keys=b"2\n", terminal="dumb")
     assert code == 0, output
     assert "SELECTED=moodle,artemis" in output and "BROWSER=second" in output
+    assert "Waiting for Artemis" in output
+    assert "Ctrl+C" in output and "Completed connections are saved" in output
+    assert "Waiting for Moodle" not in output
 
 
 @pytest.mark.parametrize("terminal", ["xterm-256color", "dumb"])

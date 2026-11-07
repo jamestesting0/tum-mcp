@@ -369,7 +369,12 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
         if present(root, "lectures"):
             require_lecture()
         lectures = read_lectures(root)
-        from tum_mcp.course.content.exam_data import check_unit_links, read_exam, stale_exam
+        from tum_mcp.course.content.exam_data import (
+            check_exercise_links,
+            check_unit_links,
+            read_exam,
+            stale_exam,
+        )
 
         exam = read_exam(root)
         if content is None and exercises is None and lectures is None and exam is None:
@@ -407,6 +412,7 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
         if exam:
             stale += stale_exam(root, state, exam)
             check_unit_links(exam, content)
+            check_exercise_links(exam, exercises)
         from tum_mcp.course.ledger.coverage import check_ledger, read_ledger
 
         ledger = read_ledger(root)

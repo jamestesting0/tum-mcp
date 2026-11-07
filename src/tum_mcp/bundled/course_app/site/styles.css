@@ -986,6 +986,8 @@ button.exam-entry-collapse:hover { color: var(--ink); }
 .pattern-example > .exam-guided + .example-part { margin-top: var(--s6); }
 .exam-guided { list-style: none; padding: 0; margin: var(--s4) 0 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
 .exam-guided-step { padding: var(--s5); border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); }
+.exam-drill-guide > .exam-guided { margin: 0; }
+.exam-drill-guide .exam-guided-step { padding: 0; border: 0; background: transparent; }
 .exam-guided-step > .exercise-response:first-of-type { margin-top: var(--s3); }
 .exam-guided-step .exercise-actions, .exam-drill-item .exercise-actions { margin-top: var(--space-related); }
 /* Compare and Hint look and read as they do in Exercises: Compare primary, Hint secondary. */
@@ -1004,6 +1006,8 @@ button.exam-entry-collapse:hover { color: var(--ink); }
 .exam-entry-row::-webkit-details-marker { display: none; }
 .exam-entry-row::before { content: ''; grid-row: 1; align-self: start; justify-self: center; margin-top: calc(0.75em - 3px); width: 6px; height: 6px; border-top: 1.5px solid var(--muted); border-right: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform var(--fast) var(--ease); }
 .exam-entry-details[open] > .exam-entry-row::before { transform: rotate(135deg); }
+.exam-entry-details.has-recall > .exam-entry-row::before { width: 0; height: 0; margin-top: calc(0.75em - 4px); border: 4px solid transparent; border-right: 0; border-left: 6px solid var(--muted); transform: rotate(0deg); }
+.exam-entry-details.has-recall[open] > .exam-entry-row::before { transform: rotate(90deg); }
 .exam-entry-head { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3); }
 .exam-entry-line { grid-column: 2; }
 .exam-status { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 7px; border-radius: 999px; font-size: 13px; font-weight: 500; line-height: 1.5; white-space: nowrap; background: var(--surface); color: var(--muted); }

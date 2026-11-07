@@ -27,9 +27,22 @@ def start(
     preparation: Annotated[
         str | None, typer.Option(help="Review a ready preparation scope ID.")
     ] = None,
+    batch: Annotated[
+        str | None, typer.Option(help="Review one complete multi-workspace batch.")
+    ] = None,
+    ad_hoc: Annotated[
+        bool, typer.Option(help="Explicitly review part of a declared batch.")
+    ] = False,
 ) -> None:
     """Fix the scope and the round budget for a new review loop."""
-    state = loop.start(project, rounds, tuple(workspace or ()), preparation=preparation)
+    state = loop.start(
+        project,
+        rounds,
+        tuple(workspace or ()),
+        preparation=preparation,
+        batch=batch,
+        ad_hoc=ad_hoc,
+    )
     _echo({"items": len(state.scope), "budget": state.budget, "next": "tum-mcp review next"})
 
 
@@ -105,9 +118,20 @@ def resolve(
 
 
 @app.command(name="close-round")
-def close_round(project: Path) -> None:
+def close_round(
+    project: Path,
+    incomplete: Annotated[bool, typer.Option(help="Close even with unanswered packets.")] = False,
+) -> None:
     """Compute the gate, save the scorecard and end the round."""
-    _echo(loop.close_round(project))
+    _echo(loop.close_round(project, incomplete=incomplete))
+
+
+@app.command(name="repair-scope")
+def repair_scope(project: Path, reason: Annotated[str, typer.Option()]) -> None:
+    """Include complete split-out repair items without another review round or carried scores."""
+    from tum_mcp.course.review.repair_scope import repair_scope as adopt
+
+    _echo(adopt(project, reason))
 
 
 @app.command()

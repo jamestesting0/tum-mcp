@@ -36,7 +36,10 @@ source citations stay local. Use publish-course for a publication request.
 2. **Evidence** ([sources](references/sources.md)). Weigh official rules and exams
    above student copies; keep conflicts visible. Find and quote with
    `tum-mcp study text PROJECT --key K --pages N-M`, and look at each page a question
-   comes from. Read each document once, even when several copies exist.
+   comes from. Read each document once, even when several copies exist. Fill the
+   exam profile from the latest available paper's cover and working instructions
+   (points and allowed aids included), unless newer official exam guidance supersedes
+   it. Name the dated reference in `profile.notes`; do not leave stated facts blank.
 3. **Registry** ([patterns](references/patterns.md)). One sitting per real exam;
    attach every copy of it as roles of one variant. Extract every subquestion and
    classify it by transferable solving strategy, reusing existing patterns first.
@@ -48,11 +51,15 @@ source citations stay local. Use publish-course for a publication request.
    each step and case applies,
    marking points, pitfalls shown in their situation as wrong/right/why, worked practice that applies every
    workflow step and covers each case once, and a drill that practises every case again
-   without steps. Programming tasks follow
+   with help initially hidden. Each drill also supplies an optional staged `guide`
+   using prompts, hints and explained answers linked to its workflow, plus a complete
+   standalone Solution. Programming tasks follow
    [coding](../prepare-exercises/references/coding.md).
 6. **Practice** ([forecast](references/forecast.md)). Make every in-scope past paper
    replayable by default (statement and solution; a solution you wrote is labelled as
-   yours), with guidance; a listed paper students cannot practise holds the gate. Where a
+   yours), with task-specific `guidance.steps`; a generic “solve the question” step
+   is not guidance. Missing guides for current classified paper questions hold the
+   draft gate before review. A listed paper students cannot practise holds the gate. Where a
    question's answer is computable, its answer key in `.tum-mcp/checks/` computes the
    forecast variants' answers too; write forecast exams to the real exam's blueprint from
    `exam-report --section blueprint`, as genuine variants or untested core ideas.
@@ -67,9 +74,13 @@ source citations stay local. Use publish-course for a publication request.
    `tum-mcp study visuals PROJECT --exam` and `--interact`, and fix what they report. Solutions
    answer each part once, labelled, in the form the part asks for. When a question needs
    knowledge Study lacks, record it in the [coverage ledger](../prepare-study/references/coverage.md).
-   Every cheatsheet fact or definition needs a Study flashcard or question that asks for
-   it, so Revision retrieves it. The review loop ([review-course](../review-course/SKILL.md))
+   Cheatsheet facts taught in the requested prepared Study need a corresponding
+   flashcard or question for Revision. For Exam topics beyond that Study scope,
+   judge retrieval through the prepared Exam practice; do not add unrequested Study
+   units to clear a review check. The review loop ([review-course](../review-course/SKILL.md))
    checks the cheatsheet, each pattern and each mock question with their profiles.
+   Finish the complete requested draft and internal checks, then ask whether to run
+   one review-and-repair round. Skip this question when review was already requested.
 8. **Report** sittings, questions and their coverage, review items, kept outliers with
    reasons, gaps and checks actually run. Launch with `tum-mcp study`.
 

@@ -26,19 +26,36 @@ scores.
    (lint, verify, visuals and `--interact` clean). `tum-mcp review start PROJECT` fixes
    the scope and defaults to one round. For prepared Study or Exercises, use
    `tum-mcp review start PROJECT --preparation ID` after the readiness report passes.
-   For ad hoc reviews use `--workspace` to narrow the scope. A round that includes Exam
-   uses workspace selectors. Check any prepared Study or Exercises scope first and report
-   its readiness separately from that round. A later loop asks about new and changed items.
+   For any declared batch matching the request, including one workspace, use
+   `review start PROJECT --batch ID` after
+   `study report PROJECT --section readiness --batch ID` passes. This binds the
+   complete declared request, its preparation scopes, Exam drafts and recording
+   selections to one round. For ad hoc reviews use `--workspace` to narrow the scope.
+   A declared unfinished batch requires its batch gate. Use `--ad-hoc` only for an
+   explicitly partial review. A later loop asks about new and changed items.
+   A filtered review that exactly matches one ready batch retains that batch's source
+   requirements automatically. A subset remains partial; do not call it a full review.
    A verdict holds until the blocks it covered change.
+   For a registered batch, retain its task until the approved round and repairs end.
+   When review is newly approved after a draft-only handoff, register that batch with
+   `study task start PROJECT --batch ID --review-rounds N` using the authorized budget.
 2. **Each round.**
    1. `tum-mcp review next PROJECT` writes one packet per profile under
       `.tum-mcp/review/packets/`. Each holds its checks with a pass and a fail example,
       the items with their passages and block ids, the report flags, the answer key's
       result, the digests of the cited sources, the findings to verify and the findings
-      already rejected with their reasons.
+      already rejected with their reasons. For items that need visual scores,
+      `visual_sheets` links the available phone and desktop captures of the current
+      draft. Use those images when scoring the six visual criteria.
    2. Give each packet to a fresh checker as its whole brief. When the host supports
       concurrent checker sessions, start independent packets together and leave the draft
       unchanged until all answers are recorded. The checker answers in the packet's
+      format after its headless command finishes. A quiet command with a live session
+      handle is still running: wait on that same handle until completion or the actual
+      host timeout. Do not cancel it, duplicate its packet request, or close the round
+      incomplete merely because it has not printed progress. A duplicate request is
+      refused while the first checker holds that packet; other packets remain independent.
+      The checker uses the packet's
       `answer` format: a verdict (`pass`, `fail` or `uncertain`) for every check with the
       blocks it read, and for each fail the quoted passage, why it fails and the fix.
       Checkers look at cited source pages for logic checks as well as the digest.
@@ -62,11 +79,28 @@ scores.
       elsewhere). A finding that is wrong: `review reject` with the reason the content is
       right; the next checker sees it. A score-2 finding the content cannot fix (the
       source gives no smaller example): `review keep` with the reason.
-   5. Lint changed items with `tum-mcp study lint PROJECT --item ITEM`. After the repair
+   5. Check changed claims and citations against the named source pages; matching source
+      hashes do not establish that a page supports a new claim. Lint changed items with
+      `tum-mcp study lint PROJECT --item ITEM`. After the repair
       batch, rebuild once and recheck the affected visuals and interactions. Inspect the
       changed rendering, including any formulas or code outside the contact sheets.
+      A finding may require splitting an item. Keep the original key for one part, create
+      the other complete items, update their plans, source-demand targets and the batch
+      item list, and fix links/paper assignments. Check only changed or new plans. After
+      all original packets are recorded and the entire batch is ready, run
+      `review repair-scope PROJECT --reason REASON`. This permits additions in the same
+      workspaces while preserving the original request, sources and required demands;
+      it cannot remove reviewed items or reset the budget. Do not keep a repairable
+      structural finding merely because it needs another item. Mark the original finding
+      fixed after its passage changes. Added items receive no copied scores or extra
+      automatic review; report them as awaiting independent verification.
+      Repair can also finish after the round has closed: it updates the current
+      scorecard without opening another round. New corroborating sources are permitted
+      while the original source revisions, request and required demands stay fixed.
    6. `tum-mcp review close-round PROJECT` computes the gate and writes
-      `.tum-mcp/loop/scorecard.md`.
+      `.tum-mcp/loop/scorecard.md`. Use `review status` to check progress while a
+      round is open. If a packet cannot be recorded, finish the available repairs
+      before deliberately closing with `--incomplete` and report the missing review.
 3. **Stop** when the gate passes, when the budget is spent, or when the student stops. A
    spent budget lists the findings, fixes, review provenance and what still needs
    verification. Use `tum-mcp review extend PROJECT` if the student requests another round. `uncertain` verdicts go to the student under "needs
@@ -106,6 +140,17 @@ review` shows their status. Missing perception is an incomplete review, never a 
 score.
 
 ## Report
+
+After the authorized budget, read `review scorecard PROJECT` and report the review
+scores, repairs and remaining issues. Include scored/in-scope counts; an average over
+only the unchanged items is not an overall score for the repaired batch.
+Run `study task finish PROJECT` for an active registered batch before the report.
+Separate independently checked scores from changes still awaiting verification.
+A spent round with completed repairs is the authorized handoff, even when its quality
+gate awaits another independent check. Report that limitation; it is not an external
+blocker requiring task pause. Findings on removed derived entries do not require
+inventing replacement content. Do not silently add a review round to clear them.
+Offer another round; never extend the budget without the student's request.
 
 Give the gate status and verified/in-scope counts, open findings by check, the
 per-workspace rows, items below the bar, findings opened and closed per round, rejected

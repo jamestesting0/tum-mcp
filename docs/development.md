@@ -250,10 +250,40 @@ workspaces, URLs and progress identities keep their existing paths.
 For dated Study or Exercises preparation, the author records the source scope with
 `tum-mcp study schema preparation` in `.tum-mcp/preparation/ID.json`. Check the
 draft with `tum-mcp study report PROJECT --section readiness --preparation ID`.
+Before authoring, `study report PROJECT --section coverage-plan --preparation ID`
+validates source requirements without reading a draft. New plans name their
+`preparation`; the plan packet supplies its coverage and approval records its
+fingerprint. A changed source scope reopens that plan check.
 The gate requires current build and browser evidence for the mapped items, including
 the phone and narrow checks from `study visuals --phone` and `--interact --phone`.
 Use `review start PROJECT --preparation ID` to review that scope. A new loop defaults
 to one round. Existing review scopes and explicitly requested budgets stay usable.
+
+Mixed-workspace requests declare every expected output with `study schema batch` in
+`.tum-mcp/batches/ID.json`. `study report PROJECT --section readiness --batch ID`
+requires the complete current draft before `review start PROJECT --batch ID` and adds
+course structure to mixed reviews. Recording selections use `study schema lecture-selection`;
+their decisions cover every eligible interval and their review includes the full compact
+transcript. Content-only authoring asks before formal review; an explicit review request
+supplies that approval. More rounds require another request.
+
+Study plans may include solved `practice` contrasts: the question key, how its decision
+differs from the worked case, and its result with reasoning. The existing plan checker
+checks these before authoring; lint checks their question links. Artifact-only changes
+elsewhere in a batch retain source-plan approvals. Changed requests and source demands
+still invalidate them.
+
+After a batch round starts, `review repair-scope PROJECT --reason REASON` can adopt
+complete split-out items after all original packets are recorded. Retain the original
+keys, update plans, mappings and links, and pass readiness first. The command preserves
+the original source/request contract and the round budget. New items receive no copied
+verdicts; the scorecard exposes their remaining review. It cannot drop reviewed items,
+change the original request or remove original past-paper questions. Completion requires
+the current batch to match the repaired review scope.
+Original source keys are captured at review start so adding a corroborating reference
+does not look like changing an original source. Original source removal/revision and
+required-demand changes still refuse adoption. Structural repair may finish after a
+round closes; its scorecard is regenerated with the new items unreviewed and no extra round.
 
 The shipped component preview demonstrates the three
 heading levels, untitled continuations and guides placed beneath their own exercise

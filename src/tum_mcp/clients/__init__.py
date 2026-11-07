@@ -7,6 +7,7 @@ from filelock import FileLock
 from pydantic import TypeAdapter, ValidationError
 
 from tum_mcp import __version__
+from tum_mcp.clients import hook_config
 from tum_mcp.clients.config import CLIENTS as CLIENTS
 from tum_mcp.clients.config import ClientConfiguration, Marketplace
 from tum_mcp.clients.config import client_config_path as client_config_path
@@ -26,6 +27,7 @@ from tum_mcp.clients.installs import (
 )
 from tum_mcp.clients.rendering import rendered_client
 from tum_mcp.clients.rendering import same_tree as same_tree
+from tum_mcp.commands.ui import State
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.settings import config_dir, data_path
@@ -38,7 +40,7 @@ def install_client(
     *,
     host: ClientHost = ClientHost.LOCAL,
     announce: bool = True,
-) -> None:
+) -> tuple[State, str]:
     try:
         selected = TypeAdapter(ClientName).validate_python(name)
     except ValidationError:
@@ -52,9 +54,15 @@ def install_client(
         writes, removed, messages = prepare_client(selected, base, host=host, extensions=None)
         commit_writes(writes)
         prune_removed_folders(base, removed)
+        state = State.CONFIGURED
+        if selected != "generic":
+            from tum_mcp.clients.verification import setup_check
+
+            state, messages = setup_check(selected, base, host)
         if announce:
             print(f"{selected.title()} registration saved for this runtime.")
-            print(messages)
+            print(f"{state.value}: {messages}")
+        return state, messages
 
 
 def prepare_client(
@@ -78,6 +86,8 @@ def prepare_client(
     desired, server, catalog, messages = rendered_client(
         selected, launch, host, extensions=extensions
     )
+    hook_files, hooks = hook_config.render(selected, base, launch, host=host)
+    desired.update(hook_files)
     target = client_config_path(selected, base, host=host)
     target_root = base if target.is_relative_to(base) else config_dir().resolve()
     before = read_owned_file(target, target_root)
@@ -97,6 +107,7 @@ def prepare_client(
     ):
         raise CampusError(Code.WORKSPACE_CONFLICT, "A customized MCP entry was preserved.")
     writes = list(managed_writes(base, desired, previous))
+    writes.extend(hook_config.writes(selected, base, hooks, previous.hooks if previous else {}))
     config.mcpServers["tum"] = server
     if selected == "codex" and "$schema" not in config.model_extra:
         config = ClientConfiguration.model_validate(
@@ -133,6 +144,7 @@ def prepare_client(
         server=server,
         files={name: hashlib.sha256(data).hexdigest() for name, data in desired.items()},
         catalog=catalog,
+        hooks=hooks,
     )
     record = receipt_path(selected, host, base)
     record_before = read_owned_file(record, config_dir().resolve())

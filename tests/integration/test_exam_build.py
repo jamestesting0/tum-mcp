@@ -222,3 +222,51 @@ def test_exam_guidance_cannot_use_an_optional_only_study_block(course: Path) -> 
     concept["passages"] = [{"unit": "elsewhere", "block": "origin"}]
     with pytest.raises(ValueError, match="passages come from the units it names"):
         ExamContent.model_validate(raw)
+
+
+def test_cheatsheet_exercise_links_require_a_prepared_target(
+    course: Path, exercise_project: Path
+) -> None:
+    from tum_mcp.course.content.exam_data import check_exercise_links
+    from tum_mcp.course.content.exercises import ExerciseContent
+
+    exercises = ExerciseContent.model_validate_json(
+        content_file(exercise_project, "exercises").read_bytes()
+    )
+    group = exercises.sets[0]
+    target = {"set": group.key, "exercise": group.exercises[0].key}
+    document = exam_document(course)
+    document["concepts"][0]["exercises"] = [target]
+    check_exercise_links(ExamContent.model_validate(document), exercises)
+    content_file(course, "exam").write_text(json.dumps(document))
+    # The same link cannot build when this project has no prepared Exercises workspace.
+    with pytest.raises(CampusError, match="links to an unprepared exercise"):
+        build(course, publish=False)
+
+
+def test_pattern_review_tracks_the_actual_past_question_it_teaches(course: Path) -> None:
+    from tum_mcp.course.review.items import collect
+
+    document = exam_document(course)
+    question = document["sittings"][0]["variants"][1]["questions"][0]
+    question["statement"] = [
+        {
+            "kind": "text",
+            "sources": ["exam-ws23-b"],
+            "paragraphs": ["A stock ticker notifies registered displays when its price changes."],
+        }
+    ]
+    before = collect(course, exam=ExamContent.model_validate(document))
+    key = "exam/pattern/observer-design"
+    # Past questions remain reviewable even when the maker chose synthetic worked examples.
+    questions = before[key].value["past_questions"]
+    assert questions[0]["statement"] and questions[0]["source_versions"]
+    source_hash = document["sittings"][0]["variants"][1]["sources"][0]["sha256"]
+    assert all(text != source_hash for _, text in before[key].passages())
+    question["statement"][0]["paragraphs"].append("Each display needs the current price.")
+    after = collect(course, exam=ExamContent.model_validate(document))
+    assert (
+        before[key].blocks["past_questions:ws23-b-1"]
+        != after[key].blocks["past_questions:ws23-b-1"]
+    )
+    assert before["exam/pattern/strategy-swap"].blocks == after["exam/pattern/strategy-swap"].blocks

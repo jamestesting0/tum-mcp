@@ -16,8 +16,11 @@ raw transcript/media into the app. Review conflicts and changed sources before
 updating authored hashes. Do not fabricate a source hash, recording identity or
 complete coverage to get a build through validation.
 
-`lectures.json` has `schema_version: 3`, the bound `course_key`, `lectures` and
-`evidence`. Each lecture has a stable key and title, the recording identity and date,
+The schema describes the assembled document. On disk,
+`app/lectures/lectures.json` has `schema_version: 3`, the bound `course_key`,
+`evidence` and `lectures: ["LECTURE_KEY"]`. Store each lecture object in
+`app/lectures/lectures/LECTURE_KEY.json`; do not put objects in the index or place
+the item beside the index. Each lecture has a stable key and title, the recording identity and date,
 a `summary` (at most 600 characters), the exact source key/SHA versions, its checked-at
 time, coverage, `notes` (up to 100) and `highlights` (up to 40) in recording order.
 Either or both arrays may be empty; do not manufacture additions. Use the actual numeric

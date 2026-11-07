@@ -1,7 +1,7 @@
 import { node, studyText, append, plainText } from '../shell/dom.mjs';
 import { fitMath, formulaParts, splitRelation, texElement } from './mathml.mjs';
 import { withMeanings } from './symbols.mjs';
-import { iconButton } from '../shell/navigation.mjs';
+import { iconButton, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 
 const fitted = cell => { fitMath(cell, 0.8); return cell; };
 
@@ -63,8 +63,8 @@ export function renderDerivation(block, renderVisual) {
   const stage = node('div', 'derivation-visual'), status = node('p', 'visually-hidden');
   status.setAttribute('aria-live', 'polite');
   let index = 0, all = false;
-  const prev = iconButton('Previous step', 'left', () => { index--; update(); });
-  const next = iconButton('Next step', 'right', () => { index++; update(); });
+  const prev = iconButton('Previous step', 'left', () => { index = cycleIndex(index - 1, items.length); update(); });
+  const next = iconButton('Next step', 'right', () => { index = cycleIndex(index + 1, items.length); update(); });
   const counter = node('span', 'small');
   const whole = node('button', 'quiet derivation-all', 'All steps');
   whole.type = 'button'; whole.setAttribute('aria-pressed', 'false');
@@ -81,13 +81,14 @@ export function renderDerivation(block, renderVisual) {
     if (visual !== shown) { stage.replaceChildren(...(visual ? [renderVisual(visual)] : [])); shown = visual; }
     stage.hidden = !visual;
     counter.textContent = all ? `${items.length} steps` : `Step ${index + 1} of ${items.length}`;
-    prev.disabled = all || index === 0; next.disabled = all || index === items.length - 1;
+    prev.disabled = next.disabled = all || items.length < 2;
     whole.textContent = all ? 'Step through' : 'All steps';
     whole.setAttribute('aria-pressed', String(all));
     const [, entry] = items[index];
     status.textContent = all ? '' : `Step ${index + 1} of ${items.length}. ${plainText(entry.reason || '')}`;
   }
   box.append(stage, controls, status);
+  arrowPaging(box, prev, next);
   update();
   return box;
 }
