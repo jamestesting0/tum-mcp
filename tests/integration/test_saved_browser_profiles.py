@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from browser_consumer_fixture import saved_profile_journey
+from browser_consumer_fixture import saved_profile_journey, synthetic_browser_keychain
 from filelock import Timeout
 from playwright.sync_api import Page, sync_playwright
 
@@ -67,7 +67,8 @@ def test_manage_opens_profile_and_keeps_it_locked_until_its_windows_close(
 
     monkeypatch.setattr(manager, "choose", select)
     try:
-        manager.manage_browsers()
+        with synthetic_browser_keychain():
+            manager.manage_browsers()
         assert closed == [True]
         with profile_lock(selected):
             pass

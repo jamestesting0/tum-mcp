@@ -1,7 +1,8 @@
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 
 from filelock import Timeout
+from playwright._impl._errors import TargetClosedError
 from playwright.sync_api import BrowserContext, BrowserType, Error, sync_playwright
 
 from tum_mcp.browser_profiles import profile_lock
@@ -49,10 +50,12 @@ def login_context(
                 try:
                     yield context
                 finally:
-                    if context.browser is not None and context.browser.is_connected():
-                        retain_cookies(context, profile)
+                    with suppress(TargetClosedError):
+                        if context.browser is not None and context.browser.is_connected():
+                            retain_cookies(context, profile)
             finally:
-                context.close()
+                with suppress(TargetClosedError):
+                    context.close()
     except Timeout:
         raise BrowserSetupError("Saved browser profile is in use. Close it and retry.") from None
     except Error:

@@ -10,11 +10,14 @@ import json
 import os
 import sys
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TypedDict
+from unittest.mock import patch
 from urllib.parse import urlsplit
 
-from playwright.sync_api import Browser, BrowserType, Route, expect, sync_playwright
+from playwright.sync_api import Browser, BrowserContext, BrowserType, Route, expect, sync_playwright
 from study_browser_fixture import study_website
 
 from tum_mcp.browser_profiles import create_profile, remove_profile
@@ -45,6 +48,26 @@ class SmokeEvidence(TypedDict):
     widths: list[int]
 
 
+@contextmanager
+def synthetic_browser_keychain() -> Iterator[None]:
+    if sys.platform != "darwin":
+        yield
+        return
+    original = BrowserType.launch_persistent_context
+
+    def launch(engine: BrowserType, user_data_dir: str | Path, **options) -> BrowserContext:
+        options["ignore_default_args"] = [
+            flag
+            for flag in options.get("ignore_default_args", [])
+            if flag not in {"--password-store=basic", "--use-mock-keychain"}
+        ]
+        return original(engine, user_data_dir, **options)
+
+    with patch.object(BrowserType, "launch_persistent_context", launch):
+        yield
+
+
+@synthetic_browser_keychain()
 def saved_profile_journey(engine: BrowserType, choice: BrowserChoice) -> None:
     saved = create_profile(choice, "Synthetic profile")
     assert saved.profile is not None

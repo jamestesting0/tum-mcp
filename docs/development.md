@@ -141,7 +141,14 @@ The same journey runs from the installed wheel on all desktop OSes and both WSL
 engines. WSL verifies Windows browser transport and Windows-side saved-profile
 paths/permissions. No live account is used. Source coverage additionally checks
 profile creation/ownership, unavailable-choice fallback and last-selection
-defaults in real terminals. Run focused checks with:
+defaults in real terminals.
+
+macOS synthetic browser fixtures use Chromium's mock keychain to avoid OS approval
+prompts in isolated runner profiles; native OS credential-store round trips remain
+separate tests. Production saved profiles use native password storage. Linux source
+checks run under Xvfb so the profile manager's visible-window lifecycle is exercised.
+
+Run focused checks with:
 
 ```sh
 uv run pytest -q tests/unit/test_browser_profiles.py tests/integration/test_cli_terminal.py
