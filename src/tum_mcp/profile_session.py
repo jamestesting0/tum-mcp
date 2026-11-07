@@ -2,9 +2,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from filelock import Timeout
-from playwright.sync_api import BrowserContext, BrowserType, Error
+from playwright.sync_api import BrowserContext, BrowserType, Error, sync_playwright
 
 from tum_mcp.browser_profiles import profile_lock
+from tum_mcp.moodle.browser_runtime import browser_driver
 from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError
 from tum_mcp.profile_cookies import restore_cookies, retain_cookies
 from tum_mcp.profile_paths import profile_root, protect_directory, windows_driver_path
@@ -37,6 +38,11 @@ def login_context(
                 executable_path=browser.executable,
                 headless=headless,
                 args=[f"--profile-directory={profile.directory}"],
+                ignore_default_args=[
+                    "--enable-automation",
+                    "--password-store=basic",
+                    "--use-mock-keychain",
+                ],
             )
             try:
                 restore_cookies(context, profile)
@@ -54,3 +60,14 @@ def login_context(
             "Saved browser could not complete login. Close other windows using this profile "
             "and retry."
         ) from None
+
+
+def open_profile(browser: BrowserChoice) -> None:
+    if browser.profile is None:
+        raise BrowserSetupError("Choose a saved profile to open.")
+    with browser_driver(browser), sync_playwright() as driver:
+        with login_context(driver.chromium, browser) as context:
+            if not context.pages:
+                context.new_page()
+            while context.pages:
+                context.pages[0].wait_for_event("close", timeout=0)

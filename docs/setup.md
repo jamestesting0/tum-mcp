@@ -122,7 +122,11 @@ Profiles are created and managed only by TUM MCP; existing browser profiles cann
 be added. TUM MCP locks each saved directory against concurrent use and never
 reads saved passwords.
 
-Run **`tum-mcp manage browsers`** to create, rename or remove profiles.
+Run **`tum-mcp manage browsers`** to create, open, rename or remove profiles.
+Choose a profile, then **Open**, to keep its window open while you save passwords
+or manage browser settings. Close all its windows to return to the menu. This
+uses the browser's native password storage; TUM MCP does not read saved passwords.
+The managed-profile lock prevents simultaneous login or removal while it is open.
 Removing a profile deletes its browser data and encrypted session copy. Interactive logout
 offers to clear the selected services' sign-in from available saved profiles too,
 including shared TUM sign-in. Otherwise profiles remain signed in and can reconnect.

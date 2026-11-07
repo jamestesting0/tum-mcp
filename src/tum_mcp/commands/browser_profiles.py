@@ -21,6 +21,7 @@ from tum_mcp.moodle.browsers import BrowserChoice, BrowserSetupError, discover_b
 
 
 class Action(Enum):
+    OPEN = "open"
     SETUP = "setup"
     RENAME = "rename"
     REMOVE = "remove"
@@ -91,9 +92,22 @@ def manage_browsers() -> None:
                     console.print("Profile saved. Use tum-mcp login to sign in.")
                 case BrowserChoice(profile=profile) if profile is not None:
                     action = choose(
-                        profile.name, ((Action.RENAME, "Rename"), (Action.REMOVE, "Remove"))
+                        profile.name,
+                        (
+                            (Action.OPEN, "Open"),
+                            (Action.RENAME, "Rename"),
+                            (Action.REMOVE, "Remove"),
+                        ),
                     )
-                    if action == Action.RENAME:
+                    if action == Action.OPEN:
+                        from tum_mcp.profile_session import open_profile
+
+                        console.print(
+                            "Open the browser's settings to manage saved passwords. "
+                            "Close all profile windows to return here."
+                        )
+                        open_profile(selected)
+                    elif action == Action.RENAME:
                         rename_profile(selected, profile_name(profile.name))
                     else:
                         message = "Remove this profile and its saved browser data?"

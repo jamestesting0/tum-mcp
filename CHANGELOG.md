@@ -5,6 +5,8 @@
 ## 0.19.1 — 2026-11-07
 
 - Saved browser choices always show their profile name in parentheses.
+- `tum-mcp manage browsers` can open a saved profile until you close its window,
+  allowing password saving and browser settings through native browser storage.
 - Doctor reuses successful client probes for 24 hours while checking local
   registration and hooks every time. Changed configuration, runtime or environment
   invalidates the cache; `--refresh-clients` forces a fresh probe and failures retry.
