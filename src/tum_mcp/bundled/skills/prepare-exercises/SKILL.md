@@ -23,6 +23,18 @@ as Study; either workspace may be prepared first. No campus login is needed when
 the required sources are already stored. The shipped demo is a minimal component
 template, not necessarily a good model for teaching or question design.
 
+**Maths.** Everything a student reads that is mathematics is LaTeX in `\( ... \)`, one
+span per expression (JSON doubles each backslash). `study lint` reports `plain_math` and
+`math_word`, and readiness waits until both are gone:
+
+| Write | Not |
+| --- | --- |
+| `\(X = \{1, 2\}\)`, `\(Z = \emptyset\)` | X={1,2}, Z=∅ |
+| `\(P(a)\)`, `\(\neg P \lor Q\)`, `\(P \leftrightarrow Q\)` | P(a), ¬P ∨ Q, P↔Q |
+| `\(0.6 \cdot 200 + 0.4 \cdot (-300) = 0\)`, one span | 0.6·200 + …, or `\(0.6\)`·200 |
+| `\(P(A = \mathrm{true} \mid \mathrm{warning})\)` | `\(P(A=true \mid warning)\)` |
+| `\(\frac{0.4}{0.4 + 0.1} = 0.8\)` in a worked step | 0.4/(0.4+0.1) = 0.8 |
+
 1. Inspect the affected source records, the sets under `app/exercises/` (`sets.json` and
    one file per problem) and existing set/exercise IDs. Reuse local passages and source hashes. A missing
    binding goes through sync-course; retrieve only missing permitted sources with
@@ -48,7 +60,7 @@ template, not necessarily a good model for teaching or question design.
    For large programming tasks, add distilled practice per [coding](references/coding.md).
    Questions you write show their figure, code, diagram, UML diagram, formula, table or plot
    beside the text. Keep a released statement's wording but structure it by part, with
-   its givens as a table and its setting drawn ([content](references/content.md)). Every
+   its numeric givens as a table and its setting drawn ([content](references/content.md)). Every
    answer uses only what the student has been shown or asked to introduce. Students
    answer on paper and compare; do not impose typing or ratings.
 4. Write each problem in its own file, `app/exercises/<set>/<problem>.json`
@@ -60,6 +72,10 @@ template, not necessarily a good model for teaching or question design.
     the next question. Each Solution reveals only its part's answer, independently of the guide.
    Preserve unrelated Study/Exercise objects and template assets. Use the existing
    builder; do not create another site, tutor service or framework.
+   Link each problem: `prerequisites` name the Study passages it uses; when a cheatsheet
+   exists, add the problem to the `exercises` of the entries it practises.
+   `tum-mcp study links PROJECT` lists what is still undecided and records a reason when no
+   link fits.
 5. Finish Phase A of the [draft checks](../prepare-study/references/loop.md): build the
    batch, run `tum-mcp study visuals PROJECT --exercise SET/KEY` and `--interact`, and
    link every problem of each sheet in the

@@ -21,7 +21,7 @@ The schema describes the assembled document. On disk,
 `evidence` and `lectures: ["LECTURE_KEY"]`. Store each lecture object in
 `app/lectures/lectures/LECTURE_KEY.json`; do not put objects in the index or place
 the item beside the index. Each lecture has a stable key and title, the recording identity and date,
-a `summary` (at most 600 characters), the exact source key/SHA versions, its checked-at
+a `summary` (at most 600 characters: what the lecture teaches, never the recording or the notes), the exact source key/SHA versions, its checked-at
 time, coverage, `notes` (up to 100) and `highlights` (up to 40) in recording order.
 Either or both arrays may be empty; do not manufacture additions. Use the actual numeric
 course/recording IDs plus the opaque course slug; they are not interchangeable.
@@ -33,9 +33,21 @@ the message as `text` (at most 400; never a repeat of the context), `evidence` k
 an optional `passage` (`unit` and `block` of the Study passage that teaches the subject;
 the build checks it exists) and optional `sources`/`pages` as below. Note and highlight keys share one
 namespace per lecture. A note has no authored clip interval: its speech evidence
-locates its recording source, shown only inside the source control. Optional `image`
-uses the staged thumbnail object plus required descriptive `alt`; it is meaningful
-content displayed with the note, not a decorative preview.
+locates its recording source, and the note shows that moment as "Watch mm:ss".
+
+Write each note for a student who skipped the lecture: it must stand on its own.
+- `kind`: `clarification`, `example`, `exam tip`, `intuition` or `correction`.
+- `context`: the setup in one sentence (the slide's claim, the question asked).
+- `text`: the takeaway in one sentence, with its condition.
+- `steps` (at most 6): the working or procedure the lecturer gave, one action each.
+- `points` (at most 4): consequences, conditions or cases, one claim each.
+- Keep the lecturer's example when there was one; say why it matters for solving or the
+  exam; never repeat what the slides already state, and never narrate ("the lecturer says").
+
+Attach `image` (the staged thumbnail object plus a descriptive `alt`) when a frame of the
+slide or board carries the point: the diagram being explained, the example worked on the
+board, an annotated figure. Choose the frame where that content is complete and legible.
+No image for a title slide, the speaker or a slide that only repeats the text.
 
 Each highlight has:
 
@@ -51,7 +63,8 @@ Each highlight has:
 
 Highlights do not overlap. Inline math uses `\( ... \)`; the builder uses the existing
 safe math renderer. Do not repeat timestamps in titles or text; the app shows each
-range and links it to the recording.
+range and links it to the recording. A lecture title names its topic only, never the
+recording date, which the app already shows.
 
 Evidence kinds are `subtitle`, `asr` and `frame`. Each item has the recording ID, an
 original-time `interval: {start_s, end_s}` and the source key/SHA. Every highlight

@@ -60,12 +60,18 @@ exemption. Include
 notation, units and assumptions the answer depends on. A reference to “the graph above” breaks when the
 item is pooled. An optional `hint` recalls the idea without naming the option.
 
+Write the stem as one question a student could answer with the options covered. A
+context table has headers naming what it carries, never generic ones such as "Feature" or
+"Information" (`generic_table`). Avoid negative stems; when one is unavoidable, set NOT
+or EXCEPT in capitals (`negative_stem`).
+
 Write four distinct options by default; the schema sets the accepted range. Map
 each distractor to a plausible reasoning error, and verify every option under the
 stated assumptions. Revise ambiguous premises; never force a key. The app shows options
-in a stable shuffled order. Match option length/style; avoid joke options
-and all/none shortcuts. If no further meaningful option exists, change the task
-rather than adding filler.
+in a stable shuffled order. Match option length and grammar: a key much longer than the
+others (`key_longest`) or the only option repeating a stem word (`stem_key_overlap`)
+gives itself away. No joke options and no "all/none of the above" (`all_of_above`). If
+no further meaningful option exists, change the task rather than adding filler.
 
 Wrong-answer feedback identifies the earliest likely reasoning break and gives a
 small repair or recheck. Do not repeat the full solution for every distractor.

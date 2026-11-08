@@ -25,8 +25,10 @@ Read the cover and working instructions of each supplied paper, not only its que
 Record its exam date, format, duration, printed total points, allowed aids and language.
 Fill `profile` from the latest available sitting by the exam's actual date, not its
 upload date or filename. A supplied paper's stated facts are usable even when the
-upcoming exam's conditions have not yet been announced. In `profile.notes`, name the
-dated paper those facts describe; the Exam overview shows this basis below the facts.
+upcoming exam's conditions have not yet been announced. In `profile.notes`, write one
+sentence naming the dated paper those facts come from and any condition still unknown
+("From the 1 January 2022 mock; this year's aids are not yet announced."). Never describe
+the page or repeat the facts shown above it.
 Newer official instructions for the upcoming exam take precedence within their scope.
 Do not mix conflicting older-paper facts into the latest paper's profile or treat an
 unstated aid rule as permission. Leave a field unknown only when the selected evidence

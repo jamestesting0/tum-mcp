@@ -48,13 +48,17 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    Do not replace a complete procedure with its first step or omit a promised result.
    **Plan every item.** `.tum-mcp/plans/<item>.json` (for example `plans/study/dfs.json`)
    names the item's outcomes and each concept with its `kind` (definition, fact, rule,
-   procedure, algorithm, model, comparison), the worked `instance` that shows it and the
-   block keys that will teach it; an exercise plan names each `part` with its `answer` and
-   `method`. A kind brings a default shape (an algorithm is stepped through, a comparison is
-   a table); give `skip` with the reason when it does not fit. Read
+   procedure, algorithm, model, comparison, cases), the worked `instance` that shows it and
+   the block keys that will teach it; an exercise plan names each `part` with its `answer`
+   and `method`. A kind brings a default shape (an algorithm is stepped through, a
+   comparison is a table, a model is drawn, parallel `cases` are a table or one `example`
+   each); give `skip` with the reason when it does not fit. Choose the kind from the idea:
+   a comparison sets several things side by side on shared attributes, so an argument or
+   two options told in a sentence each is a `rule` or `fact`, not a table that repeats the
+   text beside it. Read
    `tum-mcp review checklist --profile PROFILE` first: author and checker read the same
-   checks, and the study-unit checklist points to a gate-passing exemplar with its plan and
-   answer key.
+   checks, and the checklist points to a gate-passing exemplar of that kind of item (with
+   its plan and answer key for a Study unit). Copy its shape, not its sentences.
    Study/Exercise plans name their source scope as `preparation: "ID"`. The existing
    plan checker reads its requirements first; approval binds their fingerprint.
    Changing requirements later requires a new plan check, not silently smaller coverage.
@@ -100,10 +104,12 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    again by the checkers, and the gate holds until each has a ruling.
 7. **Read the assembled draft once before browser checks.** Check prerequisites and
    Recall links against the content actually prepared, and consistency across items.
-   When other workspaces already exist, connect the new units to them: each exercise's
-   `prerequisites` and each cheatsheet concept's `units` that a new unit now teaches, and
-   the unit's `lectures` when that lecture has notes.
-   `tum-mcp study report PROJECT --section structure` names the ones without a link.
+   **Link across workspaces.** `tum-mcp study links PROJECT` lists every exercise,
+   cheatsheet entry, lecture note and unit without a link to a workspace that exists, with
+   candidate passages. Link each in its content (exercise `prerequisites`, concept `units` or
+   `passages`, note `passage`, unit `lectures`), or record why none fits with `--none ITEM
+   --target TARGET --reason TEXT`. New lessons reopen earlier "none" decisions; readiness
+   waits until every one is decided.
    Check the finished procedure's successful return/stop and unsuccessful exit literally;
    a correct worked trace does not repair an incomplete published instruction. Compare
    each planned practice contrast against the finished worked sections, including their

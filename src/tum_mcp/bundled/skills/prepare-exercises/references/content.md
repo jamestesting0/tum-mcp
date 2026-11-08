@@ -95,7 +95,9 @@ the sheet's framing ("This exercise should refresh your knowledge…", flagged a
 `statement_framing`) or its wall of text: give each part its own block titled with its number, enumerations as points,
 givens (numbers, costs, scoring rules) as a table and the setting as a figure or diagram
 beside it. The table replaces the sentence that listed the givens; keep the sentence's
-other words, not the numbers twice. A frame, table or figure that belongs to a part follows it untitled, so it
+other words, not the numbers twice. A statement without such givens gets no table: the
+cases its parts name (games, agents, activities) are not repeated as rows. Title a part
+with its number only ("(a)", "2."); its words follow once (`repeated_title`). A frame, table or figure that belongs to a part follows it untitled, so it
 sits under the part's heading ([headings](../../prepare-study/references/content.md#blocks)).
 State each assumption the answer depends on inside the part it constrains, as a point
 of its statement; do not add an assumptions or sources passage, because the citation

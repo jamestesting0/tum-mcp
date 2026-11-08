@@ -26,6 +26,18 @@ requested synthetic preview, run `tum-mcp study demo PROJECT` in a separate dire
 Weekly sheets and guided solutions use prepare-exercises in the same app; exam
 preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
 
+**Maths.** Everything a student reads that is mathematics is LaTeX in `\( ... \)`, one
+span per expression (JSON doubles each backslash). `study lint` reports `plain_math` and
+`math_word`, and readiness waits until both are gone:
+
+| Write | Not |
+| --- | --- |
+| `\(X = \{1, 2\}\)`, `\(Z = \emptyset\)` | X={1,2}, Z=∅ |
+| `\(P(a)\)`, `\(\neg P \lor Q\)`, `\(P \leftrightarrow Q\)` | P(a), ¬P ∨ Q, P↔Q |
+| `\(0.6 \cdot 200 + 0.4 \cdot (-300) = 0\)`, one span | 0.6·200 + …, or `\(0.6\)`·200 |
+| `\(P(A = \mathrm{true} \mid \mathrm{warning})\)` | `\(P(A=true \mid warning)\)` |
+| `\(\frac{0.4}{0.4 + 0.1} = 0.8\)` in a worked step | 0.4/(0.4+0.1) = 0.8 |
+
 ## Workflow
 
 1. **Scope.** A missing binding goes through sync-course with the requested course
@@ -37,9 +49,7 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
    teach them. Classify supporting passages with [Explore](references/explore.md);
    keep essential understanding and task dependencies in Content. Read
    `study report PROJECT --section coverage`: its `study_preparation` separates core
-   gaps, optional backlog and sources without recorded outcomes. Only confirmed core
-   gaps appear in the Study overview; optional and unknown states stay in agent reports.
-   Keep this ledger current as each batch is reviewed; never
+   gaps, optional backlog and sources without recorded outcomes. Keep this ledger current as each batch is reviewed; never
    infer preparation from a unit count or the student's browser progress.
    Choose one lecture, week or topic organization that follows course
    dependencies, with one category level (a second only for a large group); use a flat

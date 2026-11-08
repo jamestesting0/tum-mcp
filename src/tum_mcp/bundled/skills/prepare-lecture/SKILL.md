@@ -1,6 +1,6 @@
 ---
 name: prepare-lecture
-description: Prepare or update the Lecture workspace in a local TUM course app with concise notes for useful remarks and timestamped highlights for substantial worked explanations worth watching, checked against recordings and course materials, or address its comments. General lessons and practice use prepare-study.
+description: Prepare or update the Lecture workspace in a local TUM course app with self-contained notes for useful remarks and timestamped highlights for substantial worked explanations worth watching, checked against recordings and course materials, or address its comments. General lessons and practice use prepare-study.
 ---
 
 When `tum-mcp study status PROJECT` reports `course_memory: true`, use
@@ -11,17 +11,30 @@ When disabled, leave retained graph files unused and follow the ordinary workflo
 # Prepare Lecture
 
 Extract useful additions to the course materials. Short remarks, conditions,
-corrections and instructions become readable Notes. Highlights are substantial
-explanations worth following: worked reasoning, examples, demonstrations or sustained
-conceptual explanations. Every highlight has a time range and a recording thumbnail;
-notes have source links without prominent timestamps and may include a meaningful
-frame. A sourced inline-SVG `figure` can show a comparison the recording frame does
+corrections and instructions become Notes that a student who skipped the lecture can
+follow: setup, takeaway, and the lecturer's working as steps when there was some.
+Highlights are substantial explanations worth following: worked reasoning, examples,
+demonstrations or sustained conceptual explanations. Every highlight has a time range and
+a recording thumbnail; a note shows its moment as "Watch mm:ss" and may include a frame of
+the slide or board that carries its point. A sourced inline-SVG `figure` can show a comparison the recording frame does
 not make clear; reuse the Study figure schema and keep it distinct from the captured
 `image`. Neither section is mandatory. Do not recreate Study or add assessment controls.
 
 This is an optional extension: `tum-mcp install lecture`. Its cached authoring
 workflow does not require a campus session. See [sources](references/sources.md)
 when connecting, preparing missing evidence or capturing frames.
+
+**Maths.** Everything a student reads that is mathematics is LaTeX in `\( ... \)`, one
+span per expression (JSON doubles each backslash). `study lint` reports `plain_math` and
+`math_word`, and readiness waits until both are gone:
+
+| Write | Not |
+| --- | --- |
+| `\(X = \{1, 2\}\)`, `\(Z = \emptyset\)` | X={1,2}, Z=∅ |
+| `\(P(a)\)`, `\(\neg P \lor Q\)`, `\(P \leftrightarrow Q\)` | P(a), ¬P ∨ Q, P↔Q |
+| `\(0.6 \cdot 200 + 0.4 \cdot (-300) = 0\)`, one span | 0.6·200 + …, or `\(0.6\)`·200 |
+| `\(P(A = \mathrm{true} \mid \mathrm{warning})\)` | `\(P(A=true \mid warning)\)` |
+| `\(\frac{0.4}{0.4 + 0.1} = 0.8\)` in a worked step | 0.4/(0.4+0.1) = 0.8 |
 
 1. Read the bound project's `.tum-mcp/course.md`, relevant source records and
    existing notes and highlights. Preserve the course, app layout, IDs and unrelated
@@ -52,8 +65,9 @@ when connecting, preparing missing evidence or capturing frames.
    `--frame-at`, at a moment that shows the highlight's topic. Look at every frame
    yourself: it must show what the highlight is about. Use it to confirm names and
    notation; check clip boundaries against speech, not a later still. Stage
-   each thumbnail with `lecture thumbnail`. Capture a note image only when the visual
-   itself carries necessary information; notes otherwise need no frame.
+   each thumbnail with `lecture thumbnail`. Capture a note image when the slide or board
+   carries the note's point (the diagram explained, the example worked on the board);
+   notes otherwise need no frame.
 6. Reconcile safe source receipts when needed, then author each lecture's file under
    `app/lectures/lectures/KEY.json`; the `lectures` array in
    `app/lectures/lectures.json` lists keys, with shared `evidence` beside it.
@@ -65,6 +79,8 @@ when connecting, preparing missing evidence or capturing frames.
    Omit missing or uncertain speech with that reason; a note or highlight may not include
    it. These recorded limits go to the reviewer and do not hold readiness.
    Comparing topic names alone is insufficient. Raw media and transcripts stay private.
+   Link each note's `passage` to the Study block that teaches it and add the lecture to
+   those units' `lectures`; `tum-mcp study links PROJECT` lists what is still undecided.
 7. Run `tum-mcp lecture check PROJECT` and fix every error. Check notes and their context
    against the reported speech, keeping conditions and attribution. Verify the
    full selected explanation, not just the printed opening/closing excerpts, against

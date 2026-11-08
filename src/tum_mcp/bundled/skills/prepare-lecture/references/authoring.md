@@ -89,10 +89,13 @@ retained context can support a note and a highlight with distinct purposes.
 
 ## Writing
 
-- A note states one useful claim, usually in one or two sentences. Include its
-  conditions and concrete mathematical objects; use inline formulas or a frame
-  rather than describing a visual object only in words. Do not turn notes into
-  long lessons or add a thumbnail merely for decoration.
+- A note states one useful claim (`text`, one sentence with its condition) and keeps
+  what a student who skipped the lecture needs to follow it: the lecturer's working or
+  example as `steps`, consequences or cases as `points`, and a frame when the slide or
+  board carries the point ([content](content.md)). Include concrete mathematical
+  objects; use inline formulas or a frame rather than describing a visual object only in
+  words. A note stays one idea: reasoning that takes minutes to follow is a highlight,
+  and a thumbnail is never decoration.
 - Give every note what it concerns and why it matters, for a student who missed the
   lecture. The `title` names the subject in the course's terms ("BFS on a disconnected
   graph", "Correction to the Dijkstra slide", "Exam: allowed aids"). The `context` sets
@@ -114,8 +117,8 @@ retained context can support a note and a highlight with distinct purposes.
   adds without reproducing the entire worked solution below its preview.
 - State ideas directly. Never narrate the recording ("In this part", "The professor
   says"). Attribution is useful for stated exam scope or course instructions; preserve
-  it there. Quote only verified wording. The app supplies highlight ranges and hides
-  note times in their source controls.
+  it there. Quote only verified wording. The app shows highlight ranges and each note's
+  moment as "Watch mm:ss"; never repeat times in text.
 - Write symbols and formulas as inline LaTeX `\( ... \)`. Take names, terms and
   notation from the slides or the frame, not from recognized speech alone.
 - The lecture summary is one to three sentences about the lecture's scope.

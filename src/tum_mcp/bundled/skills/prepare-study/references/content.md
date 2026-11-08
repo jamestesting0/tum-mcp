@@ -46,7 +46,8 @@ card faces, question options and feedback. JSON escapes the backslashes:
 - Greek letters, relations and operators: `\(\gamma\)`, `\(0 \le \gamma < 1\)`,
   `\(x \neq y\)`, `\(\forall x\, P(x)\)`, never γ, ≤, ≠ or ∀ as characters.
 - Conditionals and functions: `\(P(A \mid B)\)`, `\(Q(s, a)\)`, `\(\log_2 p\)`.
-  Word operands take `\mathrm{}`: `\(e = \mathrm{output} - \mathrm{reference}\)`.
+  Word operands and values take `\mathrm{}`: `\(e = \mathrm{output} - \mathrm{reference}\)`,
+  `\(P(A = \mathrm{true})\)`; a bare word renders as italic letters multiplied (`math_word`).
 - Calculations: the whole line, `\(1 + 0.5 \times 3 = 2.5\)`, so the student reads one
   expression. `study report` still recomputes it.
 - Sub- and superscripts: `\(V_0(S)\)`, `\(b^{*}\)`, `\(2^{2}\)`, never V₀ or b*.
@@ -123,8 +124,10 @@ on; citations open there, and later pages can differ from the printed slide numb
 
 | Block | Provide |
 | --- | --- |
-| text | Paragraphs, numbered `steps` and/or points; never an empty explanation. Paragraphs frame (one or two sentences); a procedure is steps and conditions are points. An item opening with a short `Label: ` shows the label in bold. |
+| text | Paragraphs, numbered `steps` and/or points; never an empty explanation. Paragraphs frame (one or two sentences); a procedure is steps and conditions are points; at most two paragraphs run in a row in a section. An item opening with a short `Label: ` shows the label in bold. |
 | definition | A `term`, the `statement` and optional `conditions`, placed right after the passage that introduces the term: it appears inside that section as the term above its full-width meaning, with no heading of its own. Give it a `key`. Write `{{term}}` in later text, in every workspace, to open its definition and an **Open in Study** link to the original block, including from another unit. Reuse this for earlier-concept references; the build rejects unknown terms. |
+| example | A worked case read whole: optional `given` lines (the setting, up to 8), `steps` (the working, up to 10) and the `result`, which the app emphasises. Math in LaTeX. |
+| callout | `tone: pitfall` with `situation`, `wrong`, `right` and `why` (shown like an Exam pattern pitfall), or `tone: note` with one `text`: a condition or limit the passage does not already state. At most one per section; never a repeat of the lead sentence. |
 | formula | LaTeX without dollar delimiters (JSON-escaped, e.g. `"\\frac{a}{b}"`), a plain-language reading and symbol definitions (see `variables.md`). A reusable rule states its domain (\(a^2+b^2 > 0\)) and when to reach for it in `conditions`; a formula of givens has none. Unsupported macros, links and unsafe markup fail validation. |
 | derivation | Working the student should be able to redo: `groups` of `lines`, each line one meaningful transformation as LaTeX (a line opening with `=` or another relation continues the line above, and the app aligns the lines on their relation; givens go one per line or in the text before, never as a comma list in one line) with a short `reason` saying which rule, substitution or condition makes it follow. `symbols` gives a variable a clickable meaning where a reader would stop to recall it ([variable meanings](variables.md)). When one answer gives several results, give each its own group with a `label` naming the result. Do not split a trivial result into ceremony. Set `walkthrough: true` to step through the lines with Previous and Next (earlier lines stay visible, "Show all steps" reads everything); in a walkthrough a line may carry a `visual` (a table, diagram, plot or figure block) drawing the state that line reaches, such as amplitudes or a vector on the Bloch sphere. Use a walkthrough when several dependent transformations or a changing state are the point; never as decoration. A walkthrough never asks the student to predict: prediction belongs in an exercise step. |
 | table | Column labels, rectangular rows and a meaningful caption. |
@@ -141,8 +144,8 @@ objective, prompt, level, up to three context `blocks` (a figure, code, diagram,
 table, tree, UML or plot block), options with individual feedback, one correct key, an
 explanation, an optional `hint` and sources. A question about a concept may stand alone.
 A question that needs data shows it in its picture and keeps the prompt to the question;
-a one-row table that repeats the prompt is filler. Write four plausible options by
-default; the schema sets the accepted range. Every objective needs a question; counts
+a one-row table that repeats the prompt is filler. Write options as in
+[practice](practice.md). Every objective needs a question; counts
 follow learning needs, not quotas. A unit's optional `lectures` names the Lecture
 that cover it.
 

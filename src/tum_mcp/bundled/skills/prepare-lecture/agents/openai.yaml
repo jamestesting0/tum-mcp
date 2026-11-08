@@ -1,6 +1,6 @@
 interface:
   display_name: "Prepare Lecture"
-  short_description: "Prepare concise notes and highlights worth watching"
-  default_prompt: "Use $prepare-lecture to extract concise notes and substantial worked explanations worth watching from my selected lecture recordings, compared with the course materials."
+  short_description: "Prepare self-contained notes and highlights worth watching"
+  default_prompt: "Use $prepare-lecture to extract self-contained notes and substantial worked explanations worth watching from my selected lecture recordings, compared with the course materials."
 policy:
   allow_implicit_invocation: true

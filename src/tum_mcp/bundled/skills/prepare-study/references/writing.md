@@ -8,6 +8,9 @@ that only talks about the material, the page or the writing is removed.
 
 Working memory holds only a few new elements, so a learner studies a procedure one stage at
 a time. Prose frames an idea in one or two sentences; everything else is structure.
+At most two paragraphs run in a row within a section before points, steps, an example, a
+table, a figure or a formula (`prose_run`). Restructure a longer run into the shape its
+content has; keep every idea and the sentences that link one shape to the next.
 
 - **Procedure or algorithm**: one lead sentence saying what it computes, then a complete
   procedure: labelled `steps`, source-style pseudocode or a flowchart. Choose the form
@@ -20,9 +23,10 @@ a time. Prose frames an idea in one or two sentences; everything else is structu
   In pseudocode, indentation shows that scope. Keep stages short without deleting
   their governing instructions. Conditions and guarantees follow as labelled `points`: "Converges when: …",
   "Approximation: …". The app shows each label in bold.
-- **Worked example**: its own section after the procedure. Give the setting first (a
-  table, points or a figure), then one computed value per step, labelled with the
-  sub-result it reaches:
+- **Worked example**: its own section after the procedure. A case read whole is an
+  `example` block: `given` (the setting), `steps` and the `result`; a story in paragraphs
+  ("Suppose ...", "For example ...") hides the working. One computed value per step,
+  labelled with the sub-result it reaches:
   "First backup: \(Q(\mathrm{continue}) = 1 + 0.5 \times 3 = 2.5\), below 3."
   End with the conclusion as the last step. Several states over several rounds are a
   `walkthrough`, each step with its reason ([representations](representations.md#algorithm-traces)).

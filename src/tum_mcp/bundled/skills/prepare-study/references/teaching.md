@@ -30,7 +30,7 @@ like any filler.
 | Name the parts first | The mechanism has several new parts to track (poles, angle, phase) | One new term |
 | Labelled steps, then a worked example | A procedure or calculation with interacting steps: one computed value per step, a `derivation`, or a trace; a `walkthrough` when the state changes line by line | Definitions and single facts: practise them instead |
 | Running example | Several concepts act on one setting; keep its givens unchanged | Independent concepts, or a contrast needs another case |
-| Contrast, non-example or misconception | The idea is easily confused with a neighbour, or students hold a known wrong belief | Nothing nearby to confuse |
+| Contrast, non-example or misconception | The idea is easily confused with a neighbour, or students hold a known wrong belief; a wrong move made at one moment is a `pitfall` callout (at most one per section) | Nothing nearby to confuse |
 | General rule after the case | A reusable rule exists: a formula block with every symbol, its conditions and when to use it; another application only if it tests a new condition or misconception | Descriptive or one-off content; extra arithmetic that tests only an already-known operation |
 | Relation sentence | The next idea follows from, or contrasts with, this one and a first-time reader could not infer it | Parallel cases: a table or one framing line |
 | Recap of two to four points | Several ideas to retrieve | A short single-idea unit |

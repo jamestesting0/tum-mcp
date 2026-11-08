@@ -10,7 +10,10 @@ shape each idea has; prose says only what the picture cannot.
 | A term students must learn | A `definition` block; mark later mentions `{{term}}` |
 | A reusable procedure or algorithm | Labelled steps with explicit repeat ranges, source-style pseudocode or a flowchart; preserve all branches and exits |
 | A concrete run of an algorithm or process | A `walkthrough` over the graph, table, code, working, plot or figure it changes: each step an action with its `why`, the `state` rows the student would otherwise track; its "All steps" view is the trace table |
-| Parallel cases (games, environments, designs) | A table with one row per case, or a list |
+| Parallel cases (games, environments, designs) | A table with one row per case, or a list; when each case needs its own working, one `example` per case |
+| One worked case read whole (a classification, a calculation, applying a definition) | An `example`: what is `given`, the `steps` and the `result`; a state that changes step by step is a `walkthrough` instead |
+| The wrong move students make at one moment | A `callout` with `tone: pitfall`: the situation, the wrong and the right move, why |
+| A condition or limit of the rule just stated | A `callout` with `tone: note`, one or two sentences that add something the text does not say |
 | A rule or value that depends on two inputs | A decision matrix: one input down the side, the other across the top, the result in each cell |
 | Choosing a method, model or case from a problem's properties | A decision table: one row per choice, a column per deciding property, so the student reads off which properties pick it |
 | A conditional probability from counts (tests, diagnoses, filters) | A natural-frequency table or tree of whole counts first, then the ratio as a formula; counts are easier to reason with than percentages |
@@ -21,7 +24,7 @@ shape each idea has; prose says only what the picture cannot.
 | A calculation the student should redo, or a derivation | A `derivation`: one transformation per line with its reason, a labelled group per requested result |
 | A transformation of a state over several steps (a gate on a qubit, a row reduction, a Bayes update) | A `walkthrough` with a formula stage (one line of working per step, the reason as its `why`), or a `derivation` with `walkthrough` when each line draws its own picture |
 | Two methods or inputs on the same problem | A `walkthrough` with a `variant`: both runs on one stage, and the `contrast` where they part |
-| A worked case of a reusable rule | The worked case, then the rule as a formula block with conditions and when to use it; another case only if it tests a new decision, condition or misconception |
+| A worked case of a reusable rule | The worked case (an `example`), then the rule as a formula block with conditions and when to use it; another case only if it tests a new decision, condition or misconception |
 | A matrix, vector or state named in the text | The object itself in LaTeX (inline up to 2x2, else a formula block), never a description of its entries |
 | Classes, relations, interactions, behaviour over events | A UML class, sequence or state diagram, written as in [diagrams](diagrams.md) |
 | An algorithm whose branches or loops are the point | A flowchart (`uml`, `diagram: flowchart`); a straight procedure stays numbered steps |

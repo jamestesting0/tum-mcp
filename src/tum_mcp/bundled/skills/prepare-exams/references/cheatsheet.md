@@ -101,7 +101,10 @@ Use the course's notation and language, set as in
 repeating it in another entry. When Study exists, every concept names in `units` the
 units that teach it; its line and details compress that lesson, never copy it. When one
 Study block teaches the concept, name it in `passages` (`unit` and `block`): the Recall row
-on patterns and solutions opens that passage beside the page.
+on patterns and solutions opens that passage beside the page. When Exercises exist, list in
+`exercises` the problems that practise the concept; those exercises then recall the entry and
+its patterns. `tum-mcp study links PROJECT` lists every entry and exercise still without a
+link and records a reason when none fits; readiness waits for every decision.
 
 Revision support does not authorize expanding a narrowly scoped Study lesson. If the
 sheet needs methods the requested lesson does not teach, record that gap. When the

@@ -24,6 +24,18 @@ count, rate, order, map position and blueprint; the schema has no count fields.
 Publishing the course app includes prepared Exam content; original documents and
 source citations stay local. Use publish-course for a publication request.
 
+**Maths.** Everything a student reads that is mathematics is LaTeX in `\( ... \)`, one
+span per expression (JSON doubles each backslash). `study lint` reports `plain_math` and
+`math_word`, and readiness waits until both are gone:
+
+| Write | Not |
+| --- | --- |
+| `\(X = \{1, 2\}\)`, `\(Z = \emptyset\)` | X={1,2}, Z=∅ |
+| `\(P(a)\)`, `\(\neg P \lor Q\)`, `\(P \leftrightarrow Q\)` | P(a), ¬P ∨ Q, P↔Q |
+| `\(0.6 \cdot 200 + 0.4 \cdot (-300) = 0\)`, one span | 0.6·200 + …, or `\(0.6\)`·200 |
+| `\(P(A = \mathrm{true} \mid \mathrm{warning})\)` | `\(P(A=true \mid warning)\)` |
+| `\(\frac{0.4}{0.4 + 0.1} = 0.8\)` in a worked step | 0.4/(0.4+0.1) = 0.8 |
+
 ## Workflow
 
 1. **Scope.** Read the handbook's assessment section, then
@@ -46,9 +58,10 @@ source citations stay local. Use publish-course for a publication request.
 4. **Cheatsheet** ([cheatsheet](references/cheatsheet.md)). Record every kind of
    exam-relevant source material; give each its form, its line first and the rest behind
    Expand; link dependent or contrasting ideas.
-5. **Patterns.** A short workflow that solves every member, with a decision step where
-   the method forks; recognition cues from the question text, the formula, rule or code
-   each step and case applies,
+5. **Patterns** ([patterns](references/patterns.md)). A short workflow that solves every
+   member, with a decision step where the method forks; recognition cues from the question
+   text, the formula, rule or code each step and case applies (a step that computes shows
+   its formula, never a description of it in words),
    marking points, pitfalls shown in their situation as wrong/right/why, worked practice that applies every
    workflow step and covers each case once, and a drill that practises every case again
    with help initially hidden. Each drill also supplies an optional staged `guide`

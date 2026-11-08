@@ -59,8 +59,11 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   words, inline math allowed), `math` (up to four display formulas, written exactly as
   the answer uses them) and `code` with its `language` (the lines this step writes). Give
   it when the visible line names a formula, rule, answer frame or code the student still
-  needs to see, so "form the weighted projectors" never stands alone. A complete one-line
-  verbal rule can stand alone. An expansion adds a missing formula, code, condition or
+  needs to see, so "form the weighted projectors" never stands alone. A step that
+  computes a value shows the formula it computes with, in `math` or inline in `text`
+  (\(EU(a) = \sum_s P(s \mid a)\,U(s)\)); "multiply each utility by its probability and
+  sum" in words is not a formula (`bare_workflow`). A complete one-line verbal rule with
+  nothing to compute can stand alone. An expansion adds a missing formula, code, condition or
   useful working detail; never copy or merely paraphrase `do` or `then` into `apply.text`.
   Omit `apply` when opening it would add nothing. The answer's shape (a proof frame, a table to fill, a code skeleton) is
   split over the steps that write it; there is no separate template. An applied formula
