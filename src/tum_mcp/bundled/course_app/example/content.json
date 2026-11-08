@@ -106,6 +106,49 @@
           ]
         },
         {
+          "kind": "text",
+          "title": "Worked example",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "A worked case shows what is given, the working and the result together."
+          ]
+        },
+        {
+          "kind": "example",
+          "sources": [
+            "components"
+          ],
+          "given": [
+            "A list of \\(n = 4\\) values: 2, 4, 4, 6"
+          ],
+          "steps": [
+            "Sum: \\(2 + 4 + 4 + 6 = 16\\).",
+            "Divide by the count: \\(\\frac{16}{4}\\)."
+          ],
+          "result": "The mean is \\(4\\)."
+        },
+        {
+          "kind": "callout",
+          "sources": [
+            "components"
+          ],
+          "tone": "pitfall",
+          "situation": "Averaging a list that has a repeated value.",
+          "wrong": "Count each distinct value once: \\(\\frac{2 + 4 + 6}{3} = 4\\).",
+          "right": "Count every entry: \\(\\frac{2 + 4 + 4 + 6}{4} = 4\\).",
+          "why": "The two results agree here only by chance; repeated entries carry weight."
+        },
+        {
+          "kind": "callout",
+          "sources": [
+            "components"
+          ],
+          "tone": "note",
+          "text": "The mean exists only for a nonempty list."
+        },
+        {
           "kind": "table",
           "title": "Table",
           "sources": [

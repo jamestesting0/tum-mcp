@@ -10,9 +10,9 @@ export const topics = [...exam.topics].sort((a, b) => a.order - b.order || a.key
 export const variants = exam.sittings.flatMap(sitting => sitting.variants.map(variant => ({ sitting, variant })));
 export const pastQuestions = new Map(variants.flatMap(({ sitting, variant }) => variant.questions.map(question => [question.key, { sitting, variant, question }])));
 
+// How often the pattern was asked; the table below names each exam, so no label repeats here.
 export function seen(statistics) {
-  const base = `In ${statistics.sittings_seen} of ${statistics.sittings_considered} past exams`;
-  return statistics.last_label ? `${base} (last: ${statistics.last_label})` : base;
+  return `In ${statistics.sittings_seen} of ${statistics.sittings_considered} past exams`;
 }
 export function conceptBadge(concept) {
   const stats = exam.statistics.concepts[concept.key], total = exam.statistics.sittings_considered;

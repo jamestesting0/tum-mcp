@@ -998,9 +998,44 @@ def divergence(block: WalkthroughBlock) -> int | None:
     return min(len(first), len(second)) if len(first) != len(second) else None
 
 
+class ExampleBlock(Sourced):
+    """A worked case read whole: what is given, the working and the result it reaches. A case
+    that changes a state step by step is a walkthrough; a calculation to redo, a derivation."""
+
+    kind: Literal["example"]
+    given: tuple[Text, ...] = Field(default=(), max_length=8)
+    steps: tuple[Text, ...] = Field(default=(), max_length=10)
+    result: Text
+
+
+class CalloutBlock(Sourced):
+    """One idea set apart from the running text: a pitfall, or a condition or limit."""
+
+    kind: Literal["callout"]
+    tone: Literal["pitfall", "note"]
+    # A note: a condition or limit in one or two sentences, never a repeat of the text above.
+    text: Text | None = None
+    # A pitfall reads as in Exam patterns: the moment it happens, the wrong and right move, why.
+    situation: Text | None = None
+    wrong: Text | None = None
+    right: Text | None = None
+    why: Text | None = None
+
+    @model_validator(mode="after")
+    def shaped(self) -> "CalloutBlock":
+        pitfall = (self.situation, self.wrong, self.right, self.why)
+        if self.tone == "pitfall" and (self.text or not all(pitfall)):
+            raise ValueError("A pitfall callout gives situation, wrong, right and why only.")
+        if self.tone != "pitfall" and (not self.text or any(pitfall)):
+            raise ValueError("A note callout holds one text.")
+        return self
+
+
 Block = Annotated[
     TextBlock
     | DefinitionBlock
+    | ExampleBlock
+    | CalloutBlock
     | FormulaBlock
     | DerivationBlock
     | TableBlock

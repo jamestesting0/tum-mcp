@@ -164,6 +164,11 @@ def test_notes_only_highlights_only_and_empty_selection(
         first = lecture["highlights"][0]
         lecture["notes"][0]["image"] = first["thumbnail"] | {"alt": "A path from A to B to C."}
         lecture["notes"][0]["evidence"] += first["evidence"]
+        study_path = content_file(lecture_project, "study")
+        study = json.loads(study_path.read_bytes())
+        study["units"][0]["blocks"][0]["key"] = "first-block"
+        study_path.write_text(json.dumps(study))
+        lecture["notes"][0]["passage"] = {"unit": study["units"][0]["key"], "block": "first-block"}
     if kind != "notes":
         lecture["notes"] = []
     if kind != "highlights":
@@ -186,10 +191,18 @@ def test_notes_only_highlights_only_and_empty_selection(
             image.evaluate("image => image.decode()")
             assert page.locator(".lecture-when,.lecture-thumb").count() == 0
             page.locator(".lecture-note .citation summary").click()
-            expect(page.locator(".lecture-note .citation .lecture-time")).to_have_attribute(
+            expect(page.locator(".lecture-note .lecture-time")).to_have_attribute(
                 "href", "https://example.invalid/lectures/synthetic?t=20"
             )
             page.keyboard.press("Escape")
+            # The note's moment and its Recall link read as one line.
+            centers = page.locator(".lecture-note-foot").evaluate(
+                """foot => [foot.querySelector('span').firstChild, foot.querySelector('button')]
+                    .map(node => { const range = document.createRange();
+                      range.selectNodeContents(node); const box = range.getBoundingClientRect();
+                      return (box.top + box.bottom) / 2; })"""
+            )
+            assert abs(centers[0] - centers[1]) <= 1, centers
             page.evaluate("location.hash = '#lectures/bfs-lecture/n-adjacency'")
             expect(page.locator(".lecture-note")).to_be_focused()
         elif kind == "empty":

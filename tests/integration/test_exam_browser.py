@@ -214,6 +214,8 @@ def test_patterns_drills_and_worked_practice(
         ["Design an Observer", "Build a part-whole tree", "Swap an algorithm"]
     )
     expect(page.locator(".exam-instances tbody tr")).to_have_count(3)
+    # The table names each past exam, so the header does not repeat the last one.
+    assert "(last:" not in page.locator("main").inner_text()
     # The decision step lists its cases; the pitfall shows its wrong and right lines.
     expect(page.locator(".workflow-cases li")).to_have_count(2)
     # What a step or case applies opens under it; the answer template is no separate section.

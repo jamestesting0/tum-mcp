@@ -13,6 +13,8 @@
   /* Spacing by relationship (docs: app.md, Spacing and alignment): a control to the panel it
      opens, content to its own control (Guide, Solution, Hint), sibling items, sections. */
   --space-inside: var(--s2); --space-related: var(--s4); --space-between: var(--s6); --space-section: var(--s12);
+  /* Content: a heading to its first block, and one block to the next, inside any passage. */
+  --space-heading: var(--s3); --space-block: var(--s4);
   --r1: 6px; --r2: 12px; --measure: 36em; --outline: 256px;
   --text-small: 14px; --text-ui: 15px; --text-body: 18px; --text-subsection: 20px; --text-section: 24px;
   --font-ui: 'Atkinson Hyperlegible Next', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
@@ -264,7 +266,7 @@ button.player-big:hover { background: var(--player-accent); color: #000; }
   .player-time { padding: 0 var(--s1); }
 }
 .video-links { margin-top: var(--s2); }
-.section-heading { display: flex; align-items: flex-start; gap: var(--s2); margin-bottom: var(--s3); }
+.section-heading { display: flex; align-items: flex-start; gap: var(--s2); margin-bottom: var(--space-heading); }
 .section-heading > :is(h2, h3, h4, h5, h6) { flex: 1; min-width: 0; padding-block: var(--s1); }
 /* Section levels step down in size: a subsection reads as part of the section above it. */
 .section-heading > h3 { font-size: var(--text-subsection); line-height: 1.4; }
@@ -324,6 +326,7 @@ button.contents-toggle:hover, button.contents-toggle[aria-expanded="true"] { bac
    on wide screens and below it on phones. */
 .derivation { margin-block: var(--s6); }
 .derivation-label { margin: var(--s4) 0 var(--s2); font-weight: 600; }
+.derivation > .derivation-label:first-child { margin-top: 0; }
 .derivation-lines { display: grid; grid-template-columns: minmax(0, max-content) max-content minmax(0, 1fr); gap: var(--s3) var(--s2); margin: 0; padding: 0; list-style: none; }
 .derivation-line { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: baseline; row-gap: var(--s1); }
 .derivation-math { display: contents; }
@@ -396,9 +399,9 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 .diagram.static .diagram-state { min-height: 0; padding-bottom: 0; }
 
 /* A hard idea one step at a time: numbered, with room between the steps. */
-.block-body ol.steps { display: grid; gap: var(--s3); margin: var(--s3) 0 0; padding: 0; list-style: none; counter-reset: step; }
-.block-body ol.steps > li { position: relative; padding-inline-start: 2.2em; counter-increment: step; }
-.block-body ol.steps > li::before { content: counter(step); position: absolute; inset-inline-start: 0; top: .05em; display: grid; place-items: center; width: 1.55em; height: 1.55em; border-radius: 50%; background: var(--surface); color: var(--accent); font-size: var(--text-ui); font-weight: 650; }
+:is(.block-body, .lecture-note) ol.steps { display: grid; gap: var(--s3); margin: var(--s3) 0 0; padding: 0; list-style: none; counter-reset: step; }
+:is(.block-body, .lecture-note) ol.steps > li { position: relative; padding-inline-start: 2.2em; counter-increment: step; }
+:is(.block-body, .lecture-note) ol.steps > li::before { content: counter(step); position: absolute; inset-inline-start: 0; top: .05em; display: grid; place-items: center; width: 1.55em; height: 1.55em; border-radius: 50%; background: var(--surface); color: var(--accent); font-size: var(--text-ui); font-weight: 650; }
 
 /* A drawn figure: strokes and text follow the theme; classes pick theme colours, never fixed ones. */
 .figure { margin: var(--s4) 0 0; }
@@ -433,7 +436,9 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 
 /* Terms stay in their passage, above their full-width meaning. */
 .definitions { display: grid; gap: var(--s3); margin: var(--s4) 0 0; padding-inline-start: var(--s4); border-inline-start: 2px solid var(--accent); }
-.block-body > .definitions:first-child, .reading-material > .definitions:first-child { margin-top: 0; }
+/* A block starts flush with its body: the space before it belongs to its container (a heading,
+   a prompt, the previous block), so margins never stack at a container's edge. */
+.block-body > :first-child, .reading-material > .definitions:first-child { margin-top: 0; }
 .definition-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s1); scroll-margin-top: var(--s6); }
 .definition-item dt { font-weight: 650; }
 .definition-item dd { margin: 0; }
@@ -470,7 +475,7 @@ button.term-more { align-self: flex-start; min-height: 0; padding: 0; border: 0;
 /* One labelled answer per original part. */
 .solution-answers { display: flex; flex-direction: column; gap: var(--s6); }
 .solution-label { margin: 0 0 var(--s2); font-size: var(--text-ui); font-weight: 650; }
-.model-answer > .block-body + .block-body { margin-top: var(--s4); }
+.model-answer > .block-body + .block-body { margin-top: var(--space-block); }
 
 /* A Study passage opened beside an exercise; full screen on narrower displays. */
 .reference-panel { position: fixed; inset: 0 0 0 auto; z-index: 8; width: min(440px, 100vw); max-width: none; height: 100dvh; max-height: none; margin: 0; padding: var(--s6); overflow: auto; overscroll-behavior: contain; border: 0; border-inline-start: 1px solid var(--line); color: var(--ink); background: var(--canvas); }
@@ -555,7 +560,7 @@ button.term-more { align-self: flex-start; min-height: 0; padding: 0; border: 0;
 .practice-question { margin: var(--s6) 0; }
 .card-actions { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s6); }
 .question-context { margin: 0 0 var(--s6); }
-.question-context > .block-body + .block-body { margin-top: var(--s4); }
+.question-context > .block-body + .block-body { margin-top: var(--space-block); }
 /* A hint reads the same in Practice, a Guide and an Exam pattern: a quiet rule beside the text. */
 .question-hint, .exercise-hints > p, .exam-guided-step > .disclosure.plain > p { padding: var(--s2) var(--s4); border-inline-start: 2px solid var(--line); color: var(--ink); }
 .question-hint { margin: var(--s4) 0 0; }
@@ -563,7 +568,7 @@ button.term-more { align-self: flex-start; min-height: 0; padding: 0; border: 0;
 .exam-guided-step > .disclosure.plain > p { margin: var(--s2) 0 0; font-size: var(--text-ui); }
 .exercise-sheet.group-start { margin-top: var(--s2); }
 fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
-legend { padding: 0; margin-bottom: var(--s6); font-size: var(--text-body); font-weight: 500; line-height: 1.5; }
+legend { padding: 0; margin-bottom: var(--space-related); font-size: var(--text-body); font-weight: 500; line-height: 1.5; }
 
 /* Choice rows, shared by practice questions, exercise checks and the review dialog. */
 .option { --panel: var(--surface); display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s4); margin-block: var(--s2); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); cursor: pointer; font-size: var(--text-body); line-height: 1.5; }
@@ -762,7 +767,7 @@ h1 > .comment-marker { margin-inline-start: var(--s2); }
 .exercise-disclosure { min-width: 0; }
 .section-heading.untitled { justify-content: flex-end; margin-bottom: 0; }
 .read-section:has(+ .read-section:is([data-level="2"], [data-level="3"])) { margin-bottom: var(--s5); }
-.reading-material .block-body + .block-body, .reading-material .definitions + .block-body { margin-top: var(--s4); }
+.reading-material .block-body + .block-body, .reading-material .definitions + .block-body { margin-top: var(--space-block); }
 .exercise-step .step-body > .section-heading :is(h2, h3, h4, h5, h6) { font-size: var(--text-subsection); line-height: 1.4; }
 .step-navigation { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3); padding-block: var(--s2); background: var(--surface); font-size: var(--text-small); }
 .step-navigation p { flex: 1; }
@@ -821,6 +826,12 @@ h1 > .comment-marker { margin-inline-start: var(--s2); }
 .lecture-note-context { color: var(--muted); }
 .lecture-note > .lecture-note-text { margin-top: var(--s1); }
 button.lecture-recall { margin-top: var(--s2); }
+.lecture-note > .lecture-note-kind { margin-bottom: var(--s1); }
+.lecture-note > .lecture-note-text { font-weight: 500; }
+.lecture-note-points, .lecture-note-steps { margin: var(--s2) 0 0; }
+.lecture-note-points { list-style: disc; }
+.lecture-note-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin: var(--s2) 0 0; color: var(--muted); }
+.lecture-note-foot > button.lecture-recall { margin-top: 0; align-self: center; }
 .lecture-note-image { display: block; width: 100%; max-width: 28rem; height: auto; margin-top: var(--s3); border-radius: var(--r1); }
 .lecture-highlight { display: grid; gap: var(--space-related) var(--s4); }
 .lecture-thumb { display: block; aspect-ratio: 16 / 9; border-radius: var(--r1); overflow: hidden; background: var(--aside); }
@@ -896,7 +907,6 @@ button.lecture-recall { margin-top: var(--s2); }
 .exam-profile > div { display: grid; grid-template-columns: minmax(0, calc(8 * var(--s4))) minmax(0, 1fr); align-items: baseline; gap: var(--s2) var(--s6); padding-block: var(--s3); border-bottom: 1px solid var(--line); }
 .exam-profile dt { color: var(--muted); font-size: var(--text-ui); }
 .exam-profile dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.exam-evidence { color: var(--muted); }
 .exam-section { margin-block: var(--s8); }
 .exam-section > h2 { font-size: var(--text-section); }
 .exam-label { color: var(--muted); font-weight: 600; }
@@ -1059,6 +1069,15 @@ button.exam-entry-collapse:hover { color: var(--ink); }
 .apply-code pre { margin: 0; }
 /* A pitfall: the moment it happens, the wrong working, its correction, then why it fails. */
 .pitfalls { display: grid; gap: var(--s5); margin: var(--s3) 0 0; padding: 0; list-style: none; }
+/* Study: a worked case sits in a quiet inset; a pitfall reads as in Exam patterns; a note is a
+   condition beside a quiet rule. */
+.example { padding: var(--s4) var(--s5); border-radius: var(--r2); background: var(--surface); }
+.example > * + * { margin-top: var(--s2); }
+.block-label { margin: 0; color: var(--muted); font-size: var(--text-small); font-weight: 600; }
+.example-given { margin: 0; padding-inline-start: 1.2em; }
+.example-result { font-weight: 600; }
+.callout-pitfall > .pitfalls { margin-top: var(--s2); }
+.callout.note { margin: 0; padding: var(--s1) var(--s4); border-inline-start: 3px solid var(--line); }
 .pitfalls > li { margin: 0; }
 .pitfall-situation { margin: 0; }
 .pitfall-step { display: inline-block; margin-right: var(--s1); font-size: 13px; vertical-align: 1px; }

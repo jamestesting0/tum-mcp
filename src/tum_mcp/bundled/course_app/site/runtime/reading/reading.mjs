@@ -1,5 +1,5 @@
 import data from '../../data.mjs';
-import { node, studyText, append, sourcesNote, plainText, toggletip } from '../shell/dom.mjs';
+import { node, studyText, append, sourcesNote, plainText, toggletip, answerMark } from '../shell/dom.mjs';
 import { iconButton, iconGlyph, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 import { renderPlot } from '../visuals/plot.mjs';
 import { renderCode, languageName, lineSet, markLines } from './code.mjs';
@@ -254,6 +254,31 @@ export function renderAnswers(solution, target = element => element, answerIndex
   return root;
 }
 
+// One pitfall, the same in Study and Exam patterns: the moment it happens, the wrong move,
+// the right move and why.
+export function pitfallItem(pitfall) {
+  const line = (right, text) => append(node('p', `pitfall-line ${right ? 'right' : 'wrong'}`), answerMark(right), studyText('span', '', text));
+  const situation = studyText('p', 'pitfall-situation', pitfall.situation);
+  if (pitfall.step) situation.prepend(node('span', 'pitfall-step', `Step ${pitfall.step}`), ' ');
+  return append(node('li', 'pitfall'), situation, line(false, pitfall.wrong), line(true, pitfall.right), studyText('p', 'pitfall-why', pitfall.why));
+}
+
+// A worked case read whole: what is given, the working, then the result.
+function exampleBlock(block) {
+  const box = append(node('div', 'example'), node('p', 'block-label', 'Example'));
+  if (block.given.length) box.append(append(node('ul', 'example-given'), ...block.given.map(text => studyText('li', '', text))));
+  if (block.steps.length) box.append(append(node('ol', 'steps'), ...block.steps.map(labelledItem)));
+  box.append(studyText('p', 'example-result', block.result));
+  return box;
+}
+
+// A pitfall reads as in Exam patterns, under the same label style as an example; a note is a
+// condition or limit beside a quiet rule.
+function calloutBlock(block) {
+  if (block.tone === 'pitfall') return append(node('div', 'callout-pitfall'), node('p', 'block-label', 'Pitfall'), append(node('ul', 'pitfalls'), pitfallItem(block)));
+  return studyText('p', 'callout note', block.text);
+}
+
 export function renderBlockBody(block, { term = true } = {}) {
   const root = node('div', 'block-body');
     switch (block.kind) {
@@ -263,6 +288,8 @@ export function renderBlockBody(block, { term = true } = {}) {
         if (block.points.length) root.append(append(node('ul'), ...block.points.map(labelledItem)));
         break;
       case 'definition': root.append(append(node('dl', 'definitions'), definitionItem(block, term))); break;
+      case 'example': root.append(exampleBlock(block)); break;
+      case 'callout': root.append(calloutBlock(block)); break;
       case 'formula': root.append(renderFormula(block)); break;
       case 'derivation': root.append(renderDerivation(block, visual => renderBlockBody(visual))); break;
       case 'table': root.append(table(block)); break;

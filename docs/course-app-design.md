@@ -40,6 +40,12 @@ separate rows. Keep the existing reading column and scroll ownership.
 Sheet metadata wraps beneath its title; the chevron stays at the trailing edge.
 Unprepared sheets follow prepared sheets, separated by 32px, on a subtle surface
 with the existing 6px radius. Their list remains in normal page flow.
+Content spacing is set by relation, not per component: a block starts flush with its
+body, and the container places what follows. Heading to its content `--space-heading`
+(12px), prompt or caption to its context and context to options `--space-related`
+(16px), block to block `--space-block` (16px), sibling groups `--space-between` (24px),
+sections `--space-section` (48px). The spacing browser test measures these relations on
+Study, practice, guide, solution, pattern, mock and lecture routes.
 Layout: exercise parts use the existing reading stack: shared context, then each
 part's statement and supporting blocks followed by its Guide | Solution pill and the one
 panel it opens; scroll owner remains main on desktop and the document on phones. The
@@ -87,6 +93,16 @@ all parts.
   once after the questions, as do optional transfer tasks. Guide steps and solution
   headings stay out of Contents. Opening or closing one part's panel must not alter
   another part or the guide's progress.
+- Example: a worked case read whole, on `--surface` with the existing radius: a small
+  muted "Example" label, the givens as a list, numbered steps in the Study step style and
+  the result in semibold. No heading of its own; a titled block names it in the outline.
+- Callout: a pitfall uses the Exam pattern pitfall item (situation, wrong and right move
+  with their marks, why) under a muted "Pitfall" label; a note is one or two sentences
+  beside a 3px `--line` rule. At most one per section; no icon, colour wash or banner.
+- Lecture note: a muted kind label (Clarification, Example, Exam tip, Intuition,
+  Correction), the title with its sources, the situation, the message, then the working
+  as numbered steps and consequences as points, an optional figure or frame, and a
+  footer with "Watch mm:ss" and Recall. The recording time appears only in the footer.
 - Walkthrough: a stage (graph, table, code, working, plot or figure) on top, the step
   card below it (eyebrow "Step N of M · subgoal", the action in bold, the reason, an
   optional pitfall on `--warning`, the variant contrast on `--wash`, then the state rows

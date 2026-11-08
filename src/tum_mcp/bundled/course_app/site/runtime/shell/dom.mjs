@@ -12,6 +12,13 @@ export function svgNode(tag, attributes = {}) {
   for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, String(value));
   return element;
 }
+// The small check or cross that marks a right or wrong line, read aloud as its word.
+export function answerMark(right) {
+  const badge = node('span', 'option-mark'), icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
+  icon.append(svgNode('path', { d: right ? 'M3.5 8.5 6.5 11.5 12.5 4.5' : 'M4.5 4.5l7 7M11.5 4.5l-7 7' }));
+  badge.append(icon, node('span', 'visually-hidden', right ? 'Correct: ' : 'Incorrect: '));
+  return badge;
+}
 export function studyText(tag, className = '', text = '') {
   const element = node(tag, className);
   let start = 0;

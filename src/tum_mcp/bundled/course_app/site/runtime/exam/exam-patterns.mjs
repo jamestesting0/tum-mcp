@@ -1,7 +1,7 @@
 import data from '../../data.mjs';
 import { node, studyText, button, append, sourcesNote, pageCitation, shareCitations, plainText, shuffled, pillPanel, scrollReadingTo } from '../shell/dom.mjs';
-import { renderBlockBody, renderAnswers } from '../reading/reading.mjs';
-import { renderResponse, optionExplanations, expectedAnswer, answerMark } from '../exercises/exercise-response.mjs';
+import { renderBlockBody, renderAnswers, pitfallItem } from '../reading/reading.mjs';
+import { renderResponse, optionExplanations, expectedAnswer } from '../exercises/exercise-response.mjs';
 import { annotateExam } from '../comments/anchors.mjs';
 import { codeReferences, filesIn } from '../shell/files.mjs';
 import { exam, patterns, pastQuestions, seen, list } from './exam-state.mjs';
@@ -175,12 +175,8 @@ function workflowSection(pattern, mark) {
 // Each pitfall opens with the task moment it happens in, then the wrong working, its
 // correction and why the wrong one fails.
 function pitfallsSection(pattern, mark) {
-  const line = (right, text) => append(node('p', `pitfall-line ${right ? 'right' : 'wrong'}`), answerMark(right), studyText('span', '', text));
   const rows = pattern.pitfalls.map((pitfall, index) => {
-    const row = node('li', 'pitfall'), situation = studyText('p', 'pitfall-situation', pitfall.situation);
-    if (pitfall.step) situation.prepend(node('span', 'pitfall-step', `Step ${pitfall.step}`), ' ');
-    row.append(situation, line(false, pitfall.wrong), line(true, pitfall.right), studyText('p', 'pitfall-why', pitfall.why));
-    return mark(row, `pitfall:${index}`);
+    return mark(pitfallItem(pitfall), `pitfall:${index}`);
   });
   return section('Pitfalls', append(node('ul', 'pitfalls'), ...rows));
 }
@@ -253,7 +249,8 @@ export function renderPattern(key) {
   const eyebrow = node('p', 'eyebrow', 'Exam pattern');
   const header = append(node('div', 'unit-header'), eyebrow, heading, mark(studyText('p', 'unit-summary', pattern.summary), 'summary'));
   // Past-exam evidence appears only when there is some; the citation says where the pattern comes from.
-  if (stats.sittings_considered) header.append(node('p', 'small exam-badge', seen(stats)));
+  // A frequency means something only across several exams; one exam is listed in the table.
+  if (stats.sittings_considered > 1) header.append(node('p', 'small exam-badge', seen(stats)));
   // The pattern is named already, so its concepts can be recalled before the student starts.
   const recall = examRecall(pattern.concepts);
   if (recall) header.append(recall);

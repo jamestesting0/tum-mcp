@@ -63,11 +63,6 @@ function home() {
     root.append(append(node('section', 'exam-section'), facts,
       ...(profile.notes ? [studyText('p', 'small exam-profile-note', profile.notes)] : [])));
   }
-  const stats = exam.statistics;
-  // The evidence line only appears when past exams exist; without them there is nothing to report.
-  const years = stats.years?.length ? ` (${stats.years[0] === stats.years[1] ? stats.years[0] : `${stats.years[0]}–${stats.years[1]}`})` : '';
-  if (stats.sittings_considered) root.append(node('p', 'small exam-evidence',
-    `${stats.sittings_considered} past exam${stats.sittings_considered === 1 ? '' : 's'}${years}${stats.sittings_outdated ? `; ${stats.sittings_outdated} older one${stats.sittings_outdated === 1 ? '' : 's'} not counted` : ''}`));
   // The same rows as the Study and Exercises homes: each page with its status, and Continue.
   const seen = visited(), status = (href, started) => isCompleted(href) ? 'Done' : started || seen[href] ? 'In progress' : 'Not started';
   const groups = [];

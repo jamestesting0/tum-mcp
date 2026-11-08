@@ -56,6 +56,11 @@ class Note(Frozen):
     context: Context
     # The message itself: the caveat, rule, correction or instruction, with its conditions.
     text: Line
+    # What kind of remark it is, shown as a small label so a skimming student can sort notes.
+    kind: Literal["clarification", "example", "exam tip", "intuition", "correction"] | None = None
+    # The working, conditions or example the lecturer gave, one claim per point or step.
+    points: tuple[Line, ...] = Field(default=(), max_length=4)
+    steps: tuple[Line, ...] = Field(default=(), max_length=6)
     passage: NotePassage | None = None
     sources: tuple[Key, ...] = Field(default=(), max_length=5)
     pages: PageRange | None = None

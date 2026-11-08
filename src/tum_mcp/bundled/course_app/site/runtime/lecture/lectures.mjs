@@ -64,21 +64,24 @@ function noteView(note, active) {
   const root = node('li', 'lecture-note'); root.dataset.lectureSection = note.key; root.dataset.commentTarget = 'lectures'; root.tabIndex = -1;
   if (active) root.dataset.lectureActiveSection = '';
   const sources = [...new Set([...note.sources, note.recording_source])];
-  const provenance = { [note.recording_source]: [timeLink(note.url, note.at_s)] };
-  // What the note is about, the situation it answers, then the message itself.
-  root.append(
-    append(node('div', 'lecture-note-head'), studyText('p', 'lecture-note-title', note.title),
-      sourcesNote(sources, data.sources, data.course.synthetic, note.title, provenance, note.pages || '')),
-    studyText('p', 'lecture-note-context', note.context),
-    studyText('p', 'lecture-note-text', note.text));
-  const recall = recallButton(note.passage);
-  if (recall) root.append(recall);
+  // What kind of remark, what it is about, the situation it answers, the message, then the
+  // working the lecturer gave; the moment in the recording is shown once, beside Recall.
+  const head = append(node('div', 'lecture-note-head'), studyText('p', 'lecture-note-title', note.title),
+    sourcesNote(sources, data.sources, data.course.synthetic, note.title, {}, note.pages || ''));
+  if (note.kind) root.append(node('p', 'block-label lecture-note-kind', note.kind[0].toUpperCase() + note.kind.slice(1)));
+  root.append(head, studyText('p', 'lecture-note-context', note.context), studyText('p', 'lecture-note-text', note.text));
+  if (note.steps?.length) root.append(append(node('ol', 'steps lecture-note-steps'), ...note.steps.map(text => studyText('li', '', text))));
+  if (note.points?.length) root.append(append(node('ul', 'lecture-note-points'), ...note.points.map(text => studyText('li', '', text))));
   if (note.figure) root.append(renderBlockBody(note.figure));
   if (note.image) {
     const image = node('img', 'lecture-note-image');
     Object.assign(image, { src: note.image.asset, alt: note.image.alt, width: note.image.width, height: note.image.height, loading: 'lazy', decoding: 'async' });
     root.append(image);
   }
+  const foot = append(node('p', 'lecture-note-foot small'), append(node('span'), 'Watch ', timeLink(note.url, note.at_s)));
+  const recall = recallButton(note.passage);
+  if (recall) foot.append(recall);
+  root.append(foot);
   return root;
 }
 function highlightView(highlight, active) {

@@ -29,6 +29,14 @@ GAPS = """() => {
   const heading = el => el.matches('h1, h2, h3, h4, h5, h6, .section-heading');
   const shown = el => el.getBoundingClientRect().height > 0 && !el.matches('.visually-hidden')
     && !['absolute', 'fixed'].includes(getComputedStyle(el).position);
+  // A block body's first element starts at the body's edge, so margins never stack there:
+  // measure to that element (through the question context that wraps the bodies).
+  const lead = el => {
+    const body = el.matches('.question-context') ? el.firstElementChild : el;
+    return body.firstElementChild || body;
+  };
+  const seen = (a, b) =>
+    Math.round(lead(b).getBoundingClientRect().top - a.getBoundingClientRect().bottom);
   const found = [];
   for (const parent of document.querySelectorAll('main *')) {
     const kids = [...parent.children].filter(shown);
@@ -42,10 +50,22 @@ GAPS = """() => {
       if (a.matches('.definitions') && b.matches('.block-body')) {
         found.push(['passage', gap, b.className]);
       }
+      // Content relations: a prompt to its context, a heading to its first block, block to block.
+      if (a.matches('legend') && b.matches('.question-context')) {
+        found.push(['prompt', seen(a, b), b.className]);
+      }
+      if (a.matches('.section-heading') && b.matches('.block-body')) {
+        found.push(['heading', seen(a, b), b.className]);
+      }
+      if (a.matches('.block-body') && b.matches('.block-body')
+          && parent.matches('.reading-material, .question-context, .model-answer')) {
+        found.push(['block', seen(a, b), b.className]);
+      }
     }
   }
   return {
-    found, related: px('--space-related'), between: px('--space-between'), passage: px('--s4')
+    found, related: px('--space-related'), between: px('--space-between'), passage: px('--s4'),
+    prompt: px('--space-related'), heading: px('--space-heading'), block: px('--space-block')
   };
 }"""
 
@@ -73,6 +93,7 @@ def test_controls_and_practise_items_keep_one_spacing_per_relationship(
     measured: list[tuple[str, str, int, str]] = []
     for route in (
         "#study/components/content",
+        "#study/components/practice",
         "#exercises/preview/controls",
         "#exam/patterns/order-search",
         "#exam/patterns/name-structure",
@@ -96,7 +117,7 @@ def test_controls_and_practise_items_keep_one_spacing_per_relationship(
     assert 0 < icon["width"] <= 24 and 0 < icon["height"] <= 24
     assert icon["fill"] == "none" and icon["stroke"] != "none"
     page.close()
-    assert any(relation == "related" for _, relation, _, _ in measured)
+    assert {"related", "prompt", "heading", "block"} <= {relation for _, relation, _, _ in measured}
     assert [m for m in measured if m[2]] == []
 
 
@@ -173,3 +194,4 @@ def test_completed_outline_title_keeps_its_row_and_scroll(
         expect(page.get_by_role("link", name=title, exact=True)).to_be_focused()
     finally:
         page.close()
+

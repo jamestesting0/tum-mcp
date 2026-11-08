@@ -344,7 +344,6 @@ def test_complete_public_app_keeps_learning_panels_and_lecture_timestamp_links(
                 )
                 expect(first.locator(".lecture-thumb")).to_have_attribute("href", expected)
                 note = page.locator(".lecture-note").first
-                note.locator(".citation summary").click()
                 timestamp = note.locator(".lecture-time")
                 expect(timestamp).to_have_attribute("href", lecture["notes"][0]["url"])
                 with page.expect_popup() as opened:

@@ -1,9 +1,12 @@
-import { node, svgNode, studyText, button, append, shuffled } from '../shell/dom.mjs';
+import { node, svgNode, studyText, button, append, shuffled, answerMark } from '../shell/dom.mjs';
 import { graphResponse, plotResponse } from './graph-response.mjs';
 import { renderCode, codeEditor, languageName } from '../reading/code.mjs';
 import { openInWorkspace } from '../shell/files.mjs';
 import { renderBlockBody, diagram } from '../reading/reading.mjs';
 import { iconButton } from '../shell/navigation.mjs';
+
+// Existing callers keep importing the answer mark from here.
+export { answerMark };
 
 // A code model answer stays code: highlighted, literal and labelled with its language.
 function modelAnswer(check) {
@@ -61,13 +64,6 @@ export function expectedAnswer(check) {
 // After a choice is checked, in Practice, a Guide or an Exam pattern: why each other option
 // is right or wrong, collapsed inside the verdict. The verdict already gives the chosen
 // option's feedback, so the list leaves it out. `mark` anchors comments where the caller has them.
-// The small check or cross that marks a right or wrong line, read aloud as its word.
-export function answerMark(right) {
-  const badge = node('span', 'option-mark'), icon = svgNode('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
-  icon.append(svgNode('path', { d: right ? 'M3.5 8.5 6.5 11.5 12.5 4.5' : 'M4.5 4.5l7 7M11.5 4.5l-7 7' }));
-  badge.append(icon, node('span', 'visually-hidden', right ? 'Correct: ' : 'Incorrect: '));
-  return badge;
-}
 
 export function optionExplanations(options, correct, chosen, mark = element => element) {
   const box = node('details', 'disclosure plain option-explanations');
