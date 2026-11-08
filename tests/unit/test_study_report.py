@@ -197,6 +197,52 @@ def test_context_repetition_depends_on_givens_not_the_number_of_rows(
     )
 
 
+def test_a_case_sentence_in_a_table_and_shared_option_feedback_are_flagged() -> None:
+    # A trial's templated questions put each case sentence in a one-row table and gave every
+    # wrong option the same feedback.
+    content = study()
+    unit = content["units"][0]
+    question = unit["questions"][0]
+    item = f"{unit['key']}/{question['key']}"
+    case = "A chess program imitates one player's moves and mistakes; only similarity counts."
+    question["blocks"] = [
+        {
+            "kind": "table",
+            "sources": [unit["sources"][0]["key"]],
+            "caption": "Use these conditions.",
+            "columns": ["Feature", "Details"],
+            "rows": [["System", case]],
+        }
+    ]
+    for option in question["options"]:
+        if option["key"] != question["correct"]:
+            option["feedback"] = "Recheck the relevant condition. Outward behaviour is judged."
+    flags = {
+        (flag["flag"], flag["item"])
+        for flag in quality_flags(StudyContent.model_validate(content), None)
+    }
+    assert ("text_only_question", item) in flags
+    assert ("repeated_feedback", item) in flags
+
+    question["blocks"][0]["rows"] = [["B", "Dirty"]]
+    question["options"] = study()["units"][0]["questions"][0]["options"]
+    wrong = next(o for o in question["options"] if o["key"] != question["correct"])
+    wrong["feedback"] = f"Recheck the condition. {question['explanation']}"
+    flags = {
+        (flag["flag"], flag["item"])
+        for flag in quality_flags(StudyContent.model_validate(content), None)
+    }
+    assert ("repeated_feedback", item) in flags
+
+    question["options"] = study()["units"][0]["questions"][0]["options"]
+    flags = {
+        (flag["flag"], flag["item"])
+        for flag in quality_flags(StudyContent.model_validate(content), None)
+    }
+    assert ("text_only_question", item) not in flags
+    assert ("repeated_feedback", item) not in flags
+
+
 def test_flags_flowing_procedures_and_calculation_chains_in_prose() -> None:
     # Given the value-iteration paragraph a student could not study: three sentences of
     # procedure, and a policy evaluation computed inside a sentence.

@@ -255,6 +255,8 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "citation_page": "correctness",
     "answer_key": "correctness",
     "forward_term": "organization",
+    # An exercise whose sources a Study unit teaches must open that passage through Recall.
+    "unlinked_exercise": "cohesion",
     "plain_math": "cognitive_load",
     "dense_paragraph": "cognitive_load",
     "described_object": "representation",
@@ -264,6 +266,7 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "static_walkthrough": "representation",
     "unworked_result": "representation",
     "text_only_question": "representation",
+    "bare_workflow": "representation",
     "meta_reference": "clarity",
     "statement_framing": "clarity",
     "summary_repeats_objective": "redundancy",
@@ -286,6 +289,8 @@ RULED_FLAGS: dict[str, str] = {
     "definition_refined": "correctness.source_match",
     "no_visual": "representation.shape_fits",
     "thin_unit": "coverage.ledger_outcomes",
+    "repeated_feedback": "practice.plausible_options",
+    "long_section": "representation.shape_fits",
 }
 # Invariant flags about the whole course rather than the item they are filed under: a scoped
 # draft cannot clear them, so an item lint reports them and the review gate holds on them.

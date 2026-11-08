@@ -20,6 +20,8 @@ from tum_mcp.settings import Frozen
 
 ConceptKind = Literal["definition", "fact", "rule", "procedure", "algorithm", "model", "comparison"]
 STEPPED = "a walkthrough, a stepped diagram, a derivation walkthrough or a code walkthrough"
+# A model is a system of parts and the flows between them; it is understood from a picture.
+PICTURES = {"figure", "diagram", "uml", "tree"}
 
 
 class Concept(Frozen):
@@ -60,6 +62,9 @@ class Approval(Frozen):
     coverage_fingerprint: Digest | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
+    # The batches whose requests the approval read; a batch declared later, such as one that
+    # groups earlier batches for a combined review, does not reopen it.
+    batches: tuple[Key, ...] | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Plan(Frozen):
@@ -148,6 +153,10 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
             problems.append(f"{concept.name}: a {concept.kind} is taught with {STEPPED}")
         if concept.kind == "comparison" and not any(b.get("kind") == "table" for b in shown):
             problems.append(f"{concept.name}: a comparison is shown as a table")
+        if concept.kind == "model" and not any(b.get("kind") in PICTURES for b in shown):
+            problems.append(
+                f"{concept.name}: a model is drawn as a figure, diagram, UML diagram or tree"
+            )
         if concept.kind == "definition":
             if not any(b.get("kind") == "definition" for b in shown):
                 problems.append(
@@ -174,7 +183,7 @@ def gate_status(plan: Plan, root: Path | None = None) -> str:
     if root is not None and plan.preparation:
         from tum_mcp.course.checks.coverage_plan import assess_plan
 
-        coverage = assess_plan(root, plan.preparation)
+        coverage = assess_plan(root, plan.preparation, plan.gate.batches)
         if coverage.scope is None or plan.gate.coverage_fingerprint != coverage.scope.fingerprint:
             return "changed"
     if plan.gate.verdict == "fail":
@@ -184,6 +193,8 @@ def gate_status(plan: Plan, root: Path | None = None) -> str:
 
 def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "same"]) -> dict:
     """Save a checker's plan verdicts; each applies to the plan as it was read."""
+    from tum_mcp.course.checks.coverage_plan import declaring_batches
+
     writes: list[Write] = []
     recorded: list[str] = []
     verdicts: dict[str, dict] = {}
@@ -209,6 +220,7 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
             reasons=reasons,
             provenance=provenance,
             coverage_fingerprint=coverage["scope"]["fingerprint"] if coverage else None,
+            batches=declaring_batches(root, plan.preparation) if plan.preparation else None,
         )
         name = private_name(root, f"plans/{item}.json")
         body = json.dumps(plan.model_copy(update={"gate": gate}).model_dump(mode="json"), indent=2)

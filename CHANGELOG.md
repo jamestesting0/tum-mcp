@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Review packets also split at 60 requested verdicts, so fresh checkers complete
+  them. Plan approvals stay approved when another task starts or when one batch groups
+  earlier batches for a combined review.
+- An unclear stretch of a lecture recording is disclosed to the reviewer instead of
+  blocking readiness; a retained note or highlight may not include it.
+- Content checks find mathematics typed as plain characters in Exam patterns, past-paper
+  help, past-paper statements and mock questions, and more forms such as `U1=`, `b^d`,
+  `0.19/0.72`, state names such as `S3`, and a lone symbol beside LaTeX. An exam pattern
+  workflow must show the formula, rule or code its steps apply, and a planned `model`
+  concept must be drawn. Repeated option feedback, one-sentence tables and long prose
+  sections are raised for review.
+- Exercises whose sources a Study lesson teaches must link it through Recall, and new
+  Study lessons are linked from existing exercises, cheatsheet concepts and lecture notes.
+  Recall chips name untitled passages by their section.
+- Tables use light row rules and tighter rows; guide steps no longer repeat their source
+  icon on a line of its own.
+- `tum-mcp study text --pages` accepts lists such as `3,7-9`. Invalid tool arguments
+  name the field, and duplicate snapshot keys are named.
+
 ## 0.19.1 — 2026-11-07
 
 - Saved browser choices always show their profile name in parentheses.

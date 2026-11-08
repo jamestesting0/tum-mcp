@@ -49,9 +49,10 @@ preparation (cheatsheet, exam patterns, practice exams) uses prepare-exams.
    it before writing ([planning](references/planning.md)): each unit's structured plan in
    `.tum-mcp/plans/study/<key>.json` passes the plan gate before you write it
    ([draft checks](references/loop.md)).
-3. **Author.** Teach each unit as its plan decided, with the moves that fit each idea
-   ([teaching](references/teaching.md)) and the block types the schema offers
-   ([content](references/content.md)). Draft the heading outline first: major topics,
+3. **Author.** Read [teaching](references/teaching.md) and
+   [writing](references/writing.md) before writing a new or restructured unit. Teach each
+   unit as its plan decided, with the moves that fit each idea and the block types the
+   schema offers ([content](references/content.md)). Draft the heading outline first: major topics,
    their cases/examples, and any necessary detail. Set levels by those relationships
    rather than making every passage a level-1 section. On a new site, prove one unit
    with the hardest required formats, then author the rest in batches. Record changed

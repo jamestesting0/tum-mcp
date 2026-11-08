@@ -30,7 +30,9 @@ scores.
    `review start PROJECT --batch ID` after
    `study report PROJECT --section readiness --batch ID` passes. This binds the
    complete declared request, its preparation scopes, Exam drafts and recording
-   selections to one round. For ad hoc reviews use `--workspace` to narrow the scope.
+   selections to one round. To review several prepared batches together, declare one batch
+   that lists their items and preparations; their approved plans stay approved.
+   For ad hoc reviews use `--workspace` to narrow the scope.
    A declared unfinished batch requires its batch gate. Use `--ad-hoc` only for an
    explicitly partial review. A later loop asks about new and changed items.
    A filtered review that exactly matches one ready batch retains that batch's source

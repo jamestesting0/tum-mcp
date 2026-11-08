@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.course.checks.coverage_plan import assess_plan
-from tum_mcp.course.checks.plans import plan_packet, read_plan, record_gate
+from tum_mcp.course.checks.plans import gate_status, plan_packet, read_plan, record_gate
 from tum_mcp.course.checks.preparation import assess
 from tum_mcp.course.content.store import remove_document
 from tum_mcp.errors import CampusError
@@ -93,6 +93,43 @@ def test_plan_checker_sees_the_original_request_and_request_changes_reopen_appro
     with pytest.raises(CampusError, match="coverage changed"):
         record_gate(project, [dict(entry, verdict="pass")], "fresh")
     assert plan_packet(project)["plans"]
+
+
+def test_a_task_for_another_batch_keeps_plan_approval(project: Path) -> None:
+    # In a trial every approved lesson plan reported "source coverage changed" once the
+    # student started a task for the next workspace.
+    from tum_mcp.course.workflow.tasks import begin, pause
+
+    _, scope = bounded_scope(project)
+    lessons = {
+        "course_key": scope["course_key"],
+        "request": "Prepare the degree lesson.",
+        "items": ["study/graphs"],
+        "preparations": ["bounded"],
+    }
+    write(project / ".tum-mcp/batches/lessons.json", lessons)
+    sheet = dict(lessons, request="Prepare the first sheet.", items=["exercises/one/a"])
+    write(project / ".tum-mcp/batches/sheet.json", dict(sheet, preparations=[]))
+    write(
+        project / ".tum-mcp/plans/study/graphs.json",
+        {"item": "study/graphs", "preparation": "bounded", "outcomes": ["apply"]},
+    )
+    begin(project, "lessons", owner="codex:first")
+    (entry,) = plan_packet(project)["plans"]
+    record_gate(project, [dict(entry, verdict="pass")], "fresh")
+    pause(project, "The lesson draft is done.", owner="codex:first")
+    begin(project, "sheet", owner="codex:second")
+
+    plan = read_plan(project, "study/graphs")
+    assert plan and gate_status(plan, project) == "approved"
+
+    # A later batch that groups this one for a combined review keeps the approval too.
+    everything = dict(lessons, request="Review everything.", items=["study/graphs"])
+    write(project / ".tum-mcp/batches/everything.json", everything)
+    assert gate_status(plan, project) == "approved"
+    lessons["request"] += " Include its proof."
+    write(project / ".tum-mcp/batches/lessons.json", lessons)
+    assert gate_status(plan, project) == "changed"
 
 
 def test_invalid_outcome_mapping_names_the_overlap_and_accepted_ids(project: Path) -> None:

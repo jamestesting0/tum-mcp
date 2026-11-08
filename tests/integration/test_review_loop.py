@@ -312,6 +312,19 @@ def test_cli_uses_one_round_unless_a_budget_is_requested(project: Path) -> None:
     assert json.loads(result.output)["budget"] == 3
 
 
+def test_a_packet_asks_no_more_verdicts_than_one_checker_reply_can_hold(project: Path) -> None:
+    # Trial checkers gave up on packets asking for 100 to 312 quoted verdicts.
+    loop.start(project, workspaces=("study",))
+    opened = packets(project, loop.next_round(project))
+    assert len(opened) > 1
+    for packet in opened:
+        counts = [
+            sum(len(entry[task]) for task in ("needs", "verify", "visuals", "rule"))
+            for entry in packet["items"]
+        ]
+        assert len(counts) == 1 or sum(counts) <= loop.PACKET_VERDICTS
+
+
 def test_closing_with_unanswered_packets_requires_an_explicit_choice(project: Path) -> None:
     loop.start(project, workspaces=("study",))
     opened = loop.next_round(project)

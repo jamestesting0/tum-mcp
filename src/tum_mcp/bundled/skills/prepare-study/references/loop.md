@@ -16,6 +16,11 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    or name a bounded selection and its exclusions. Keep teaching dates, release dates
    and reports of a session distinct. Put future semester outcomes in the roadmap.
    Record each required outcome clause or exercise demand and its source locator first.
+   A tracked campus source still marked `needs_fetch` keeps its key: download it with
+   read-content, then `study sync` a partial snapshot holding only that resource with its
+   `source_file` ([snapshot contract](../../sync-course/references/project.md)).
+   `study import` is for files only the student holds; importing a campus download
+   creates an untracked private duplicate.
    For each preparation request, write `.tum-mcp/batches/ID.json`
    (`study schema batch`) with the original request, every planned item key (including
    each forecast question as `exam/mock/MOCK/QUESTION`) and
@@ -62,8 +67,10 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    when `review plans PROJECT` lists no pending plans.
 4. **Pass the plan gate.** `tum-mcp review plans PROJECT` gives the plans waiting for a
    check, and one fresh session reads them: `tum-mcp review run-checker PROJECT --plans`
-   (a headless host session, recorded as fresh), or a subagent whose answer you record with
-   `tum-mcp review plan-record PROJECT --file ANSWER --provenance fresh`. Read only this batch
+   (a headless host session, recorded as fresh), or a subagent that starts empty, whose answer
+   you record with `tum-mcp review plan-record PROJECT --file ANSWER --provenance fresh`.
+   A forked agent (Codex `spawn_agent`) replays this conversation and is not fresh; record
+   its answer as `same` or use run-checker. Read only this batch
    with `tum-mcp review plans PROJECT --item ITEM` (repeat `--item`). Checking your own
    plans records them as provisional. A changed plan needs a new check. Rework a rejected
    plan before writing.
@@ -77,9 +84,12 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    Reuse the solved plan instances and preserve their calculations in this key;
    solving the same case again is unnecessary unless the input or method changed.
 6. **Write each item, then lint it.** Edit the item's own file under `app/` with your edit
-   tools (no scripts that rewrite whole workspaces). While its source and plan are fresh,
-   follow the published procedure on the worked input and a relevant boundary case;
-   check the actual loop scope, branches and exits, not an independent hidden implementation.
+   tools (no scripts that rewrite whole workspaces). Write each question's context, options
+   and feedback for that question: a helper that fills one template across questions gives
+   every wrong option the same feedback and wraps sentences in one-row tables. While its
+   source and plan are fresh, follow the published procedure on the worked input and a
+   relevant boundary case; check the actual loop scope, branches and exits, not an
+   independent hidden implementation.
    Read an exercise's Solution alone and keep its working self-contained. Repair these
    gaps in this item before moving to the next. After each item run
    `tum-mcp study lint PROJECT --item ITEM`: schema, report flags, the plan's links and the
@@ -90,6 +100,10 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    again by the checkers, and the gate holds until each has a ruling.
 7. **Read the assembled draft once before browser checks.** Check prerequisites and
    Recall links against the content actually prepared, and consistency across items.
+   When other workspaces already exist, connect the new units to them: each exercise's
+   `prerequisites` and each cheatsheet concept's `units` that a new unit now teaches, and
+   the unit's `lectures` when that lecture has notes.
+   `tum-mcp study report PROJECT --section structure` names the ones without a link.
    Check the finished procedure's successful return/stop and unsuccessful exit literally;
    a correct worked trace does not repair an incomplete published instruction. Compare
    each planned practice contrast against the finished worked sections, including their
@@ -112,7 +126,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    `tum-mcp study report PROJECT --section readiness --preparation ID`.
    Resolve required gaps before asking for formal review. Name the verified cutoff or
    selected subset, the workload and any excluded or unresolved sources, then ask:
-   Ask whether to run one review round, using the student's terms. Report the findings,
+   Ask whether to run one review round, using the student's terms; do not cite skill
+   files or workflow rules to the student. Report the findings,
    fixes and any remaining verification when it ends. Extend the budget only if requested. Skip the question when the request already asks for a review,
    and do not ask again in the same session once the student has answered.
    For a multi-workspace request, run

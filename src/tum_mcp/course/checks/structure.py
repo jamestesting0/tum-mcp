@@ -641,20 +641,29 @@ def _links(
     lectures: LectureContent | None,
     flag: Flag,
 ) -> None:
+    taught = {source.key: unit.key for unit in content.units for source in unit.sources}
     for group in exercises.sets if exercises else ():
         for exercise in group.exercises:
             item = f"exercises/{group.key}/{exercise.key}"
             if not exercise.prerequisites:
+                # A unit that teaches from the exercise's own sources is the Recall target;
+                # without one, the exercise may rest on Study not prepared yet.
+                units = sorted({taught[s.key] for s in exercise.sources if s.key in taught})
                 flag(
                     item,
-                    "unlinked_exercise",
-                    "Names no Study passage it builds on; add the unit and block a student "
-                    "needs, so the passage opens beside the exercise.",
+                    "unlinked_exercise" if units else "untaught_exercise",
+                    (
+                        f"Study unit {', '.join(units)} teaches from this exercise's sources; "
+                        if units
+                        else "No Study unit teaches from this exercise's sources; "
+                    )
+                    + "add the unit and block a student needs as a prerequisite, so Recall "
+                    "opens that passage beside the exercise.",
                 )
             elif loose := [p.unit for p in exercise.prerequisites if not p.block]:
                 flag(
                     item,
-                    "unlinked_exercise",
+                    "unit_only_link",
                     f"Links unit {loose[0]} without the block that teaches what the steps use.",
                 )
     if exam and (bare := [concept.key for concept in exam.concepts if not concept.units]):

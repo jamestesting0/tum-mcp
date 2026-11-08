@@ -12,6 +12,9 @@ shape each idea has; prose says only what the picture cannot.
 | A concrete run of an algorithm or process | A `walkthrough` over the graph, table, code, working, plot or figure it changes: each step an action with its `why`, the `state` rows the student would otherwise track; its "All steps" view is the trace table |
 | Parallel cases (games, environments, designs) | A table with one row per case, or a list |
 | A rule or value that depends on two inputs | A decision matrix: one input down the side, the other across the top, the result in each cell |
+| Choosing a method, model or case from a problem's properties | A decision table: one row per choice, a column per deciding property, so the student reads off which properties pick it |
+| A conditional probability from counts (tests, diagnoses, filters) | A natural-frequency table or tree of whole counts first, then the ratio as a formula; counts are easier to reason with than percentages |
+| A system of parts and the flows between them (an agent and its environment, an agent architecture) | A `diagram` or `figure` of the parts and labelled arrows; plan it as a `model`, which must be drawn |
 | Something with a physical or spatial shape (an arm and its angles, rooms, a map, a mechanism) | A `figure` drawn as in [figures](figures.md), or an image |
 | A hard argument or a multi-part explanation | Numbered `steps`, one claim each |
 | A calculation or definition with symbols | A formula block with every symbol explained |

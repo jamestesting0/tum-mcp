@@ -43,6 +43,8 @@ STATEMENT_WORDS = 80
 # About one 390 px phone screen: a question beyond this scrolls before the student can answer.
 QUESTION_WORDS = 80
 QUESTION_TABLE_ROWS = 6
+# A one-row table whose cell is a sentence holds the case's prose, not data.
+SENTENCE_CELL_WORDS = 8
 # Sentences about the material instead of the subject, such as "the lecture groups ...".
 # An action hidden in a noun: "perform the computation of", "carry out an evaluation of".
 NOMINALISATION = re.compile(
@@ -75,6 +77,12 @@ PLAIN_MATH = re.compile(
     r"|(?:\d|\b[A-Za-z]\b|\))\s*−\s*[\w(]"
     r"|\b[A-Z][A-Za-z]{0,2}\([^()\n]*[|=,][^()\n]*\)"
     r"|(?<![\w.])[A-Za-z]\*?(?:\([^()\n]{1,12}\))?\s*[=<>]\s*[-\w(]"
+    # U1 = ..., b^d, and a numeric quotient such as 0.192/0.72 (not a year such as 2025/26).
+    r"|\b[A-Za-z]\d{1,2}\s*[=<>]\s*[-\w(]"
+    # A subscripted name such as S1 or U3 (a state, utility or variable), written as text.
+    r"|(?<![\w\\])[A-Z]\d{1,2}(?!\w)"
+    r"|\w\^[\w{(]"
+    r"|(?<![\w/.])(?!\d{4}/\d{2}\b)\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?(?![\w/])"
 )
 # Mathematics read aloud in words ("theta over two", "lambda squared", "one over n"); names such
 # as "beta distribution" stay, because no operation follows them.
@@ -451,6 +459,14 @@ def _name(block) -> str:
     return block.title or block.kind
 
 
+def _sentence_table(block) -> bool:
+    return (
+        isinstance(block, TableBlock)
+        and len(block.rows) == 1
+        and any(len(cell.split()) >= SENTENCE_CELL_WORDS for cell in block.rows[0])
+    )
+
+
 def _normalized(text: str) -> str:
     return " ".join(re.findall(r"\w+", text.lower()))
 
@@ -634,12 +650,18 @@ def quality_flags(
         if not has_visual(unit.blocks):
             flag(unit.key, "no_visual", "No diagram, table, formula, code or plot in the lesson.")
         for question in unit.questions:
-            if not has_visual(question.blocks):
+            carried = tuple(block for block in question.blocks if not _sentence_table(block))
+            if not has_visual(carried):
+                wrapped = (
+                    " A one-row table of sentences is prose, not data."
+                    if len(carried) < len(question.blocks)
+                    else ""
+                )
                 flag(
                     f"{unit.key}/{question.key}",
                     "text_only_question",
                     "The question has no code, diagram, table, formula or plot carrying its "
-                    "context. Reframe it around a useful case, not a decorative picture.",
+                    f"context. Reframe it around a useful case, not a decorative picture.{wrapped}",
                 )
         definitions = sum(block.kind == "definition" for block in unit.blocks)
         if definitions > 5:
@@ -846,6 +868,21 @@ def quality_flags(
                         f"Option '{option.key}' feedback does not name the mistake behind it.",
                     )
                     break
+            wrong = [
+                " ".join(option.feedback.casefold().split())
+                for option in question.options
+                if option.key != question.correct
+            ]
+            explanation = " ".join(question.explanation.casefold().split())
+            if len(set(wrong)) < len(wrong) or (
+                explanation and any(explanation in feedback for feedback in wrong)
+            ):
+                flag(
+                    f"{unit.key}/{question.key}",
+                    "repeated_feedback",
+                    "Wrong options share one feedback or repeat the explanation shown after "
+                    "Check; name the mistake behind each option.",
+                )
     for group in exercises.sets if exercises else ():
         # A set summary is teaching text: what the sheet practises, not where it came from.
         if (
@@ -1031,9 +1068,7 @@ def quality_flags(
         described: dict[str, list[str]] = {}
         tall: dict[str, list[str]] = {}
         for item, text in _prose(value):
-            prose = INLINE_SPANS.sub(" ", text)
-            found = PLAIN_MATH.search(prose) or SPOKEN_MATH.search(prose)
-            if found:
+            if found := _typed_math(text):
                 plain.setdefault(item, []).append(found[0])
             if spelled := DESCRIBED_OBJECT.search(text):
                 described.setdefault(item, []).append(spelled[0])
@@ -1121,14 +1156,23 @@ def _opening(
     return opening, symbols, terms - seen_terms
 
 
+# A one-letter symbol in running text ("each state has reward R"). Alone it may be a word
+# ("Group B"), so it counts only where the same text already sets other symbols as LaTeX.
+LONE_SYMBOL = re.compile(r"(?<=[a-z,] )[B-HJ-Z](?=[\s,.;:)]|$)")
+
+
+def _typed_math(text: str) -> re.Match[str] | None:
+    prose = INLINE_SPANS.sub(" ", text)
+    return (
+        PLAIN_MATH.search(prose)
+        or SPOKEN_MATH.search(prose)
+        or (LONE_SYMBOL.search(prose) if prose != text else None)
+    )
+
+
 def plain_math(value: JsonValue) -> list[str]:
     """Mathematics typed as characters or words in the rendered text of any content."""
-    return [
-        found[0]
-        for _, text in _prose(value)
-        if (found := PLAIN_MATH.search(prose := INLINE_SPANS.sub(" ", text)))
-        or (found := SPOKEN_MATH.search(prose))
-    ]
+    return [found[0] for _, text in _prose(value) if (found := _typed_math(text))]
 
 
 # A quotient written with a slash in displayed mathematics, outside units and derivatives.

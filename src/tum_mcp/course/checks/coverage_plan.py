@@ -10,26 +10,33 @@ from tum_mcp.course.project.schedule import read_schedule
 from tum_mcp.course.project.store import confined, digest, load_state, read_bytes
 
 
-def requested_scope(root: Path, identifier: str) -> dict | None:
+def declaring_batches(root: Path, identifier: str) -> tuple[str, ...]:
+    """The batches that list this preparation, whichever task is active."""
     from tum_mcp.course.checks.batch import Batch
-    from tum_mcp.course.workflow.tasks import read_task
 
-    task = read_task(root)
-    paths = (
-        [confined(root, f".tum-mcp/batches/{task.batch}.json")]
-        if task
-        else sorted((root / ".tum-mcp/batches").glob("*.json"))
+    return tuple(
+        path.stem
+        for path in sorted((root / ".tum-mcp/batches").glob("*.json"))
+        if (body := read_bytes(path)) is not None
+        and identifier in Batch.model_validate_json(body).preparations
     )
+
+
+def requested_scope(
+    root: Path, identifier: str, batches: tuple[str, ...] | None = None
+) -> dict | None:
+    """The requests of the given batches, or of every batch that lists the preparation."""
+    from tum_mcp.course.checks.batch import Batch
+
     requests = []
-    for path in paths:
-        body = read_bytes(path)
-        batch = Batch.model_validate_json(body) if body is not None else None
-        if batch and identifier in batch.preparations:
-            requests.append(batch.model_dump(mode="json"))
+    for name in declaring_batches(root, identifier) if batches is None else batches:
+        body = read_bytes(root / f".tum-mcp/batches/{name}.json")
+        if body is not None:
+            requests.append(Batch.model_validate_json(body).model_dump(mode="json"))
     return requests[0] if len(requests) == 1 else {"requests": requests} if requests else None
 
 
-def assess_plan(root: Path, identifier: str) -> Readiness:
+def assess_plan(root: Path, identifier: str, batches: tuple[str, ...] | None = None) -> Readiness:
     scope = read_preparation(root, identifier)
     if scope is None:
         return Readiness(identifier=identifier, problems=("Record the source scope first.",))
@@ -56,7 +63,7 @@ def assess_plan(root: Path, identifier: str) -> Readiness:
             else f"study/{target.unit}"
         )
         items.setdefault(key, []).append(demand.model_dump(mode="json"))
-    request = requested_scope(root, identifier)
+    request = requested_scope(root, identifier, batches)
     fingerprint = scope.fingerprint()
     if request:
         # Artifact keys are draft mappings, not the source or learner requirements.

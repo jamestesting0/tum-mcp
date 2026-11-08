@@ -7,6 +7,7 @@ from tum_mcp.course.content.exam import Concept, ExamContent
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.study import StudyContent
 from tum_mcp.course.lecture.content import LectureContent
+from tum_mcp.course.review.models import INVARIANT_FLAGS
 
 FIXTURES = Path(__file__).parents[1] / "fixtures"
 PASSAGE = (
@@ -153,9 +154,11 @@ def test_flags_exercises_concepts_and_lectures_that_do_not_link_their_teaching()
         (FIXTURES / "course_app/lectures.json").read_bytes()
     )
     found = flags(content, sheets, exam=exam, lectures=lectures)
-    # Then each missing link and the order clash is named where it can be fixed.
+    # Then each missing link and the order clash is named where it can be fixed; only the
+    # exercise whose sources a Study unit teaches must link it before the draft is ready.
     assert ("unlinked_exercise", "exercises/sheet-1/sample-minimum-proof") in found
-    assert ("unlinked_exercise", "exercises/sheet-1/sample-relaxation") in found
+    assert ("unit_only_link", "exercises/sheet-1/sample-relaxation") in found
+    assert "unlinked_exercise" in INVARIANT_FLAGS and "untaught_exercise" not in INVARIANT_FLAGS
     assert ("order_mismatch", "exercises") in found
     assert ("unlinked_concept", "exam") in found
     assert ("unlinked_lecture", "lectures") in found

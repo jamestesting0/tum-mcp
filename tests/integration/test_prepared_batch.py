@@ -180,6 +180,33 @@ def test_selection_cannot_omit_speech_used_by_a_retained_entry(
     assert loop.read_state(prepared.root) is None
 
 
+@pytest.mark.parametrize("unclear, ready", [((70, 100), True), ((40, 50), False)])
+def test_unclear_speech_blocks_only_the_entries_that_rely_on_it(
+    prepared: Prepared, monkeypatch: pytest.MonkeyPatch, unclear: tuple[int, int], ready: bool
+) -> None:
+    # A trial's lecture could never become ready: recognition was uncertain in time the
+    # author had omitted, and the author cannot listen to the audio.
+    from tum_mcp.course.lecture import selection as module
+    from tum_mcp.course.lecture.evidence import Interval
+
+    receipt = module.usable_receipt(prepared.root, prepared.recording.key)
+    gap = Interval(start_s=unclear[0], end_s=unclear[1])
+    monkeypatch.setattr(
+        module,
+        "usable_receipt",
+        lambda *_: receipt.model_copy(update={"status": "partial", "uncertain": (gap,)}),
+    )
+    value = selection(prepared)
+    value["comparison_limits"] = ["Slides 3-4 were unavailable for comparison."]
+    write_selection(prepared, value)
+    write_batch(prepared)
+
+    report = assess_batch(prepared.root, "complete")
+
+    assert report.ready is ready
+    assert any("uncertain speech" in problem for problem in report.problems) is not ready
+
+
 def test_a_note_and_highlight_can_share_retained_speech(prepared: Prepared) -> None:
     lecture = prepared.notes["lectures"][0]
     note = lecture["notes"][0]
@@ -211,6 +238,48 @@ def test_a_note_and_highlight_can_share_retained_speech(prepared: Prepared) -> N
     build(prepared.root, publish=False)
 
     assert assess_batch(prepared.root, "complete").ready
+
+
+def test_plain_typed_mathematics_is_flagged_in_patterns_and_mocks(tmp_path: Path) -> None:
+    # A trial's exam patterns typed "U1=R+6" and "0.192/0.72" as plain characters 55 times.
+    from material_fixture import exam_document, exam_project
+
+    from tum_mcp.course.content.exam import ExamContent
+    from tum_mcp.course.content.exam_data import exam_item_flags
+
+    exam = exam_document(exam_project(tmp_path))
+    pattern, mock = exam["patterns"][0], exam["mocks"][0]
+    for each in exam["patterns"]:
+        each["workflow"][0]["apply"] = {"code": "Logger(Service())", "language": "python"}
+    assert not exam_item_flags(ExamContent.model_validate(exam))
+    pattern["workflow"][0]["do"] = "Solve the policy equations: U1=R+6."
+    text = next(block for block in mock["questions"][0]["statement"] if "paragraphs" in block)
+    text["paragraphs"] = ["Compute 0.192/0.72 to two decimals."]
+
+    flagged = {flag["item"] for flag in exam_item_flags(ExamContent.model_validate(exam))}
+
+    assert flagged == {
+        f"exam/pattern/{pattern['key']}",
+        f"exam/mock/{mock['key']}/{mock['questions'][0]['key']}",
+    }
+    mock_item = f"exam/mock/{mock['key']}/{mock['questions'][0]['key']}"
+    # A state name or a lone symbol beside LaTeX is mathematics too; a word like "Group B" is not.
+    for paragraph, typed in [
+        ("The terminal utility of S3 is 4.", True),
+        (r"With \(U_3=6\), each state has reward R.", True),
+        ("Group B sat the exam.", False),
+    ]:
+        text["paragraphs"] = [paragraph]
+        found = {flag["item"] for flag in exam_item_flags(ExamContent.model_validate(exam))}
+        assert (mock_item in found) is typed, paragraph
+    for step in pattern["workflow"]:
+        step.pop("apply", None)
+        for case in step.get("cases") or ():
+            case.pop("apply", None)
+    bare = exam_item_flags(ExamContent.model_validate(exam))
+    assert {"item": f"exam/pattern/{pattern['key']}", "flag": "bare_workflow"}.items() <= next(
+        flag for flag in bare if flag["flag"] == "bare_workflow"
+    ).items()
 
 
 def test_a_pattern_batch_also_checks_its_visible_cheatsheet(tmp_path: Path) -> None:

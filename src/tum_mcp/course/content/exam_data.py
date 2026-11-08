@@ -328,6 +328,49 @@ SHEET_FLAGS = {
 PROSE_LEGEND = re.compile(r"(?:\\\([^()]{1,30}?\\\)|\b[A-Za-z]\b)\s*:\s+[a-z]")
 
 
+def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
+    """Plain-typed mathematics in patterns, past-question help and mocks, and workflows
+    that never show the formula, rule or code a step applies."""
+    if content is None:
+        return []
+    texts: dict[str, list[str]] = {}
+    for pattern in content.patterns:
+        texts[f"exam/pattern/{pattern.key}"] = plain_math(pattern.model_dump(mode="json"))
+    for _, _, question in content.past_questions().values():
+        if question.patterns:
+            texts.setdefault(f"exam/pattern/{question.patterns[0]}", []).extend(
+                plain_math(question.model_dump(mode="json"))
+            )
+    for mock in content.mocks:
+        for question in mock.questions:
+            key = f"exam/mock/{mock.key}/{question.key}"
+            texts[key] = plain_math(question.model_dump(mode="json"))
+    bare = [
+        {
+            "item": f"exam/pattern/{pattern.key}",
+            "flag": "bare_workflow",
+            "detail": "No workflow step or case shows what it applies; give the formula, rule "
+            "or code each computing step uses under `apply`.",
+        }
+        for pattern in content.patterns
+        if pattern.workflow
+        and not any(
+            step.get("apply") or any(case.get("apply") for case in step.get("cases") or ())
+            for step in pattern.model_dump(mode="json")["workflow"]
+        )
+    ]
+    return bare + [
+        {
+            "item": item,
+            "flag": "plain_math",
+            "detail": f"{len(found)} text(s) type mathematics as plain characters, such as "
+            f"'{found[0]}'. Write every symbol, variable and formula as inline LaTeX.",
+        }
+        for item, found in texts.items()
+        if found
+    ]
+
+
 def sheet_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
     """The cheatsheet's report targets as review prompts on the cheatsheet item."""
     if content is None:

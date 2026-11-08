@@ -29,6 +29,10 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
 - **Cues**: what a student can see in the question text (a structure, a given, a
   phrasing). Never the concept's name, because the exam does not print it.
 - **Workflow**: the steps an expert takes, each one action, with an optional reason.
+  Write it so a student who studied the topic can follow it under exam time without
+  recalling anything elsewhere: each step acts on the question's givens, and every step
+  that writes an equation, computes a value or applies a rule shows it under `apply`.
+  A workflow with no `apply` anywhere is refused.
   It must solve every listed instance; check it against each one. When the method only
   holds under conditions, the first step checks them; when the answer can be verified,
   the last step says how.

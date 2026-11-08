@@ -53,6 +53,9 @@ from tum_mcp.settings import Frozen
 
 DEFAULT_ROUNDS: Final = 1
 PACKET_CHARS = 60_000
+# One checker reply must hold a quoted verdict per check: trial checkers completed packets of
+# up to about 100 short verdicts and gave up on 100 to 312 long ones.
+PACKET_VERDICTS = 60
 GATED = ("correctness", "coverage")
 
 
@@ -143,6 +146,7 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
     from tum_mcp.course.checks.report import citation_flags, quality_flags
     from tum_mcp.course.checks.structure import course_map, forward_terms
     from tum_mcp.course.content.exam_data import (
+        exam_item_flags,
         meta_flags,
         practice_flags,
         read_exam,
@@ -171,6 +175,7 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
     from tum_mcp.course.memory.report import knowledge_revision
 
     media = discover(root, state, content)
+    links: list[dict[str, JsonValue]] = []
     if items:
         semantics = knowledge_revision(root)
         structure = course_map(
@@ -183,10 +188,14 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
             media=media.structure,
         )
         items["course"] = course_item(structure, str(structure["revision"]), semantics)
+        # An exercise that should open its Study passage through Recall holds its own gate.
+        links = [flag for flag in structure["flags"] if flag["flag"] == "unlinked_exercise"]
     flags = [
         *quality_flags(content, exercises),
+        *links,
         *(forward_terms(content) if content else ()),
         *sheet_flags(exam),
+        *exam_item_flags(exam),
         *meta_flags(exam),
         *practice_flags(exam),
         *retrieval_flags(exam, content),
@@ -580,15 +589,17 @@ def next_round(root: Path) -> dict[str, JsonValue]:
     writes: list[Write] = []
     for profile, entries in groups.items():
         batch: list[dict[str, JsonValue]] = []
-        size = 0
+        size = verdicts = 0
         batches: list[list[dict[str, JsonValue]]] = []
         for entry in entries:
             length = len(json.dumps(entry["passages"]))
-            if batch and size + length > PACKET_CHARS:
+            asked = sum(len(entry[task]) for task in ("needs", "verify", "visuals", "rule"))
+            if batch and (size + length > PACKET_CHARS or verdicts + asked > PACKET_VERDICTS):
                 batches.append(batch)
-                batch, size = [], 0
+                batch, size, verdicts = [], 0, 0
             batch.append(entry)
             size += length
+            verdicts += asked
         if batch:
             batches.append(batch)
         for index, items in enumerate(batches, 1):
