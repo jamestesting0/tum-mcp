@@ -1,10 +1,13 @@
 """Code-derived review flags for prepared learning content; the agent revises or keeps each."""
 
 import ast
+import json
 import operator
 import re
 import statistics
 from collections.abc import Iterator
+from functools import cache
+from importlib.resources import files
 from pathlib import Path
 
 from pydantic import JsonValue
@@ -73,16 +76,22 @@ META_REFERENCE = re.compile(
 # Mathematics typed as plain text: Greek letters, math symbols, sub/superscripts, a function
 # applied to a condition or several arguments (P(A|B), Q(S, a)) or a one-letter equation (V = 3).
 PLAIN_MATH = re.compile(
-    r"[\u0391-\u03a9\u03b1-\u03c9≤≥≠≈∑∏∫√∞∀∃¬∧∨⇒⇔→∈∉⊂⊆∪∩×÷²³⁰-⁹₀-₉ᵈⁿ]"
+    r"[\u0391-\u03a9\u03b1-\u03c9≤≥≠≈∑∏∫√∞∀∃¬∧∨⇒⇔→↔∈∉⊂⊆∪∩∅⊥⊤×÷²³⁰-⁹₀-₉ᵈⁿ]"
+    # A set, a predicate applied to variables, a product with a middle dot: X={1,2}, P(x), 0.6·200.
+    r"|(?<![\w\\])[A-Za-z]\d{0,2}\s*=\s*\{"
+    r"|(?<![\w\\])[A-Z]\([a-z](?:,\s*[a-z])*\)"
+    r"|[\d)]\s*·\s*[\d(]"
     r"|(?:\d|\b[A-Za-z]\b|\))\s*−\s*[\w(]"
     r"|\b[A-Z][A-Za-z]{0,2}\([^()\n]*[|=,][^()\n]*\)"
     r"|(?<![\w.])[A-Za-z]\*?(?:\([^()\n]{1,12}\))?\s*[=<>]\s*[-\w(]"
     # U1 = ..., b^d, and a numeric quotient such as 0.192/0.72 (not a year such as 2025/26).
     r"|\b[A-Za-z]\d{1,2}\s*[=<>]\s*[-\w(]"
     # A subscripted name such as S1 or U3 (a state, utility or variable), written as text.
-    r"|(?<![\w\\])[A-Z]\d{1,2}(?!\w)"
+    r"|(?<![\w\\])[A-Z]\d{1,2}(?!\w)(?!\s*(?:sheets?|paper|pages?|format)\b)"
     r"|\w\^[\w{(]"
     r"|(?<![\w/.])(?!\d{4}/\d{2}\b)\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?(?![\w/])"
+    # A sum or product worked in plain digits, such as 4+4+3=11 or 0.5 * 8 = 4.
+    r"|(?<![\w.\\])\d+(?:\.\d+)?(?:\s*[-+*]\s*\d+(?:\.\d+)?)+\s*=\s*\d"
 )
 # Mathematics read aloud in words ("theta over two", "lambda squared", "one over n"); names such
 # as "beta distribution" stay, because no operation follows them.
@@ -459,6 +468,35 @@ def _name(block) -> str:
     return block.title or block.kind
 
 
+# At most this many authored paragraphs in a row in one rendered section before a list, steps,
+# an example, a table, a figure or a formula breaks the run.
+PROSE_RUN = 2
+WORKED_CASE = re.compile(r"^(?:For example|For instance|Suppose|Consider|Imagine)\b")
+
+
+def prose_runs(blocks) -> Iterator[tuple[int, int, str]]:
+    """(block index, paragraphs in a row, section name) where a section's prose runs too long.
+    A titled block opens a new section; untitled blocks continue it, so short blocks cannot
+    hide a long run."""
+    run, section, start = 0, "", None
+    for index, block in enumerate(blocks):
+        if block.title:
+            run, section = 0, block.title
+        if not isinstance(block, TextBlock):
+            run = 0
+            continue
+        start = index if run == 0 else start
+        run += len(block.paragraphs)
+        ends = block.steps or block.points or index + 1 == len(blocks)
+        following = None if ends else blocks[index + 1]
+        if not ends and (not isinstance(following, TextBlock) or following.title):
+            ends = True
+        if ends:
+            if run > PROSE_RUN:
+                yield start, run, section or _name(block)
+            run = 0
+
+
 def _sentence_table(block) -> bool:
     return (
         isinstance(block, TableBlock)
@@ -469,6 +507,86 @@ def _sentence_table(block) -> bool:
 
 def _normalized(text: str) -> str:
     return " ".join(re.findall(r"\w+", text.lower()))
+
+
+# Item-writing checks (Haladyna, Downing & Rodriguez 2002): a table whose headers say nothing,
+# options that point at each other, a key that stands out by length or by echoing the stem.
+GENERIC_HEADERS = frozenset(
+    "feature features information info detail details value values item items description "
+    "property properties aspect aspects attribute field content case example examples "
+    "explanation meaning significance illustration notes remarks comments".split()
+) | {"what it illustrates", "what it shows", "what it means"}
+GENERIC_CAPTIONS = frozenset({"case", "table", "example", "information", "details"})
+OPTION_POINTER = re.compile(r"\b(?:all|none|both|neither) of (?:the )?(?:above|these|them)\b", re.I)
+NEGATIVE_STEM = re.compile(r"\b(?:not|except|never|least)\b")
+STEM_WORDS = re.compile(r"[a-z]{4,}")
+COMMON_WORDS = frozenset(
+    "that this with from which what when where there their they them then than these those "
+    "does into each have most more only also because would could should about after before "
+    "agent value".split()
+)
+
+
+def generic_table(block: object) -> bool:
+    """A table whose every header is a placeholder, or whose caption only names a table."""
+    if not isinstance(block, TableBlock):
+        return False
+    headers = [_normalized(column) for column in block.columns]
+    caption = _normalized(block.caption or "")
+    return all(header in GENERIC_HEADERS for header in headers) or caption in GENERIC_CAPTIONS
+
+
+def _stems(text: str) -> set[str]:
+    return {word.rstrip("s") for word in STEM_WORDS.findall(text.lower())} - COMMON_WORDS
+
+
+def option_flags(item: str, prompt: str, options, correct: str) -> list[dict[str, JsonValue]]:
+    """Cues that let a student answer without the idea: pointer options, a long key, a key
+    that alone repeats the stem's words, and an unmarked negative stem."""
+    found: list[dict[str, JsonValue]] = []
+    if any(OPTION_POINTER.search(option.text) for option in options):
+        found.append(
+            {
+                "item": item,
+                "flag": "all_of_above",
+                "detail": "An option points at other options; give each option its own claim.",
+            }
+        )
+    key = next((option for option in options if option.key == correct), None)
+    others = [option for option in options if option.key != correct]
+    if key is None or not others:
+        return found
+    lengths = sorted(len(option.text) for option in others)
+    if len(key.text) > 1.5 * lengths[len(lengths) // 2] and len(key.text) - lengths[-1] > 20:
+        found.append(
+            {
+                "item": item,
+                "flag": "key_longest",
+                "detail": "The correct option "
+                "is much longer than the others; balance their length and detail.",
+            }
+        )
+    shared = (_stems(prompt) & _stems(key.text)) - set().union(*(_stems(o.text) for o in others))
+    if shared:
+        found.append(
+            {
+                "item": item,
+                "flag": "stem_key_overlap",
+                "detail": "Only the correct "
+                f"option repeats the stem's '{sorted(shared)[0]}'; reword so words do not "
+                "give the answer away.",
+            }
+        )
+    if NEGATIVE_STEM.search(prompt):
+        found.append(
+            {
+                "item": item,
+                "flag": "negative_stem",
+                "detail": "The question asks "
+                "for what is not true; ask positively, or write the negation in capitals.",
+            }
+        )
+    return found
 
 
 def stepped(block: object) -> bool:
@@ -500,9 +618,11 @@ UNWORKED_RESULT = re.compile(
     r"|\s*[^=]*?=\s*O\([^)]*\)\s*)\\\)"
 )
 # Bookkeeping a student should never read: where a file came from or who wrote it.
+# A part heading's leading number, such as "(a)", "2." or "1.3".
+ENUMERATOR = re.compile(r"^\s*(?:\(?[a-z0-9]{1,3}\)|\d+(?:\.\d+)*\.?|[a-z]\.)\s*", re.I)
 PROVENANCE = re.compile(
     r"\b(?:user[- ]provided|agent[- ](?:written|authored)|uploaded by|imported from|"
-    r"sample solution|official solution|provenance)\b",
+    r"sample solution|official solution|provenance|subject to change|moodle (?:folder|page))\b",
     re.IGNORECASE,
 )
 
@@ -704,9 +824,28 @@ def quality_flags(
                 for index, block in enumerate(item.blocks)
             ),
         ]
+        for blocks, prefix in (
+            (unit.blocks, unit.key),
+            *((item.blocks, f"{unit.key}/explore/{item.key}") for item in unit.explore),
+        ):
+            for index, run, section in prose_runs(blocks):
+                flag(
+                    f"{prefix}#{index}",
+                    "prose_run",
+                    f"'{section}': {run} paragraphs in a row. Keep the sentence that leads in, "
+                    "then show the rest as points, numbered steps, an example, a table or a "
+                    "figure; restructure, do not cut ideas.",
+                )
         for location, block in passages:
             if not isinstance(block, TextBlock):
                 continue
+            if case := next((p for p in block.paragraphs if WORKED_CASE.match(p)), None):
+                flag(
+                    location,
+                    "example_in_prose",
+                    f"'{_name(block)}': a worked case told as prose ('{case[:60]}'); give it as "
+                    "an example (given, working, result), a table or a walkthrough.",
+                )
             words = sum(len(part.split()) for part in block.paragraphs)
             if words > SECTION_WORDS or len(block.paragraphs) > 2:
                 flag(
@@ -883,6 +1022,30 @@ def quality_flags(
                     "Wrong options share one feedback or repeat the explanation shown after "
                     "Check; name the mistake behind each option.",
                 )
+            flags.extend(
+                option_flags(
+                    f"{unit.key}/{question.key}",
+                    question.prompt,
+                    question.options,
+                    question.correct,
+                )
+            )
+        for location, block in (
+            *((f"{unit.key}#{i}", block) for i, block in enumerate(unit.blocks)),
+            *(
+                (f"{unit.key}/{question.key}", block)
+                for question in unit.questions
+                for block in question.blocks
+            ),
+        ):
+            if generic_table(block):
+                flag(
+                    location,
+                    "generic_table",
+                    "A table's headers or caption only say 'Feature', 'Information', 'Case' "
+                    "and the like; name what each column holds, or show the context another "
+                    "way.",
+                )
     for group in exercises.sets if exercises else ():
         # A set summary is teaching text: what the sheet practises, not where it came from.
         if (
@@ -897,6 +1060,14 @@ def quality_flags(
                 "the sheet practises and keep provenance in the ledger.",
             )
         for exercise in group.exercises:
+            for step in exercise.steps:
+                for _, run, _ in prose_runs(step.blocks):
+                    flag(
+                        exercise.key,
+                        "prose_run",
+                        f"A guide step has {run} paragraphs in a row; show the working as "
+                        "steps, points, an example or a table.",
+                    )
             flags.extend(variable_flags(exercise.key, exercise.model_dump(mode="json"), task=True))
             flags.extend(visual_state_flags(exercise.key, exercise.model_dump(mode="json")))
             guided = (*exercise.statement, *(b for step in exercise.steps for b in step.blocks))
@@ -956,7 +1127,7 @@ def quality_flags(
                 sentence
                 for text in authored
                 for sentence in re.split(r"(?<=[.!?])\s+", text)
-                if META_REFERENCE.search(sentence)
+                if META_REFERENCE.search(sentence) or PROVENANCE.search(sentence)
             ]
             if narrated:
                 flag(
@@ -993,6 +1164,21 @@ def quality_flags(
                     "assumption_aside",
                     f"'{asides[0]}' sets assumptions or sources apart; state assumptions in the "
                     "problem statement and leave sources to the citation button.",
+                )
+            repeated = [
+                block.title
+                for block in exercise.statement
+                if isinstance(block, TextBlock)
+                and block.title
+                and block.paragraphs
+                and _normalized(block.paragraphs[0]) == _normalized(ENUMERATOR.sub("", block.title))
+            ]
+            if repeated:
+                flag(
+                    exercise.key,
+                    "repeated_title",
+                    f"The part heading '{repeated[0]}' repeats its own text; title the part with "
+                    "its number only and keep the words once.",
                 )
             for block in exercise.statement:
                 if not isinstance(block, TextBlock):
@@ -1056,6 +1242,12 @@ def quality_flags(
                         f"{targets} answers with {len(step.hints)} hint(s); add a hint that "
                         "works the first operation, or split the step.",
                     )
+    worded = [(unit.key, math_words(unit.model_dump(mode="json"))) for unit in units] + [
+        (exercise.key, math_words(exercise.model_dump(mode="json")))
+        for group in (exercises.sets if exercises else ())
+        for exercise in group.exercises
+    ]
+    flags.extend(math_word_flag(item, words) for item, words in worded if words)
     for name, value in (
         ("study", content.model_dump(mode="json") if content else None),
         ("exercises", exercises.model_dump(mode="json") if exercises else None),
@@ -1067,7 +1259,10 @@ def quality_flags(
         identities: dict[str, list[str]] = {}
         described: dict[str, list[str]] = {}
         tall: dict[str, list[str]] = {}
+        copied: dict[str, list[str]] = {}
         for item, text in _prose(value):
+            if reused := _long_sentences(text) & _exemplar_sentences():
+                copied.setdefault(item, []).extend(sorted(reused))
             if found := _typed_math(text):
                 plain.setdefault(item, []).append(found[0])
             if spelled := DESCRIBED_OBJECT.search(text):
@@ -1107,6 +1302,14 @@ def quality_flags(
                 "sentence; set anything larger than a 2x2 matrix or a three-entry column as a "
                 "formula block.",
             )
+        for item, samples in copied.items():
+            flag(
+                item,
+                "exemplar_copy",
+                f"{len(samples)} sentence(s) copied from a bundled exemplar, such as "
+                f"'{samples[0]}'. Exemplars show a shape; write the course's own sentences "
+                "from its sources.",
+            )
         for item, samples in plain.items():
             flag(
                 item,
@@ -1116,6 +1319,26 @@ def quality_flags(
                 r"\(P(A \mid B)\), \(\gamma\), \(V = 3\).",
             )
     return flags
+
+
+EXEMPLAR_WORDS = 8
+
+
+def _long_sentences(text: str) -> set[str]:
+    words = (re.findall(r"[a-z0-9]+", part.lower()) for part in re.split(r"(?<=[.!?])\s+", text))
+    return {" ".join(found) for found in words if len(found) >= EXEMPLAR_WORDS}
+
+
+@cache
+def _exemplar_sentences() -> frozenset[str]:
+    folder = files("tum_mcp") / "bundled/exemplars"
+    names = ("study.json", "exercises.json", "exam-pattern.json", "lecture-note.json")
+    return frozenset(
+        sentence
+        for name in names
+        for _, text in _prose(json.loads((folder / name).read_text()))
+        for sentence in _long_sentences(text)
+    )
 
 
 def _texts(block) -> Iterator[str]:
@@ -1161,13 +1384,61 @@ def _opening(
 LONE_SYMBOL = re.compile(r"(?<=[a-z,] )[B-HJ-Z](?=[\s,.;:)]|$)")
 
 
+# One expression split over several \\( \\) spans, or an operator outside them:
+# "\\(h(n)=20\\) \\(-9\\)", "\\(C2\\)=3".
+SPLIT_MATH = re.compile(r"\\\((?:(?!\\\)).){0,60}?\\\)(?:\s{0,2}\\\(|\s*[·×*+−=]\s*[\w(\\])", re.S)
+
+
 def _typed_math(text: str) -> re.Match[str] | None:
     prose = INLINE_SPANS.sub(" ", text)
     return (
-        PLAIN_MATH.search(prose)
+        SPLIT_MATH.search(text)
+        or PLAIN_MATH.search(prose)
         or SPOKEN_MATH.search(prose)
         or (LONE_SYMBOL.search(prose) if prose != text else None)
     )
+
+
+MATH_FIELDS = frozenset({"latex", "math"})
+_MATH_SPAN = re.compile(r"\\\((.*?)\\\)|\\\[(.*?)\\\]", re.S)
+_WORD_COMMAND = re.compile(
+    r"\\(?:text|mathrm|operatorname|mathit|mathbf|mathsf|texttt|textbf|textit|begin|end)"
+    r"\s*\{[^{}]*\}"
+)
+_COMMAND = re.compile(r"\\[A-Za-z]+")
+_MATH_WORD = re.compile(r"(?<![A-Za-z])[A-Za-z]{4,}(?![A-Za-z])")
+
+
+def math_words(value: JsonValue, field: str = "") -> list[str]:
+    """Words set in math mode, which render as a product of italic letters (\\(P(A=true)\\))."""
+    match value:
+        case str():
+            spans = (
+                [value] if field in MATH_FIELDS else [a or b for a, b in _MATH_SPAN.findall(value)]
+            )
+            bare = (_COMMAND.sub(" ", _WORD_COMMAND.sub(" ", span)) for span in spans)
+            return [word for span in bare for word in _MATH_WORD.findall(span)]
+        case list():
+            return [word for entry in value for word in math_words(entry, field)]
+        case dict():
+            return [
+                word
+                for key, entry in value.items()
+                if key not in {"code", "svg"}
+                for word in math_words(entry, key)
+            ]
+        case _:
+            return []
+
+
+def math_word_flag(item: str, words: list[str]) -> dict[str, JsonValue]:
+    return {
+        "item": item,
+        "flag": "math_word",
+        "detail": f"{len(words)} word(s) sit in math mode, such as '{words[0]}', and render as "
+        r"italic letters multiplied together; write \(P(A=\text{true})\), or "
+        r"\(\operatorname{diag}\) for a named function.",
+    }
 
 
 def plain_math(value: JsonValue) -> list[str]:

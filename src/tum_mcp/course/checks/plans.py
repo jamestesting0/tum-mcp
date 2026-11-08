@@ -18,7 +18,9 @@ from tum_mcp.course.project.store import Write, apply, confined, private_name, r
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
 
-ConceptKind = Literal["definition", "fact", "rule", "procedure", "algorithm", "model", "comparison"]
+ConceptKind = Literal[
+    "definition", "fact", "rule", "procedure", "algorithm", "model", "comparison", "cases"
+]
 STEPPED = "a walkthrough, a stepped diagram, a derivation walkthrough or a code walkthrough"
 # A model is a system of parts and the flows between them; it is understood from a picture.
 PICTURES = {"figure", "diagram", "uml", "tree"}
@@ -153,6 +155,12 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
             problems.append(f"{concept.name}: a {concept.kind} is taught with {STEPPED}")
         if concept.kind == "comparison" and not any(b.get("kind") == "table" for b in shown):
             problems.append(f"{concept.name}: a comparison is shown as a table")
+        if concept.kind == "cases" and not any(
+            b.get("kind") in {"table", "example"} for b in shown
+        ):
+            problems.append(
+                f"{concept.name}: parallel cases are a table, or one example block per case"
+            )
         if concept.kind == "model" and not any(b.get("kind") in PICTURES for b in shown):
             problems.append(
                 f"{concept.name}: a model is drawn as a figure, diagram, UML diagram or tree"

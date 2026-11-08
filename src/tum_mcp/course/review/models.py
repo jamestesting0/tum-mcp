@@ -259,6 +259,10 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "undecided_link": "cohesion",
     "plain_math": "cognitive_load",
     "dense_paragraph": "cognitive_load",
+    # A rendered section with more than two authored paragraphs in a row (user decision).
+    "prose_run": "representation",
+    "generic_table": "representation",
+    "all_of_above": "practice",
     "described_object": "representation",
     "prose_calculation": "representation",
     "compressed_working": "representation",
@@ -267,7 +271,9 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "unworked_result": "representation",
     "text_only_question": "representation",
     "bare_workflow": "representation",
+    "math_word": "representation",
     "meta_reference": "clarity",
+    "repeated_title": "clarity",
     "statement_framing": "clarity",
     "summary_repeats_objective": "redundancy",
     "redundant_workflow_detail": "redundancy",
@@ -291,6 +297,11 @@ RULED_FLAGS: dict[str, str] = {
     "thin_unit": "coverage.ledger_outcomes",
     "repeated_feedback": "practice.plausible_options",
     "long_section": "representation.shape_fits",
+    "example_in_prose": "representation.shape_fits",
+    "key_longest": "practice.plausible_options",
+    "stem_key_overlap": "practice.plausible_options",
+    "negative_stem": "clarity.one_reading",
+    "exemplar_copy": "correctness.source_match",
 }
 # Invariant flags about the whole course rather than the item they are filed under: a scoped
 # draft cannot clear them, so an item lint reports them and the review gate holds on them.

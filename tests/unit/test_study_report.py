@@ -317,6 +317,25 @@ def test_mathematics_typed_as_plain_text_is_flagged_and_latex_passes() -> None:
     ]
     flags = quality_flags(StudyContent.model_validate(content), None)
     assert key not in {f["item"] for f in flags if f["flag"] == "plain_math"}
+    # A sum worked in plain digits is an equation too; the same sum in LaTeX passes.
+    content["units"][0]["blocks"][0]["paragraphs"] = ["The path costs 3+1+5=9 in total."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key in {f["item"] for f in flags if f["flag"] == "plain_math"}
+    content["units"][0]["blocks"][0]["paragraphs"] = [r"The path costs \(3+1+5=9\) in total."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key not in {f["item"] for f in flags if f["flag"] == "plain_math"}
+    # A paper size is not a subscripted variable; setting it in LaTeX made it italic.
+    content["units"][0]["blocks"][0]["paragraphs"] = ["Bring one handwritten A4 sheet."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key not in {f["item"] for f in flags if f["flag"] == "plain_math"}
+    # Forms a pilot's reviewers found: sets, predicates, middle-dot products, split formulas.
+    for typed in ("X={1,2}", "Resolve with P(a).", "Use 0.6·200.", r"Then \(C_2\)=3."):
+        content["units"][0]["blocks"][0]["paragraphs"] = [typed]
+        flags = quality_flags(StudyContent.model_validate(content), None)
+        assert key in {f["item"] for f in flags if f["flag"] == "plain_math"}, typed
+    content["units"][0]["blocks"][0]["paragraphs"] = [r"Compare \(x\) and \(y\)."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key not in {f["item"] for f in flags if f["flag"] == "plain_math"}
 
 
 def test_spelled_out_objects_and_large_inline_matrices_are_flagged() -> None:
@@ -577,6 +596,17 @@ def test_bookkeeping_in_set_summaries_and_exam_labels_is_flagged() -> None:
     flags = quality_flags(None, ExerciseContent.model_validate(payload))
     first = payload["sets"][0]["exercises"][0]["key"]
     assert ("meta_reference", first) in {(flag["flag"], flag["item"]) for flag in flags}
+    payload["sets"][0]["summary"] = "The Moodle folder is marked subject to change."
+    flags = quality_flags(None, ExerciseContent.model_validate(payload))
+    assert ("meta_reference", first) in {(flag["flag"], flag["item"]) for flag in flags}
+    # Provenance inside a statement is narration too.
+    payload["sets"][0]["summary"] = None
+    statement = next(
+        b for b in payload["sets"][0]["exercises"][0]["statement"] if b["kind"] == "text"
+    )
+    statement["points"] = ["Assume no new dirt, as in the official solution."]
+    flags = quality_flags(None, ExerciseContent.model_validate(payload))
+    assert ("meta_reference", first) in {(flag["flag"], flag["item"]) for flag in flags}
     exam = json.loads((files("tum_mcp") / "bundled/course_app/example/exam.json").read_bytes())
     assert meta_flags(ExamContent.model_validate(exam)) == []
     exam["sittings"][0]["label"] += " (user-provided)"
@@ -623,3 +653,151 @@ def test_a_linked_cheatsheet_fact_no_card_asks_for_is_flagged() -> None:
     card["front"] = f"What is a {concept.title}?"
     asked = {flag["item"] for flag in retrieval_flags(exam, StudyContent.model_validate(study))}
     assert f"concept:{concept.key}" not in asked
+
+
+def test_a_section_cannot_run_three_paragraphs_even_across_untitled_blocks() -> None:
+    # Trial units split a six-paragraph section into short untitled blocks to pass length checks.
+    content = study()
+    unit = content["units"][0]
+    source = unit["blocks"][0]["sources"]
+    lead = {"kind": "text", "title": "Choosing a method", "sources": source}
+    blocks = [
+        lead | {"paragraphs": ["Pick the method from what is given.", "Each method needs input."]},
+        {"kind": "text", "sources": source, "paragraphs": ["Search needs a goal test."]},
+    ]
+    unit["blocks"] = blocks + unit["blocks"]
+
+    def runs() -> list[str]:
+        found = quality_flags(StudyContent.model_validate(content), None)
+        return [flag["item"] for flag in found if flag["flag"] == "prose_run"]
+
+    assert runs() == [f"{unit['key']}#0"]
+    blocks[1]["points"] = ["Inference needs premises."]
+    blocks[1]["paragraphs"] = []
+    unit["blocks"] = blocks + unit["blocks"][2:]
+    assert runs() == []
+
+
+def test_a_worked_case_told_as_prose_is_raised_and_an_example_block_is_valid() -> None:
+    content = study()
+    unit = content["units"][0]
+    source = unit["blocks"][0]["sources"]
+    case = "Suppose a test is positive with probability 0.8 given the disease."
+    unit["blocks"].append({"kind": "text", "sources": source, "paragraphs": [case]})
+    found = quality_flags(StudyContent.model_validate(content), None)
+    assert any(flag["flag"] == "example_in_prose" for flag in found)
+
+    unit["blocks"][-1] = {
+        "kind": "example",
+        "sources": source,
+        "given": ["\\(P(+ \\mid d) = 0.8\\)"],
+        "steps": ["Weigh by the prior."],
+        "result": "The posterior.",
+    }
+    found = quality_flags(StudyContent.model_validate(content), None)
+    assert not any(flag["flag"] == "example_in_prose" for flag in found)
+    pitfall = {"kind": "callout", "sources": source, "tone": "pitfall", "text": "Mixed."}
+    unit["blocks"].append(pitfall)
+    with pytest.raises(ValidationError, match="situation, wrong, right and why"):
+        StudyContent.model_validate(content)
+
+
+def test_item_writing_cues_and_placeholder_tables_are_raised() -> None:
+    # A trial's questions all sat on 'Case / Feature / Information' tables; one key ran long.
+    content = study()
+    unit = content["units"][0]
+    question = unit["questions"][0]
+    source = unit["blocks"][0]["sources"]
+    wrapper = {
+        "kind": "table",
+        "sources": source,
+        "caption": "Case",
+        "columns": ["Feature", "Information"],
+        "rows": [["Observation", "A chatbot improved twice."]],
+    }
+    question["blocks"] = [wrapper]
+
+    item = f"{unit['key']}/{question['key']}"
+
+    def raised() -> set[str]:
+        found = quality_flags(StudyContent.model_validate(content), None)
+        return {flag["flag"] for flag in found if flag["item"] == item}
+
+    assert "generic_table" in raised()
+    # A pilot lesson used 'Case / What it illustrates' three times beside its own prose.
+    wrapper.update(caption="A time-sensitive choice", columns=["Case", "What it illustrates"])
+    assert "generic_table" in raised()
+    wrapper.update(caption="Readings", columns=["Variable", "Value"])
+    assert "generic_table" not in raised()
+    wrong = next(o for o in question["options"] if o["key"] != question["correct"])
+    wrong["text"] = "All of the above"
+    key = next(o for o in question["options"] if o["key"] == question["correct"])
+    key["text"] += " because the condition holds for every reachable state of the search"
+    assert {"all_of_above", "key_longest"} <= raised()
+
+
+def test_a_sentence_copied_from_an_exemplar_is_ruled_on() -> None:
+    from importlib.resources import files
+
+    folder = files("tum_mcp") / "bundled/exemplars"
+    exemplar = StudyContent.model_validate_json((folder / "study.json").read_bytes())
+    copied = [f for f in quality_flags(exemplar, None) if f["flag"] == "exemplar_copy"]
+    assert "bfs" in {f["item"] for f in copied}
+    own = StudyContent.model_validate(study())
+    assert not [f for f in quality_flags(own, None) if f["flag"] == "exemplar_copy"]
+
+
+def test_a_part_heading_that_repeats_its_own_text_is_flagged() -> None:
+    # A pilot sheet titled a part "1. Playing football" above the paragraph "Playing football".
+    payload = exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    block = next(b for b in exercise["statement"] if b["kind"] == "text")
+    block.update(title="1. Playing football", paragraphs=["Playing football"])
+
+    def flagged() -> bool:
+        found = quality_flags(None, ExerciseContent.model_validate(payload))
+        return any(f["flag"] == "repeated_title" for f in found if f["item"] == exercise["key"])
+
+    assert flagged()
+    block["title"] = "1."
+    assert not flagged()
+
+
+def test_a_workflow_step_that_computes_shows_its_formula() -> None:
+    # A pilot's decision pattern said "multiply utilities by probabilities" with no formula.
+    from importlib.resources import files
+
+    from tum_mcp.course.content.exam import ExamContent
+    from tum_mcp.course.content.exam_data import exam_item_flags
+
+    exam = json.loads((files("tum_mcp") / "bundled/course_app/example/exam.json").read_bytes())
+    pattern = exam["patterns"][0]
+    step = pattern["workflow"][-1]
+    step.pop("cases", None)
+    step["do"] = "Compute the expected utility of each action."
+    step["apply"] = {"text": "Multiply each utility by its probability and sum."}
+
+    def flagged() -> bool:
+        found = exam_item_flags(ExamContent.model_validate(exam))
+        item = f"exam/pattern/{pattern['key']}"
+        return any(f["flag"] == "bare_workflow" and f["item"] == item for f in found)
+
+    assert flagged()
+    step["apply"] = {"text": r"Use \(EU(a) = \sum_s P(s \mid a)\,U(s)\)."}
+    assert not flagged()
+
+
+def test_a_word_in_math_mode_is_flagged_and_text_or_a_matrix_passes() -> None:
+    # A pilot's exam patterns wrote P(A=true) and P(pass real | warning) in math mode.
+    content = study()
+    key = content["units"][0]["key"]
+    block = content["units"][0]["blocks"][0]
+
+    def flagged(paragraph: str) -> bool:
+        block["paragraphs"] = [paragraph]
+        found = quality_flags(StudyContent.model_validate(content), None)
+        return any(f["flag"] == "math_word" and f["item"] == key for f in found)
+
+    assert flagged(r"Here \(P(A=true)\) holds.")
+    assert not flagged(r"Here \(P(A=\mathrm{true})\) holds.")
+    assert not flagged(r"Here \(\begin{pmatrix}1 & 0\end{pmatrix}\) is a row.")

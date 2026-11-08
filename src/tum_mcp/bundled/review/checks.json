@@ -1255,6 +1255,18 @@
       "scope": "item",
       "version": 1,
       "default_fail": true
+    },
+    {
+      "id": "coverage.note_stands_alone",
+      "dimension": "coverage",
+      "rule": "A lecture note teaches a student who skipped the lecture: it gives the setup, the takeaway with its condition, the lecturer's working or example when one was given, and why it matters for solving or the exam. It adds what the slides do not say, and an attached frame shows the point legibly.",
+      "pass": "Read alone, the note explains the remark, its condition and its use; any frame shows the diagram or board work it explains.",
+      "fail": "The note needs the recording to make sense, drops the lecturer's example, repeats the slide, or shows a decorative or unreadable frame.",
+      "profiles": [
+        "lecture-entry"
+      ],
+      "scope": "item",
+      "version": 1
     }
   ],
   "retired": [

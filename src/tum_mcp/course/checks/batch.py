@@ -11,7 +11,7 @@ from tum_mcp.course.checks.plans import gate_status, plan_problems, read_plan
 from tum_mcp.course.checks.preparation import PreparedScope, Readiness, _browser_problems, assess
 from tum_mcp.course.content.exam_data import read_exam, stale_exam
 from tum_mcp.course.content.study import Text
-from tum_mcp.course.lecture.check import check_highlights
+from tum_mcp.course.lecture.check import SUMMARY_META, TITLE_DATE, check_highlights
 from tum_mcp.course.lecture.data import read_lectures, stale_lectures
 from tum_mcp.course.lecture.selection import selection_problems
 from tum_mcp.course.ledger.coverage import read_ledger
@@ -165,6 +165,16 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
             )
             if check_highlights(root, lectures, lecture.key)["errors"]:
                 problems.append(f"{selection_key}: fix the lecture check's evidence or boundaries.")
+            if TITLE_DATE.search(lecture.title):
+                problems.append(
+                    f"{selection_key}: the title repeats a date; name the topic only, "
+                    "the app shows the recording date."
+                )
+            if SUMMARY_META.search(lecture.summary):
+                problems.append(
+                    f"{selection_key}: the summary describes the recording or its notes; say "
+                    "what the lecture teaches."
+                )
             routes.append(f"#lectures/{lecture.key}")
             for entry in lecture.entries:
                 entry_key = f"{selection_key}/{entry.key}"

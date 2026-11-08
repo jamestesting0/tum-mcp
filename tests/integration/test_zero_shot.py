@@ -92,6 +92,15 @@ def test_lint_reports_one_items_plan_links_and_kind_defaults(demo: Path) -> None
     assert "a model is drawn" in plan_problems(drawn, tabled, None)[0]
     pictured = model.model_copy(update={"blocks": ("pic",)})
     assert not plan_problems(drawn.model_copy(update={"concepts": (pictured,)}), tabled, None)
+    # Parallel cases are scanned in a table or worked one example each, not told in prose.
+    told = {"blocks": [{"key": "story", "kind": "text"}, {"key": "case", "kind": "example"}]}
+    cases = model.model_copy(update={"kind": "cases", "blocks": ("story",)})
+    assert (
+        "parallel cases"
+        in plan_problems(drawn.model_copy(update={"concepts": (cases,)}), told, None)[0]
+    )
+    worked = cases.model_copy(update={"blocks": ("story", "case")})
+    assert not plan_problems(drawn.model_copy(update={"concepts": (worked,)}), told, None)
     skipped = checked.model_copy(
         update={
             "concepts": (

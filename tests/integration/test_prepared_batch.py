@@ -147,6 +147,49 @@ def test_complete_filtered_review_keeps_matching_batch_requirements(prepared: Pr
     assert state.batch_contract and state.budget == 1
 
 
+@pytest.mark.parametrize(
+    "title, ready",
+    [("BFS — 22 October 2026", False), ("BFS (Oct 22, 2026)", False), ("BFS in 3 steps", True)],
+)
+def test_a_lecture_title_names_its_topic_not_its_date(
+    prepared: Prepared, title: str, ready: bool
+) -> None:
+    # A trial titled a lecture "Uninformed Search — 22 October 2026" beside the shown date.
+    write_selection(prepared, selection(prepared))
+    write_batch(prepared)
+    prepared.notes["lectures"][0]["title"] = title
+    prepared.write_notes()
+    build(prepared.root, publish=False)
+
+    report = assess_batch(prepared.root, "complete")
+
+    assert report.ready is ready
+    assert any("repeats a date" in problem for problem in report.problems) is not ready
+
+
+@pytest.mark.parametrize(
+    "summary, ready",
+    [
+        ("The earliest available recording introduces search problems.", False),
+        ("The notes preserve selected clarifications.", False),
+        ("Search problems, tree search and graph search.", True),
+    ],
+)
+def test_a_lecture_summary_says_what_it_teaches(
+    prepared: Prepared, summary: str, ready: bool
+) -> None:
+    # Two pilot runs opened the summary with the recording or the notes instead of the topic.
+    write_selection(prepared, selection(prepared))
+    write_batch(prepared)
+    prepared.notes["lectures"][0]["summary"] = summary
+    prepared.write_notes()
+    build(prepared.root, publish=False)
+
+    report = assess_batch(prepared.root, "complete")
+
+    assert report.ready is ready
+
+
 def test_batch_rejects_unchecked_highlight_boundaries(prepared: Prepared) -> None:
     write_selection(prepared, selection(prepared))
     write_batch(prepared)

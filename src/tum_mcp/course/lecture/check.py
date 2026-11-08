@@ -1,5 +1,6 @@
 """Offline review of note evidence and highlight boundaries against the cached transcript."""
 
+import re
 from pathlib import Path
 
 from pydantic import JsonValue
@@ -13,6 +14,19 @@ from tum_mcp.lecture_processing.transcript_models import Passage
 EDGE_S = 0.5
 WINDOW_S = 20.0
 TEXT_LIMIT = 400
+# A date written into a lecture title ("Uninformed Search — 22 October 2026"); the app
+# already shows the recording date beside it.
+TITLE_DATE = re.compile(
+    r"\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[./]\d{1,2}[./]\d{2,4}\b"
+    r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}\b"
+    r"|\b\d{1,2}\.?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{4}\b",
+    re.IGNORECASE,
+)
+# A summary says what the lecture teaches; "The earliest available recording introduces ..."
+# or "The notes preserve ..." describes the material instead.
+SUMMARY_META = re.compile(
+    r"\b(?:recording|lecturer|video|the notes|these notes|the highlights)\b", re.IGNORECASE
+)
 
 
 def _speech(passages: tuple[Passage, ...] | list[Passage], start: float, end: float) -> str:

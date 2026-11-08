@@ -13,6 +13,8 @@ from tum_mcp.course.checks.report import (
     _sentences,
     echoed_meanings,
     generic_meanings,
+    math_word_flag,
+    math_words,
     plain_math,
     redeclared_meanings,
     renamed_meanings,
@@ -326,6 +328,39 @@ SHEET_FLAGS = {
 }
 # "\(b\): maximum branching, \(d\): ..." spells out a meaning list in a sentence.
 PROSE_LEGEND = re.compile(r"(?:\\\([^()]{1,30}?\\\)|\b[A-Za-z]\b)\s*:\s+[a-z]")
+# A workflow line that computes a value ("Compute the expected utility", "normalize by the
+# sum"); a check, choice or report of a result is not a computation.
+COMPUTING = re.compile(
+    r"\b(?:comput|calculat|multipl|sums?\b|add up|averag|normali[sz]|weight|estimat|"
+    r"marginali[sz]|divid)",
+    re.IGNORECASE,
+)
+NOT_COMPUTING = re.compile(
+    r"^\s*(?:check|verify|confirm|state|identify|choose|select|stop|report|interpret|decide|name)\b",
+    re.IGNORECASE,
+)
+# An inline formula in an apply text: an equation, sum, fraction or product in LaTeX.
+INLINE_FORMULA = re.compile(r"\\\((?:(?!\\\)).)*?(?:=|\\sum|\\frac|\\prod|\\cdot|\\times)", re.S)
+
+
+def _unformulated(workflow: list[dict]) -> list[str]:
+    """Workflow lines that compute a value but show no formula or code to compute it with."""
+    lines = [
+        (line, apply or {})
+        for step in workflow
+        for line, apply in (
+            (step["do"], step.get("apply")),
+            *((case["then"], case.get("apply")) for case in step.get("cases") or ()),
+        )
+    ]
+    return [
+        line
+        for line, apply in lines
+        if COMPUTING.search(line)
+        and not NOT_COMPUTING.search(line)
+        and not (apply.get("math") or apply.get("code"))
+        and not INLINE_FORMULA.search(apply.get("text") or "")
+    ]
 
 
 def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
@@ -345,6 +380,19 @@ def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
         for question in mock.questions:
             key = f"exam/mock/{mock.key}/{question.key}"
             texts[key] = plain_math(question.model_dump(mode="json"))
+    worded: dict[str, list[str]] = {}
+    for pattern in content.patterns:
+        worded[f"exam/pattern/{pattern.key}"] = math_words(pattern.model_dump(mode="json"))
+    for _, _, question in content.past_questions().values():
+        if question.patterns:
+            worded.setdefault(f"exam/pattern/{question.patterns[0]}", []).extend(
+                math_words(question.model_dump(mode="json"))
+            )
+    for mock in content.mocks:
+        for question in mock.questions:
+            worded[f"exam/mock/{mock.key}/{question.key}"] = math_words(
+                question.model_dump(mode="json")
+            )
     bare = [
         {
             "item": f"exam/pattern/{pattern.key}",
@@ -359,6 +407,21 @@ def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
             for step in pattern.model_dump(mode="json")["workflow"]
         )
     ]
+    bare += [
+        {
+            "item": f"exam/pattern/{pattern.key}",
+            "flag": "bare_workflow",
+            "detail": f"{len(lines)} step(s) compute a value without showing the formula, such "
+            f"as '{lines[0][:80]}'. Put the formula under `apply`: `math` with its `symbols`, or "
+            r"inline in `text` (\(EU(a) = \sum_s P(s \mid a)\,U(s)\)); words such as "
+            "'multiply and sum' are not a formula.",
+        }
+        for pattern in content.patterns
+        if pattern.workflow
+        and f"exam/pattern/{pattern.key}" not in {flag["item"] for flag in bare}
+        and (lines := _unformulated(pattern.model_dump(mode="json")["workflow"]))
+    ]
+    bare += [math_word_flag(item, words) for item, words in worded.items() if words]
     return bare + [
         {
             "item": item,

@@ -1308,7 +1308,7 @@ class StudyContent(Frozen):
 
 # {{term}} marks a mention of a defined term; it opens the definition where it is used.
 TERM_MARKER = re.compile(r"\{\{([^{}\n]{1,80})\}\}")
-LITERAL_FIELDS = frozenset({"code", "starter_code", "latex", "mathml", "svg"})
+LITERAL_FIELDS = frozenset({"code", "starter_code", "latex", "math", "mathml", "svg"})
 
 
 def term_markers(value: JsonValue, *, fold: bool = True) -> set[str]:
