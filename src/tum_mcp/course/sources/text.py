@@ -161,16 +161,21 @@ def page_images(
     return paths
 
 
-def parse_pages(value: str, total: int) -> range:
-    """Parse "4" or "2-9" into a page range within a document."""
-    try:
-        first, _, last = value.partition("-")
-        start, end = int(first), int(last or first)
-    except ValueError:
-        raise CampusError(Code.INVALID_RESPONSE, "Use --pages N or --pages FIRST-LAST.") from None
-    if not 1 <= start <= end <= total:
-        raise CampusError(Code.INVALID_RESPONSE, f"Pages must lie within 1-{total}.")
-    return range(start, end + 1)
+def parse_pages(value: str, total: int) -> tuple[int, ...]:
+    """Parse "4", "2-9" or a comma list such as "3,7-9" into pages within a document."""
+    chosen: set[int] = set()
+    for part in value.split(","):
+        try:
+            first, _, last = part.strip().partition("-")
+            start, end = int(first), int(last or first)
+        except ValueError:
+            raise CampusError(
+                Code.INVALID_RESPONSE, "Use --pages N, FIRST-LAST or a list such as 3,7-9."
+            ) from None
+        if not 1 <= start <= end <= total:
+            raise CampusError(Code.INVALID_RESPONSE, f"Pages must lie within 1-{total}.")
+        chosen.update(range(start, end + 1))
+    return tuple(sorted(chosen))
 
 
 def find_sources(root: Path, query: str | None, kind: str | None = None, limit: int = 10) -> dict:

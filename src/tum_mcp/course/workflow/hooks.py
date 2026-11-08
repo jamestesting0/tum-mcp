@@ -36,7 +36,8 @@ def handle(host: Host, payload: dict, event: str | None = None) -> dict:
             "Only add --review-rounds N when review was already authorized. Determine source "
             "coverage before drafting; finish every requested workspace and internal check. "
             f"Use --owner {shlex.quote(owner)} with study task finish or pause as well. "
-            "Finish the task before the final report. Ordinary course questions need no task."
+            "Finish the task before the final report. Course setup, source sync and ordinary "
+            "course questions need no task."
         )
         if host == "cursor":
             return {"env": {"TUM_MCP_TASK_OWNER": owner}, "additional_context": context}

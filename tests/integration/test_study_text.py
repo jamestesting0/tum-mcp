@@ -53,6 +53,8 @@ def test_cli_returns_a_page_range_and_rejects_changed_materials(tmp_path: Path) 
     assert notes["kind"] == "text" and "Composite pattern" in notes["pages"][0]["text"]
     bad = runner.invoke(app, ["study", "text", str(root), "--key", "slides", "--pages", "3-9"])
     assert bad.exit_code != 0
+    listed = runner.invoke(app, ["study", "text", str(root), "--key", "slides", "--pages", "3,1"])
+    assert [page["number"] for page in json.loads(listed.output)["pages"]] == [1, 3]
     (root / "materials/content/material-slides.pdf").write_bytes(pdf_bytes(["Edited"]))
     with pytest.raises(CampusError) as error:
         document_text(root, "slides")

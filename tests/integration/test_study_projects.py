@@ -39,6 +39,7 @@ def test_an_invalid_snapshot_names_what_failed(project: Path, inputs: Path) -> N
     with pytest.raises(CampusError) as error:
         sync(project, inputs)
     assert "keys must be unique" in error.value.message
+    assert incoming["resources"][0]["key"] in error.value.message
 
 
 def test_source_update_invalidates_only_dependent_units(project: Path, inputs: Path) -> None:

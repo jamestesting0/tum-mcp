@@ -6,6 +6,19 @@ from mcp.types import CallToolResult, InputRequiredResult, Tool
 from pydantic import JsonValue
 
 
+def _argument_problem(error: ValidationError, schema: dict, arguments: dict) -> str:
+    """Name the offending fields without echoing any supplied value."""
+    accepted = sorted(schema.get("properties", {}))
+    if error.validator == "additionalProperties" and not error.absolute_path:
+        unexpected = sorted(set(arguments) - set(accepted))
+        return f"unexpected {', '.join(unexpected)}; accepted: {', '.join(accepted) or 'none'}"
+    if error.validator == "required" and not error.absolute_path:
+        missing = [key for key in schema.get("required", ()) if key not in arguments]
+        return f"missing {', '.join(missing)}"
+    field = ".".join(str(part) for part in error.absolute_path) or "arguments"
+    return f"{field} fails its {error.validator} rule"
+
+
 class StrictMCPServer(MCPServer):
     async def list_tools(self) -> list[Tool]:
         return [
@@ -30,7 +43,8 @@ class StrictMCPServer(MCPServer):
             if tool.name == name:
                 try:
                     validate(arguments, tool.input_schema)
-                except ValidationError:
-                    raise ToolError(f"Invalid arguments for {name}.") from None
+                except ValidationError as error:
+                    problem = _argument_problem(error, tool.input_schema, arguments)
+                    raise ToolError(f"Invalid arguments for {name}: {problem}.") from None
                 break
         return await super().call_tool(name, arguments, context)

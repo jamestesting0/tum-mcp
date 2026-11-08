@@ -337,7 +337,9 @@ def import_material(
 def text(
     project: Path,
     key: Annotated[str, typer.Option(help="Inventory resource key.")],
-    pages: Annotated[str | None, typer.Option(help="Page N or FIRST-LAST.")] = None,
+    pages: Annotated[
+        str | None, typer.Option(help="Page N, FIRST-LAST or a list such as 3,7-9.")
+    ] = None,
     images: Annotated[
         bool, typer.Option(help="Also render each page to a PNG to look at (12 pages at most).")
     ] = False,

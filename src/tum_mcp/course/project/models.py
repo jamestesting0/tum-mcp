@@ -1,5 +1,6 @@
 """Validated, course-bound local inventories. No network or credential access."""
 
+from collections import Counter
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
 from urllib.parse import parse_qsl, urlsplit
@@ -134,7 +135,9 @@ class Snapshot(Frozen):
         keys = [item.key for item in self.resources]
         coverage = [item.binding for item in self.coverage]
         if len(keys) != len(set(keys)) or len(coverage) != len(set(coverage)):
-            raise ValueError("Resource and coverage keys must be unique.")
+            counts = (*Counter(keys).items(), *Counter(coverage).items())
+            repeated = [key for key, count in counts if count > 1]
+            raise ValueError(f"Resource and coverage keys must be unique: {', '.join(repeated)}.")
         retained = set(self.retained_bindings)
         if len(retained) != len(self.retained_bindings) or not retained <= bindings:
             raise ValueError("Retained bindings must be unique course bindings.")
