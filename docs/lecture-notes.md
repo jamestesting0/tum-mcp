@@ -55,8 +55,10 @@ Lecture has no quizzes or flashcards; broader teaching/practice stays in Study.
    note or highlight count applies. A brief explanation that makes a printed formula
    or diagram understandable to a newcomer can still be a useful addition.
    Save `.tum-mcp/lecture-review/RECORDING_KEY.json` with `study schema lecture-selection`.
-   Decisions partition the full eligible timeline and cite the checked materials;
-   unresolved comparison limits keep a combined batch unready. The recording selection
+   Decisions partition the full eligible timeline and cite the checked materials.
+   Unresolved comparison limits, and missing or uncertain speech in omitted time, are
+   disclosed to the reviewer rather than blocking the batch; a retained note or highlight
+   may not include missing or uncertain speech. The recording selection
    receives its own review against the compact full transcript, including omitted
    passages, even when no notes or highlights were selected.
    Readiness also refuses retained entries whose speech or clip includes time marked

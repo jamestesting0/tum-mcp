@@ -59,14 +59,14 @@ def selection_problems(root: Path, lecture: Lecture, evidence: tuple[Evidence, .
     if selection is None:
         return ["Record the full selection map before review, including omitted teaching."]
     receipt = usable_receipt(root, lecture.recording.key)
-    problems = list(selection.comparison_limits)
+    # Comparison limits and unclear speech in omitted time are disclosed to the reviewer;
+    # only a retained note or highlight that relies on unclear speech blocks the draft.
+    problems: list[str] = []
     if (
         selection.recording != receipt.key
         or selection.transcript_sha256 != receipt.transcript_sha256
     ):
         problems.append("The selection map does not match the prepared transcript.")
-    if receipt.missing or receipt.uncertain:
-        problems.append("The selected recording still has missing or uncertain speech.")
     if merge_intervals(tuple(d.interval for d in selection.decisions)) != merge_intervals(
         receipt.validity.eligible
     ):
@@ -83,6 +83,13 @@ def selection_problems(root: Path, lecture: Lecture, evidence: tuple[Evidence, .
         problems.append("Every selected note and highlight must match its decision.")
     retained = merge_intervals(
         tuple(d.interval for d in selection.decisions if d.disposition != "omit")
+    )
+    problems.extend(
+        f"Retained time {kept.start_s:g}-{kept.end_s:g} s overlaps missing or uncertain speech "
+        f"at {gap.start_s:g}-{gap.end_s:g} s; omit that part with its reason."
+        for kept in retained
+        for gap in merge_intervals((*receipt.missing, *receipt.uncertain))
+        if kept.start_s < gap.end_s and gap.start_s < kept.end_s
     )
     speech = {item.key: item.interval for item in evidence if item.kind != "frame"}
     for entry in lecture.entries:

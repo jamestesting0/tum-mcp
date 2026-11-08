@@ -62,6 +62,8 @@ when connecting, preparing missing evidence or capturing frames.
    using `study schema lecture-selection`. Its decisions partition every eligible
    recording interval and identify each selected entry or a specific omission reason.
    Name the compared material revisions and pages, and record unresolved comparisons.
+   Omit missing or uncertain speech with that reason; a note or highlight may not include
+   it. These recorded limits go to the reviewer and do not hold readiness.
    Comparing topic names alone is insufficient. Raw media and transcripts stay private.
 7. Run `tum-mcp lecture check PROJECT` and fix every error. Check notes and their context
    against the reported speech, keeping conditions and attribution. Verify the

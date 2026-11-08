@@ -19,6 +19,10 @@ tum-mcp lecture prepare PROJECT --recording https://live.rbg.tum.de/w/SLUG/ID
 tum-mcp lecture prepare PROJECT --recording URL --transcript lecture.vtt
 ```
 
+Recognizing a two-hour recording takes minutes (about five on Apple Silicon, longer on
+CPU) and prints nothing until it ends. Wait on its command handle with the longest wait your host allows instead of
+polling every few seconds; each poll repeats the whole conversation.
+
 Use `--language en` only when the language is known. `install lecture` provisions
 an isolated, hash-locked local recognizer: MLX on Apple Silicon macOS 15+, NVIDIA
 CUDA on Windows x64 and Linux/WSL x86_64 with a CUDA 12 GPU of compute capability 7.0+,
