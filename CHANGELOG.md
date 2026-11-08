@@ -13,9 +13,43 @@
   workflow must show the formula, rule or code its steps apply, and a planned `model`
   concept must be drawn. Repeated option feedback, one-sentence tables and long prose
   sections are raised for review.
-- Exercises whose sources a Study lesson teaches must link it through Recall, and new
-  Study lessons are linked from existing exercises, cheatsheet concepts and lecture notes.
-  Recall chips name untitled passages by their section.
+- Every exercise, cheatsheet entry, lecture note and Study unit links each workspace that
+  exists or records why none fits (`tum-mcp study links`); new content reopens those
+  decisions and readiness waits for them. Exercises recall their Study passages,
+  cheatsheet entries and exam patterns. A link added to an older item does not reopen its
+  review. Recall chips name untitled passages by their section.
+- Study has two new blocks: `example` (givens, steps, result) for a worked case read
+  whole, and `callout` for one pitfall (shown like an Exam pattern pitfall) or one
+  condition. A section may run at most two paragraphs before another shape; worked cases
+  told as prose are raised for review, and a planned set of parallel `cases` is a table or
+  one example each.
+- Practice questions: placeholder table headers and "all of the above" options hold
+  readiness; a key much longer than the other options, a stem word only the key repeats
+  and an unmarked negative stem are raised for review.
+- Lecture notes can name their kind and give the lecturer's working as steps and its
+  consequences as points; the recording time shows once, as "Watch mm:ss". A lecture
+  title that contains a date, or a summary that describes the recording or the notes
+  instead of the topic, is refused, and the exam home no longer counts past papers.
+- Each authoring skill opens its workflow with the same short maths card (sets, logic,
+  one span per calculation, words in `\mathrm{}`, fractions in worked steps), and the
+  exam skill links its pattern reference at the pattern step.
+- Content blocks follow one spacing scale by relation (heading, context, block, section),
+  removing the extra gap between a practice question and its table.
+- Plain-text mathematics also covers sums worked in digits (`4+4+3=11`), sets
+  (`X={1,2}`), predicates (`P(a)`), `↔` and `∅`, middle-dot products and one expression
+  split over several math spans; a paper size such as A4 is no longer taken for a variable.
+  Words in math mode (`\(P(A=true)\)`) are flagged, since they render as italic letters
+  run together. Headers such as "What it illustrates" or "Explanation" count as
+  placeholders. An exercise part titled with its own text, and provenance in set summaries
+  or statements, are flagged.
+- An exam pattern step that computes a value must show the formula it computes with, in
+  `math`, code or inline LaTeX; words such as "multiply and sum" are not enough. A
+  pattern's header shows how often it was asked only across several past exams, and no
+  longer repeats the last exam that the table below already lists.
+- `tum-mcp study build` prints the readiness problems of items changed since the last
+  build. `tum-mcp review checklist` offers a gate-passing exemplar for exercises, exam
+  patterns and lecture notes as well as Study units, and a sentence copied verbatim from
+  an exemplar is raised for review.
 - Tables use light row rules and tighter rows; guide steps no longer repeat their source
   icon on a line of its own.
 - `tum-mcp study text --pages` accepts lists such as `3,7-9`. Invalid tool arguments
