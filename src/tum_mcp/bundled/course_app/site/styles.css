@@ -360,14 +360,14 @@ button.contents-toggle:hover, button.contents-toggle[aria-expanded="true"] { bac
 .symbols { display: grid; grid-template-columns: fit-content(35%) minmax(0, 1fr); gap: var(--s2) var(--s4); margin: var(--s4) 0; font-size: var(--text-ui); }
 .symbols dt { font-weight: 600; }
 .symbols dd { margin: 0; }
-/* A table fits its content, so short columns stay close, and draws a full grid. Its rules and
+/* A table fits its content, so short columns stay close. Rows are separated by light rules
+   only, so a table reads as part of the text rather than a box of boxes. Its rules and
    header tint mix the text colour, so they keep their contrast on the page, in a panel and
    inside an answer box. */
 .table-region { width: fit-content; min-inline-size: 0; max-inline-size: 100%; overflow-x: auto; margin-top: var(--s4); }
-table { --rule: color-mix(in srgb, currentColor 28%, transparent); table-layout: auto; border-collapse: separate; border-spacing: 0; border: 1px solid var(--rule); border-radius: var(--r1); font-size: var(--text-ui); font-variant-numeric: tabular-nums; text-align: start; }
+table { --rule: color-mix(in srgb, currentColor 18%, transparent); table-layout: auto; border-collapse: separate; border-spacing: 0; border: 1px solid var(--rule); border-radius: var(--r1); font-size: var(--text-ui); line-height: 1.5; font-variant-numeric: tabular-nums; text-align: start; }
 .table-region > .table-caption { margin: 0 0 var(--s3); color: var(--muted); font-size: var(--text-ui); }
-th, td { padding: var(--s3) var(--s4); border: 0 solid var(--rule); border-width: 0 1px 1px 0; vertical-align: top; text-align: start; overflow-wrap: normal; word-break: normal; }
-tr > :last-child { border-right-width: 0; }
+th, td { padding: var(--s2) var(--s4); border: 0 solid var(--rule); border-width: 0 0 1px; vertical-align: top; text-align: start; overflow-wrap: normal; word-break: normal; }
 table > :last-child > tr:last-child > *, table > tr:last-child > * { border-bottom-width: 0; }
 th { font-weight: 600; }
 thead th { background: color-mix(in srgb, currentColor 7%, transparent); }
@@ -868,7 +868,7 @@ button.lecture-recall { margin-top: var(--s2); }
   .tabs button { padding-inline: var(--s3); }
   .recall-prompt { font-size: var(--text-body); }
   .card-face { min-height: 240px; padding: var(--s6); }
-  th, td { padding: var(--s3) var(--s2); }
+  th, td { padding: var(--s2); }
   .step-navigation { top: calc(var(--target) + 2 * var(--s1) + 1px); }
 }
 /* Phones fit the whole drawing; larger glyphs keep labels legible after scaling. */

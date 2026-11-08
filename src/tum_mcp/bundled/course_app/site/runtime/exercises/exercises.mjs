@@ -189,11 +189,13 @@ export function exercisePage(exercise, options) {
   root.append(statement);
   const recall = recallRow(exercise.prerequisites.map(prerequisite => {
     const unit = data.units.find(item => item.key === prerequisite.unit);
-    const block = unit?.blocks.find(item => prerequisite.block && item.key === prerequisite.block);
+    const index = unit ? unit.blocks.findIndex(item => prerequisite.block && item.key === prerequisite.block) : -1;
     // Before Study is prepared, the explanation itself is the reminder.
     if (!unit) return { label: prerequisite.explanation };
-    return { label: block ? block.title || block.term : unit.title, line: prerequisite.explanation, unit: prerequisite.unit, block: prerequisite.block };
-  }));
+    // An untitled block is named by the section it continues.
+    const named = unit.blocks.slice(0, index + 1).reverse().find(item => item.title || item.term);
+    return { label: named ? named.title || named.term : unit.title, line: prerequisite.explanation, unit: prerequisite.unit, block: prerequisite.block };
+  }).filter((item, at, all) => all.findIndex(other => other.label === item.label) === at));
   if (recall) root.insertBefore(recall, statement);
   // One guide per original part, as each part is its own problem; a single-part exercise has one.
   const groups = [];
@@ -242,7 +244,7 @@ export function exercisePage(exercise, options) {
       const citations = step.sources?.length ? step.sources : step.check?.graph?.sources || step.check?.plot?.sources || exercise.sources.map(item => item.key);
       body.append(append(node('div', 'section-heading'), title, sourcesNote(citations, data.sources, data.course.synthetic, step.prompt)));
       if (step.blocks?.length) {
-        const rich = renderReading({ blocks: step.blocks }, { depth: guideLevel });
+        const rich = renderReading({ blocks: step.blocks }, { depth: guideLevel, inherited: citations });
         [...rich.querySelectorAll('.reading-material')].forEach((element, i) => target(element, `block:${i}`, step.key));
         body.append(rich);
       }

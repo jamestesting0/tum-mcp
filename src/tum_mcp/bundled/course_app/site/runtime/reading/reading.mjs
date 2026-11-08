@@ -120,8 +120,10 @@ const continues = block => block.kind === 'definition' || !block.title;
 
 // A titled block opens a section at its level. A term or an untitled block continues the
 // section above, under that heading and its citation; one that opens the passage shares an
-// untitled section. `depth` shifts every level under an enclosing heading, such as a step's.
-export function renderReading(unit, { depth = 1, withVideo = true } = {}) {
+// untitled section. `depth` shifts every level under an enclosing heading, such as a step's;
+// `inherited` lists the sources that heading already cites, so an untitled section citing
+// nothing more adds no row of its own.
+export function renderReading(unit, { depth = 1, withVideo = true, inherited = [] } = {}) {
   const root = node('div');
   const video = withVideo ? videoPanel(unit) : null;
   if (video) root.append(video);
@@ -149,7 +151,7 @@ export function renderReading(unit, { depth = 1, withVideo = true } = {}) {
     const members = [block];
     for (const next of unit.blocks.slice(index + 1)) { if (!continues(next)) break; members.push(next); }
     const cited = [...new Set(members.flatMap(item => item.kind === 'definition' && item !== block ? [] : item.sources))];
-    if (block.kind !== 'definition') {
+    if (block.kind !== 'definition' && (block.title || block.insight || cited.some(id => !inherited.includes(id)))) {
       const heading = append(node('div', `section-heading${block.title ? '' : ' untitled'}`));
       if (block.title) heading.append(studyText(headingTag(block, depth), '', block.title));
       if (block.insight) heading.append(insightTip(block));
