@@ -158,7 +158,8 @@ def test_flags_exercises_concepts_and_lectures_that_do_not_link_their_teaching()
     # exercise whose sources a Study unit teaches must link it before the draft is ready.
     assert ("unlinked_exercise", "exercises/sheet-1/sample-minimum-proof") in found
     assert ("unit_only_link", "exercises/sheet-1/sample-relaxation") in found
-    assert "unlinked_exercise" in INVARIANT_FLAGS and "untaught_exercise" not in INVARIANT_FLAGS
+    # Readiness holds on the link decisions instead (undecided_link); these stay prompts.
+    assert "undecided_link" in INVARIANT_FLAGS and "unlinked_exercise" not in INVARIANT_FLAGS
     assert ("order_mismatch", "exercises") in found
     assert ("unlinked_concept", "exam") in found
     assert ("unlinked_lecture", "lectures") in found

@@ -5,7 +5,7 @@ import { arrowPaging, usePager, iconButton, iconGlyph, nextStep, cycleIndex } fr
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
 import { annotateExercise } from '../comments/anchors.mjs';
 import { markCompleted, isCompleted } from '../shell/completion.mjs';
-import { recallRow } from '../study/recall.mjs';
+import { recallRow, exerciseExamLinks } from '../study/recall.mjs';
 import { codeReferences, filesIn } from '../shell/files.mjs';
 import { renderCommentedView } from '../comments/comments.mjs';
 import { exerciseVideo } from '../lecture/video.mjs';
@@ -136,7 +136,7 @@ export function renderExercises(hash, state) {
   }
   const following = ordered[ordered.findIndex(item => item.exercise === exercise) + 1];
   return exercisePage(exercise, {
-    state, stepKey, completes: exerciseLink(group, exercise), video: `${group.key}/${exercise.key}`,
+    state, stepKey, completes: exerciseLink(group, exercise), video: `${group.key}/${exercise.key}`, set: group.key,
     eyebrow: [group.title, exercise.label, due(group)].filter(Boolean).join(' · '),
     link: step => exerciseLink(group, exercise, step),
     annotate: (element, field, step) => annotateExercise(element, group, exercise, field, step),
@@ -187,7 +187,9 @@ export function exercisePage(exercise, options) {
     if (partSection) partSection.append(section);
   }
   root.append(statement);
-  const recall = recallRow(exercise.prerequisites.map(prerequisite => {
+  // The lesson first, then the cheatsheet entry, then the exam patterns that use it.
+  const examLinks = options.set ? exerciseExamLinks(options.set, exercise.key) : { patterns: [], ideas: [] };
+  const recall = recallRow([...exercise.prerequisites.map(prerequisite => {
     const unit = data.units.find(item => item.key === prerequisite.unit);
     const index = unit ? unit.blocks.findIndex(item => prerequisite.block && item.key === prerequisite.block) : -1;
     // Before Study is prepared, the explanation itself is the reminder.
@@ -195,7 +197,7 @@ export function exercisePage(exercise, options) {
     // An untitled block is named by the section it continues.
     const named = unit.blocks.slice(0, index + 1).reverse().find(item => item.title || item.term);
     return { label: named ? named.title || named.term : unit.title, line: prerequisite.explanation, unit: prerequisite.unit, block: prerequisite.block };
-  }).filter((item, at, all) => all.findIndex(other => other.label === item.label) === at));
+  }), ...examLinks.ideas, ...examLinks.patterns].filter((item, at, all) => all.findIndex(other => other.label === item.label) === at));
   if (recall) root.insertBefore(recall, statement);
   // One guide per original part, as each part is its own problem; a single-part exercise has one.
   const groups = [];

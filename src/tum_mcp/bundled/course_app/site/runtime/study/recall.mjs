@@ -32,6 +32,10 @@ export function recallRow(items) {
 // Study passage it names, or the first unit that teaches it, and its cheatsheet entry, both
 // beside the page. The cheatsheet module loads only when a student opens an entry.
 export function examRecall(conceptKeys, patternKeys = []) {
+  const { patterns, ideas } = examRecallItems(conceptKeys, patternKeys);
+  return recallRow([...patterns, ...ideas]);
+}
+export function examRecallItems(conceptKeys, patternKeys = []) {
   const exam = data.exam || { concepts: [], patterns: [] };
   const patterns = patternKeys.map(key => exam.patterns.find(item => item.key === key)).filter(Boolean)
     .map(pattern => ({ label: `Pattern: ${pattern.title}`, href: `#exam/patterns/${pattern.key}` }));
@@ -39,5 +43,15 @@ export function examRecall(conceptKeys, patternKeys = []) {
     const passage = concept.passages?.[0];
     return { label: concept.title, line: concept.line, unit: passage?.unit || concept.units?.[0], block: passage?.block, concept };
   });
-  return recallRow([...patterns, ...ideas]);
+  return { patterns, ideas };
+}
+// The cheatsheet entries that list an exercise, and the patterns built on them (the entry a
+// pattern names first ranks first; two at most), so an exercise recalls its exam material too.
+export function exerciseExamLinks(setKey, exerciseKey) {
+  const exam = data.exam || { concepts: [], patterns: [] };
+  const concepts = exam.concepts.filter(concept => (concept.exercises || []).some(link => link.set === setKey && link.exercise === exerciseKey)).map(concept => concept.key);
+  const rank = pattern => Math.min(...concepts.map(key => pattern.concepts.indexOf(key)).filter(index => index >= 0));
+  const patterns = exam.patterns.filter(pattern => pattern.concepts.some(key => concepts.includes(key)))
+    .sort((a, b) => rank(a) - rank(b)).slice(0, 2).map(pattern => pattern.key);
+  return examRecallItems(concepts, patterns);
 }

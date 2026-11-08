@@ -255,8 +255,8 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "citation_page": "correctness",
     "answer_key": "correctness",
     "forward_term": "organization",
-    # An exercise whose sources a Study unit teaches must open that passage through Recall.
-    "unlinked_exercise": "cohesion",
+    # Each item links every existing workspace or records why none fits (Recall everywhere).
+    "undecided_link": "cohesion",
     "plain_math": "cognitive_load",
     "dense_paragraph": "cognitive_load",
     "described_object": "representation",

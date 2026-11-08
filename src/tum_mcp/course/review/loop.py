@@ -188,8 +188,19 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
             media=media.structure,
         )
         items["course"] = course_item(structure, str(structure["revision"]), semantics)
-        # An exercise that should open its Study passage through Recall holds its own gate.
-        links = [flag for flag in structure["flags"] if flag["flag"] == "unlinked_exercise"]
+        # Every exercise, cheatsheet entry, note and unit links each existing workspace or
+        # records why none fits; an open decision holds that item's gate.
+        from tum_mcp.course.checks.links import undecided
+
+        links = [
+            {
+                "item": pair.item,
+                "flag": "undecided_link",
+                "detail": f"No {pair.target} link and no recorded reason; run tum-mcp study "
+                "links to see candidates, then link it or record why none fits.",
+            }
+            for pair in undecided(root, content, exercises, exam, lectures)
+        ]
     flags = [
         *quality_flags(content, exercises),
         *links,

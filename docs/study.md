@@ -341,9 +341,13 @@ hints. Solutions open independently and reveal only their own question's answer;
 shared solution notes appear once after the questions.
 Multiple-choice steps are checked; for every other step you work on paper and press
 **Compare**, the one place that shows the answer, its reasoning and a hint for the
-likeliest mistake. **Review** beside a prerequisite opens the Study passage next to
-the exercise on desktop, or as a full-page view on mobile. Closing it returns to the
-same step and scroll position. A sheet whose problems are not all prepared
+likeliest mistake. The Recall row under the statement opens, next to the exercise on
+desktop or as a full-page view on mobile, the Study passages it uses, the cheatsheet
+entries it practises and up to two exam patterns of those entries. Closing it returns to
+the same step and scroll position. The agent links every exercise, cheatsheet entry,
+lecture note and Study unit to each workspace that exists, or records why none fits
+(`study links`); a new lecture reopens those decisions, and readiness waits for them.
+A link added to an older item does not reopen its review. A sheet whose problems are not all prepared
 says which ones are still missing. Code steps open the function skeleton in a small editor and
 show the model answer as code; code is never run, and nothing is graded by keywords.
 Finishing the last step marks the exercise completed in the outline; you can also

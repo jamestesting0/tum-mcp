@@ -169,6 +169,24 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
             for entry in lecture.entries:
                 entry_key = f"{selection_key}/{entry.key}"
                 items[entry_key] = [{"request": batch.request}]
+    # New content in a workspace reopens the link decisions of items elsewhere that could point
+    # to it (an exercise or cheatsheet entry and a new lesson), so they are decided now.
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.checks.links import undecided
+    from tum_mcp.course.content.exercise_data import read_exercises
+    from tum_mcp.course.content.store import present
+
+    prefixes = {"study": "study/", "exercises": "exercises/", "cheatsheet": "exam/"}
+    added = {
+        target for target, prefix in prefixes.items() if any(k.startswith(prefix) for k in items)
+    }
+    added |= {"lectures"} if any(key.startswith("lecture/") for key in items) else set()
+    study = read_content(root) if present(root, "study") else None
+    problems.extend(
+        f"{pair.item}: decide its link to the {pair.target} content (tum-mcp study links)."
+        for pair in undecided(root, study, read_exercises(root), exam, lectures)
+        if pair.target in added and pair.item not in items
+    )
     if read_bytes(root / "app/data.mjs") != current_data(root):
         problems.append("Build the complete current draft.")
     elif not problems and routes:

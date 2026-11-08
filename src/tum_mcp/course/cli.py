@@ -379,6 +379,36 @@ def find(
 
 
 @app.command(rich_help_panel="Author")
+def links(
+    project: Path,
+    none: Annotated[
+        str | None, typer.Option(help="Record that ITEM has no fitting link in --target.")
+    ] = None,
+    target: Annotated[
+        str | None, typer.Option(help="study, cheatsheet, exercises or lectures.")
+    ] = None,
+    reason: Annotated[str | None, typer.Option(help="Why no link fits, for --none.")] = None,
+) -> None:
+    """List items without a link to each existing workspace, or record why none fits."""
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.checks.links import record_none, report
+    from tum_mcp.course.content.exam_data import read_exam
+    from tum_mcp.course.content.exercise_data import read_exercises
+    from tum_mcp.course.content.store import present
+    from tum_mcp.course.lecture.data import read_lectures
+
+    root = project.expanduser().resolve()
+    study = read_content(root) if present(root, "study") else None
+    documents = (study, read_exercises(root), read_exam(root), read_lectures(root))
+    if none is None:
+        typer.echo(json.dumps(report(root, *documents), indent=2))
+        return
+    if not target or not reason:
+        raise CampusError(Code.ACTION_REQUIRED, "Give --target and --reason with --none.")
+    typer.echo(json.dumps(record_none(root, *documents, none, target, reason), indent=2))
+
+
+@app.command(rich_help_panel="Author")
 def build(
     project: Path,
     local_only: Annotated[

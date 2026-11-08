@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from collections.abc import Iterator
 from functools import partial
 from pathlib import Path
@@ -195,3 +196,32 @@ def test_completed_outline_title_keeps_its_row_and_scroll(
     finally:
         page.close()
 
+
+def test_an_exercise_recalls_its_lesson_cheatsheet_entry_and_pattern(
+    course_browser: Browser, example_url: str
+) -> None:
+    # A trial's exercises showed no Recall row; an exercise now recalls Exam material too.
+    page = course_browser.new_page(viewport={"width": 1280, "height": 900})
+    names: dict[str, str] = {}
+
+    def linked(route: Route) -> None:
+        response = route.fetch()
+        data = json.loads(response.text().removeprefix("export default ").removesuffix(";\n"))
+        pattern = data["exam"]["patterns"][0]
+        concept = next(c for c in data["exam"]["concepts"] if c["key"] == pattern["concepts"][0])
+        concept["exercises"] = [{"set": "preview", "exercise": "controls"}]
+        names.update(concept=concept["title"], pattern=pattern["title"])
+        route.fulfill(response=response, body=f"export default {json.dumps(data)};\n")
+
+    page.route("**/data.mjs", linked)
+    try:
+        page.goto(example_url + "#exercises/preview/controls")
+        chips = page.locator(".exercise-workspace .recall-row .recall-chip")
+        expect(chips.first).to_be_visible()
+        labels = chips.all_inner_texts()
+        assert labels[0] == "Invariant"
+        assert names["concept"] in labels and f"Pattern: {names['pattern']}" in labels
+        chips.filter(has_text=f"Pattern: {names['pattern']}").click()
+        expect(page).to_have_url(re.compile(r"#exam/patterns/"))
+    finally:
+        page.close()

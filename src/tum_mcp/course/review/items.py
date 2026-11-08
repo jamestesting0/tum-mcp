@@ -73,8 +73,21 @@ def answer_key(root: Path, key: str) -> str | None:
     return hashlib.sha256(body).hexdigest()[:16] if body is not None else None
 
 
+# Cross-workspace links: reviewed with the course's link matrix, so adding a link to an older
+# item (a new lecture's lesson) never marks that item's teaching as changed.
+LINK_FIELDS = frozenset({"prerequisites", "lectures", "units", "passages", "exercises", "passage"})
+
+
+def _without_links(value: JsonValue) -> JsonValue:
+    if isinstance(value, dict):
+        return {k: _without_links(v) for k, v in value.items() if k not in LINK_FIELDS}
+    if isinstance(value, list):
+        return [_without_links(entry) for entry in value]
+    return value
+
+
 def _item(root: Path, key: str, profile: str, title: str, value: dict) -> ReviewItem:
-    blocks = blocks_of(value)
+    blocks = blocks_of(_without_links(value))
     if script := answer_key(root, key):
         blocks["answer-key"] = script
     return ReviewItem(key, profile, title, value, blocks)
