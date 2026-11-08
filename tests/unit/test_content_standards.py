@@ -8,7 +8,11 @@ DOC = Path(__file__).parents[2] / "docs/content-standards.md"
 
 
 def enforcement() -> set[str]:
-    rows = [line.split("|") for line in DOC.read_text().splitlines() if line.startswith("| ")]
+    rows = [
+        line.split("|")
+        for line in DOC.read_text(encoding="utf-8").splitlines()
+        if line.startswith("| ")
+    ]
     return {name for row in rows if len(row) > 3 for name in re.findall(r"`([a-z_.]+)`", row[3])}
 
 

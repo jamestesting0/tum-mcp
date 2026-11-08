@@ -29,7 +29,9 @@ def open_pairs(project: Path) -> set[tuple[str, str]]:
 
 
 def test_a_none_decision_closes_a_pair_until_the_target_workspace_changes(demo: Path) -> None:
-    concept = json.loads(sorted((demo / "app/exam/concepts").glob("*.json"))[0].read_text())
+    concept = json.loads(
+        sorted((demo / "app/exam/concepts").glob("*.json"))[0].read_text(encoding="utf-8")
+    )
     pair = (f"concept:{concept['key']}", "study")
     assert pair in open_pairs(demo)
 
@@ -38,17 +40,17 @@ def test_a_none_decision_closes_a_pair_until_the_target_workspace_changes(demo: 
     assert pair not in open_pairs(demo)
     # A new Study section (a new lecture's lesson) reopens the decision.
     path = demo / "app/study/units/components.json"
-    unit = json.loads(path.read_text())
+    unit = json.loads(path.read_text(encoding="utf-8"))
     unit["blocks"][0]["key"] = "a-new-section"
-    path.write_text(json.dumps(unit))
+    path.write_text(json.dumps(unit), encoding="utf-8")
     assert pair in open_pairs(demo)
 
 
 def test_a_link_in_the_content_decides_the_pair(demo: Path) -> None:
     path = sorted((demo / "app/exam/concepts").glob("*.json"))[0]
-    concept = json.loads(path.read_text())
+    concept = json.loads(path.read_text(encoding="utf-8"))
     concept["exercises"] = [{"set": "preview", "exercise": "controls"}]
-    path.write_text(json.dumps(concept))
+    path.write_text(json.dumps(concept), encoding="utf-8")
 
     assert ("exercises/preview/controls", "cheatsheet") not in open_pairs(demo)
     assert (f"concept:{concept['key']}", "exercises") not in open_pairs(demo)
@@ -74,10 +76,10 @@ def test_a_link_edit_leaves_the_review_fingerprint_of_the_teaching_unchanged(dem
 
     path = demo / "app/exercises/preview/controls.json"
     before = blocks()
-    exercise = json.loads(path.read_text())
+    exercise = json.loads(path.read_text(encoding="utf-8"))
     exercise["prerequisites"][0]["explanation"] = "A different reminder of the invariant."
-    path.write_text(json.dumps(exercise))
+    path.write_text(json.dumps(exercise), encoding="utf-8")
     assert blocks() == before
     exercise["objectives"][0] = "Explain a different idea."
-    path.write_text(json.dumps(exercise))
+    path.write_text(json.dumps(exercise), encoding="utf-8")
     assert blocks() != before

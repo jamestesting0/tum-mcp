@@ -298,10 +298,10 @@ def test_a_build_reports_the_problems_of_what_changed_since_the_last_build(demo:
     build()
     assert build() == {}
     path = next((demo / "app/study/units").glob("*.json"))
-    unit = json.loads(path.read_text())
+    unit = json.loads(path.read_text(encoding="utf-8"))
     block = next(b for b in unit["blocks"] if b["kind"] == "text" and b.get("paragraphs"))
     block["paragraphs"][0] += " The utility of S3 is 4."
-    path.write_text(json.dumps(unit))
+    path.write_text(json.dumps(unit), encoding="utf-8")
 
     problems = build()
 
