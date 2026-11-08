@@ -1,0 +1,19 @@
+{
+  "key": "open-loop-plan",
+  "kind": "clarification",
+  "title": "Executing a found path",
+  "context": "After search reaches the goal, the slides recover the route from parent links.",
+  "text": "The recovered plan reaches the goal only if every action behaves as the model predicts.",
+  "steps": [
+    "Follow parent links from the goal back to the start.",
+    "Reverse the list to get the actions in order.",
+    "Execute them without observing again (open loop)."
+  ],
+  "points": [
+    "With disturbances, the agent can leave the plan.",
+    "It must then observe and search again, or follow a policy."
+  ],
+  "evidence": [
+    "execution-speech"
+  ]
+}

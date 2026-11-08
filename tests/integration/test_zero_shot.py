@@ -236,6 +236,30 @@ def test_the_shipped_exemplar_passes_its_plan_answer_key_and_flags() -> None:
     assert not {flag["flag"] for flag in quality_flags(content, None)} & set(INVARIANT_FLAGS)
 
 
+def test_each_kind_of_item_ships_a_valid_exemplar_the_checklist_points_to() -> None:
+    from importlib.resources import files
+
+    from tum_mcp.course.checks.report import quality_flags
+    from tum_mcp.course.content.exam import Pattern
+    from tum_mcp.course.content.exercise_data import check_prerequisites
+    from tum_mcp.course.content.exercises import ExerciseContent
+    from tum_mcp.course.content.study import StudyContent
+    from tum_mcp.course.lecture.content import Note
+    from tum_mcp.course.review.models import INVARIANT_FLAGS
+
+    folder = files("tum_mcp") / "bundled/exemplars"
+    study = StudyContent.model_validate_json((folder / "study.json").read_bytes())
+    exercises = ExerciseContent.model_validate_json((folder / "exercises.json").read_bytes())
+    check_prerequisites(exercises, study)
+    assert not {flag["flag"] for flag in quality_flags(study, exercises)} & set(INVARIANT_FLAGS)
+    Pattern.model_validate_json((folder / "exam-pattern.json").read_bytes())
+    Note.model_validate_json((folder / "lecture-note.json").read_bytes())
+    for profile in ("study-unit", "exercise", "exam-pattern", "lecture-entry"):
+        result = CliRunner().invoke(app, ["review", "checklist", "--profile", profile])
+        assert result.exit_code == 0, result.output
+        assert Path(json.loads(result.output)["exemplar"]["content"]).is_file()
+
+
 def test_this_week_resolves_from_the_recorded_schedule(demo: Path) -> None:
     from tum_mcp.course.project.store import load_state
 
@@ -253,6 +277,28 @@ def test_this_week_resolves_from_the_recorded_schedule(demo: Path) -> None:
     (demo / ".tum-mcp/schedule.json").write_text(json.dumps({"sessions": sessions}))
     result = CliRunner().invoke(app, ["study", "schedule", str(demo)])
     assert result.exit_code != 0 and "unknown sources" in str(result.exception)
+
+
+def test_a_build_reports_the_problems_of_what_changed_since_the_last_build(demo: Path) -> None:
+    # Authors in trials met invariant problems only at readiness; a build shows them at once.
+    def build() -> dict:
+        result = CliRunner().invoke(app, ["study", "build", str(demo), "--local-only"])
+        assert result.exit_code == 0, result.output
+        return json.loads(result.output).get("problems", {})
+
+    build()
+    assert build() == {}
+    path = next((demo / "app/study/units").glob("*.json"))
+    unit = json.loads(path.read_text())
+    block = next(b for b in unit["blocks"] if b["kind"] == "text" and b.get("paragraphs"))
+    block["paragraphs"][0] += " The utility of S3 is 4."
+    path.write_text(json.dumps(unit))
+
+    problems = build()
+
+    assert list(problems) == [f"study/{unit['key']}"]
+    assert any(line.startswith("plain_math") for line in problems[f"study/{unit['key']}"])
+    assert build() == {}
 
 
 def test_situation_questions_and_guides_without_a_picture_are_flagged(demo: Path) -> None:

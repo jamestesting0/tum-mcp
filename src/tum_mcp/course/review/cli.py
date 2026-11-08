@@ -175,21 +175,21 @@ def checklist(
     from importlib.resources import files
 
     exemplars = files("tum_mcp") / "bundled/exemplars"
+    # A gate-passing item of this kind to copy the shape from: read it before writing.
+    shown = {
+        "study-unit": {
+            "content": str(exemplars / "study.json"),
+            "plan": str(exemplars / "plans/study/bfs.json"),
+            "answer_key": str(exemplars / "checks/study/bfs.py"),
+        },
+        "exercise": {"content": str(exemplars / "exercises.json")},
+        "exam-pattern": {"content": str(exemplars / "exam-pattern.json")},
+        "lecture-entry": {"content": str(exemplars / "lecture-note.json")},
+    }
     _echo(
         {
             "profile": profile,
-            # A gate-passing item with its plan and answer key, to copy the shape from.
-            **(
-                {
-                    "exemplar": {
-                        "content": str(exemplars / "study.json"),
-                        "plan": str(exemplars / "plans/study/bfs.json"),
-                        "answer_key": str(exemplars / "checks/study/bfs.py"),
-                    }
-                }
-                if profile == "study-unit"
-                else {}
-            ),
+            **({"exemplar": shown[profile]} if profile in shown else {}),
             "checks": [check.brief() for check in registry.judged(profile)],
             "decided_by_code": [
                 {"check": check.id, "flag": check.decided_by}

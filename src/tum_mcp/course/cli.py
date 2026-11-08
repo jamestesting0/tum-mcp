@@ -417,9 +417,12 @@ def build(
 ) -> None:
     """Validate current source-linked content and build the local study app."""
     from tum_mcp.course.app.build import build as build_site
+    from tum_mcp.course.checks.changes import changed_problems
 
     result = build_site(project, publish=not local_only)
-    typer.echo(json.dumps(asdict(result), indent=2))
+    # What the author just changed and must fix before the draft can be ready.
+    problems = changed_problems(project.expanduser().resolve())
+    typer.echo(json.dumps(asdict(result) | ({"problems": problems} if problems else {}), indent=2))
     if result.publication is not None and result.publication.status in {"pending", "failed"}:
         raise typer.Exit(2)
 

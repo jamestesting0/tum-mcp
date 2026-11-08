@@ -1,0 +1,262 @@
+{
+  "schema_version": 1,
+  "course_key": "exemplar",
+  "sets": [
+    {
+      "key": "search",
+      "title": "Search",
+      "exercises": [
+        {
+          "key": "shortest-route",
+          "label": "1",
+          "title": "Shortest route by breadth-first search",
+          "sources": [
+            {
+              "key": "search",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "statement": [
+            {
+              "kind": "text",
+              "key": "setting",
+              "sources": [
+                "search"
+              ],
+              "paragraphs": [
+                "A courier starts at S and must reach G. Every road takes the same time."
+              ]
+            },
+            {
+              "kind": "diagram",
+              "key": "road-graph",
+              "sources": [
+                "search"
+              ],
+              "description": "Roads between S, A, B, C and G; every road has the same length.",
+              "nodes": [
+                {
+                  "key": "s",
+                  "label": "S",
+                  "row": 1,
+                  "col": 0,
+                  "shape": "circle"
+                },
+                {
+                  "key": "a",
+                  "label": "A",
+                  "row": 0,
+                  "col": 1,
+                  "shape": "circle"
+                },
+                {
+                  "key": "b",
+                  "label": "B",
+                  "row": 2,
+                  "col": 1,
+                  "shape": "circle"
+                },
+                {
+                  "key": "c",
+                  "label": "C",
+                  "row": 1,
+                  "col": 2,
+                  "shape": "circle"
+                },
+                {
+                  "key": "g",
+                  "label": "G",
+                  "row": 0,
+                  "col": 3,
+                  "shape": "circle"
+                }
+              ],
+              "edges": [
+                {
+                  "start": "s",
+                  "end": "a",
+                  "directed": false
+                },
+                {
+                  "start": "s",
+                  "end": "b",
+                  "directed": false
+                },
+                {
+                  "start": "a",
+                  "end": "c",
+                  "directed": false
+                },
+                {
+                  "start": "b",
+                  "end": "c",
+                  "directed": false
+                },
+                {
+                  "start": "a",
+                  "end": "g",
+                  "directed": false
+                },
+                {
+                  "start": "c",
+                  "end": "g",
+                  "directed": false
+                }
+              ],
+              "frames": [
+                {
+                  "caption": "Every road counts as one edge."
+                }
+              ],
+              "state_labels": "caption"
+            },
+            {
+              "kind": "text",
+              "key": "part-a",
+              "title": "(a)",
+              "sources": [
+                "search"
+              ],
+              "paragraphs": [
+                "Give the order in which breadth-first search from S expands the nodes; break ties alphabetically and stop when G is expanded."
+              ]
+            },
+            {
+              "kind": "text",
+              "key": "part-b",
+              "title": "(b)",
+              "sources": [
+                "search"
+              ],
+              "paragraphs": [
+                "Give the shortest route from S to G and its number of roads."
+              ]
+            }
+          ],
+          "parts": [
+            "(a)",
+            "(b)"
+          ],
+          "part_blocks": {
+            "(a)": "part-a",
+            "(b)": "part-b"
+          },
+          "objectives": [
+            "Trace breadth-first search on a graph with tie-breaking.",
+            "Read the shortest route from the parent of each node."
+          ],
+          "prerequisites": [
+            {
+              "unit": "bfs",
+              "block": "bfs-trace",
+              "explanation": "Breadth-first search expands nodes in the order they were discovered."
+            },
+            {
+              "unit": "bfs",
+              "block": "bfs-shortest",
+              "explanation": "The first route that reaches a node uses the fewest edges."
+            }
+          ],
+          "steps": [
+            {
+              "key": "second",
+              "part": "(a)",
+              "purpose": "Discovery order decides the queue.",
+              "prompt": "Which node does breadth-first search expand second?",
+              "check": {
+                "kind": "choice",
+                "correct": "a",
+                "options": [
+                  {
+                    "key": "a",
+                    "text": "A",
+                    "feedback": "S discovers A and B; A is first alphabetically."
+                  },
+                  {
+                    "key": "b",
+                    "text": "B",
+                    "feedback": "B is discovered with A, but ties go alphabetically."
+                  },
+                  {
+                    "key": "c",
+                    "text": "C",
+                    "feedback": "C is two roads away, so it waits in the queue."
+                  },
+                  {
+                    "key": "g",
+                    "text": "G",
+                    "feedback": "G is not discovered until A is expanded."
+                  }
+                ]
+              },
+              "hints": [
+                "List what S discovers, in tie-break order."
+              ],
+              "explanation": "The queue after expanding S holds A then B, so A is expanded second."
+            },
+            {
+              "key": "roads",
+              "part": "(b)",
+              "purpose": "First discovery gives the shortest route.",
+              "prompt": "How many roads does the shortest route from S to G use?",
+              "check": {
+                "kind": "numeric",
+                "answer": 2,
+                "feedback": "G is discovered from A, which was discovered from S."
+              },
+              "hints": [
+                "Follow the parent of G back to S."
+              ],
+              "explanation": "G's parent is A and A's parent is S: S, A, G uses 2 roads."
+            }
+          ],
+          "solution": {
+            "origin": "authored",
+            "answers": [
+              {
+                "label": "(a)",
+                "blocks": [
+                  {
+                    "kind": "example",
+                    "sources": [
+                      "search"
+                    ],
+                    "given": [
+                      "Start S; ties broken alphabetically"
+                    ],
+                    "steps": [
+                      "Expand S: queue A, B.",
+                      "Expand A: queue B, C, G.",
+                      "Expand B: C is already queued.",
+                      "Expand C, then G."
+                    ],
+                    "result": "Expansion order: S, A, B, C, G."
+                  }
+                ]
+              },
+              {
+                "label": "(b)",
+                "blocks": [
+                  {
+                    "kind": "example",
+                    "sources": [
+                      "search"
+                    ],
+                    "given": [
+                      "Parents: A from S, G from A"
+                    ],
+                    "steps": [
+                      "Follow G back: G, A, S.",
+                      "Reverse it."
+                    ],
+                    "result": "Route S, A, G with 2 roads."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

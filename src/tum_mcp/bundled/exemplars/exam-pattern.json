@@ -1,0 +1,595 @@
+{
+  "key": "order-search",
+  "topic": "graphs",
+  "title": "Write a search procedure",
+  "summary": "Write a traversal and justify the data structure that holds its frontier.",
+  "cues": [
+    "A traversal must be written or completed for a graph"
+  ],
+  "workflow": [
+    {
+      "do": "Identify the frontier structure",
+      "why": "The frontier's order is the search order.",
+      "cases": [
+        {
+          "when": "The oldest discovered node is explored first",
+          "then": "Keep the frontier in a queue (breadth-first)",
+          "apply": {
+            "code": "frontier = deque([start])\nnode = frontier.popleft()",
+            "language": "python"
+          }
+        },
+        {
+          "when": "The newest discovered node is explored first",
+          "then": "Keep the frontier in a stack (depth-first)",
+          "apply": {
+            "code": "frontier = [start]\nnode = frontier.pop()",
+            "language": "python"
+          }
+        }
+      ]
+    },
+    {
+      "do": "Start, then loop: take, expand, record",
+      "apply": {
+        "text": "Mark a node when it enters the frontier, so it is never added twice.",
+        "code": "seen = {start}\nwhile frontier:\n    node = take(frontier)\n    order.append(node)\n    for nxt in graph[node]:\n        if nxt not in seen:\n            seen.add(nxt)\n            frontier.append(nxt)",
+        "language": "python",
+        "math": [
+          "T=O(V+E)"
+        ],
+        "symbols": [
+          {
+            "symbol": "\\(V\\)",
+            "meaning": "nodes reachable from the start node"
+          },
+          {
+            "symbol": "\\(E\\)",
+            "meaning": "edges between those nodes"
+          }
+        ]
+      }
+    }
+  ],
+  "concepts": [
+    "bfs"
+  ],
+  "sources": [
+    {
+      "key": "components",
+      "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+    }
+  ],
+  "examples": [
+    {
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "Task",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "Breadth-first search from S: say which structure holds the frontier, then write the search."
+          ]
+        },
+        {
+          "kind": "diagram",
+          "title": "Graph",
+          "sources": [
+            "components"
+          ],
+          "description": "An undirected graph: S links to A and B, and A links to C.",
+          "nodes": [
+            {
+              "key": "s",
+              "label": "S",
+              "row": 1,
+              "col": 0
+            },
+            {
+              "key": "a",
+              "label": "A",
+              "row": 0,
+              "col": 1
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "row": 2,
+              "col": 1
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "row": 0,
+              "col": 2
+            }
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "s",
+              "end": "b"
+            },
+            {
+              "start": "a",
+              "end": "c"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Search starts at S."
+            }
+          ],
+          "state_labels": "caption"
+        }
+      ],
+      "solution": {
+        "answers": [
+          {
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Solution",
+                "sources": [
+                  "components"
+                ],
+                "paragraphs": [
+                  "A queue holds the frontier. Put S in; then repeatedly take the oldest node, visit its unseen neighbours and add them."
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "step": 1,
+          "prompt": "Which node does breadth-first search explore next: the oldest or the newest it has found?",
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Frontier",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "A queue."
+              ]
+            }
+          ],
+          "case": 1,
+          "case_feedback": [
+            "Yes: breadth-first takes the oldest discovered node, so the frontier is first in, first out.",
+            "Taking the newest node first goes deep along one branch; that is depth-first."
+          ]
+        },
+        {
+          "step": 2,
+          "prompt": "Write `bfs(graph, start)`. `graph` maps each node to a list of its neighbours.",
+          "check": {
+            "kind": "self_check",
+            "format": "code",
+            "language": "python",
+            "starter_code": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    # your code\n",
+            "model_answer": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    seen = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbour in graph[node]:\n            if neighbour not in seen:\n                seen.add(neighbour)\n                queue.append(neighbour)\n    return order\n",
+            "rubric": [
+              "Keeps the frontier in a queue and takes the oldest node with `popleft()`",
+              "Marks a neighbour seen when it is enqueued, so no node is added twice",
+              "Records each node once, in the order it is taken"
+            ]
+          },
+          "answer": [
+            {
+              "kind": "code",
+              "title": "Search",
+              "sources": [
+                "components"
+              ],
+              "language": "python",
+              "code": "from collections import deque\n\ndef bfs(graph, start):\n    \"\"\"Return the nodes reachable from start in breadth-first order.\"\"\"\n    seen = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbour in graph[node]:\n            if neighbour not in seen:\n                seen.add(neighbour)\n                queue.append(neighbour)\n    return order\n",
+              "explanation": "Take the oldest node, then add its unseen neighbours."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "Task",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "List the order in which nodes are taken from S: (a) breadth-first, (b) depth-first. Add a node's neighbours in alphabetical order."
+          ]
+        },
+        {
+          "kind": "diagram",
+          "title": "Graph",
+          "sources": [
+            "components"
+          ],
+          "description": "An undirected graph: S links to A and B, and A links to C.",
+          "nodes": [
+            {
+              "key": "s",
+              "label": "S",
+              "row": 1,
+              "col": 0
+            },
+            {
+              "key": "a",
+              "label": "A",
+              "row": 0,
+              "col": 1
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "row": 2,
+              "col": 1
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "row": 0,
+              "col": 2
+            }
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "s",
+              "end": "b"
+            },
+            {
+              "start": "a",
+              "end": "c"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Search starts at S."
+            }
+          ],
+          "state_labels": "caption"
+        }
+      ],
+      "solution": {
+        "answers": [
+          {
+            "blocks": [
+              {
+                "kind": "table",
+                "title": "Orders",
+                "sources": [
+                  "components"
+                ],
+                "columns": [
+                  "Search",
+                  "Frontier",
+                  "Order taken"
+                ],
+                "rows": [
+                  [
+                    "Breadth-first",
+                    "Queue",
+                    "S, A, B, C"
+                  ],
+                  [
+                    "Depth-first",
+                    "Stack",
+                    "S, B, A, C"
+                  ]
+                ],
+                "caption": "The stack takes B first because it was pushed last."
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "part": "a",
+          "step": 1,
+          "prompt": "Breadth-first: which case applies?",
+          "case": 1,
+          "case_feedback": [
+            "Yes: breadth-first explores the oldest discovered node, so the frontier is a queue.",
+            "Newest first is depth-first, part (b)."
+          ],
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Frontier",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "A queue: first in, first out."
+              ]
+            }
+          ]
+        },
+        {
+          "part": "a",
+          "step": 2,
+          "prompt": "Take, expand and record until the queue is empty. In which order are the nodes taken?",
+          "check": {
+            "kind": "text",
+            "feedback": "S, then its neighbours A and B in order, then C.",
+            "answer": "S, A, B, C"
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Order",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "S, A, B, C."
+              ]
+            }
+          ]
+        },
+        {
+          "part": "b",
+          "step": 1,
+          "prompt": "Depth-first: which case applies?",
+          "case": 2,
+          "case_feedback": [
+            "Oldest first is breadth-first, part (a).",
+            "Yes: depth-first explores the newest discovered node, so the frontier is a stack."
+          ],
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Frontier",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "A stack: last in, first out."
+              ]
+            }
+          ]
+        },
+        {
+          "part": "b",
+          "step": 2,
+          "prompt": "Take, expand and record until the stack is empty. In which order are the nodes taken?",
+          "check": {
+            "kind": "text",
+            "feedback": "S pushes A, then B; B is on top, so it is taken before A.",
+            "answer": "S, B, A, C"
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Order",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "S, B, A, C."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "pitfalls": [
+    {
+      "situation": "Deciding where to mark nodes as seen in the BFS loop.",
+      "wrong": "`seen.add(node)` after `queue.popleft()`",
+      "right": "`seen.add(neighbour)` before `queue.append(neighbour)`",
+      "why": "A node marked only when taken can be added twice while it waits, so it is visited twice.",
+      "step": 2
+    }
+  ],
+  "drill": [
+    {
+      "key": "crawl",
+      "prompt": "A crawler fetches pages in the order it found their links. Which structure holds the pages still to fetch?",
+      "blocks": [
+        {
+          "kind": "table",
+          "title": "Links found",
+          "sources": [
+            "components"
+          ],
+          "columns": [
+            "Page fetched",
+            "New links"
+          ],
+          "rows": [
+            [
+              "home",
+              "news, shop"
+            ],
+            [
+              "news",
+              "sport"
+            ]
+          ],
+          "caption": "news and shop were found before sport."
+        }
+      ],
+      "check": {
+        "kind": "text",
+        "feedback": "Found first, fetched first.",
+        "answer": "queue"
+      },
+      "explanation": "The oldest found page is fetched next: a queue, as in breadth-first search.",
+      "cases": [
+        {
+          "step": 1,
+          "case": 1
+        }
+      ],
+      "guide": [
+        {
+          "step": 1,
+          "prompt": "After fetching news, which waiting page was found first?",
+          "hint": "Compare when shop and sport entered the frontier.",
+          "answer": [
+            {
+              "kind": "text",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "shop entered before sport. Taking the oldest waiting page requires a FIFO queue."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "maze",
+      "prompt": "Search the graph depth-first from A, adding neighbours in alphabetical order. In which order are the nodes taken?",
+      "blocks": [
+        {
+          "kind": "diagram",
+          "title": "Graph",
+          "sources": [
+            "components"
+          ],
+          "description": "A links to B and C; B links to D.",
+          "nodes": [
+            {
+              "key": "a",
+              "label": "A",
+              "row": 1,
+              "col": 0
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "row": 0,
+              "col": 1
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "row": 2,
+              "col": 1
+            },
+            {
+              "key": "d",
+              "label": "D",
+              "row": 0,
+              "col": 2
+            }
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "b"
+            },
+            {
+              "start": "a",
+              "end": "c"
+            },
+            {
+              "start": "b",
+              "end": "d"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Search starts at A."
+            }
+          ],
+          "state_labels": "caption"
+        }
+      ],
+      "explanation": "The newest node is taken first, so the search finishes C before it returns to B.",
+      "solution": [
+        {
+          "kind": "table",
+          "title": "Stack",
+          "sources": [
+            "components"
+          ],
+          "columns": [
+            "Taken",
+            "Stack after expanding"
+          ],
+          "rows": [
+            [
+              "A",
+              "B, C"
+            ],
+            [
+              "C",
+              "B"
+            ],
+            [
+              "B",
+              "D"
+            ],
+            [
+              "D",
+              "(empty)"
+            ]
+          ],
+          "caption": "Order taken: A, C, B, D."
+        }
+      ],
+      "cases": [
+        {
+          "step": 1,
+          "case": 2
+        }
+      ],
+      "guide": [
+        {
+          "step": 1,
+          "prompt": "When B then C are pushed, which node does a stack take next?",
+          "hint": "The last pushed node is on top.",
+          "answer": [
+            {
+              "kind": "text",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "C is taken next, because it was pushed after B."
+              ]
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "prompt": "Continue the stack until no node remains.",
+          "hint": "Mark each node when pushed and skip neighbours already seen.",
+          "answer": [
+            {
+              "kind": "text",
+              "sources": [
+                "components"
+              ],
+              "paragraphs": [
+                "Take A, then C, then B, then D. After each expansion the stacks are [B, C], [B], [D], then empty."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -277,6 +277,17 @@
           ]
         },
         {
+          "kind": "callout",
+          "tone": "pitfall",
+          "sources": [
+            "search"
+          ],
+          "situation": "Writing the loop and deciding when a node counts as seen.",
+          "wrong": "Mark a node as seen only when it leaves the queue.",
+          "right": "Mark it as seen when it enters the queue.",
+          "why": "A node found from two queued nodes is otherwise queued twice, so the queue grows with the edges instead of the nodes."
+        },
+        {
           "kind": "table",
           "title": "Breadth-first or depth-first",
           "key": "bfs-vs-dfs",
