@@ -1150,11 +1150,11 @@ def publish(
             assets_sha256=current["assets"],
             source_references=source_.source_references,
             beats=timings.beats,
+            # One visual per beat: the unit its contact-sheet frames show and a reviewer scores.
             visuals=tuple(
-                f"{chapter.key}/{beat.key}/{key}"
+                f"{chapter.key}/{beat.key}"
                 for chapter in storyboard.chapters
                 for beat in chapter.beats
-                for key in (tuple(item.key for item in beat.on_screen) or ("scene",))
             ),
             guidance_sha256=guidance_hash("video"),
             teaching_review_sha256=sha256(review),

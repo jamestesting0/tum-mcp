@@ -148,7 +148,7 @@ MediaKey = Annotated[
 ]
 MediaVisualKey = Annotated[
     str,
-    Field(pattern=r"^c\d{2}/b\d{2,3}/[a-z0-9][a-z0-9_.-]{0,99}$"),
+    Field(pattern=r"^c\d{2}/b\d{2,3}(?:/[a-z0-9][a-z0-9_.-]{0,99})?$"),
 ]
 
 
