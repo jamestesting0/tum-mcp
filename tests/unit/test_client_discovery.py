@@ -67,6 +67,24 @@ def test_setup_still_offers_generic_when_no_supported_apps_are_installed(profile
     assert [(name, check.state) for name, check in checks] == [("generic", State.UNCONFIGURED)]
 
 
+def test_setup_without_a_supported_client_opens_no_client_picker(
+    profile: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+
+    from tum_mcp.commands import lifecycle, ui
+
+    titles: list[str] = []
+    monkeypatch.setattr(
+        lifecycle, "sys", SimpleNamespace(stdin=SimpleNamespace(isatty=lambda: True))
+    )
+    monkeypatch.setattr(ui, "select_many", lambda title, *_, **__: titles.append(title) or ())
+    result = CliRunner().invoke(app, ["setup"])
+    assert result.exit_code == 0, result.output
+    assert titles == ["Optional workflows"]
+    assert "No supported coding client was found" in result.output
+
+
 def test_configured_client_is_shown_even_without_installation_evidence(profile: Path) -> None:
     config = profile / ".cursor/mcp.json"
     config.parent.mkdir(parents=True)

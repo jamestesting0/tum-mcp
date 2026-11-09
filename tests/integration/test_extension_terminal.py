@@ -22,6 +22,7 @@ def run_removal(
     columns: int = 80,
     mode: str = "uninstall",
     launcher: bool = False,
+    workflows: bytes = b"",
 ) -> tuple[int, str, dict[str, bool]]:
     import fcntl
     import pty
@@ -89,6 +90,7 @@ def run_removal(
     os.close(slave)
     captured = bytearray()
     sent = False
+    sent_at = 0
     deadline = time.monotonic() + 15
     try:
         while time.monotonic() < deadline:
@@ -120,6 +122,17 @@ def run_removal(
                         ).write_bytes(captured)
                     os.write(master, keys)
                     sent = True
+                    sent_at = len(captured)
+                # Setup's second picker, for optional workflows, opens after the clients.
+                later = bytes(captured[sent_at:])
+                if (
+                    sent
+                    and workflows
+                    and b"Optional workflows" in re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", later)
+                    and b"\x1b[?25l" in later
+                ):
+                    os.write(master, workflows)
+                    workflows = b""
             if process.poll() is not None:
                 break
         else:
@@ -246,10 +259,32 @@ def test_install_picker_can_select_only_course_memory(tmp_path: Path) -> None:
 
 
 def test_setup_picker_configures_only_the_selected_client(tmp_path: Path) -> None:
-    code, output, _ = run_removal(tmp_path, b"\x1b[B \r", mode="setup")
+    code, output, state = run_removal(tmp_path, b"\x1b[B \r", mode="setup", workflows=b"\r")
     assert code == 0, output
     assert (tmp_path / "profile/.claude.json").is_file()
     assert not (tmp_path / "profile/.codex/plugins/local/tum-mcp").exists()
+    # Enter with nothing selected skips the optional workflows.
+    assert state == {"lecture": True, "audio-notes": True}
+    assert (
+        json.loads((tmp_path / "config/extensions.json").read_bytes()).get("video_notes")
+        is not True
+    )
+
+
+def test_setup_can_skip_the_clients_and_still_offer_the_workflows(tmp_path: Path) -> None:
+    code, output, _ = run_removal(tmp_path, b"\r", mode="setup", workflows=b"\r")
+    assert code == 0, output
+    assert not (tmp_path / "profile/.claude.json").exists()
+    assert not (tmp_path / "profile/.codex/plugins/local/tum-mcp").exists()
+
+
+def test_setup_installs_an_optional_workflow_chosen_after_the_clients(tmp_path: Path) -> None:
+    code, output, _ = run_removal(
+        tmp_path, b"\x1b[B \r", mode="setup", enabled=(), workflows=b"\x1b[B\x1b[B\x1b[B \r"
+    )
+    assert code == 0, output
+    assert (tmp_path / "profile/.claude.json").is_file()
+    assert json.loads((tmp_path / "config/extensions.json").read_bytes())["course_memory"] is True
 
 
 def test_cancelled_setup_does_not_create_client_registrations(tmp_path: Path) -> None:

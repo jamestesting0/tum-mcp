@@ -18,6 +18,10 @@ tum-mcp login
 tum-mcp doctor
 ```
 
+`tum-mcp setup` asks which of your installed coding clients to configure, then which
+optional workflows (Lecture, Audio Notes, Video Notes, Course Memory) to add. Nothing
+is preselected, and Enter with nothing selected skips a step.
+
 Doctor reuses successful client checks for 24 hours while checking local
 registration and hooks every time. Use `tum-mcp doctor --refresh-clients` for a
 fresh client probe.

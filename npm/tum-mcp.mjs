@@ -21,7 +21,7 @@ try {
     printHelp(version, 'Campus tools and local study workflows.', 'tum-mcp [OPTIONS] COMMAND [ARGS]...', [
       ['Options', [['--version', 'Show the installed version.'], ['-h, --help', 'Show this help.']]],
       ['Commands', [
-        ['setup', 'Configure your coding client and managed runtime.'],
+        ['setup', 'Configure coding clients and optional workflows.'],
         ['login', 'Sign in to selected campus services.'],
         ['doctor', 'Show connections, extensions and relevant client/runtime health.'],
         ['install', 'Choose optional Lecture, Audio Notes, Video Notes or Course Memory workflows.'],
@@ -37,7 +37,7 @@ try {
         ['serve', 'Run the MCP server over stdio.'],
         ['version', 'Show the installed version.'],
       ]],
-      ['Get started', [['tum-mcp setup --client codex', 'Prepare the backend and a client.'], ['tum-mcp login', 'Choose services and sign in.']]],
+      ['Get started', [['tum-mcp setup', 'Choose clients and optional workflows.'], ['tum-mcp login', 'Choose services and sign in.']]],
     ]);
   } else if (['--version', 'version'].includes(args[0])) {
     console.log(version);
@@ -53,7 +53,7 @@ try {
         options: [['--local', 'Refresh the installed version without contacting npm.']],
       },
       setup: {
-        description: 'Prepare the runtime and choose coding clients to configure.',
+        description: 'Prepare the runtime, then choose coding clients and optional workflows.',
         usage: 'tum-mcp setup [OPTIONS]',
         options: [['--client NAME', 'Choose codex, claude, cursor, antigravity or generic; repeat as needed.'], ['--host local|windows', 'Choose the client host; windows is for WSL registrations.']],
       },

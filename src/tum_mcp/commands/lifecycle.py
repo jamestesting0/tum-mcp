@@ -26,14 +26,8 @@ def install(
     ] = False,
 ) -> None:
     """Choose optional workflows to install, or provide their names."""
-    from tum_mcp.commands.ui import State, heading, status_rows, terminal_console
-    from tum_mcp.extension_management import LABELS, choose_extensions
-    from tum_mcp.extensions import (
-        install_lecture,
-        set_audio_notes,
-        set_course_memory,
-        set_video_notes,
-    )
+    from tum_mcp.commands.ui import heading, terminal_console
+    from tum_mcp.extension_management import choose_extensions
 
     selected = (
         tuple(extensions)
@@ -45,6 +39,46 @@ def install(
     console = terminal_console()
     if not json_output and extensions:
         heading(console, "Install", "Add optional workflows to your configured clients.")
+    reports, needs_review = _install_workflows(selected, asr=asr, json_output=json_output)
+    if json_output:
+        typer.echo(json.dumps(reports[0] if len(reports) == 1 else reports, indent=2))
+    else:
+        local = {ExtensionName.AUDIO_NOTES, ExtensionName.VIDEO_NOTES, ExtensionName.COURSE_MEMORY}
+        if any(name not in local for name in selected):
+            console.print("Use tum-mcp login to sign in to the selected services.")
+        else:
+            console.print(
+                "These workflows use local course content; no campus connection is needed."
+            )
+        if ExtensionName.VIDEO_NOTES in selected:
+            console.print(
+                "The video render runtime installs when first used; "
+                "check it with tum-mcp video-notes runtime status."
+            )
+        console.print("Reload or restart configured clients to load the workflows.")
+        if ExtensionName.LECTURE in selected and not asr:
+            console.print(
+                "Lecture uses captions or imported transcripts; "
+                "local recognition was not installed."
+            )
+    if needs_review:
+        raise typer.Exit(2)
+
+
+def _install_workflows(
+    selected: tuple[ExtensionName, ...], *, asr: bool, json_output: bool
+) -> tuple[list[object], bool]:
+    """Install each workflow and show its row; True when client files need review."""
+    from tum_mcp.commands.ui import State, status_rows, terminal_console
+    from tum_mcp.extension_management import LABELS
+    from tum_mcp.extensions import (
+        install_lecture,
+        set_audio_notes,
+        set_course_memory,
+        set_video_notes,
+    )
+
+    console = terminal_console()
     reports = []
     needs_review = False
     for name in dict.fromkeys(selected):
@@ -78,29 +112,7 @@ def install(
                     )
                 ],
             )
-    if json_output:
-        typer.echo(json.dumps(reports[0] if len(reports) == 1 else reports, indent=2))
-    else:
-        local = {ExtensionName.AUDIO_NOTES, ExtensionName.VIDEO_NOTES, ExtensionName.COURSE_MEMORY}
-        if any(name not in local for name in selected):
-            console.print("Use tum-mcp login to sign in to the selected services.")
-        else:
-            console.print(
-                "These workflows use local course content; no campus connection is needed."
-            )
-        if ExtensionName.VIDEO_NOTES in selected:
-            console.print(
-                "The video render runtime installs when first used; "
-                "check it with tum-mcp video-notes runtime status."
-            )
-        console.print("Reload or restart configured clients to load the workflows.")
-        if ExtensionName.LECTURE in selected and not asr:
-            console.print(
-                "Lecture uses captions or imported transcripts; "
-                "local recognition was not installed."
-            )
-    if needs_review:
-        raise typer.Exit(2)
+    return reports, needs_review
 
 
 def setup(
@@ -111,7 +123,7 @@ def setup(
     ] = ClientHost.LOCAL,
     runtime_only: Annotated[bool, typer.Option("--runtime-only", hidden=True)] = False,
 ) -> None:
-    """Prepare the runtime and choose coding clients to configure."""
+    """Prepare the runtime, then choose coding clients and optional workflows."""
     from tum_mcp.clients import install_client
     from tum_mcp.clients.hosts import client_home
     from tum_mcp.commands.ui import State, heading, select_many, status_rows, terminal_console
@@ -146,36 +158,64 @@ def setup(
             raise CampusError(
                 Code.WORKSPACE_CONFLICT, "Review the failed client registrations locally."
             )
-        try:
-            selected = (
-                select_many(
+        if all(name == "generic" for name, _ in checks):
+            # Generic alone is a manual export, not a client the student already uses.
+            console.print(
+                "No supported coding client was found. Install Codex, Claude Code, Cursor or "
+                "Antigravity and run setup again, or use tum-mcp setup --client generic."
+            )
+        else:
+            try:
+                picked = select_many(
                     "Set up clients",
                     tuple(
                         (name, check.label, check.state, check.state != State.FAILED)
                         for name, check in checks
                     ),
+                    optional=True,
                 )
-                or ()
-            )
-        except (EOFError, KeyboardInterrupt):
-            selected = ()
-        if not selected:
-            console.print("Cancelled. Client registrations were not changed.")
-            raise typer.Exit(130)
+            except (EOFError, KeyboardInterrupt):
+                picked = None
+            if picked is None:
+                console.print("Cancelled. Client registrations were not changed.")
+                raise typer.Exit(130)
+            selected = picked
     for name in selected:
         state, detail = install_client(name, host=host, announce=False)
         status_rows(console, [(name.title(), state, detail)])
-    console.print(
-        "Reload or restart the selected clients, then open a new chat. "
-        "Run tum-mcp doctor to recheck registration and hooks. "
-        "An unverified host is shown above with its next step; "
-        "disabled hooks and host policy are preserved."
-    )
+    needs_review = False
+    if not client:
+        # First-time setup ends in one command: offer the optional workflows here too.
+        from tum_mcp.extension_management import EXTENSIONS, extension_rows
+
+        choices = tuple(
+            (name, label, state, state == State.DISABLED)
+            for name, (label, state, _) in zip(EXTENSIONS, extension_rows(), strict=True)
+        )
+        if any(selectable for *_, selectable in choices):
+            console.print(
+                "Add optional workflows now, or press Enter with none selected to skip; "
+                "tum-mcp install adds them later."
+            )
+            try:
+                workflows = select_many("Optional workflows", choices, optional=True) or ()
+            except (EOFError, KeyboardInterrupt):
+                workflows = ()
+            _, needs_review = _install_workflows(workflows, asr=True, json_output=False)
+    if selected:
+        console.print(
+            "Reload or restart the selected clients, then open a new chat. "
+            "Run tum-mcp doctor to recheck registration and hooks. "
+            "An unverified host is shown above with its next step; "
+            "disabled hooks and host policy are preserved."
+        )
     typer.echo("Runtime ready. Run tum-mcp login to sign in to the services you select.")
     from tum_mcp.moodle.browsers import is_wsl
 
     if is_wsl() and host == ClientHost.LOCAL:
         typer.echo("For a Windows desktop client, repeat setup with --host windows.")
+    if needs_review:
+        raise typer.Exit(2)
 
 
 def update() -> None:

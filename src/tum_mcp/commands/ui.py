@@ -146,11 +146,12 @@ def select_many[T](
     *,
     exclusive: T | None = None,
     defaults: tuple[T, ...] = (),
+    optional: bool = False,
 ) -> tuple[T, ...] | None:
     """Choose actions independently from the displayed current status."""
 
     def valid(values: list[T]) -> bool | str:
-        if not values:
+        if not values and not optional:
             return "Select at least one available item."
         if exclusive is not None and exclusive in values and len(values) > 1:
             return "Choose All on its own, or select individual extensions."
@@ -172,6 +173,8 @@ def select_many[T](
         while True:
             prompt = f"Selection [{default_numbers}]: " if default_numbers else "Selection: "
             answer = numbered_input(prompt).strip()
+            if optional and not answer and not default_numbers:
+                return ()
             numbers = [value.strip() for value in (answer or default_numbers).split(",")]
             if numbers and all(value in available for value in numbers):
                 selected = list(dict.fromkeys(choices[int(value) - 1][0] for value in numbers))
@@ -206,7 +209,7 @@ def select_many[T](
     ).unsafe_ask()
     return (
         tuple(value for value, _, _, enabled in choices if enabled and value in result)
-        if result
+        if result is not None
         else None
     )
 

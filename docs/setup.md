@@ -55,7 +55,10 @@ needed, red means failed, and muted dots mean inactive. Every dot has a text
 label. `NO_COLOR` disables color; narrow terminals use stacked rows.
 
 Bare `tum-mcp setup`, `tum-mcp install` and `tum-mcp uninstall` share the same
-keyboard controls as login. Nothing is preselected; Esc cancels. Uninstall
+keyboard controls as login. Nothing is preselected; Esc cancels. Bare setup lists the
+installed clients, then the optional workflows that are not installed yet; Enter with
+nothing selected skips either step. Without a supported client it shows no client
+picker and says so. `setup --client NAME` registers clients only. Uninstall
 also offers **All — TUM MCP**, which removes the package and managed client setup.
 Personal notes, sessions and customized files are retained. Scripts can name extensions:
 `tum-mcp uninstall lecture audio-notes --json`.
