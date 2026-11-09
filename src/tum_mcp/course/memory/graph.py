@@ -34,6 +34,7 @@ class Edge:
     origin: Literal["native", "lexical", "reviewed"] = "native"
     assertion: str | None = None
     conditions: tuple[str, ...] = ()
+    note: str = ""
 
 
 @dataclass(frozen=True, slots=True)

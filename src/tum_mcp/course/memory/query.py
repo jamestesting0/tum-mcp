@@ -175,6 +175,8 @@ def _path(
             "traversal": direction,
             "conditions": [excerpt(c) for c in edge.conditions],
         }
+        if edge.note:
+            step["note"] = excerpt(edge.note)
         if edge.assertion:
             assertion = graph.assertions[edge.assertion]
             assessment = checks.assertion(edge.assertion)

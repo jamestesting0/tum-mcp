@@ -189,6 +189,17 @@ def test_teaching_packet_puts_authored_links_before_weaker_items(course, seed, p
     assert set(others[: len(authored)]) == authored
 
 
+def test_path_steps_carry_the_authors_link_explanation(course):
+    packet = context(course, item=PRACTICE, purpose="study", limit=4, max_bytes=8000)
+    step = next(
+        step
+        for path in packet["paths"]
+        for step in path["steps"]
+        if step["relation"] == "prerequisite_of" and step["from"] == BLOCK
+    )
+    assert step["note"] == "Use the notification contract."
+
+
 def test_entry_locators_name_only_the_sources_the_entry_cites(course):
     cited = {
         BLOCK: {"slides"},

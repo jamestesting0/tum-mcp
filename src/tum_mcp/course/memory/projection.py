@@ -309,7 +309,14 @@ def _links(graph: Graph) -> None:
             for exercise in group.exercises:
                 ref = exercises[exercise.key]
                 for need in exercise.prerequisites:
-                    graph.connect(Edge(_passage(need.unit, need.block), ref, "prerequisite_of"))
+                    graph.connect(
+                        Edge(
+                            _passage(need.unit, need.block),
+                            ref,
+                            "prerequisite_of",
+                            note=need.explanation,
+                        )
+                    )
                 for original in exercise.distilled_from:
                     graph.connect(Edge(ref, exercises[original], "distills"))
     if exam := graph.inputs.exam:
@@ -336,6 +343,7 @@ def _links(graph: Graph) -> None:
                     f"exam/concept/{link.start}",
                     f"exam/concept/{link.end}",
                     "prerequisite_of" if link.kind == "requires" else link.kind,
+                    note=link.note or "",
                 )
             )
         for pattern in exam.patterns:
@@ -359,6 +367,7 @@ def _links(graph: Graph) -> None:
                                 _passage(need.unit, need.block),
                                 past[question.key],
                                 "prerequisite_of",
+                                note=need.explanation,
                             )
                         )
         for mock in exam.mocks:
@@ -369,6 +378,7 @@ def _links(graph: Graph) -> None:
                             f"exam/mock/{mock.key}/question/{question.key}",
                             past[key],
                             "varies_from",
+                            note=question.change_note or "",
                         )
                     )
         for node in tuple(graph.nodes.values()):
