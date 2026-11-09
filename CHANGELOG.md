@@ -1,5 +1,33 @@
 # Changes
 
+## 0.21.0 — 2026-11-09
+
+- Published audio notes play in a new Audio workspace in the local app: Lectures and
+  Exam shelves with Play all, chapters that each link back to their Study passage,
+  cheatsheet entry or pattern, a read-along transcript that follows the voice and plays
+  from any sentence you tap, speed, resume, and a mini player that keeps playing while
+  you move between workspaces. Download playlist saves every track with its chapters,
+  an M3U playlist and a README as one ZIP; each track also downloads on its own. Audio
+  stays local, and hosted sites never request it.
+- Audio Notes also turns the Exam workspace into a spoken summary: each cheatsheet
+  entry's condition, rule or formula, one example and its trap, and each exam pattern's
+  cues, steps and formulas. `tum-mcp audio-notes sources | check | narration | publish`
+  lists the sources, checks coverage and speakable text, and assembles one chaptered
+  AAC track at -16 LUFS with its receipt.
+- `tum-mcp audio-notes listen` and `tum-mcp video-notes listen` transcribe a published
+  track with the local speech recognizer, line each sentence up with the script and its
+  timing, re-check doubtful sentences on their own, and flag unclear or missing words,
+  dropped numbers and negations, timing slips, silences and pace. Videos also get a
+  frame for each spoken sentence.
+- Media reviews score every dimension their evidence supports, re-check repaired items
+  before saving them, and score video visuals once per scene step.
+- Videos teach with objects instead of text slides: a render fails when a teaching
+  chapter shows only labels or clears the screen at every step, storyboards reject
+  arithmetic typed as labels, a `self.grid` helper draws tables, and a requested video
+  always ends published.
+- Video Notes commands work inside Codex's sandbox: the data folder is no longer
+  re-permissioned on every call and the speech model is found without a write lock.
+
 ## 0.20.0 — 2026-11-09
 
 - `tum-mcp setup` now completes a first installation in one command: after the

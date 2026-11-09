@@ -468,16 +468,19 @@ and offline support are not included.
 ## Create and maintain audio notes
 
 Install the optional workflow with `tum-mcp install audio-notes`.
-Use `prepare-study` to author the interactive course, then ask `audio-notes` to
-convert that prepared content into spoken lessons. For example:
+Use `prepare-study` or `prepare-exams` to author the course, then ask `audio-notes` to
+convert that prepared content into spoken tracks. For example:
 
 ```text
 Create audio notes from this prepared study website, one file per category.
 Keep course outputs under audio/; prefer free ElevenLabs with local Kokoro fallback.
 ```
 
-Audio Notes reads the Study files under `app/study/`, retaining the course's language, examples,
-assumptions and limitations. It turns tables, formulas, code and diagram sequences
+Audio Notes makes two kinds of track. Study tracks re-explain the lessons under
+`app/study/`. Cheatsheet tracks are a spoken summary of the Exam workspace: each
+cheatsheet entry's condition, rule or formula (read with audible grouping), one short
+example and its trap, and each exam pattern's cues, steps and formulas. Both keep the
+course's language, examples, assumptions and limitations. It turns tables, formulas, code and diagram sequences
 into explanations that work without a screen. It does not independently research
 the course or create new subject matter. An audio-only request reuses the prepared
 course; it does not refresh campus sources or rebuild the website automatically.
@@ -492,11 +495,24 @@ no screen, spoken response or mandatory interaction. Exact Study dependencies ar
 disclosed where a construction cannot be taught through sound alone.
 These checks do not establish learning outcomes.
 
+Behind the skill, `tum-mcp audio-notes` does the checkable work: `sources` lists
+Study units and Exam entries and patterns with their locators, `check` validates a
+category script (coverage, stale sources, unspeakable symbols), `narration` lists one
+file per sentence to synthesize, and `publish` assembles one AAC M4A with chapters at
+-16 LUFS in the shared media runtime, checks it and writes the manifest receipt.
+`listen` then transcribes the published track with the local speech recognizer
+(`tum-mcp lecture runtime install`), lines every sentence up with the script and its
+planned timing, re-listens to doubtful sentences on their own, and flags unclear or
+missing words, dropped numbers and negations, several unheard words in a row, timing
+slips, unplanned silences and pace. It checks what was said and when, not how natural
+the voice sounds.
+
 All course-specific audio files stay inside the project's `audio/` directory:
 
 ```text
 audio/
-  scripts/01_category.txt    Editable narration, matching the track name
+  categories/01_category.json  Category script: sources, chapters and sentences
+  scripts/01_category.txt    Published narration text, matching the track name
   tracks/01_category.m4a     One final AAC M4A per category
   chapters/01_category.json  Section titles and measured timestamps
   manifest.json             Last verified published coverage and fingerprints
@@ -509,6 +525,16 @@ audio/
   .build/                   Candidates, resumable chunks, downloads and QA
   archive/                  Recoverable superseded versions
 ```
+
+Published tracks appear in the local app (`tum-mcp study`) in an **Audio** workspace:
+Lectures and Exam shelves with Play all, a track page with chapters (each with a
+Recall link to its Study passage, cheatsheet entry or pattern), a read-along
+transcript that follows the voice and plays from any sentence you tap, playback
+speed, and a mini player that keeps playing while you move to Study, Exercises or
+Exam. Each track resumes where you stopped. **Download playlist** saves a ZIP of
+every track (chapters included), an M3U playlist and a short README for any phone or
+podcast player; each track also downloads on its own. Like videos, audio is local
+only: hosted study sites never include or request it.
 
 Names remain stable across updates, using prefixes and slugs such as
 `01_security-foundations`. New content within a category updates that complete
@@ -578,7 +604,12 @@ overlapping or off-screen text. Labels can wrap at a measured scene width withou
 shrinking; crowded scenes need recomposition rather than smaller type.
 Each run produces entry/middle/exit contact sheets
 for review, and the final video is checked for codec,
-sync, loudness, captions and chapters before publication. Unchanged chapters are
+sync, loudness, captions and chapters before publication. A render fails when a
+teaching chapter only shows text labels or clears the screen at every step, and
+storyboards reject arithmetic typed as plain labels; tables use the `self.grid`
+helper. After publishing, `video-notes listen` transcribes the narration, checks each
+sentence and its timing against the cues and takes a frame while each sentence is
+spoken. Unchanged chapters are
 reused, interrupted runs resume, and a failed publication restores the previous
 files.
 
@@ -622,10 +653,13 @@ clip.
 `study schema audio-plan`, `audio-manifest` and `review` describe typed records.
 `study report PROJECT --section review` has a separate `media` section for
 pending/broken/stale outputs, source-bound revisions, evidence and audio/video
-averages. Media needs actual script, signal and complete listening evidence;
-video also needs frames and full playback. Missing perception stays incomplete.
-An ASR transcript, passing codec check or contact sheet cannot certify that a
-voice was heard. Reviews never claim mastery or exam readiness.
+averages. Media needs script, signal and listening evidence over the whole track;
+video also needs frames and playback evidence. `audio-notes listen` and
+`video-notes listen` supply the listening evidence (and, for video, speech-aligned
+frames); they cover what was said and when, not how natural the voice sounds. Fresh
+checkers score every dimension the evidence supports, a repaired item is checked
+again before it is saved, and a dimension without evidence stays unscored. Reviews
+never claim mastery or exam readiness.
 
 The render runtime (about 320 MB) installs on first use with
 `tum-mcp video-notes runtime install`. Windows x64 needs nothing else. macOS 14+ on

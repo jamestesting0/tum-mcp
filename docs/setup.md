@@ -32,7 +32,10 @@ Setup preserves unrelated settings and refuses to
 replace customized entries. It does not authenticate or fetch courses.
 
 Audio Notes is optional: use `tum-mcp install audio-notes`. It adds the
-`audio-notes` skill for prepared Study content; synthesis is set up when used.
+`audio-notes` skill and `tum-mcp audio-notes` commands for prepared Study and Exam
+content; synthesis is set up when used, publishing uses the Video Notes render
+runtime (`tum-mcp video-notes runtime install`) and `listen` uses the Lecture speech
+recognizer (`tum-mcp lecture runtime install`).
 Existing course audio is retained when the extension is disabled.
 
 Video Notes is optional: use `tum-mcp install video-notes`. It adds the
