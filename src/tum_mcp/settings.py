@@ -137,7 +137,9 @@ def config_path() -> Path:
 def data_dir() -> Path:
     path = data_path()
     path.mkdir(mode=0o700, parents=True, exist_ok=True)
-    path.chmod(0o700)
+    # A sandboxed agent may read this folder but not change it; chmod only when needed.
+    if path.stat().st_mode & 0o777 != 0o700:
+        path.chmod(0o700)
     return path.resolve()
 
 

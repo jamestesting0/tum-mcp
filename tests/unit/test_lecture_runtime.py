@@ -210,6 +210,38 @@ def test_invalid_model_receipt_is_preserved_without_network(tmp_path, monkeypatc
     assert receipt.read_text() == "invalid edited receipt"
 
 
+def test_installed_model_resolves_where_the_runtime_is_read_only(tmp_path, monkeypatch):
+    from tum_mcp.lecture_processing import runtime_assets
+
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(tmp_path / "data"))
+    executable = runtime.python_path()
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"synthetic-runtime")
+    spec = runtime_assets.selected()
+    weights = tmp_path / "weights"
+    weights.mkdir()
+    supporting = {}
+    for name in ("config.json", spec.weights, "tokenizer.json", "vocabulary.txt"):
+        (weights / name).write_text(name)
+        if name.endswith((".txt", "tokenizer.json")):
+            supporting[name] = "0" * 64
+    asset = runtime_assets.ModelAsset(
+        path=weights,
+        revision=spec.models["base"][1],
+        config_sha256="1" * 64,
+        weights_sha256="2" * 64,
+        supporting_sha256=supporting,
+    )
+    (runtime.runtime_root() / "model-base.json").write_text(asset.model_dump_json())
+
+    def denied(*_: object, **__: object) -> None:
+        raise PermissionError("Operation not permitted")
+
+    monkeypatch.setattr(runtime_assets, "FileLock", denied)
+    monkeypatch.setattr(runtime, "call_worker", lambda *a, **kw: pytest.fail("No download"))
+    assert runtime.model("base") == asset
+
+
 def test_windows_native_libraries_fit_nested_data_directory(monkeypatch):
     from pathlib import PureWindowsPath
 

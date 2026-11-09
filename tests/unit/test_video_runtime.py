@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -113,6 +114,24 @@ def test_worker_failures_are_typed(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
     monkeypatch.setattr(subprocess, "run", slow)
     with pytest.raises(CampusError, match="resumable"):
         runtime.call_worker({"action": "health"}, executable=tmp_path / "python", timeout=1)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX folder modes")
+def test_runtime_location_resolves_in_a_sandbox_that_forbids_chmod(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    data = tmp_path / "data"
+    data.mkdir(mode=0o755)
+    data.chmod(0o755)
+    monkeypatch.setenv("TUM_MCP_DATA_DIR", str(data))
+    assert runtime.runtime_root().parent == data.resolve() / "video-runtime"
+    assert data.stat().st_mode & 0o777 == 0o700
+
+    def sandboxed(self: Path, mode: int, **_: object) -> None:
+        raise PermissionError(1, "Operation not permitted", str(self))
+
+    monkeypatch.setattr(Path, "chmod", sandboxed)
+    assert runtime.runtime_root().parent == data.resolve() / "video-runtime"
 
 
 def test_install_stops_on_missing_prerequisites(monkeypatch: pytest.MonkeyPatch) -> None:

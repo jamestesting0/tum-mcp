@@ -46,8 +46,12 @@ def model(name: str) -> ModelAsset:
     root = runtime.runtime_root()
     if not runtime.python_path().is_file():
         raise CampusError(Code.ACTION_REQUIRED, "Install the optional lecture runtime first.")
+    receipt = root / f"model-{name}.json"
+    # An installed model needs no lock: a sandboxed agent may read the runtime but not write it.
+    installed = read_asset(receipt)
+    if installed is not None and installed.revision == revision:
+        return installed
     with FileLock(str(root / "models.lock"), timeout=1200):
-        receipt = root / f"model-{name}.json"
         if receipt.is_file():
             try:
                 ModelAsset.model_validate_json(receipt.read_bytes())
