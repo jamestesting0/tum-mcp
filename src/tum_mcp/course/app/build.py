@@ -68,6 +68,7 @@ TEMPLATE_FILES = (
     "assets/katex/katex-license.txt",
     "assets/katex/katex.min.css",
     "assets/katex/katex.min.js",
+    "runtime/audio/audio.mjs",
     "runtime/comments/anchors.mjs",
     "runtime/comments/comment-popover.mjs",
     "runtime/comments/comment-store.mjs",

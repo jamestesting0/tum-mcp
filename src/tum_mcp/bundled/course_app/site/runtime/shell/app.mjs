@@ -12,6 +12,7 @@ import { renderExercises, exerciseOutline } from '../exercises/exercises.mjs';
 import { renderLectures, lectureOutline } from '../lecture/lectures.mjs';
 import { renderExam, examOutline } from '../exam/exam.mjs';
 import { examPrefix } from '../exam/exam-state.mjs';
+import { loadAudio, hasAudio, renderAudio, audioOutline, mountAudioDock, syncDock } from '../audio/audio.mjs';
 
 const storageKey = `study-space:${data.course.identity}:progress:v1`;
 let memoryOnly = false;
@@ -22,7 +23,7 @@ function readStored(key, fallback) {
 function store(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { memoryOnly = true; }
 }
-const workspaces = data.workspaces || ['study'];
+const workspaces = [...(data.workspaces || ['study'])];
 const positionKey = `course-app:${data.course.identity}:positions:v1`;
 const rawPositions = readStored(positionKey, {});
 const positions = rawPositions && typeof rawPositions === 'object' && !Array.isArray(rawPositions) ? rawPositions : {};
@@ -306,12 +307,13 @@ function render() {
   const exercisePage = workspace === 'exercises' ? renderExercises(location.hash.slice(1) || 'exercises', exercises) : null;
   const lecturePage = workspace === 'lectures' ? renderLectures(location.hash.slice(1) || 'lectures') : null;
   const examPage = workspace === 'exam' ? renderExam(location.hash.slice(1) || 'exam', readStored, store) : null;
-  const notesPage = exercisePage || lecturePage || examPage;
+  const audioPage = workspace === 'audio' ? renderAudio(location.hash.slice(1) || 'audio') : null;
+  const notesPage = exercisePage || lecturePage || examPage || audioPage;
   exercisePageView = exercisePage || (examPage?.navigateStep ? examPage : null);
   // A workspace's own home marks the course title as the current page, as the Study home does.
   navigationState.location = notesPage ? (notesPage.current ? workspace : 'home') : home ? 'home' : revising ? 'revision' : currentIndex;
   navigationState.context = notesPage ? notesPage.title : unavailable ? 'Course' : home ? data.course.title : revising ? 'Revision' : data.units[currentIndex].title;
-  navigationState.outline = examPage ? () => examOutline(examPage.current, examPage.currentKey) : lecturePage ? () => lectureOutline(lecturePage.current) : exercisePage ? () => exerciseOutline(exercisePage.current) : unavailable ? () => node('div') : null;
+  navigationState.outline = audioPage ? () => audioOutline(audioPage.current) : examPage ? () => examOutline(examPage.current, examPage.currentKey) : lecturePage ? () => lectureOutline(lecturePage.current) : exercisePage ? () => exerciseOutline(exercisePage.current) : unavailable ? () => node('div') : null;
   navigationState.homeHref = workspace === 'study' ? '#home' : `#${workspace}`;
   navigationState.showRevision = workspace === 'study' && !unavailable;
   navigationState.workspace = workspace;
@@ -332,7 +334,7 @@ function render() {
   } else if (unavailable) {
     unitHeading = node('h1', '', 'Study');
     const first = workspaces.find(item => item !== 'study');
-    const link = node('a', '', { lectures: 'Open Lecture', exam: 'Open Exam' }[first] || 'Open Exercises'); link.href = `#${first}`;
+    const link = node('a', '', { lectures: 'Open Lecture', exam: 'Open Exam', audio: 'Open Audio' }[first] || 'Open Exercises'); link.href = `#${first}`;
     reading.append(unitHeading, node('p', '', 'Study has not been prepared for this course.'));
     if (first) reading.append(link);
     reading.append(studyPreparation());
@@ -387,6 +389,7 @@ function render() {
   if (!notesPage && !unavailable && !home) renderPanel();
   contentsOutline(reading, !(home || unavailable || (notesPage && !notesPage.current)));
   persist();
+  syncDock();
 }
 function route(initial = false) {
   rememberPosition();
@@ -400,8 +403,9 @@ function route(initial = false) {
     renderedHash = location.hash; remember(); persist(); return;
   }
   const prefix = raw.split('/')[0];
-  workspace = ['exercises', 'lectures', 'exam'].includes(prefix) ? prefix : !raw ? workspaces[0] : 'study';
-  unavailable = !workspaces.includes(workspace);
+  workspace = ['exercises', 'lectures', 'exam', 'audio'].includes(prefix) ? prefix : !raw ? workspaces[0] : 'study';
+  // The Audio page explains itself when the local preview has no tracks.
+  unavailable = workspace !== 'audio' && !workspaces.includes(workspace);
   const hash = raw.startsWith('study/') ? raw.slice(6) : raw;
   revising = hash === 'revision' || hash.startsWith('revision?');
   const params = new URLSearchParams(revising ? hash.split('?')[1] || '' : '');
@@ -451,3 +455,5 @@ addEventListener('hashchange', () => route());
 addEventListener('keydown', event => { if (workspace === 'study' && currentView === 'flashcards') flashcardShortcut(event); });
 addEventListener('pagehide', rememberPosition);
 route(true);
+// Published audio adds a workspace and the mini player once the local preview lists it.
+loadAudio().then(() => { if (!hasAudio()) return; workspaces.push('audio'); mountAudioDock(); route(true); });

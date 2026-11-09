@@ -46,6 +46,8 @@ VIDEO_TYPES = {
     ".txt": "text/plain; charset=utf-8",
     ".json": "application/json",
 }
+AUDIO_FOLDERS = {"tracks": ".m4a", "scripts": ".txt"}
+AUDIO_TYPES = {".m4a": "audio/mp4", ".txt": "text/plain; charset=utf-8"}
 VIDEO_NAME = re.compile(r"[0-9a-z][0-9a-z_.-]{0,120}")
 RANGE = re.compile(r"bytes=(\d*)-(\d*)")
 
@@ -116,6 +118,12 @@ class Handler(SimpleHTTPRequestHandler):
         finally:
             super().finish()
 
+    def copyfile(self, source: BinaryIO, outputfile: BinaryIO) -> None:
+        try:
+            super().copyfile(source, outputfile)
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # A player that seeks or changes track drops the rest of a download.
+
     def do_GET(self) -> None:
         from tum_mcp.course.app.comment_api import ENDPOINT, comments_request
 
@@ -172,6 +180,8 @@ class Handler(SimpleHTTPRequestHandler):
             return None
         if urlsplit(self.path).path.startswith("/videos/"):
             return self.video_head()
+        if urlsplit(self.path).path.startswith("/audio/"):
+            return _audio_reply(self)
         if urlsplit(self.path).path.startswith("/materials/"):
             return _material_reply(self)
         base = Path(self.directory).resolve()
@@ -242,18 +252,22 @@ def _material_reply(handler: "Handler") -> BinaryIO | None:
     return io.BytesIO(body)
 
 
+def _json_reply(handler: "Handler", value: object) -> BinaryIO:
+    body = json.dumps(value).encode()
+    handler.send_response(200)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    return io.BytesIO(body)
+
+
 def _video_reply(handler: "Handler") -> BinaryIO | Slice | None:
     path = unquote(urlsplit(handler.path).path)
     project = Path(handler.directory).resolve().parent
     if path == "/videos/index.json":
         from tum_mcp.course.media.video_project import preview_index
 
-        body = json.dumps(preview_index(project)).encode()
-        handler.send_response(200)
-        handler.send_header("Content-Type", "application/json")
-        handler.send_header("Content-Length", str(len(body)))
-        handler.end_headers()
-        return io.BytesIO(body)
+        return _json_reply(handler, preview_index(project))
     parts = path.split("/")[2:]
     if (
         len(parts) != 2
@@ -263,8 +277,44 @@ def _video_reply(handler: "Handler") -> BinaryIO | Slice | None:
     ):
         handler.send_error(404)
         return None
+    return _file_reply(handler, project, f"videos/{parts[0]}/{parts[1]}", VIDEO_TYPES)
+
+
+def _audio_reply(handler: "Handler") -> BinaryIO | Slice | None:
+    from tum_mcp.course.media.audio_app import playlist_zip, preview_index
+
+    path = unquote(urlsplit(handler.path).path)
+    project = Path(handler.directory).resolve().parent
+    if path == "/audio/index.json":
+        return _json_reply(handler, preview_index(project))
+    if path == "/audio/playlist.zip":
+        try:
+            name, body = playlist_zip(project)
+        except (CampusError, OSError):
+            handler.send_error(404)
+            return None
+        handler.send_response(200)
+        handler.send_header("Content-Type", "application/zip")
+        handler.send_header("Content-Disposition", f'attachment; filename="{name}"')
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        return io.BytesIO(body)
+    parts = path.split("/")[2:]
+    if (
+        len(parts) != 2
+        or Path(parts[1]).suffix != AUDIO_FOLDERS.get(parts[0])
+        or VIDEO_NAME.fullmatch(parts[1]) is None
+    ):
+        handler.send_error(404)
+        return None
+    return _file_reply(handler, project, f"audio/{parts[0]}/{parts[1]}", AUDIO_TYPES)
+
+
+def _file_reply(
+    handler: "Handler", project: Path, relative: str, types: dict[str, str]
+) -> BinaryIO | Slice | None:
     try:
-        target = confined(project, f"videos/{parts[0]}/{parts[1]}")
+        target = confined(project, relative)
         if not target.is_file():
             raise CampusError(Code.WORKSPACE_CONFLICT, "missing")
         stream = target.open("rb")
@@ -281,7 +331,7 @@ def _video_reply(handler: "Handler") -> BinaryIO | Slice | None:
         handler.end_headers()
         return None
     handler.send_response(200 if span is None else 206)
-    handler.send_header("Content-Type", VIDEO_TYPES[target.suffix])
+    handler.send_header("Content-Type", types[target.suffix])
     handler.send_header("Accept-Ranges", "bytes")
     if span is None:
         handler.send_header("Content-Length", str(size))

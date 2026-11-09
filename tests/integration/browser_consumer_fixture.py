@@ -156,6 +156,9 @@ def study_smoke(browser: Browser, site: Path, unit: str) -> SmokeEvidence:
         if name == "videos/index.json":
             route.fulfill(content_type="application/json", body='{"videos":{}}')
             return
+        if name == "audio/index.json":
+            route.fulfill(content_type="application/json", body='{"tracks":[]}')
+            return
         assert name in {*TEMPLATE_FILES, "data.mjs"}
         asset = site / name
         if not asset.is_file():

@@ -31,6 +31,12 @@ const paths = {
   captions: 'M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2m6 5.3a2.5 2.5 0 1 0 0 3.4m6.5-3.4a2.5 2.5 0 1 0 0 3.4',
   expand: 'M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5',
   shrink: 'M9 4v5H4m16 0h-5V4m0 16v-5h5M4 15h5v5',
+  headphones: 'M4 16v-4a8 8 0 0 1 16 0v4M4 15h3v6H5a1 1 0 0 1-1-1zm16 0h-3v6h2a1 1 0 0 0 1-1z',
+  download: 'M12 4v11m-5-5 5 5 5-5M5 20h14',
+  back: 'M4 12a8 8 0 1 0 2.34-5.66L4 8.7M4 4v4.7h4.7',
+  ahead: 'M20 12a8 8 0 1 1-2.34-5.66L20 8.7M20 4v4.7h-4.7',
+  chapterBack: 'M6 5v14M18 6l-8 6 8 6z',
+  chapterNext: 'M18 5v14M6 6l8 6-8 6z',
 };
 export function iconGlyph(icon) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -147,9 +153,9 @@ document.addEventListener('pointerdown', event => {
 });
 function workspacePicker(context) {
   closePicker();
-  const name = value => ({ study: 'Study', exercises: 'Exercises', lectures: 'Lecture', exam: 'Exam' })[value];
+  const name = value => ({ study: 'Study', exercises: 'Exercises', lectures: 'Lecture', exam: 'Exam', audio: 'Audio' })[value];
   const label = node('span', 'workspace-name', name(context.workspace));
-  const badge = node('span', 'workspace-badge'); badge.append(iconGlyph(({ study: 'book', exercises: 'pencil', lectures: 'lecture', exam: 'target' })[context.workspace]));
+  const badge = node('span', 'workspace-badge'); badge.append(iconGlyph(({ study: 'book', exercises: 'pencil', lectures: 'lecture', exam: 'target', audio: 'headphones' })[context.workspace]));
   if ((context.workspaces || ['study']).length < 2) {
     const passive = node('div', 'workspace-current'); passive.append(badge, label); return passive;
   }
@@ -162,7 +168,7 @@ function workspacePicker(context) {
   const links = context.workspaces.map(value => {
     const link = node('a', 'workspace-item'); link.href = context.workspaceHref(value);
     link.setAttribute('role', 'menuitemradio'); link.setAttribute('aria-label', name(value)); link.setAttribute('aria-checked', String(value === context.workspace)); link.tabIndex = -1;
-    link.append(iconGlyph(({ study: 'book', exercises: 'pencil', lectures: 'lecture', exam: 'target' })[value]), node('span', '', name(value)));
+    link.append(iconGlyph(({ study: 'book', exercises: 'pencil', lectures: 'lecture', exam: 'target', audio: 'headphones' })[value]), node('span', '', name(value)));
     if (value === context.workspace) link.append(iconGlyph('check'));
     link.addEventListener('click', event => { if (value === context.workspace) event.preventDefault(); closePicker(true); });
     menu.append(link); return link;
