@@ -114,3 +114,9 @@ def test_direct_fill_reserves_the_seed_slot_and_counts_displacement(tmp_path):
     result = metrics(tmp_path)["direct_fill_at_4"]
     assert TEACHING["limit"] == 4
     assert result["mean"] == 0.75 and result["displaced"] == 1
+
+
+def test_stage_three_fills_three_trials_per_task_for_the_chosen_arms():
+    tasks = [{"id": "R1"}]
+    rows = [{"task": "R1", "arm": "B", "trial": 1, "success": True}]
+    assert plan_stage(rows, tasks, 3, ("B",)) == [("R1", "B", 2), ("R1", "B", 3)]

@@ -259,17 +259,27 @@ def disagreeing(rows: list[dict]) -> list[str]:
     )
 
 
-def plan_stage(rows: list[dict], tasks: list[dict], stage: int) -> list[tuple[str, str, int]]:
+def plan_stage(
+    rows: list[dict], tasks: list[dict], stage: int, arms: tuple[str, ...] = ("A", "B")
+) -> list[tuple[str, str, int]]:
+    """Stage 1: one trial per task; 2: trials 2-3 where arms disagreed; 3: trials 1-3 for all."""
     done = {(row["task"], row["arm"], row["trial"]) for row in rows}
-    if stage == 1:
-        wanted = [(task["id"], arm, 1) for arm in ("A", "B") for task in tasks]
-    else:
-        wanted = [
-            (task, arm, trial)
-            for arm in ("A", "B")
-            for task in disagreeing([r for r in rows if r["trial"] == 1])
-            for trial in (2, 3)
-        ]
+    match stage:
+        case 1:
+            wanted = [(task["id"], arm, 1) for arm in arms for task in tasks]
+        case 2:
+            wanted = [
+                (task, arm, trial)
+                for arm in arms
+                for task in disagreeing([r for r in rows if r["trial"] == 1])
+                for trial in (2, 3)
+            ]
+        case 3:
+            wanted = [
+                (task["id"], arm, trial) for arm in arms for task in tasks for trial in (1, 2, 3)
+            ]
+        case unreachable:
+            raise LabError(f"Unknown stage {unreachable}.")
     pending = [item for item in wanted if item not in done]
     if len(rows) + len(pending) > CAP:
         raise LabError(f"Stage {stage} would exceed the {CAP}-episode cap.")
@@ -281,6 +291,7 @@ def run_stage(
     label: str,
     stage: int,
     *,
+    arms: tuple[str, ...] = ("A", "B"),
     runner_factory: Callable[[Path, Path, Path], Runner] | None = None,
     installer: Callable[[Path, Path, Path, Path], list[str]] = install_arm,
 ) -> dict:
@@ -290,7 +301,7 @@ def run_stage(
     output.mkdir(parents=True, exist_ok=True)
     (output / "raw").mkdir(exist_ok=True)
     rows = episodes(output)
-    pending = plan_stage(rows, tasks, stage)
+    pending = plan_stage(rows, tasks, stage, arms)
     if not pending:
         return report(name, label)
     spec = ModelSpec.parse(AUTHOR)
@@ -308,7 +319,10 @@ def run_stage(
         "author": AUTHOR,
         "variant": variant_dir.name,
         "manifest": hashlib.sha256((corpus(name) / "manifest.json").read_bytes()).hexdigest(),
-        "tasks": hashlib.sha256((corpus(name) / "agent-tasks.json").read_bytes()).hexdigest(),
+        # What the agent sees; gold corrections regrade stored answers and keep the identity.
+        "prompts": hashlib.sha256(
+            json.dumps([[task["id"], task["prompt"]] for task in tasks]).encode()
+        ).hexdigest(),
     }
     known = output / "identity.json"
     if known.is_file() and json.loads(known.read_text()) != identity:
@@ -389,136 +403,234 @@ def run_stage(
     return report(name, label)
 
 
-def report(name: str, label: str) -> dict:
-    output = corpus(name) / "agent" / label
+def graded(name: str, label: str) -> list[dict]:
     tasks = {
         task["id"]: task for task in json.loads((corpus(name) / "agent-tasks.json").read_text())
     }
     names = aliases(check_manifest(name))
     # Grade from the stored answers with the current gold, so a gold correction never
     # needs a rerun; every arm is regraded alike.
-    rows = [row | grade(tasks[row["task"]], row["answer"], names) for row in episodes(output)]
+    rows = episodes(corpus(name) / "agent" / label)
+    return [row | grade(tasks[row["task"]], row["answer"], names) for row in rows]
+
+
+def usage(row: dict, field: str) -> int:
+    return int((row.get("usage") or {}).get(field, 0))
+
+
+# Cost is what the provider bills at full rate: uncached input plus output. Cached input is
+# reported separately because it is billed at a fraction and dominates the raw input count.
+METRICS: dict[str, Callable[[dict], float]] = {
+    "cost": lambda r: (
+        usage(r, "input_tokens") - usage(r, "cached_input_tokens") + usage(r, "output_tokens")
+    ),
+    "seconds": lambda r: float(r["seconds"]),
+    "requests": lambda r: float(r["commands"] or 1),
+    "cached_input": lambda r: float(usage(r, "cached_input_tokens")),
+}
+
+
+def median(values: list[float]) -> float | None:
+    ordered = sorted(values)
+    if not ordered:
+        return None
+    middle = len(ordered) // 2
+    return ordered[middle] if len(ordered) % 2 else (ordered[middle - 1] + ordered[middle]) / 2
+
+
+def bootstrap(values: list[float]) -> tuple[float, float] | None:
+    """A deterministic 95% interval for the median over tasks."""
+    if not values:
+        return None
+
+    def draw(sample: int, slot: int) -> float:
+        seed = hashlib.sha256(f"{sample}:{slot}".encode()).digest()
+        return values[int.from_bytes(seed[:4]) % len(values)]
+
+    medians = sorted(
+        median([draw(sample, slot) for slot in range(len(values))]) for sample in range(2000)
+    )
+    return medians[int(0.025 * len(medians))], medians[int(0.975 * len(medians))]
+
+
+def summarize(rows: list[dict], pairs: tuple[tuple[str, str], ...]) -> dict:
     by: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    kinds: dict[str, str] = {}
     for row in rows:
         by[(row["task"], row["arm"])].append(row)
-    tasks = sorted({row["task"] for row in rows})
+        kinds[row["task"]] = row["kind"]
+    arms = sorted({row["arm"] for row in rows})
+    tasks = sorted(kinds)
 
-    def rate(task: str, arm: str) -> float | None:
-        found = by.get((task, arm), [])
-        return sum(r["success"] for r in found) / len(found) if found else None
+    def mean(task: str, arm: str, metric: Callable[[dict], float]) -> float:
+        found = by[(task, arm)]
+        return sum(metric(r) for r in found) / len(found)
 
-    def majority(task: str, arm: str) -> bool:
-        value = rate(task, arm)
-        return value is not None and value > 0.5
-
-    relational = [t for t in tasks if by[(t, "A")] and by[(t, "A")][0]["kind"] == "relational"]
-    controls = [t for t in tasks if t not in relational]
-
-    def tokens(row: dict) -> int:
-        usage = row.get("usage") or {}
-        return int(usage.get("input_tokens", 0)) + int(usage.get("output_tokens", 0))
-
-    ratios = defaultdict(list)
-    for task in tasks:
-        a, b = by.get((task, "A"), []), by.get((task, "B"), [])
-        if not a or not b:
-            continue
-        for metric, value in (("tokens", tokens), ("requests", lambda r: r["commands"] or 1)):
-            mean_a = sum(value(r) for r in a) / len(a)
-            mean_b = sum(value(r) for r in b) / len(b)
-            if mean_a:
-                ratios[metric].append(mean_b / mean_a)
-
-    def median(values: list[float]) -> float | None:
-        ordered = sorted(values)
-        return ordered[len(ordered) // 2] if ordered else None
-
-    def bootstrap_upper(values: list[float]) -> float | None:
-        if not values:
-            return None
-
-        def draw(sample: int, slot: int) -> float:
-            seed = hashlib.sha256(f"{sample}:{slot}".encode()).digest()
-            return values[int.from_bytes(seed[:4]) % len(values)]
-
-        medians = sorted(
-            median([draw(sample, slot) for slot in range(len(values))]) for sample in range(2000)
-        )
-        return medians[int(0.975 * len(medians))]
-
-    rel_a = sum(majority(t, "A") for t in relational)
-    rel_b = sum(majority(t, "B") for t in relational)
-    ctl_a = sum(majority(t, "A") for t in controls)
-    ctl_b = sum(majority(t, "B") for t in controls)
-    writes = [row for row in rows if row["protected_writes"]]
-    errors = [row for row in rows if row.get("error")]
-    summary = {
-        "episodes": len(rows),
-        "relational_success": {"A": rel_a, "B": rel_b, "tasks": len(relational)},
-        "control_success": {"A": ctl_a, "B": ctl_b, "tasks": len(controls)},
-        "over_trigger_episodes": sum(row["over_trigger"] for row in rows),
-        "memory_calls_on_relational_B": sum(
-            row["memory_calls"] for row in rows if row["arm"] == "B" and row["kind"] == "relational"
-        ),
-        "protected_writes": [(r["task"], r["arm"], r["protected_writes"]) for r in writes],
-        "errors": [(r["task"], r["arm"], r["error"][:120]) for r in errors],
-        "median_ratio_B_over_A": {k: median(v) for k, v in ratios.items()},
-        "bootstrap_upper_95": {k: bootstrap_upper(v) for k, v in ratios.items()},
-        "per_task": {task: {"A": rate(task, "A"), "B": rate(task, "B")} for task in tasks},
+    success = {
+        kind: {
+            arm: sum(
+                mean(t, arm, lambda r: float(r["success"])) > 0.5 for t in tasks if kinds[t] == kind
+            )
+            for arm in arms
+        }
+        | {"tasks": sum(kinds[t] == kind for t in tasks)}
+        for kind in ("relational", "control")
+    }
+    ratios = {}
+    for left, right in pairs:
+        for name, metric in METRICS.items():
+            per_task = {
+                t: mean(t, left, metric) / mean(t, right, metric)
+                for t in tasks
+                if by[(t, left)] and by[(t, right)] and mean(t, right, metric)
+            }
+            values = list(per_task.values())
+            # The change under test rarely touches control tasks, so a control ratio far
+            # from 1.0 shows drift between the batches being compared.
+            controls = [v for t, v in per_task.items() if kinds[t] == "control"]
+            ratios[f"{left}/{right} {name}"] = {
+                "median": median(values),
+                "interval": bootstrap(values),
+                "tasks": len(values),
+                "controls": median(controls),
+            }
+    return {
+        "episodes": {arm: sum(len(by[(t, arm)]) for t in tasks) for arm in arms},
+        "trials_per_task": {arm: sorted({len(by[(t, arm)]) for t in tasks}) for arm in arms},
+        "success": success,
+        "per_task_success": {
+            t: {
+                arm: round(mean(t, arm, lambda r: float(r["success"])), 2)
+                for arm in arms
+                if by[(t, arm)]
+            }
+            for t in tasks
+        },
+        "totals": {
+            arm: {
+                name: round(sum(metric(r) for r in rows if r["arm"] == arm))
+                for name, metric in METRICS.items()
+            }
+            for arm in arms
+        },
+        "ratios": ratios,
+        "memory_calls": {
+            arm: {
+                kind: sum(r["memory_calls"] for r in rows if r["arm"] == arm and r["kind"] == kind)
+                for kind in ("relational", "control")
+            }
+            for arm in arms
+        },
+        "protected_writes": [
+            (r["task"], r["arm"], r["protected_writes"]) for r in rows if r["protected_writes"]
+        ],
+        "errors": [(r["task"], r["arm"], r["error"][:120]) for r in rows if r.get("error")],
         "models_reported": sorted({r["model_reported"] for r in rows if r.get("model_reported")}),
     }
-    non_inferior = rel_b >= rel_a and ctl_b >= ctl_a and not writes
-    efficiency = any(
-        (summary["median_ratio_B_over_A"].get(m) or 2) <= 0.75
-        and (summary["bootstrap_upper_95"].get(m) or 2) < 1.0
-        for m in ("tokens", "requests")
+
+
+def improved(summary: dict, pair: str, threshold: float) -> bool:
+    return any(
+        (entry := summary["ratios"].get(f"{pair} {metric}"))
+        and entry["median"] is not None
+        and entry["median"] <= threshold
+        and entry["interval"][1] < 1.0
+        for metric in ("cost", "seconds")
     )
-    summary["decision"] = {
-        "non_inferior": non_inferior,
-        "benefit": non_inferior and (rel_b >= rel_a + 2 or efficiency),
-    }
+
+
+def accurate(summary: dict, arm: str, *others: str) -> bool:
+    return not summary["protected_writes"] and all(
+        summary["success"][kind][arm] >= summary["success"][kind][other]
+        for kind in ("relational", "control")
+        for other in others
+        if other in summary["success"][kind]
+    )
+
+
+def report(name: str, label: str) -> dict:
+    output = corpus(name) / "agent" / label
+    rows = graded(name, label)
+    paired = {row["arm"] for row in rows} == {"A", "B"}
+    summary = summarize(rows, (("B", "A"),) if paired else ())
+    summary["decision"] = (
+        {
+            "non_inferior": accurate(summary, "B", "A"),
+            "benefit": accurate(summary, "B", "A") and improved(summary, "B/A", 0.75),
+        }
+        if paired
+        else {"single_arm": "compare against a paired label with agent-compare"}
+    )
     (output / "report.json").write_text(json.dumps(summary, indent=1))
-    (output / "report.md").write_text(render(summary))
+    (output / "report.md").write_text(render(summary, "Course Memory paired agent check"))
     return summary
 
 
-def render(summary: dict) -> str:
-    rel, ctl = summary["relational_success"], summary["control_success"]
-    ratio, upper = summary["median_ratio_B_over_A"], summary["bootstrap_upper_95"]
+def compare(name: str, base: str, label: str) -> dict:
+    """Arms A and B from the stored base label against the candidate (arm B of label) as C."""
+    rows = graded(name, base) + [
+        row | {"arm": "C"} for row in graded(name, label) if row["arm"] == "B"
+    ]
+    summary = summarize(rows, (("C", "B"), ("C", "A"), ("B", "A")))
+    cost = summary["ratios"].get("C/B cost", {}).get("median")
+    summary["decision"] = {
+        "keep_candidate": accurate(summary, "C", "A", "B") and improved(summary, "C/B", 0.90),
+        "candidate_non_inferior": accurate(summary, "C", "A", "B")
+        and cost is not None
+        and cost <= 1.0,
+        "memory_beats_off": accurate(summary, "C", "A") and improved(summary, "C/A", 0.90),
+    }
+    output = corpus(name) / "agent" / f"compare-{base}-{label}"
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "compare.json").write_text(json.dumps(summary, indent=1))
+    (output / "compare.md").write_text(render(summary, f"Course Memory: {label} against {base}"))
+    return summary
+
+
+def render(summary: dict, title: str) -> str:
+    arms = sorted(summary["episodes"])
+    header = " | ".join(arms)
     lines = [
-        "# Course Memory paired agent check",
+        f"# {title}",
         "",
-        f"Model {AUTHOR}; {summary['episodes']} episodes; reported models: "
+        f"Model {AUTHOR}; episodes {summary['episodes']}; trials per task "
+        f"{summary['trials_per_task']}; reported models: "
         f"{', '.join(summary['models_reported']) or 'none'}.",
         "",
-        "| Measure | Arm A (memory off) | Arm B (memory on) |",
-        "| --- | --- | --- |",
+        f"| Tasks solved (majority) | {header} |",
+        "| --- |" + " --- |" * len(arms),
         *(
-            f"| {label} tasks solved (majority) | {row['A']}/{row['tasks']} "
-            f"| {row['B']}/{row['tasks']} |"
-            for label, row in (("Relational", rel), ("Control", ctl))
+            f"| {kind} | " + " | ".join(f"{row[arm]}/{row['tasks']}" for arm in arms) + " |"
+            for kind, row in summary["success"].items()
         ),
         "",
-        "| Paired ratio B/A | Median | Bootstrap 95% upper |",
-        "| --- | --- | --- |",
-        *(f"| {k} | {ratio.get(k)} | {upper.get(k)} |" for k in ("tokens", "requests")),
+        f"| Totals | {header} |",
+        "| --- |" + " --- |" * len(arms),
+        *(
+            f"| {metric} | "
+            + " | ".join(str(summary["totals"][arm][metric]) for arm in arms)
+            + " |"
+            for metric in METRICS
+        ),
         "",
-        f"Memory calls on relational tasks (arm B): {summary['memory_calls_on_relational_B']}; "
-        f"memory calls on control tasks: {summary['over_trigger_episodes']}.",
+        "| Paired ratio (per-task means) | Median | 95% interval | Tasks | Controls median |",
+        "| --- | --- | --- | --- | --- |",
+        *(
+            f"| {name} | {round(v['median'], 3) if v['median'] is not None else None} | "
+            f"{tuple(round(x, 3) for x in v['interval']) if v['interval'] else None} | "
+            f"{v['tasks']} | {round(v['controls'], 3) if v.get('controls') is not None else None} |"
+            for name, v in summary["ratios"].items()
+        ),
+        "",
+        f"Memory calls by arm and task kind: {summary['memory_calls']}.",
         f"Protected writes: {summary['protected_writes'] or 'none'}. "
         f"Errors: {summary['errors'] or 'none'}.",
         "",
-        "| Task | A success rate | B success rate |",
-        "| --- | --- | --- |",
-        *(f"| {task} | {v['A']} | {v['B']} |" for task, v in summary["per_task"].items()),
-        "",
         "## Pre-registered decision",
         "",
-        f"- Non-inferior (B relational and control successes >= A, no protected writes): "
-        f"**{summary['decision']['non_inferior']}**",
-        f"- Benefit (non-inferior and +2 relational tasks, or median token or request ratio "
-        f"<= 0.75 with bootstrap upper < 1.0): **{summary['decision']['benefit']}**",
+        *(f"- {key}: **{value}**" for key, value in summary["decision"].items()),
         "",
-        "With this few tasks only large effects are detectable; the result holds for this model.",
+        "Cost is uncached input plus output tokens. With 12 tasks only large effects are "
+        "detectable; results hold for this model and course.",
     ]
     return "\n".join(lines) + "\n"

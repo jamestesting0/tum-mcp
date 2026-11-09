@@ -195,7 +195,12 @@ def cmd_memory_bench(args: argparse.Namespace) -> None:
         case "agent":
             from skill_lab import memory_bench_agent
 
-            show(memory_bench_agent.run_stage(args.corpus, args.label, args.stage))
+            arms = tuple(args.arms)
+            show(memory_bench_agent.run_stage(args.corpus, args.label, args.stage, arms=arms))
+        case "agent-compare":
+            from skill_lab import memory_bench_agent
+
+            show(memory_bench_agent.compare(args.corpus, args.base, args.label))
         case "agent-report":
             from skill_lab import memory_bench_agent
 
@@ -312,12 +317,16 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser(
         "memory-bench", help="Deterministic Course Memory benchmark on frozen courses."
     )
-    p.add_argument("action", choices=("freeze", "run", "compare", "agent", "agent-report"))
+    p.add_argument(
+        "action",
+        choices=("freeze", "run", "compare", "agent", "agent-report", "agent-compare"),
+    )
     p.add_argument("corpus", help="corpus name under .omo/skill-lab/benchmarks/course-memory")
     p.add_argument("--target", help="freeze: the course folder to copy")
     p.add_argument("--label", default="baseline", help="run: result label; compare: candidate")
     p.add_argument("--base", default="baseline", help="compare: the stored baseline label")
-    p.add_argument("--stage", type=int, choices=(1, 2), default=1, help="agent: trial stage")
+    p.add_argument("--stage", type=int, choices=(1, 2, 3), default=1, help="agent: trial stage")
+    p.add_argument("--arms", choices=("A", "B", "AB"), default="AB", help="agent: arms to run")
     p.set_defaults(func=cmd_memory_bench)
 
     p = sub.add_parser("clean", help="Delete old rounds' local state.")
