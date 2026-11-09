@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   source:
-    name: Source tests (${{ matrix.os }})
+    name: Source tests
     # Own codex/** branches are already checked by their exact-commit push run.
     if: >-
       github.event_name != 'pull_request' ||
@@ -78,7 +78,7 @@ jobs:
         run: uv build
 
   installed:
-    name: Installed package (${{ matrix.os }})
+    name: Installed package
     if: >-
       github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name != github.repository ||
