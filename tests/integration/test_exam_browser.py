@@ -77,6 +77,29 @@ def exam_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
             thread.join(timeout=3)
 
 
+# Links that pass behind a card other than their own two, or through a region title.
+CROSSINGS = """() => {
+  const svg = document.querySelector('.exam-map-svg');
+  const cards = [...svg.querySelectorAll('.exam-node')].map(g => ({
+    key: g.dataset.concept, r: g.querySelector('rect').getBoundingClientRect() }));
+  const titles = [...svg.querySelectorAll('.exam-region text')]
+    .map(t => t.getBoundingClientRect());
+  const inside = (x, y, r) =>
+    x > r.left + 1 && x < r.right - 1 && y > r.top + 1 && y < r.bottom - 1;
+  const found = [];
+  for (const path of svg.querySelectorAll('[data-edge]')) {
+    const own = [path.dataset.start, path.dataset.end], m = path.getScreenCTM();
+    for (let d = 0; d <= path.getTotalLength(); d += 3) {
+      const p = path.getPointAtLength(d);
+      const x = m.a * p.x + m.c * p.y + m.e, y = m.b * p.x + m.d * p.y + m.f;
+      const behind = cards.some(c => !own.includes(c.key) && inside(x, y, c.r));
+      if (behind || titles.some(t => inside(x, y, t))) { found.push(own.join('>')); break; }
+    }
+  }
+  return found;
+}"""
+
+
 def open_page(browser: Browser, url: str, width: int, errors: list[str]) -> Page:
     context = browser.new_context(viewport={"width": width, "height": 900})
     page = context.new_page()
@@ -149,6 +172,8 @@ def test_cheatsheet_scans_filters_flags_and_maps(
         node.focus()
         page.keyboard.press("ArrowRight")
         assert page.evaluate("document.activeElement.dataset.concept") != "loose-coupling"
+        # No link passes behind a card it does not join or through a topic's title.
+        assert page.evaluate(CROSSINGS) == []
         canvas = page.locator(".exam-map-scroll")
         canvas.scroll_into_view_if_needed()
         box = canvas.bounding_box()

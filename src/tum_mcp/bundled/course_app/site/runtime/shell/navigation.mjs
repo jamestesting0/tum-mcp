@@ -191,17 +191,28 @@ const narrow = matchMedia('(max-width: 799px)');
 let refresh = () => {};
 narrow.addEventListener('change', () => refresh());
 
+// Every outline entry is a muted label over its title; a folder named "Lecture 3 · Uninformed
+// search" reads as "Lecture 3" over "Uninformed search", like a unit's label over its title.
+const entry = (eyebrow, title) => append(node('span', 'unit-entry'),
+  ...(eyebrow ? [node('span', 'unit-label', eyebrow)] : []), studyText('span', 'unit-title', title));
+const parts = label => { const at = label.indexOf(' · '); return at < 0 ? ['', label] : [label.slice(0, at), label.slice(at + 3)]; };
+
 function outline(currentIndex) {
   const nav = node('nav', 'unit-list'); nav.setAttribute('aria-label', 'Course units');
-  const folders = new Map();
+  const folders = new Map(), sizes = new Map();
+  for (const unit of data.units) {
+    const top = unit.path?.[0];
+    if (top) sizes.set(top, (sizes.get(top) || 0) + 1);
+  }
   data.units.forEach((unit, index) => {
     let parent = nav;
-    const ancestry = unit.path || [];
+    // A lecture with one unit is that unit's own entry, so no folder holds a single row.
+    const ancestry = unit.path?.length === 1 && sizes.get(unit.path[0]) === 1 ? [] : unit.path || [];
     ancestry.forEach((label, depth) => {
       const key = JSON.stringify(ancestry.slice(0, depth + 1));
       if (!folders.has(key)) {
         const group = node('details', 'unit-group');
-        group.append(node('summary', '', label));
+        group.append(append(node('summary'), entry(...parts(label))));
         const children = node('div', 'group-children'); group.append(children);
         const activePath = data.units[currentIndex]?.path || [];
         group.open = ancestry.slice(0, depth + 1).every((part, i) => part === activePath[i]) || expanded.get(key) === true;
@@ -212,8 +223,7 @@ function outline(currentIndex) {
     });
     const link = node('a', 'unit-link study-unit-link'); link.href = `#${unit.key}/content`;
     if (index === currentIndex) link.setAttribute('aria-current', 'page');
-    if (!ancestry.length) link.append(node('span', '', unit.label));
-    link.append(studyText('span', 'unit-title', unit.title));
+    link.append(entry(ancestry.length ? '' : unit.label || parts(unit.path?.[0] || '')[0], unit.title));
     const status = node('span', 'small'); status.dataset.studyProgress = unit.key;
     link.append(status); parent.append(link);
   });

@@ -125,7 +125,7 @@ Every cheatsheet has a semester map, and readiness waits for it (`unlinked_map`)
 idea on the map links at least one other, so the student sees what to learn first and
 what follows. Draw only links a student benefits from seeing. Put the core ideas on the
 map (`on_map`) and set `on_map: false` for supporting detail with no link worth drawing;
-around 60 to 80 nodes stay readable. Topics are the map's columns in course order.
+around 60 to 80 nodes stay readable. Each topic is a region of the map, in course order.
 
 Study Explore is not evidence for an exam requirement and cannot supply core unit
 links. If an actual task requires an optional-only concept, record the dependency and

@@ -38,7 +38,7 @@ function legendItem(dashed, text) {
 // The semester map: build-time positions, focusable nodes and, for the selection, the same entry
 // the cheatsheet list shows, so a student reads the details without leaving the map.
 // The smallest scale a map opens at, so 13px card titles stay legible.
-const READABLE = 0.8;
+const READABLE = 0.75;
 
 export function renderMap() {
   const map = exam.map;
@@ -93,10 +93,8 @@ export function renderMap() {
     if (key) elements.get(key)?.focus({ preventScroll: true });
   }
   const scroller = node('div', 'exam-map-scroll'); scroller.tabIndex = 0;
-  // The collapsed frame takes the map's shape, so a wide, short map leaves no empty band; it is
-  // tall enough to show the map at a readable size when the whole map would not be.
-  scroller.style.aspectRatio = `${map.width + 64} / ${map.height + 160}`;
-  scroller.style.minHeight = `${Math.round(map.height * READABLE + 48)}px`;
+  // The collapsed frame takes the map's shape, so a wide, short map leaves no empty band.
+  scroller.style.aspectRatio = `${map.width + 64} / ${map.height + 112}`;
   scroller.setAttribute('aria-label', 'Semester map canvas. Arrow keys move it, plus and minus zoom, 0 fits it.');
   scroller.title = 'Drag to move · pinch or Ctrl/⌘ + scroll to zoom';
   const svg = svgNode('svg', { viewBox: `0 0 ${map.width} ${map.height}`, class: 'exam-map-svg', role: 'group', 'aria-label': 'Semester map of exam-relevant ideas' });
@@ -108,15 +106,18 @@ export function renderMap() {
     marker.append(svgNode('path', { d: 'M0 0L10 5L0 10z', class: className })); defs.append(marker);
   }
   svg.append(defs);
-  for (const column of map.columns) {
-    const label = svgNode('text', { x: column.x, y: 24, class: 'exam-map-column' }); label.textContent = plainText(column.title);
-    svg.append(label);
-  }
+  // Each topic is a tinted region with its title centred on top; its tone also marks its cards.
+  map.regions.forEach((region, index) => {
+    const group = svgNode('g', { class: 'exam-region', 'data-tone': index % 6, 'data-topic': region.topic, 'aria-hidden': 'true' });
+    group.append(svgNode('rect', { x: region.x, y: region.y, width: region.width, height: region.height, rx: 14 }));
+    const label = svgNode('text', { x: region.x + region.width / 2, y: region.y + map.header / 2 + 5, 'text-anchor': 'middle' });
+    label.textContent = plainText(region.title); group.append(label);
+    svg.append(group);
+  });
   const position = new Map(map.nodes.map(item => [item.key, item]));
   const width = map.node_width, height = map.node_height;
   // A line never crosses a card other than its own two. It takes the simplest route that stays
-  // clear: one smooth curve, else two rounded corners through a gap between card columns, else
-  // four corners through the gap beside the target's row.
+  // clear: one smooth curve, else rounded corners through the gaps between cards and regions.
   const cards = map.nodes.map(item => [item.x, item.y, item.x + width, item.y + height, item.key]);
   const ys = [...new Set(map.nodes.map(item => item.y))].sort((p, q) => p - q);
   const rowGap = Math.max(16, Math.min(48, ...ys.slice(1).map((y, i) => y - ys[i] - height).filter(gap => gap > 0)));
@@ -139,6 +140,17 @@ export function renderMap() {
     const k1 = Math.min(radius, before / 2), k2 = Math.min(radius, after / 2);
     return `L${x - (x - px) / before * k1} ${y - (y - py) / before * k1}Q${x} ${y} ${x + (nx - x) / after * k2} ${y + (ny - y) / after * k2}`;
   }).join('');
+  // Links leaving one card's bottom start apart, ordered by where they go, so no two share a
+  // start; links arriving at a card's top land apart the same way.
+  const below = map.edges.filter(edge => edge.kind !== 'contrasts' && position.get(edge.end).y > position.get(edge.start).y + height);
+  const share = new Map();
+  for (const [end, other] of [['start', 'end'], ['end', 'start']]) {
+    for (const key of position.keys()) {
+      const group = below.filter(edge => edge[end] === key).sort((p, q) => position.get(p[other]).x - position.get(q[other]).x);
+      group.forEach((edge, index) => share.set(`${end}:${edge.start}>${edge.end}`, (index + 1) / (group.length + 1)));
+    }
+  }
+  const port = (edge, end) => position.get(edge[end]).x + width * (share.get(`${end}:${edge.start}>${edge.end}`) ?? 0.5);
   for (const edge of map.edges) {
     const a = position.get(edge.start), b = position.get(edge.end), own = [edge.start, edge.end];
     // Within a column, a link that would pass behind another card runs beside the column instead:
@@ -148,17 +160,48 @@ export function renderMap() {
       const free = side => [a, b].every(end => !members.some(item => item.y === end.y && (item.x - end.x) * side > 0));
       const side = free(-1) ? -1 : free(1) ? 1 : 0;
       if (!side) return null;
-      const x = side < 0 ? Math.min(...members.map(item => item.x)) - 16 : Math.max(...members.map(item => item.x)) + width + 16;
+      const x = side < 0 ? Math.min(...members.map(item => item.x)) - 8 : Math.max(...members.map(item => item.x)) + width + 8;
       const out = side < 0 ? a.x : a.x + width, into = (side < 0 ? b.x : b.x + width) + side * (arrow ? head : 0);
       return rounded([[out, a.y + height / 2], [x, a.y + height / 2], [x, b.y + height / 2], [into, b.y + height / 2]]);
     };
+    // Between rows of regions a link never crosses a region's title or ideas: out of the source's
+    // outer side into the gap beside its region, along the gap between the rows, into the
+    // target's outer side.
+    const between = arrow => {
+      const ra = map.regions[a.column], rb = map.regions[b.column], half = map.gap / 2;
+      const leftOf = (item, region) => item.x + width / 2 < region.x + region.width / 2;
+      const ga = leftOf(a, ra) ? ra.x - half : ra.x + ra.width + half, gb = leftOf(b, rb) ? rb.x - half : rb.x + rb.width + half;
+      const out = leftOf(a, ra) ? a.x : a.x + width, side = leftOf(b, rb) ? -1 : 1;
+      const into = (side < 0 ? b.x : b.x + width) + side * (arrow ? head : 0);
+      const lane = rb.y > ra.y ? rb.y - half : ra.y - half;
+      return rounded([[out, a.y + height / 2], [ga, a.y + height / 2], [ga, lane], [gb, lane], [gb, b.y + height / 2], [into, b.y + height / 2]]);
+    };
+    // Down to a later row, the shortest clear route: straight down out of the source, along the
+    // gap above the target's row, and into the target's top beside its region's title.
+    const drop = () => {
+      const rb = map.regions[b.column], x1 = port(edge, 'start'), lane = rb.y - map.gap / 2;
+      const clearance = plainText(rb.title).length * 3.9 + 8, centre = rb.x + rb.width / 2;
+      const entries = [b.x + width * 0.8, b.x + width * 0.2].filter(x => Math.abs(x - centre) > clearance)
+        .sort((p, q) => Math.abs(p - x1) - Math.abs(q - x1));
+      const points = entries.length && [[x1, a.y + height], [x1, lane], [entries[0], lane], [entries[0], b.y - head]];
+      return points && !crosses(along(points), own) ? rounded(points) : null;
+    };
     let path;
-    if (edge.kind === 'contrasts') {
+    if (edge.kind === 'contrasts' && a.y === b.y && a.column === b.column) {
+      // Two confusable neighbours share a dashed bracket under them, which a short dash between
+      // the cards would not show.
+      const [left, right] = a.x < b.x ? [a, b] : [b, a], low = a.y + height + 12;
+      path = rounded([[left.x + width * 0.7, a.y + height], [left.x + width * 0.7, low], [right.x + width * 0.3, low], [right.x + width * 0.3, a.y + height]], 8);
+    } else if (edge.kind === 'contrasts') {
       const straight = [[a.x + width / 2, a.y + height / 2], [b.x + width / 2, b.y + height / 2]];
-      path = (a.column === b.column && a.y !== b.y && crosses(along(straight), own) && lane(false))
+      const blocked = crosses(along(straight), own);
+      path = (blocked && a.column === b.column && a.y !== b.y && lane(false))
+        || (map.regions[a.column].y !== map.regions[b.column].y && between(false))
         || `M${straight[0][0]} ${straight[0][1]}L${straight[1][0]} ${straight[1][1]}`;
+    } else if (a.column !== b.column && map.regions[a.column].y !== map.regions[b.column].y) {
+      path = (b.y > a.y && drop()) || between(true);
     } else if (a.column !== b.column) {
-      const forward = b.column > a.column, side = forward ? 1 : -1, x1 = forward ? a.x + width : a.x;
+      const forward = b.x > a.x, side = forward ? 1 : -1, x1 = forward ? a.x + width : a.x;
       const x2 = (forward ? b.x : b.x + width) - side * head, y1 = a.y + height / 2, y2 = b.y + height / 2;
       const x3 = x2 - side * stub, bend = (x3 - x1) / 2;
       if (!crosses(sampled([x1, y1], [x1 + bend, y1], [x3 - bend, y2], [x3, y2]), [edge.start, edge.end])) {
@@ -173,7 +216,7 @@ export function renderMap() {
         path = rounded(turns || [[x1, y1], [out, y1], [out, gap], [into, gap], [into, y2], [x2, y2]]);
       }
     } else if (b.y > a.y + height) {
-      const x1 = a.x + width / 2, y1 = a.y + height, x2 = b.x + width / 2, y2 = b.y - head, y3 = y2 - stub, middle = (y1 + y3) / 2;
+      const x1 = port(edge, 'start'), y1 = a.y + height, x2 = port(edge, 'end'), y2 = b.y - head, y3 = y2 - stub, middle = (y1 + y3) / 2;
       path = (crosses(sampled([x1, y1], [x1, middle], [x2, middle], [x2, y3]), own) && lane(true))
         || `M${x1} ${y1}C${x1} ${middle} ${x2} ${middle} ${x2} ${y3}L${x2} ${y2}`;
     } else {
@@ -186,7 +229,7 @@ export function renderMap() {
   }
   for (const item of ordered) {
     const concept = concepts.get(item.key);
-    const group = svgNode('g', { class: `exam-node ${concept.tier}`, transform: `translate(${item.x} ${item.y})`, tabindex: 0, role: 'button', 'aria-pressed': 'false', 'aria-label': describe(item.key), 'data-concept': item.key, 'data-topic': concept.topic });
+    const group = svgNode('g', { class: `exam-node ${concept.tier}`, 'data-tone': item.column % 6, transform: `translate(${item.x} ${item.y})`, tabindex: 0, role: 'button', 'aria-pressed': 'false', 'aria-label': describe(item.key), 'data-concept': item.key, 'data-topic': concept.topic });
     group.append(svgNode('rect', { width, height, rx: 8 }));
     const text = svgNode('text', { x: width / 2, y: height / 2, 'text-anchor': 'middle' });
     const rows = lines(plainTitle(item.key));
@@ -211,15 +254,15 @@ export function renderMap() {
     const width = scroller.clientWidth, height = scroller.clientHeight;
     if (width && height) svg.setAttribute('viewBox', `${view.x} ${view.y} ${width / view.scale} ${height / view.scale}`);
   }
-  // Fit shows the whole map. Opening it, a map too wide to read whole starts at a readable size
-  // on its first topics, and the student drags along the semester.
+  // Fit shows the whole map. Opening it, the map fills the frame's width at a readable size and
+  // starts at its first topics; the student drags along the semester.
   function fit(whole = true) {
     const width = scroller.clientWidth, height = scroller.clientHeight;
     if (!width || !height) return;
-    const all = Math.min((width - 32) / map.width, (height - 32) / map.height, 1.25);
-    view.scale = clamp(whole ? all : Math.max(all, READABLE));
-    const centre = (size, room) => size * view.scale <= room - 32 ? (size - room / view.scale) / 2 : -16 / view.scale;
-    view.x = centre(map.width, width); view.y = centre(map.height, height);
+    const across = (width - 32) / map.width;
+    view.scale = clamp(whole ? Math.min(across, (height - 32) / map.height, 1.25) : Math.min(Math.max(across, READABLE), 1.25));
+    const start = (size, room) => size * view.scale <= room - 32 ? (size - room / view.scale) / 2 : -16 / view.scale;
+    view.x = start(map.width, width); view.y = start(map.height, height);
     fitted = true; apply();
   }
   function zoomAt(factor, cx = scroller.clientWidth / 2, cy = scroller.clientHeight / 2) {
@@ -330,6 +373,8 @@ export function renderMap() {
     }
     group.append(items); overview.append(group);
   }
-  root.append(append(node('div', 'exam-map-frame'), scroller, tools, legend), overview, card, status);
+  // The key sits under the heading, where it never covers the map.
+  heading.append(legend);
+  root.append(append(node('div', 'exam-map-frame'), scroller, tools), overview, card, status);
   return root;
 }

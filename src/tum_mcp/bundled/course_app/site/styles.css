@@ -152,12 +152,20 @@ a.course-title:hover, a.course-title[aria-current="page"] { color: var(--accent)
 .study-unit-link { display: grid; gap: var(--s1); }
 .study-unit-link > span { margin: 0; }
 .revision-link { color: var(--ink); font-weight: 500; }
+/* Every outline entry, folder or unit, is a muted label over its title in one weight. */
+.unit-link > span.unit-entry, .unit-group > summary > span.unit-entry { display: grid; gap: 2px; min-width: 0; margin: 0; color: inherit; font-size: var(--text-ui); }
+.unit-entry > span.unit-label { margin: 0; color: var(--muted); font-size: var(--text-small); font-weight: 400; }
+.unit-entry > span.unit-title { margin: 0; }
+/* Beside folders, a page's text starts where the folders' titles do, after the chevron. */
+.unit-list:has(> .unit-group) > .unit-link, .unit-list:has(> .unit-group) + nav > .revision-link { padding-inline-start: calc(var(--s2) * 2 + 6px); }
+.study-unit-link { padding-block: var(--s2); }
 .unit-group { min-width: 0; }
-.unit-group > summary { display: flex; align-items: flex-start; gap: var(--s2); min-height: var(--target); padding: var(--s2); border-radius: var(--r1); color: var(--ink); font-size: var(--text-ui); font-weight: 500; overflow-wrap: anywhere; }
+.unit-group > summary { display: flex; align-items: flex-start; gap: var(--s2); min-height: var(--target); padding: var(--s2); border-radius: var(--r1); color: var(--ink); font-size: var(--text-ui); line-height: 1.45; overflow-wrap: anywhere; }
 .unit-group > summary::before { margin-block-start: calc((1lh - 6px) / 2); color: var(--muted); }
 .unit-group > summary:hover { background: var(--surface); }
 /* Children align with their folder's label: chevron width plus its gap. */
-.group-children { margin-top: var(--s1); margin-inline-start: calc(6px + var(--s2)); }
+/* An open folder's pages hang from a thin rail under its chevron; their text keeps its place. */
+.group-children { margin-top: var(--s1); margin-inline-start: calc(var(--s2) + 3px); padding-inline-start: 2px; border-inline-start: 1px solid var(--line); }
 .sidebar-footer { display: flex; flex-shrink: 0; flex-wrap: nowrap; align-items: center; gap: var(--s1); margin-top: auto; padding-top: var(--s3); border-top: 1px solid var(--line); }
 .outline-toggle { position: fixed; z-index: 3; top: calc(50dvh - var(--target) / 2); left: calc(var(--outline) - var(--target) / 2); height: var(--target); border: 0; border-radius: 0; background: transparent; opacity: 0; }
 .outline-toggle::before { content: ''; position: absolute; z-index: -1; inset-block: 0; left: calc((var(--target) - var(--edge-surface)) / 2); width: var(--edge-surface); border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); }
@@ -921,7 +929,7 @@ button.lecture-recall { margin-top: var(--s2); }
 .exam-entry-cues dd { margin: 0; line-height: 1.55; }
 @media (max-width: 480px) { .exam-entry-cues { grid-template-columns: minmax(0, 1fr); row-gap: var(--s1); } .exam-entry-cues dd + dt { margin-top: var(--s2); } .exam-cue { height: auto; } }
 .exam-badge { color: var(--muted); }
-.exam-map-scroll { position: relative; width: 100%; min-height: 240px; max-height: min(64vh, 520px); overflow: hidden; border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.exam-map-scroll { position: relative; width: 100%; min-height: 240px; max-height: min(72vh, 720px); overflow: hidden; border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .exam-map-scroll.panning { cursor: grabbing; }
 .exam-map-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .exam-map-svg { display: block; width: 100%; height: 100%; font-family: var(--font-ui); }
@@ -938,12 +946,21 @@ button.lecture-recall { margin-top: var(--s2); }
   .exam-map.expanded .exam-map-heading { grid-column: 1 / -1; }
   .exam-map.expanded .exam-map-card { grid-column: 2; grid-row: 2; max-height: none; }
 }
-.exam-map-column { fill: var(--muted); font-size: 14px; font-weight: 650; }
+/* Topic regions: a quiet tint of the topic's tone with its title centred; its cards carry the
+   tone, at full strength for core ideas. Six tones repeat in course order. */
+.exam-map-svg [data-tone="0"] { --tone: light-dark(#3070b3, #8cbffa); }
+.exam-map-svg [data-tone="1"] { --tone: light-dark(#1d7a6f, #6fd3c4); }
+.exam-map-svg [data-tone="2"] { --tone: light-dark(#6a4fb6, #bba8f6); }
+.exam-map-svg [data-tone="3"] { --tone: light-dark(#93600a, #e9b86a); }
+.exam-map-svg [data-tone="4"] { --tone: light-dark(#a3405a, #f19bb2); }
+.exam-map-svg [data-tone="5"] { --tone: light-dark(#3b7a2c, #a3d68e); }
+.exam-region rect { fill: color-mix(in srgb, var(--tone) 7%, var(--surface)); stroke: color-mix(in srgb, var(--tone) 24%, transparent); stroke-width: 1; }
+.exam-region text { fill: var(--tone); font-size: 14px; font-weight: 650; }
 .exam-node { cursor: pointer; outline: none; }
-.exam-node rect { fill: var(--canvas); stroke: var(--line); stroke-width: 1.5; }
-.exam-node.core rect { stroke: var(--accent); }
+.exam-node rect { fill: var(--canvas); stroke: color-mix(in srgb, var(--tone) 45%, var(--line)); stroke-width: 1.5; }
+.exam-node.core rect { stroke: var(--tone); }
 .exam-node text { fill: var(--ink); font-size: 13px; pointer-events: none; }
-.exam-node.related rect { fill: var(--wash); }
+.exam-node.related rect { fill: color-mix(in srgb, var(--tone) 14%, var(--canvas)); }
 .exam-node.selected rect, .exam-node:focus-visible rect { fill: var(--wash); stroke: var(--ink); stroke-width: 2.5; }
 .exam-edge { fill: none; stroke: var(--muted); stroke-width: 1.4; opacity: .7; }
 .exam-edge.contrasts { stroke-dasharray: 5 4; }
@@ -951,12 +968,12 @@ button.lecture-recall { margin-top: var(--s2); }
 .exam-arrow-head { fill: var(--muted); }
 .exam-arrow-head.related { fill: var(--accent); }
 .exam-edge.related:not(.contrasts) { marker-end: url(#exam-arrow-related); }
-.exam-map-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.exam-map-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s1) var(--s3); }
 .exam-map-frame { position: relative; }
-.exam-map-tools { position: absolute; top: var(--s2); right: var(--s2); display: flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r1); background: var(--canvas); }
+.exam-map-tools { position: absolute; right: var(--s2); bottom: var(--s2); display: flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r1); background: var(--canvas); }
 button.exam-map-tool { display: grid; place-items: center; min-width: 36px; min-height: 36px; padding: 0; color: var(--ink); }
 button.exam-map-tool svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.exam-map-legend { position: absolute; left: var(--s2); bottom: var(--s2); display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); padding: 4px 10px; border-radius: var(--r1); background: var(--canvas); color: var(--muted); font-size: 12px; pointer-events: none; }
+.exam-map-legend { display: flex; flex-basis: 100%; order: 3; flex-wrap: wrap; gap: var(--s1) var(--s4); color: var(--muted); font-size: 12px; }
 .exam-map-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .exam-map-legend svg { width: 28px; height: 10px; }
 .exam-map-legend path { fill: none; stroke: var(--muted); stroke-width: 1.4; }
@@ -975,7 +992,7 @@ button.exam-map-tool svg { width: 16px; height: 16px; fill: none; stroke: curren
 .exam-map-topic-list { margin: 0 0 var(--s3); padding: 0; list-style: none; }
 button.exam-map-item { display: flex; justify-content: space-between; gap: var(--s3); width: 100%; text-align: start; }
 @media (max-width: 719px) {
-  .exam-map:not(.expanded) .exam-map-frame { display: none; }
+  .exam-map:not(.expanded) :is(.exam-map-frame, .exam-map-legend) { display: none; }
   .exam-map:not(.expanded) .exam-map-overview { display: block; }
 }
 .exam-topic > h2, .exam-topic > .section-heading { margin-top: var(--s8); }

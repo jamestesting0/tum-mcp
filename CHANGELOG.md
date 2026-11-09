@@ -10,6 +10,14 @@
 - Every cheatsheet shows its semester map again: readiness asks for a link from each
   idea on the map to what it builds on or contrasts with, or for the idea to leave the
   map, and the app draws the map even before any link exists.
+- The semester map groups each topic in its own tinted region with the title centred on
+  top, laid out in course order and opened at a readable size. Ideas keep the sheet's
+  order; links never pass behind another card or through a title, run between regions
+  through the gaps, and leave and enter cards at separate points. The key sits under the
+  heading instead of over the map.
+- The Study outline shows every lecture the same way, a muted label over its title; a
+  lecture with several lessons folds, its lessons hang from a thin rail, and titles line
+  up across lessons, folders and Revision (and in the Exam outline).
 - Exercise questions read "a. Find the cost ..." with the label inline, and sub-questions
   "i." and "ii." nest under their question. A title that only repeats the problem number
   is no longer shown as a heading, and parts citing the same pages show the citation once.

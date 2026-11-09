@@ -168,12 +168,18 @@ def test_layout_is_deterministic_layered_and_non_overlapping(content: ExamConten
     assert set(nodes) == {"observer", "loose-coupling", "strategy", "composite", "decorator"}
     assert nodes["loose-coupling"]["depth"] == 0 and nodes["observer"]["depth"] == 1
     assert nodes["decorator"]["depth"] == 0
-    assert [column["topic"] for column in first["columns"]] == ["behavioral", "structural"]
+    regions = first["regions"]
+    assert [region["topic"] for region in regions] == ["behavioral", "structural"]
+    # Each idea sits inside its topic's region, below the title band, and regions never overlap.
+    for one, other in zip(regions, regions[1:], strict=False):
+        assert one["x"] + one["width"] <= other["x"] or one["y"] + one["height"] <= other["y"]
     rows: dict[tuple[int, int], list[int]] = {}
     for node in first["nodes"]:
         rows.setdefault((node["column"], node["y"]), []).append(node["x"])
-        assert 0 <= node["x"] and node["x"] + NODE_WIDTH <= first["width"]
-        assert node["y"] + first["node_height"] <= first["height"]
+        box = regions[node["column"]]
+        assert box["x"] <= node["x"] and node["x"] + NODE_WIDTH <= box["x"] + box["width"]
+        assert box["y"] + first["header"] <= node["y"]
+        assert node["y"] + first["node_height"] <= box["y"] + box["height"] <= first["height"]
     for xs in rows.values():
         xs.sort()
         assert all(
