@@ -1,0 +1,26 @@
+id: media-notes
+turns:
+  - say: "Set up my AI course in this folder."
+    skills: [sync-course, read-content]
+  - say: "Prepare study for the first two lectures."
+    skills: [prepare-study, read-content]
+  - say: "Prepare the first exercise sheet."
+    skills: [prepare-exercises, read-content]
+  - say: "Prepare the exam from the mock exam I put in this folder."
+    skills: [prepare-exams, read-content]
+  - say: "Make an explainer video for the second lecture."
+    skills: [video-notes, read-content]
+  - say: "Make a video that walks me through the solution of the hardest problem on the sheet."
+    skills: [video-notes, read-content]
+  - say: "Make audio notes of the whole exam cheatsheet so I can revise it on the go."
+    skills: [audio-notes, read-content]
+  - say: "Make audio notes for all the lecture content in Study."
+    skills: [audio-notes, read-content]
+  - say: "Review the videos and audio notes."
+    skills: [review-course, video-notes, audio-notes]
+replies:
+  review: "Not now, I'll ask for a review later."
+  publish: "No, keep it local."
+  course: "The fundamentals of AI course, this semester."
+  sheet: "The first released exercise sheet."
+  default: "Your choice, go ahead."

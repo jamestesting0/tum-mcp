@@ -26,7 +26,13 @@ def refusal(arguments: list[str]) -> str | None:
 
 # Browser checks, fresh checker sessions and recording acquisition need the host's
 # capabilities; the trial still selects only workspace-bound, vetted commands.
-BROKERED = (["study", "visuals"], ["review", "run-checker"], ["lecture", "prepare"])
+BROKERED = (
+    ["study", "visuals"],
+    ["review", "run-checker"],
+    ["lecture", "prepare"],
+    ["audio-notes", "listen"],
+    ["video-notes", "listen"],
+)
 WAIT_SECONDS = 2400
 
 

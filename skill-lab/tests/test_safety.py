@@ -283,6 +283,22 @@ def test_recording_preparation_is_confined_to_the_course_and_canonical_streams(t
         )
 
 
+def test_broker_listens_to_one_published_stem_inside_the_workspace(tmp_path):
+    from skill_lab import LabError, runs
+
+    listen = ["video-notes", "listen", ".", "02_rational-vacuum-agents"]
+    job = {"arguments": listen, "cwd": str(tmp_path)}
+    assert runs._render_request(job, tmp_path) == (listen, tmp_path)
+    for arguments in (
+        ["audio-notes", "listen", ".", "../tracks"],
+        ["audio-notes", "listen", ".", "01_logic", "--extra"],
+        ["audio-notes", "listen", "../outside", "01_logic"],
+        ["audio-notes", "publish", ".", "01_logic"],
+    ):
+        with pytest.raises(LabError):
+            runs._render_request({"arguments": arguments, "cwd": str(tmp_path)}, tmp_path)
+
+
 def test_a_render_is_answered_while_a_long_checker_still_runs(tmp_path, monkeypatch):
     # The candidate trial's renders stalled for ten minutes behind one checker.
     import subprocess

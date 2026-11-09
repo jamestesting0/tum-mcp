@@ -40,6 +40,7 @@ def _broker_command(python: Path, arguments: list[str]) -> list[str]:
 
 RENDER_OPTIONS = frozenset({"--exam", "--gallery", "--phone", "--interact", "--json"})
 PACKET = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{0,80}$")
+STEM = re.compile(r"[0-9]{2}_[a-z0-9][a-z0-9-]{0,80}")
 
 
 def _render_request(
@@ -52,10 +53,12 @@ def _render_request(
         ["study", "visuals"],
         ["review", "run-checker"],
         ["lecture", "prepare"],
+        ["audio-notes", "listen"],
+        ["video-notes", "listen"],
     ):
         raise LabError(
-            "The broker only runs study visuals, review run-checker and lecture prepare "
-            "inside its trial workspace."
+            "The broker only runs study visuals, review run-checker, lecture prepare and "
+            "media listen inside its trial workspace."
         )
     if len(arguments) < 3 or arguments[2].startswith("-"):
         raise LabError("A broker request names its course project.")
@@ -63,6 +66,11 @@ def _render_request(
     if not project.is_relative_to(workspace):
         raise LabError("A broker request's project stays inside its trial workspace.")
     options = iter(arguments[3:])
+    if command[1] == "listen":
+        # Speech recognition uses the GPU, which the trial sandbox blocks.
+        if len(arguments) != 4 or not STEM.fullmatch(arguments[3]):
+            raise LabError("A listen request names its project and one published stem.")
+        return arguments, cwd
     if command == ["lecture", "prepare"]:
         recordings = 0
         for option in options:
