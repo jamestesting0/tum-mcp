@@ -4,7 +4,14 @@ import json
 from pathlib import Path
 
 from documents import content_file
-from material_fixture import EXAM_FILES, exam_document, minimal_unit, pdf_bytes, text
+from material_fixture import (
+    EXAM_FILES,
+    exam_document,
+    minimal_unit,
+    pdf_bytes,
+    text,
+    with_guided_paper,
+)
 
 from tum_mcp.course.project.store import load_state
 from tum_mcp.course.project.sync import sync
@@ -219,4 +226,108 @@ def knowledge_project(
         content_file(root, "lectures").write_text(json.dumps(payload), encoding="utf-8")
     if layout[1] != ".tum-mcp":
         (root / ".tum-mcp").rename(root / layout[1])
+    return root
+
+
+PASSAGE = {"unit": "observer", "block": "observer-definition"}
+
+
+def fidelity_project(tmp_path: Path) -> Path:
+    """The knowledge course plus one instance of every authored link family and entries that
+    cite a subset of their owner's sources."""
+    from tum_mcp.course.checks.links import record_none
+    from tum_mcp.course.memory.store import load_inputs
+
+    root = knowledge_project(tmp_path)
+    sha = {item.resource.key: item.sha256 for item in load_state(root).resources}
+
+    def version(key: str) -> dict:
+        return {"key": key, "sha256": sha[key]}
+
+    def edit(workspace: str, change) -> None:
+        path = content_file(root, workspace)
+        value = json.loads(path.read_bytes())
+        change(value)
+        path.write_text(json.dumps(value), encoding="utf-8")
+
+    def study(value: dict) -> None:
+        unit = value["units"][0]
+        unit["sources"].append(version("exam-ws23"))
+        unit["blocks"].append(
+            text("Exam use", "exam-ws23", "The weather station task applies Observer.")
+            | {"key": "exam-link", "pages": "1"}
+        )
+
+    def exercises(value: dict) -> None:
+        practice = value["sets"][0]["exercises"][0]
+        practice["sources"].append(version("exam-ws23"))
+        value["sets"][0]["exercises"].append(
+            {
+                "key": "observer-drill",
+                "label": "Drill 1",
+                "title": "Register a display",
+                "kind": "distilled",
+                "distilled_from": ["observer-practice"],
+                "sources": [version("slides")],
+                "statement": [
+                    text("Task", "slides", "Register one more display."),
+                    {
+                        "kind": "table",
+                        "title": "Calls",
+                        "sources": ["slides"],
+                        "caption": "Subject calls",
+                        "columns": ["Call", "Effect"],
+                        "rows": [["attach", "registers a display"]],
+                    },
+                ],
+                "objectives": ["Register a display with the subject."],
+                "steps": [
+                    {
+                        "key": "register",
+                        "purpose": "Find the call.",
+                        "prompt": "Which call registers the display?",
+                        "explanation": "The subject's attach call.",
+                    }
+                ],
+                "solution": {"answers": [{"blocks": [text("Answer", "slides", "Call attach.")]}]},
+            }
+        )
+
+    def exam(value: dict) -> None:
+        with_guided_paper(value)
+        concept = next(item for item in value["concepts"] if item["key"] == "observer")
+        concept.update(
+            units=["observer"],
+            passages=[PASSAGE],
+            exercises=[{"set": "sheet-1", "exercise": "observer-practice"}],
+        )
+        value["topics"][0]["units"] = ["observer"]
+        question = value["sittings"][0]["variants"][0]["questions"][0]
+        question["guidance"]["prerequisites"] = [
+            PASSAGE | {"explanation": "Use the notification contract."}
+        ]
+
+    def lectures(value: dict) -> None:
+        lecture = value["lectures"][0]
+        lecture["sources"].append(version("exam-ws22-upload"))
+        lecture["notes"][0]["passage"] = PASSAGE
+
+    for workspace, change in (
+        ("study", study),
+        ("exercises", exercises),
+        ("exam", exam),
+        ("lectures", lectures),
+    ):
+        edit(workspace, change)
+    inputs = load_inputs(root)
+    record_none(
+        root,
+        inputs.study,
+        inputs.exercises,
+        inputs.exam,
+        inputs.lectures,
+        "concept:decorator",
+        "exercises",
+        "No sheet exercise trains Decorator yet.",
+    )
     return root

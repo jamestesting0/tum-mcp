@@ -1,5 +1,6 @@
 """Deterministic two-hop retrieval over one local optimistic course snapshot."""
 
+import json
 import re
 from collections import deque
 from pathlib import Path
@@ -17,6 +18,25 @@ from tum_mcp.errors import CampusError, Code
 
 LEARNING = frozenset({"study", "exercises", "exam", "lectures"})
 NAVIGATION = frozenset({"supported_by", "coverage_of", "covered_by"})
+# Native relations an author wrote down, ordered by how directly they answer each purpose.
+PRIORITY: dict[str, tuple[str, ...]] = {
+    "exercises": ("practices", "distills", "prerequisite_of"),
+    "study": ("linked_teaching", "prerequisite_of", "clarifies"),
+    "exam": (
+        "shows_workflow",
+        "prerequisite_of",
+        "derives",
+        "contrasts",
+        "uses_concept",
+        "worked_example",
+        "varies_from",
+        "assesses",
+        "uses_pattern",
+    ),
+    "lectures": ("linked_lecture", "clarifies"),
+    "review": (),
+}
+AUTHORED = frozenset(relation for order in PRIORITY.values() for relation in order)
 
 
 def tokens(value: str) -> frozenset[str]:
@@ -189,15 +209,45 @@ def _collect(
     max_bytes: int,
     *,
     outgoing: bool = False,
+    exact: bool = True,
 ) -> dict:
     evidence = EvidenceChecks(graph.inputs)
     checks = AssertionChecks(graph, evidence)
     packet = envelope(graph, selector)
     routes, exhausted = walk(graph, selected, checks, outgoing=outgoing)
     refs = [ref for ref in routes if graph.nodes[ref].workspace in LEARNING]
+    order = PRIORITY[purpose]
+    direct: dict[str, int] = {}
+    for edge in graph.edges:
+        if edge.origin != "native" or edge.relation not in AUTHORED:
+            continue
+        rank = order.index(edge.relation) if edge.relation in order else len(order)
+        for seed, other in ((edge.start, edge.end), (edge.end, edge.start)):
+            if seed in selected and other in routes and other not in selected:
+                direct[other] = min(direct.get(other, rank), rank)
+
+    def tier(ref: str) -> int:
+        node = graph.nodes[ref]
+        if ref in selected:
+            return 0
+        if ref in direct and node.workspace == purpose:
+            return 1
+        if any(edge.origin == "reviewed" for edge, _ in routes[ref][0]):
+            return 2
+        if ref in direct:
+            return 3
+        return 5 if any(edge.origin == "lexical" for edge, _ in routes[ref][0]) else 4
+
+    # A free-text query's lexical seeds are guesses, so only an exact selector ranks its own
+    # authored links first; queries keep the purpose-first order and reserve workspace homes
+    # only around the best-matching seed.
+    tiers = {ref: tier(ref) if exact else 4 for ref in refs}
     refs.sort(
         key=lambda ref: (
+            tiers[ref],
+            direct.get(ref, len(order)) if exact else 0,
             graph.nodes[ref].workspace != purpose,
+            exact and graph.nodes[ref].granularity == "owner",
             graph.nodes[ref].scope.get("role") == "enrichment",
             ref not in selected,
             not any(edge.origin == "reviewed" for edge, _ in routes[ref][0]),
@@ -212,32 +262,54 @@ def _collect(
             views[ref] = item_view(graph.nodes[ref], evidence)
         return views[ref]["evidence_status"] == "current"
 
-    # Find a current home per workspace before filling remaining slots. Unchecked
-    # candidates cannot displace an already selected current item in this order.
-    primary: list[str] = []
-    spaces = dict.fromkeys(graph.nodes[ref].workspace for ref in refs)
-    for space in spaces:
+    # The seed and its authored links in the requested workspace come first; then one current
+    # home per remaining workspace; then the rest in rank order. Unchecked candidates cannot
+    # displace an already selected current item in this order.
+    chosen: list[str] = []
+    for ref in refs:
+        if tiers[ref] > 1 or len(chosen) >= limit:
+            break
+        if current(ref):
+            chosen.append(ref)
+    for space in dict.fromkeys(graph.nodes[ref].workspace for ref in refs):
+        if len(chosen) >= limit:
+            break
+        if any(graph.nodes[ref].workspace == space for ref in chosen):
+            continue
         home = next(
-            (ref for ref in refs if graph.nodes[ref].workspace == space and current(ref)), None
+            (
+                ref
+                for ref in refs
+                if graph.nodes[ref].workspace == space
+                and (exact or routes[ref][1][0] == selected[0])
+                and current(ref)
+            ),
+            None,
         )
         if home is not None:
-            primary.append(home)
-    primary.sort(key=refs.index)
-    chosen = primary[:limit]
+            chosen.append(home)
     for ref in refs:
         if len(chosen) >= limit:
             break
-        if ref not in primary and current(ref):
+        if ref not in chosen and current(ref):
             chosen.append(ref)
     if len(chosen) < limit:
         # The scan exhausted every candidate: all remaining views are noncurrent.
         chosen += [ref for ref in refs if ref not in chosen][: limit - len(chosen)]
+    chosen.sort(key=refs.index)
     needed = {ref for target in chosen for ref in routes[target][1]}
     for ref in sorted(needed - views.keys()):
         views[ref] = item_view(graph.nodes[ref], evidence)
     packet["items"] = [views[ref] for ref in chosen]
     packet["paths"] = [_path(graph, ref, routes[ref], views, checks) for ref in chosen]
     packet["nodes"] = [views[ref] for ref in sorted(needed) if ref not in chosen]
+    packet["gaps"] = list(
+        {
+            json.dumps(gap, sort_keys=True): gap
+            for ref in dict.fromkeys([*selected, *chosen])
+            for gap in graph.gaps.get(ref, [])
+        }.values()
+    )
     packet["issues"] = [
         {"code": issue.code, "ref": issue.ref, "message": issue.message}
         for issue in graph.issues[:30]
@@ -296,13 +368,18 @@ def context(
     if query is not None:
         selected, ambiguous = seeds(graph, query)
     else:
-        selected, ambiguous = [item if item is not None else f"concept/{concept}"], []
-        if selected[0] not in graph.nodes or graph.nodes[selected[0]].workspace not in LEARNING | {
-            "concept"
-        }:
+        options = [item] if item is not None else [f"exam/concept/{concept}", f"concept/{concept}"]
+        found = [
+            ref
+            for ref in options
+            if ref in graph.nodes and graph.nodes[ref].workspace in LEARNING | {"concept"}
+        ]
+        if not found:
             raise CampusError(
                 Code.INVALID_RESPONSE, "Unknown exact item or concept in this course."
             )
+        # An Exam concept and a registry concept with the same key name one idea: seed both.
+        selected, ambiguous = found, []
     if ambiguous:
         packet = envelope(graph, selector)
         packet.update(
@@ -313,7 +390,7 @@ def context(
         )
         packet["snapshot_digest"] = graph.inputs.reader.verify()
         return fit(packet, max_bytes)
-    return _collect(graph, selected, selector, purpose, limit, max_bytes)
+    return _collect(graph, selected, selector, purpose, limit, max_bytes, exact=query is None)
 
 
 def impact(project_path: Path, source: str, *, limit: int = 12, max_bytes: int = 24000) -> dict:

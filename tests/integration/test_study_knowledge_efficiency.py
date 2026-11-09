@@ -54,8 +54,8 @@ def test_small_packet_avoids_validating_discarded_native_candidates(tmp_path: Pa
     root = scaled_course(tmp_path, 10, crowded=True)
     result = measured_context(root)
     assert result["ids"] == [
-        "study/unit/unit-000",
         "exercises/set/sheet-1/exercise/observer-practice",
+        "study/unit/unit-000",
         "study/unit/unit-001",
         "study/unit/unit-002",
     ]
@@ -71,7 +71,9 @@ def test_selection_skips_stale_top_home_and_preserves_workspace_reservations(tmp
     root = scaled_course(tmp_path, 10, crowded=True)
     (root / "materials/content/material-source-000.md").write_text("Changed evidence.")
     packet = context(root, item="exercises/set/sheet-1/exercise/observer-practice", limit=limit)
-    assert packet["items"][0]["id"] == "study/unit/unit-001"
+    ids = [item["id"] for item in packet["items"]]
+    assert ids[0] == "exercises/set/sheet-1/exercise/observer-practice"
+    assert ids[1:2] == ["study/unit/unit-001"][: limit - 1]
     assert all(item["evidence_status"] == "current" for item in packet["items"])
     assert all("unit-000" not in item["id"] for item in packet["items"])
     if limit >= 4:

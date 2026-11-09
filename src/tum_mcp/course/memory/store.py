@@ -8,6 +8,7 @@ from types import MappingProxyType
 
 from pydantic import BaseModel, JsonValue, ValidationError
 
+from tum_mcp.course.checks.links import Decisions
 from tum_mcp.course.content.exam import ExamContent
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.store import index_name, read_json
@@ -123,6 +124,7 @@ class CourseInputs:
     lectures: LectureContent | None
     ledger: CoverageLedger | None
     registry: KnowledgeRegistry | None
+    decisions: Decisions | None = None
 
     _resources: Mapping[str, ResourceState] = field(init=False, repr=False, compare=False)
 
@@ -212,6 +214,7 @@ def load_inputs(project: Path) -> CourseInputs:
         _document(reader, root, "lectures", LectureContent),
         _model(reader, private_path(root, "coverage.json"), CoverageLedger),
         _model(reader, private_path(root, "knowledge.json"), KnowledgeRegistry),
+        _model(reader, private_path(root, "links.json"), Decisions),
     )
     for model in (
         result.study,

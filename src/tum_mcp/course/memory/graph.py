@@ -52,6 +52,7 @@ class Graph:
     edges: set[Edge] = field(default_factory=set)
     assertions: dict[str, Assertion] = field(default_factory=dict)
     issues: list[Issue] = field(default_factory=list)
+    gaps: dict[str, list[dict[str, str]]] = field(default_factory=dict)
 
     def source(self, key: str) -> str:
         ref = f"source/{key}"
@@ -123,11 +124,17 @@ class Graph:
                     "",
                     safe_text(block),
                     block,
-                    owner.sources,
+                    cited(owner.sources, block.get("sources")),
                     owner.scope,
                 )
             )
             self.connect(Edge(owner.id, ref, "contains"))
+
+
+def cited(versions: tuple[SourceVersion, ...], keys: JsonValue) -> tuple[SourceVersion, ...]:
+    """The owner's versions an entry cites; an entry citing none keeps its owner's."""
+    wanted = set(keys) if isinstance(keys, list | tuple) else set()
+    return tuple(version for version in versions if version.key in wanted) or versions
 
 
 def block_records(value: JsonValue) -> Iterator[dict[str, JsonValue]]:

@@ -83,6 +83,7 @@ def item_view(node: Node, evidence: EvidenceChecks) -> dict[str, JsonValue]:
                 "relevance",
                 "classification",
                 "question_number",
+                "topic",
             }
         },
         "source_roles": [
@@ -105,13 +106,23 @@ def envelope(graph: Graph, selector: dict[str, JsonValue]) -> dict[str, JsonValu
         "scope": {
             "present": list(graph.inputs.workspaces),
             "checked": [],
-            "inputs": ["state", "study", "exercises", "exam", "lectures", "coverage", "knowledge"],
+            "inputs": [
+                "state",
+                "study",
+                "exercises",
+                "exam",
+                "lectures",
+                "coverage",
+                "links",
+                "knowledge",
+            ],
         },
         "selector": selector,
         "items": [],
         "paths": [],
         "nodes": [],
         "issues": [],
+        "gaps": [],
         "omitted": {},
         "truncation": {"output_budget": False, "traversal": False, "verification": False},
     }
@@ -122,7 +133,10 @@ def fit(packet: dict[str, JsonValue], max_bytes: int) -> dict[str, JsonValue]:
     while len(encoded(packet)) > max_bytes:
         packet["truncation"]["output_budget"] = True
         packet["status"] = "partial"
-        if packet["items"]:
+        if packet.get("gaps"):
+            packet["gaps"].pop()
+            packet["omitted"]["gaps"] = packet["omitted"].get("gaps", 0) + 1
+        elif packet["items"]:
             removed = packet["items"].pop()["id"]
             for name in ("direct", "review_candidates"):
                 if name in packet:
