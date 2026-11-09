@@ -1,10 +1,11 @@
-"""Machine records for prepared Study adaptations, not an audio generation service."""
+"""Machine records for audio adaptations of prepared Study units and Exam cheatsheet items."""
 
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
 
 from pydantic import Field, RootModel, field_validator, model_validator
 
+from tum_mcp.course.content.exam import Concept, ExamContent, Pattern
 from tum_mcp.course.content.study import SourceVersion
 from tum_mcp.course.media.video_content import Locator, Short, Stem, VoiceProfile, canonical, sha256
 from tum_mcp.course.project.models import Digest, Key
@@ -37,12 +38,26 @@ class TeachingReviewFile(MediaFile):
     guidance_sha256: Digest
 
 
+SourceKind = Literal["unit", "concept", "pattern"]
+
+
+def target(kind: str, key: str) -> str:
+    """The course item an audio source maps to: a Study unit or an Exam concept/pattern."""
+    return f"study/{key}" if kind == "unit" else f"exam/{kind}s/{key}"
+
+
 class AudioUnit(Frozen):
+    kind: SourceKind = "unit"
     unit: Key
     semantic_sha256: Digest
 
+    @property
+    def target(self) -> str:
+        return target(self.kind, self.unit)
+
 
 class AudioCoverage(Frozen):
+    kind: SourceKind = "unit"
     unit: Key
     locator: Locator
     section: Key
@@ -54,7 +69,26 @@ class AudioCoverage(Frozen):
     def disclosed(self) -> "AudioCoverage":
         if self.mode != "spoken" and not self.reason:
             raise ValueError("Non-spoken coverage names the specific dependency or gap.")
+        if (self.kind == "unit") != (self.locator.kind not in {"concept", "pattern"}) or (
+            self.kind != "unit"
+            and (self.locator.kind != self.kind or self.locator.ref != self.unit)
+        ):
+            raise ValueError("Exam coverage addresses its whole concept or pattern.")
         return self
+
+    @property
+    def target(self) -> str:
+        return target(self.kind, self.unit)
+
+
+def exam_item(exam: "ExamContent | None", kind: str, key: str) -> "Concept | Pattern | None":
+    items = () if exam is None else exam.concepts if kind == "concept" else exam.patterns
+    return next((item for item in items if item.key == key), None)
+
+
+def exam_hash(item: "Concept | Pattern") -> str:
+    """Teaching identity of a cheatsheet entry or pattern; citations alone do not change it."""
+    return sha256(canonical(item.model_dump(mode="json", exclude={"sources"}, exclude_none=True)))
 
 
 def category_hash(title: str, units: tuple[AudioUnit, ...]) -> str:
@@ -71,10 +105,10 @@ class AudioCategory(Frozen):
 
     @model_validator(mode="after")
     def consistent(self) -> "AudioCategory":
-        units = [item.unit for item in self.units]
+        units = [item.target for item in self.units]
         if len(units) != len(set(units)):
             raise ValueError("Category units must be unique and ordered.")
-        if any(entry.unit not in units for entry in self.coverage):
+        if any(entry.target not in units for entry in self.coverage):
             raise ValueError("Coverage may reference only the category's units.")
         if category_hash(self.title, self.units) != self.category_sha256:
             raise ValueError("category_sha256 does not match the title and ordered units.")
@@ -104,7 +138,7 @@ class AudioReceipt(AudioCategory):
         keys = [item.key for item in self.chunk_inputs]
         if len(keys) != len(set(keys)):
             raise ValueError("Chunk input keys must be unique.")
-        if {entry.unit for entry in self.coverage} != {unit.unit for unit in self.units}:
+        if {entry.target for entry in self.coverage} != {unit.target for unit in self.units}:
             raise ValueError("Coverage must include every requested unit.")
         if not self.teaching_review.path.startswith(
             ".build/"
@@ -145,7 +179,7 @@ class PlannedAudio(AudioCategory):
         if not self.units and self.pending != "removed":
             raise ValueError("Active planned categories need at least one unit.")
         if self.pending != "removed" and (
-            {entry.unit for entry in self.coverage} != {unit.unit for unit in self.units}
+            {entry.target for entry in self.coverage} != {unit.target for unit in self.units}
         ):
             raise ValueError("Coverage targets must include every requested unit.")
         return self
@@ -169,7 +203,7 @@ class AudioPlan(Frozen):
         ):
             raise ValueError("category_order lists every active category exactly once.")
         units = [
-            unit.unit
+            unit.target
             for item in self.categories.values()
             if item.pending != "removed"
             for unit in item.units

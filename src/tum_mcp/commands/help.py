@@ -44,6 +44,7 @@ def command_help(command: TyperCommand | TyperGroup, context: click.Context) -> 
                 "study",
                 "lecture",
                 "video-notes",
+                "audio-notes",
                 "discover",
                 "update",
                 "logout",

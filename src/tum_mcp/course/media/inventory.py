@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import JsonValue
 
+from tum_mcp.course.content.exam import ExamContent
 from tum_mcp.course.content.study import StudyContent
 from tum_mcp.course.media.audio import (
     AudioChapters,
@@ -16,6 +17,8 @@ from tum_mcp.course.media.audio import (
     AudioUnit,
     AudioValidation,
     category_hash,
+    exam_hash,
+    exam_item,
 )
 from tum_mcp.course.media.video_content import (
     ExerciseReceipt,
@@ -87,7 +90,8 @@ def _bound(record: AudioManifest | AudioPlan | Manifest | VideoPlan, state: Stud
 def _audio_item(
     root: Path,
     state: StudyState,
-    content: StudyContent,
+    content: StudyContent | None,
+    exam: ExamContent | None,
     receipt: AudioReceipt,
 ) -> MediaItem:
     hashes = {
@@ -124,26 +128,41 @@ def _audio_item(
     chapter_keys = {chapter.key for chapter in chapters.root}
     if any(entry.chapter not in chapter_keys for entry in receipt.coverage):
         technical.append("coverage.chapter")
-    units = {unit.key: unit for unit in content.units}
+    units = {unit.key: unit for unit in content.units} if content else {}
+
+    def source(kind: str, key: str):
+        return units.get(key) if kind == "unit" else exam_item(exam, kind, key)
+
     current_units = tuple(
-        AudioUnit(unit=entry.unit, semantic_sha256=semantic_hash(units[entry.unit]))
+        AudioUnit(
+            kind=entry.kind,
+            unit=entry.unit,
+            semantic_sha256=semantic_hash(item) if entry.kind == "unit" else exam_hash(item),
+        )
         for entry in receipt.units
-        if entry.unit in units
+        if (item := source(entry.kind, entry.unit)) is not None
     )
     stale = list(source_problems(root, state, receipt.source_references))
     if category_hash(receipt.title, current_units) != receipt.category_sha256:
         stale.append("teaching_changed")
     for entry in receipt.coverage:
-        unit = units.get(entry.unit)
-        if unit is None or locator_fingerprint(unit, entry.locator) != entry.locator.fingerprint:
+        item = source(entry.kind, entry.unit)
+        actual = (
+            None
+            if item is None
+            else locator_fingerprint(item, entry.locator)
+            if entry.kind == "unit"
+            else exam_hash(item)
+        )
+        if actual != entry.locator.fingerprint:
             stale.append(f"coverage_changed:{entry.unit}/{entry.locator.ref}")
         if entry.mode == "missing":
             stale.append(f"coverage_missing:{entry.unit}/{entry.locator.ref}")
     references = {
-        (source.key, source.sha256)
+        (version.key, version.sha256)
         for entry in receipt.units
-        if entry.unit in units
-        for source in units[entry.unit].sources
+        if (item := source(entry.kind, entry.unit)) is not None
+        for version in item.sources
     }
     if references != {(source.key, source.sha256) for source in receipt.source_references}:
         stale.append("source_references_changed")
@@ -166,10 +185,11 @@ def _audio_item(
     }
     structure = {
         "item": f"audio/{receipt.key}",
-        "targets": [f"study/{u.unit}" for u in receipt.units],
+        "targets": [u.target for u in receipt.units],
         "chapters": [{"key": c.key, "title": c.title} for c in chapters.root],
         "coverage": [
             {
+                "target": entry.target,
                 "unit": entry.unit,
                 "locator": entry.locator.ref,
                 "chapter": entry.chapter,
@@ -355,7 +375,13 @@ def _video_item(
 
 
 def discover(root: Path, state: StudyState, content: StudyContent | None) -> MediaInventory:
+    from tum_mcp.course.content.exam_data import read_exam
+
     result = MediaInventory()
+    try:
+        exam = read_exam(root)
+    except (CampusError, OSError):
+        exam = None
     for modality, manifest_model, plan_model in (
         ("audio", AudioManifest, AudioPlan),
         ("video", Manifest, VideoPlan),
@@ -396,11 +422,11 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                 for key, receipt in manifest.categories.items():
                     result.known.add(f"audio/{key}")
                     try:
-                        if content is None:
+                        if content is None and any(u.kind == "unit" for u in receipt.units):
                             raise CampusError(
-                                Code.ACTION_REQUIRED, "Audio requires prepared Study."
+                                Code.ACTION_REQUIRED, "Study audio requires prepared Study."
                             )
-                        item = _audio_item(root, state, content, receipt)
+                        item = _audio_item(root, state, content, exam, receipt)
                         result.items.append(item)
                         result.structure.append(item.structure)
                     except (CampusError, OSError) as error:
@@ -408,7 +434,7 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                         result.structure.append(
                             {
                                 "item": f"audio/{key}",
-                                "targets": [f"study/{u.unit}" for u in receipt.units],
+                                "targets": [u.target for u in receipt.units],
                                 "available": False,
                             }
                         )
@@ -433,10 +459,10 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
             case AudioPlan():
                 published = manifest.categories if isinstance(manifest, AudioManifest) else {}
                 previous_homes = {
-                    u.unit: key for key, category in published.items() for u in category.units
+                    u.target: key for key, category in published.items() for u in category.units
                 }
                 desired_homes = {
-                    u.unit: key
+                    u.target: key
                     for key, category in plan.categories.items()
                     if category.pending != "removed"
                     for u in category.units
@@ -446,7 +472,10 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                     for unit, home in desired_homes.items()
                     if unit in previous_homes and previous_homes[unit] != home
                 }
-                known_units = {unit.key for unit in content.units} if content else set()
+                known_units = {f"study/{unit.key}" for unit in content.units} if content else set()
+                if exam is not None:
+                    known_units.update(f"exam/concepts/{c.key}" for c in exam.concepts)
+                    known_units.update(f"exam/patterns/{p.key}" for p in exam.patterns)
                 for key in (
                     *plan.category_order,
                     *(k for k in plan.categories if k not in plan.category_order),
@@ -454,12 +483,12 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                     desired = plan.categories[key]
                     old = published.get(key)
                     actual = next((i for i in result.items if i.item == f"audio/{key}"), None)
-                    affected_units = {u.unit for u in desired.units}
+                    affected_units = {u.target for u in desired.units}
                     if old:
-                        affected_units.update(u.unit for u in old.units)
+                        affected_units.update(u.target for u in old.units)
                     if (
                         desired.pending == "removed"
-                        or not {u.unit for u in desired.units} <= known_units
+                        or not {u.target for u in desired.units} <= known_units
                     ):
                         reason = "removed"
                     elif moved & affected_units:
@@ -484,7 +513,7 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                     result.structure.append(
                         {
                             "item": f"audio/{key}",
-                            "targets": [f"study/{u.unit}" for u in desired.units],
+                            "targets": [u.target for u in desired.units],
                             "pending": reason,
                             "order": list(plan.category_order).index(key)
                             if key in plan.category_order

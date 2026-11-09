@@ -58,6 +58,13 @@ app.add_typer(
     name="video-notes",
     help="Render and maintain videos with the optional Video Notes extension.",
 )
+from tum_mcp.course.media.audio_cli import app as audio_app  # noqa: E402
+
+app.add_typer(
+    audio_app,
+    name="audio-notes",
+    help="Assemble and publish revision audio with the optional Audio Notes extension.",
+)
 
 
 @app.command()

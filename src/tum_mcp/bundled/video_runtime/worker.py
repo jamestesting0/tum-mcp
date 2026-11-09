@@ -302,6 +302,115 @@ def _encode_audio(container, stream, block, cursor: int) -> int:
     return cursor + len(block)
 
 
+def track(request: dict) -> dict:
+    """An audio-only M4A: narration chunks mixed to the loudness target, with chapters and tags."""
+    import av
+    import numpy as np
+
+    audio = _narration(request["audio"], float(request["total"]))
+    output = Path(request["output"])
+    temporary = output.with_suffix(".partial.m4a")
+    with av.open(str(temporary), "w", format="ipod", options={"movflags": "+faststart"}) as box:
+        for name, value in request.get("tags", {}).items():
+            box.metadata[name] = str(value)
+        sound = box.add_stream("aac", rate=SAMPLE_RATE)
+        sound.layout = "mono"
+        sound.bit_rate = 128000
+        sound.options = {"aac_pns": "0", "aac_tns": "0"}
+        box.set_chapters(
+            [
+                {
+                    "id": index,
+                    "start": int(round(item["start"] * SAMPLE_RATE)),
+                    "end": int(round(item["end"] * SAMPLE_RATE)),
+                    "time_base": Fraction(1, SAMPLE_RATE),
+                    "metadata": {"title": item["title"]},
+                }
+                for index, item in enumerate(request["chapters"], 1)
+            ]
+        )
+        cursor = 0
+        while cursor < len(audio):
+            block = audio[cursor : cursor + 1024]
+            if len(block) < 1024:
+                block = np.pad(block, (0, 1024 - len(block)))
+            cursor = _encode_audio(box, sound, block, cursor)
+        for packet in sound.encode():
+            box.mux(packet)
+    temporary.replace(output)
+    return {"probe": audio_probe(output)}
+
+
+def pcm16k(request: dict) -> dict:
+    """Mono 16 kHz WAV windows of a track's audio for speech recognition."""
+    import wave
+
+    import av
+    import numpy as np
+
+    resampler = av.AudioResampler(format="s16", layout="mono", rate=16000)
+    pieces = []
+    with av.open(request["file"]) as container:
+        for frame in container.decode(container.streams.audio[0]):
+            for converted in resampler.resample(frame):
+                pieces.append(converted.to_ndarray().reshape(-1))
+        for converted in resampler.resample(None):
+            pieces.append(converted.to_ndarray().reshape(-1))
+    samples = np.concatenate(pieces) if pieces else np.zeros(0, dtype=np.int16)
+    begin = int(request.get("start", 0) * 16000)
+    finish = int(request["end"] * 16000) if request.get("end") is not None else len(samples)
+    samples = samples[begin:finish]
+    window, step = int(request["window"] * 16000), int(request["step"] * 16000)
+    folder = Path(request["output"])
+    folder.mkdir(parents=True, exist_ok=True)
+    windows = []
+    for index, start in enumerate(range(0, max(1, len(samples)), step)):
+        path = folder / f"window-{index:03d}.wav"
+        with wave.open(str(path), "wb") as stream:
+            stream.setnchannels(1)
+            stream.setsampwidth(2)
+            stream.setframerate(16000)
+            stream.writeframes(samples[start : start + window].astype("<i2").tobytes())
+        windows.append({"file": str(path), "offset": start / 16000})
+        if start + window >= len(samples):
+            break
+    return {"windows": windows, "duration": round(len(samples) / 16000, 4)}
+
+
+def audio_probe(path: Path) -> dict:
+    import av
+    import numpy as np
+
+    with av.open(str(path)) as container:
+        stream = container.streams.audio[0]
+        resampler = av.AudioResampler(format="dbl", layout="mono", rate=SAMPLE_RATE)
+        pieces = []
+        for frame in container.decode(stream):
+            for converted in resampler.resample(frame):
+                pieces.append(converted.to_ndarray().reshape(-1))
+        samples = np.concatenate(pieces) if pieces else np.zeros(0)
+        marks = [
+            {
+                "title": item["metadata"].get("title", ""),
+                "start": round(float(item["start"] * item["time_base"]), 4),
+                "end": round(float(item["end"] * item["time_base"]), 4),
+            }
+            for item in container.chapters()
+        ]
+        return {
+            "container": container.format.name,
+            "audio_codec": stream.codec_context.name,
+            "sample_rate": stream.codec_context.sample_rate,
+            "channels": stream.codec_context.channels,
+            "decoded_samples": int(len(samples)),
+            "audio_duration": round(len(samples) / SAMPLE_RATE, 4),
+            "loudness_lufs": None if (lufs := loudness(samples)) is None else round(lufs, 2),
+            "true_peak_dbtp": round(true_peak(samples), 2),
+            "chapters": marks,
+            "tags": dict(container.metadata),
+        }
+
+
 def probe(request: dict) -> dict:
     import av
     import numpy as np
@@ -387,6 +496,8 @@ ACTIONS = {
     "measure": measure,
     "render": render,
     "assemble": assemble,
+    "track": track,
+    "pcm16k": pcm16k,
     "probe": probe,
     "frames": frames,
 }

@@ -241,6 +241,39 @@ def test_transient_rich_speech_stays_below_the_decoded_true_peak_ceiling(
     assert abs(result["probe"]["loudness_lufs"] + 16) <= 1
 
 
+def test_audio_track_embeds_chapters_at_the_loudness_target(
+    installed: Path, tmp_path: Path
+) -> None:
+    speech = FIXTURES / "video/speech.wav"
+    duration = video_runtime.call_worker({"action": "measure", "files": [str(speech)]})[
+        "durations"
+    ][str(speech)]
+    total = 2 * duration + 1.5
+    result = video_runtime.call_worker(
+        {
+            "action": "track",
+            "audio": [
+                {"file": str(speech), "start": 0.4, "end": 0.4 + duration},
+                {"file": str(speech), "start": duration + 1.1, "end": 2 * duration + 1.1},
+            ],
+            "total": total,
+            "output": str(tmp_path / "track.m4a"),
+            "chapters": [
+                {"title": "First", "start": 0, "end": duration + 0.9},
+                {"title": "Second", "start": duration + 0.9, "end": total},
+            ],
+            "tags": {"title": "Revision", "artist": "Synthetic narration"},
+        },
+        timeout=180,
+    )
+    probe = result["probe"]
+    assert probe["audio_codec"] == "aac" and "m4a" in probe["container"].split(",")
+    assert [mark["title"] for mark in probe["chapters"]] == ["First", "Second"]
+    assert abs(probe["audio_duration"] - total) <= 0.15
+    assert abs(probe["loudness_lufs"] + 16) <= 1 and probe["true_peak_dbtp"] <= -1.5
+    assert probe["tags"]["title"] == "Revision"
+
+
 def test_labels_wrap_at_measured_width_without_shrinking_the_type(
     installed: Path, tmp_path: Path
 ) -> None:
@@ -263,6 +296,89 @@ def test_labels_wrap_at_measured_width_without_shrinking_the_type(
     result = project.render(root, STEM, quality="draft", jobs=1, max_minutes=None, run=None)
     assert result["ok"], result
     assert not result["layout"]
+
+
+SLIDES = """from manim import *
+from vnotes import NotesScene
+
+
+class C01(NotesScene):
+    def construct(self):
+        with self.beat("b01") as b:
+            start = self.label("start")
+            self.play(FadeIn(start), run_time=b.share(0.3))
+        with self.beat("b02") as b:
+            first = self.label("first")
+            frame = SurroundingRectangle(first)
+            self.play(FadeOut(start), FadeIn(first), Create(frame), run_time=b.share(0.3))
+        with self.beat("b03") as b:
+            BODY
+
+
+class C02(NotesScene):
+    def construct(self):
+        with self.beat("b04") as b:
+            self.play(FadeIn(self.code("trace")), run_time=b.share(0.3))
+"""
+
+
+def slides(tmp_path: Path, body: str) -> Path:
+    root = course(tmp_path, SLIDES.replace("BODY", body))
+    path = root / f"videos/storyboards/{STEM}.json"
+    board = json.loads(path.read_bytes())
+    first, second = board["chapters"]
+    locators = first["beats"][1]["locators"]
+    first["beats"][1]["on_screen"] = [{"key": "first", "kind": "label", "text": "Queue"}]
+    first["beats"].append(
+        {
+            "key": "b03",
+            "kind": "mechanism",
+            "point": "Discovery order",
+            "narration": ["Each layer is discovered before the next one."],
+            "intent": "Compare layers.",
+            "locators": locators,
+            "on_screen": [
+                {"key": "near", "kind": "label", "text": "Layer one"},
+                {"key": "far", "kind": "label", "text": "Layer two"},
+            ],
+        }
+    )
+    second["beats"][0]["key"] = "b04"
+    path.write_text(json.dumps(board), encoding="utf-8")
+    for item in project.narration(root, STEM, "tone"):
+        target = root / item["file"]
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            speech_like(target, len(item["text"].split()) / 2.6)
+    project.timing(root, STEM, profile="tone", silent=False)
+    return root
+
+
+def test_label_slides_are_reported_and_a_grid_is_a_drawing(installed: Path, tmp_path: Path) -> None:
+    replaced = (
+        'later = self.label("near")\n'
+        "            self.play(FadeOut(first, frame), FadeIn(later), run_time=b.share(0.3))"
+    )
+    result = project.render(
+        slides(tmp_path, replaced), STEM, quality="draft", jobs=1, max_minutes=None, run=None
+    )
+    rules = {(issue["beat"], issue["rule"]) for issue in result["layout"]}
+    assert {("b02", "visual.text_only"), ("b03", "visual.text_only")} <= rules
+    assert ("b03", "visual.no_thread") in rules
+    assert not result["ok"]
+    shutil.rmtree(tmp_path / "course")
+    grid = (
+        'table = self.grid([["near"], ["far"]]).shift(RIGHT * 3)\n'
+        "            assert table.cell(0, 0).get_top()[1] > table.cell(1, 0).get_top()[1]\n"
+        "            left = [table.cell(row, 0).get_left()[0] for row in (0, 1)]\n"
+        "            assert abs(left[0] - left[1]) < 1e-6\n"
+        "            band = table.highlight(1)\n"
+        "            self.play(FadeIn(table), FadeIn(band), run_time=b.share(0.3))"
+    )
+    result = project.render(
+        slides(tmp_path, grid), STEM, quality="draft", jobs=1, max_minutes=None, run=None
+    )
+    assert [issue["beat"] for issue in result["layout"]] == ["b02"]
 
 
 def test_real_probe_reports_overlap_and_overrun(installed: Path, tmp_path: Path) -> None:

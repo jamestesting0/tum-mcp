@@ -207,6 +207,9 @@ def course_map(
                 for group in exercises.sets
                 for exercise in group.exercises
             )
+        if exam:
+            known.update(f"exam/concepts/{concept.key}" for concept in exam.concepts)
+            known.update(f"exam/patterns/{pattern.key}" for pattern in exam.patterns)
         for entry in media:
             targets = entry.get("targets", [entry["source"]] if "source" in entry else [])
             for target in targets:
