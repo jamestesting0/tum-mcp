@@ -25,7 +25,9 @@ browser = pytest.mark.skipif(
 def invoke(*args: str) -> dict:
     result = CliRunner().invoke(app, ["study", *args])
     assert result.exit_code == 0, result.output
-    return json.loads(result.output)
+    # The result is the JSON on stdout; `result.output` also interleaves stderr, where a
+    # Windows CI run once found text after the JSON.
+    return json.loads(result.stdout)
 
 
 def render(project: Path) -> dict:
