@@ -19,6 +19,18 @@ function due(group) {
     ? `Due ${new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)}` : '';
 }
 
+// "a", "(b)", "2.", "b(ii)" or "Part c" label a question: the last token prints as "ii." and
+// each token is one level of nesting. Words such as "Hint" are titles, not labels.
+const LABEL_TOKEN = /^(?:[a-z]|[ivx]{1,4}|\d{1,2})$/i;
+function questionLabel(title) {
+  const bare = title.replace(/^\s*part\s+/i, '');
+  const tokens = bare.match(/[a-z]+|\d+/gi) || [];
+  const valid = tokens.length && tokens.length <= 3 && tokens.join('') === bare.replace(/[\s().]/g, '')
+    && tokens.every(token => LABEL_TOKEN.test(token));
+  return valid ? { text: `${tokens.at(-1)}.`, depth: tokens.length } : null;
+}
+const problemNumber = text => text.replace(/^\s*(?:problem|exercise|question|task)\s*/i, '').trim().toLowerCase();
+
 // A category is named only when it groups several sets and says more than their titles.
 function categoryLabel(group) {
   const category = group.category || '', members = sets.filter(item => (item.category || '') === category);
@@ -172,19 +184,43 @@ export function exercisePage(exercise, options) {
   const statement = options.untitledStatement ? append(node('div', 'exam-stem'), ...exercise.statement.map(renderBlockBody)) : renderReading({ blocks: exercise.statement });
   statement.id = 'exercise-question';
   [...statement.querySelectorAll(options.untitledStatement ? '.block-body' : '.reading-material')].forEach((element, index) => target(element, `statement:${index}`));
-  const partSections = new Map();
-  let partSection = null, partLevel = 0;
+  const partSections = new Map(), cited = new Set();
+  let partSection = null, partLevel = 0, partDepth = 0;
   for (const section of [...statement.children]) {
     const block = exercise.statement[Number(section.dataset.blockIndex)];
     const part = Object.entries(exercise.part_blocks || {}).find(([, key]) => key === block?.key)?.[0];
     if (part) {
       partSection = node('div', 'exercise-part'); partSection.dataset.part = part;
       statement.insertBefore(partSection, section); partSections.set(part, partSection);
-      partLevel = block.level || 1;
+      partLevel = block.level || 1; partDepth = 0;
     } else if (partSection && block?.title && (block.level || 1) <= partLevel) {
       partSection = null;
     }
     if (partSection) partSection.append(section);
+    if (!block || options.untitledStatement) continue;
+    // A title that only repeats the problem number or a question label is not a heading:
+    // the number is in the eyebrow, and a label hangs before its question text.
+    const heading = section.querySelector(':scope > .reading-material > .section-heading');
+    const title = heading?.querySelector(':scope > :is(h2, h3, h4, h5, h6)');
+    const repeatsNumber = Boolean(title) && problemNumber(block.title) === problemNumber(exercise.label);
+    const label = title && !repeatsNumber ? questionLabel(block.title) : null;
+    const sourceKey = `${[...block.sources].sort().join(',')}|${block.pages || ''}`;
+    if (label || repeatsNumber) {
+      title.remove(); heading.classList.add('untitled');
+      // The citation shows once while the following questions cite the same pages.
+      if (cited.has(sourceKey) && !block.insight) heading.remove();
+    }
+    cited.add(sourceKey);
+    if (!label) continue;
+    const depth = Math.max(block.level || 1, label.depth);
+    const indented = part ? partSection : section;
+    indented.classList.add('labelled');
+    indented.style.setProperty('--indent', String(depth - (part || !partSection ? 0 : partDepth)));
+    if (part) partDepth = depth;
+    const marker = node('span', 'question-label', label.text);
+    const first = section.querySelector('.block-body > p');
+    if (first) first.prepend(marker);
+    else section.querySelector('.reading-material').prepend(append(node('p'), marker));
   }
   root.append(statement);
   // The lesson first, then the cheatsheet entry, then the exam patterns that use it.

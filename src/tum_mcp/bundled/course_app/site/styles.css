@@ -763,6 +763,9 @@ h1 > .comment-marker { margin-inline-start: var(--s2); }
 .exercise-help:empty { display: none; }
 .exercise-help > .disclosure[open]:not(:last-child) { margin-bottom: var(--s2); }
 .exercise-part { margin-bottom: var(--s8); }
+/* A question label hangs before its text; each nesting level indents by one label width. */
+.labelled { --label: 1.75em; padding-inline-start: calc(var(--label) * var(--indent, 1)); }
+.question-label { display: inline-block; min-width: var(--label); margin-inline-start: calc(-1 * var(--label)); font-weight: 600; }
 .exercise-part > .read-section:last-of-type { margin-bottom: var(--s4); }
 .exercise-disclosure { min-width: 0; }
 .section-heading.untitled { justify-content: flex-end; margin-bottom: 0; }

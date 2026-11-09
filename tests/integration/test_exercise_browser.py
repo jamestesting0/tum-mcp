@@ -712,6 +712,51 @@ def test_study_passages_terms_and_answers_open_in_place_without_losing_work(
         context.close()
 
 
+def test_question_labels_sit_inline_and_nest_under_their_question(
+    course_browser: Browser, exercise_project: Path, exercise_url: str
+) -> None:
+    # A pilot showed parts as headings "a" above their text, and some problems titled with
+    # their own number; a label now prints as "a." before the text and "i." nests below it.
+    path = content_file(exercise_project, "exercises")
+    payload = json.loads(path.read_bytes())
+    exercise = payload["sets"][0]["exercises"][0]
+    sources = exercise["statement"][0]["sources"]
+    exercise["label"] = "Problem 2.1"
+    exercise["parts"] = ["a", "b(i)", "b(ii)"]
+    exercise["part_blocks"] = {"a": "first", "b(i)": "second", "b(ii)": "third"}
+    text = partial(dict, kind="text", sources=sources)
+    exercise["statement"] = [
+        text(title="2.1", paragraphs=["Use the graph from the lecture."]),
+        text(key="first", title="(a)", paragraphs=["Find the cost through A."]),
+        text(title="b", paragraphs=["Compare the two routes."]),
+        text(key="second", title="i", level=2, paragraphs=["Which route is cheaper?"]),
+        text(key="third", title="ii", level=2, paragraphs=["What changes on a tie?"]),
+    ]
+    for step, part in zip(exercise["steps"], exercise["parts"], strict=True):
+        step["part"] = part
+    answer = exercise["solution"]["answers"][0]
+    exercise["solution"]["answers"] = [answer | {"label": part} for part in exercise["parts"]]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    build(exercise_project, publish=False)
+    page = course_browser.new_page(viewport={"width": 390, "height": 900})
+    try:
+        page.goto(exercise_url + "#exercises/sheet-1/sample-relaxation")
+        question = page.locator("#exercise-question")
+        expect(question.locator(".question-label")).to_have_text(["a.", "b.", "i.", "ii."])
+        expect(question.get_by_role("heading")).to_have_count(0)
+        left = page.evaluate(
+            """() => Object.fromEntries([...document.querySelectorAll('.question-label')].map(
+                label => [label.textContent, {label: label.getBoundingClientRect().left,
+                    text: label.parentElement.getBoundingClientRect().left}]))"""
+        )
+        assert abs(left["a."]["label"] - left["b."]["label"]) < 1
+        assert abs(left["i."]["label"] - left["b."]["text"]) < 1
+        assert abs(left["i."]["label"] - left["ii."]["label"]) < 1
+        expect(page.locator(".exercise-part")).to_have_count(3)
+    finally:
+        page.close()
+
+
 @pytest.mark.parametrize("width,theme", [(390, "light"), (1440, "dark")])
 def test_guides_follow_their_parts_and_keep_nested_context(
     course_browser: Browser, exercise_project: Path, exercise_url: str, width: int, theme: str

@@ -130,7 +130,10 @@ applies across the answers. Assumptions belong in the statement.
 For separate guides, give the first statement block of each part a stable `key`, map
 the label to that key in `part_blocks` (for example `{"(a)": "cost", "(b)": "decision"}`),
 and name the part on every step. The build checks that these anchors are titled,
-distinct and in the original order. Each guide follows its part's whole statement,
+distinct and in the original order. Title an anchor with its label only (`a`, `(b)`); a
+sub-question takes its own label (`i`, `ii`) at level 2 under its question, with part
+labels such as `b(i)`. The app prints each label inline before its question text,
+indented by level, and drops a title that only repeats the problem number it shows. Each guide follows its part's whole statement,
 including untitled diagrams/tables and nested subsections. A new peer or parent heading
 ends the part, so shared context for a later question stays outside the preceding guide.
 Keep shared givens before the parts they serve. Split lettered sub-questions into their own

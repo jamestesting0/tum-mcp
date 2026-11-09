@@ -67,7 +67,8 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    (`tum-mcp study schema exercises`), and run `tum-mcp study lint PROJECT --item
    exercises/<set>/<problem>` after each;
    read [content](references/content.md) for identities, checks and source links.
-   Anchor each part's guide with `part_blocks` and nest its supporting headings beneath
+   Anchor each part's guide with `part_blocks`, title each part with its label only (`a`;
+   sub-questions `i`, `ii` at level 2), and nest its supporting headings beneath
     the part; verify statement, context, Guide and Solution appear together before
     the next question. Each Solution reveals only its part's answer, independently of the guide.
    Preserve unrelated Study/Exercise objects and template assets. Use the existing
