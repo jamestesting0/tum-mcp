@@ -32,7 +32,8 @@ Prefer short active sentences with one main idea and unambiguous referents. Each
 paragraph should define, explain a mechanism, apply an example, distinguish ideas
 or preserve a necessary condition. Merge or cut paragraphs that only restate work
 already done. Announce meaningful transitions without narrating the production
-process. Say "For example" rather than "The prepared website's authored example";
+process. Say "For example" rather than "The prepared website's authored example" or
+"in the prepared cleaner example"; `check` warns about such wording;
 keep provenance, lecture references and editorial qualifications in SOURCES.md.
 Preserve a source qualification when it affects the subject matter itself.
 
@@ -68,6 +69,8 @@ symbols/acronyms for synthesis and maintain their pronunciation map in voice.jso
 | Formula | Explain the purpose, symbols and conditions, state the expression unambiguously, then follow any existing worked example. |
 | Code | Name the inputs and state, follow the relevant operations/branches and explain the result using the prepared example. Avoid long punctuation readings. |
 | Diagram | Establish the starting state and edge meanings; introduce components as needed while walking through frames in order. Replace "here/above/this arrow" with explicit names. |
+| Cheatsheet entry | Trigger, the rule or formula with audible grouping and symbol meanings, one short sheet example, the trap. See [cheatsheet tracks](revision-design.md#cheatsheet-tracks-a-spoken-summary). |
+| Exam pattern | Cues that identify the question, the ordered steps with the formula each applies, the usual pitfall. |
 | Flashcard/practice | Reuse distinct teaching from correct feedback. A source-backed recall prompt is optional, continues to its answer automatically, and requires no response. Consolidate duplicate feedback and label misconceptions. |
 
 Retain the source's exact relationships, qualifications, numeric results and

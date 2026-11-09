@@ -20,7 +20,16 @@ contract. Planning keeps existing video numbers and never renumbers.
 
 - **R1 Orient first.** Open with the source-backed learning question, what the
   viewer will understand, and a short map of the sections. State the selected
-  scope rather than implying that a partial lesson covers the whole unit.
+  scope as what the viewer will learn; never narrate what the video leaves out or
+  how it was made ("this overview leaves ... to Study" is meta, not teaching).
+- **Depth over survey.** A unit is not a checklist of its sections. Give its central
+  mechanisms (a loop, a memory trace, an expected-value choice) a sustained visual
+  each. A further mechanism the unit teaches (an architecture's information flow) gets
+  at least one diagram that builds, never a silent omission; only a list or definition
+  table may stay in Study. Size the lesson so the request ends published: a long unit
+  teaches its core deeply and bridges the rest briefly, and the overview says what the
+  video teaches. Two or three label beats per section is a narrated summary, not a
+  lesson.
 - **R2 Concrete before abstract.** Show the course's own worked example, diagram
   frames, plot data or practice givens before the general rule. If the unit has no
   concrete instance, report the gap to prepare-study instead of inventing one.

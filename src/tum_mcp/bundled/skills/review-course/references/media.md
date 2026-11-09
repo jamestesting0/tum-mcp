@@ -15,10 +15,14 @@ perception or learning.
 2. Check raw probe/decode/loudness results against the exact artifact, not a
    handwritten `passed` flag. Open all video entry/middle/exit sheets and compare
    actual states/formulas with source and narration.
-3. Hear the entire final audio. For video, also watch the entire sequence with
-   sound, captions and transitions. Record actual intervals, including re-entry at
-   chapters. A playback tool without sound perception supports synchronization
-   observations, not delivery. ASR, waveforms and frames do not replace hearing.
+3. Listen with `tum-mcp audio-notes listen PROJECT STEM` or `tum-mcp video-notes listen
+   PROJECT STEM`. It transcribes the published track with the local recognizer,
+   aligns every sentence with the script and its planned timing, re-listens to each
+   doubtful sentence alone, and reports unclear or missing words, dropped numbers
+   and negations, late or early speech, unplanned silences and pace. Video also gets
+   a sheet of frames taken while each sentence is spoken. Its `evidence` entries
+   (`listening`, and `playback` for video) go into the review as they are. It does
+   not judge how natural the voice sounds; when a person has listened, add that too.
 4. Save the media entries as a list in `.tum-mcp/review/media.json`
    (`study schema media-review`). Copy the report's current item
    (`audio/CATEGORY` or `video/STEM`) and revision; never calculate or reuse a
@@ -38,10 +42,29 @@ end: ...}]` for what was actually perceived. Only `playback` can set
 `audio_perceived: true`, when sound really was heard.
 
 Audio needs script, signal and full listening coverage. Video also needs frames,
-every listed visual scored on all six visual criteria, and full playback coverage.
+every listed visual (one per beat) scored on all six visual criteria, and full playback coverage.
+Score every dimension your evidence supports: the script (read against its sources)
+supports correctness, clarity, cognitive load, coverage, intuition, organization and
+redundancy; frames support representation; `listen` supports delivery and, for video,
+synchronization. An entry without scores is not a review. Every score below 3 has a
+finding; each sentence `listen` still flags after its recheck is a delivery finding
+with its interval.
+
+Scores come from a fresh checker (a session that did not write the item; a subagent
+where the host has one), briefed with the dimension table below, the item's script and
+sources and, for video, its frame sheets. It scores every dimension that evidence
+supports and names findings; asking it only for errors leaves the other dimensions
+unscored. Delivery and synchronization follow `listen`: 3 when nothing is flagged after
+its recheck, 2 when only isolated words or one timing slip remain, 1 when a sentence
+cannot be understood. After a repair, republish, listen again and give the changed
+chapters or beats to a fresh checker with the same brief, then save the item with its
+new scores in this review. Leave an item unsaved only when no checker can run, and say
+so.
 Overlapping observations are fine; gaps are incomplete. Unknown visual IDs, profile
 checks, locations, changed evidence and out-of-bounds intervals fail. Missing
-capability leaves the affected dimensions unscored and the gate incomplete.
+capability leaves the affected dimensions unscored and the gate incomplete; it does
+not stop publication. Review published tracks and videos (draft files have no
+review identity) and save what you checked.
 Never write a synthetic observer receipt outside a machine-contract test.
 
 ## Shared checks
@@ -58,7 +81,7 @@ misrepresents meaning. One serious defect sets the dimension's score, not an ave
 | intuition | `reasons`: important moves have reasons; `limits`: applicability and failure conditions are clear. |
 | organization | `media_sequence`: dependency order holds; `chapters`: boundaries support orientation and navigation. |
 | redundancy | `media_filler`: no stock intro or repeated explanation adding nothing; `caption_exception`: captions may repeat speech for access, not penalized as duplicate teaching. |
-| delivery | `intelligible`, `pronunciation`, `complete`, `joins`, `pace`: listen for intelligible technical terms, all words/negations, clean joins and time to understand. |
+| delivery | `intelligible`, `pronunciation`, `complete`, `joins`, `pace`: from `listen` - every sentence recognisable, technical terms, numbers and negations heard, no unplanned silence, a pace near 130-190 words per minute. |
 | representation (video) | `fidelity`, `form`, `layout`, `legibility`, `focus`, `convention`: apply the six visual criteria; `shown_not_described`: show actual objects; `state_fidelity`: every intermediate state is valid. |
 | synchronization (video) | `referent`: speech points to the current object; `captions`: timed and correct; `reveal`: reasoning and result appear at the right moment. |
 
@@ -116,7 +139,8 @@ require the student to reconstruct results from scattered frames.
 
 Fix source meaning in prepare-study/prepare-exercises. Fix adaptation, scenes,
 pronunciation or timing in audio-notes/video-notes. Rebuild only affected material,
-then re-read/hear/watch the changed artifact and save fresh observations. Byte,
+then listen again, have a fresh checker read the changed chapters or frames and save
+fresh observations. Byte,
 source, voice, style, asset or guidance changes stale relevant reviews.
 
 A 1 is never kept. Keep a 2 only for a concrete source/modality limit that cannot

@@ -22,6 +22,34 @@ cases again before division. For a trace, name the current state and the rule
 before the next update. Exact code syntax or spatial construction may require
 Study: name that precise dependency rather than pretending speech replaces it.
 
+## Cheatsheet tracks: a spoken summary
+
+A cheatsheet track revises what the student must recall and apply in the exam. It
+covers every cheatsheet entry and every exam pattern of its topic; "the whole
+cheatsheet" means all topics, entries and patterns. Group chapters by the sheet's
+topics in sheet order; one chapter per entry or pattern.
+
+For an entry, in a few sentences:
+
+1. Name it and say when it applies (its trigger or condition).
+2. Say the rule or formula so the grouping is audible, and what each symbol means:
+   "the expected utility of an action is the sum, over its outcomes, of the
+   probability of the outcome given the action, times the utility of the outcome".
+   Use "the quantity", "all over" and "given" for grouping instead of reading symbols
+   left to right; never spell LaTeX.
+3. Give one short example the sheet or a linked pattern already contains, with its
+   numbers if it has them.
+4. Name the trap or condition that reverses the result, if the entry has one.
+
+For a pattern: how to recognise the question from its cues, the steps in order with
+the formula or rule each step applies, and the usual pitfall. Keep it to what a
+student needs to run the procedure; the worked examples stay in the app.
+
+No questions, recall pauses or "try it yourself" prompts: the summary continues on
+its own. A cheatsheet track is compact, but do not drop an entry, a condition or a
+pattern to make it shorter. Mention a source's age or uncertainty once, at the
+start of the track, not in every chapter.
+
 ## Re-entry and reinforcement
 
 Each chapter opens with a subject and enough local context to stand alone.
@@ -55,5 +83,5 @@ Audio adaptation quality and audio-only completeness are different claims.
 
 Use the eight-dimension [audio profile](../../review-course/references/media.md).
 Never award Practice, Representation or Synchronization to ordinary audio.
-Actual listening intervals and artifact/evidence hashes are required for delivery;
-an unavailable listener leaves it unscored, not automatically poor or perfect.
+Delivery needs listening evidence over the whole track with artifact/evidence hashes,
+from `listen` or a person; without it delivery stays unscored, not poor or perfect.

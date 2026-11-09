@@ -1,6 +1,6 @@
 ---
 name: review-course
-description: Run the review loop on prepared Study, Exercises, Exam, Lecture content and course structure - fresh checkers read packets, the maker fixes by check, code re-checks, and the gate decides. Also reviews audio and video with real listening and playback; media scores stay separate.
+description: Run the review loop on prepared Study, Exercises, Exam, Lecture content and course structure - fresh checkers read packets, the maker fixes by check, code re-checks, and the gate decides. Also reviews audio and video against their sources, frames and machine listening (listen); media scores stay separate.
 ---
 
 When `tum-mcp study status PROJECT` reports `course_memory: true`, use
@@ -135,11 +135,18 @@ when the checker is new to them.
 
 ## Media
 
-Audio and video are reviewed with actual listening and playback, never from the script
-alone; follow [media](references/media.md) and its [media pairs](references/media-gallery.md).
+Audio and video are reviewed against their sources, frames and narration; follow
+[media](references/media.md) and its [media pairs](references/media-gallery.md). Run
+`tum-mcp audio-notes listen` or `tum-mcp video-notes listen` on each published item for
+the listening evidence; fresh checkers read each script against its sources (and the
+frames) and score every dimension that evidence supports. Fix what you find (reword a
+sentence the recognizer still cannot hear, recompose a slide, restore a missing
+condition), publish again, re-listen, have a fresh checker confirm the changed chapters,
+and save every reviewed item with its scores; a repaired item is not left unsaved.
 Media reviews go to `.tum-mcp/review/media.json`; `tum-mcp study report PROJECT --section
-review` shows their status. Missing perception is an incomplete review, never a perfect
-score.
+review` shows their status. A dimension with no supporting evidence stays unscored, never
+a perfect score, and it never holds back publication. Judge coverage against what the
+student asked for (a cheatsheet track covers every entry and pattern).
 
 ## Report
 

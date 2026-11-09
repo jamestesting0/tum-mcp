@@ -2,8 +2,8 @@
 
 ## Inputs and scope
 
-Read AGENTS.md, the Study files under app/study/, relevant .tum-mcp/state.json entries
-and existing audio records. Use the content schema already used by prepare-study;
+Read AGENTS.md, the Study files under app/study/ or the Exam files under app/exam/,
+relevant .tum-mcp/state.json entries and existing audio records. Use the content schema already used by prepare-study;
 `tum-mcp study schema content` describes unfamiliar fields. Reuse an existing source
 check; otherwise `tum-mcp study inspect PROJECT` identifies stale units without
 refreshing campus websites. A hash mismatch requires content review by
@@ -29,10 +29,11 @@ audio/
   README.md                  Playback, actual voice, durations and update instructions
   SOURCES.md                 Prepared content identity and original source locators
   COVERAGE.md                Current coverage and unresolved gaps
-  manifest.json              Last verified published category receipts
-  plan.json                  Current desired categories, hashes and pending changes
-  voice.json                 Provider, access route, voice and synthesis settings
-  playlist.m3u               Relative tracks/ paths in the intended study order
+  manifest.json              Published category receipts (written by publish)
+  plan.json                  Desired categories, hashes and pending changes (publish keeps it current)
+  voice.json                 Voice profiles: provider, route, voice, language, model, settings
+  playlist.m3u               Relative tracks/ paths in the intended study order (publish)
+  categories/01_category.json  The category script you write and check
   scripts/01_category.txt    Published editable narration
   tracks/01_category.m4a     One published audio file per category
   chapters/01_category.json  Section titles and measured start/end seconds
@@ -61,58 +62,33 @@ credentials stay in the established secret store/environment, never in audio/.
 
 ## Stable categories and complete coverage
 
-Reuse meaningful category groups from the website's outline and unit paths. Where
-there are no groups, use its existing topics. Do not create new subject categories
-or group unrelated units merely to shorten the playlist. Persist the mapping from
-stable unit keys to category keys in plan.json and manifest.json. Reconcile moves
-against the current outline, keeping category identity where it still represents
-the same group. Every current unit has exactly one primary category; brief spoken
-prerequisite reminders may repeat a concept without duplicating entire units.
+Reuse meaningful category groups from the website's outline and unit paths for
+Study tracks, and the Exam topics in sheet order for cheatsheet tracks. Where there
+are no groups, use existing topics. Do not create new subject categories or group
+unrelated units merely to shorten the playlist. Every current unit, entry and pattern
+has exactly one primary category; brief spoken prerequisite reminders may repeat a
+concept without duplicating whole units.
 
-For each unit record its key, learning-objective keys and block locators, such as
-`blocks[2]` plus the block title and fingerprint. Blocks have no stable IDs, so an
-index alone cannot prove identity after insertions. Map each substantive concept,
-definition, nonredundant example, mechanism, condition, comparison and limitation to
-a named narration section and eventually its chapter interval. Duplicate source
-explanations may share one spoken treatment; record which locators were consolidated
-and why no distinct teaching was lost. Inspect all block types,
-including formulas and diagram frames. A concept being named is not evidence that
-it has been explained. COVERAGE.md should expose both missing source concepts and
-scripted sections that still lack verified audio.
+`sources` prints each Study unit's block, objective, flashcard and question
+locators with fingerprints, and each cheatsheet entry and pattern as one locator.
+Copy them into the chapter that teaches them. Blocks have no stable IDs, so an
+index alone cannot prove identity after insertions; `check` compares the copied
+fingerprint with the current content. Map each substantive concept, definition,
+nonredundant example, mechanism, condition, comparison and limitation to a named
+chapter. Duplicate source explanations may share one spoken treatment; say in the
+teaching review which locators were consolidated and why no distinct teaching was
+lost. A concept being named is not evidence that it has been explained. COVERAGE.md
+lists `study_required` limits and anything still unpublished.
 
 ## Change detection and receipts
 
-Compute fingerprints programmatically using SHA-256, not timestamps, filename
-matches, rounded durations or model-invented hashes. For structured fingerprints,
-serialize UTF-8 JSON with sorted object keys, no insignificant spaces and preserved
-array order. For scripts and audio files, hash their exact bytes.
-
-Use `tum-mcp study schema audio-plan` and `audio-manifest` as the field authority.
-`study report PROJECT --section review` discovers these records read-only.
-plan.json records schema_version=1, course_key, the exact content-file hash, current
-category order, each category's key/stem/title, ordered unit keys, semantic input
-hashes, source versions, coverage targets and pending actions. It is desired state,
-not a completion receipt. Update it without replacing unrelated category records.
-
-Semantic unit fingerprints cover title, summary, objectives, explanations,
-formulas/symbols/conditions, table content, literal code and its explanation,
-diagram labels/edges/frame states/captions, cards and question answers/feedback.
-Exclude source locators/hashes, estimated minutes, navigation labels/paths and
-pure diagram layout fields (x, y, shape). Retain ordered content and stable item
-keys. Category fingerprints cover its spoken title, ordered unit keys and their
-semantic hashes. This separates meaningful teaching changes from formatting,
-source-metadata and playlist-only changes. Source references still require review
-when their versions change; reuse audio only when the prepared meaning is unchanged.
-
-manifest.json records schema_version=1 and course_key, plus the last published
-receipt for each category: key/stem/title, ordered unit semantic hashes, category
-hash, source references, script/track/chapter paths and SHA-256 values, actual voice
-profile, chunk input hashes, duration and validation evidence paths. Coverage
-entries identify the source concept and narration section/chapter. Store only
-checks actually performed, including the teaching-review evidence path. That review
-records the exact script hash and the bundled audio guidance hash used for
-its assessment. Recheck input/script/voice and review fingerprints before promotion
-so a concurrent edit cannot be certified against an older snapshot.
+`publish` computes every fingerprint and receipt: the semantic hash of each Study
+unit (teaching content, not layout, citations or navigation) or Exam item
+(everything but its citations), the category hash over its title and ordered units,
+exact file hashes, the voice profile, narration chunk hashes and the validation
+evidence. `study report PROJECT --section review` reads them back and marks a track
+stale when its sources' teaching changes. Do not compute or edit these records by
+hand.
 
 Keep actual profiles per category; voice.json's preferred/fallback policy is not
 proof that a track used that provider. On authorized Kokoro fallback, mark the
@@ -143,71 +119,34 @@ from filenames.
 
 ## Generation, validation and publication
 
-Write work under .build/<run-id>/ and retain a pending record for interrupted runs.
-Cache a chunk by its exact spoken text plus provider, model, voice, language, rate,
-pronunciation rules and any context/stitching settings that affect its audio.
-Changing any of those inputs invalidates reuse. Split at sentences or paragraphs
-within the provider's observed limits. Keep an ordered chunk list; never assume a
-large partial download contains the final sentence.
+Write the category script first and run `check`; it is the only place sentences,
+chapters and coverage live. Complete the [teaching check](narration.md#teaching-check-before-synthesis)
+on the whole script before synthesis, then keep a concise
+`.build/STEM/teaching-review.md`: units, chapter-to-locator mapping, consolidation
+decisions, `study_required` limits, word count, and the failed checks you repaired.
+Write "not applicable" for checks with no relevant source material; never invent
+recall prompts or a numerical learning score. Fix clear in-scope problems yourself.
 
-Complete the [teaching check](narration.md#teaching-check-before-synthesis) before
-synthesis. Keep a concise .build/<run-id>/teaching-review.md with category IDs,
-source/script/guidance hashes, objective/concept mapping, consolidation decisions,
-word counts, estimated duration and any failed checks and repairs. Reuse existing
-coverage records instead of duplicating the full source in this review. Write
-"not applicable" for checks with no relevant source material; never invent recall
-prompts or a numerical learning score to fill a checklist. Fix clear in-scope
-problems yourself, rechecking affected teaching before generation. Do not require
-a separate user approval of ordinary scripts or generated candidates.
+`narration` names one file per sentence; its name hashes the text and the voice
+profile, so an edited sentence or a changed profile needs a new file and unchanged
+sentences are reused. For a new voice/profile, test a short passage first (voice
+guidance). Validate each generated file's start and end against its sentence; a
+plausible duration does not prove the whole sentence was spoken. Use available
+transcription or listening tools when you have them and keep their output under
+`.build/`.
 
-For a new voice/profile, use the short passage test in the voice guidance before
-full synthesis. For an established profile, reuse applicable voice evidence and
-test changed technical pronunciations or synthesis behavior when needed. Keep
-editorial improvement separate from source changes: changed guidance triggers a
-script review, not automatic resynthesis of unchanged, satisfactory speech.
+`publish` does the rest and refuses anything it cannot verify: missing or stale
+coverage, unspeakable sentences, absent narration files, a track that is not AAC
+M4A, does not decode, misses -16 LUFS by more than 1 LU, exceeds -1.5 dBTP or whose
+embedded chapters differ from the script. It archives the previous published files
+under `archive/`, installs the new track, script and chapters, writes the
+validation evidence and the manifest receipt last, and rebuilds the playlist. Never
+hand-write `manifest.json` or `plan.json`; edit the category script and publish
+again. Update README.md and COVERAGE.md from the published receipts.
 
-Validate each generated chunk's beginning/end against its expected text; a decode
-or plausible duration does not establish full narration. Where transcription is
-available and authorized, compare it with the expected text, allowing spelling
-differences but investigating missing explanations, numbers, negations and technical
-terms. Keep QA and any transcripts under .build/. Use available listening tools for
-pronunciation, joins, pace and listening fatigue; distinguish signal checks from
-listening checks.
-
-Export AAC M4A, normally mono at 44.1 kHz and about 128 kb/s, normalized near
--16 LUFS with true peak at or below -1.5 dBTP. Tag title, album, track number and
-actual synthetic narrator. Use ffmpeg/ffprobe when available; report missing tools
-instead of labelling another format as M4A. Derive chapter timings from measured
-assembled segments, including deliberate pauses; estimates are not verified cues.
-
-Check the affected files for valid decoding/codec, nonzero and plausible duration,
-complete ordered speech, pronunciation of difficult terms, unintended long silence,
-chapter bounds, metadata and resolvable playlist paths. An intentional recall pause
-is not accidental silence. Verify that every current category is represented and
-that any remaining unverified material is visible in COVERAGE.md.
-
-Before publishing, compare the current files with their previous receipt to detect
-concurrent/manual edits. Archive the affected old script, track, chapters and
-receipt under archive/<UTC-date-time>-<run-id>/. Stage all new category files before
-replacement and retain recovery data if a multi-file write fails. Publish verified
-category receipts only after the corresponding files are installed successfully;
-update manifest.json last via atomic replacement. Then update playlist/coverage and
-README from the verified receipts, including unchanged categories. A failed build
-keeps the previous usable files and pending work; never overwrite them with empty
-or unverified output. Do not delete useful resumable chunks on failure.
-
-Record each coverage locator as `spoken`, `study_required` with an exact dependency
-and reason, or `missing` with a reason. `study_required` is an honest adaptation
-limit, not complete audio-only instruction. `missing` remains pending.
-Validation JSON records actual tool/version, codec/container, duration, sample
-rate/channels, decode result, measured LUFS/peak and hashed raw probe/decode/loudness
-files. It has no self-authored `passed` flag. Use the schema's typed chapter records
-(`key`, `title`, `start`, `end`), measured and ordered within the final duration.
-
-Report complete only when the requested current categories have verified coverage
-and the required real listening evidence exists.
-Otherwise list the completed/reused categories and precise pending material or
-provider limitation, with the prepared scripts and recovery path.
+A published track has signal, script and coverage evidence, not listening
+evidence. Publish it anyway: the student asked for audio. Report what was and was
+not heard; the media review keeps delivery unscored until someone listens.
 
 ## Explore boundary
 

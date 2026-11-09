@@ -37,6 +37,7 @@ All take the course project folder and print JSON.
 | Look | `frames PROJECT STEM --run RUN --at 12.5,40` |
 | Recheck | `check PROJECT STEM --run RUN` |
 | Publish | `publish PROJECT STEM --run RUN --teaching-review FILE --visual-review performed|not-performed` |
+| Listen | `listen PROJECT STEM` (speech recognition against the cues, speech-aligned frames) |
 | Keep after edit | `acknowledge PROJECT STEM --review FILE` |
 | Clean | `prune PROJECT [--keep N]` |
 | Runtime | `runtime status`, `runtime install` |

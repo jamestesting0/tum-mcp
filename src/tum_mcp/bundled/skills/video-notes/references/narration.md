@@ -29,9 +29,14 @@ narration pending with the precise reason, render a silent draft
 never published.
 
 Shared Kokoro model files and runtimes belong in host user storage, never in the
-course: macOS `~/Library/Caches/tum-mcp/tts/kokoro/`, Windows
+course. Model files: macOS `~/Library/Caches/tum-mcp/tts/kokoro/`, Windows
 `%LOCALAPPDATA%\tum-mcp\Cache\tts\kokoro\`, Linux `$XDG_CACHE_HOME/tum-mcp/tts/kokoro/`
-(default `~/.cache/...`). Upstream publishes no digest for the Kokoro release files, so
+(default `~/.cache/...`). The runtime, a virtual environment with kokoro-onnx named by
+version, Python ABI and platform: macOS `~/Library/Application Support/tum-mcp/tts/runtimes/`,
+Windows `%LOCALAPPDATA%\tum-mcp\tts\runtimes\`, Linux `$XDG_DATA_HOME/tum-mcp/tts/runtimes/`
+(default `~/.local/share/...`). Look there first and reuse a compatible runtime
+(`runtimes/kokoro-onnx-0.6.1-cp313-darwin-arm64/bin/python`); build one only when none
+fits. Upstream publishes no digest for the Kokoro release files, so
 record their SHA-256 in a receipt at the first download, verify against it and reuse
 them; never per course. eSpeak NG ignores a data path longer than about 160
 characters and falls back to a build path (`Error processing file

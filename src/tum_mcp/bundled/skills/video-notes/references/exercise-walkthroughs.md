@@ -62,6 +62,14 @@ Show the current operation or inference as it is explained. Do not reveal later
 steps or the final result before the relevant narration. Restore context when
 moving to another part, rather than relying on a chapter label alone.
 
+Lay the screen out like a worked solution on a board: the problem's model (its
+diagram, world or givens) stays in one region for the whole part, the working grows
+or transforms in another, and only the current line changes. Cases or alternatives
+go in a `self.grid` table whose rows fill in as each case is worked, with
+`.highlight(r)` on the row being discussed. Calculations are `math` items that
+transform step by step. The answer gets an `emphasis` frame after its check, and a
+multi-part problem ends on one summary grid of every requested result.
+
 No stock branding intro, unrelated recap, added example, quiz or mandatory pause-and-solve.
 Source defects return to prepare-exercises; missing exposition/timing returns here.
 

@@ -36,6 +36,10 @@ minimum is reported. Text never overlaps other text; dim context beside new cont
 deliberate overlap is right (a label on its node is not text-on-text), add a
 `layout_waiver` with the reason to that beat.
 
+Size the main object to fill the main region: a diagram, world or table spans at least
+half of the frame width, and its labels sit at 32 or more. A small figure floating in
+white space reads as unfinished and is unreadable on a phone.
+
 Measure labels rather than guessing how many characters fit. `self.label(key,
 width=...)` wraps at the requested scene width without reducing its font size.
 If the wrapped text is too tall, shorten or recompose the scene, move a supporting
@@ -78,6 +82,6 @@ hide captions or reduce the type to make the check pass.
 | code | `self.code(key)` lines with a moving highlight and a small variable table driven by storyboard numbers. A prepared walkthrough gives the order of highlights. |
 | files | Show only the file and lines the beat explains, as code; never scroll through a whole project. |
 | tree | Grow the tree level by level from the root, keeping indentation and connector lines; reveal notes such as sizes as the beat reaches them. |
-| table | Reveal rows against the comparison criterion; highlight contrasting cells. |
+| table | `self.grid` with the source's columns; reveal rows against the comparison criterion and `highlight` the row being discussed. |
 | text points | Narration plus objects, not bullet slides. |
 | cards and questions | Question beats and pitfalls; distractor feedback names misconceptions. |

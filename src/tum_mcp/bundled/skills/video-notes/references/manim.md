@@ -57,9 +57,16 @@ beginning because the whole beat mentions it eventually.
 | `self.number(key, size=32, color=None)` | Formatted storyboard number with its unit. |
 | `self.value(key)` | The number as a float, for geometry or `tracker.set_value(self.value("k"))`. |
 | `self.code(key, size=24)` | `VGroup` of code lines; `lines[i]` is line i + 1. |
+| `self.grid(rows, header=True, size=None)` | A table of label/math/number items: `rows` is a literal list of rows of keys (`None` = empty cell). `.cell(r, c)`, `.row(r)`, `.column(c)` for reveals; `.highlight(r)` returns a washed band behind row `r` to fade in. |
 | `self.color(token)`, `self.symbol(name)` | Colors (see visuals). |
 | `self.anchor(row, column)`, `self.region(name)` | Layout positions. |
 | `self.asset(name)` | An SVG from `videos/assets/`. |
+
+Every render reports `visual.text_only` for a teaching beat (bridge, instance,
+mechanism, generalize, pitfall, work, verify) that ends with only label text and
+frames around it, and `visual.no_thread` for a chapter of three or more beats where
+every beat removes everything the previous one showed. Both block the final check
+like layout issues; a beat's `layout_waiver` with a real reason keeps one.
 
 Keys and tokens are string literals, including in helper functions: build a palette
 as `[self.color("c1"), self.color("c2")]`, never `self.color(f"c{i}")`. Module-level

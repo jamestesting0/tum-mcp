@@ -27,14 +27,17 @@ teaching review is not proof that students learn.
 
 ## Perception and source review
 
-Follow [media review](../../review-course/references/media.md). Inspect the entire
-final playback with sound, not just sampled frames: transitions, current state,
-referents, useful prior state, pronunciation, joins, captions and chapter seeks.
+Follow [media review](../../review-course/references/media.md). Run `listen` for the
+whole narration and its speech-aligned frames, not just sampled frames: transitions,
+current state, referents, useful prior state, pronunciation, joins, captions and
+chapter seeks.
 Compare source formula entries, assumptions and every Exercise demand. Re-enter
 chapters and check orientation. A correct endpoint with missing visible reasoning
 does not pass; neither does an early result hidden by choosing a later screenshot.
 Record actual inspected intervals and file hashes. Missing listening/playback stays
-incomplete; transcripts, loudness, ASR and frame sheets cannot substitute for it.
+incomplete in the media review; transcripts, loudness, ASR and frame sheets cannot
+substitute for it. It does not stop publication: publish the checked final run and
+say that nobody has listened to it yet.
 
 ## Report
 

@@ -46,20 +46,29 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
 4. **Teaching gate.** Review the storyboard against its locators before any audio:
    coverage, fidelity, reasoning, referents, orientation/ending and visual
    correspondences. Passing role checks does not establish good teaching. Questions
-   are optional, source-backed and never a quota. Record the review.
+   are optional, source-backed and never a quota. Record the review. A gap it finds is
+   yours to fix now: revise the storyboard, review again and continue; the gate never
+   ends the request with a storyboard or outline.
 5. **Narration.** Follow [narration and voice](references/narration.md): `narration`
    lists one audio file per sentence; synthesize them, then `timing --profile KEY`.
-6. **Scenes.** Write `videos/scenes/STEM/chapters.py` with the helpers in
-   [Manim and helpers](references/manim.md) and the style in
-   [visuals](references/visuals.md). `render PROJECT STEM --draft` lints, renders,
-   mixes, checks and writes contact sheets. Recompose crowded content at readable
-   sizes, and use the actual scene to focus attention on the current step.
-7. **Repair.** Fix the reported line, then beat, then chapter. Inspect entry/middle/
-   exit sheets and formulas, then play the complete final artifact with sound.
-   Follow the [media review](../review-course/references/media.md); missing
-   perception stays unscored. A run budget is not permission to ship a defect.
-8. **Final.** `render --final`, then `publish` with the teaching review and the visual
-   review state. Details, records and recovery: [workflow](references/workflow.md).
+6. **Scenes.** Write `videos/scenes/STEM/chapters.py` by hand, chapter by chapter,
+   with the helpers in [Manim and helpers](references/manim.md) and the style in
+   [visuals](references/visuals.md). Each chapter keeps one object on screen and
+   changes it: the diagram, the problem's world, a `self.grid` table or the working.
+   A screen of label text is a slide, not an explanation. `render PROJECT STEM
+   --draft` lints, renders, mixes, checks and writes contact sheets.
+7. **Repair.** Fix every reported issue (`visual.text_only`, `visual.no_thread`,
+   layout) and what the entry/middle/exit sheets show, then render again. Repeat
+   until the sheets pass the six visual criteria; a defect you can see is yours to
+   fix in this request, not a note for the student.
+8. **Final and publish.** A requested video ends published: `render --final`, then
+   `publish` with the teaching review and the visual review state. Then
+   `listen PROJECT STEM`: it transcribes the narration, checks every sentence and its
+   timing against the cues, re-listens to doubtful sentences alone, and samples a
+   frame while each sentence is spoken. Reword sentences it still flags, fix frames
+   that show the wrong object for their sentence, render and publish again. Never
+   leave a requested video as a draft in `.build`. Details, records and recovery:
+   [workflow](references/workflow.md).
 9. **Report.** Name created, updated, reused and text-first units, gaps, narrator,
    durations, checks actually run and paths under `videos/`. Run
    [verification](references/verification.md) before claiming anything is complete.
