@@ -4,7 +4,8 @@ description: Initialize or refresh one TUM course project, its shared sources an
 ---
 
 When `tum-mcp study status PROJECT` reports `course_memory: true`, use
-the installed `course-memory` skill for relationships and scoped source updates.
+the installed `course-memory` skill for relationships and scoped source updates: after a
+refresh, run `tum-mcp study impact PROJECT --source KEY` for each changed source key.
 When disabled, leave retained graph files unused and follow the ordinary workflow.
 
 

@@ -1,45 +1,33 @@
 ---
 name: course-memory
-description: Set up and maintain optional private course memory for source-backed relationships across Study, Exercises, Exam and Lecture, including prerequisites, practice choices and changed-source impact. Use only when Course Memory is enabled; ordinary course authoring stays with its prepare skill.
+description: Answer relationship questions across a course's Study, Exercises, Exam and Lecture workspaces from their authored links - practice for a concept, what to review before an exercise, where an exam question is taught, how concepts relate and what a changed source affects. Use only when Course Memory is enabled; ordinary course authoring stays with its prepare skill.
 ---
 
-This extension is disabled by default. `tum-mcp install course-memory` enables it;
-`tum-mcp uninstall course-memory` stops its use and preserves course files. Check
-`tum-mcp study status PROJECT`: when `course_memory` is false, do not read or use
+This extension is disabled by default. Check `tum-mcp study status PROJECT` once: when
+`course_memory` is false, do not call `study context` or `study impact` and do not use
 retained graph files or packets. Old instructions and file presence are not activation.
 
-On the next relationship, prerequisite, practice-choice or source-update request,
-read [local course relationships](references/knowledge.md). Work only in the current
-bound course. Prefer a known item/concept selector; for teaching use `--limit 4`
-and `--max-bytes 8000`. Reuse one packet within the unchanged request; simple facts
-need no graph. A later request revalidates normally.
-The native workspace links are available immediately, even without extra annotations.
-Do not build a whole-course graph before answering the student.
+Course Memory reads the links the course already holds: exercise prerequisites,
+cheatsheet units, passages and exercises, pattern workflows and worked examples, mock
+variants, past-question guidance, lecture-note passages, unit lectures and the semester
+map. It is read-only: it never fetches, extracts, builds, publishes or writes files.
 
-If private `.tum-mcp/knowledge.json` is absent, initialize schema 1
-using the exact course key and semester from state, with `concepts: []` and
-`assertions: []`. Add only useful relationships for this request, checked against the
-actual sources. Installation permits this bounded local memory setup and maintenance;
-it does not authorize new campus reads, app edits, publication, model benchmarks or
-recording processing. Read PDFs natively where supported; existing source helpers are
-optional fallbacks. Never manufacture reviewed assertions from names or co-occurrence.
+| Request | Call (current bound course) |
+| --- | --- |
+| Practice for a concept | `tum-mcp study context . --concept KEY --purpose exercises --limit 4 --max-bytes 8000` |
+| What to review before an exercise | `tum-mcp study context . --item exercises/set/SET/exercise/KEY --purpose study --limit 4 --max-bytes 8000` |
+| Where an exam or mock question is taught | `--item` with the question ref and `--purpose study` |
+| How concepts relate, which patterns use one | `--concept KEY --purpose exam` |
+| Sync reported changed source keys | `tum-mcp study impact . --source KEY`, once per changed key |
+| No key known yet | one query: `tum-mcp study context . "few words" --purpose WORKSPACE --limit 4 --max-bytes 8000` |
 
-For existing or reinstalled memory, inspect a narrow context packet first. Malformed
-or unsupported metadata needs explicit recovery; preserve it and continue teaching
-from native sources without using that graph. Stale relationships remain inactive
-until actual source/content review and explicit receipts make them current. Do not
-copy a new fingerprint merely to pass validation.
+Concept keys are the cheatsheet entry keys in `app/exam/`. Do not call Course Memory for
+a date, a simple fact or one item you already have open; read the native files instead.
+Reuse one packet within the same request and do not start a whole-course search beside it.
 
-After authorized source/content changes, run impact for changed keys, repair affected
-owners first. Once the content and references are stable, review the necessary
-relationships together, then run the explicit knowledge report. Keep unrelated memory,
-rejected history, unresolved candidates and intentional alias ambiguity. The review
-loop's course item fingerprints the reviewed relationships, so changing them re-opens the
-course's integration checks; never mark them passed without reviewing them. The optional
-binding is ignored when the extension is disabled; ordinary course review remains.
+Read [packets and teaching decisions](references/knowledge.md) before relying on a packet.
+Open every slide, sheet or recording time a packet points to before teaching from it.
 
-Use the student's stated goal, time and work shown to make a small source-backed
-recommendation. Course coverage is not mastery. No learner profile, automatic chat
-archive, background updater, cross-course graph or mandatory document pipeline exists.
-Client reload or a new chat may be needed to remove instructions/context already read
-before uninstall; new graph tool calls are blocked by the disabled capability.
+Never create or edit `.tum-mcp/knowledge.json` while answering, tutoring or authoring.
+Reviewed relationship maintenance runs only when the student explicitly asks for it:
+follow [maintenance](references/maintenance.md).

@@ -76,7 +76,7 @@ Run `tum-mcp install` to choose extensions, then reload your client.
 | `lecture` | `prepare-lecture` | Concise notes for useful remarks and highlights for worked explanations worth watching, each with a time range and frame. Prefers transcripts and slides; local recognition is optional. |
 | `audio-notes` | `audio-notes` | Turn prepared Study lessons or the Exam cheatsheet into hands-free revision tracks, with checked coverage, chapter re-entry and a listening check. Play them in the app's Audio workspace or download the playlist. Voice setup happens when used. |
 | `video-notes` | `video-notes` | Explain prepared Study concepts in depth or solve selected Exercises with intuitive visual walkthroughs in the local app. Check timing, captions and layout; install the render runtime when first used. |
-| `course-memory` | `course-memory` | Connect Study, Exercises, Exam and Lecture with source-checked private memory. Setup happens on the next relevant course request; uninstall preserves the graph files and stops their use. |
+| `course-memory` | `course-memory` | Answer relationship questions across Study, Exercises, Exam and Lecture from the course's own links, with source-checked pages. Read-only; uninstall stops its use and keeps any private files. |
 
 Use `tum-mcp doctor` to see installed workflows and `tum-mcp uninstall` to remove
 them.

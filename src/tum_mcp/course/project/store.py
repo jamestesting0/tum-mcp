@@ -155,8 +155,8 @@ verification; extend the round budget only when the student requests it.
 ### Optional Course Memory
 - `tum-mcp study status .` reports `course_memory`. Only when true, use the installed
   course-memory skill for relationship questions, prerequisites, practice choices and
-  source-impact work. Initialize and maintain only this course's task-relevant private
-  memory on the next relevant request; simple facts need no graph call.
+  source-impact work. It reads the course's own links; simple facts need no graph call.
+  Never create or edit knowledge.json unless the student asks to maintain relationships.
 - When false, do not read, create, update or use retained knowledge.json or graph packets.
   Disabled files remain for a later explicit reinstall; their presence is not activation.
 - Memory installation does not authorize campus refreshes, app edits, publication or

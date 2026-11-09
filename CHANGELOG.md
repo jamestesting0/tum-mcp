@@ -1,5 +1,19 @@
 # Changes
 
+## Unreleased
+
+- Course Memory reads every link the course now holds: cheatsheet passages, exercises and
+  pattern workflows, pattern worked examples, mock variants, distilled practice,
+  past-question guidance prerequisites and lecture-note passages, and tags items with
+  their semester-map topic. Recorded "no link fits" decisions appear as `gaps`.
+- `study context --item` and `--concept` list the selected item first, then the items it
+  links to in the requested workspace, before weaker neighbours. `--concept` accepts
+  cheatsheet concept keys.
+- Locators and freshness use each block, question, flashcard, exercise step and lecture
+  note's own cited sources and pages, so slide pages no longer point at a recording.
+- The course-memory skill is shorter and read-only while answering: it no longer creates
+  `knowledge.json` on first use. Reviewed relationships are recorded only on request.
+
 ## 0.21.0 — 2026-11-09
 
 - Published audio notes play in a new Audio workspace in the local app: Lectures and

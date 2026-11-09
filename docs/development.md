@@ -437,6 +437,12 @@ existing structure/review, lecture freshness, migration and export tests when th
 boundaries change. Installed consumer checks exercise schema/context/impact through the
 packaged launcher; retain all native installation, upgrade and lifecycle gates.
 
+`test_course_memory_fidelity.py` holds one instance of every authored link family and
+checks that each reaches its other end, that exact selectors list authored links before
+weaker items, that locators name only the sources an entry cites, and that every key
+reference in the four content schemas is either a tested link family or classified as
+internal. A new reference field fails that test until it is projected or classified.
+
 Retrieval evaluation uses fixed synthetic typed-reference gold sets, separate authored
 lexical/native-map and raw-page finder baselines, the same packet budgets, and explicit
 cold extraction versus warm lookup timing. Projection and source verification are timed

@@ -1222,5 +1222,53 @@
     "context": "initialized_study_project",
     "partition": "held_out",
     "expected_skill": "prepare-study"
+  },
+  {
+    "id": "course-memory-01",
+    "target_skill": "course-memory",
+    "prompt": "Which sheet exercises practise simple reflex agents?",
+    "context": "bound_course_with_exam_cheatsheet_links",
+    "partition": "development",
+    "expected_skill": "course-memory"
+  },
+  {
+    "id": "course-memory-02",
+    "target_skill": "course-memory",
+    "prompt": "What should I review in the lessons before I try problem 1.4.1?",
+    "context": "bound_course_with_exercise_prerequisites",
+    "partition": "development",
+    "expected_skill": "course-memory"
+  },
+  {
+    "id": "course-memory-03",
+    "target_skill": "course-memory",
+    "prompt": "The lecture slides were re-uploaded. Which of my study pages and exercises need checking?",
+    "context": "bound_course_after_sync_with_changed_sources",
+    "partition": "development",
+    "expected_skill": "course-memory"
+  },
+  {
+    "id": "course-memory-04",
+    "target_skill": "course-memory",
+    "prompt": "When is the exam and how long does it take?",
+    "context": "bound_course_with_handbook_exam_date",
+    "partition": "development",
+    "expected_skill": null
+  },
+  {
+    "id": "course-memory-05",
+    "target_skill": "course-memory",
+    "prompt": "Explain the definition on page 12 of the second slide deck.",
+    "context": "bound_course_single_known_page",
+    "partition": "development",
+    "expected_skill": "read-content"
+  },
+  {
+    "id": "course-memory-06",
+    "target_skill": "course-memory",
+    "prompt": "Build lessons for the third lecture.",
+    "context": "bound_course_with_new_lecture_slides",
+    "partition": "development",
+    "expected_skill": "prepare-study"
   }
 ]

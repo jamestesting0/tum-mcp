@@ -740,15 +740,20 @@ exclude private comments/classification reasons. `study demo PROJECT` shows an e
 
 These commands require the optional **Course Memory** extension, disabled by default.
 Enable it with `tum-mcp install course-memory` and reload your client. The installed
-`course-memory` skill performs bounded local setup on the next relevant request,
-then maintains affected relationships during authorized source/content updates.
+`course-memory` skill reads the links the course already holds and writes nothing while
+answering; reviewed relationships are recorded only on an explicit request.
 `study status PROJECT` reports the `course_memory` capability without reading the
 graph. No whole-course ingestion, background process or model benchmark is started.
 
-`study context PROJECT "topic" --limit 4 --max-bytes 8000` connects authored Study,
-Exercises, Exam and Lecture items using explicit native links and optional reviewed assertions. Use `--item REF` or
-`--concept KEY` instead of a query for an exact selector, and `--purpose exercises` (or
-study, exam, lectures, review) to rank the task's workspace first.
+`study context PROJECT "topic" --limit 4 --max-bytes 8000` connects Study, Exercises, Exam
+and Lecture items through the links authors write: exercise prerequisites, cheatsheet
+units, passages, exercises and pattern workflows, pattern worked examples, mock variants,
+past-question guidance, lecture-note passages and unit lectures, plus optional reviewed
+assertions. Use `--item REF` or `--concept KEY` (a cheatsheet entry key) for an exact
+selector, and `--purpose exercises` (or study, exam, lectures, review) for the workspace
+the answer needs: an exact selector lists itself first, then its authored links in that
+workspace. Each item cites only the sources and pages it cites itself, items carry their
+semester-map `topic`, and `gaps` reports links an author recorded as not fitting.
 
 `study impact PROJECT --source KEY` separates direct dependents and possible review
 targets. Unknown and unmapped sources remain explicit. `study report PROJECT --section
