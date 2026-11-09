@@ -1,7 +1,18 @@
 # Changes
 
-## Unreleased
+## 0.20.0 — 2026-11-09
 
+- `tum-mcp setup` now completes a first installation in one command: after the
+  installed coding clients it offers the optional workflows (Lecture, Audio Notes,
+  Video Notes, Course Memory). Nothing is preselected and Enter with nothing selected
+  skips a step; without a supported client no client picker opens.
+  `setup --client NAME` still registers clients only.
+- Every cheatsheet shows its semester map again: readiness asks for a link from each
+  idea on the map to what it builds on or contrasts with, or for the idea to leave the
+  map, and the app draws the map even before any link exists.
+- Exercise questions read "a. Find the cost ..." with the label inline, and sub-questions
+  "i." and "ii." nest under their question. A title that only repeats the problem number
+  is no longer shown as a heading, and parts citing the same pages show the citation once.
 - Review packets also split at 60 requested verdicts, so fresh checkers complete
   them. Plan approvals stay approved when another task starts or when one batch groups
   earlier batches for a combined review.
