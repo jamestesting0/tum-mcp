@@ -10,11 +10,14 @@ from typing import Any
 
 import numpy as np
 from manim import (
+    LEFT,
     RIGHT,
     UP,
+    Line,
     MathTex,
     MathTypst,
     Mobject,
+    Rectangle,
     Scene,
     SVGMobject,
     Typst,
@@ -81,6 +84,46 @@ def _typst_string(text: str) -> str:
     return f'#"{escaped}"'
 
 
+# Beat kinds that should show what they explain, not only words.
+TEACHING = {"bridge", "instance", "mechanism", "generalize", "pitfall", "work", "verify"}
+
+
+class Grid(VGroup):
+    """Storyboard items aligned in rows and columns; cells stay addressable for reveals."""
+
+    def __init__(self, cells: list[list[Mobject | None]], rules: VGroup, wash: str) -> None:
+        super().__init__(*(cell for row in cells for cell in row if cell is not None), rules)
+        self.cells = cells
+        self.rules = rules
+        self.wash = wash
+
+    def cell(self, row: int, column: int) -> Mobject:
+        found = self.cells[row][column]
+        if found is None:
+            raise VideoNotesError(f"Grid cell ({row}, {column}) is empty.")
+        return found
+
+    def row(self, index: int) -> VGroup:
+        return VGroup(*(cell for cell in self.cells[index] if cell is not None))
+
+    def column(self, index: int) -> VGroup:
+        return VGroup(*(row[index] for row in self.cells if row[index] is not None))
+
+    def highlight(self, index: int) -> Rectangle:
+        """A washed band behind one row, as wide as the grid; add or fade it in yourself."""
+        cells = self.row(index)
+        band = Rectangle(
+            width=self.width + 0.3,
+            height=cells.height + 0.2,
+            stroke_width=0,
+            fill_color=self.wash,
+            fill_opacity=1,
+        )
+        band.move_to([self.get_center()[0], cells.get_center()[1], 0])
+        band.set_z_index(-1)
+        return band
+
+
 @dataclass
 class BeatHandle:
     key: str
@@ -125,11 +168,23 @@ class NotesScene(Scene):
             for item in beat.get("on_screen", ())
         }
         self.camera.background_color = self.tokens["background"]
+        self.kept: set[int] | None = None
+        self.wipes = 0
 
     def tear_down(self) -> None:
         missing = [key for key in self.beat_order if key not in self.done]
         if missing:
             raise VideoNotesError(f"{self.chapter_key}: beats never played: {', '.join(missing)}")
+        last = self.beat_order[-1]
+        if len(self.beat_order) >= 3 and self.wipes == len(self.beat_order) - 1:
+            self._issue(
+                _context(),
+                last,
+                "visual.no_thread",
+                "every beat replaces the whole screen; keep the problem, object or working "
+                "in place and change it",
+                self.beat_specs[last].get("layout_waiver"),
+            )
 
     def _frames(self, seconds: float) -> int:
         return round(seconds * config.frame_rate)
@@ -166,6 +221,7 @@ class NotesScene(Scene):
             self.wait((target - current + 0.5) / config.frame_rate, frozen_frame=True)
         self.done.append(key)
         self._probe(key)
+        self._visual(key)
 
     @contextmanager
     def cue(self, index: int) -> Iterator[BeatHandle]:
@@ -324,6 +380,61 @@ class NotesScene(Scene):
             lines.add(line)
         return self._mark(lines, key, "code", size)
 
+    def grid(
+        self,
+        rows: list[list[str | None]],
+        *,
+        header: bool = True,
+        size: float | None = None,
+        column_gap: float = 0.7,
+        row_gap: float = 0.35,
+    ) -> Grid:
+        """Lay out label, math and number items as a table: rows of storyboard keys (None leaves
+        a cell empty). Columns are left-aligned; a rule separates the header row."""
+        builders = {"label": self.label, "math": self.math, "number": self.number}
+        width = max((len(row) for row in rows), default=0)
+        if not rows or width == 0 or any(len(row) != width for row in rows):
+            raise VideoNotesError("A grid needs rows of equal, non-zero length.")
+        cells: list[list[Mobject | None]] = []
+        for row in rows:
+            built: list[Mobject | None] = []
+            for key in row:
+                if key is None:
+                    built.append(None)
+                    continue
+                kind = self.screen.get(key, {}).get("kind")
+                if kind not in builders:
+                    raise VideoNotesError(
+                        f"Grid cell '{key}' must be a label, math or number item."
+                    )
+                built.append(
+                    builders[kind](key) if size is None else builders[kind](key, size=size)
+                )
+            cells.append(built)
+        widths = [
+            max((row[c].width for row in cells if row[c] is not None), default=0.0)
+            for c in range(width)
+        ]
+        heights = [max((c.height for c in row if c is not None), default=0.3) for row in cells]
+        lefts = [sum(widths[:c]) + c * column_gap for c in range(width)]
+        top = 0.0
+        for row, height in zip(cells, heights, strict=True):
+            middle = top - height / 2
+            for column, cell in enumerate(row):
+                if cell is not None:
+                    cell.move_to([lefts[column], middle, 0], aligned_edge=LEFT)
+            top -= height + row_gap
+        total = lefts[-1] + widths[-1]
+        rules = VGroup()
+        if header and len(cells) > 1:
+            y = -heights[0] - row_gap / 2
+            rules.add(
+                Line([-0.15, y, 0], [total + 0.15, y, 0], color=self.color("line"), stroke_width=2)
+            )
+        grid = Grid(cells, rules, self.color("wash"))
+        grid.move_to([0, 0, 0])
+        return grid
+
     def color(self, token: str) -> str:
         if token in self.tokens and isinstance(self.tokens[token], str):
             return self.tokens[token]
@@ -378,6 +489,51 @@ class NotesScene(Scene):
             walk(mobject)
         return found
 
+    def _visual(self, beat: str) -> None:
+        """Beat-end checks for slides: a teaching beat showing only label text, and a chapter
+        whose every beat removes everything the previous beat showed."""
+        shown = {id(mobject) for mobject in self.mobjects if self._visible(mobject)}
+        if self.kept and not shown & self.kept:
+            self.wipes += 1
+        self.kept = shown
+        spec = self.beat_specs[beat]
+        if spec.get("kind") not in TEACHING:
+            return
+        texts = self._texts()
+        if not texts or any(text.vnotes_kind in {"math", "code"} for text in texts):
+            return
+        boxes = [
+            (t.get_left()[0], t.get_right()[0], t.get_bottom()[1], t.get_top()[1]) for t in texts
+        ]
+        if not any(self._drawing(mobject, boxes) for mobject in self.mobjects):
+            self._issue(
+                _context(),
+                beat,
+                "visual.text_only",
+                "only label text is on screen; show the object, state, table or working "
+                "the narration explains",
+                spec.get("layout_waiver"),
+            )
+
+    def _drawing(self, mobject: Mobject, boxes: list[tuple[float, float, float, float]]) -> bool:
+        """Visible geometry other than text and frames hugging a single text."""
+        if getattr(mobject, "vnotes_key", None) is not None or not self._visible(mobject):
+            return False
+        if mobject.submobjects:
+            return any(self._drawing(child, boxes) for child in mobject.submobjects)
+        if not mobject.has_points():
+            return False
+        left, right = mobject.get_left()[0], mobject.get_right()[0]
+        bottom, top = mobject.get_bottom()[1], mobject.get_top()[1]
+        return not any(
+            left <= a + 1e-3
+            and right >= b - 1e-3
+            and bottom <= c + 1e-3
+            and top >= d - 1e-3
+            and max(a - left, right - b, c - bottom, top - d) <= 0.6
+            for a, b, c, d in boxes
+        )
+
     def _probe(self, beat: str) -> None:
         context = _context()
         waived = self.beat_specs[beat].get("layout_waiver")
@@ -426,4 +582,4 @@ class NotesScene(Scene):
         )
 
 
-__all__ = ["NotesScene", "VideoNotesError"]
+__all__ = ["Grid", "NotesScene", "VideoNotesError"]

@@ -1,13 +1,35 @@
 """Structural teaching checks shared by the two prepared video source variants."""
 
+import re
 from itertools import groupby
 
-from tum_mcp.course.media.video_content import ExerciseStoryboard, Storyboard
+from tum_mcp.course.media.video_content import (
+    Beat,
+    ExerciseBeat,
+    ExerciseStoryboard,
+    Storyboard,
+)
+
+# Arithmetic or a numeric comparison typed as label text ("0.8 x 1 + 0.2 x 0 = 0.8", "1/2").
+# An ASCII hyphen between digits is a range, not a subtraction.
+CALCULATION = re.compile(
+    r"[\d)]\s*[\u00d7*\u00b7+\u2212/]\s*[(\d]|[=<>\u2264\u2265]\s*[\u2212+-]?\d"
+)
+
+
+def screen_errors(beats: tuple[Beat, ...] | tuple[ExerciseBeat, ...]) -> list[str]:
+    return [
+        f"screen.calculation {beat.key}: '{item.text}' is mathematics; make it a math item "
+        "so it is typeset and can transform step by step"
+        for beat in beats
+        for item in beat.on_screen
+        if item.kind == "label" and item.text and CALCULATION.search(item.text)
+    ]
 
 
 def lesson_errors(board: Storyboard) -> list[str]:
     beats = board.beats()
-    errors = []
+    errors = screen_errors(beats)
     if beats[0].kind != "overview":
         errors.append("lesson.overview: open with the learning question and section map")
     if beats[-1].kind != "recap":
@@ -24,7 +46,7 @@ def lesson_errors(board: Storyboard) -> list[str]:
 
 
 def exercise_errors(board: ExerciseStoryboard) -> list[str]:
-    errors = []
+    errors = screen_errors(board.beats())
     if board.beats()[0].kind != "setup":
         errors.append("exercise.setup: establish the actual problem before solving it")
     groups = groupby(board.chapters, key=lambda chapter: chapter.answer)

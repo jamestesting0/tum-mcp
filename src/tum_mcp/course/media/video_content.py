@@ -8,7 +8,16 @@ import unicodedata
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import AwareDatetime, Field, JsonValue, RootModel, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    Discriminator,
+    Field,
+    JsonValue,
+    RootModel,
+    Tag,
+    field_validator,
+    model_validator,
+)
 
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.study import SourceVersion, StudyContent, Unit
@@ -80,7 +89,8 @@ def unit_revision(unit: Unit) -> str:
 
 
 class Locator(Frozen):
-    kind: Literal["block", "flashcard", "question", "objective", "summary"]
+    # concept and pattern address a whole Exam cheatsheet entry or pattern (audio only).
+    kind: Literal["block", "flashcard", "question", "objective", "summary", "concept", "pattern"]
     ref: Annotated[str, Field(min_length=1, max_length=120)]
     fingerprint: Digest
 
@@ -90,7 +100,7 @@ class Locator(Frozen):
             raise ValueError("Block locators use blocks[N].")
         if self.kind == "summary" and self.ref != "summary":
             raise ValueError("Summary locators use ref 'summary'.")
-        if self.kind in {"flashcard", "question", "objective"} and (
+        if self.kind in {"flashcard", "question", "objective", "concept", "pattern"} and (
             re.fullmatch(r"[a-z0-9][a-z0-9_.-]{0,99}", self.ref) is None
         ):
             raise ValueError("Item locators use the item's key.")
@@ -464,7 +474,21 @@ class ExerciseStoryboard(Frozen):
         return self
 
 
-class StoryboardFile(RootModel[Storyboard | ExerciseStoryboard]):
+def _storyboard_source(value: object) -> str:
+    # Errors then name only the fields of the storyboard kind the file actually is.
+    if isinstance(value, dict):
+        return "exercise" if "exercise" in value else "unit"
+    return "exercise" if isinstance(value, ExerciseStoryboard) else "unit"
+
+
+class StoryboardFile(
+    RootModel[
+        Annotated[
+            Annotated[Storyboard, Tag("unit")] | Annotated[ExerciseStoryboard, Tag("exercise")],
+            Discriminator(_storyboard_source),
+        ]
+    ]
+):
     pass
 
 

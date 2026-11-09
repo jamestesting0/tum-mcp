@@ -9,6 +9,7 @@ from tum_mcp.course.media.video_content import (
     Locator,
     Selection,
     Storyboard,
+    StoryboardFile,
     VideoPlan,
     VoiceProfile,
     allocate,
@@ -139,6 +140,36 @@ def test_storyboard_rejects_unsafe_or_inconsistent_beats(
     target[path[-1]] = replacement
     with pytest.raises(ValidationError, match=message):
         Storyboard.model_validate(value)
+
+
+def test_storyboard_file_reports_only_the_lesson_contract(content: StudyContent) -> None:
+    value = storyboard(content)
+    value["chapters"][0]["beats"][1]["key"] = "b01"
+    with pytest.raises(ValidationError) as raised:
+        StoryboardFile.model_validate(value)
+    assert "Beat keys" in str(raised.value)
+    assert "exercise_hash" not in str(raised.value)
+
+
+@pytest.mark.parametrize(
+    ("text", "flagged"),
+    [
+        ("0.8 \u00d7 1 + 0.2 \u00d7 0 = 0.8", True),
+        ("(2 + 1.5) / 2 = 1.75", True),
+        ("Initially dirty: 1/2", True),
+        ("Learning \u2192 autonomy", False),
+        ("Clean dirt: +3", False),
+        ("Slides 4-35", False),
+    ],
+)
+def test_calculations_typed_as_labels_must_be_math(
+    content: StudyContent, text: str, flagged: bool
+) -> None:
+    value = storyboard(content)
+    value["chapters"][0]["beats"][0]["on_screen"] = [{"key": "sum", "kind": "label", "text": text}]
+    report = check_storyboard(Storyboard.model_validate(value), content)
+    calculation = [error for error in report.errors if error.startswith("screen.calculation b01")]
+    assert bool(calculation) is flagged
 
 
 def test_stems_stay_stable_and_new_videos_take_unused_numbers(content: StudyContent) -> None:

@@ -55,6 +55,13 @@ def test_scene_using_helpers_passes() -> None:
     assert report.warnings == ()
 
 
+def test_grid_cells_are_storyboard_keys() -> None:
+    scene = GOOD.replace('self.label("title")', 'self.grid([["title", None], [None, "n"]])')
+    report = lint(scene, BOARD)
+    assert report.ok, report.errors
+    assert report.warnings == ()
+
+
 @pytest.mark.parametrize(
     ("change", "fragment"),
     [
@@ -64,6 +71,9 @@ def test_scene_using_helpers_passes() -> None:
         (('self.label("title")', 'Text("Demo")'), "text line"),
         (('self.label("title")', 'MathTex("x")'), "text line"),
         (('self.label("title")', 'self.label("missing")'), "no on-screen item"),
+        (('self.label("title")', 'self.grid([["title", "missing"]])'), "no on-screen item"),
+        (('self.label("title")', "self.grid(rows)"), "literal list of rows"),
+        (('self.label("title")', 'self.grid([["title", name]])'), "literal keys or None"),
         (('self.label("title")', "self.label(name)"), "literal key"),
         (('self.label("title")', 'self.number("title")'), "is a label"),
         (("Write(title)", "ShowCreation(title)"), "ManimGL"),

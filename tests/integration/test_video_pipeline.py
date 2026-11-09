@@ -588,7 +588,7 @@ def prepare_walkthrough(root: Path, tmp_path: Path, parts: int = 1, *, timed: bo
                     "intent": "Connect the path cost to the result.",
                     "locators": [statement, answer] if kind == "answer" else [statement],
                     "on_screen": (
-                        [{"key": screen, "kind": "label", "text": "2 + 1 = 3"}]
+                        [{"key": screen, "kind": "math", "typst": "2 + 1 = 3"}]
                         if kind == "answer"
                         else []
                     ),
@@ -599,7 +599,7 @@ def prepare_walkthrough(root: Path, tmp_path: Path, parts: int = 1, *, timed: bo
                 scene.extend(
                     [
                         "            with self.cue(1) as cue:",
-                        f'                self.play(Write(self.label("{screen}")), '
+                        f'                self.play(Write(self.math("{screen}")), '
                         "run_time=cue.share(0.5))",
                     ]
                 )

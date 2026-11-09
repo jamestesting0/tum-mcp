@@ -210,6 +210,28 @@ def lint(source: str, storyboard: Storyboard | ExerciseStoryboard) -> LintReport
                     )
                 else:
                     used.add(key)
+            if is_self and name == "grid":
+                rows = node.args[0] if node.args else None
+                cells = (
+                    [cell for row in rows.elts if isinstance(row, ast.List) for cell in row.elts]
+                    if isinstance(rows, ast.List)
+                    and all(isinstance(row, ast.List) for row in rows.elts)
+                    else None
+                )
+                if cells is None:
+                    errors.append(f"key {where(node)}: self.grid() needs a literal list of rows")
+                for cell in cells or ():
+                    if isinstance(cell, ast.Constant) and cell.value is None:
+                        continue
+                    key = _literal(cell)
+                    if key is None:
+                        errors.append(f"key {where(node)}: grid cells are literal keys or None")
+                    elif key not in screen:
+                        errors.append(f"key {where(node)}: no on-screen item '{key}'")
+                    elif screen[key].kind not in {"label", "math", "number"}:
+                        errors.append(f"key {where(node)}: grid cell '{key}' is code")
+                    else:
+                        used.add(key)
             if (
                 is_self
                 and name in {"color", "beat", "asset"}
