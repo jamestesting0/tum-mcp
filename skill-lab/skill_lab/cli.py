@@ -182,6 +182,28 @@ def cmd_clean(args: argparse.Namespace) -> None:
     show({"removed": removed, "kept": [path.name for path in found if path.name not in removed]})
 
 
+def cmd_memory_bench(args: argparse.Namespace) -> None:
+    from skill_lab import memory_bench
+
+    match args.action:
+        case "freeze":
+            show(memory_bench.freeze(Path(args.target), args.corpus))
+        case "run":
+            show(memory_bench.run(args.corpus, args.label))
+        case "compare":
+            show(memory_bench.compare(args.corpus, args.base, args.label))
+        case "agent":
+            from skill_lab import memory_bench_agent
+
+            show(memory_bench_agent.run_stage(args.corpus, args.label, args.stage))
+        case "agent-report":
+            from skill_lab import memory_bench_agent
+
+            show(memory_bench_agent.report(args.corpus, args.label))
+        case unreachable:
+            raise LabError(f"Unknown memory-bench action {unreachable}.")
+
+
 def parser() -> argparse.ArgumentParser:
     top = argparse.ArgumentParser(prog="lab", description="Skill lab (dev-only).")
     sub = top.add_subparsers(dest="command", required=True)
@@ -286,6 +308,17 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("round")
     p.add_argument("--decision", type=Path, required=True)
     p.set_defaults(func=cmd_ledger)
+
+    p = sub.add_parser(
+        "memory-bench", help="Deterministic Course Memory benchmark on frozen courses."
+    )
+    p.add_argument("action", choices=("freeze", "run", "compare", "agent", "agent-report"))
+    p.add_argument("corpus", help="corpus name under .omo/skill-lab/benchmarks/course-memory")
+    p.add_argument("--target", help="freeze: the course folder to copy")
+    p.add_argument("--label", default="baseline", help="run: result label; compare: candidate")
+    p.add_argument("--base", default="baseline", help="compare: the stored baseline label")
+    p.add_argument("--stage", type=int, choices=(1, 2), default=1, help="agent: trial stage")
+    p.set_defaults(func=cmd_memory_bench)
 
     p = sub.add_parser("clean", help="Delete old rounds' local state.")
     p.add_argument("--keep", type=int, default=3)
