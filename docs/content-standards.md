@@ -52,6 +52,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | E2 | Cheatsheet entries give procedures as steps and set mathematics as LaTeX | `method_without_steps`, `sheet_plain_math`, `sheet_dense_paragraph` |
 | E3 | Practice is guided before it is unguided; every listed paper can be replayed | `unguided_practice`, `unreplayable_paper` |
 | E4 | Cheatsheet entries link the lessons and exercises that teach and practise them | `undecided_link` |
+| E5 | The cheatsheet has a semester map; every idea on it links what it builds on or contrasts with | `unlinked_map` |
 
 ## Lecture notes
 

@@ -363,6 +363,27 @@ def _unformulated(workflow: list[dict]) -> list[str]:
     ]
 
 
+def _map_flags(content: ExamContent) -> list[dict[str, JsonValue]]:
+    """Every cheatsheet has a semester map: each idea on it shows what it builds on, leads to
+    or is confused with. An idea with no link worth drawing leaves the map (`on_map: false`)."""
+    on_map = [concept.key for concept in content.concepts if concept.on_map]
+    if len(content.concepts) < 2:
+        return []
+    if not on_map:
+        detail = "No idea is on the semester map; put the core ideas on it and link them."
+    else:
+        linked = {key for link in content.links for key in (link.start, link.end)}
+        isolated = [key for key in on_map if key not in linked]
+        if not isolated:
+            return []
+        detail = (
+            f"{len(isolated)} of {len(on_map)} ideas on the semester map have no link, such as "
+            f"{', '.join(isolated[:4])}. Link each to what it builds on (`requires`, `derives`) "
+            "or is confused with (`contrasts`), or set `on_map: false` for supporting detail."
+        )
+    return [{"item": "exam/sheet", "flag": "unlinked_map", "detail": detail}]
+
+
 def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
     """Plain-typed mathematics in patterns, past-question help and mocks, and workflows
     that never show the formula, rule or code a step applies."""
@@ -422,6 +443,7 @@ def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
         and (lines := _unformulated(pattern.model_dump(mode="json")["workflow"]))
     ]
     bare += [math_word_flag(item, words) for item, words in worded.items() if words]
+    bare += _map_flags(content)
     return bare + [
         {
             "item": item,

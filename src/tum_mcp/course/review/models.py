@@ -271,6 +271,7 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "unworked_result": "representation",
     "text_only_question": "representation",
     "bare_workflow": "representation",
+    "unlinked_map": "organization",
     "math_word": "representation",
     "meta_reference": "clarity",
     "repeated_title": "clarity",

@@ -787,6 +787,27 @@ def test_a_workflow_step_that_computes_shows_its_formula() -> None:
     assert not flagged()
 
 
+def test_the_cheatsheet_needs_a_semester_map_with_every_idea_linked() -> None:
+    # Three pilot exams drew no links, so the app showed no semester map at all.
+    from importlib.resources import files
+
+    from tum_mcp.course.content.exam import ExamContent
+    from tum_mcp.course.content.exam_data import exam_item_flags
+
+    exam = json.loads((files("tum_mcp") / "bundled/course_app/example/exam.json").read_bytes())
+
+    def flagged() -> bool:
+        found = exam_item_flags(ExamContent.model_validate(exam))
+        return any(f["flag"] == "unlinked_map" and f["item"] == "exam/sheet" for f in found)
+
+    assert not flagged()
+    lone = exam["concepts"][0] | {"key": "lone-idea", "basis": "untested_core", "on_map": True}
+    exam["concepts"].append(lone)
+    assert flagged()
+    lone["on_map"] = False
+    assert not flagged()
+
+
 def test_a_word_in_math_mode_is_flagged_and_text_or_a_matrix_passes() -> None:
     # A pilot's exam patterns wrote P(A=true) and P(pass real | warning) in math mode.
     content = study()

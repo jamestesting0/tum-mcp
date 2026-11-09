@@ -17,6 +17,8 @@ PER_ROW = 2
 def layout(content: ExamContent) -> dict[str, JsonValue]:
     """Lay out on-map concepts; identical content always yields identical coordinates."""
     nodes = {concept.key: concept for concept in content.concepts if concept.on_map}
+    # Ideas keep the cheatsheet's order inside a cell, so the map reads like the sheet.
+    order = {key: index for index, key in enumerate(nodes)}
     if not nodes:
         return {"width": 0, "height": 0, "columns": [], "nodes": [], "edges": [], "overview": {}}
     topics = sorted(
@@ -37,12 +39,16 @@ def layout(content: ExamContent) -> dict[str, JsonValue]:
         neighbours[link.end].add(link.start)
     cells: dict[tuple[int, int], list[str]] = defaultdict(list)
     column_of = {topic.key: index for index, topic in enumerate(topics)}
-    for key in sorted(nodes):
+    for key in nodes:
         cells[(column_of[nodes[key].topic], depth[key])].append(key)
     for _ in range(SWEEPS):
         position = _place(cells, len(topics))[0]
         for cell in sorted(cells):
-            cells[cell] = sorted(cells[cell], key=partial(_barycentre, position, neighbours))
+            cells[cell] = sorted(cells[cell], key=partial(_barycentre, position, neighbours, order))
+            # A band that wraps puts the ideas that lead further down in its last row, so their
+            # arrows reach the next band without passing another card.
+            if len(cells[cell]) > PER_ROW:
+                cells[cell].sort(key=lambda key: bool(following[key]))
     position, rows_y, widths, starts, total_width, total_height = _place(cells, len(topics))
     placed = [
         {
@@ -127,10 +133,10 @@ def _place(
 
 
 def _barycentre(
-    position: dict[str, float], neighbours: dict[str, set[str]], key: str
-) -> tuple[float, str]:
+    position: dict[str, float], neighbours: dict[str, set[str]], order: dict[str, int], key: str
+) -> tuple[float, int]:
     around = [position[other] for other in neighbours[key]]
-    return (sum(around) / len(around) if around else position[key], key)
+    return (sum(around) / len(around) if around else position[key], order[key])
 
 
 def _depths(keys: list[str], following: dict[str, list[str]]) -> dict[str, int]:

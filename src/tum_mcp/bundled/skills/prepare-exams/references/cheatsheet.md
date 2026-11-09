@@ -121,9 +121,11 @@ table there too: a cell wrapping into a screenful is not a usable lookup.
 Links run from a foundation (`start`) to what builds on it (`end`): `requires` for
 prerequisite knowledge, `derives` when one result follows from another, `contrasts`
 for ideas students confuse. Prerequisite and derivation links must not form a cycle.
-Draw only links a student benefits from seeing. Put the core ideas on the map
-(`on_map`) and leave supporting detail off when the map would get crowded; around 60
-to 80 nodes stay readable. Topics are the map's columns in course order.
+Every cheatsheet has a semester map, and readiness waits for it (`unlinked_map`): each
+idea on the map links at least one other, so the student sees what to learn first and
+what follows. Draw only links a student benefits from seeing. Put the core ideas on the
+map (`on_map`) and set `on_map: false` for supporting detail with no link worth drawing;
+around 60 to 80 nodes stay readable. Topics are the map's columns in course order.
 
 Study Explore is not evidence for an exam requirement and cannot supply core unit
 links. If an actual task requires an optional-only concept, record the dependency and

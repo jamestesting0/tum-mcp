@@ -57,7 +57,8 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    classify it by transferable solving strategy, reusing existing patterns first.
 4. **Cheatsheet** ([cheatsheet](references/cheatsheet.md)). Record every kind of
    exam-relevant source material; give each its form, its line first and the rest behind
-   Expand; link dependent or contrasting ideas.
+   Expand; draw the semester map by linking each core idea to what it builds on or
+   contrasts with.
 5. **Patterns** ([patterns](references/patterns.md)). A short workflow that solves every
    member, with a decision step where the method forks; recognition cues from the question
    text, the formula, rule or code each step and case applies (a step that computes shows

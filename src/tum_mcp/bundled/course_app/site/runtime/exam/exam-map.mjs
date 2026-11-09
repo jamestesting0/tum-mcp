@@ -37,14 +37,16 @@ function legendItem(dashed, text) {
 
 // The semester map: build-time positions, focusable nodes and, for the selection, the same entry
 // the cheatsheet list shows, so a student reads the details without leaving the map.
+// The smallest scale a map opens at, so 13px card titles stay legible.
+const READABLE = 0.8;
+
 export function renderMap() {
   const map = exam.map;
   const root = node('section', 'exam-map'); root.setAttribute('aria-labelledby', 'exam-map-title');
   const title = node('h2', '', 'Semester map'); title.id = 'exam-map-title';
   const heading = append(node('div', 'section-heading exam-map-heading'), title);
   root.append(heading);
-  // Without links the map only repeats the sheet's own grouping, so it is left out.
-  if (!map?.nodes?.length || !map.edges?.length) { root.hidden = true; return root; }
+  if (!map?.nodes?.length) { root.hidden = true; return root; }
   const links = new Map(map.nodes.map(item => [item.key, []]));
   for (const edge of map.edges) { links.get(edge.start).push({ ...edge, other: edge.end, out: true }); links.get(edge.end).push({ ...edge, other: edge.start, out: false }); }
   const card = node('div', 'exam-map-card'); card.setAttribute('role', 'region'); card.hidden = true;
@@ -91,8 +93,10 @@ export function renderMap() {
     if (key) elements.get(key)?.focus({ preventScroll: true });
   }
   const scroller = node('div', 'exam-map-scroll'); scroller.tabIndex = 0;
-  // The collapsed frame takes the map's shape, so a wide, short map leaves no empty band.
+  // The collapsed frame takes the map's shape, so a wide, short map leaves no empty band; it is
+  // tall enough to show the map at a readable size when the whole map would not be.
   scroller.style.aspectRatio = `${map.width + 64} / ${map.height + 160}`;
+  scroller.style.minHeight = `${Math.round(map.height * READABLE + 48)}px`;
   scroller.setAttribute('aria-label', 'Semester map canvas. Arrow keys move it, plus and minus zoom, 0 fits it.');
   scroller.title = 'Drag to move · pinch or Ctrl/⌘ + scroll to zoom';
   const svg = svgNode('svg', { viewBox: `0 0 ${map.width} ${map.height}`, class: 'exam-map-svg', role: 'group', 'aria-label': 'Semester map of exam-relevant ideas' });
@@ -136,17 +140,31 @@ export function renderMap() {
     return `L${x - (x - px) / before * k1} ${y - (y - py) / before * k1}Q${x} ${y} ${x + (nx - x) / after * k2} ${y + (ny - y) / after * k2}`;
   }).join('');
   for (const edge of map.edges) {
-    const a = position.get(edge.start), b = position.get(edge.end);
+    const a = position.get(edge.start), b = position.get(edge.end), own = [edge.start, edge.end];
+    // Within a column, a link that would pass behind another card runs beside the column instead:
+    // out of its source's free side, along the column, into the same side of its target.
+    const lane = arrow => {
+      const members = map.nodes.filter(item => item.column === a.column);
+      const free = side => [a, b].every(end => !members.some(item => item.y === end.y && (item.x - end.x) * side > 0));
+      const side = free(-1) ? -1 : free(1) ? 1 : 0;
+      if (!side) return null;
+      const x = side < 0 ? Math.min(...members.map(item => item.x)) - 16 : Math.max(...members.map(item => item.x)) + width + 16;
+      const out = side < 0 ? a.x : a.x + width, into = (side < 0 ? b.x : b.x + width) + side * (arrow ? head : 0);
+      return rounded([[out, a.y + height / 2], [x, a.y + height / 2], [x, b.y + height / 2], [into, b.y + height / 2]]);
+    };
     let path;
-    if (edge.kind === 'contrasts') path = `M${a.x + width / 2} ${a.y + height / 2}L${b.x + width / 2} ${b.y + height / 2}`;
-    else if (a.column !== b.column) {
+    if (edge.kind === 'contrasts') {
+      const straight = [[a.x + width / 2, a.y + height / 2], [b.x + width / 2, b.y + height / 2]];
+      path = (a.column === b.column && a.y !== b.y && crosses(along(straight), own) && lane(false))
+        || `M${straight[0][0]} ${straight[0][1]}L${straight[1][0]} ${straight[1][1]}`;
+    } else if (a.column !== b.column) {
       const forward = b.column > a.column, side = forward ? 1 : -1, x1 = forward ? a.x + width : a.x;
       const x2 = (forward ? b.x : b.x + width) - side * head, y1 = a.y + height / 2, y2 = b.y + height / 2;
       const x3 = x2 - side * stub, bend = (x3 - x1) / 2;
       if (!crosses(sampled([x1, y1], [x1 + bend, y1], [x3 - bend, y2], [x3, y2]), [edge.start, edge.end])) {
         path = `M${x1} ${y1}C${x1 + bend} ${y1} ${x3 - bend} ${y2} ${x3} ${y2}L${x2} ${y2}`;
       } else {
-        const own = [edge.start, edge.end], out = x1 + side * 14, into = x3 - side * 14;
+        const out = x1 + side * 14, into = x3 - side * 14;
         // Two corners: across at the source's height, along a column gap, then into the target.
         const turns = [...channels.filter(x => (x - out) * side > 0 && (into - x) * side > 0)
           .sort((p, q) => Math.abs(p - (x1 + x3) / 2) - Math.abs(q - (x1 + x3) / 2)), into, out]
@@ -156,7 +174,8 @@ export function renderMap() {
       }
     } else if (b.y > a.y + height) {
       const x1 = a.x + width / 2, y1 = a.y + height, x2 = b.x + width / 2, y2 = b.y - head, y3 = y2 - stub, middle = (y1 + y3) / 2;
-      path = `M${x1} ${y1}C${x1} ${middle} ${x2} ${middle} ${x2} ${y3}L${x2} ${y2}`;
+      path = (crosses(sampled([x1, y1], [x1, middle], [x2, middle], [x2, y3]), own) && lane(true))
+        || `M${x1} ${y1}C${x1} ${middle} ${x2} ${middle} ${x2} ${y3}L${x2} ${y2}`;
     } else {
       const x1 = a.x + width, y1 = a.y + height / 2, x2 = b.x, y2 = b.y + height / 2, length = Math.hypot(x2 - x1, y2 - y1) || 1;
       path = `M${x1} ${y1}L${x2 - (x2 - x1) * head / length} ${y2 - (y2 - y1) * head / length}`;
@@ -192,11 +211,15 @@ export function renderMap() {
     const width = scroller.clientWidth, height = scroller.clientHeight;
     if (width && height) svg.setAttribute('viewBox', `${view.x} ${view.y} ${width / view.scale} ${height / view.scale}`);
   }
-  function fit() {
+  // Fit shows the whole map. Opening it, a map too wide to read whole starts at a readable size
+  // on its first topics, and the student drags along the semester.
+  function fit(whole = true) {
     const width = scroller.clientWidth, height = scroller.clientHeight;
     if (!width || !height) return;
-    view.scale = clamp(Math.min((width - 32) / map.width, (height - 32) / map.height, 1.25));
-    view.x = (map.width - width / view.scale) / 2; view.y = (map.height - height / view.scale) / 2;
+    const all = Math.min((width - 32) / map.width, (height - 32) / map.height, 1.25);
+    view.scale = clamp(whole ? all : Math.max(all, READABLE));
+    const centre = (size, room) => size * view.scale <= room - 32 ? (size - room / view.scale) / 2 : -16 / view.scale;
+    view.x = centre(map.width, width); view.y = centre(map.height, height);
     fitted = true; apply();
   }
   function zoomAt(factor, cx = scroller.clientWidth / 2, cy = scroller.clientHeight / 2) {
@@ -269,7 +292,7 @@ export function renderMap() {
     root.classList.toggle('expanded', on);
     const name = on ? 'Exit full screen' : 'Full screen';
     full.setAttribute('aria-label', name); full.title = name; full.querySelector('path').setAttribute('d', on ? ICONS.exit : ICONS.enter);
-    requestAnimationFrame(fit);
+    requestAnimationFrame(() => fit(false));
   }
   const onFullscreen = () => {
     if (!root.isConnected) { document.removeEventListener('fullscreenchange', onFullscreen); return; }
@@ -283,11 +306,11 @@ export function renderMap() {
     if (root.classList.contains('expanded') && !document.fullscreenElement) { setExpanded(false); full.focus(); }
   });
   heading.append(full);
-  const tools = append(node('div', 'exam-map-tools'), tool('Zoom out', ICONS.out, () => zoomAt(0.8)), tool('Zoom in', ICONS.in, () => zoomAt(1.25)), tool('Fit', ICONS.fit, fit));
+  const tools = append(node('div', 'exam-map-tools'), tool('Zoom out', ICONS.out, () => zoomAt(0.8)), tool('Zoom in', ICONS.in, () => zoomAt(1.25)), tool('Fit', ICONS.fit, () => fit()));
   const legend = append(node('div', 'exam-map-legend'), legendItem(false, 'builds on'), legendItem(true, 'easy to confuse'));
   new ResizeObserver((entries, observer) => {
     if (!scroller.isConnected) { observer.disconnect(); return; }
-    if (fitted) apply(); else fit();
+    if (fitted) apply(); else fit(false);
   }).observe(scroller);
   scroller.append(svg);
   // Phones show topics first; a topic opens its concepts as a list.

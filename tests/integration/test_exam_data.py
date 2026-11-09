@@ -182,6 +182,26 @@ def test_layout_is_deterministic_layered_and_non_overlapping(content: ExamConten
     assert first["overview"]["links"] == []
 
 
+def test_a_wrapped_band_keeps_a_link_clear_of_other_cards() -> None:
+    # A pilot map wrapped four first-row ideas into two rows and drew an arrow through the
+    # second row; the idea with a link below now sits in the band's last row.
+    from importlib.resources import files
+
+    exam = json.loads((files("tum_mcp") / "bundled/course_app/example/exam.json").read_bytes())
+    for concept in exam["concepts"]:
+        if concept["key"] in {"operation-costs", "removal-matrix"}:
+            concept["on_map"] = True
+    nodes = {node["key"]: node for node in layout(ExamContent.model_validate(exam))["nodes"]}
+    source, target = nodes["fifo"], nodes["queue"]
+    assert source["depth"] == 0 and target["depth"] == 1
+    between = [
+        key
+        for key, node in nodes.items()
+        if node["column"] == source["column"] and source["y"] < node["y"] < target["y"]
+    ]
+    assert between == []
+
+
 def test_changed_sources_mark_only_dependent_items_stale(tmp_path: Path) -> None:
     root = exam_project(tmp_path)
     content = ExamContent.model_validate(exam_document(root))
