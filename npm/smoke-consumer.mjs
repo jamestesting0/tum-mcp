@@ -136,7 +136,8 @@ for name in ('cursor','antigravity'):
   const impactPacket = JSON.parse(run(process.execPath, [launcher, 'study', 'impact', studyProject, '--source', nativeUnit.sources[0].key]));
   assert.ok(impactPacket.direct.length > 0);
   assert.equal(impactPacket.source_status, 'current');
-  assert.ok(impactPacket.items.some(item => item.locators.some(locator => locator.source === nativeUnit.sources[0].key)));
+  assert.ok(impactPacket.items.some(item => impactPacket.direct.includes(item.id) && item.owner && item.evidence_status));
+  assert.ok(impactPacket.owners.includes(`study/unit/${nativeUnit.key}`));
   assert.deepEqual(readdirSync(studyProject, { recursive: true }).sort(), beforeKnowledge);
   const memoryPath = join(studyProject, '.tum-mcp/knowledge.json');
   const memoryBytes = JSON.stringify({ schema_version: 1, course_key: boundStatus.course.key, semester: boundStatus.course.semester, concepts: [], assertions: [] });
