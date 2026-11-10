@@ -1,5 +1,23 @@
 # Changes
 
+## Unreleased
+
+- Cleaner terminal output. `--help` groups commands into Get started, Manage and
+  Used by your coding agent, and the npm launcher shows the same help before setup.
+  Statuses use one vocabulary with distinct symbols (✓ ! ✗ ○ –). Errors are single
+  `Error:` lines that name the fix. Narrow terminals keep their indentation.
+- `doctor` leads with its verdict and next steps, and states a repeated detail once
+  per section. `setup`, `install`, `update` and `login` end with numbered next steps
+  instead of paragraphs.
+- `tum-mcp logout SERVICE [ACCOUNT]` accepts all five services, with ACCOUNT needed
+  only when several are saved. Interactive logout no longer runs a network check.
+- Removing Everything in `tum-mcp uninstall` asks for one confirmation and lists what
+  is removed and kept. The first runtime preparation prints one line instead of
+  installer output, and writes a log if it fails.
+- Saved browser profiles appear as `Google Chrome (TUM)`; plain names open a
+  temporary profile. The TUMonline "Admission" permission is now labelled
+  "Semester fee".
+
 ## 0.22.0 — 2026-11-10
 
 - Learning record: a private, per-course record of a student's attempts, mistakes (with

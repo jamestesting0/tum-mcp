@@ -60,8 +60,12 @@ export function currentPython() {
 function run(executable, args, { quiet = false, timeout = 600000 } = {}) {
   const env = { ...process.env }; delete env.VIRTUAL_ENV; delete env.PYTHONPATH; delete env.PYTHONHOME;
   const result = spawnSync(executable, args, { env, stdio: quiet ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'inherit', 'inherit'], shell: false, timeout });
-  if (result.error) throw new Error(`Managed runtime subprocess could not start (${result.error.code || 'unknown'}); check permissions and retry setup.`);
-  if (result.status !== 0) throw new Error('Managed runtime setup failed; the previous runtime was retained.');
+  if (result.error) throw new Error(`A runtime setup program could not start (${result.error.code || 'unknown'}); check permissions and run tum-mcp setup again.`);
+  if (result.status !== 0) {
+    const failure = new Error('Runtime setup failed.');
+    failure.output = `$ ${basename(executable)} ${args.join(' ')}\n${result.stdout || ''}${result.stderr || ''}`;
+    throw failure;
+  }
   return result;
 }
 
@@ -96,7 +100,7 @@ async function uvExecutable() {
   const arches = { arm64: 'aarch64', x64: 'x86_64' };
   const target = `${arches[process.arch]}-${systems[process.platform]}`;
   const artifact = pins.artifacts[target];
-  if (!artifact) throw new Error('Unsupported platform/architecture; use a documented manual installation.');
+  if (!artifact) throw new Error(`This platform (${process.platform} ${process.arch}) is not supported by the npm installer; see https://github.com/jamestesting0/tum-mcp/blob/main/docs/setup.md.`);
   const temporary = await mkdtemp(join(dataRoot(), 'bootstrap-'));
   try {
     const archive = join(temporary, process.platform === 'win32' ? 'uv.zip' : 'uv.tar.gz');
@@ -116,7 +120,7 @@ export async function ensureRuntime() {
   const backend = join(packageRoot, 'npm/backend');
   const value = manifest();
   for (const [name, expected] of [[value.wheel, value.wheelSha256], ['requirements.txt', value.requirementsSha256]]) {
-    if (createHash('sha256').update(readFileSync(join(backend, name))).digest('hex') !== expected) throw new Error('Backend integrity check failed.');
+    if (createHash('sha256').update(readFileSync(join(backend, name))).digest('hex') !== expected) throw new Error('The installed package is damaged; reinstall it with npm install --global @jamestesting888/tum-mcp@latest.');
   }
   const identity = runtimeIdentity(value);
   await mkdir(dataRoot(), { recursive: true, mode: 0o700 });
@@ -124,26 +128,36 @@ export async function ensureRuntime() {
   let preparing;
   try {
     let python = currentPython();
+    const previous = Boolean(python);
     if (!python || !healthy(python)) {
-      const uv = await uvExecutable();
-      const control = controlDirectory(identity);
-      for (const path of [join(dataRoot(), 'runtimes'), control]) {
-        if (existsSync(path) && lstatSync(path).isSymbolicLink()) throw new Error('Symbolic runtime directory preserved; review it locally.');
+      process.stderr.write('Preparing the TUM MCP runtime; this takes about a minute the first time\u2026\n');
+      try {
+        const uv = await uvExecutable();
+        const control = controlDirectory(identity);
+        for (const path of [join(dataRoot(), 'runtimes'), control]) {
+          if (existsSync(path) && lstatSync(path).isSymbolicLink()) throw new Error(`${path} is a symbolic link, so it was left alone; replace it with a normal folder and run tum-mcp setup again.`);
+        }
+        await mkdir(control, { recursive: true, mode: 0o700 });
+        await atomicWrite(join(control, 'runtime-owner.json'), JSON.stringify({ kind: 'tum-mcp-runtime', schema: 2, identity }));
+        preparing = await mkdtemp(join(control, 'env-'));
+        python = pythonPath(preparing);
+        run(uv, ['venv', '--managed-python', '--python', pins.python, preparing], { quiet: true });
+        run(uv, ['pip', 'sync', '--python', python, '--require-hashes', '--only-binary', ':all:', join(backend, 'requirements.txt')], { quiet: true });
+        run(uv, ['pip', 'install', '--python', python, '--no-deps', '--no-index', join(backend, value.wheel)], { quiet: true });
+        if (!healthy(python)) throw new Error('The new runtime failed its health check.');
+        await atomicWrite(join(preparing, '.tum-mcp-ready'), identity);
+        const selected = JSON.stringify({ schema: 2, identity, generation: basename(preparing), python });
+        await atomicWrite(join(control, 'current.json'), selected);
+        // Published generations are never removed: existing clients may still pin one.
+        preparing = undefined;
+        await atomicWrite(join(dataRoot(), 'runtime.json'), selected);
+      } catch (error) {
+        const kept = previous ? ' The previous runtime is still in use.' : '';
+        if (!error.output) throw new Error(`${error.message}${kept}`);
+        const log = join(dataRoot(), 'setup-error.log');
+        await writeFile(log, error.output, { mode: 0o600 });
+        throw new Error(`${error.message} Details: ${log}.${kept}`);
       }
-      await mkdir(control, { recursive: true, mode: 0o700 });
-      await atomicWrite(join(control, 'runtime-owner.json'), JSON.stringify({ kind: 'tum-mcp-runtime', schema: 2, identity }));
-      preparing = await mkdtemp(join(control, 'env-'));
-      python = pythonPath(preparing);
-      run(uv, ['venv', '--managed-python', '--python', pins.python, preparing]);
-      run(uv, ['pip', 'sync', '--python', python, '--require-hashes', '--only-binary', ':all:', join(backend, 'requirements.txt')]);
-      run(uv, ['pip', 'install', '--python', python, '--no-deps', '--no-index', join(backend, value.wheel)]);
-      if (!healthy(python)) throw new Error('New runtime validation failed; the previous runtime was retained.');
-      await atomicWrite(join(preparing, '.tum-mcp-ready'), identity);
-      const selected = JSON.stringify({ schema: 2, identity, generation: basename(preparing), python });
-      await atomicWrite(join(control, 'current.json'), selected);
-      // Published generations are never removed: existing clients may still pin one.
-      preparing = undefined;
-      await atomicWrite(join(dataRoot(), 'runtime.json'), selected);
     }
     const selected = readFileSync(join(controlDirectory(identity), 'current.json'), 'utf8');
     const global = join(dataRoot(), 'runtime.json');
@@ -208,5 +222,5 @@ export async function removeRuntimeFiles() {
     if (readdirSync(leases).length === 0) await rmdir(leases);
   }
   await rm(join(root, 'runtime-removal.pending'), { force: true });
-  console.log(`Removed ${owned.length} managed runtime(s). Saved user data was retained.`);
+  console.log(`Removed ${owned.length} managed runtime${owned.length === 1 ? '' : 's'}.`);
 }

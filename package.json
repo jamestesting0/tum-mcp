@@ -13,6 +13,7 @@
   "files": [
     "npm/tum-mcp.mjs",
     "npm/ui.mjs",
+    "npm/help.json",
     "npm/runtime.mjs",
     "npm/download.mjs",
     "npm/lock.mjs",

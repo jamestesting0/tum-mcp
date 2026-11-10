@@ -27,18 +27,24 @@ test('bootstrap help is consistent, bounded and side-effect-free without Python'
   for (const args of [['--help'], ['-h'], ['install', '--help'], ['setup', '--help'], ['update', '--help'], ['uninstall', '--help']]) {
     const result = invoke(args, { COLUMNS: '40', NO_COLOR: '' });
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /^TUM MCP  Help/);
+    assert.match(result.stdout, /^TUM MCP  /);
     assert.doesNotMatch(result.stdout, /\x1b\[/);
     assert.ok(result.stdout.split('\n').every(line => line.length <= 40));
     assert.deepEqual(result.files, []);
   }
-  assert.match(invoke(['--help']).stdout, /manage/);
+  const root = invoke(['--help']).stdout;
+  const shared = JSON.parse(readFileSync(new URL('../help.json', import.meta.url)));
+  for (const [title, rows] of Object.entries(shared.groups)) {
+    assert.match(root, new RegExp(title));
+    for (const [name] of rows) assert.match(root, new RegExp(`^${name}\\b`, 'm'));
+  }
+  assert.match(invoke(['update', '--help']).stdout, /^TUM MCP  tum-mcp update/);
 });
 
 test('serve fails closed before explicit setup', () => {
   const result = invoke(['serve']);
   assert.equal(result.status, 2);
-  assert.match(result.stderr, /SETUP_REQUIRED/);
+  assert.match(result.stderr, /^Error: TUM MCP is not set up yet/);
 });
 
 
@@ -61,6 +67,6 @@ test('uninstall validates scope and flags before package removal', () => {
   ]) {
     const result = invoke(['uninstall', ...args]);
     assert.equal(result.status, 2);
-    assert.doesNotMatch(result.stderr, /SETUP_REQUIRED|npm installation/);
+    assert.doesNotMatch(result.stderr, /not set up yet|npm installation/);
   }
 });

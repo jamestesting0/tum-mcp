@@ -13,7 +13,7 @@ function runLauncher(root, args, quiet = false) {
   });
   if (result.error || result.status !== 0) {
     if (quiet) process.stderr.write((result.stdout || '') + (result.stderr || ''));
-    throw new Error(`${args[0]} did not complete. Saved data and customized client files were preserved; review the details and retry.`);
+    throw new Error(`${args[0]} did not finish; review the messages above and retry. Your saved data was kept.`);
   }
 }
 
@@ -53,17 +53,17 @@ async function operate(job) {
         runLauncher(job.root, ['uninstall', '--keep-package', ...job.args]);
       }
       runNpm(job.npm, ['uninstall', ...scope, packageName]);
-      console.log('TUM MCP package and managed client setup removed. Saved user data was retained unless explicitly requested.');
+      console.log('TUM MCP was removed.');
       return;
     }
     const current = JSON.parse(readFileSync(join(job.root, 'package.json'), 'utf8')).version;
     const latest = JSON.parse(runNpm(job.npm, ['view', `${packageName}@latest`, 'version', '--json', ...scope], true));
     if (!newerVersion(latest, current)) {
-      console.log(`Installed ${current}; no newer npm release. Refreshing configured clients.`);
+      console.log(`TUM MCP ${current} is up to date. Refreshing your coding apps.`);
       runLauncher(job.root, ['update', '--local']);
       return;
     }
-    console.log(`Preparing TUM MCP ${latest}.`);
+    console.log(`Downloading TUM MCP ${latest}\u2026`);
     const packed = JSON.parse(runNpm(job.npm, ['pack', `${packageName}@${latest}`, '--pack-destination', job.temporary, '--json', ...scope], true));
     if (!Array.isArray(packed) || packed.length !== 1 || packed[0].name !== packageName || packed[0].version !== latest || basename(packed[0].filename) !== packed[0].filename) {
       throw new Error('npm package metadata did not match the selected release.');
@@ -77,7 +77,7 @@ async function operate(job) {
     runNpm(job.npm, ['install', ...scope, job.target.global ? archive : `${packageName}@${latest}`]);
     if (JSON.parse(readFileSync(join(job.root, 'package.json'), 'utf8')).version !== latest) throw new Error('npm did not install the selected version; client activation was stopped.');
     runLauncher(job.root, ['update', '--local']);
-    console.log(`Updated TUM MCP to ${latest}. Restart clients to load refreshed skills.`);
+    console.log(`Updated TUM MCP ${current} \u2192 ${latest}.`);
   } finally { await release(); }
 }
 
