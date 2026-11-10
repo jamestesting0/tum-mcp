@@ -82,14 +82,12 @@ def inspect(
     if not live:
         return (
             State.CONFIGURED,
-            "TUM registration and hook files match; "
-            "host activation and transport were not checked (--static).",
+            "Registration and hooks match; not checked live.",
         )
     if host != ClientHost.LOCAL:
         return (
             State.CONFIGURED,
-            "Windows registration and hooks match; "
-            "run doctor on Windows for live host verification.",
+            "Registration and hooks match; run tum-mcp doctor on Windows to check it live.",
         )
     from tum_mcp.clients import verification_cache
 
@@ -121,7 +119,7 @@ def _inspect_live(
 
         if note := codex_cache_note(home):
             return State.ACTION, note
-        return State.READY, verify(home, host) + " MCP initialization and tool discovery passed."
+        return State.READY, verify(home, host) + " TUM tools found."
     if name == "claude":
         executable = shutil.which("claude")
         command = [executable, "mcp", "get", "tum"] if executable else None
@@ -133,8 +131,7 @@ def _inspect_live(
     if command is None:
         return (
             State.CONFIGURED,
-            "MCP initialization and tool discovery passed; "
-            "native host loading is unverified because its supported CLI is unavailable.",
+            "TUM tools found; loading inside the app was not checked because its CLI is missing.",
         )
     result = subprocess.run(  # noqa: S603
         command,
@@ -159,8 +156,8 @@ def _inspect_live(
             "inspect its TUM server and workspace permissions.",
         )
     return State.READY, (
-        "Native client loaded the TUM server; MCP initialization and tool discovery passed. "
-        "Course hooks are installed; workspace trust and host policy still apply."
+        "Loaded by the app with its TUM tools and course hooks; "
+        "the app's workspace trust settings still apply."
     )
 
 

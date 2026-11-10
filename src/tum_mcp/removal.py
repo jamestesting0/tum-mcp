@@ -35,25 +35,24 @@ def remove_clients(*, purge_runtime: bool = False, forget_credentials: bool = Fa
             except CampusError as error:
                 errors.append(f"{name} ({host.value}): {error.message}")
             except OSError:
-                errors.append(f"{name}: client files could not be accessed; preserved.")
+                errors.append(f"{name}: its files could not be read, so they were kept.")
         if errors:
             for error in errors:
                 print(error)
             raise CampusError(
                 Code.WORKSPACE_CONFLICT,
-                "Some clients need review; runtimes and credentials were retained.",
+                "Some coding apps need review (listed above); runtimes and sign-ins were kept.",
             )
         if forget_credentials:
             _forget_local_credentials()
             print(
-                "Local service credentials and Git tokens removed. "
-                "Native-store records were retained."
+                "Saved campus sign-ins and Git tokens removed; "
+                "system credential store entries stay."
             )
         if purge_runtime:
             _remove_windows_driver()
             private_write(removal_marker(), b"explicit-runtime-removal\n")
-    print(f"Removed {removed} managed client registration(s).")
-    print("User settings, custom files, downloads, course cache and assignment work were retained.")
+    print("Your settings, custom files, downloads and course work were kept.")
     return removed
 
 

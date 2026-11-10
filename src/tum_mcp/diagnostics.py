@@ -16,7 +16,7 @@ from tum_mcp import __version__
 from tum_mcp.clients import CLIENTS, client_config_path, read_client_config
 from tum_mcp.clients.hosts import ClientHost, client_home
 from tum_mcp.clients.installs import ClientName
-from tum_mcp.commands.ui import State
+from tum_mcp.commands.ui import State, client_label, count
 from tum_mcp.connect import ServiceChoice
 from tum_mcp.errors import CampusError
 from tum_mcp.moodle.browsers import BrowserSetupError, discover_browsers, is_wsl
@@ -65,9 +65,7 @@ def session_check(
             if live is False:
                 return check
         except ValidationError:
-            check = check.model_copy(
-                update={"detail": "Invalid verification record; run tum-mcp doctor --live."}
-            )
+            check = check.model_copy(update={"detail": "Invalid check record; run tum-mcp doctor."})
         if cached is not None and cached.key_stamp == file_stamp(key):
             age = time.time() - cached.checked_at
             if 0 <= age < 8 * 60 * 60:
@@ -76,16 +74,13 @@ def session_check(
                     update={
                         "state": State.READY if cached.succeeded else State.ACTION,
                         "detail": (
-                            f"Live session verified at {timestamp} (valid for 8 hours)."
+                            f"Signed in (checked {timestamp})."
                             if cached.succeeded
-                            else f"Live check failed at {timestamp}; "
-                            "run tum-mcp doctor --live to retry."
+                            else f"Check failed at {timestamp}; run tum-mcp doctor to retry."
                         ),
                     }
                 )
-            check = check.model_copy(
-                update={"detail": "Live verification expired; run tum-mcp doctor --live."}
-            )
+            check = check.model_copy(update={"detail": "Last check expired; run tum-mcp doctor."})
         if live is False:
             return check
     try:
@@ -111,6 +106,7 @@ class DoctorReport(Frozen):
     extensions: tuple[Check, ...]
     runtime: tuple[Check, ...]
     next_steps: tuple[str, ...]
+    optional_steps: tuple[str, ...] = ()
     data_directory: str
     config_directory: str
     live_authentication: str
@@ -124,14 +120,14 @@ def github_check(*, live: bool) -> Check:
         return Check(
             label="GitHub publishing",
             state=State.MISSING,
-            detail="Optional: install GitHub CLI, then gh auth login --hostname github.com.",
+            detail="Needed only to publish a course website.",
         )
     if not live:
         return Check(
             label="GitHub publishing",
             state=State.CONFIGURED,
             location=executable,
-            detail="GitHub CLI found; authentication not checked. Use doctor --live to verify.",
+            detail="GitHub CLI found; sign-in not checked.",
         )
     from tum_mcp.course.app.github import Account, GitHub
 
@@ -141,8 +137,7 @@ def github_check(*, live: bool) -> Check:
             label="GitHub publishing",
             state=State.READY,
             location=executable,
-            detail=f"Authenticated as {account.login}; repository/Pages permissions "
-            "and paid-plan eligibility are checked at publication.",
+            detail=f"Signed in as {account.login}; Pages access is checked when publishing.",
         )
     except CampusError as error:
         return Check(label="GitHub publishing", state=State.ACTION, detail=error.message)
@@ -183,7 +178,7 @@ def collect_services(*, live: bool | Literal["stale"] = False) -> ServiceReport:
         check = Check(
             label="Moodle",
             state=State.CONFIGURED,
-            detail="Local encrypted session saved; live authentication not checked.",
+            detail="Saved; not checked live.",
         )
 
         def verify_moodle() -> None:
@@ -199,14 +194,14 @@ def collect_services(*, live: bool | Literal["stale"] = False) -> ServiceReport:
             key=moodle_key,
             live=live,
             verify=verify_moodle,
-            verified_detail="Live session verified; Moodle read tools available.",
+            verified_detail="Signed in.",
         )
     else:
         legacy = (moodle_root / "session.enc").is_file()
         detail = (
-            "Legacy native-store session retained; reconnect for local-file storage."
+            "Session is in the system credential store; run tum-mcp login to move it."
             if legacy
-            else "No local session. Connect to enable Moodle reads."
+            else "Run tum-mcp login."
         )
         check = Check(
             label="Moodle", state=State.ACTION if legacy else State.UNCONFIGURED, detail=detail
@@ -225,7 +220,7 @@ def collect_services(*, live: bool | Literal["stale"] = False) -> ServiceReport:
                 Check(
                     label=ServiceChoice(provider.value).label,
                     state=State.UNCONFIGURED,
-                    detail="No account configured. Run tum-mcp login.",
+                    detail="Run tum-mcp login.",
                 )
             )
         for index, account in enumerate(accounts):
@@ -238,10 +233,9 @@ def collect_services(*, live: bool | Literal["stale"] = False) -> ServiceReport:
             needs_connection |= not saved
             state = State.CONFIGURED if saved else State.ACTION
             detail = (
-                "Saved locally; read access follows your campus account. "
-                "Live authentication not checked."
+                "Saved; not checked live."
                 if saved
-                else "Reconnect for local encrypted storage; any legacy session is retained."
+                else "Run tum-mcp login to reconnect; the old session is kept."
             )
 
             def verify_account(account: Account = account, provider: Provider = provider) -> None:
@@ -267,9 +261,7 @@ def collect_services(*, live: bool | Literal["stale"] = False) -> ServiceReport:
                     key=key,
                     live=live,
                     verify=verify_account,
-                    verified_detail=(
-                        "Live identity verified; read access follows your campus account."
-                    ),
+                    verified_detail="Signed in.",
                 )
             needs_connection |= check.state == State.ACTION
             services.append(check)
@@ -308,10 +300,10 @@ def client_check(
             and bool(entry.get("url"))
         )
         detail = (
-            "MCP registration saved; host activation not checked."
+            "Registration saved; not checked live."
             if registered
             else (
-                f"Register with tum-mcp setup --client {name}"
+                f"Set up with tum-mcp setup --client {name}"
                 + (" --host windows." if host == ClientHost.WINDOWS else ".")
             )
         )
@@ -322,7 +314,7 @@ def client_check(
             if note := codex_cache_note(home):
                 state, detail = State.ACTION, note
         if entry is not None and not registered:
-            state, detail = State.FAILED, "Invalid tum server entry; review client configuration."
+            state, detail = State.FAILED, f"Invalid tum server entry in {path}; review it."
         if registered and live is not None:
             from tum_mcp.clients.verification import inspect
 
@@ -335,7 +327,7 @@ def client_check(
             State.ACTION,
         )
     return Check(
-        label=name.title() + (" (Windows)" if host == ClientHost.WINDOWS else ""),
+        label=client_label(name, host.value),
         state=state,
         detail=detail,
         location=str(path),
@@ -376,7 +368,7 @@ def collect_diagnostics(
     runtime = list(connections.issues)
     next_steps = []
     if connections.needs_connection:
-        next_steps.append("tum-mcp login — sign in only to the services you select")
+        next_steps.append("Run tum-mcp login to sign in to the services that need it.")
 
     clients: list[Check] = []
     profiles = [(ClientHost.LOCAL, base)]
@@ -393,13 +385,13 @@ def collect_diagnostics(
             )
         )
     if not any(item.state in {State.CONFIGURED, State.READY} for item in clients):
-        next_steps.append("tum-mcp setup — choose a detected client or generic configuration")
+        next_steps.append("Run tum-mcp setup to connect a coding app.")
 
     runtime.append(
         Check(
             label="Python",
             state=State.READY,
-            detail=f"{platform.python_version()} · current interpreter",
+            detail=platform.python_version(),
             location=sys.executable,
         )
     )
@@ -409,24 +401,20 @@ def collect_diagnostics(
             Check(
                 label="Browsers",
                 state=State.READY if browsers else State.MISSING,
-                detail=(
-                    "Detected: "
-                    + ", ".join(browser.label for browser in browsers)
-                    + ". Launch not checked."
-                )
+                detail=", ".join(browser.label for browser in browsers)
                 if browsers
-                else "Install a Chromium browser such as Edge, Chrome, Brave or Chromium.",
+                else "Install Edge, Chrome, Brave or Chromium.",
             )
         )
         if not browsers:
-            next_steps.append("Install a Chromium browser before connecting services.")
+            next_steps.append("Install Edge, Chrome, Brave or Chromium, then run tum-mcp login.")
         if is_wsl():
             runtime.append(
                 Check(
                     label="WSL browser bridge",
                     state=State.INFO,
-                    detail="Windows sign-in through private pipes; "
-                    "the isolated runtime is prepared on first use.",
+                    detail="Windows sign-in runs through private pipes; "
+                    "its runtime is prepared on first use.",
                 )
             )
     except BrowserSetupError as error:
@@ -434,7 +422,7 @@ def collect_diagnostics(
     node = shutil.which("node")
     node_state, node_detail = (
         State.MISSING,
-        "Install Node.js 22.14+ for npm and the Codex launcher.",
+        "Install Node.js 22.14 or newer.",
     )
     if node:
         try:
@@ -446,24 +434,23 @@ def collect_diagnostics(
                 supported = tuple(int(part) for part in version.groups()) >= (22, 14, 0)
                 node_state = State.READY if supported else State.ACTION
                 node_detail = (
-                    f"{version.group().strip()} · supported npm runtime."
-                    if supported
-                    else "Upgrade Node.js to 22.14 or newer."
+                    version.group().strip() if supported else "Upgrade Node.js to 22.14 or newer."
                 )
             else:
                 node_state, node_detail = (
                     State.ACTION,
-                    "Found Node.js; version could not be verified.",
+                    "Found Node.js, but its version could not be read.",
                 )
         except (subprocess.SubprocessError, OSError, UnicodeError):
-            node_state, node_detail = State.ACTION, "Found Node.js; version check failed."
+            node_state, node_detail = State.ACTION, "Found Node.js, but its version check failed."
     runtime.append(Check(label="Node.js", state=node_state, detail=node_detail, location=node))
     github = github_check(live=live)
     runtime.append(github)
+    optional_steps = []
     if github.state in {State.MISSING, State.ACTION}:
-        next_steps.append(
-            "Optional website publishing: install GitHub CLI if needed, then "
-            "gh auth login --hostname github.com and tum-mcp doctor --live."
+        optional_steps.append(
+            "To publish a course website: install GitHub CLI if needed, "
+            "run gh auth login --hostname github.com, then tum-mcp doctor."
         )
     try:
         skills = inspect_skills()
@@ -471,7 +458,7 @@ def collect_diagnostics(
             Check(
                 label="Workflow skills",
                 state=State.READY,
-                detail=f"{len(skills)} valid definitions; host selection quality not measured.",
+                detail=count(len(skills), "skill"),
             )
         )
     except CampusError as error:
@@ -481,14 +468,16 @@ def collect_diagnostics(
             Check(
                 label="Workflow skills",
                 state=State.FAILED,
-                detail="Skill files are unreadable; review local customizations before setup.",
+                detail="Skill files are unreadable; review your customized skills, "
+                "then rerun setup.",
             )
         )
     runtime.append(
         Check(
             label="Credential storage",
             state=State.INFO,
-            detail="Encrypted files, owner-restricted key; less protection than a native keychain.",
+            detail="encrypted files with an owner-only key "
+            "(less protection than a system credential store).",
         )
     )
     from tum_mcp.extension_management import extension_rows
@@ -498,11 +487,12 @@ def collect_diagnostics(
         services=tuple(services),
         clients=tuple(clients),
         extensions=tuple(
-            Check(label=label, state=state, detail=detail)
-            for label, state, detail in extension_rows()
+            Check(label=label, state=state, detail=status)
+            for _, label, state, _, status in extension_rows()
         ),
         runtime=tuple(runtime),
         next_steps=tuple(dict.fromkeys(next_steps)),
+        optional_steps=tuple(optional_steps),
         data_directory=str(data),
         config_directory=str(config),
         live_authentication="checked_saved_local_sessions" if live else "not_checked",

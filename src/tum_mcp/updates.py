@@ -79,9 +79,7 @@ def refresh_clients() -> UpdateSummary:
             current = read_client_config(target, for_update=True)
             if current.mcpServers.get("tum") is None:
                 results.append(
-                    ClientUpdate(
-                        name, host.value, "not_registered", "No tum entry; it was not re-created."
-                    )
+                    ClientUpdate(name, host.value, "not_registered", "Not set up; left unchanged.")
                 )
                 continue
             # The adapter preflights every managed file before applying any change.
@@ -91,8 +89,7 @@ def refresh_clients() -> UpdateSummary:
                     name,
                     host.value,
                     "updated",
-                    f"Managed registration refreshed. {state.value}: {detail} "
-                    "Reload/restart the client.",
+                    detail,
                 )
             )
         except (CampusError, BrowserSetupError) as error:

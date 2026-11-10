@@ -106,12 +106,12 @@ def test_live_transport_cannot_be_reported_as_native_host_activation(
         "antigravity", home, ClientHost.LOCAL, live=True, refresh=True
     )
     assert called == [True]
-    assert state == State.CONFIGURED and "unverified" in detail
+    assert state == State.CONFIGURED and "not checked" in detail
     cached_state, cached_detail = verification.inspect(
         "antigravity", home, ClientHost.LOCAL, live=True
     )
     assert called == [True]
-    assert cached_state == State.CONFIGURED and "unverified" in cached_detail
+    assert cached_state == State.CONFIGURED and "not checked" in cached_detail
     assert "Cached client check" in cached_detail
     from tum_mcp.updates import installation_targets
 
@@ -256,6 +256,6 @@ def test_setup_shows_the_actual_client_verification_result(
 
     assert result.exit_code == 0, result.output
     assert detail in result.output
-    assert state.value in result.output
+    assert state.label in result.output
     if state != State.READY:
         assert "Updated" not in result.output

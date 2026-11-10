@@ -62,7 +62,8 @@ keyboard controls as login. Nothing is preselected; Esc cancels. Bare setup list
 installed clients, then the optional workflows that are not installed yet; Enter with
 nothing selected skips either step. Without a supported client it shows no client
 picker and says so. `setup --client NAME` registers clients only. Uninstall
-also offers **All — TUM MCP**, which removes the package and managed client setup.
+also offers **Everything (remove TUM MCP)**, which removes the package and managed
+client setup after one confirmation that lists what is removed and kept.
 Personal notes, sessions and customized files are retained. Scripts can name extensions:
 `tum-mcp uninstall lecture audio-notes --json`.
 
@@ -93,10 +94,11 @@ retains its previous configuration format; new integrations should use `doctor -
 
 Run **`tum-mcp login`**, with no arguments, in an interactive terminal:
 
-1. Services marked Action needed are preselected. Use up/down to move and Space to
+1. Services marked Needs action are preselected. Use up/down to move and Space to
    change the selection. Installed Lecture adds TUM-Live.
-2. Press Enter, choose a browser and press Enter. Choices end in `- temporary` or
-   `- saved`. Your last selected browser or profile appears first and is selected
+2. Press Enter, choose a browser and press Enter. A saved profile shows its name in
+   parentheses, e.g. `Google Chrome (TUM)`; a plain browser name opens a temporary
+   profile. Your last selected browser or profile appears first and is selected
    by default; if it is unavailable, the first available choice is selected.
 3. Complete TUM sign-in/MFA in the opened window. Only selected service tabs open.
 4. Return to the terminal for the saved-connection result.
@@ -106,11 +108,13 @@ replaces them. Esc cancels. Login verifies saved sessions when their diagnostic
 result is missing or at least 8 hours old, or the credential key has changed.
 Fresh results are reused. `tum-mcp doctor` checks again.
 
-Run `tum-mcp logout` to choose saved connections to remove. It refreshes stale
-verification in the same way, but preselects nothing. Removing a connection clears
+Run `tum-mcp logout` to choose saved connections to remove. Nothing is preselected
+and no network check runs. Removing a connection clears
 its local credentials, retaining settings, TUMonline permissions, downloads and
 other connections. Remote sessions are not revoked. The explicit
-`tum-mcp logout PROVIDER ACCOUNT_ID` form remains available for scripts.
+`tum-mcp logout SERVICE [ACCOUNT]` form works without a terminal, e.g.
+`tum-mcp logout moodle`; ACCOUNT is needed only when several accounts of that
+service are saved.
 
 Campus services use browser sign-in and encrypted session storage. No API key is
 required. Temporary login uses a fresh profile.
@@ -136,7 +140,7 @@ The managed-profile lock prevents simultaneous login or removal while it is open
 Removing a profile deletes its browser data and encrypted session copy. Interactive logout
 offers to clear the selected services' sign-in from available saved profiles too,
 including shared TUM sign-in. Otherwise profiles remain signed in and can reconnect.
-Explicit `logout PROVIDER ACCOUNT_ID` retains browser profiles. Uninstalling with
+Explicit `logout SERVICE [ACCOUNT]` retains browser profiles. Uninstalling with
 `--all --forget-credentials` removes managed profiles and TUM MCP's saved sessions.
 Other browser profiles are never changed.
 
@@ -160,7 +164,7 @@ lectures, student slides and released exercise statements while the service gran
 An account ID identifies a saved service connection; it is not your TUM login.
 TUMonline additionally has a local policy: `tum-mcp manage tumonline --show`
 shows it, `tum-mcp manage tumonline` changes its permissions,
-and `tum-mcp manage tumonline --disconnect` removes its saved local session.
+and `tum-mcp logout tumonline` removes its saved local session.
 Use `--account ACCOUNT_ID` if more than one TUMonline account is configured.
 Study names, public course metadata and public course curriculum positions are available by default;
 grades and progress, exams and fee status need your permission first, and the full
@@ -215,7 +219,7 @@ browser discovery still requires functioning interop.
   GitHub CLI authentication. `--live` remains an explicit way to request this default.
 - `tum-mcp doctor --static` uses cached verification and local checks. Successful
   verification remains current for 8 hours. After that, the session appears as
-  **Not verified** until a fresh check. `--json` provides structured output with
+  **Not checked** until a fresh check. `--json` provides structured output with
   either mode.
   Setup also installs course completion hooks for Codex, Claude Code, Cursor and
   Antigravity, preserves unrelated hooks, and checks the owned MCP transport.
@@ -286,7 +290,7 @@ the npm package and all managed registrations:
 
 ```sh
 tum-mcp uninstall
-# Choose All to remove TUM MCP and its managed client setup.
+# Choose Everything to remove TUM MCP and its managed client setup.
 ```
 
 Custom edits and user-added files are preserved. Codex's local source/catalog
@@ -334,7 +338,7 @@ Doctor never installs a client CLI, signs in, enables a disabled hook, or writes
 trust entries. Native CLIs may maintain their own normal metadata and cache logs
 while performing these health checks. `--static` launches none of these checks.
 
-A working transport alone is reported as **Not verified** when native host loading
+A working transport alone is reported as **Not checked** when native host loading
 cannot be checked, including an unavailable Antigravity CLI. WSL can inspect Windows
 registration files; run doctor on the Windows host for its native live result.
 These global registration checks do not prove workspace-specific permissions or

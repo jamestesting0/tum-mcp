@@ -25,7 +25,9 @@ from tum_mcp.lecture_processing.receipts import (
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 runtime_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
-app.add_typer(runtime_app, name="runtime")
+app.add_typer(
+    runtime_app, name="runtime", help="Check or install local speech recognition for lectures."
+)
 
 
 @runtime_app.command(name="status")

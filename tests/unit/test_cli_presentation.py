@@ -60,7 +60,10 @@ def test_management_output_has_human_and_parseable_json_forms(command: list[str]
     assert "\x1b[" not in machine.output
 
 
-def test_unverified_dot_is_blue_while_label_uses_the_terminal_foreground() -> None:
+@pytest.mark.parametrize("state", list(State))
+def test_status_symbol_carries_the_color_and_label_uses_the_terminal_foreground(
+    state: State,
+) -> None:
     stream = io.StringIO()
     console = Console(
         file=stream,
@@ -69,8 +72,17 @@ def test_unverified_dot_is_blue_while_label_uses_the_terminal_foreground() -> No
         color_system="standard",
         theme=Theme(STYLES),
     )
-    status_rows(console, [("Synthetic service", State.CONFIGURED, "Session saved.")])
-    assert re.search(r"\x1b\[34m● \x1b\[0mNot verified", stream.getvalue())
+    status_rows(console, [("Synthetic service", state, "Session saved.")])
+    pattern = rf"\x1b\[[0-9;]*m{re.escape(state.symbol)} \x1b\[0m{re.escape(state.label)}"
+    assert re.search(pattern, stream.getvalue())
+
+
+def test_npm_bootstrap_help_matches_the_python_cli() -> None:
+    from tum_mcp.commands.help import launcher_help
+
+    shipped = Path(__file__).parents[2] / "npm" / "help.json"
+    # Regenerate with: uv run python scripts/export_launcher_help.py
+    assert json.loads(shipped.read_text(encoding="utf-8")) == launcher_help(app)
 
 
 def test_removal_without_names_in_a_pipe_cannot_change_extensions() -> None:
@@ -126,10 +138,11 @@ def test_requested_credential_cleanup_cannot_select_an_individual_extension(
     monkeypatch.setenv("TUM_MCP_NPM_LAUNCHER", "1")
 
     def choose(title, choices, **kwargs):
-        assert {value for value, _, _, enabled in choices if enabled} == {"all"}
+        assert {value for value, _, _, enabled in choices if enabled is True} == {"all"}
         return ("all",)
 
     monkeypatch.setattr("tum_mcp.extension_management.select_many", choose)
+    monkeypatch.setattr("tum_mcp.extension_management.confirm_full_removal", lambda **kwargs: True)
     result = runner.invoke(app, ["uninstall", "--forget-credentials"])
     assert result.exit_code == 20
     assert lecture_enabled() and audio_notes_enabled()

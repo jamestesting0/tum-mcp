@@ -11,9 +11,11 @@ from prompt_toolkit.output import ColorDepth
 
 from tum_mcp.commands.terminal_input import numbered_input, with_escape
 from tum_mcp.commands.ui import (
+    MULTI_HINT,
     State,
+    fit,
     heading,
-    selection_label,
+    hint,
     selector_style,
     status_rows,
     terminal_console,
@@ -40,7 +42,7 @@ CATEGORIES: Final = (
     ),
     (
         Scope.ADMISSION,
-        LABELS[Scope.ADMISSION],
+        "Semester fee",
         "Current semester fee invoice, payment deadline and bookings.",
     ),
 )
@@ -53,12 +55,13 @@ def interactive_terminal() -> bool:
 def choose_scopes(current: frozenset[Scope]) -> frozenset[Scope] | None:
     console = terminal_console()
     if os.environ.get("TERM") == "dumb":
-        console.print("TUMonline permissions")
-        for index, (scope, label, _) in enumerate(CATEGORIES, 1):
-            console.print(f"{index}. {label} ({'allowed' if scope in current else 'denied'})")
+        console.print("What may your agent read from TUMonline?")
+        for index, (scope, label, detail) in enumerate(CATEGORIES, 1):
+            state = "on" if scope in current else "off"
+            console.print(f"{index}. {label} ({state}): {detail}", markup=False)
         console.print(
-            "Enter the numbers to allow, separated by commas, none to deny all, "
-            "or press Enter to keep the current settings. Esc cancels."
+            "Enter the numbers to allow, separated by commas, or none · "
+            "Enter keeps the current choice · Esc cancels"
         )
         numbers = {str(index): scope for index, (scope, _, _) in enumerate(CATEGORIES, 1)}
         while True:
@@ -72,19 +75,20 @@ def choose_scopes(current: frozenset[Scope]) -> frozenset[Scope] | None:
                 return frozenset(numbers[part] for part in chosen)
             console.print("Choose numbers from the list, none, or Enter.")
 
-    console.print("Up/down: move · Space: select")
-    console.print("Enter: save · Esc: cancel")
-    console.print()
+    hint(console, MULTI_HINT.replace("confirm", "save"))
+    wide = console.width >= 70
     selected = with_escape(
         questionary.checkbox(
-            "TUMonline permissions",
+            "What may your agent read from TUMonline?",
             choices=[
                 questionary.Choice(
-                    selection_label(label, State.ENABLED if scope in current else State.DISABLED),
+                    [("", f"{label:<21}"), ("class:muted", fit(detail, console, 21))]
+                    if wide
+                    else [("", label)],
                     value=scope.value,
                     checked=scope in current,
                 )
-                for scope, label, _ in CATEGORIES
+                for scope, label, detail in CATEGORIES
             ],
             qmark="",
             pointer=">",
@@ -98,16 +102,22 @@ def choose_scopes(current: frozenset[Scope]) -> frozenset[Scope] | None:
 
 @app.command("tumonline")
 def tumonline(
-    account: Annotated[str | None, typer.Option("--account")] = None,
+    account: Annotated[
+        str | None,
+        typer.Option(
+            "--account",
+            metavar="ID",
+            help="Needed only when several TUMonline accounts are saved.",
+            show_default=False,
+        ),
+    ] = None,
     show: Annotated[bool, typer.Option("--show", help="Show configured permissions.")] = False,
     json_output: Annotated[
         bool, typer.Option("--json", help="Print machine-readable permissions without editing.")
     ] = False,
-    disconnect: Annotated[
-        bool, typer.Option("--disconnect", help="Remove the local session.")
-    ] = False,
+    disconnect: Annotated[bool, typer.Option("--disconnect", hidden=True)] = False,
 ) -> None:
-    """Inspect TUMonline permissions and implementation availability."""
+    """Choose what your agent may read from TUMonline."""
     store = PolicyStore()
     if disconnect and (show or json_output):
         raise CampusError(Code.ACTION_REQUIRED, "Choose --show or --disconnect, not both.")
@@ -122,16 +132,12 @@ def tumonline(
         except ValidationError:
             raise CampusError(Code.SCOPE_DENIED, "Invalid TUMonline account identifier.") from None
         remove_session(target)
-        typer.echo("Local TUMonline session removed. Remote sessions are not revoked.")
+        typer.echo("Removed TUMonline from this computer. Website sessions are not revoked.")
         return
     accounts = store.accounts()
     console = terminal_console()
     if not json_output:
-        heading(
-            console,
-            "TUMonline permissions",
-            "Control the TUMonline reads available to your coding clients.",
-        )
+        heading(console, "TUMonline permissions")
     if not accounts:
         if json_output:
             typer.echo(json.dumps({"accounts": []}))
@@ -142,14 +148,19 @@ def tumonline(
                     (
                         "TUMonline",
                         State.UNCONFIGURED,
-                        "No TUMonline policy is configured. Run tum-mcp login to sign in.",
+                        "Run tum-mcp login and choose TUMonline.",
                     )
                 ],
             )
         return
     if account is None:
         if len(accounts) != 1:
-            raise CampusError(Code.ACTION_REQUIRED, "Choose an account with --account.")
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                "Several TUMonline accounts are saved; add --account with one of: "
+                + ", ".join(accounts)
+                + ".",
+            )
         account = accounts[0]
     policy = store.read(account)
     if disconnect:
@@ -157,12 +168,13 @@ def tumonline(
         from tum_mcp.tumonline.onboarding import disconnect as remove_session
 
         remove_session(AccountRef(account_id=account))
-        typer.echo("Local TUMonline session removed. Remote sessions are not revoked.")
+        typer.echo("Removed TUMonline from this computer. Website sessions are not revoked.")
         return
-    context = (
-        f"Policy account: {account}",
-        "These permissions apply to all MCP clients sharing this configuration.",
-        "Other providers and local programs are outside this policy's control.",
+    if len(accounts) > 1:
+        hint(console, f"Account {account}")
+    scope_note = (
+        "Applies to every coding app on this computer; "
+        "it does not limit other services or programs."
     )
     if show or json_output:
         if json_output:
@@ -175,17 +187,13 @@ def tumonline(
                 for scope, label, detail in CATEGORIES
             ],
         )
-        console.print("Edit permissions: tum-mcp manage tumonline", markup=False)
-        console.print(context[1], markup=False)
-        console.print(context[2], markup=False)
+        hint(console, scope_note)
+        hint(console, "Change them with tum-mcp manage tumonline")
         return
     if not interactive_terminal():
         raise CampusError(Code.ACTION_REQUIRED, "Run this command in an interactive terminal.")
-    console = terminal_console()
-    for line in context[1:]:
-        console.print(line, markup=False)
-    for _, label, detail in CATEGORIES:
-        console.print(f"{label}: {detail}", markup=False)
+    hint(console, scope_note)
+    console.print()
     try:
         selected = choose_scopes(policy.allowed)
     except (EOFError, KeyboardInterrupt):
@@ -194,4 +202,5 @@ def tumonline(
         typer.echo("Cancelled. Permissions were not changed.")
         return
     store.save_scopes(policy, selected)
-    typer.echo("Saved.")
+    allowed = [label for scope, label, _ in CATEGORIES if scope in selected]
+    typer.echo("Saved. Allowed: " + (", ".join(allowed) if allowed else "nothing") + ".")

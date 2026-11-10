@@ -26,5 +26,5 @@ def test_last_browser_or_profile_is_selected_by_enter(
     assert code == 0, output
     assert "BROWSER=second" in output
     if saved:
-        assert "Second browser - saved (Study)" in output
+        assert "Second browser (Study)" in output
     assert "PROFILE=" + (selected.profile.id if saved else "temporary") in output

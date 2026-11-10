@@ -27,7 +27,7 @@ from tum_mcp.clients.installs import (
 )
 from tum_mcp.clients.rendering import rendered_client
 from tum_mcp.clients.rendering import same_tree as same_tree
-from tum_mcp.commands.ui import State
+from tum_mcp.commands.ui import State, client_label
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extension_selection import ExtensionSelection
 from tum_mcp.settings import config_dir, data_path
@@ -60,8 +60,7 @@ def install_client(
 
             state, messages = setup_check(selected, base, host)
         if announce:
-            print(f"{selected.title()} registration saved for this runtime.")
-            print(f"{state.value}: {messages}")
+            print(f"{client_label(selected)}: {state.label}. {messages}")
         return state, messages
 
 

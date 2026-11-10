@@ -60,8 +60,7 @@ def run_manager(
                 ready = (
                     b"Permissions: " in plain
                     if terminal == "dumb"
-                    # The last row appears once in the category notes and once in the selector.
-                    else (plain.count(b"Admission") >= 2 and b"\x1b[?25l" in captured)
+                    else (b"Semester fee" in plain and b"\x1b[?25l" in captured)
                 )
                 if not sent and ready:
                     if destination := os.environ.get("TUM_MCP_TERMINAL_QA"):
@@ -147,7 +146,7 @@ def test_basic_terminal_accepts_numbered_selection_revoke_or_keep(
     policies.create(ACCOUNT)
     code, output = run_manager(tmp_path, keys, terminal="dumb")
     assert code == 0, output
-    assert "Exams (denied)" in output and "\x1b[" not in output
+    assert "Exams (off)" in output and "\x1b[" not in output
     assert policies.read(ACCOUNT).allowed == allowed
 
 

@@ -289,7 +289,7 @@ def test_login_refreshes_stale_verification_and_preselects_rejected_sessions(
 
 
 @pytest.mark.parametrize("cancel", [False, True])
-def test_logout_verifies_saved_accounts_and_removes_only_selected_credentials(
+def test_logout_removes_only_selected_credentials_without_status_checks(
     saved_service: tuple[ServiceChoice, Path, Path],
     monkeypatch: pytest.MonkeyPatch,
     cancel: bool,
@@ -309,7 +309,7 @@ def test_logout_verifies_saved_accounts_and_removes_only_selected_credentials(
 
     def select(title, choices, **kwargs):
         target = next(row for row in choices if row[0].service == service)
-        assert target[2] == State.READY
+        assert target[2] is None
         assert not kwargs.get("defaults")
         return None if cancel else (target[0],)
 
@@ -596,5 +596,5 @@ def test_wsl_doctor_reports_both_client_profiles_without_creating_state(
     assert clients["Cursor (Windows)"].state == State.ACTION
     assert "ownership receipt" in clients["Cursor (Windows)"].detail
     assert clients["Cursor"].state == State.UNCONFIGURED
-    assert "--host windows" in clients["Claude (Windows)"].detail
+    assert "--host windows" in clients["Claude Code (Windows)"].detail
     assert not (tmp_path / "data").exists()

@@ -206,7 +206,7 @@ def summary() -> str:
     if missing:
         return "Render prerequisites needed: " + "; ".join(commands)
     if python_path().is_file():
-        return "Render runtime present; tum-mcp video-notes runtime status verifies it."
+        return "Render runtime installed; check it with tum-mcp video-notes runtime status."
     return "Render runtime installs on first use (about 320 MB)."
 
 

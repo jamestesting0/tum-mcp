@@ -23,6 +23,7 @@ from tum_mcp.clients.installs import (
 )
 from tum_mcp.clients.legacy import legacy_installation
 from tum_mcp.clients.rendering import rendered_client
+from tum_mcp.commands.ui import client_label
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import config_dir
 
@@ -43,7 +44,7 @@ def _uninstall_client(name: ClientName, home: Path | None, *, host: ClientHost) 
     entry = config.mcpServers.get("tum")
     previous = load_receipt(name, host, base)
     if previous is None and entry is None:
-        print(f"{name.title()}: no managed registration to remove.")
+        print(f"{client_label(name, host.value)}: not set up; nothing to remove.")
         return False
     if previous is None:
         launch = client_launch(host)
@@ -65,7 +66,11 @@ def _uninstall_client(name: ClientName, home: Path | None, *, host: ClientHost) 
                 catalog=catalog,
             )
     if previous is None or entry is not None and entry != previous.server:
-        raise CampusError(Code.WORKSPACE_CONFLICT, "A customized MCP configuration was preserved.")
+        raise CampusError(
+            Code.WORKSPACE_CONFLICT,
+            f"The tum entry in {target} is customized, so it was kept. "
+            "Remove it there if you no longer need it.",
+        )
     writes = list(managed_writes(base, {}, previous))
     writes.extend(hook_config.writes(name, base, {}, previous.hooks))
     config.mcpServers.pop("tum", None)
@@ -101,8 +106,7 @@ def _uninstall_client(name: ClientName, home: Path | None, *, host: ClientHost) 
     writes.append(Write(record, record.read_bytes() if record.is_file() else None, None))
     commit_writes(tuple(writes))
     prune_removed_folders(base, tuple(previous.files))
-    print(f"{name.title()}: managed registration and unchanged skill files removed.")
+    print(f"{client_label(name, host.value)}: registration and unchanged skill files removed.")
     if name == "codex":
-        print("Remove/disable the cached TUM MCP plugin in Codex Plugins, then restart.")
-    print("Campus sessions, settings, downloads and assignment work were preserved.")
+        print("Also disable the cached TUM MCP plugin in Codex Plugins, then restart Codex.")
     return True

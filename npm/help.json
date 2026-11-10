@@ -1,0 +1,170 @@
+{
+  "description": "Campus tools and local study workflows.",
+  "usage": "tum-mcp [OPTIONS] COMMAND [ARGS]...",
+  "options": [
+    [
+      "--version",
+      "Show the installed version."
+    ],
+    [
+      "-h, --help",
+      "Show this help."
+    ]
+  ],
+  "groups": {
+    "Get started": [
+      [
+        "setup",
+        "Connect TUM MCP to your coding apps and choose optional workflows."
+      ],
+      [
+        "login",
+        "Sign in to the campus services you choose."
+      ]
+    ],
+    "Manage": [
+      [
+        "doctor",
+        "Check connections, workflows, coding apps and the runtime."
+      ],
+      [
+        "install",
+        "Add optional workflows."
+      ],
+      [
+        "uninstall",
+        "Remove workflows, a coding-app registration, or TUM MCP itself."
+      ],
+      [
+        "manage",
+        "Manage TUMonline permissions and saved browser profiles."
+      ],
+      [
+        "update",
+        "Update TUM MCP and refresh your coding apps."
+      ],
+      [
+        "logout",
+        "Remove saved campus connections from this computer."
+      ],
+      [
+        "skills",
+        "List, inspect and customize workflow skills."
+      ],
+      [
+        "version",
+        "Show the installed version."
+      ]
+    ],
+    "Used by your coding agent": [
+      [
+        "study",
+        "Prepare, preview and publish a course app."
+      ],
+      [
+        "review",
+        "Review prepared course content in gated rounds."
+      ],
+      [
+        "lecture",
+        "Prepare lecture recordings (Lecture workflow)."
+      ],
+      [
+        "video-notes",
+        "Render and maintain explainer videos (Video Notes workflow)."
+      ],
+      [
+        "audio-notes",
+        "Assemble and publish revision audio (Audio Notes workflow)."
+      ],
+      [
+        "discover",
+        "List the courses or channels an account can read (JSON)."
+      ],
+      [
+        "serve",
+        "Run the MCP server over stdio (started by coding apps)."
+      ]
+    ]
+  },
+  "commands": {
+    "setup": {
+      "description": "Connect TUM MCP to your coding apps and choose optional workflows.",
+      "usage": "tum-mcp setup [OPTIONS]",
+      "arguments": [],
+      "options": [
+        [
+          "--client NAME",
+          "codex, claude, cursor, antigravity or generic (writes mcp.json); repeatable."
+        ],
+        [
+          "--host <local|windows>",
+          "Use windows to set up a Windows coding app from WSL.  [default: local]"
+        ]
+      ]
+    },
+    "install": {
+      "description": "Add optional workflows.",
+      "usage": "tum-mcp install [OPTIONS] [WORKFLOW]...",
+      "arguments": [
+        [
+          "[WORKFLOW]...",
+          "lecture, audio-notes, video-notes or course-memory; omit to choose."
+        ]
+      ],
+      "options": [
+        [
+          "--asr / --no-asr",
+          "Install local speech-to-text for lectures without captions; models download when first used."
+        ],
+        [
+          "--json",
+          "Print machine-readable installation results; requires names."
+        ]
+      ]
+    },
+    "update": {
+      "description": "Update TUM MCP and refresh your coding apps.",
+      "usage": "tum-mcp update [OPTIONS]",
+      "arguments": [],
+      "options": [
+        [
+          "--local",
+          "Refresh this version without checking npm for a newer release."
+        ]
+      ]
+    },
+    "uninstall": {
+      "description": "Remove workflows, a coding-app registration, or TUM MCP itself.",
+      "usage": "tum-mcp uninstall [OPTIONS] [WORKFLOW]...",
+      "arguments": [
+        [
+          "[WORKFLOW]...",
+          "lecture, audio-notes, video-notes or course-memory; omit to choose."
+        ]
+      ],
+      "options": [
+        [
+          "--client NAME",
+          "Remove only this coding app's registration (codex, claude, cursor, antigravity or generic)."
+        ],
+        [
+          "--host <local|windows>",
+          "Use windows for a Windows coding app set up from WSL.  [default: local]"
+        ],
+        [
+          "--purge-runtime",
+          "With Everything: also remove downloaded runtimes. Close coding apps first."
+        ],
+        [
+          "--json",
+          "Print machine-readable extension results."
+        ],
+        [
+          "--forget-credentials",
+          "With Everything: also forget saved campus sign-ins and Git tokens (system credential store entries stay)."
+        ]
+      ]
+    }
+  }
+}

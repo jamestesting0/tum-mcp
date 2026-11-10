@@ -119,7 +119,7 @@ tum-mcp --help
 tum-mcp study build --help
 ```
 
-`login` takes no arguments or connection options. Services marked Action needed
+`login` takes no arguments or connection options. Services marked Needs action
 are preselected; other services remain opt-in. Move with up/down, toggle
 services with Space, and press Enter. Missing, stale (8-hour) or invalidated
 verification triggers a live identity check before the selector opens. Fresh
@@ -132,10 +132,11 @@ Sign-in/MFA stays in the browser. `TERM=dumb` uses numbered prompts: Enter accep
 the displayed defaults, and entering numbers replaces them. Esc
 cancels and retains completed connections.
 
-`logout` without arguments opens a saved-account selector with the same session
-verification. Nothing is preselected. It removes only the chosen local sessions;
+`logout` without arguments opens a saved-account selector without a network check.
+Nothing is preselected. It removes only the chosen local sessions;
 settings, permissions, downloads and other connections remain. The explicit
-`logout PROVIDER ACCOUNT_ID` form does not need a terminal or a network check.
+`logout SERVICE [ACCOUNT]` form does not need a terminal; ACCOUNT is needed only
+when several accounts of the service are saved.
 Both Esc and Ctrl+C cancel selectors; their keyboard guides show Esc.
 
 Detection covers Chrome, Edge, Brave, Chromium, Vivaldi, Opera and selected
@@ -197,7 +198,7 @@ Three personal categories are off until you allow them:
 | --- | --- |
 | Grades and progress | Your achievements (course, semester, date, grade, passed, credits, type, status, study) and the module and exam progress bars from My Studies. |
 | Exams | Exams you are registered for, and exam offers searched by course title or number, with dates, rooms, registration and deregistration windows and your registration state. Examiner names are dropped. |
-| Admission | The current semester's fee invoice, payment deadline, bookings and outstanding amount. The account holder and refund forms are dropped. |
+| Semester fee | The current semester's fee invoice, payment deadline, bookings and outstanding amount. The account holder and refund forms are dropped. |
 
 The fee reader parses TUMonline's English fee page because it has no JSON
 endpoint; a changed page fails with an error instead of guessing. Account
@@ -210,7 +211,7 @@ Run `tum-mcp manage tumonline --show` to inspect the policy and
 permissions with Space and save with Enter. On basic terminals, the command offers
 a numbered text prompt instead: enter the numbers to allow, separated by commas.
 When multiple accounts exist, add `--account ACCOUNT_ID`. Reconnecting preserves
-the policy. `tum-mcp manage tumonline --disconnect` removes the local TUMonline
+the policy. `tum-mcp logout tumonline` removes the local TUMonline
 credential and retains the policy; it does not revoke remote sessions. An expired
 session requires `tum-mcp login` again. If the policy is missing or corrupt, use
 `tum-mcp manage tumonline --account ACCOUNT_ID --disconnect` to remove that saved
@@ -253,7 +254,7 @@ The tools resolve one exact mapping; ambiguity never grants broader access.
 campus sessions, and checks optional GitHub CLI authentication. Use `--static`
 for local checks and cached session status. Successful campus verification is saved
 locally with a timestamp and reused by local status readers and the `login` selector
-for 8 hours. After expiry, the session appears as **Not verified** until a fresh check.
+for 8 hours. After expiry, the session appears as **Not checked** until a fresh check.
 The saved session remains available for that check.
 A fresh live check replaces the previous result, including failures. Replacing
 credentials or logging out invalidates their saved verification. Only the result,

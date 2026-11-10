@@ -23,6 +23,7 @@ def run_removal(
     mode: str = "uninstall",
     launcher: bool = False,
     workflows: bytes = b"",
+    then_on: bytes = b"Add optional workflows",
 ) -> tuple[int, str, dict[str, bool]]:
     import fcntl
     import pty
@@ -107,7 +108,7 @@ def run_removal(
                     b"Selection: " in plain
                     if terminal == "dumb"
                     else (
-                        {"setup": b"Generic", "login": b"TUMonline"}.get(mode, b"Audio Notes")
+                        {"setup": b"Other app", "login": b"TUMonline"}.get(mode, b"Audio Notes")
                         in plain
                         and b"\x1b[?25l" in captured
                     )
@@ -123,12 +124,12 @@ def run_removal(
                     os.write(master, keys)
                     sent = True
                     sent_at = len(captured)
-                # Setup's second picker, for optional workflows, opens after the clients.
+                # A second prompt (setup's workflows, removal's confirmation) follows the first.
                 later = bytes(captured[sent_at:])
                 if (
                     sent
                     and workflows
-                    and b"Optional workflows" in re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", later)
+                    and then_on in re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", later)
                     and b"\x1b[?25l" in later
                 ):
                     os.write(master, workflows)
@@ -164,7 +165,7 @@ def test_keyboard_removal_changes_only_the_checked_extension(tmp_path: Path, col
     code, output, state = run_removal(tmp_path, b" \r", columns=columns)
     assert code == 0, output
     assert state == {"lecture": False, "audio-notes": True}
-    assert "●" in output
+    assert "Removed." in output
 
 
 def test_keyboard_removal_can_disable_both_extensions(tmp_path: Path) -> None:
@@ -213,14 +214,29 @@ def test_no_optional_extensions_still_offers_full_package_removal(tmp_path: Path
     code, output, state = run_removal(tmp_path, b"\x03", enabled=())
     assert code == 130, output
     assert state == {"lecture": False, "audio-notes": False}
-    assert "All" in output
+    assert "Everything (remove TUM MCP)" in output
 
 
 def test_all_selection_hands_off_to_the_launcher_without_partial_extension_changes(
     tmp_path: Path,
 ) -> None:
-    code, output, state = run_removal(tmp_path, b"\x1b[B\x1b[B \r", launcher=True)
+    code, output, state = run_removal(
+        tmp_path,
+        b"\x1b[B\x1b[B \r",
+        launcher=True,
+        workflows=b"\x1b[B\r",
+        then_on=b"Remove TUM MCP?",
+    )
     assert code == 20, output
+    assert "Keeps your campus sign-ins" in output
+    assert state == {"lecture": True, "audio-notes": True}
+
+
+def test_cancelled_full_removal_confirmation_changes_nothing(tmp_path: Path) -> None:
+    code, output, state = run_removal(
+        tmp_path, b"\x1b[B\x1b[B \r", launcher=True, workflows=b"\r", then_on=b"Remove TUM MCP?"
+    )
+    assert code == 130, output
     assert state == {"lecture": True, "audio-notes": True}
 
 

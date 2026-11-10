@@ -81,8 +81,8 @@ def test_setup_without_a_supported_client_opens_no_client_picker(
     monkeypatch.setattr(ui, "select_many", lambda title, *_, **__: titles.append(title) or ())
     result = CliRunner().invoke(app, ["setup"])
     assert result.exit_code == 0, result.output
-    assert titles == ["Optional workflows"]
-    assert "No supported coding client was found" in result.output
+    assert titles == ["Add optional workflows? (Enter skips)"]
+    assert "No supported coding app was found" in result.output
 
 
 def test_configured_client_is_shown_even_without_installation_evidence(profile: Path) -> None:

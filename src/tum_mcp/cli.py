@@ -13,7 +13,7 @@ import typer
 from tum_mcp import __version__
 from tum_mcp.commands.discovery import discover
 from tum_mcp.commands.help import configure_help
-from tum_mcp.credentials import Vault
+from tum_mcp.connect import ServiceChoice
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import (
     audio_notes_enabled,
@@ -23,18 +23,16 @@ from tum_mcp.extensions import (
 )
 from tum_mcp.moodle.browsers import BrowserSetupError
 from tum_mcp.moodle.errors import MoodleError
-from tum_mcp.settings import (
-    Provider,
-    find_account,
-    preferences,
-)
+from tum_mcp.settings import preferences
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False, add_completion=False)
 skills_app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
-app.add_typer(skills_app, name="skills", help="Inspect and validate workflow skills.")
+app.add_typer(skills_app, name="skills", help="List, inspect and customize workflow skills.")
 from tum_mcp.tumonline.manage import app as manage_app  # noqa: E402
 
-app.add_typer(manage_app, name="manage", help="Manage provider permissions and saved browsers.")
+app.add_typer(
+    manage_app, name="manage", help="Manage TUMonline permissions and saved browser profiles."
+)
 from tum_mcp.commands.browser_profiles import manage_browsers  # noqa: E402
 
 manage_app.command("browsers")(manage_browsers)
@@ -49,33 +47,51 @@ from tum_mcp.course.lecture.cli import app as lecture_app  # noqa: E402
 app.add_typer(
     lecture_app,
     name="lecture",
-    help="Prepare recording evidence with the optional Lecture extension.",
+    help="Prepare lecture recordings (Lecture workflow).",
 )
 from tum_mcp.course.media.video_cli import app as video_app  # noqa: E402
 
 app.add_typer(
     video_app,
     name="video-notes",
-    help="Render and maintain videos with the optional Video Notes extension.",
+    help="Render and maintain explainer videos (Video Notes workflow).",
 )
 from tum_mcp.course.media.audio_cli import app as audio_app  # noqa: E402
 
 app.add_typer(
     audio_app,
     name="audio-notes",
-    help="Assemble and publish revision audio with the optional Audio Notes extension.",
+    help="Assemble and publish revision audio (Audio Notes workflow).",
 )
+
+
+def print_version(requested: bool) -> None:
+    if requested:
+        typer.echo(__version__)
+        raise typer.Exit()
+
+
+@app.callback()
+def root(
+    _version: Annotated[
+        bool,
+        typer.Option(
+            "--version", callback=print_version, is_eager=True, help="Show the installed version."
+        ),
+    ] = False,
+) -> None:
+    """Campus tools and local study workflows."""
 
 
 @app.command()
 def version() -> None:
-    """Show the campus integration version."""
+    """Show the installed version."""
     typer.echo(__version__)
 
 
 @app.command()
 def serve() -> None:
-    """Run the combined campus/Moodle MCP server over stdio."""
+    """Run the MCP server over stdio (started by coding apps)."""
     os.environ["TUM_MOODLE_SESSION_STORAGE"] = "file"
     from tum_mcp.server import server
 
@@ -127,57 +143,48 @@ def status(
 
 @app.command("login")
 def connect() -> None:
-    """Choose services and complete sign-in."""
+    """Sign in to the campus services you choose."""
     from rich.text import Text
 
     from tum_mcp.commands.browser_profiles import choose_login_browser
-    from tum_mcp.commands.ui import heading, select_services, terminal_console
-    from tum_mcp.connect import ConnectionResult, ServiceChoice, connect_services
+    from tum_mcp.commands.ui import State, heading, hint, select_services, terminal_console
+    from tum_mcp.connect import SIGN_IN_MINUTES, ConnectionResult, connect_services
     from tum_mcp.moodle.browsers import discover_browsers
 
     console = terminal_console()
     if not sys.stdin.isatty():
-        raise CampusError(Code.ACTION_REQUIRED, "Run tum-mcp login in your interactive terminal.")
-    heading(console, "Login", "Choose services to sign in to. Only selected providers will open.")
+        raise CampusError(Code.ACTION_REQUIRED, "Run tum-mcp login in an interactive terminal.")
+    heading(console, "Login")
     try:
         selected = select_services()
         if not selected:
             console.print("No services selected. Nothing was changed.")
             return
-        if ServiceChoice.TUMONLINE in selected:
-            console.print(
-                "TUMonline defaults to study names, public courses and curriculum positions. "
-                "Grades and progress, exams and fee status stay off until you allow them."
-            )
-            console.print(
-                "All MCP clients sharing this configuration use the same permission; "
-                "manage it with tum-mcp manage tumonline."
-            )
         browser = choose_login_browser(discover_browsers())
     except (KeyboardInterrupt, EOFError):
         console.print("Cancelled. No browser was opened.")
         raise typer.Exit(130) from None
-    console.print(Text(f"Browser: {browser.login_label}"))
-    console.print(Text("Opening " + ", ".join(value.label for value in selected) + "."))
-    console.print("Complete TUM sign-in/MFA in the browser window.")
+    names = ", ".join(value.label for value in selected)
+    console.print()
+    console.print(Text(f"Opening {names} in {browser.login_label}."))
+    console.print("Sign in there and complete MFA.")
     if browser.windows_host:
-        console.print("Preparing the private Windows browser driver on first use.")
-        console.print("Sessions stay encrypted in WSL; no browser debugging port is opened.")
-    console.print("Campus sessions are encrypted locally with an owner-restricted key file.")
+        console.print("Preparing the private Windows browser driver (first use only).")
+    hint(console, f"Waiting up to {SIGN_IN_MINUTES} minutes. Press Ctrl+C to stop waiting.")
+    hint(console, "Completed connections are saved.")
     console.print()
     pending = dict.fromkeys(selected)
 
     def connected(result: ConnectionResult) -> None:
         del pending[result.service]
         console.print(
-            Text.assemble(("● ", "ready"), (f"Connected  {result.service.label}", "bold"))
+            Text.assemble((State.READY.symbol + " ", "ready"), f"{result.service.label} connected")
         )
-        if result.account is not None:
-            console.print(Text(f"Account ID: {result.account.id}"))
+        if result.service == ServiceChoice.TUMONLINE:
+            hint(console, "  Choose what your agent may read: tum-mcp manage tumonline")
         if pending:
             remaining = ", ".join(service.label for service in pending)
-            console.print(Text(f"Waiting for {remaining} sign-in."))
-            console.print("Press Ctrl+C to stop waiting. Completed connections are saved.")
+            hint(console, f"  Waiting for {remaining}")
 
     try:
         results = connect_services(selected, on_connected=connected, browser=browser)
@@ -187,10 +194,9 @@ def connect() -> None:
     console.print()
     if results:
         console.print(
-            f"Saved {len(results)} campus connection(s). "
-            "Read access also depends on local settings."
+            "Next: ask your coding agent about your courses, "
+            "for example \u201cWhat is due this week?\u201d"
         )
-    console.print("Your agent can discover courses and channels, then read the relevant material.")
 
 
 app.command("connect", hidden=True)(connect)
@@ -201,19 +207,30 @@ app.command()(discover)
 
 @app.command()
 def logout(
-    provider: Annotated[Provider | None, typer.Argument()] = None,
-    account_id: Annotated[str | None, typer.Argument()] = None,
+    service: Annotated[
+        ServiceChoice | None,
+        typer.Argument(
+            metavar="[SERVICE]",
+            help="moodle, artemis, zulip, tumonline or tum_live; omit to choose.",
+            show_default=False,
+        ),
+    ] = None,
+    account_id: Annotated[
+        str | None,
+        typer.Argument(
+            metavar="[ACCOUNT]",
+            help="Needed only when several accounts of the service are saved.",
+            show_default=False,
+        ),
+    ] = None,
 ) -> None:
-    """Choose local connections to remove, or name one provider and account."""
-    if provider is None and account_id is None:
-        from tum_mcp.logout import choose_logout
+    """Remove saved campus connections from this computer."""
+    from tum_mcp.logout import choose_logout, logout_named
 
+    if service is None:
         choose_logout()
         return
-    if provider is None or account_id is None:
-        raise CampusError(Code.ACTION_REQUIRED, "Provide both a provider and account ID.")
-    Vault().logout(find_account(account_id, provider))
-    typer.echo("Local credential removed. Revoke remote API keys separately if needed.")
+    logout_named(service, account_id)
 
 
 @app.command()
@@ -235,45 +252,85 @@ def doctor(
         ),
     ] = True,
 ) -> None:
-    """Show connections, extensions and relevant client/runtime health."""
+    """Check connections, workflows, coding apps and the runtime."""
+    from collections import Counter
+
+    from rich.status import Status
     from rich.text import Text
 
-    from tum_mcp.commands.ui import heading, section, status_rows, terminal_console
+    from tum_mcp.commands.ui import (
+        State,
+        count,
+        heading,
+        hint,
+        next_steps,
+        section,
+        status_rows,
+        terminal_console,
+    )
     from tum_mcp.diagnostics import collect_diagnostics
 
     if refresh_clients and not live:
         raise typer.BadParameter("--refresh-clients requires live checks; omit --static.")
-    report = collect_diagnostics(live=live, refresh_clients=refresh_clients)
+    console = terminal_console()
+    if json_output or not console.is_terminal:
+        report = collect_diagnostics(live=live, refresh_clients=refresh_clients)
+    else:
+        with Status("Checking…", console=console):
+            report = collect_diagnostics(live=live, refresh_clients=refresh_clients)
     if json_output:
         typer.echo(report.model_dump_json(indent=2))
         return
-    console = terminal_console()
     heading(
         console,
         "Doctor",
-        "Local readiness checks"
-        + (" and live authentication." if live else ". No login or Keychain access."),
+        None if live else "Sessions, coding apps and GitHub were not checked live.",
+        version=True,
     )
-    for title, items in (
+    sections = (
         ("Services", report.services),
-        ("Extensions", report.extensions),
-        ("Clients", report.clients),
+        ("Workflows", report.extensions),
+        ("Coding apps", report.clients),
         ("Runtime", report.runtime),
-    ):
-        if items:
-            section(console, title)
-            status_rows(console, [(item.label, item.state, item.detail) for item in items])
-    if report.next_steps:
-        section(console, "Next steps")
-        for index, action in enumerate(report.next_steps, 1):
-            console.print(Text(f"{index}. {action}"))
-        console.print()
-    console.print(
-        Text("Campus websites are read-only. Study publication is optional.", style="muted")
     )
-    console.print(
-        Text("Use --live for a fresh session check; --json for automation.", style="muted")
+    attention = sum(
+        item.state in {State.ACTION, State.FAILED} for _, items in sections for item in items
     )
+    if attention:
+        console.print(
+            Text.assemble(
+                (State.ACTION.symbol + " ", "attention"),
+                count(attention, "item needs", "items need") + " attention",
+            )
+        )
+    else:
+        verdict = "Ready" if live else "No problems found"
+        console.print(Text.assemble((State.READY.symbol + " ", "ready"), verdict))
+    console.print()
+    next_steps(console, list(report.next_steps))
+    for title, items in sections:
+        rows = [item for item in items if item.state != State.INFO]
+        notes = [item for item in items if item.state == State.INFO]
+        if not items:
+            continue
+        section(console, title)
+        repeated = {
+            detail
+            for detail, number in Counter(item.detail for item in rows).items()
+            if number > 1 and detail
+        }
+        status_rows(
+            console,
+            [
+                (item.label, item.state, "" if item.detail in repeated else item.detail)
+                for item in rows
+            ],
+        )
+        for line in [*sorted(repeated), *(f"{note.label}: {note.detail}" for note in notes)]:
+            hint(console, line)
+        if repeated or notes:
+            console.print()
+    next_steps(console, list(report.optional_steps), "Optional")
 
 
 from tum_mcp.commands.lifecycle import install, setup, uninstall, update  # noqa: E402
@@ -290,42 +347,48 @@ def list_skills(
         bool, typer.Option("--json", help="Print machine-readable skill metadata.")
     ] = False,
 ) -> None:
-    """Inspect bundled skills and customization paths."""
+    """List the skills your coding apps use."""
+    import re
+    import textwrap
+
     from tum_mcp.skills import inspect_skills
+
+    def summary(description: str) -> str:
+        first = re.split(r" - |\. ", description)[0].rstrip(".")
+        return textwrap.shorten(first, 72, placeholder="…")
 
     skills = inspect_skills()
     if json_output:
         typer.echo(json.dumps(skills, indent=2))
         return
-    from tum_mcp.commands.ui import State, heading, status_rows, terminal_console
+    from tum_mcp.commands.ui import detail_rows, heading, hint, terminal_console
 
     console = terminal_console()
-    heading(console, "Skills", "Active workflow definitions for your configured clients.")
-    status_rows(
+    heading(console, "Skills")
+    detail_rows(
         console,
         [
             (
                 item["name"],
-                State.ENABLED,
-                "Personal customization." if item["customized"] else "Bundled workflow.",
+                summary(item["description"]) + (" (customized)" if item["customized"] else ""),
             )
             for item in skills
         ],
     )
-    console.print("Use skills inspect NAME to read a workflow, or --json for metadata.")
+    hint(console, "Read one: tum-mcp skills inspect NAME")
 
 
 @skills_app.command()
 def customize(name: str) -> None:
-    """Create a personal editable copy without changing its installed counterpart."""
+    """Create your own editable copy of a skill."""
     from tum_mcp.skills import customize_skill
 
     typer.echo(str(customize_skill(name)))
 
 
-@skills_app.command("export")
+@skills_app.command("export", rich_help_panel="Advanced")
 def export_skills(destination: Path) -> None:
-    """Export the selected skill pack to a new folder for manual installation/review."""
+    """Copy the active skills to a new folder for manual installation."""
     from tum_mcp.skills import export_pack
 
     export_pack(destination)
@@ -342,40 +405,38 @@ def validate_skill_pack(
         bool, typer.Option("--json", help="Print machine-readable validation.")
     ] = False,
 ) -> None:
-    """Check metadata and real tool references; does not claim routing accuracy."""
+    """Check skill metadata and the tools each skill names."""
     from tum_mcp.skills.validation import validate_skills
 
     report = validate_skills(include_optional=all_skills)
     if json_output:
         typer.echo(report.model_dump_json(indent=2))
     else:
-        from tum_mcp.commands.ui import State, heading, status_rows, terminal_console
+        from rich.text import Text
+
+        from tum_mcp.commands.ui import State, count, heading, terminal_console
 
         console = terminal_console()
-        heading(
-            console,
-            "Validate skills",
-            "Check definitions and tool references; no agent or campus calls.",
-        )
-        status_rows(
-            console,
-            [
-                (
-                    "Workflow definitions",
-                    State.FAILED if report.errors else State.READY,
-                    f"{len(report.checked_skills)} checked; {len(report.errors)} error(s).",
+        heading(console, "Validate skills")
+        checked = count(len(report.checked_skills), "skill")
+        if report.errors:
+            console.print(
+                Text.assemble(
+                    (State.FAILED.symbol + " ", "failed"),
+                    f"{count(len(report.errors), 'problem')} in {checked}",
                 )
-            ],
-        )
-        for error in report.errors:
-            console.print(str(error), markup=False)
+            )
+            for error in report.errors:
+                console.print(Text(f"  {error}"))
+        else:
+            console.print(Text.assemble((State.READY.symbol + " ", "ready"), f"{checked} valid"))
     if report.errors:
         raise typer.Exit(1)
 
 
 @skills_app.command("inspect")
 def inspect_skill(name: str) -> None:
-    """Print the selected version of one bundled/customized skill."""
+    """Print a skill as your coding apps read it."""
     from tum_mcp.skills import selected
 
     typer.echo((selected(name) / "SKILL.md").read_text(encoding="utf-8"))
@@ -383,15 +444,15 @@ def inspect_skill(name: str) -> None:
 
 @skills_app.command("diff")
 def diff_skill(name: str) -> None:
-    """Review the entry-text difference between a personal override and this bundle."""
+    """Show how your customized skill differs from the bundled one."""
     from tum_mcp.skills import skill_diff
 
     typer.echo(skill_diff(name) or "No entry-text difference from the bundled skill.")
 
 
-@skills_app.command("evaluate")
+@skills_app.command("evaluate", rich_help_panel="Advanced")
 def evaluate_skills(trials: Path) -> None:
-    """Score supplied fresh-session trial records; never invokes another coding agent."""
+    """Score saved trial records of skill use."""
     from tum_mcp.evaluations import score_trials
 
     typer.echo(json.dumps([score.model_dump() for score in score_trials(trials)], indent=2))
@@ -407,14 +468,18 @@ def main() -> None:
                 stream.reconfigure(encoding="utf-8")
     try:
         app(prog_name="tum-mcp")
-    except (CampusError, MoodleError, BrowserSetupError) as error:
-        typer.echo(str(error), err=True)
+    except (CampusError, MoodleError) as error:
+        typer.echo(f"Error: {error.message}", err=True)
+        raise SystemExit(2) from None
+    except BrowserSetupError as error:
+        typer.echo(f"Error: {error}", err=True)
         raise SystemExit(2) from None
     except OSError as error:
         reason = error.strerror or type(error).__name__
         where = f" ({error.filename})" if error.filename else ""
         typer.echo(
-            f"Local files could not be accessed: {reason}{where}. Check permissions and retry.",
+            f"Error: local files could not be accessed: {reason}{where}. "
+            "Check their permissions and retry.",
             err=True,
         )
         raise SystemExit(2) from None

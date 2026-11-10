@@ -62,7 +62,7 @@ def test_future_boolean_flags_load_and_survive_rewrites(config: Path) -> None:
 )
 def test_malformed_selections_still_need_local_review(config: Path, document: str) -> None:
     (config / "extensions.json").write_text(document, encoding="utf-8")
-    with pytest.raises(CampusError, match="Invalid extension selection"):
+    with pytest.raises(CampusError, match="Invalid workflow selection"):
         selection()
     assert not video_notes_enabled()
 

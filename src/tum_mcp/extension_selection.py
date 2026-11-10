@@ -48,7 +48,7 @@ def selection() -> ExtensionSelection:
         return ExtensionSelection.model_validate_json(path.read_bytes())
     except (OSError, ValueError, ValidationError):
         raise CampusError(
-            Code.WORKSPACE_CONFLICT, "Invalid extension selection; review it locally."
+            Code.WORKSPACE_CONFLICT, f"Invalid workflow selection in {path}; fix or delete it."
         ) from None
 
 

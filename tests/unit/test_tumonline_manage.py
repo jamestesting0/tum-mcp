@@ -4,6 +4,7 @@ import pytest
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.commands.ui import State
 from tum_mcp.errors import CampusError
 from tum_mcp.tumonline.policy import PolicyStore, Scope
 
@@ -19,8 +20,8 @@ def test_manager_displays_default_permissions(
     assert result.exit_code == 0, result.output
     assert "Studies and courses" in result.output
     assert "Grades and progress" in result.output
-    assert "Enabled" in result.output and "Disabled" in result.output
-    assert "other providers" in result.output.lower()
+    assert State.ENABLED.label in result.output and State.DISABLED.label in result.output
+    assert "other services" in result.output.lower()
 
 
 def test_manager_with_no_account_does_not_claim_a_connection(
@@ -29,7 +30,8 @@ def test_manager_with_no_account_does_not_claim_a_connection(
     monkeypatch.setenv("TUM_MCP_CONFIG_DIR", str(tmp_path))
     result = CliRunner().invoke(app, ["manage", "tumonline", "--show"])
     assert result.exit_code == 0
-    assert "no tumonline policy" in result.output.lower()
+    assert State.UNCONFIGURED.label in result.output
+    assert "tum-mcp login" in result.output
 
 
 def test_atomic_policy_update_rejects_stale_revision(tmp_path: Path) -> None:

@@ -9,13 +9,18 @@ from tum_mcp.settings import Provider, find_account
 
 
 def discover(
-    provider: Provider,
-    account_id: str,
+    provider: Annotated[
+        Provider, typer.Argument(metavar="SERVICE", help="artemis, zulip or tum_live.")
+    ],
+    account_id: Annotated[
+        str,
+        typer.Argument(metavar="ACCOUNT", help="Its account_id in tum-mcp status --json."),
+    ],
     include_past: Annotated[
         bool, typer.Option(help="Include past Artemis courses as well as active courses.")
     ] = False,
 ) -> None:
-    """Discover accessible channel/course metadata for focused reads."""
+    """List the courses or channels an account can read (JSON)."""
     if include_past and provider != Provider.ARTEMIS:
         raise typer.BadParameter("--include-past applies to Artemis course discovery only.")
     if provider == Provider.TUM_LIVE:

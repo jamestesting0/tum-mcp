@@ -17,7 +17,8 @@ def connection_checks(*, live: bool | Literal["stale"] = False) -> tuple[Check, 
             Check(
                 label="TUMonline",
                 state=State.FAILED,
-                detail="Invalid local policy. Review TUMonline permissions locally.",
+                detail="TUMonline permissions are invalid; "
+                "check them with tum-mcp manage tumonline --show.",
             ),
         )
     if not policies:
@@ -25,7 +26,7 @@ def connection_checks(*, live: bool | Literal["stale"] = False) -> tuple[Check, 
             Check(
                 label="TUMonline",
                 state=State.UNCONFIGURED,
-                detail="No account configured. Run tum-mcp login.",
+                detail="Run tum-mcp login.",
             ),
         )
     checks = []
@@ -36,9 +37,7 @@ def connection_checks(*, live: bool | Literal["stale"] = False) -> tuple[Check, 
             credentials / "session.key"
         ).is_file()
         state = State.CONFIGURED if saved else State.ACTION
-        detail = (
-            "Session saved; not live verified." if saved else "Session missing. Run tum-mcp login."
-        )
+        detail = "Saved; not checked live." if saved else "Session missing; run tum-mcp login."
         allowed = policy.allows(Scope.STUDIES_COURSES)
         if not allowed:
             state = State.DISABLED if saved else state
@@ -58,7 +57,7 @@ def connection_checks(*, live: bool | Literal["stale"] = False) -> tuple[Check, 
                 key=credentials / "session.key",
                 live=live,
                 verify=verify_account,
-                verified_detail="Identity verified. Studies and courses allowed.",
+                verified_detail="Signed in. Studies and courses allowed.",
             )
         checks.append(check)
     return tuple(checks)

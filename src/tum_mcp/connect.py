@@ -41,6 +41,9 @@ def connect_artemis() -> Account:
     return connect_browser((Provider.ARTEMIS,))[0]
 
 
+SIGN_IN_MINUTES: Final = 10
+
+
 class ServiceChoice(StrEnum):
     MOODLE = "moodle"
     ARTEMIS = "artemis"
@@ -112,7 +115,7 @@ def _connect_campus_services(
         require_lecture()
     available = (browser,) if browser is not None else discover_browsers()
     if not available:
-        raise BrowserSetupError("Install a Chromium browser, then run tum-mcp login.")
+        raise BrowserSetupError("Install Edge, Chrome, Brave or Chromium, then run tum-mcp login.")
     selected_browser = available[0]
     connected: dict[ServiceChoice, ConnectionResult] = {}
     attempt: str | None = None
@@ -131,7 +134,7 @@ def _connect_campus_services(
                     pages[service] = page
                 for page in startup_pages:
                     page.close()
-                deadline = time.monotonic() + 600
+                deadline = time.monotonic() + SIGN_IN_MINUTES * 60
                 while time.monotonic() < deadline:
                     for service in services:
                         if service in connected:
@@ -201,7 +204,8 @@ def _connect_campus_services(
                     )
                     raise CampusError(
                         Code.AUTH_REQUIRED,
-                        f"Sign-in timed out for {pending}. Completed connections were saved.",
+                        f"Sign-in for {pending} timed out after {SIGN_IN_MINUTES} minutes. "
+                        "Completed connections were saved; run tum-mcp login to retry.",
                     )
     except BrowserError:
         pending = ", ".join(service.label for service in services if service not in connected)

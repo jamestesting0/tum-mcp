@@ -61,12 +61,13 @@ def setup_profile(browsers: tuple[BrowserChoice, ...]) -> BrowserChoice:
 
 
 def manage_browsers() -> None:
+    """Set up, open, rename or remove saved browser profiles."""
     if not sys.stdin.isatty():
         raise CampusError(
             Code.ACTION_REQUIRED, "Run tum-mcp manage browsers in your interactive terminal."
         )
     console = terminal_console()
-    heading(console, "Browsers", "Set up and manage saved browser profiles.")
+    heading(console, "Browsers")
     try:
         browsers = discover_browsers()
         while True:
@@ -76,7 +77,7 @@ def manage_browsers() -> None:
                 (
                     item,
                     item.login_label
-                    + (" - unavailable" if item.profile.id not in available else ""),
+                    + (" · browser not found" if item.profile.id not in available else ""),
                 )
                 for item in saved
             ]
@@ -89,7 +90,7 @@ def manage_browsers() -> None:
                     if not browsers:
                         select_browser(browsers)
                     remember_browser(setup_profile(browsers))
-                    console.print("Profile saved. Use tum-mcp login to sign in.")
+                    console.print("Profile saved. Run tum-mcp login to sign in with it.")
                 case BrowserChoice(profile=profile) if profile is not None:
                     action = choose(
                         profile.name,
@@ -103,8 +104,8 @@ def manage_browsers() -> None:
                         from tum_mcp.profile_session import open_profile
 
                         console.print(
-                            "Open the browser's settings to manage saved passwords. "
-                            "Close all profile windows to return here."
+                            "Manage saved passwords in the browser's settings. "
+                            "Close every window of this profile to return here."
                         )
                         open_profile(selected)
                     elif action == Action.RENAME:
@@ -122,4 +123,7 @@ def manage_browsers() -> None:
     except Timeout:
         raise BrowserSetupError("Saved profile is in use. Close it and retry.") from None
     except ValidationError:
-        raise BrowserSetupError("Profile settings are invalid.") from None
+        raise BrowserSetupError(
+            "Saved browser profile settings are invalid; run tum-mcp manage browsers "
+            "to remove the profile, then set it up again."
+        ) from None
