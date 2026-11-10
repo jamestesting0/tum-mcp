@@ -49,6 +49,8 @@ def built_project(tmp_path_factory: pytest.TempPathFactory) -> Path:
             "Algorithms & Graphs",
             "--snapshot",
             str(example / "snapshot.json"),
+            "--learner",
+            "off",
         ],
     )
     assert result.exit_code == 0, result.output

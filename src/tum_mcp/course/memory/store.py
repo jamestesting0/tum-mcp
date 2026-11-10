@@ -199,6 +199,11 @@ def _validate[T: BaseModel](body: bytes, model: type[T], name: str) -> T:
 
 def load_inputs(project: Path) -> CourseInputs:
     require_course_memory()
+    return read_inputs(project)
+
+
+def read_inputs(project: Path) -> CourseInputs:
+    """The course's own files, for callers that need item ids without Course Memory."""
     root = project.expanduser().resolve()
     reader = SnapshotReader(root)
     state = _model(reader, private_path(root, "state.json"), StudyState)

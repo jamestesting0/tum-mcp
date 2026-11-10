@@ -49,7 +49,7 @@ when needed.
 
 Combine source-backed content with the student's stated goal, time, preferences and the
 work shown in this chat. Viewing a page, file presence, link counts and course coverage
-do not prove mastery, and no learner model exists. If a missing prerequisite matters, ask
+do not prove mastery, and the learning record holds dated evidence, never ability. If a missing prerequisite matters, ask
 one useful diagnostic or state a reversible assumption.
 
 Offer a small next step with its goal, prerequisite, source and reason. Separate source
@@ -70,4 +70,5 @@ questions or readiness from past papers.
 A question or recommendation does not authorize app edits, sync, build, publication or
 lecture processing; use the existing workflow when durable authoring is requested. Keep
 stated preferences in the user area of course AGENTS, conventions in the handbook and
-reusable findings in private notes. Do not persist inferred ability or conversations.
+reusable findings in private notes. Observed attempts and mistakes go to the learning
+record when it is on. Do not persist inferred ability or conversations.

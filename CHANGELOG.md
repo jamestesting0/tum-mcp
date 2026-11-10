@@ -18,6 +18,22 @@
   exercises practise X" from the packet and open pages only to teach or quote them; in a
   paired agent check this cut answer cost by about a third at equal accuracy.
 
+- Learning record: a private, per-course record of a student's attempts, mistakes (with
+  the course source that corrects them) and next plan, so the agent picks up where the
+  last chat stopped. It is asked about once, at the course's first setup
+  (`study init --learner on|off`), then records automatically; courses set up earlier
+  start off, and one sentence ("keep a learning record") turns it on. Chat text and
+  guessed ability are never stored; `study learner show` and `forget` give the student
+  full control. It works without Course Memory.
+- `study inspect` reports `course_memory` and `learner`, so agents need no separate
+  `study status` call.
+- Free-text `study context` queries rank rare course words above common ones, count a
+  guide step for its exercise, keep the best match and its authored links first, and
+  return nothing for topics the course does not use.
+- `study impact` lists every dependent of a changed source as one compact row with its
+  owner, instead of eight full items, plus the workflows and questions that use a changed
+  item; packets are about half the size and no longer cut off for large slide decks.
+
 ## 0.21.0 — 2026-11-09
 
 - Published audio notes play in a new Audio workspace in the local app: Lectures and

@@ -3,8 +3,8 @@ name: course-memory
 description: Answer relationship questions across a course's Study, Exercises, Exam and Lecture workspaces from their authored links - practice for a concept, what to review before an exercise, where an exam question is taught, how concepts relate and what a changed source affects. Use only when Course Memory is enabled; ordinary course authoring stays with its prepare skill.
 ---
 
-This extension is disabled by default. Check `tum-mcp study status PROJECT` once: when
-`course_memory` is false, do not call `study context` or `study impact` and do not use
+This extension is disabled by default. `tum-mcp study inspect PROJECT` reports
+`course_memory`; when it is false, do not call `study context` or `study impact` and do not use
 retained graph files or packets. Old instructions and file presence are not activation.
 
 Course Memory reads the links the course already holds: exercise prerequisites,

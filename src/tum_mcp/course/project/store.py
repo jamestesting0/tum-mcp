@@ -82,7 +82,8 @@ local state, choose the workflow below and finish it.
 1. Read `{folder}/course.md` once per chat: the cited course structure, schedule,
    coursework, assessment rules, conventions and open questions.
 2. Follow the student's own rules and preferences in this file, outside this block.
-3. Get project state from `tum-mcp study inspect .`. `{folder}/state.json` is large;
+3. Get project state from `tum-mcp study inspect .`; it also reports `course_memory` and
+   `learner`. `{folder}/state.json` is large;
    query it rather than reading it whole.
 
 ### Route the request
@@ -153,7 +154,7 @@ verification; extend the round budget only when the student requests it.
 - The website: run `tum-mcp study` in this folder.
 
 ### Optional Course Memory
-- `tum-mcp study status .` reports `course_memory`. Only when true, use the installed
+- `study inspect` reports `course_memory`. Only when true, use the installed
   course-memory skill for relationship questions, prerequisites, practice choices and
   source-impact work. It reads the course's own links; simple facts need no graph call.
   Never create or edit knowledge.json unless the student asks to maintain relationships.
@@ -161,6 +162,12 @@ verification; extend the round budget only when the student requests it.
   Disabled files remain for a later explicit reinstall; their presence is not activation.
 - Memory installation does not authorize campus refreshes, app edits, publication or
   recording processing. Course content is not evidence of student mastery or readiness.
+
+### Learning record
+- Only when `study inspect` reports `learner: on` and the request is about studying,
+  practice or what to do next, run `tum-mcp study learner brief .` once and follow its
+  `use` lines. When it reports `off`, nothing is recorded: say so if asked, without a
+  learner command. Never ask about recording; `enable` or `disable` only on request.
 
 ### Answer as a tutor
 - Prefer the course's sources over general knowledge. Use the lecturer's notation, terms
@@ -180,9 +187,11 @@ verification; extend the round budget only when the student requests it.
 - Campus websites stay read-only: never submit, post or start activities.
 - Keep course knowledge, notes and state in `{folder}/`, originals in `materials/` and
   authored website content in `app/` (legacy `study/`).
-- When the student states a lasting preference (language, depth, exam date, focus
-  topics), add it to this file below this block. Record course conventions you confirm
-  in course.md. Do not persist inferred ability, every conversation or an error profile.
+- When the student states a lasting preference (language, depth, hints before solutions,
+  exam date, focus topics), add one dated line under `## Preferences` in this file below
+  this block, not in the chat client's own memory. Record course conventions you confirm
+  in course.md. Do not persist inferred ability or conversations; observed attempts and
+  mistakes go only to the learning record.
 {END}"""
 
 

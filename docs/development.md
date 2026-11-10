@@ -431,6 +431,14 @@ Revision-only checks preserve the full reviewed semantic hash and snapshot valid
 explicit knowledge reports also diagnose inactive assertions. No persistent cache or
 new runtime dependency is introduced.
 
+The learning record (`course/learner/`) reads item ids through the ungated
+`memory.store.read_inputs`, so it works with Course Memory off. Its decisions are
+deterministic and covered by `tests/integration/test_learner_record.py`: consent from
+setup only, refusal while off, dedupe, forget, the revisit schedule, brief selection and
+byte cap, owner-only files and the `study init --learner` requirement. Agent behaviour
+(asking nothing, recording in the same turn, staying out of unrelated chats, correcting a
+recorded mistake) is not part of the automated suite.
+
 Use `uv run pytest -q tests/unit/test_study_knowledge*
  tests/integration/test_study_knowledge*` (on one shell line) for focused behavior, plus
 existing structure/review, lecture freshness, migration and export tests when those

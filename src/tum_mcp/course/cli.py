@@ -11,6 +11,7 @@ import typer
 from tum_mcp.course.app.comment_cli import app as comments_app
 from tum_mcp.course.app.publish_cli import app as publish_app
 from tum_mcp.course.content.store import document_writes, index_name, present, read_document
+from tum_mcp.course.learner.cli import app as learner_app
 from tum_mcp.course.memory.cli import register as register_knowledge
 from tum_mcp.course.output import emit
 from tum_mcp.course.workflow.cli import app as task_app
@@ -24,6 +25,12 @@ app.add_typer(
     name="comments",
     help="Read and address local passage comments.",
     rich_help_panel="Author",
+)
+app.add_typer(
+    learner_app,
+    name="learner",
+    help="This student's private learning record for the course.",
+    rich_help_panel="Study",
 )
 app.add_typer(
     publish_app,
@@ -75,13 +82,26 @@ def init(
     project: Path,
     course: Annotated[str, typer.Option(help="Required, explicitly chosen course title.")],
     snapshot: Annotated[Path, typer.Option(help="Validated source snapshot JSON.")],
+    learner: Annotated[
+        Literal["on", "off"] | None,
+        typer.Option(help="The student's one-time answer: keep a private learning record?"),
+    ] = None,
 ) -> None:
     """Bind one chosen course and initialize its local study inventory."""
+    from tum_mcp.course.learner.record import decided, set_consent
     from tum_mcp.course.project.sync import sync
 
     if not course.strip():
         raise CampusError(Code.ACTION_REQUIRED, "An explicit course input is required.")
+    if learner is None and not decided(project.expanduser().resolve()):
+        raise CampusError(
+            Code.ACTION_REQUIRED,
+            "Ask the student once whether to keep a private learning record for this course "
+            "(attempts and mistakes, never chat text), then pass --learner on or --learner off.",
+        )
     report = sync(project, snapshot, course_input=course)
+    if learner is not None and not report.conflicts:
+        set_consent(project.expanduser().resolve(), learner, "setup")
     typer.echo(json.dumps(asdict(report), indent=2))
     if report.conflicts:
         raise typer.Exit(2)
@@ -111,10 +131,12 @@ def inspect(project: Path) -> None:
     """Show course identity, source coverage and units that need regeneration."""
     from tum_mcp.course.app.build import read_content, stale_units
     from tum_mcp.course.content.exercise_data import read_exercises, stale_exercises
+    from tum_mcp.course.learner.record import consent
     from tum_mcp.course.lecture.data import lecture_health, read_lectures, stale_lectures
     from tum_mcp.course.project.context import context_review
     from tum_mcp.course.project.store import PRIVATE, load_state
     from tum_mcp.course.sources.duplicates import exact_groups
+    from tum_mcp.extension_selection import course_memory_enabled
 
     root = project.expanduser().resolve()
     state = load_state(root)
@@ -130,6 +152,8 @@ def inspect(project: Path) -> None:
                 "course": state.course.model_dump(mode="json"),
                 "generation": state.generation,
                 "private_folder": PRIVATE,
+                "course_memory": course_memory_enabled(),
+                "learner": consent(root),
                 "course_context": context_review(root, state).model_dump(mode="json"),
                 "coverage": [item.model_dump(mode="json") for item in state.coverage],
                 "resources": len(state.resources),

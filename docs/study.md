@@ -710,7 +710,7 @@ stages a source snapshot with exact course identity, coverage and resource revis
 The helper does not authenticate the snapshot or grant any campus access itself.
 
 ```sh
-tum-mcp study init PROJECT --course "Exact course title" --snapshot snapshot.json
+tum-mcp study init PROJECT --course "Exact course title" --snapshot snapshot.json --learner on
 tum-mcp study sync PROJECT --snapshot snapshot.json
 ```
 
@@ -736,6 +736,30 @@ teaching and visual review but preserve saved core practice progress. Local pass
 comments remain item-scoped; published sites include optional reading with Study and
 exclude private comments/classification reasons. `study demo PROJECT` shows an example.
 
+## Learning record
+
+A course can keep a private record of how its student is doing, so a new chat continues
+where the last one stopped. It is asked about once, when the course is first set up:
+sync-course asks the student and runs `study init ... --learner on` or `--learner off`.
+After that it records without asking again. Courses set up before this feature start off;
+saying "keep a learning record for this course" (or `tum-mcp study learner enable .`)
+turns it on.
+
+| Stored in `.tum-mcp/learner/` | Never stored |
+| --- | --- |
+| Attempts on exercises and questions: solved, needed a hint, wrong, skipped | Chat text or quotes |
+| Mistakes, each with the course source that corrects it, and when they were resolved | Guessed ability or scores |
+| The next study step agreed in a chat | TUMonline data, names, credentials |
+
+For study, practice and "what next" requests the agent reads `study learner brief .`: at
+most 1.2 KB with open mistakes and the lessons to review for them, items due again (1, 3,
+7, 14 and 30 days after a miss, pushed out by later successes) and the last plan. Other
+requests never read it. Files are owner-only, never built into the app and never
+published. `study learner show .` prints everything; `study learner forget . ID`,
+`--item sheet-1`, `--before DATE` or `--all` deletes for good; `disable` stops
+recording. Preferences about how to help ("hints before solutions") go in the course
+`AGENTS.md` under `## Preferences`.
+
 ## Local course relationships
 
 These commands require the optional **Course Memory** extension, disabled by default.
@@ -755,8 +779,9 @@ the answer needs: an exact selector lists itself first, then its authored links 
 workspace. Each item cites only the sources and pages it cites itself, items carry their
 semester-map `topic`, and `gaps` reports links an author recorded as not fitting.
 
-`study impact PROJECT --source KEY` separates direct dependents and possible review
-targets. Unknown and unmapped sources remain explicit. `study report PROJECT --section
+`study impact PROJECT --source KEY` lists every direct dependent as a compact row with
+its owner (lesson, exercise, exam item or lecture) and evidence status, then possible
+review targets reached through authored links. Unknown and unmapped sources remain explicit. `study report PROJECT --section
 knowledge` performs a full local semantic audit; it is excluded from the default five
 report sections. `study schema knowledge` defines the optional private
 `.tum-mcp/knowledge.json`. No graph database, embeddings, provider call
