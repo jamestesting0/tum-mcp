@@ -76,8 +76,13 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    A forked agent (Codex `spawn_agent`) replays this conversation and is not fresh; record
    its answer as `same` or use run-checker. Read only this batch
    with `tum-mcp review plans PROJECT --item ITEM` (repeat `--item`). Checking your own
-   plans records them as provisional. A changed plan needs a new check. Rework a rejected
-   plan before writing.
+   plans records them as provisional. For Study or Exercises in a single-agent run, or
+   when an independent checker is unavailable, read the complete scoped packet and
+   record your actual verdicts from its `answer.items` template with
+   `tum-mcp review plan-record PROJECT --file ANSWER --provenance same`. A passing
+   same-author verdict can complete draft readiness. It does not replace independent
+   review or a current independent verdict. Check changed plans again and repair rejected
+   plans before writing.
    Read the complete batch locally before this call and fix all detectable omissions
    together. Do not request independent checks of unchanged approved plans. Changing
    only an artifact key elsewhere in the batch does not change the source requirements.

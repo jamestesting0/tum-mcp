@@ -6,7 +6,12 @@ from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.course.ledger.coverage import CoverageLedger
-from tum_mcp.course.ledger.preparation import Preparation, read_preparation, scope_problems
+from tum_mcp.course.ledger.preparation import (
+    Preparation,
+    read_preparation,
+    scope_problems,
+    source_byte_problems,
+)
 from tum_mcp.course.project.schedule import Schedule
 from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError
@@ -124,6 +129,67 @@ def test_preparation_schema_and_local_scope_path(project: Path) -> None:
     assert read_preparation(project, "missing") is None
     with pytest.raises(CampusError, match="Invalid preparation scope"):
         read_preparation(project, "../outside")
+
+
+def test_authorized_old_sheet_still_requires_original_demands_and_bytes(project: Path) -> None:
+    state = load_state(project)
+    sheet = next(resource for resource in state.resources if resource.resource.kind == "exercise")
+    key = sheet.resource.key
+    scope = {
+        "course_key": state.course.key,
+        "semester": state.course.semester,
+        "workspaces": ["exercises"],
+        "mode": "selected_sources",
+        "policy": "include_provisional",
+        "inventory": [
+            {
+                "source": key,
+                "sha256": sheet.sha256,
+                "disposition": "provisional",
+                "basis": "source",
+                "reason": "Requested as practice; assignment date unconfirmed.",
+                "locator": "Original sheet header",
+            }
+        ],
+        "demands": [
+            {
+                "kind": "exercises",
+                "id": "one",
+                "source": key,
+                "label": "1",
+                "text": "Solve the original exercise.",
+                "locator": "Page 1",
+            }
+        ],
+    }
+    ledger = CoverageLedger.model_validate(
+        {
+            "course_key": state.course.key,
+            "sources": [
+                {
+                    "source": key,
+                    "status": {"availability": "provisional", "checked_at": "2026-11-06"},
+                    "items": [{"label": "1"}],
+                }
+            ],
+        }
+    )
+    inclusive = Preparation.model_validate(scope)
+    assert scope_problems(inclusive, state, ledger, None) == []
+    strict = Preparation.model_validate({**scope, "policy": "strict"})
+    assert "policy" not in strict.model_dump()
+    assert any(
+        "include_provisional" in problem for problem in scope_problems(strict, state, ledger, None)
+    )
+    missing = Preparation.model_validate({**scope, "demands": []})
+    assert scope_problems(missing, state, ledger, None)
+    assert source_byte_problems(project, inclusive, state) == []
+    assert sheet.path
+    material = project / sheet.path
+    material.write_bytes(material.read_bytes() + b"\nchanged")
+    assert source_byte_problems(project, inclusive, state) == [
+        f"{key}: required source bytes are missing or changed."
+    ]
 
 
 def test_a_selected_sheet_part_can_explicitly_exclude_other_sheet_entries(project: Path) -> None:

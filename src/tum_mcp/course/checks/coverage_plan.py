@@ -5,9 +5,15 @@ from pathlib import Path
 
 from tum_mcp.course.checks.preparation import PreparedScope, Readiness
 from tum_mcp.course.ledger.coverage import read_ledger
-from tum_mcp.course.ledger.preparation import ExerciseDemand, read_preparation, scope_problems
+from tum_mcp.course.ledger.preparation import (
+    ExerciseDemand,
+    read_preparation,
+    scope_problems,
+    scope_summary,
+    source_byte_problems,
+)
 from tum_mcp.course.project.schedule import read_schedule
-from tum_mcp.course.project.store import confined, digest, load_state, read_bytes
+from tum_mcp.course.project.store import digest, load_state, read_bytes
 
 
 def declaring_batches(root: Path, identifier: str) -> tuple[str, ...]:
@@ -43,14 +49,7 @@ def assess_plan(root: Path, identifier: str, batches: tuple[str, ...] | None = N
     state = load_state(root)
     schedule = read_schedule(root, state) if scope.cutoff else None
     problems = scope_problems(scope, state, read_ledger(root), schedule)
-    resources = {entry.resource.key: entry for entry in state.resources}
-    for source in scope.inventory:
-        if source.disposition != "required":
-            continue
-        stored = resources.get(source.source)
-        body = read_bytes(confined(root, stored.path)) if stored and stored.path else None
-        if body is None or digest(body) != source.sha256:
-            problems.append(f"{source.source}: required source bytes are missing or changed.")
+    problems.extend(source_byte_problems(root, scope, state))
     items: dict[str, list[dict]] = {}
     for demand in scope.demands:
         target = demand.target
@@ -81,4 +80,6 @@ def assess_plan(root: Path, identifier: str, batches: tuple[str, ...] | None = N
         problems=tuple(problems),
         dispositions=tuple(entry.model_dump(mode="json") for entry in scope.inventory),
         items=items,
+        walkthrough_evidence=scope.walkthrough_evidence,
+        **scope_summary(scope, state, problems),
     )

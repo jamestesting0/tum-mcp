@@ -270,11 +270,25 @@ def _app_data(
     if content and content.annotations:
         payload["annotations"] = [entry.model_dump(mode="json") for entry in content.annotations]
     payload["workspaces"] = (["study"] if content else []) + (["exercises"] if exercises else [])
+    provisional_sheets: set[str] = set()
     if root is not None:
         from tum_mcp.course.ledger.coverage import pending_exercises, read_ledger, study_preparation
+        from tum_mcp.course.ledger.preparation import provisional_targets
 
         ledger = read_ledger(root)
         payload["studyPreparation"] = {"pending": study_preparation(state, ledger)["pending"]}
+        provisional_units, provisional_sheets = provisional_targets(root, state, ledger)
+        for unit in units:
+            mapped = provisional_units.get(unit["key"], {})
+            for block in unit["blocks"]:
+                if mapped.get(block.get("key"), set()).intersection(block["sources"]):
+                    block["provisional"] = True
+            if any(block.get("provisional") for block in unit["blocks"]):
+                unit["provisional"] = (
+                    "Provisional study"
+                    if all(block.get("provisional") for block in unit["blocks"])
+                    else "Includes provisional study"
+                )
         if exercises:
             payload["pending"] = pending_exercises(ledger, state, exercises)
     if lectures:
@@ -296,6 +310,8 @@ def _app_data(
     if exercises:
         value = render_exercises(exercises)
         for exercise_set in value.get("sets", []):
+            if exercise_set.get("sheet") in provisional_sheets:
+                exercise_set["provisional"] = True
             for exercise in exercise_set.get("exercises", []):
                 resolve_meanings(exercise)
         payload["exercises"] = value

@@ -49,6 +49,12 @@ def test_plan_approval_binds_source_coverage_and_refuses_a_weakened_scope(projec
     checked = read_plan(project, "study/graphs")
     assert checked and checked.gate
     assert checked.gate.coverage_fingerprint == assess_plan(project, "bounded").scope.fingerprint
+    with pytest.raises(CampusError, match="current independent verdict"):
+        record_gate(project, [answer], "same")
+    record_gate(project, [answer | {"verdict": "fail", "reasons": ["Missing case."]}], "fresh")
+    with pytest.raises(CampusError, match="current independent verdict"):
+        record_gate(project, [answer], "same")
+    record_gate(project, [answer], "fresh")
 
     scope["demands"][0]["text"] = "Recall only the degree rule."
     write(path, scope)

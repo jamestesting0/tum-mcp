@@ -21,6 +21,26 @@ def table() -> dict:
     return copy.deepcopy(WALKS["walkthrough-table"])
 
 
+def test_run_keyed_answers_check_exact_state_in_each_run() -> None:
+    from tum_mcp.course.checks.answers import compare
+
+    block = {
+        "kind": "walkthrough",
+        "key": "queue",
+        "steps": [{"state": [{"label": "Frontier", "value": "A"}]}],
+        "variant": {"steps": [{"state": [{"label": "Frontier", "value": "Empty"}]}]},
+    }
+    expected = {"primary": [{"Frontier": "A"}], "variant": [{"Frontier": "Empty"}]}
+
+    def check(runs: dict) -> tuple[list[str], int]:
+        return compare(block, {"walkthroughs": {"queue": runs}})
+
+    assert check(expected) == ([], 2)
+    assert "queue/primary step 1" in check(expected | {"primary": [{"Frontier": "AA"}]})[0][0]
+    assert "queue/variant step 1" in check(expected | {"variant": [{"Frontier": "A"}]})[0][0]
+    assert "authored variant" in check({"primary": expected["primary"]})[0][0]
+
+
 def test_the_shipped_walkthroughs_render_their_stage() -> None:
     blocks = TypeAdapter(tuple[Block, ...]).validate_python(list(WALKS.values()))
     rendered = render_blocks(blocks)

@@ -109,6 +109,8 @@ def inputs(root: Path) -> str:
     paths = set((root / "app").rglob("*")) if (root / "app").exists() else set()
     for pattern in (
         "state.json",
+        "schedule.json",
+        "links.json",
         "course.md",
         "digests/*.json",
         "coverage.json",

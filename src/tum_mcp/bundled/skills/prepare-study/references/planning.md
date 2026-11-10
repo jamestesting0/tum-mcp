@@ -71,6 +71,18 @@ checker or a separate planning document.
 Routine application may use new values without becoming a deeper transfer task.
 Judge the required calculation or decision, not shared vocabulary or numbers alone.
 
+For new or substantively rewritten Study preparations, use
+`walkthrough_evidence: source_mapped` in the preparation. For each apply or reason
+demand, record the decisions the source actually requires, with locators, or explain
+why the demand is non-procedural. Map each decision in the plan's `worked_decisions`
+to a worked block and a primary or alternate step, or an exact checked content path.
+State inputs, show the changing state and explain the stop condition. Include a
+separate contrast when the first case cannot exercise a required branch. Compute
+the expected states from the case inputs before authoring. For executable traces,
+use run-keyed answer states so verification checks every step and every state row.
+The mapped practice question must ask the student to make a new decision and keep
+the answer hidden until attempted or revealed.
+
 ## Check the plan before writing
 
 Read the plan as a student who knows only the profile's prerequisites and the earlier units:

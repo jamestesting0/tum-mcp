@@ -22,6 +22,16 @@ npm run test:package-lifecycle
 
 Python 3.13 is the managed runtime. Install Tesseract for OCR tests. Default tests
 use synthetic sources and credentials. No language-server installation is needed.
+
+For a local Study and Exercises draft in a single-author session, first run
+`study report PROJECT --section coverage-plan --preparation ID --json`, then
+`review plans PROJECT --item ITEM` with one `--item` per batch item. Copy the
+packet's answer shape, check and correct the plans, and record the verdicts using
+`review plan-record PROJECT --file ANSWERS --provenance same`. This provenance
+qualifies for draft readiness. Independent review has its own gate. Run scoped
+`study lint` during authoring, `study build PROJECT --local-only` for the combined
+draft, then both visual and interaction checks with `--phone` before checking
+`study report PROJECT --section readiness --batch BATCH --json`.
 `-n logical --dist loadfile` (pytest-xdist) runs one worker per logical CPU and keeps
 each file's module-scoped browser on one worker; drop it to debug a test serially.
 (`-n auto` counts physical cores and starts only two workers on 4-vCPU hosted runners.)

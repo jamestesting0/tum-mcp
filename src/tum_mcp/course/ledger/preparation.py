@@ -2,15 +2,15 @@
 
 from datetime import date
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypedDict
 
 from pydantic import Field, TypeAdapter, ValidationError, model_validator
 
 from tum_mcp.course.content.study import Label, Text
 from tum_mcp.course.ledger.coverage import CoverageLedger, Locator
 from tum_mcp.course.project.models import Digest, Key, StudyState
-from tum_mcp.course.project.schedule import Schedule
-from tum_mcp.course.project.store import digest, private_path, read_bytes
+from tum_mcp.course.project.schedule import Schedule, read_schedule
+from tum_mcp.course.project.store import confined, digest, private_path, read_bytes
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
 
@@ -18,7 +18,9 @@ from tum_mcp.settings import Frozen
 class Candidate(Frozen):
     source: Key
     sha256: Digest | None = None
-    disposition: Literal["required", "later", "optional", "logistics", "unresolved", "excluded"]
+    disposition: Literal[
+        "required", "provisional", "later", "optional", "logistics", "unresolved", "excluded"
+    ]
     basis: Literal["schedule", "release", "corroborated", "source", "unknown"]
     on: date | None = None
     reason: Text
@@ -30,6 +32,10 @@ class Candidate(Frozen):
         exclude_if=lambda items: not items,
         description="Original sheet entry labels excluded from this selected scope, with reasons.",
     )
+
+    @property
+    def included(self) -> bool:
+        return self.disposition in {"required", "provisional"}
 
 
 class StudyTarget(Frozen):
@@ -59,11 +65,19 @@ class Demand(Frozen):
     walkthroughs: tuple[Key, ...] = ()
 
 
+class SourceDecision(Frozen):
+    locator: Locator
+    text: Text
+    computed: bool = False
+
+
 class StudyDemand(Demand):
     kind: Literal["study"]
     outcome: Key
     level: Literal["recall", "apply", "reason"]
     target: StudyTarget | None = None
+    decisions: dict[Key, SourceDecision] = Field(default_factory=dict, exclude_if=lambda v: not v)
+    non_procedural: Text | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class ExerciseDemand(Demand):
@@ -91,6 +105,12 @@ class Preparation(Frozen):
     demands: tuple[Requirement, ...] = Field(max_length=10000)
     # A partial provider may be immaterial, for example a discussion-only binding.
     provider_limits: dict[Key, Text] = Field(default_factory=dict)
+    policy: Literal["strict", "include_provisional"] = Field(
+        default="strict", exclude_if=lambda value: value == "strict"
+    )
+    walkthrough_evidence: Literal["source_mapped"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
 
     @model_validator(mode="after")
     def consistent(self) -> "Preparation":
@@ -140,8 +160,16 @@ def scope_problems(
     demands_by_source: dict[str, list[Requirement]] = {}
     for demand in scope.demands:
         demands_by_source.setdefault(demand.source, []).append(demand)
-    required = {entry.source for entry in scope.inventory if entry.disposition == "required"}
+    required = {entry.source for entry in scope.inventory if entry.included}
     problems: list[str] = []
+    if scope.walkthrough_evidence:
+        problems.extend(
+            f"{demand.source}/{demand.id}: record source decisions or a non-procedural reason."
+            for demand in scope.demands
+            if isinstance(demand, StudyDemand)
+            and demand.level != "recall"
+            and bool(demand.decisions) == bool(demand.non_procedural)
+        )
     if not required or not scope.demands:
         problems.append("Record at least one required source and demand.")
     if scope.cutoff:
@@ -171,8 +199,34 @@ def scope_problems(
             continue
         if resource.sha256 != entry.sha256:
             problems.append(f"{key}: source revision changed since the scope was recorded.")
+        source = recorded.get(key)
+        dates = schedule_dates.get(key, {})
+        if entry.disposition == "provisional":
+            if scope.policy != "include_provisional":
+                problems.append(f"{key}: provisional preparation requires include_provisional.")
+            if scope.cutoff and (
+                (entry.on and entry.on > scope.cutoff)
+                or any(on > scope.cutoff for on in dates.values())
+                or (
+                    dates
+                    and source
+                    and source.status.availability == "released"
+                    and (resource.resource.kind == "exercise" or source.status.taught == "yes")
+                )
+            ):
+                problems.append(f"{key}: use the confirmed dated disposition for this source.")
         if scope.cutoff:
-            if entry.disposition == "unresolved" or entry.disposition == "excluded":
+            unresolved = entry.disposition == "unresolved" and (
+                scope.policy == "strict"
+                or (dates and min(dates.values()) <= scope.cutoff)
+                or (entry.on and entry.on <= scope.cutoff)
+                or (
+                    source
+                    and (source.status.taught == "yes" or source.status.availability == "released")
+                )
+                or key in demands_by_source
+            )
+            if unresolved or entry.disposition == "excluded":
                 problems.append(f"{key}: unresolved for the requested cutoff.")
             if entry.disposition in {"required", "later"} and (
                 entry.basis not in {"schedule", "release", "corroborated"}
@@ -181,7 +235,6 @@ def scope_problems(
             ):
                 problems.append(f"{key}: dated evidence does not support its cutoff disposition.")
         if scope.cutoff and entry.disposition in {"required", "later"}:
-            dates = schedule_dates.get(key, {})
             basis = "schedule" if "schedule" in dates else entry.basis
             if basis in {"schedule", "release"} and (
                 basis != entry.basis or dates.get(basis) != entry.on or entry.on is None
@@ -191,12 +244,14 @@ def scope_problems(
             continue
         if resource.status != "current":
             problems.append(f"{key}: required source is not available locally.")
-        source = recorded.get(key)
         demands = demands_by_source.get(key, [])
         if source is None or not demands:
             problems.append(f"{key}: record its ledger entry and required demands.")
             continue
-        if source.status.availability in {"provisional", "unavailable", "announced"}:
+        unavailable = {"unavailable", "announced"}
+        if entry.disposition == "required":
+            unavailable.add("provisional")
+        if source.status.availability in unavailable:
             problems.append(
                 f"{key}: ledger marks the required source {source.status.availability}."
             )
@@ -228,6 +283,11 @@ def scope_problems(
                 demand.label for demand in demands if isinstance(demand, ExerciseDemand)
             }
             deferred = set(entry.deferred_items)
+            if entry.disposition == "provisional" and any(
+                item.label in mapped_items and item.status in {"not_inspected", "unavailable"}
+                for item in source.items
+            ):
+                problems.append(f"{key}: inspect every mapped provisional problem.")
             if deferred and scope.cutoff:
                 problems.append(f"{key}: a through-date scope cannot defer required sheet entries.")
                 deferred = set()
@@ -242,3 +302,79 @@ def scope_problems(
                     f"{key}: demand does not resolve to an original entry of this sheet."
                 )
     return sorted(problems)
+
+
+def source_byte_problems(root: Path, scope: Preparation, state: StudyState) -> list[str]:
+    resources = {entry.resource.key: entry for entry in state.resources}
+    problems = []
+    for source in scope.inventory:
+        if not source.included:
+            continue
+        stored = resources.get(source.source)
+        body = read_bytes(confined(root, stored.path)) if stored and stored.path else None
+        if body is None or digest(body) != source.sha256:
+            problems.append(f"{source.source}: required source bytes are missing or changed.")
+    return problems
+
+
+class ScopeSummary(TypedDict):
+    provisional_sources: tuple[str, ...]
+    unresolved_sources: tuple[str, ...]
+    partial_providers: tuple[str, ...]
+    cutoff_verified: bool | None
+
+
+def scope_summary(scope: Preparation, state: StudyState, problems: list[str]) -> ScopeSummary:
+    provisional = tuple(
+        entry.source for entry in scope.inventory if entry.disposition == "provisional"
+    )
+    unresolved = tuple(
+        entry.source for entry in scope.inventory if entry.disposition == "unresolved"
+    )
+    limits = tuple(entry.binding for entry in state.coverage if entry.status != "complete")
+    return {
+        "provisional_sources": provisional,
+        "unresolved_sources": unresolved,
+        "partial_providers": limits,
+        "cutoff_verified": not (provisional or unresolved or limits or problems)
+        if scope.cutoff
+        else None,
+    }
+
+
+def provisional_targets(
+    root: Path, state: StudyState, ledger: CoverageLedger | None
+) -> tuple[dict[str, dict[str, set[str]]], set[str]]:
+    units: dict[str, dict[str, set[str]]] = {}
+    sheets: set[str] = set()
+    for path in sorted(private_path(root, "preparation").glob("*.json")):
+        try:
+            scope = read_preparation(root, path.stem)
+        except CampusError as error:
+            if error.code != Code.INVALID_RESPONSE:
+                raise
+            # Scoped reports diagnose a malformed preparation. It cannot label this build.
+            continue
+        if (
+            scope is None
+            or scope.policy != "include_provisional"
+            or scope.course_key != state.course.key
+            or scope.semester != state.course.semester
+        ):
+            continue
+        schedule = read_schedule(root, state) if scope.cutoff else None
+        if scope_problems(scope, state, ledger, schedule) or source_byte_problems(
+            root, scope, state
+        ):
+            continue
+        sources = {row.source for row in scope.inventory if row.disposition == "provisional"}
+        for demand in scope.demands:
+            if demand.source not in sources or demand.target is None:
+                continue
+            if isinstance(demand, StudyDemand):
+                for block in demand.target.blocks:
+                    unit = units.setdefault(demand.target.unit, {})
+                    unit.setdefault(block, set()).add(demand.source)
+            else:
+                sheets.add(demand.source)
+    return units, sheets

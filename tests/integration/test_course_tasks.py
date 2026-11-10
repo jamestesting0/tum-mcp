@@ -69,6 +69,18 @@ def test_guard_requires_receipt_and_never_starts_an_unapproved_review(task_proje
     assert tasks.stop(event(project)) == {}
 
 
+@pytest.mark.parametrize("decision", ["schedule", "links"])
+def test_changed_course_decision_invalidates_the_finish_receipt(
+    task_project: Path, decision: str
+) -> None:
+    project = task_project
+    tasks.begin(project, "selected")
+    assert tasks.finish(project)["ready"]
+    path = project / f".tum-mcp/{decision}.json"
+    path.write_bytes((path.read_bytes() if path.exists() else b"{}") + b"\n")
+    assert tasks.stop(event(project))["decision"] == "block"
+
+
 def test_guard_requires_requested_round_and_keeps_its_budget(task_project: Path) -> None:
     project = task_project
     tasks.begin(project, "selected", 1)

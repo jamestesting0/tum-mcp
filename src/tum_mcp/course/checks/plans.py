@@ -7,16 +7,32 @@ brings; the plan gate records a fresh checker's verdict against the plan's finge
 
 import hashlib
 import json
+from collections.abc import Callable
+from functools import cache
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import Field, JsonValue, ValidationError
 
-from tum_mcp.course.content.study import Label, Text
+from tum_mcp.course.content.study import (
+    CodeBlock,
+    DerivationBlock,
+    DiagramBlock,
+    Label,
+    Text,
+    Unit,
+    WalkthroughBlock,
+)
+from tum_mcp.course.ledger.preparation import StudyDemand
 from tum_mcp.course.project.models import Digest, Key
 from tum_mcp.course.project.store import Write, apply, confined, private_name, read_bytes
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
+
+if TYPE_CHECKING:
+    from tum_mcp.course.checks.preparation import Readiness
+
+type CoverageReader = Callable[[str, tuple[str, ...] | None], tuple["Readiness", tuple[str, ...]]]
 
 ConceptKind = Literal[
     "definition", "fact", "rule", "procedure", "algorithm", "model", "comparison", "cases"
@@ -69,6 +85,16 @@ class Approval(Frozen):
     batches: tuple[Key, ...] | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
+class WorkedDecision(Frozen):
+    source: Key
+    demand: Key
+    decision: Key
+    block: Key
+    run: Literal["primary", "variant"] = "primary"
+    step: Annotated[int, Field(ge=1)] | None = None
+    value_path: Text | None = None
+
+
 class Plan(Frozen):
     item: Annotated[str, Field(min_length=1, max_length=200)]
     preparation: Key | None = Field(
@@ -84,6 +110,9 @@ class Plan(Frozen):
     practice: tuple[PracticeCase, ...] = Field(
         default=(), max_length=100, exclude_if=lambda value: not value
     )
+    worked_decisions: tuple[WorkedDecision, ...] = Field(
+        default=(), max_length=200, exclude_if=lambda v: not v
+    )
     gate: Approval | None = None
 
     def fingerprint(self) -> str:
@@ -97,8 +126,10 @@ def plan_path(root: Path, item: str) -> Path:
 
 def read_plan(root: Path, item: str) -> Plan | None:
     body = read_bytes(plan_path(root, item))
-    if body is None:
-        return None
+    return _parse_plan(item, body) if body is not None else None
+
+
+def _parse_plan(item: str, body: bytes) -> Plan:
     try:
         return Plan.model_validate_json(body)
     except ValidationError as error:
@@ -182,17 +213,112 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
     return problems
 
 
-def gate_status(plan: Plan, root: Path | None = None) -> str:
+def coverage_reader(root: Path) -> CoverageReader:
+    from tum_mcp.course.checks.coverage_plan import assess_plan, declaring_batches
+
+    @cache
+    def discovered(identifier: str) -> tuple[str, ...]:
+        return declaring_batches(root, identifier)
+
+    @cache
+    def assess(identifier: str, batches: tuple[str, ...]) -> "Readiness":
+        return assess_plan(root, identifier, batches)
+
+    def read(
+        identifier: str, batches: tuple[str, ...] | None
+    ) -> tuple["Readiness", tuple[str, ...]]:
+        bound = discovered(identifier) if batches is None else batches
+        return assess(identifier, bound), bound
+
+    return read
+
+
+def worked_decision_problems(
+    plan: Plan,
+    demands: list[dict[str, JsonValue]],
+    unit: Unit | None = None,
+    verified: dict[str, JsonValue] | None = None,
+) -> list[str]:
+    expected = {}
+    problems = []
+    practice = {case.question for case in plan.practice}
+    for value in demands:
+        if value.get("kind") != "study":
+            continue
+        demand = StudyDemand.model_validate(value)
+        if demand.decisions and demand.target:
+            if demand.target.question not in practice:
+                problems.append(f"{plan.item}/{demand.id}: plan the mapped transfer question.")
+            for name, decision in demand.decisions.items():
+                expected[demand.source, demand.id, name] = (demand.target.blocks, decision.computed)
+    seen: set[tuple[str, str, str]] = set()
+    blocks = {block.key: block for block in unit.blocks} if unit else {}
+    for worked in plan.worked_decisions:
+        key = worked.source, worked.demand, worked.decision
+        at = f"{plan.item}/{worked.demand}/{worked.decision}"
+        if key in seen or key not in expected:
+            problems.append(f"{at}: duplicate or unknown worked decision.")
+            continue
+        seen.add(key)
+        targets, computed = expected[key]
+        if worked.block not in targets:
+            problems.append(f"{at}: the worked block must teach this demand.")
+            continue
+        if unit is None:
+            continue
+        block = blocks.get(worked.block)
+        if block is None or worked.source not in block.sources:
+            problems.append(f"{at}: missing worked block or cited source.")
+            continue
+        if isinstance(block, WalkthroughBlock):
+            steps = (
+                block.steps
+                if worked.run == "primary"
+                else (block.variant.steps if block.variant else ())
+            )
+            if worked.step is None or worked.step > len(steps):
+                problems.append(f"{at}: missing {worked.run} step {worked.step}.")
+            if computed:
+                runs = (verified or {}).get("checked_runs", {})
+                checked = runs.get(worked.block, {}) if isinstance(runs, dict) else {}
+                if not (verified or {}).get("passed") or not checked.get(worked.run):
+                    problems.append(f"{at}: check the full {worked.run} walkthrough states.")
+        elif isinstance(block, (CodeBlock, DerivationBlock, DiagramBlock)):
+            if computed and (
+                not worked.value_path
+                or not worked.value_path.startswith(f"blocks[{unit.blocks.index(block)}].")
+                or not (verified or {}).get("passed")
+                or worked.value_path not in ((verified or {}).get("exact_values") or [])
+            ):
+                problems.append(f"{at}: verify the worked state or result with an exact value.")
+        elif computed:
+            problems.append(f"{at}: use a walkthrough, diagram, derivation or code for this trace.")
+    problems.extend(
+        f"{plan.item}/{demand}/{name}: missing worked decision."
+        for _, demand, name in sorted(expected.keys() - seen)
+    )
+    return problems
+
+
+def gate_status(
+    plan: Plan,
+    root: Path | None = None,
+    *,
+    coverage_reader_for_command: CoverageReader | None = None,
+) -> str:
     """approved, rejected, provisional (only the author read it), changed or unchecked."""
     if plan.gate is None:
         return "unchecked"
     if plan.gate.fingerprint != plan.fingerprint():
         return "changed"
-    if root is not None and plan.preparation:
-        from tum_mcp.course.checks.coverage_plan import assess_plan
-
-        coverage = assess_plan(root, plan.preparation, plan.gate.batches)
-        if coverage.scope is None or plan.gate.coverage_fingerprint != coverage.scope.fingerprint:
+    read = coverage_reader_for_command or (coverage_reader(root) if root is not None else None)
+    if read is not None and plan.preparation:
+        coverage, _ = read(plan.preparation, plan.gate.batches)
+        if (
+            not coverage.ready
+            or coverage.scope is None
+            or plan.gate.coverage_fingerprint != coverage.scope.fingerprint
+        ):
             return "changed"
     if plan.gate.verdict == "fail":
         return "rejected"
@@ -201,19 +327,24 @@ def gate_status(plan: Plan, root: Path | None = None) -> str:
 
 def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "same"]) -> dict:
     """Save a checker's plan verdicts; each applies to the plan as it was read."""
-    from tum_mcp.course.checks.coverage_plan import declaring_batches
-
+    read_coverage = coverage_reader(root)
     writes: list[Write] = []
     recorded: list[str] = []
     verdicts: dict[str, dict] = {}
     for answer in answers:
         item = str(answer.get("item", ""))
-        plan = read_plan(root, item)
-        if plan is None:
+        name = private_name(root, f"plans/{item}.json")
+        original = read_bytes(confined(root, name))
+        if original is None:
             raise CampusError(Code.ACTION_REQUIRED, f"No plan for {item}.")
+        plan = _parse_plan(item, original)
         if answer.get("fingerprint") != plan.fingerprint():
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item} changed since it was read.")
-        coverage = _coverage(root, plan)
+        coverage, batches = (
+            _coverage(plan.preparation, plan.item, read_coverage)
+            if plan.preparation
+            else (None, None)
+        )
         if coverage and answer.get("coverage_fingerprint") != coverage["scope"]["fingerprint"]:
             raise CampusError(
                 Code.ACTION_REQUIRED, f"Plan {item}: coverage changed or was not checked."
@@ -222,48 +353,68 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
         reasons = tuple(str(reason) for reason in answer.get("reasons", []))
         if verdict not in {"pass", "fail"} or (verdict == "fail" and not reasons):
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item}: pass, or fail with the reasons.")
+        if verdict == "pass" and coverage and coverage.get("walkthrough_evidence"):
+            problems = worked_decision_problems(plan, coverage["items"].get(item, []))
+            if problems:
+                raise CampusError(Code.ACTION_REQUIRED, " ".join(problems[:5]))
+        if (
+            provenance == "same"
+            and plan.gate
+            and (plan.gate.provenance == "fresh" or plan.gate.verdict == "fail")
+            and gate_status(plan, coverage_reader_for_command=read_coverage)
+            in {"approved", "rejected"}
+        ):
+            reason = (
+                "a current independent verdict already exists."
+                if plan.gate.provenance == "fresh"
+                else "repair the rejected plan and check the changed inputs first."
+            )
+            raise CampusError(Code.ACTION_REQUIRED, f"Plan {item}: {reason}")
         gate = Approval(
             fingerprint=plan.fingerprint(),
             verdict=verdict,
             reasons=reasons,
             provenance=provenance,
             coverage_fingerprint=coverage["scope"]["fingerprint"] if coverage else None,
-            batches=declaring_batches(root, plan.preparation) if plan.preparation else None,
+            batches=batches,
         )
-        name = private_name(root, f"plans/{item}.json")
         body = json.dumps(plan.model_copy(update={"gate": gate}).model_dump(mode="json"), indent=2)
-        writes.append(Write(name, read_bytes(confined(root, name)), body.encode()))
+        writes.append(Write(name, original, body.encode()))
         recorded.append(item)
         verdicts[item] = {"verdict": verdict, "reasons": list(reasons)}
     apply(root, tuple(writes))
     return {
         "recorded": recorded,
         "verdicts": verdicts,
+        "provenance": provenance,
         "next": (
             "Repair the rejected plans using these reasons, then check the changed plans."
             if any(result["verdict"] == "fail" for result in verdicts.values())
-            else "Author the requested items from these plans; reuse unchanged approvals."
+            else (
+                "Author a provisional draft from these same-author checks."
+                if provenance == "same"
+                else "Author the requested items from these plans; reuse unchanged approvals."
+            )
         ),
     }
 
 
-def _coverage(root: Path, plan: Plan) -> dict | None:
-    if plan.preparation is None:
-        return None
-    from tum_mcp.course.checks.coverage_plan import assess_plan
-
-    report = assess_plan(root, plan.preparation).report()
+def _coverage(
+    preparation: str, item: str, read_coverage: CoverageReader
+) -> tuple[dict[str, JsonValue], tuple[str, ...]]:
+    coverage, batches = read_coverage(preparation, None)
+    report = coverage.report()
     if not report["ready"]:
         raise CampusError(
             Code.ACTION_REQUIRED,
-            f"Plan {plan.item}: determine coverage before drafting. "
-            + " ".join(report["problems"][:5]),
+            f"Plan {item}: determine coverage before drafting. " + " ".join(coverage.problems[:5]),
         )
-    return report
+    return report, batches
 
 
 def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]:
     """Read the requested authoring batch or all plans waiting for a fresh checker."""
+    read_coverage = coverage_reader(root)
     if items:
         waiting = []
         for item in dict.fromkeys(items):
@@ -272,8 +423,15 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                 raise CampusError(Code.ACTION_REQUIRED, f"No plan for {item}.")
             waiting.append(plan)
     else:
-        waiting = [plan for plan in plans(root) if gate_status(plan, root) != "approved"]
-    coverage = {plan.preparation: _coverage(root, plan) for plan in waiting if plan.preparation}
+        waiting = [
+            plan
+            for plan in plans(root)
+            if gate_status(plan, coverage_reader_for_command=read_coverage) != "approved"
+        ]
+    coverage = {}
+    for plan in waiting:
+        if plan.preparation and plan.preparation not in coverage:
+            coverage[plan.preparation] = _coverage(plan.preparation, plan.item, read_coverage)[0]
     return {
         **({"coverage": coverage} if coverage else {}),
         "plans": [
@@ -285,7 +443,11 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                     if plan.preparation
                     else {}
                 ),
-                **({"status": gate_status(plan, root)} if items else {}),
+                **(
+                    {"status": gate_status(plan, coverage_reader_for_command=read_coverage)}
+                    if items
+                    else {}
+                ),
             }
             for plan in waiting
         ],

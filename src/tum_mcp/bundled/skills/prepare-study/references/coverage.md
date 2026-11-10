@@ -27,6 +27,15 @@ for each source. When using a release proxy, record it in the schedule as a rele
 Keep independently corroborated dates with their locators in the preparation scope.
 Never infer a student's own progress.
 
+Use `tum-mcp study schema preparation` and run
+`tum-mcp study report PROJECT --section coverage-plan --preparation ID --json`
+before drafting. When the request explicitly includes accessible material with
+unconfirmed release, teaching or assignment dates, set `policy: include_provisional`
+and classify those candidates as `provisional`. Record their reason and evidence
+locator and map every applicable demand. Keep the recorded source status and term.
+Known later, announced-only, withdrawn or unavailable material cannot qualify.
+Check `cutoff_verified` separately from readiness and leave unresolved sources visible.
+
 ## While authoring
 
 Link each outcome to the units that teach and practise it (`units`); a linked outcome is

@@ -5,7 +5,10 @@ A script prints one JSON object:
 
 - `values`: content path -> expected value. The text at the path must contain the value; a
   number must equal it within 1e-9 (relative).
-- `walkthroughs`: walkthrough block key -> one object per step, label -> expected state row.
+- `exact_values`: content path -> complete expected value, with whitespace normalized in text.
+- `walkthroughs`: walkthrough block key -> runs (`primary`, and `variant` when authored).
+  Each run lists one object per step containing all state rows, matched exactly.
+  A list of partial primary-run states is accepted for legacy keys.
 
 Scripts run isolated (`python -I`) in an empty folder with a time limit.
 """
@@ -82,6 +85,45 @@ def _walkthrough(value: JsonValue, key: str) -> dict | None:
     return next((found for child in children if (found := _walkthrough(child, key))), None)
 
 
+def _exact(found: JsonValue, expected: JsonValue) -> bool:
+    if isinstance(found, str) and isinstance(expected, str):
+        return found.split() == expected.split()
+    return type(found) is type(expected) and found == expected
+
+
+def _compare_runs(block: dict, runs: dict, key: str) -> tuple[list[str], int]:
+    written = {"primary": block["steps"]}
+    if block.get("variant"):
+        written["variant"] = block["variant"]["steps"]
+    if runs.keys() != written.keys():
+        return [f"walkthrough {key}: expected primary and authored variant runs exactly."], 0
+    problems = []
+    compared = 0
+    for run, steps in written.items():
+        expected = runs[run]
+        if not isinstance(expected, list) or len(expected) != len(steps):
+            problems.append(f"walkthrough {key}/{run}: expected {len(steps)} steps.")
+            continue
+        for number, (step, states) in enumerate(zip(steps, expected, strict=True), 1):
+            rows = step.get("state", [])
+            actual = {row["label"]: row["value"] for row in rows}
+            place = f"walkthrough {key}/{run} step {number}"
+            if (
+                not isinstance(states, dict)
+                or not states
+                or (states.keys() != actual.keys() or len(actual) != len(rows))
+            ):
+                problems.append(f"{place}: expected each authored state row exactly once.")
+                continue
+            for label, state in states.items():
+                compared += 1
+                if not _exact(actual[label], state):
+                    problems.append(
+                        f"{place}: {label} is {actual[label]!r}, the key computes {state!r}"
+                    )
+    return problems, compared
+
+
 def compare(value: JsonValue, output: dict) -> tuple[list[str], int]:
     """The differences between an item's content and its answer key, and how many values
     were compared."""
@@ -96,10 +138,24 @@ def compare(value: JsonValue, output: dict) -> tuple[list[str], int]:
             continue
         if not _same(found, expected):
             problems.append(f"{path}: the key computes {expected!r}, the content says {found!r}")
+    for path, expected in (output.get("exact_values") or {}).items():
+        compared += 1
+        try:
+            found = at(value, path)
+        except (KeyError, IndexError, TypeError):
+            problems.append(f"{path}: no such place in the content")
+            continue
+        if not _exact(found, expected):
+            problems.append(f"{path}: the key computes {expected!r}, the content says {found!r}")
     for key, steps in (output.get("walkthroughs") or {}).items():
         block = _walkthrough(value, key)
         if block is None:
             problems.append(f"walkthrough {key}: not in the content")
+            continue
+        if isinstance(steps, dict):
+            failures, count = _compare_runs(block, steps, key)
+            problems.extend(failures)
+            compared += count
             continue
         written = block["steps"]
         if len(written) != len(steps):
@@ -135,7 +191,15 @@ def verify(root: Path, items: dict, only: str | None = None) -> list[dict[str, J
                 "passed": not problems,
                 "compared": compared,
                 "problems": problems,
-                "values": sorted(output.get("values") or {}),
+                "values": sorted(
+                    (output.get("values") or {}).keys() | (output.get("exact_values") or {}).keys()
+                ),
+                "exact_values": sorted(output.get("exact_values") or {}),
+                "checked_runs": {
+                    name: {run: len(rows) for run, rows in steps.items() if isinstance(rows, list)}
+                    for name, steps in (output.get("walkthroughs") or {}).items()
+                    if isinstance(steps, dict)
+                },
                 "walkthroughs": sorted(
                     name
                     for name, steps in (output.get("walkthroughs") or {}).items()

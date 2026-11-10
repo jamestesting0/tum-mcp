@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 from tum_mcp.cli import app
 from tum_mcp.course.app import visuals
 from tum_mcp.course.app.build import build
-from tum_mcp.course.checks.plans import read_plan, record_gate
+from tum_mcp.course.checks.plans import plan_packet, read_plan, record_gate
 
 
 @pytest.mark.parametrize("command", ["lint", "verify"])
@@ -42,6 +42,44 @@ def test_scoped_plan_packet_preserves_provisional_status(project: Path) -> None:
     assert result.exit_code == 0, result.output
     plans = json.loads(result.output)["plans"]
     assert [(item["item"], item["status"]) for item in plans] == [("study/bfs", "provisional")]
+
+
+def test_large_batch_assesses_each_bound_scope_once(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from test_preparation_workflow import bounded_scope, write
+
+    from tum_mcp.course.checks import coverage_plan
+
+    _, scope = bounded_scope(project)
+    items = tuple(f"study/lesson-{index}" for index in range(29))
+    for key in items:
+        write(project / f".tum-mcp/plans/{key}.json", {"item": key, "preparation": "bounded"})
+    write(
+        project / ".tum-mcp/batches/selected.json",
+        {
+            "course_key": scope["course_key"],
+            "request": "Study the topic.",
+            "items": items,
+            "preparations": ["bounded"],
+        },
+    )
+    real_assess = coverage_plan.assess_plan
+    calls = []
+
+    def count(root: Path, identifier: str, batches: tuple[str, ...]):
+        calls.append((identifier, batches))
+        return real_assess(root, identifier, batches)
+
+    monkeypatch.setattr(coverage_plan, "assess_plan", count)
+    packet = plan_packet(project, items)
+    assert calls == [("bounded", ("selected",))]
+    calls.clear()
+    record_gate(project, [item | {"verdict": "pass"} for item in packet["answer"]["items"]], "same")
+    assert calls == [("bounded", ("selected",))]
+    calls.clear()
+    assert {plan["status"] for plan in plan_packet(project, items)["plans"]} == {"provisional"}
+    assert calls == [("bounded", ("selected",))]
 
 
 @pytest.mark.skipif(

@@ -9,7 +9,13 @@ from pydantic import Field, JsonValue
 from tum_mcp.course.app.browser_evidence import browser_choice, browser_identity, read_receipt
 from tum_mcp.course.app.build import current_data, read_content, stale_units
 from tum_mcp.course.app.visuals import WIDTHS, interaction_routes, shell_workspace
-from tum_mcp.course.checks.plans import gate_status, plan_problems, read_plan
+from tum_mcp.course.checks.plans import (
+    coverage_reader,
+    gate_status,
+    plan_problems,
+    read_plan,
+    worked_decision_problems,
+)
 from tum_mcp.course.content.exercise_data import read_exercises, stale_exercises
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.store import present
@@ -21,6 +27,7 @@ from tum_mcp.course.ledger.preparation import (
     StudyDemand,
     read_preparation,
     scope_problems,
+    scope_summary,
 )
 from tum_mcp.course.project.models import Digest, Key
 from tum_mcp.course.project.schedule import read_schedule
@@ -51,6 +58,12 @@ class Readiness(Frozen):
     items: dict[str, list[dict[str, JsonValue]]] = Field(default_factory=dict)
     fingerprints: dict[str, str] = Field(default_factory=dict)
     provisional_plans: tuple[str, ...] = ()
+    provisional_sources: tuple[Key, ...] = ()
+    unresolved_sources: tuple[Key, ...] = ()
+    partial_providers: tuple[Key, ...] = ()
+    cutoff_verified: bool | None = None
+    walkthrough_evidence: Literal["source_mapped"] | None = None
+    preparations: tuple[dict[str, JsonValue], ...] = ()
 
     @property
     def ready(self) -> bool:
@@ -236,6 +249,8 @@ def assess(root: Path, identifier: str, context: "Context | None" = None) -> Rea
         "mode": scope.mode,
         "cutoff": scope.cutoff.isoformat() if scope.cutoff else None,
         "dispositions": tuple(entry.model_dump(mode="json") for entry in scope.inventory),
+        "walkthrough_evidence": scope.walkthrough_evidence,
+        **scope_summary(scope, state, problems),
     }
     if ledger is None:
         return Readiness(**kwargs, problems=tuple(problems))
@@ -250,23 +265,33 @@ def assess(root: Path, identifier: str, context: "Context | None" = None) -> Rea
     outcomes = {outcome.key for entry in ledger.sources for outcome in entry.outcomes}
     verified = {result["item"]: result for result in context.answer_keys}
     provisional = []
+    read_coverage = coverage_reader(root)
     for key, demands in items.items():
         plan = read_plan(root, key)
-        if plan is None or plan.item != key or gate_status(plan) not in {"approved", "provisional"}:
-            problems.append(f"{key}: check the current teaching plan.")
+        status = (
+            gate_status(plan, coverage_reader_for_command=read_coverage) if plan else "unchecked"
+        )
+        if plan is None or plan.item != key or status == "unchecked":
+            problems.append(f"{key}: check the teaching plan with review plans --item {key}.")
+        elif status == "changed":
+            problems.append(f"{key}: source coverage changed or plan edited. Check it again.")
+        elif status == "rejected":
+            reasons = "; ".join(plan.gate.reasons) if plan.gate else ""
+            problems.append(f"{key}: repair the rejected teaching plan. {reasons}")
         else:
-            if plan.preparation and (
-                plan.preparation != identifier
-                or plan.gate is None
-                or gate_status(plan, root) == "changed"
-            ):
+            if plan.preparation and (plan.preparation != identifier or plan.gate is None):
                 problems.append(f"{key}: source coverage changed; check the plan against it again.")
             problems.extend(
                 f"{key}: {problem}"
                 for problem in plan_problems(plan, context.items[key].value, outcomes)
             )
-            if gate_status(plan) == "provisional":
+            if status == "provisional":
                 provisional.append(key)
+            if scope.walkthrough_evidence and study and key.startswith("study/"):
+                unit = next(unit for unit in study.units if key == f"study/{unit.key}")
+                problems.extend(
+                    worked_decision_problems(plan, demands, unit, verified.get(key, {}))
+                )
         problems.extend(
             f"{key}: {flag['detail']}"
             for flag in context.flags_by_item.get(key, [])

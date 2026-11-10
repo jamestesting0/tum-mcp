@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
-from pydantic import Field, TypeAdapter, ValidationError
+from pydantic import Field, JsonValue, TypeAdapter, ValidationError
 
 from tum_mcp.course.app.build import current_data
 from tum_mcp.course.app.visuals import _exam_visuals
@@ -90,12 +90,24 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
     fingerprints = {}
     dispositions = [{"request": batch.request, "items": list(batch.items)}]
     provisional: list[str] = []
+    preparations: list[dict[str, JsonValue]] = []
     for scope in batch.preparations:
         readiness = assess(root, scope, context)
         problems.extend(readiness.problems)
         covered.update(readiness.items)
         fingerprints.update(readiness.fingerprints)
         provisional.extend(readiness.provisional_plans)
+        preparations.append(
+            {
+                "identifier": scope,
+                "mode": readiness.mode,
+                "cutoff": readiness.cutoff,
+                "cutoff_verified": readiness.cutoff_verified,
+                "provisional_sources": list(readiness.provisional_sources),
+                "unresolved_sources": list(readiness.unresolved_sources),
+                "partial_providers": list(readiness.partial_providers),
+            }
+        )
         dispositions.extend(readiness.dispositions)
         for key in items.keys() & readiness.items.keys():
             items[key].extend(readiness.items[key])
@@ -214,4 +226,5 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
             key: digest({"batch": contract, "scope": fingerprints.get(key)}) for key in items
         },
         provisional_plans=tuple(provisional),
+        preparations=tuple(preparations),
     )
