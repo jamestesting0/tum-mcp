@@ -242,7 +242,7 @@ def test_prepared_review_uses_current_build_and_scope(project: Path) -> None:
                 ["study", "visuals", str(project), "--unit", "graphs", "--phone", "--json", *extra],
             )
             assert result.exit_code == 0, result.output
-            assert json.loads(result.output)["passed"], result.output
+            assert json.loads(result.stdout)["passed"], result.output
 
     check_draft()
     report = readiness(project)
