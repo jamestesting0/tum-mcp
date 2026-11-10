@@ -59,6 +59,9 @@ app. For your own resources, such as past exams from other websites, create a
 temporary folder, put them all there and ask the agent to sort them into the course.
 Preparation checks coverage and completes the draft before offering review.
 Approve review for one round of checking and repair, or request more rounds.
+Study plans connect source decisions to worked steps and transfer practice.
+Browser checks follow revealed Study and Exercise content and flag formulas that
+clip, scroll individually or become too small to read.
 [Study guide and demo](docs/study.md).
 
 TUMonline provides study names/degrees, public course catalog metadata and partial

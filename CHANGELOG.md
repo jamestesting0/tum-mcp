@@ -1,5 +1,28 @@
 # Changes
 
+## 0.24.0 — 2026-11-10
+
+- Course preparation checks the selected source bytes and topic scope before
+  approving a draft plan. An author can check the plan for draft readiness,
+  while independent review keeps its own provenance. Uncertain source status
+  remains in preparation reports without repeated provisional notices in the app.
+- Study plans map source-backed decisions to worked steps and transfer practice.
+  Computed walkthroughs must verify their complete states and any required variant,
+  and exact answer checks cover the mapped results.
+- Mathematics wraps at supported boundaries and fits within readable size limits.
+  Study and Exercises verification rejects clipped, individually scrolling or
+  unreadably small formulas, including math revealed by practice, walkthroughs,
+  guides and solutions. Reports identify expressions that need shorter notation
+  or a mathematically valid split. Diagram labels render their mathematics.
+- Exercise parts use their relative question labels and align with their statements.
+  Course rebuilds can carry existing Study and Exercise progress through explicitly
+  recorded content revisions.
+- Moodle material tools explain their paging limits and offsets. Preview port
+  conflicts explain how to reuse the existing preview or choose a free port.
+- Browser tests replay the stale outline callback without holding unrelated
+  animations, open saved-profile fixtures headlessly, and read JSON responses
+  separately from browser diagnostics.
+
 ## 0.23.0 — 2026-11-10
 
 - Cleaner terminal output. `--help` groups commands into Get started, Manage and
