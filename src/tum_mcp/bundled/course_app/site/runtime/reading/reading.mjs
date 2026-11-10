@@ -48,7 +48,6 @@ export function diagram(block) {
   const state = node('div', 'diagram-state'); state.setAttribute('aria-live', 'polite');
   const caption = node('p'), frontier = node('p', 'small'), rows = node('dl', 'frame-state');
   state.append(caption, rows, frontier);
-  const lines = [...graph.querySelectorAll('[data-edge-key], [data-arrow-key]')];
   let index = 0;
   const prev = iconButton('Previous step', 'left', () => { index = cycleIndex(index - 1, block.frames.length); update(); });
   const next = iconButton('Next step', 'right', () => { index = cycleIndex(index + 1, block.frames.length); update(); });
@@ -63,7 +62,7 @@ export function diagram(block) {
       (mark.start === edge.start && mark.end === edge.end) ||
       (!edge.directed && mark.start === edge.end && mark.end === edge.start)
     )).map(edge => `${edge.start}--${edge.end}`));
-    for (const line of lines) line.classList.toggle('active', marked.has(line.dataset.edgeKey || line.dataset.arrowKey));
+    for (const line of graph.querySelectorAll('[data-edge-key], [data-arrow-key]')) line.classList.toggle('active', marked.has(line.dataset.edgeKey || line.dataset.arrowKey));
     caption.replaceChildren(...studyText('span', '', frame.caption).childNodes);
     // The algorithm's own state (a queue, the domains) at this step; what changed since the last step is marked.
     const before = new Map((block.frames[index - 1]?.state || []).map(row => [row.label, row.value]));
@@ -135,10 +134,12 @@ export function renderReading(unit, { depth = 1, withVideo = true, inherited = [
         const list = last?.matches('dl.definitions') ? last : material.appendChild(node('dl', 'definitions'));
         const item = definitionItem(block); item.dataset.blockIndex = String(index);
         if (block.key) item.dataset.block = block.key;
+        if (block.provisional) item.querySelector('dd').prepend(node('p', 'small', 'Provisional study'));
         list.append(item);
       } else {
         const body = renderBlockBody(block); body.dataset.blockIndex = String(index);
         if (block.key) body.dataset.block = block.key;
+        if (block.provisional) material.append(node('p', 'small', 'Provisional study'));
         material.append(body);
       }
       continue;
@@ -157,6 +158,9 @@ export function renderReading(unit, { depth = 1, withVideo = true, inherited = [
       if (block.insight) heading.append(insightTip(block));
       heading.append(sourcesNote(cited, data.sources, data.course.synthetic, block.title || unit.title || '', {}, block.pages));
       material.append(heading);
+    }
+    if (block.provisional) {
+      material.append(node('p', 'small', 'Provisional study'));
     }
     material.append(block.kind === 'definition' ? append(node('dl', 'definitions'), definitionItem(block)) : renderBlockBody(block));
     section.append(material); root.append(section);
@@ -284,7 +288,14 @@ export function renderBlockBody(block, { term = true } = {}) {
     switch (block.kind) {
       case 'text':
         for (const text of block.paragraphs) root.append(studyText('p', '', text));
-        if (block.steps?.length) root.append(append(node('ol', 'steps'), ...block.steps.map(labelledItem)));
+        if (block.steps?.length) {
+          const steps = append(node('ol', 'steps'), ...block.steps.map(labelledItem));
+          if (block.steps_marker === 'lower-alpha') {
+            steps.type = 'a';
+            steps.setAttribute('role', 'list');
+          }
+          root.append(steps);
+        }
         if (block.points.length) root.append(append(node('ul'), ...block.points.map(labelledItem)));
         break;
       case 'definition': root.append(append(node('dl', 'definitions'), definitionItem(block, term))); break;

@@ -230,6 +230,7 @@ function outline(currentIndex) {
     const link = node('a', 'unit-link study-unit-link'); link.href = `#${unit.key}/content`;
     if (index === currentIndex) link.setAttribute('aria-current', 'page');
     link.append(entry(ancestry.length ? '' : unit.label || parts(unit.path?.[0] || '')[0], unit.title));
+    if (unit.provisional) link.append(node('span', 'small', unit.provisional));
     const status = node('span', 'small'); status.dataset.studyProgress = unit.key;
     link.append(status); parent.append(link);
   });

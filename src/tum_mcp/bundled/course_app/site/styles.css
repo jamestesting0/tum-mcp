@@ -470,6 +470,11 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 .graph .visited circle, .graph .visited rect { fill: var(--wash); stroke: var(--accent); }
 .graph .active circle, .graph .active rect { fill: var(--accent); stroke: var(--accent); }
 .graph .active text { fill: var(--canvas); }
+.graph-math-text { display: inline-block; white-space: nowrap; font: 18px var(--font-ui); }
+.graph foreignObject { text-align: center; color: var(--ink); }
+.graph .edge-label .graph-math-text { color: var(--muted); }
+.graph .active .graph-math-text { color: var(--canvas); }
+.graph-measure { position: absolute; visibility: hidden; }
 .diagram-state { min-height: 88px; padding-block: var(--s4); }
 .diagram.static .diagram-state { min-height: 0; padding-bottom: 0; }
 
@@ -477,6 +482,7 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 :is(.block-body, .lecture-note) ol.steps { display: grid; gap: var(--s3); margin: var(--s3) 0 0; padding: 0; list-style: none; counter-reset: step; }
 :is(.block-body, .lecture-note) ol.steps > li { position: relative; padding-inline-start: 2.2em; counter-increment: step; }
 :is(.block-body, .lecture-note) ol.steps > li::before { content: counter(step); position: absolute; inset-inline-start: 0; top: .05em; display: grid; place-items: center; width: 1.55em; height: 1.55em; border-radius: 50%; background: var(--surface); color: var(--accent); font-size: var(--text-ui); font-weight: 650; }
+:is(.block-body, .lecture-note) ol.steps[type="a"] > li::before { content: counter(step, lower-alpha) "."; border-radius: 0; background: transparent; color: var(--ink); }
 
 /* A drawn figure: strokes and text follow the theme; classes pick theme colours, never fixed ones. */
 .figure { margin: var(--s4) 0 0; }

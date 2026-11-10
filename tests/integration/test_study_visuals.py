@@ -42,6 +42,24 @@ def add_corpus(project: Path) -> None:
     build(project, publish=False)
 
 
+@browser
+def test_math_graph_labels_are_measured_as_painted_math(project: Path) -> None:
+    path = content_file(project, "study")
+    content = json.loads(path.read_bytes())
+    unit = json.loads(CORPUS.read_bytes())
+    graph = next(block for block in unit["blocks"] if block["kind"] == "diagram")
+    graph["nodes"][0]["label"] = r"Cloudy \(X_{1}\)"
+    graph["edges"][0]["label"] = r"\(X<Y\)"
+    unit["blocks"] = [graph]
+    content["units"].append(unit)
+    path.write_text(json.dumps(content), encoding="utf-8")
+    build(project, publish=False)
+
+    result = invoke("visuals", str(project), "--unit", unit["key"], "--phone", "--json")
+
+    assert result["passed"], result["defects"]
+
+
 def test_answer_visuals_are_listed_and_injected() -> None:
     payload = json.loads((CORPUS.parent / "exercises.json").read_bytes())
     exercise = payload["sets"][0]["exercises"][0]

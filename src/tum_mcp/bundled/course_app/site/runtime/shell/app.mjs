@@ -281,7 +281,9 @@ function renderHome() {
     const result = unitProgress(unit), status = [];
     if (result.answered) status.push(`Practice ${practiceLabel(result)}`);
     if (result.rated) status.push(`Cards ${result.known} of ${result.cards} known`);
-    list.append(topicRow(`#${unit.key}/content`, unit.title, [path ? `${unit.minutes} min` : `${unit.label} · ${unit.minutes} min`], status.join(' · ') || 'Not started'));
+    const metadata = [path ? `${unit.minutes} min` : `${unit.label} · ${unit.minutes} min`];
+    if (unit.provisional) metadata.push(unit.provisional);
+    list.append(topicRow(`#${unit.key}/content`, unit.title, metadata, status.join(' · ') || 'Not started'));
   }
   return [header, topics, studyPreparation(), resetButton()];
 }
@@ -361,6 +363,7 @@ function render() {
       objectives.append(node('p', 'small objectives-label', 'Objectives'), append(node('ul'), ...unit.objectives.map(item => studyText('li', '', item.text))));
       unitEyebrow = node('p', 'eyebrow', `${breadcrumb} · ${unit.minutes} min`);
       heading.append(unitEyebrow, unitHeading, summary, objectives);
+      if (unit.provisional) heading.append(node('p', 'small', unit.provisional));
       headerDetails = [summary, objectives];
       const related = relatedWork(unit);
       if (related) { heading.append(related); headerDetails.push(related); }

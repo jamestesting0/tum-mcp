@@ -2,7 +2,7 @@
 // module sizes nodes from their labels, spaces rows and columns from their widest member, bends
 // edges around nodes, separates two-way pairs, draws self-loops, and places every edge label
 // where it touches no node, line or other label. The drawing is cropped to what it shows.
-import { svgNode } from '../shell/dom.mjs';
+import { plainText, studyText, svgNode } from '../shell/dom.mjs';
 
 export const SIZES = { circle: 18, box: 16, label: 14 };
 const LINE = 20, PAD = 12;
@@ -15,6 +15,25 @@ export function textWidth(text, size) {
   const family = getComputedStyle(document.documentElement).getPropertyValue('--font-ui').trim() || 'sans-serif';
   context.font = `500 ${size}px ${family}`;
   return context.measureText(text).width || text.length * size * 0.56;
+}
+
+const hasMath = text => /\\\(.+?\\\)/s.test(text);
+
+function labelMetrics() {
+  const sizes = new Map();
+  return (text, size) => {
+    if (!hasMath(text)) return { width: textWidth(text, size), height: LINE };
+    const key = size + ':' + text;
+    if (!sizes.has(key)) {
+      const sample = studyText('span', 'graph-math-text graph-measure', text);
+      sample.style.fontSize = size + 'px';
+      document.body.append(sample);
+      const { width, height } = sample.getBoundingClientRect();
+      sample.remove();
+      sizes.set(key, { width: Math.ceil(width) + 2, height: Math.ceil(height) + 2 });
+    }
+    return sizes.get(key);
+  };
 }
 
 // A box label wraps at word boundaries into at most two lines.
@@ -30,7 +49,13 @@ function wrap(text, size, limit = 176) {
   return best;
 }
 
-function measure(item, limit) {
+function measure(item, limit, labelSize) {
+  if (hasMath(item.label)) {
+    const { width, height } = labelSize(item.label, item.shape === 'box' ? SIZES.box : SIZES.circle);
+    if (item.shape === 'box') return { lines: [item.label], w: Math.max(96, width + 32), h: Math.max(44, height + 16) };
+    const r = Math.max(24, Math.ceil(Math.hypot(width, height) / 2) + 8);
+    return { lines: [item.label], w: 2 * r, h: 2 * r, r };
+  }
   if (item.shape === 'box') {
     const lines = wrap(item.label, SIZES.box, limit), widest = Math.max(...lines.map(line => textWidth(line, SIZES.box)));
     return { lines, w: Math.max(96, Math.ceil(widest) + 32), h: lines.length > 1 ? 64 : 44 };
@@ -67,11 +92,11 @@ function segmentHits(a, b, box) {
 
 // The roomiest layout that fits `maxWidth`, or the tightest one when none does.
 // A label that finds no free spot first gets more room between rows.
-export function layoutGraph(block, maxWidth = Infinity) {
+export function layoutGraph(block, maxWidth = Infinity, labelSize = labelMetrics()) {
   let laid = null;
   for (const step of STEPS) {
     for (let extra = 0; extra <= 72; extra += 24) {
-      laid = layoutWith(block, { ...step, extra });
+      laid = layoutWith(block, { ...step, extra }, labelSize);
       if (!laid.edges.some(edge => edge.labelBox?.onLine)) break;
     }
     if (laid.width <= maxWidth) break;
@@ -79,8 +104,8 @@ export function layoutGraph(block, maxWidth = Infinity) {
   return laid;
 }
 
-function layoutWith(block, { gap: GAP, wrap: limit, extra }) {
-  const nodes = block.nodes.map(item => ({ ...item, ...measure(item, limit) }));
+function layoutWith(block, { gap: GAP, wrap: limit, extra }, labelSize) {
+  const nodes = block.nodes.map(item => ({ ...item, ...measure(item, limit, labelSize) }));
   const byKey = new Map(nodes.map(item => [item.key, item]));
   const cols = Math.max(...nodes.map(item => item.col)) + 1, rows = Math.max(...nodes.map(item => item.row)) + 1;
   const colW = Array.from({ length: cols }, (_, c) => Math.max(0, ...nodes.filter(item => item.col === c).map(item => item.w)));
@@ -90,8 +115,9 @@ function layoutWith(block, { gap: GAP, wrap: limit, extra }) {
   for (const edge of block.edges) {
     const a = byKey.get(edge.start), b = byKey.get(edge.end);
     if (!edge.label || a === b) continue;
-    if (a.row === b.row && Math.abs(a.col - b.col) === 1) hgap[Math.min(a.col, b.col)] = Math.max(hgap[Math.min(a.col, b.col)], textWidth(edge.label, SIZES.label) + 28);
-    if (a.col === b.col && Math.abs(a.row - b.row) === 1) vgap[Math.min(a.row, b.row)] = Math.max(vgap[Math.min(a.row, b.row)], 48);
+    const { width, height } = labelSize(edge.label, SIZES.label);
+    if (a.row === b.row && Math.abs(a.col - b.col) === 1) hgap[Math.min(a.col, b.col)] = Math.max(hgap[Math.min(a.col, b.col)], width + 28);
+    if (a.col === b.col && Math.abs(a.row - b.row) === 1) vgap[Math.min(a.row, b.row)] = Math.max(vgap[Math.min(a.row, b.row)], height + 28);
   }
   const xs = [], ys = [];
   colW.forEach((w, c) => xs.push(c ? xs[c - 1] + colW[c - 1] / 2 + hgap[c - 1] + w / 2 : w / 2));
@@ -165,7 +191,7 @@ function layoutWith(block, { gap: GAP, wrap: limit, extra }) {
     const bend = ctrl ? Math.sign(-(end[1] - start[1]) * (ctrl[0] - (start[0] + end[0]) / 2) + (end[0] - start[0]) * (ctrl[1] - (start[1] + end[1]) / 2)) : 0;
     return { ...edge, path: ctrl ? `M${start} Q${ctrl} ${end}` : `M${start} L${end}`, points, tip: end, from: ctrl || start, bend };
   });
-  placeLabels(nodes, edges);
+  placeLabels(nodes, edges, labelSize);
   return { nodes, edges, ...crop(nodes, edges) };
 }
 
@@ -192,13 +218,14 @@ function selfLoop(n, nodes, allEdges) {
 
 // Each label tries spots beside its own line, nearest the middle first, and takes the first
 // that is clear of every node, every line (its own included) and every earlier label.
-function placeLabels(nodes, edges) {
+function placeLabels(nodes, edges, labelSize) {
   const placed = [], blocks = nodes.map(item => boxOf(item, 4));
   const cx = nodes.reduce((sum, item) => sum + item.x, 0) / nodes.length, cy = nodes.reduce((sum, item) => sum + item.y, 0) / nodes.length;
   const segments = edges.flatMap(edge => edge.points.slice(1).map((p, i) => [edge.points[i], p]));
   const free = box => !blocks.some(other => overlaps(box, other)) && !placed.some(other => overlaps(grow(box, 6), other)) && !segments.some(([a, b]) => segmentHits(a, b, box));
   for (const edge of edges.filter(item => item.label)) {
-    const w = textWidth(edge.label, SIZES.label) + 8, h = 20, pts = edge.points;
+    const { width, height: h } = labelSize(edge.label, SIZES.label);
+    const w = width + 8, pts = edge.points;
     let chosen = null;
     const at = (t, side, d) => {
       const i = Math.min(pts.length - 2, Math.floor(t * (pts.length - 1))), a = pts[i], b = pts[i + 1];
@@ -243,28 +270,70 @@ function arrow([x, y], [fx, fy]) {
 // The drawing at its natural size: 1 unit = 1 CSS pixel. On narrow screens it shrinks only until
 // its smallest text (14 px edge labels) reaches 12 px; beyond that its region scrolls sideways.
 export function drawGraph(block, label = '') {
-  // The reading column is about 600 px wide; on a phone it is the viewport less its margins.
-  const laid = layoutGraph(block, Math.min(620, (globalThis.innerWidth || 1280) - 72));
-  const graph = svgNode('svg', { viewBox: `${laid.left} ${laid.top} ${laid.width} ${laid.height}`, width: Math.round(laid.width), height: Math.round(laid.height), class: 'graph', role: 'img', 'aria-label': label });
+  const maths = [...block.nodes, ...block.edges].map(item => item.label || '').filter(hasMath);
+  const name = [label, ...new Set(maths.map(plainText))].filter(Boolean).join('. ');
+  const graph = svgNode('svg', { class: 'graph', role: 'img', 'aria-label': name });
+  const groups = new Map();
+  const draw = () => {
+    // The reading column is about 600 px wide; on a phone it is the viewport less its margins.
+    const labelSize = labelMetrics();
+    const laid = layoutGraph(block, Math.min(620, (globalThis.innerWidth || 1280) - 72), labelSize);
+    paintGraph(graph, groups, laid, labelSize);
+    return laid;
+  };
+  const laid = draw();
+  if (maths.length && document.fonts?.status === 'loading') {
+    document.fonts.ready.then(() => { if (graph.isConnected) draw(); });
+  }
+  return { graph, groups, laid };
+}
+
+function mathLabel(value, x, y, size, labelSize, attributes = {}) {
+  const { width, height } = labelSize(value, size);
+  const box = svgNode('foreignObject', {
+    x: x - width / 2, y: y - height / 2, width, height,
+    'data-graph-math': value, ...attributes,
+  });
+  const contents = studyText('span', 'graph-math-text', value);
+  contents.style.fontSize = size + 'px';
+  box.append(contents);
+  return box;
+}
+
+function paintGraph(graph, groups, laid, labelSize) {
+  const activeEdges = new Set([...graph.querySelectorAll('.edge.active')].map(path => path.dataset.edgeKey));
+  const classes = new Map([...groups].map(([key, group]) => [key, group.getAttribute('class')]));
+  graph.replaceChildren();
+  graph.setAttribute('viewBox', `${laid.left} ${laid.top} ${laid.width} ${laid.height}`);
+  graph.setAttribute('width', Math.round(laid.width));
+  graph.setAttribute('height', Math.round(laid.height));
   graph.style.minWidth = `${Math.ceil(laid.width * 12 / SIZES.label)}px`;
   for (const edge of laid.edges) {
-    graph.append(svgNode('path', { d: edge.path, class: 'edge', 'data-edge-key': edge.key }));
-    if (edge.directed) graph.append(svgNode('path', { d: arrow(edge.tip, edge.from), class: 'arrow', 'data-arrow-key': edge.key }));
+    const active = activeEdges.has(edge.key) ? ' active' : '';
+    graph.append(svgNode('path', { d: edge.path, class: 'edge' + active, 'data-edge-key': edge.key }));
+    if (edge.directed) graph.append(svgNode('path', { d: arrow(edge.tip, edge.from), class: 'arrow' + active, 'data-arrow-key': edge.key }));
   }
-  const groups = new Map();
   for (const item of laid.nodes) {
-    const group = svgNode('g', { class: item.shape === 'box' ? 'node-box' : 'node-circle', 'data-node-key': item.key, 'data-cx': item.x, 'data-cy': item.y, 'data-reach': Math.max(item.w, item.h) / 2 + 10 });
+    const group = svgNode('g', { class: classes.get(item.key) || (item.shape === 'box' ? 'node-box' : 'node-circle'), 'data-node-key': item.key, 'data-cx': item.x, 'data-cy': item.y, 'data-reach': Math.max(item.w, item.h) / 2 + 10 });
     group.append(item.shape === 'box' ? svgNode('rect', { x: item.x - item.w / 2, y: item.y - item.h / 2, width: item.w, height: item.h, rx: 6 }) : svgNode('circle', { cx: item.x, cy: item.y, r: item.r }));
+    groups.set(item.key, group); graph.append(group);
+    if (hasMath(item.label)) {
+      group.append(mathLabel(item.label, item.x, item.y, item.shape === 'box' ? SIZES.box : SIZES.circle, labelSize));
+      continue;
+    }
     const text = svgNode('text', { x: item.x, y: item.y });
     item.lines.forEach((line, index) => {
       const span = svgNode('tspan', { x: item.x, y: item.y + (index - (item.lines.length - 1) / 2) * LINE, 'dominant-baseline': 'central' });
       span.textContent = line; text.append(span);
     });
-    group.append(text); groups.set(item.key, group); graph.append(group);
+    group.append(text);
   }
   for (const edge of laid.edges.filter(item => item.labelBox)) {
+    if (hasMath(edge.label)) {
+      graph.append(mathLabel(edge.label, edge.labelBox.cx, edge.labelBox.cy, SIZES.label, labelSize, { class: 'edge-label', 'data-label-edge': edge.key }));
+      continue;
+    }
     const text = svgNode('text', { x: edge.labelBox.cx, y: edge.labelBox.cy, class: 'edge-label', 'dominant-baseline': 'central' });
     text.textContent = edge.label; graph.append(text);
   }
-  return { graph, groups, laid };
 }

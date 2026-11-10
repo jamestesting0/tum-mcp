@@ -10,8 +10,26 @@
   const inside = (p, r) => p[0] > r.left && p[0] < r.right && p[1] > r.top && p[1] < r.bottom;
   const say = element => (element.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
   const textSize = text => {
-    const size = parseFloat(getComputedStyle(text).fontSize) || 0, ctm = text.getScreenCTM?.();
+    const content = text.querySelector('.graph-math-text') || text;
+    const size = parseFloat(getComputedStyle(content).fontSize) || 0, ctm = text.getScreenCTM?.();
     return ctm ? size * Math.hypot(ctm.a, ctm.b) : size;
+  };
+  const mathMatches = (label, authored) => {
+    const expressions = [...authored.matchAll(/\\\((.+?)\\\)/gs)].map(match => match[1]);
+    if (!label || label.dataset.graphMath !== authored || !expressions.length) return false;
+    const math = [...label.querySelectorAll('.inline-math')];
+    if (math.length !== expressions.length || math.some(item => !rect(item).width)) return false;
+    const copy = label.cloneNode(true);
+    for (const item of copy.querySelectorAll('.inline-math')) item.remove();
+    if (copy.textContent.trim() !== authored.replace(/\\\((.+?)\\\)/gs, '').trim()) return false;
+    const signature = el => [...el.querySelectorAll('math *')].map(part => [part.localName, part.childElementCount ? '' : part.textContent]).filter(([tag]) => tag !== 'annotation');
+    return math.every((item, index) => {
+      if (!item.querySelector('math')) return false;
+      if (!globalThis.katex) return true;
+      const expected = document.createElement('span');
+      globalThis.katex.render(expressions[index], expected, { trust: false, strict: 'ignore', maxExpand: 1000 });
+      return JSON.stringify(signature(item)) === JSON.stringify(signature(expected));
+    });
   };
   // Points along a stroke in screen pixels, leaving out a few pixels at each end.
   const samples = (path, trim = 8) => {
@@ -65,7 +83,7 @@
     }
     const svg = kind === 'uml' ? root.querySelector('svg') : root.matches('svg') ? root : null;
     if (!svg) continue;
-    const frame = rect(svg), texts = [...svg.querySelectorAll('text')].filter(text => text.textContent.trim());
+    const frame = rect(svg), texts = [...svg.querySelectorAll('text, foreignObject[data-graph-math]')].filter(text => text.textContent.trim());
     const sizes = texts.map(textSize).filter(Boolean);
     entry.facts.minTextPx = sizes.length ? Math.round(Math.min(...sizes) * 10) / 10 : null;
     if (sizes.length && Math.min(...sizes) < 11.9) add('tiny_text', `smallest text ${entry.facts.minTextPx} px`);
@@ -112,7 +130,7 @@
     const heads = kind === 'diagram' ? [...svg.querySelectorAll('path.arrow')] : [...svg.querySelectorAll('.uml-edge path:not(.uml-line)')];
     if (heads.some(head => { const r = rect(head); return r.width < 2 && r.height < 2; })) add('fidelity', 'an arrowhead is drawn without size, so its direction is lost');
     // A label printed on a line, unless a knockout behind it opens the line (inline UML labels).
-    const labels = kind === 'diagram' ? [...svg.querySelectorAll('text.edge-label')] : texts.filter(text => !text.closest('g[data-node], .uml-participant, .uml-message') && !text.previousElementSibling?.matches?.('rect.uml-knockout'));
+    const labels = kind === 'diagram' ? [...svg.querySelectorAll('.edge-label')] : texts.filter(text => !text.closest('g[data-node], .uml-participant, .uml-message') && !text.previousElementSibling?.matches?.('rect.uml-knockout'));
     for (const label of labels) {
       const r = shrink(rect(label), 1);
       if (edges.some(edge => edge.points.some(p => inside(p, r)))) add('label_on_line', `"${say(label)}" sits on a line`);
@@ -127,10 +145,20 @@
     };
     if (kind === 'diagram') {
       differ('nodes', nodes.map(n => n.key), block.nodes.map(n => n.key));
-      differ('node labels', [...svg.querySelectorAll('g[data-node-key] text')].map(text => [...text.querySelectorAll('tspan')].map(span => span.textContent).join(' ') || text.textContent), block.nodes.map(n => n.label.replace(/\s+/g, ' ')));
+      const sourceText = label => label.dataset.graphMath || [...label.querySelectorAll('tspan')].map(span => span.textContent).join(' ') || label.textContent;
+      differ('node labels', [...svg.querySelectorAll('g[data-node-key] :is(text,foreignObject)')].map(sourceText), block.nodes.map(n => n.label.replace(/\s+/g, ' ')));
       differ('edges', edges.map(edge => edge.key), block.edges.map(edge => `${edge.start}--${edge.end}`));
       differ('arrows', [...svg.querySelectorAll('path.arrow')].map(arrow => arrow.dataset.arrowKey), block.edges.filter(edge => edge.directed).map(edge => `${edge.start}--${edge.end}`));
-      differ('edge labels', [...svg.querySelectorAll('text.edge-label')].map(text => text.textContent), block.edges.filter(edge => edge.label).map(edge => edge.label));
+      differ('edge labels', labels.map(sourceText), block.edges.filter(edge => edge.label).map(edge => edge.label));
+      for (const node of block.nodes.filter(n => n.label.includes('\\('))) {
+        const label = svg.querySelector(`[data-node-key="${CSS.escape(node.key)}"] foreignObject`);
+        if (!mathMatches(label, node.label)) add('fidelity', `node ${node.key} lacks its typeset math label`);
+      }
+      for (const edge of block.edges.filter(e => e.label?.includes('\\('))) {
+        const key = `${edge.start}--${edge.end}`;
+        const label = svg.querySelector(`[data-label-edge="${CSS.escape(key)}"]`);
+        if (!mathMatches(label, edge.label)) add('fidelity', `edge ${key} lacks its typeset math label`);
+      }
     } else if (block.diagram === 'sequence') {
       differ('participants', [...svg.querySelectorAll('[data-participant]')].map(group => group.dataset.participant), block.participants.map(item => item.key));
       if (svg.querySelectorAll('.uml-message').length !== block.messages.length) add('fidelity', 'messages drawn differ from the block');

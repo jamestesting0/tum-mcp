@@ -8,6 +8,7 @@ import statistics
 from collections.abc import Iterator
 from functools import cache
 from importlib.resources import files
+from itertools import pairwise
 from pathlib import Path
 
 from pydantic import JsonValue
@@ -1183,6 +1184,16 @@ def quality_flags(
             for block in exercise.statement:
                 if not isinstance(block, TextBlock):
                     continue
+                markers = [
+                    re.match(r"^(?:\(([a-z])\)|([a-z])\.)\s", point) for point in block.points
+                ]
+                letters = [match.group(1) or match.group(2) for match in markers if match]
+                if any(ord(right) - ord(left) == 1 for left, right in pairwise(letters)):
+                    flag(
+                        exercise.key,
+                        "duplicate_list_marker",
+                        "Use an alphabetic ordered list for lettered items without typed markers.",
+                    )
                 words = sum(len(p.split()) for p in (*block.paragraphs, *block.steps))
                 parts = len(re.findall(r"\bProblem \d+(?:\.\d+)+", " ".join(block.paragraphs)))
                 if words > STATEMENT_WORDS or parts > 1:

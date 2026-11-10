@@ -63,6 +63,9 @@ class TextBlock(Sourced):
     paragraphs: tuple[Text, ...] = ()
     # A hard idea one claim at a time, shown as a numbered sequence after the paragraphs.
     steps: tuple[Text, ...] = Field(default=(), max_length=12)
+    steps_marker: Literal["decimal", "lower-alpha"] = Field(
+        default="decimal", exclude_if=lambda marker: marker == "decimal"
+    )
     points: tuple[Text, ...] = ()
 
     @model_validator(mode="after")

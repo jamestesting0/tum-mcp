@@ -21,7 +21,6 @@ function stageView(stage, renderBody, steps) {
   switch (stage.kind) {
     case 'diagram': {
       const { graph, groups } = drawGraph(stage, plainText(stage.description));
-      const lines = [...graph.querySelectorAll('[data-edge-key], [data-arrow-key]')];
       return { element: append(node('div', 'graph-region'), graph), show(step) {
         for (const [key, group] of groups) {
           const active = step.active.includes(key);
@@ -33,7 +32,7 @@ function stageView(stage, renderBody, steps) {
           (mark.start === edge.start && mark.end === edge.end) ||
           (!edge.directed && mark.start === edge.end && mark.end === edge.start)
         )).map(edge => `${edge.start}--${edge.end}`));
-        for (const line of lines) line.classList.toggle('active', marked.has(line.dataset.edgeKey || line.dataset.arrowKey));
+        for (const line of graph.querySelectorAll('[data-edge-key], [data-arrow-key]')) line.classList.toggle('active', marked.has(line.dataset.edgeKey || line.dataset.arrowKey));
       } };
     }
     case 'table': {

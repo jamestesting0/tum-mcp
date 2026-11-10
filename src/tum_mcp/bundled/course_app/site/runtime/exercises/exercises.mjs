@@ -22,12 +22,15 @@ function due(group) {
 // "a", "(b)", "2.", "b(ii)" or "Part c" label a question: the last token prints as "ii." and
 // each token is one level of nesting. Words such as "Hint" are titles, not labels.
 const LABEL_TOKEN = /^(?:[a-z]|[ivx]{1,4}|\d{1,2})$/i;
-function questionLabel(title) {
+function questionLabel(title, prefix) {
   const bare = title.replace(/^\s*part\s+/i, '');
   const tokens = bare.match(/[a-z]+|\d+/gi) || [];
-  const valid = tokens.length && tokens.length <= 3 && tokens.join('') === bare.replace(/[\s().]/g, '')
-    && tokens.every(token => LABEL_TOKEN.test(token));
-  return valid ? { text: `${tokens.at(-1)}.`, depth: tokens.length } : null;
+  if (!tokens.length || tokens.join('') !== bare.replace(/[\s().]/g, '')
+    || !tokens.every(token => LABEL_TOKEN.test(token))) return null;
+  const root = /^\d+(?:\.\d+)*$/.test(prefix) ? prefix.split('.') : [];
+  const relative = root.length && root.every((token, index) => token === tokens[index])
+    ? tokens.slice(root.length) : tokens;
+  return relative.length && relative.length <= 3 ? { text: `${relative.at(-1)}.`, depth: relative.length } : null;
 }
 const problemNumber = text => text.replace(/^\s*(?:problem|exercise|question|task)\s*/i, '').trim().toLowerCase();
 
@@ -50,7 +53,8 @@ export function exerciseOutline(current = '') {
     }
     const sheet = node('details', `unit-group exercise-sheet${starts ? ' group-start' : ''}`);
     sheet.open = group.exercises.some(item => item.key === current) || group === sets[0];
-    sheet.append(append(node('summary'), studyText('span', '', group.title)));
+    sheet.append(append(node('summary'), studyText('span', '', group.title),
+      ...(sheet.provisional ? [node('span', 'small', 'Provisional practice')] : [])));
     const list = node('div', 'group-children');
     for (const exercise of group.exercises) {
       const link = node('a', 'unit-link'); link.href = exerciseLink(group, exercise);
@@ -94,7 +98,7 @@ function exerciseList(state) {
       if (categoryLabel(group)) root.append(studyText('h2', 'topic-group', category));
     }
     root.append(studyText('h3', 'topic-group', group.title));
-    const meta = [group.week, due(group)].filter(Boolean).join(' · ');
+    const meta = [group.week, due(group), group.provisional ? 'Provisional practice' : ''].filter(Boolean).join(' · ');
     if (meta) root.append(node('p', 'small sheet-meta', meta));
     if (group.summary) root.append(studyText('p', 'sheet-summary', group.summary));
     for (const entry of pending.filter(item => item.set === group.key)) {
@@ -169,6 +173,9 @@ export function exercisePage(exercise, options) {
   const activityChanged = () => root.dispatchEvent(new Event('study-activity-change', { bubbles: true }));
   const eyebrow = studyText('p', 'eyebrow', options.eyebrow);
   header.append(eyebrow, heading);
+  if (sets.some(group => group.key === options.set && group.provisional)) {
+    header.append(node('p', 'small', 'Provisional practice'));
+  }
   if (exercise.kind === 'distilled') {
     const practice = node('p', 'small practice-for', 'Practice for ');
     exercise.distilled_from.forEach((key, index) => {
@@ -203,7 +210,7 @@ export function exercisePage(exercise, options) {
     const heading = section.querySelector(':scope > .reading-material > .section-heading');
     const title = heading?.querySelector(':scope > :is(h2, h3, h4, h5, h6)');
     const repeatsNumber = Boolean(title) && problemNumber(block.title) === problemNumber(exercise.label);
-    const label = title && !repeatsNumber ? questionLabel(block.title) : null;
+    const label = title && !repeatsNumber ? questionLabel(block.title, problemNumber(exercise.label)) : null;
     const sourceKey = `${[...block.sources].sort().join(',')}|${block.pages || ''}`;
     if (label || repeatsNumber) {
       title.remove(); heading.classList.add('untitled');
