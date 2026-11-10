@@ -1,5 +1,6 @@
 import { node, studyText, append, plainText } from '../shell/dom.mjs';
-import { fitMath, formulaParts, splitRelation, texElement } from './mathml.mjs';
+import { fitMath } from './math-fit.mjs';
+import { formulaParts, splitRelation, texElement } from './mathml.mjs';
 import { withMeanings } from './symbols.mjs';
 import { iconButton, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 
@@ -33,9 +34,8 @@ function line(entry, symbols, seen) {
   const typeset = !listed && globalThis.katex && [left, relation, right].map(part => part.trim() ? texElement(part, { display: true, symbols: symbols?.map(item => item.symbol), seen }) : null);
   if (typeset && typeset.every((part, index) => part || ![left, relation, right][index].trim())) {
     const [l, r, rest] = typeset;
-    expression.append(append(node('span', 'derivation-left'), ...(l ? [l] : [])),
+    expression.append(fitted(append(node('span', 'derivation-left'), ...(l ? [l] : []))),
       append(node('span', 'derivation-relation'), ...(r ? [r] : [])),
-      // A long right side breaks only between its parts, then shrinks a little, then scrolls.
       fitted(append(node('span', 'derivation-right'), ...(rest ? [rest] : []))));
   } else {
     // A listed line, or any line without KaTeX (the build's MathML), shows whole and unaligned.

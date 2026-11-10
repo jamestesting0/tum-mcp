@@ -44,7 +44,7 @@ def add_corpus(project: Path) -> None:
 
 
 @browser
-def test_formula_layout_holds_receipts_for_clipped_practice_and_scrolling_guide(
+def test_formula_layout_rejects_clipped_tiny_and_scrolling_math_in_revealed_content(
     exercise_project: Path,
 ) -> None:
     project = exercise_project
@@ -61,6 +61,12 @@ def test_formula_layout_holds_receipts_for_clipped_practice_and_scrolling_guide(
             "rows": [["Trial", r"\(a+b=3\)"]],
         }
     )
+    graph = next(
+        block for block in json.loads(CORPUS.read_bytes())["blocks"] if block["kind"] == "diagram"
+    )
+    graph["sources"] = [unit["sources"][0]["key"]]
+    graph["edges"][0]["label"] = r"\(X_{1}<Y\)"
+    unit["blocks"].append(graph)
     study_file.write_text(json.dumps(study), encoding="utf-8")
     exercise_file = content_file(project, "exercises")
     exercises = json.loads(exercise_file.read_bytes())
@@ -74,6 +80,7 @@ def test_formula_layout_holds_receipts_for_clipped_practice_and_scrolling_guide(
         + """
       .table-region { max-width: 150px; }
       .table-region table { min-width: 700px; }
+      .graph-region { max-width: 150px; }
     """
     )
     css.write_text(wide, encoding="utf-8")
@@ -97,21 +104,27 @@ def test_formula_layout_holds_receipts_for_clipped_practice_and_scrolling_guide(
       .question-hint .inline-math { width: 14px; overflow: hidden; }
       .question-hint .inline-math > .tex { font-size: 18px !important; }
       .exercise-hints .inline-math { overflow: scroll; }
+      .solution-answer { max-width: 150px; overflow-x: auto; }
+      .solution-answer .inline-math:first-of-type > .tex { font-size: 6px !important; }
+      .solution-answer .inline-math:nth-of-type(2) > .tex { position: relative; left: 180px; }
     """,
         encoding="utf-8",
     )
     broken = invoke(*args)
 
     assert not broken["passed"]
-    problems = {
-        issue["route"]: issue["problem"]
-        for issue in broken["problems"]
-        if issue["control"] == "math"
-    }
-    assert "Practice question 1" in problems["#graphs/content"]
-    assert "is clipped" in problems["#graphs/content"]
+    problems = [issue for issue in broken["problems"] if issue["control"] == "math"]
     guide = "#exercises/sheet-1/sample-relaxation"
-    assert "Step 2" in problems[guide] and "has its own scrollbar" in problems[guide]
+    for route, state, reason in (
+        ("#graphs/content", "Practice question 1", "is clipped"),
+        (guide, "Step 2", "has its own scrollbar"),
+        (guide, "Solution", "is too small"),
+        (guide, "Solution", "requires horizontal scrolling"),
+    ):
+        assert any(
+            issue["route"] == route and state in issue["problem"] and reason in issue["problem"]
+            for issue in problems
+        ), problems
     receipt = read_receipt(project)
     assert receipt is not None
     for width in ("phone", "narrow", "desktop"):

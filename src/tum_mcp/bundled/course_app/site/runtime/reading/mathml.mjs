@@ -1,3 +1,5 @@
+import './math-fit.mjs';
+
 // Only the local compiler's inert MathML is accepted; prose never becomes HTML.
 const namespace = 'http://www.w3.org/1998/Math/MathML';
 const allowed = new Set('math mrow mi mn mo mtext mfrac msqrt mroot msub msup msubsup mtable mtr mtd munder mover munderover mmultiscripts mprescripts none mspace mstyle menclose'.split(' '));
@@ -216,34 +218,6 @@ function typeset(katex, latex, display, symbols, seen) {
   return span;
 }
 
-function fit(elements) {
-  const rows = elements.filter(element => element.isConnected).map(element => {
-    const inline = element.localName === 'study-inline-math';
-    const expression = inline ? element.firstElementChild : element;
-    expression.style.fontSize = '';
-    return { element, expression, inline };
-  });
-  const sizes = rows.map(({ element, expression, inline }) => {
-    const style = getComputedStyle(element), size = parseFloat(getComputedStyle(expression).fontSize);
-    const width = element.getBoundingClientRect().width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-    const parts = expression.querySelectorAll(inline ? '.katex-html > .base' : '.tex-part');
-    const widest = parts.length
-      ? Math.max(...[...parts].map(part => part.getBoundingClientRect().width))
-      : (inline ? expression : expression.querySelector('math'))?.getBoundingClientRect().width;
-    return width > 0 && widest > width ? `${size * Math.max(0.5, width - 0.5) / widest}px` : '';
-  });
-  rows.forEach(({ expression }, index) => { expression.style.fontSize = sizes[index]; });
-}
-const fitter = new ResizeObserver(entries => fit(entries.map(entry => entry.target)));
-export function fitMath(element) {
-  fitter.observe(element);
-  document.fonts?.ready.then(() => fit([element]));
-}
-customElements.define('study-inline-math', class extends HTMLElement {
-  connectedCallback() { fitMath(this); }
-  disconnectedCallback() { fitter.unobserve(this); }
-});
-
 export function inlineExpression(latex, mathml = null) {
   const math = texElement(latex, { mathml });
   if (!math) return null;
@@ -265,7 +239,7 @@ export function texElement(latex, { display = false, mathml = null, symbols = nu
     const span = document.createElement('span');
     span.className = display ? 'tex tex-display' : 'tex';
     try {
-      // Display math breaks between its parts; an inline formula is one piece and never breaks.
+      // Keep authored display breaks as well as KaTeX's break opportunities within a part.
       const parts = display ? formulaParts(latex) : [{ latex, gap: null }];
       for (const part of parts) {
         span.append(typeset(katex, part.latex, display, symbols, seen));

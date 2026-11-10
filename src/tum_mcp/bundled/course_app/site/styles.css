@@ -68,10 +68,9 @@ li + li { margin-top: var(--s2); }
 .eyebrow, .citation-eyebrow { font-weight: 500; }
 /* Let KaTeX wrap between its unbroken groups without clipping scripts or fractions. */
 .inline-math { display: inline-block; max-inline-size: 100%; vertical-align: baseline; }
-.inline-math .tex-part { white-space: normal; }
+.inline-math .tex-part, .tex-display .tex-part { white-space: normal; }
 .inline-math > math { display: inline-block; inline-size: max-content; white-space: nowrap; }
 .tex .katex { text-rendering: auto; }
-/* A formula never breaks inside one of its parts; lines break only at the gaps between them. */
 .tex-part { white-space: nowrap; }
 /* A variable with a meaning: a click opens it. KaTeX draws inline blocks, which take no text
    decoration, so the cue is a border on the marked box. */
@@ -410,7 +409,7 @@ button.contents-toggle:hover, button.contents-toggle[aria-expanded="true"] { bac
 .derivation-right { grid-column: 3; min-width: 0; }
 /* Listed lines also size the math columns when a group has no aligned equations. */
 .derivation-whole { grid-column: 1 / 4; }
-.derivation-left :is(math, .katex), .derivation-relation :is(math, .katex) { display: inline-block; }
+.derivation-left math, .derivation-relation :is(math, .katex) { display: inline-block; }
 .derivation-left, .derivation-right, .apply-math { padding: .4em 2px; margin-block: -.4em; }
 .derivation-reason { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: var(--text-ui); }
 /* Reasons sit beside the working only when every line fits there at full size (derivation.mjs

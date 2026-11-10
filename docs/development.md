@@ -269,6 +269,14 @@ holds) and falls back to that MathML. Unit `path` labels group the outline
 without changing learning-progress revisions. Shared modules render all units;
 content changes do not require a framework or per-unit HTML.
 
+The formula layout check visits Study and Exercises, including math revealed by
+practice, walkthroughs, guides and solutions. It rejects clipping, formula
+scrollbars and rendered sizes below 1 rem for reading math, 0.875 rem in tables
+and 0.75 rem in SVG labels. Whole data tables and diagrams can scroll when
+their structure requires it. If a formula still fails after wrapping and
+fitting, move inline math into a display, split the working at a valid relation,
+or define shorter notation. The report identifies the formula and interaction state.
+
 Shared renderer assets live in `src/tum_mcp/bundled/course_app/site/`; they are the
 source of truth for layout, styling and interaction, and
 [the design contract](course-app-design.md) describes their components and states. Design tokens sit at the top of

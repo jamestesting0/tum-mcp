@@ -90,6 +90,7 @@ TEMPLATE_FILES = (
     "runtime/reading/code.mjs",
     "runtime/reading/derivation.mjs",
     "runtime/reading/formulas.mjs",
+    "runtime/reading/math-fit.mjs",
     "runtime/reading/mathml.mjs",
     "runtime/reading/reading.mjs",
     "runtime/reading/symbols.mjs",

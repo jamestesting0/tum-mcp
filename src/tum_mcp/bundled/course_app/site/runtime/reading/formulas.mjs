@@ -1,5 +1,6 @@
 import { node, studyText, plainText } from '../shell/dom.mjs';
-import { fitMath, parseMath, texElement } from './mathml.mjs';
+import { fitMath, mathSizeFloor } from './math-fit.mjs';
+import { parseMath, texElement } from './mathml.mjs';
 import { symbolName } from './symbols.mjs';
 
 const namespace = 'http://www.w3.org/1998/Math/MathML';
@@ -71,8 +72,9 @@ class StudyEquation extends HTMLElement {
     const style = getComputedStyle(this);
     const width = this.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
     if (width <= 0) return;
-    const minimum = parseFloat(style.getPropertyValue('--math-min'));
-    const maximum = parseFloat(style.getPropertyValue('--math-max'));
+    const floor = mathSizeFloor(this, parseFloat(getComputedStyle(document.documentElement).fontSize));
+    const minimum = Math.max(floor, parseFloat(style.getPropertyValue('--math-min')));
+    const maximum = Math.max(minimum, parseFloat(style.getPropertyValue('--math-max')));
     const source = this.#source;
     const original = source.cloneNode(true); original.style.fontSize = `${maximum}px`;
     const whole = node('div', 'equation-line'); whole.append(original); this.replaceChildren(whole);
@@ -89,7 +91,7 @@ class StudyEquation extends HTMLElement {
     this.replaceChildren(...rows.map(tokens => line(source, tokens, maximum)));
     for (const row of this.children) {
       const math = row.firstElementChild, natural = math.getBoundingClientRect().width;
-      math.style.fontSize = `${Math.min(maximum, maximum * (width - 1) / natural)}px`;
+      math.style.fontSize = `${Math.max(floor, Math.min(maximum, maximum * (width - 1) / natural))}px`;
     }
   }
 }

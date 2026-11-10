@@ -8,14 +8,18 @@ async ({ query, study, exercise }) => {
   const visible = element => Boolean(element && element.getClientRects().length && !element.closest('[hidden]'));
   const label = element => (element.closest('section')?.querySelector('h2, h3, h4')?.textContent || '').trim().slice(0, 60);
   const formulaBox = '.inline-math, .equation, .derivation-left, .derivation-relation, .derivation-right, .derivation-whole, .tex, math';
-  const checked = new WeakSet();
+  const checked = new WeakMap();
   const scrolls = (mode, extent, client) => mode === 'scroll' || (mode === 'auto' && extent > client);
   const mathVisible = element => visible(element)
     && !element.closest('[inert], .katex-mathml, details:not([open]) > :not(summary)')
     && getComputedStyle(element).visibility === 'visible';
   const mathText = value => typeof value === 'string' ? /\\\(|<math[\s>]/.test(value)
     : value !== null && typeof value === 'object' && Object.values(value).some(mathText);
-  const data = study || exercise ? (await import(new URL('data.mjs', location.href).href)).default : null;
+  const mathRoute = study || exercise;
+  const data = mathRoute ? (await import(new URL('data.mjs', location.href).href)).default : null;
+  const { katexGroups, mathSizeFloor } = mathRoute
+    ? await import(new URL('runtime/reading/math-fit.mjs', location.href).href) : {};
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
   const steps = exercise && data.exercises.sets.flatMap(set => set.exercises)
     .find(item => item.key === exercise).steps;
   const guideMath = mathText(steps || null);
@@ -29,7 +33,7 @@ async ({ query, study, exercise }) => {
     const scaleY = element.offsetHeight ? box.height / element.offsetHeight : 1;
     const left = box.left + (element.clientLeft || 0) * scaleX;
     const top = box.top + (element.clientTop || 0) * scaleY;
-    const layout = { left, top, scaleX, scaleY,
+    const layout = { box, left, top, scaleX, scaleY, fontSize: parseFloat(style.fontSize),
       width: svg ? box.width : element.clientWidth * scaleX,
       height: svg ? box.height : element.clientHeight * scaleY,
       overflowX: svg ? 'clip' : style.overflowX, overflowY: svg ? 'clip' : style.overflowY };
@@ -38,11 +42,21 @@ async ({ query, study, exercise }) => {
   }
 
   function mathIssue(formula, cache) {
-    const marks = [...formula.querySelectorAll('.katex-html > .katex-base, math')].filter(mathVisible);
+    const marks = [...formula.querySelectorAll(`${katexGroups}, math`)].filter(mathVisible);
     if (!marks.length) marks.push(...[...formula.querySelectorAll('.katex-html')].filter(mathVisible));
     if (!marks.length && formula.matches('math')) marks.push(formula);
+    const svg = formula.closest('svg');
+    const matrix = svg?.getScreenCTM();
+    const scale = matrix ? Math.hypot(matrix.c, matrix.d) : 1;
+    const scrollOwner = svg?.closest('.graph-region, .uml-region')
+      || formula.closest('td, th')?.closest('.table-region');
+    const floor = mathSizeFloor(formula, rem);
+    const width = layoutOf(formula, cache).box.width;
     for (const mark of marks) {
-      const box = mark.getBoundingClientRect().toJSON();
+      const layout = layoutOf(mark, cache);
+      const box = layout.box.toJSON();
+      const size = layout.fontSize * scale;
+      if (size < floor - .1) return { reason: `is too small (${size.toFixed(1)} px, minimum ${floor.toFixed(1)} px)`, width };
       for (let node = mark; node && node !== document.body; node = node.parentElement) {
         const region = layoutOf(node, cache);
         const own = formula.contains(node);
@@ -53,11 +67,13 @@ async ({ query, study, exercise }) => {
           const mode = region['overflow' + axis];
           if (mode === 'visible' || (!node[offset] && !node[extent] && node.localName !== 'foreignObject')) continue;
           const scrolling = scrolls(mode, node[extent], node[offset]);
-          if (own && scrolling) return 'has its own scrollbar';
+          if (own && scrolling) return { reason: 'has its own scrollbar', width: region.width };
           const shift = scrolling ? node[position] * scale : 0;
           const span = scrolling ? node[extent] * scale : region[size];
           const min = region[start] - shift;
-          if (box[start] < min - 2 || box[end] > min + span + 2) return 'is clipped';
+          if (box[start] < min - 2 || box[end] > min + span + 2) return { reason: 'is clipped', width: region.width };
+          if (axis === 'X' && scrolling && node !== scrollOwner && box[end] > min + region.width + 2)
+            return { reason: 'requires horizontal scrolling outside its table or diagram', width: region.width };
           if (scrolling) {
             const length = Math.min(box[end] - box[start], region[size]);
             box[start] = Math.max(region[start], Math.min(box[start], region[start] + region[size] - length));
@@ -66,30 +82,38 @@ async ({ query, study, exercise }) => {
         }
       }
       if (box.left < -2 || box.right > document.documentElement.clientWidth + 2)
-        return 'extends beyond the reading viewport';
+        return { reason: 'extends beyond the reading viewport', width: document.documentElement.clientWidth };
     }
-    return '';
+    return null;
   }
 
   async function inspectMath(root, context) {
-    if (!root || (!study && !exercise)) return;
+    if (!root || !mathRoute) return;
     if (document.fonts.status === 'loading') { await document.fonts.ready; await frame(); }
     const cache = new Map(), suspects = [];
     for (const formula of root.querySelectorAll(formulaBox)) {
-      if (checked.has(formula) || !mathVisible(formula) || formula.parentElement.closest(formulaBox)) continue;
-      checked.add(formula);
+      if (formula.parentElement.closest(formulaBox) || !mathVisible(formula)) continue;
+      const width = checked.has(formula) ? formula.getBoundingClientRect().width : layoutOf(formula, cache).box.width;
+      if (checked.get(formula) === width) continue;
+      checked.set(formula, width);
       if (mathIssue(formula, cache)) suspects.push(formula);
     }
+    if (!suspects.length) return;
+    await frame(); await frame();
+    let settled = new Map();
     for (const formula of suspects) {
-      // The native display equation fits when it nears the viewport. Retry a suspect after that layout.
-      formula.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-      await frame(); await frame();
-      const issue = mathIssue(formula, new Map());
+      let issue = mathIssue(formula, settled);
+      if (issue && formula.matches('study-equation')) {
+        formula.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        await frame(); await frame();
+        settled = new Map();
+        issue = mathIssue(formula, settled);
+      }
       if (!issue) continue;
       const ink = [...formula.querySelectorAll('.katex-html')].map(node => node.textContent).join(' ') || formula.textContent;
       const excerpt = ink.replace(/\s+/g, ' ').trim().slice(0, 72);
       const heading = label(formula);
-      say('math', `${context}${heading ? ` · ${heading}` : ''}: formula "${excerpt}" ${issue}`);
+      say('math', `${context}${heading ? ` · ${heading}` : ''}: formula "${excerpt}" ${issue.reason} (available width ${Math.round(issue.width)} px). Split at a valid math boundary or use shorter notation.`);
     }
   }
 

@@ -13,6 +13,7 @@ from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.course.app.preview import Handler, PreviewServer
+from tum_mcp.course.content.latex import compile_latex
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Explicit owned browser QA."
@@ -87,7 +88,9 @@ def test_math_derivations_and_drawings_render_like_their_page(
         context.close()
 
 
-def test_formulas_break_only_between_their_parts(course_browser: Browser, example_url: str) -> None:
+def test_formulas_wrap_at_authored_and_typeset_breaks(
+    course_browser: Browser, example_url: str
+) -> None:
     page = course_browser.new_page(viewport={"width": 390, "height": 900})
     page.goto(example_url + "#study/components/content")
     expect(page.locator(".tex-equation .katex").first).to_be_visible()
@@ -103,11 +106,11 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
           document.querySelector('main').append(box);
           const pieces = [...box.querySelectorAll('.tex-part')];
           const feedback = document.createElement('p');
-          feedback.className = 'feedback';
+          feedback.className = 'feedback'; feedback.style.width = '180px';
           const matrix = String.raw`\begin{pmatrix}1&1\\0&0\end{pmatrix}`;
           const inline = inlineExpression(`R^2=${matrix}${matrix}=${matrix}=R`);
           feedback.append('Multiplying gives ', inline, '.');
-          box.append(feedback);
+          box.after(feedback);
           await document.fonts.ready;
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           return {
@@ -115,9 +118,9 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
               parts: formulaParts(c.latex).map(part => part.latex),
               split: splitRelation(c.latex),
             })),
-            rects: pieces.map(piece => piece.getClientRects().length),
-            stacked: pieces[1].getBoundingClientRect().top
-              > pieces[0].getBoundingClientRect().bottom - 1,
+            wraps: pieces.every(piece => piece.getClientRects().length > 1),
+            displayOverflow: Math.max(...pieces.map(piece => piece.getBoundingClientRect().right))
+              - box.getBoundingClientRect().right,
             inlineOverflow: feedback.scrollWidth - feedback.clientWidth,
             inlineRects: inline.querySelector('.tex-part').getClientRects().length,
             inlineBoxOverflow: inline.scrollWidth - inline.clientWidth,
@@ -130,13 +133,46 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
     page.close()
     # The app cuts and aligns formulas where the build's scanner does (test_study_math).
     assert result["scan"] == [{"parts": c["parts"], "split": c["split"]} for c in cases]
-    # Each part stays on one line; the line breaks at the gap between them.
-    assert result["rects"] == [1, 1]
-    assert result["stacked"]
+    assert result["wraps"]
+    assert result["displayOverflow"] <= 1
     assert result["inlineOverflow"] <= 1
     assert result["inlineRects"] > 1
     assert result["inlineBoxOverflow"] <= 1
     assert result["inlineOverflowX"] == result["inlineOverflowY"] == "visible"
+
+
+@pytest.mark.parametrize("native", [False, True])
+def test_unbreakable_formula_keeps_a_readable_size(
+    course_browser: Browser, example_url: str, native: bool
+) -> None:
+    with course_browser.new_page(viewport={"width": 320, "height": 900}) as page:
+        if native:
+            _ = page.route("**/katex.min.js", lambda route: route.abort())
+        _ = page.goto(example_url + "#study/components/content")
+        expect(page.locator(".reading")).to_be_visible()
+        latex = r"\mathrm{" + "unbreakable" * 12 + "}"
+        sizes = page.evaluate(
+            """async ({ latex, mathml }) => {
+              const { inlineExpression } = await import('./runtime/reading/mathml.mjs');
+              const { renderFormula } = await import('./runtime/reading/formulas.mjs');
+              const inline = inlineExpression(latex, mathml);
+              const display = renderFormula({ latex, mathml, plain: 'Long formula', symbols: [] });
+              const box = document.createElement('div');
+              box.style.width = '240px';
+              box.append(inline, display);
+              document.body.prepend(box);
+              box.scrollIntoView();
+              await document.fonts.ready;
+              for (let i = 0; i < 4; i++) await new Promise(done => requestAnimationFrame(done));
+              return [inline, display].map(formula => {
+                const ink = formula.querySelector('.katex-html > .katex-base')
+                  || formula.querySelector('math');
+                return parseFloat(getComputedStyle(ink).fontSize);
+              });
+            }""",
+            {"latex": latex, "mathml": compile_latex(latex)},
+        )
+    assert all(size >= 15.9 for size in sizes), sizes
 
 
 @pytest.mark.parametrize("width", [390, 1280])
