@@ -18,20 +18,20 @@ tum-mcp login
 tum-mcp doctor
 ```
 
-`tum-mcp setup` asks which of your installed coding clients to configure, then which
-optional workflows (Lecture, Audio Notes, Video Notes, Course Memory) to add. Nothing
-is preselected, and Enter with nothing selected skips a step.
+`tum-mcp setup` configures your installed coding clients and installs the optional
+workflows you pick (Lecture, Audio Notes, Video Notes, Course Memory) in one pass.
+Nothing is preselected, and Enter with nothing selected skips a step.
 
 Doctor reuses successful client checks for 24 hours while checking local
 registration and hooks every time. Use `tum-mcp doctor --refresh-clients` for a
 fresh client probe.
 
 Then create a folder for one course, open an agent chat in it and run `$sync-course`
-(Codex) or `/sync-course` (Claude Code). You are all set: the agent collects the
-course's materials and you get your own learning harness for that course.
+(Codex, Antigravity, Cursor) or `/sync-course` (Claude Code). You are all set: the
+agent collects the course's materials and you get your own learning harness for that
+course.
 
-Recommended models to start with: GPT-6.1 Terra at xhigh reasoning in Codex, or
-Claude Opus 5.5 at medium effort in Claude Code.
+Recommended models: GPT-6.1 Terra high or Opus 5.5 medium.
 
 ## Read and study
 
