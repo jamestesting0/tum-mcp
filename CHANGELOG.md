@@ -19,7 +19,8 @@
   recorded content revisions.
 - Moodle material tools explain their paging limits and offsets. Preview port
   conflicts explain how to reuse the existing preview or choose a free port.
-- Browser tests replay the stale outline callback without holding unrelated
+- Render checks wait for the course shell to mount before measuring its visuals.
+  Browser tests replay the stale outline callback without holding unrelated
   animations, open saved-profile fixtures headlessly, and read JSON responses
   separately from browser diagnostics.
 

@@ -337,6 +337,7 @@ def _sheets(page: "Page", shots: list[tuple[str, bytes]], width: int, stem: Path
 def _open(page: "Page", url: str) -> None:
     page.goto(url)
     page.wait_for_load_state("networkidle")
+    page.locator("#app > .shell").wait_for(state="attached")
     page.evaluate(SETTLE)
 
 

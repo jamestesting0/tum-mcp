@@ -9,10 +9,12 @@ from threading import Thread
 
 import pytest
 from playwright.sync_api import Browser, expect
+from playwright.sync_api import TimeoutError as BrowserTimeout
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.course.app.preview import Handler, PreviewServer
+from tum_mcp.course.app.visuals import _open
 from tum_mcp.course.content.latex import compile_latex
 
 pytestmark = pytest.mark.skipif(
@@ -173,6 +175,18 @@ def test_unbreakable_formula_keeps_a_readable_size(
             {"latex": latex, "mathml": compile_latex(latex)},
         )
     assert all(size >= 15.9 for size in sizes), sizes
+
+
+def test_visual_measurement_rejects_a_course_that_never_started(
+    course_browser: Browser, example_url: str
+) -> None:
+    with course_browser.new_page() as page:
+        page.set_default_timeout(1000)
+        page.set_default_navigation_timeout(10000)
+        _ = page.route("**/runtime/shell/app.mjs", lambda route: route.abort())
+        with pytest.raises(BrowserTimeout):
+            _open(page, example_url + "#study/components/content")
+        expect(page.get_by_role("heading", name="Course unavailable", exact=True)).to_be_visible()
 
 
 @pytest.mark.parametrize("width", [390, 1280])
