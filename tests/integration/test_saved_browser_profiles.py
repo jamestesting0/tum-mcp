@@ -1,10 +1,12 @@
 import os
+from functools import partial
 
 import pytest
 from browser_consumer_fixture import saved_profile_journey, synthetic_browser_keychain
 from filelock import Timeout
 from playwright.sync_api import Page, sync_playwright
 
+from tum_mcp import profile_session
 from tum_mcp.browser_profiles import create_profile, profile_lock, remove_profile
 from tum_mcp.commands import browser_profiles as manager
 from tum_mcp.moodle.browser_runtime import browser_driver
@@ -51,6 +53,9 @@ def test_manage_opens_profile_and_keeps_it_locked_until_its_windows_close(
         closed.append(True)
 
     monkeypatch.setattr(Page, "wait_for_event", close_window)
+    monkeypatch.setattr(
+        profile_session, "login_context", partial(profile_session.login_context, headless=True)
+    )
     monkeypatch.setattr(manager.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(manager, "discover_browsers", lambda: (browser,))
 
