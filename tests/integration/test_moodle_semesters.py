@@ -111,6 +111,27 @@ def test_mcp_tool_calls_discover_read_and_reject_denied_past_courses(
                 )
                 async with ClientSession(*client_streams) as client:
                     await client.initialize()
+                    for tool, args, supplied, cap in (
+                        ("moodle_list_courses", {"include_past": True}, 100, 50),
+                        ("moodle_list_materials", {"course_id": 1}, 200, 50),
+                    ):
+                        invalid = await client.call_tool(tool, args | {"limit": supplied})
+                        message = invalid.content[0].text
+                        assert invalid.is_error
+                        assert f"limit must be at most {cap}" in message
+                        assert str(supplied) not in message
+                        assert "next_cursor as cursor with the same filters" in message
+                        first = (
+                            await client.call_tool(tool, args | {"limit": 1})
+                        ).structured_content
+                        rest = (
+                            await client.call_tool(tool, args | {"cursor": first["next_cursor"]})
+                        ).structured_content
+                        field = tool.removeprefix("moodle_list_")
+                        assert not rest["next_cursor"]
+                        assert set(row["id"] for row in first[field]).isdisjoint(
+                            row["id"] for row in rest[field]
+                        )
                     current = await client.call_tool("moodle_list_courses", {})
                     assert [c["id"] for c in current.structured_content["courses"]] == [2]
                     listed = await client.call_tool("moodle_list_courses", {"include_past": True})

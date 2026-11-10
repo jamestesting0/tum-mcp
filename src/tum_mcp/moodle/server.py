@@ -75,7 +75,10 @@ def moodle_logout() -> dict[str, str]:
 
 @server.tool(
     annotations=READ,
-    description="List current-semester courses; include_past=true adds all enrolled semesters.",
+    description=(
+        "List current-semester courses. include_past=true adds all enrolled semesters. "
+        "Limit defaults to 20 and is capped at 50. Pass next_cursor as cursor for more."
+    ),
 )
 def moodle_list_courses(
     cursor: str | None = None, limit: Limit = 20, include_past: bool = False
@@ -91,7 +94,10 @@ def moodle_list_courses(
 
 @server.tool(
     annotations=READ,
-    description="Discover sections, files, links and activities in any accessible Moodle course.",
+    description=(
+        "Discover sections, files, links and activities in an accessible Moodle course. "
+        "Limit defaults to 50 and is capped at 50. Pass next_cursor as cursor for more."
+    ),
 )
 def moodle_list_materials(
     course_id: CourseId, cursor: str | None = None, limit: Limit = 50

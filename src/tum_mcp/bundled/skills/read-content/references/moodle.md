@@ -18,6 +18,11 @@ with `moodle_list_materials` in the known course; `moodle_list_courses` is only
 needed for course discovery. If an old ID is no longer indexed, rediscover its
 course/parent before concluding that the upstream item disappeared.
 
+Call `moodle_list_materials` with `course_id` and the default 50 per page. If the
+response includes `next_cursor`, call it again with that value as `cursor` and the
+same course. Stop when the cursor is absent. Course discovery defaults to 20, with
+the same limit cap of 50. Keep `include_past` consistent across its pages.
+
 - Files/pages/books/labels/activity descriptions: `moodle_read_material`, with a
   page range or cursor and modest max_chars. A root listing is not a complete
   nested activity inventory. Follow related_materials only as

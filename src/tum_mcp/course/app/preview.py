@@ -357,8 +357,9 @@ def serve(project: Path, port: int, *, open_browser: bool = False) -> None:
             raise
         raise CampusError(
             Code.ACTION_REQUIRED,
-            f"Port {port} is in use. Stop the other preview or run tum-mcp study --port PORT "
-            "with a different port. Keep the same port to retain browser progress.",
+            f"Port {port} is in use. Reuse the preview if it serves this project, or run "
+            "tum-mcp study serve PROJECT --port PORT with a different port. "
+            "Use --port 0 for a free port. Keep the same port to retain browser progress.",
         ) from None
     with server:
         url = f"http://127.0.0.1:{server.server_port}/"
