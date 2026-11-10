@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.23.0 — 2026-11-10
 
 - Cleaner terminal output. `--help` groups commands into Get started, Manage and
   Used by your coding agent, and the npm launcher shows the same help before setup.
