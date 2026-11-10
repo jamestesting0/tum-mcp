@@ -30,7 +30,7 @@ from tum_mcp.course.content.study import (
 from tum_mcp.course.lecture.assets import asset_writes
 from tum_mcp.course.lecture.content import LectureContent
 from tum_mcp.course.lecture.data import read_lectures, render_lectures, stale_lectures
-from tum_mcp.course.project.models import Digest, StudyState
+from tum_mcp.course.project.models import Digest, Key, StudyState
 from tum_mcp.course.project.paths import APP, app_path
 from tum_mcp.course.project.store import (
     Write,
@@ -131,6 +131,33 @@ class BuildRecord(Frozen):
     )
 
 
+class ProgressSource(Frozen):
+    previous: Digest
+    current: Digest
+
+
+class StudyProgressSource(ProgressSource):
+    cards: tuple[Key, ...] = ()
+    questions: tuple[Key, ...] = ()
+
+
+class ProgressContinuity(Frozen):
+    study: dict[Key, StudyProgressSource] = Field(default_factory=dict)
+    exercises: dict[Key, ProgressSource] = Field(default_factory=dict)
+
+
+def _read_progress_continuity(root: Path | None) -> ProgressContinuity:
+    body = read_bytes(private_path(root, "progress-continuity.json")) if root else None
+    if body is None:
+        return ProgressContinuity()
+    try:
+        return ProgressContinuity.model_validate_json(body)
+    except ValidationError:
+        raise CampusError(
+            Code.INVALID_RESPONSE, "Invalid course progress continuity record."
+        ) from None
+
+
 @dataclass(frozen=True, slots=True)
 class BuildReport:
     units: int
@@ -201,10 +228,14 @@ def _app_data(
     root: Path | None = None,
     exam: ExamContent | None = None,
 ) -> dict[str, JsonValue]:
+    continuity = _read_progress_continuity(root)
     units: list[JsonValue] = []
     for unit in content.units if content else ():
         value = compile_formulas(unit.model_dump(mode="json", exclude_none=True))
         value["revision"] = unit_revision(unit)
+        previous = continuity.study.get(unit.key)
+        if previous and previous.current == value["revision"]:
+            value["progressFrom"] = previous.model_dump(mode="json", exclude={"current"})
         for item, rendered in zip(unit.explore, value.get("explore", []), strict=True):
             rendered["revision"] = explore_revision(item)
         resolve_meanings(value)
@@ -270,25 +301,11 @@ def _app_data(
     if content and content.annotations:
         payload["annotations"] = [entry.model_dump(mode="json") for entry in content.annotations]
     payload["workspaces"] = (["study"] if content else []) + (["exercises"] if exercises else [])
-    provisional_sheets: set[str] = set()
     if root is not None:
         from tum_mcp.course.ledger.coverage import pending_exercises, read_ledger, study_preparation
-        from tum_mcp.course.ledger.preparation import provisional_targets
 
         ledger = read_ledger(root)
         payload["studyPreparation"] = {"pending": study_preparation(state, ledger)["pending"]}
-        provisional_units, provisional_sheets = provisional_targets(root, state, ledger)
-        for unit in units:
-            mapped = provisional_units.get(unit["key"], {})
-            for block in unit["blocks"]:
-                if mapped.get(block.get("key"), set()).intersection(block["sources"]):
-                    block["provisional"] = True
-            if any(block.get("provisional") for block in unit["blocks"]):
-                unit["provisional"] = (
-                    "Provisional study"
-                    if all(block.get("provisional") for block in unit["blocks"])
-                    else "Includes provisional study"
-                )
         if exercises:
             payload["pending"] = pending_exercises(ledger, state, exercises)
     if lectures:
@@ -310,10 +327,11 @@ def _app_data(
     if exercises:
         value = render_exercises(exercises)
         for exercise_set in value.get("sets", []):
-            if exercise_set.get("sheet") in provisional_sheets:
-                exercise_set["provisional"] = True
             for exercise in exercise_set.get("exercises", []):
                 resolve_meanings(exercise)
+                old_exercise = continuity.exercises.get(exercise["key"])
+                if old_exercise and old_exercise.current == exercise["revision"]:
+                    exercise["progressFrom"] = old_exercise.previous
         payload["exercises"] = value
         payload["inlineMath"] = {
             **payload["inlineMath"],

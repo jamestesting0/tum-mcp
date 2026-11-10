@@ -134,12 +134,10 @@ export function renderReading(unit, { depth = 1, withVideo = true, inherited = [
         const list = last?.matches('dl.definitions') ? last : material.appendChild(node('dl', 'definitions'));
         const item = definitionItem(block); item.dataset.blockIndex = String(index);
         if (block.key) item.dataset.block = block.key;
-        if (block.provisional) item.querySelector('dd').prepend(node('p', 'small', 'Provisional study'));
         list.append(item);
       } else {
         const body = renderBlockBody(block); body.dataset.blockIndex = String(index);
         if (block.key) body.dataset.block = block.key;
-        if (block.provisional) material.append(node('p', 'small', 'Provisional study'));
         material.append(body);
       }
       continue;
@@ -158,9 +156,6 @@ export function renderReading(unit, { depth = 1, withVideo = true, inherited = [
       if (block.insight) heading.append(insightTip(block));
       heading.append(sourcesNote(cited, data.sources, data.course.synthetic, block.title || unit.title || '', {}, block.pages));
       material.append(heading);
-    }
-    if (block.provisional) {
-      material.append(node('p', 'small', 'Provisional study'));
     }
     material.append(block.kind === 'definition' ? append(node('dl', 'definitions'), definitionItem(block)) : renderBlockBody(block));
     section.append(material); root.append(section);

@@ -9,7 +9,9 @@ export function exerciseState(read, write, prefix = exercisePrefix) {
   function get(exercise) {
     const key = `${prefix}${exercise.key}:${exercise.revision}`;
     if (!cache.has(key)) {
-      const saved = object(read(key, {})), steps = {};
+      const current = read(key, null);
+      const previousKey = exercise.progressFrom && `${prefix}${exercise.key}:${exercise.progressFrom}`;
+      const saved = object(current ?? (previousKey ? read(previousKey, {}) : {})), steps = {};
       for (const step of exercise.steps) {
         const previous = object(object(saved.steps)[step.key]);
         steps[step.key] = { draft: text(previous.draft),

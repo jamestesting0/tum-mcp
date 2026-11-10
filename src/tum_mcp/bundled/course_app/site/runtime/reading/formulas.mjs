@@ -89,10 +89,8 @@ class StudyEquation extends HTMLElement {
     this.replaceChildren(...rows.map(tokens => line(source, tokens, maximum)));
     for (const row of this.children) {
       const math = row.firstElementChild, natural = math.getBoundingClientRect().width;
-      math.style.fontSize = `${Math.max(minimum, Math.min(maximum, maximum * (width - 1) / natural))}px`;
+      math.style.fontSize = `${Math.min(maximum, maximum * (width - 1) / natural)}px`;
     }
-    // Auto margins become zero for an oversized line, keeping its beginning reachable.
-    this.scrollLeft = 0;
   }
 }
 customElements.define('study-equation', StudyEquation);
@@ -106,7 +104,7 @@ export function renderFormula(block) {
   expression.setAttribute('aria-label', `Equation: ${plainText(block.plain)}`);
   const math = typeset || parseMath(block.mathml);
   if (math) expression.append(math);
-  if (typeset) fitMath(expression, 0.75);
+  if (typeset) fitMath(expression);
   else expression.append(node('p', '', block.plain));
   box.append(expression, studyText('p', '', block.plain));
   const glossary = node('dl', 'symbols');

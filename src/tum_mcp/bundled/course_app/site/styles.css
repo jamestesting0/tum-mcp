@@ -66,10 +66,10 @@ ul, ol { margin-block: var(--s3) 0; padding-inline-start: var(--s6); }
 li + li { margin-top: var(--s2); }
 .small, .eyebrow, .citation-eyebrow { font-size: var(--text-small); color: var(--muted); }
 .eyebrow, .citation-eyebrow { font-weight: 500; }
-/* Inline expressions stay whole; an expression wider than its paragraph scrolls locally.
-   Native MathML is only the fallback. */
-.inline-math { display: inline-block; max-width: 100%; overflow-x: auto; vertical-align: middle; }
-math.inline-math { font-size: 1em; white-space: nowrap; }
+/* Let KaTeX wrap between its unbroken groups without clipping scripts or fractions. */
+.inline-math { display: inline-block; max-inline-size: 100%; vertical-align: baseline; }
+.inline-math .tex-part { white-space: normal; }
+.inline-math > math { display: inline-block; inline-size: max-content; white-space: nowrap; }
 .tex .katex { text-rendering: auto; }
 /* A formula never breaks inside one of its parts; lines break only at the gaps between them. */
 .tex-part { white-space: nowrap; }
@@ -391,7 +391,7 @@ button.contents-toggle:hover, button.contents-toggle[aria-expanded="true"] { bac
 .resume svg { flex-shrink: 0; width: 14px; height: 14px; fill: currentColor; }
 
 /* Blocks: formula, table, code, diagram and line graph */
-.equation { display: block; min-width: 0; margin-block: var(--s6); overflow-x: auto; padding: var(--s4); text-align: center; font-size: var(--math-max); }
+.equation { display: block; min-width: 0; margin-block: var(--s6); padding: var(--s4); text-align: center; font-size: var(--math-max); }
 .equation-line { width: max-content; margin-inline: auto; }
 /* In a formula card the card's padding is the space; the equation adds none above it. */
 .surface > .equation { margin-block: 0 var(--s4); padding: var(--s2) 2px; }
@@ -405,16 +405,13 @@ button.contents-toggle:hover, button.contents-toggle[aria-expanded="true"] { bac
 .derivation-lines { display: grid; grid-template-columns: minmax(0, max-content) max-content minmax(0, 1fr); gap: var(--s3) var(--s2); margin: 0; padding: 0; list-style: none; }
 .derivation-line { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: baseline; row-gap: var(--s1); }
 .derivation-math { display: contents; }
-.derivation-left { grid-column: 1; text-align: right; overflow-x: auto; }
+.derivation-left { grid-column: 1; text-align: right; }
 .derivation-relation { grid-column: 2; text-align: center; }
-.derivation-right { grid-column: 3; min-width: 0; overflow-x: auto; }
+.derivation-right { grid-column: 3; min-width: 0; }
 /* Listed lines also size the math columns when a group has no aligned equations. */
 .derivation-whole { grid-column: 1 / 4; }
 .derivation-left :is(math, .katex), .derivation-relation :is(math, .katex) { display: inline-block; }
-/* A cell scrolls sideways only. KaTeX's fractions, sums and accents reach a few pixels past
-   their line, and an x-scroller would otherwise scroll by those pixels vertically; the padding
-   holds them, the negative margin keeps the layout, and the y axis never scrolls. */
-.derivation-left, .derivation-right, .apply-math { padding: .4em 2px; margin-block: -.4em; overflow-y: hidden; }
+.derivation-left, .derivation-right, .apply-math { padding: .4em 2px; margin-block: -.4em; }
 .derivation-reason { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: var(--text-ui); }
 /* Reasons sit beside the working only when every line fits there at full size (derivation.mjs
    decides); otherwise they sit under their lines and the working keeps the whole width. */
@@ -1157,7 +1154,7 @@ button.exam-entry-collapse:hover { color: var(--ink); }
 .apply-panel { margin-top: var(--s2); }
 .apply-panel > * + * { margin-top: var(--s3); }
 .apply-text { margin: 0; }
-.apply-math { overflow-x: auto; font-size: 1.15em; }
+.apply-math { font-size: 1.15em; }
 .apply-code { padding: 0; background: none; }
 .apply-code pre { margin: 0; }
 /* A pitfall: the moment it happens, the wrong working, its correction, then why it fails. */

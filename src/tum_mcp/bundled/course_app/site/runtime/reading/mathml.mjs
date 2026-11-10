@@ -216,26 +216,47 @@ function typeset(katex, latex, display, symbols, seen) {
   return span;
 }
 
-// A typeset formula breaks only between its parts. A part still wider than its column shrinks
-// to at most `smallest` of its size, then scrolls.
-const smallest = new WeakMap();
-function fit(element) {
-  element.style.fontSize = '';
-  const style = getComputedStyle(element), size = parseFloat(style.fontSize);
-  const width = element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-  const widest = Math.max(0, ...[...element.querySelectorAll('.tex-part')].map(part => part.getBoundingClientRect().width));
-  if (width > 0 && widest > width) element.style.fontSize = `${Math.max(size * smallest.get(element), size * width / widest)}px`;
+function fit(elements) {
+  const rows = elements.filter(element => element.isConnected).map(element => {
+    const inline = element.localName === 'study-inline-math';
+    const expression = inline ? element.firstElementChild : element;
+    expression.style.fontSize = '';
+    return { element, expression, inline };
+  });
+  const sizes = rows.map(({ element, expression, inline }) => {
+    const style = getComputedStyle(element), size = parseFloat(getComputedStyle(expression).fontSize);
+    const width = element.getBoundingClientRect().width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    const parts = expression.querySelectorAll(inline ? '.katex-html > .base' : '.tex-part');
+    const widest = parts.length
+      ? Math.max(...[...parts].map(part => part.getBoundingClientRect().width))
+      : (inline ? expression : expression.querySelector('math'))?.getBoundingClientRect().width;
+    return width > 0 && widest > width ? `${size * Math.max(0.5, width - 0.5) / widest}px` : '';
+  });
+  rows.forEach(({ expression }, index) => { expression.style.fontSize = sizes[index]; });
 }
-const fitter = new ResizeObserver(entries => {
-  for (const { target } of entries) { fit(target); document.fonts?.ready.then(() => fit(target)); }
+const fitter = new ResizeObserver(entries => fit(entries.map(entry => entry.target)));
+export function fitMath(element) {
+  fitter.observe(element);
+  document.fonts?.ready.then(() => fit([element]));
+}
+customElements.define('study-inline-math', class extends HTMLElement {
+  connectedCallback() { fitMath(this); }
+  disconnectedCallback() { fitter.unobserve(this); }
 });
-export function fitMath(element, ratio) { smallest.set(element, ratio); fitter.observe(element); }
+
+export function inlineExpression(latex, mathml = null) {
+  const math = texElement(latex, { mathml });
+  if (!math) return null;
+  const span = document.createElement('study-inline-math');
+  span.className = 'inline-math';
+  span.append(math);
+  return span;
+}
 
 // Mathematics is typeset by KaTeX (vendored, MIT), as in Notion: TeX fonts, spacing, radicals
 // and text-size inline matrices. Only LaTeX the build already validated reaches it, with
-// trust off. `display` sets display style in KaTeX's inline layout. A line breaks only
-// between a formula's parts (see formulaParts), never inside an equation; a part wider than
-// its column scrolls. KaTeX keeps a MathML copy for screen readers; its LaTeX annotation is
+// trust off. `display` sets display style in KaTeX's inline layout. Display equations break
+// between the parts from formulaParts. KaTeX keeps a MathML copy for screen readers; its LaTeX annotation is
 // dropped so the page text stays the mathematics. When KaTeX is missing or rejects the
 // input, the build's MathML is shown.
 export function texElement(latex, { display = false, mathml = null, symbols = null, seen = new Set() } = {}) {

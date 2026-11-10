@@ -60,7 +60,7 @@ def test_math_derivations_and_drawings_render_like_their_page(
     try:
         page.goto(example_url + "#study/components/content")
         # Inline and block math are typeset by KaTeX under the CSP, not left as source.
-        expect(page.locator(".inline-math.tex .katex").first).to_be_visible()
+        expect(page.locator(".inline-math .katex").first).to_be_visible()
         assert page.locator(".tex-equation .katex").count() >= 1
         assert "\\(" not in page.locator("main").inner_text()
         # A derivation aligns each line on its relation and states its reason.
@@ -94,7 +94,7 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
     cases = json.loads((Path(__file__).parents[1] / "fixtures/latex_scan.json").read_text())
     result = page.evaluate(
         r"""async cases => {
-          const { texElement, formulaParts, splitRelation } =
+          const { inlineExpression, texElement, formulaParts, splitRelation } =
             await import('./runtime/reading/mathml.mjs');
           const box = document.createElement('div');
           box.style.width = '140px'; box.style.fontSize = '24px';
@@ -105,10 +105,11 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
           const feedback = document.createElement('p');
           feedback.className = 'feedback';
           const matrix = String.raw`\begin{pmatrix}1&1\\0&0\end{pmatrix}`;
-          const inline = texElement(`R^2=${matrix}${matrix}=${matrix}=R`);
-          inline.classList.add('inline-math');
+          const inline = inlineExpression(`R^2=${matrix}${matrix}=${matrix}=R`);
           feedback.append('Multiplying gives ', inline, '.');
           box.append(feedback);
+          await document.fonts.ready;
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           return {
             scan: cases.map(c => ({
               parts: formulaParts(c.latex).map(part => part.latex),
@@ -119,7 +120,9 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
               > pieces[0].getBoundingClientRect().bottom - 1,
             inlineOverflow: feedback.scrollWidth - feedback.clientWidth,
             inlineRects: inline.querySelector('.tex-part').getClientRects().length,
-            inlineScroll: inline.scrollWidth > inline.clientWidth,
+            inlineBoxOverflow: inline.scrollWidth - inline.clientWidth,
+            inlineOverflowX: getComputedStyle(inline).overflowX,
+            inlineOverflowY: getComputedStyle(inline).overflowY,
           };
         }""",
         cases,
@@ -131,8 +134,9 @@ def test_formulas_break_only_between_their_parts(course_browser: Browser, exampl
     assert result["rects"] == [1, 1]
     assert result["stacked"]
     assert result["inlineOverflow"] <= 1
-    assert result["inlineRects"] == 1
-    assert result["inlineScroll"]
+    assert result["inlineRects"] > 1
+    assert result["inlineBoxOverflow"] <= 1
+    assert result["inlineOverflowX"] == result["inlineOverflowY"] == "visible"
 
 
 @pytest.mark.parametrize("width", [390, 1280])

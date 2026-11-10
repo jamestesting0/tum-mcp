@@ -119,7 +119,7 @@ function applyPanel(apply, summary) {
   const seen = new Set();
   for (const latex of apply.math || []) {
     const math = append(node('div', 'apply-math'), texElement(latex, { display: true, symbols: (apply.symbols || []).map(item => item.symbol), seen }) || node('code', '', latex));
-    fitMath(math, 0.75); panel.append(withMeanings(math, apply.symbols || [], latex));
+    fitMath(math); panel.append(withMeanings(math, apply.symbols || [], latex));
   }
   if (apply.code) panel.append(append(node('div', 'code-region apply-code'), renderCode(apply.code, apply.language)));
   return panel;

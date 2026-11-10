@@ -111,6 +111,7 @@ def inputs(root: Path) -> str:
         "state.json",
         "schedule.json",
         "links.json",
+        "progress-continuity.json",
         "course.md",
         "digests/*.json",
         "coverage.json",

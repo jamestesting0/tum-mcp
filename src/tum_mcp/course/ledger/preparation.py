@@ -9,7 +9,7 @@ from pydantic import Field, TypeAdapter, ValidationError, model_validator
 from tum_mcp.course.content.study import Label, Text
 from tum_mcp.course.ledger.coverage import CoverageLedger, Locator
 from tum_mcp.course.project.models import Digest, Key, StudyState
-from tum_mcp.course.project.schedule import Schedule, read_schedule
+from tum_mcp.course.project.schedule import Schedule
 from tum_mcp.course.project.store import confined, digest, private_path, read_bytes
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
@@ -340,41 +340,3 @@ def scope_summary(scope: Preparation, state: StudyState, problems: list[str]) ->
         if scope.cutoff
         else None,
     }
-
-
-def provisional_targets(
-    root: Path, state: StudyState, ledger: CoverageLedger | None
-) -> tuple[dict[str, dict[str, set[str]]], set[str]]:
-    units: dict[str, dict[str, set[str]]] = {}
-    sheets: set[str] = set()
-    for path in sorted(private_path(root, "preparation").glob("*.json")):
-        try:
-            scope = read_preparation(root, path.stem)
-        except CampusError as error:
-            if error.code != Code.INVALID_RESPONSE:
-                raise
-            # Scoped reports diagnose a malformed preparation. It cannot label this build.
-            continue
-        if (
-            scope is None
-            or scope.policy != "include_provisional"
-            or scope.course_key != state.course.key
-            or scope.semester != state.course.semester
-        ):
-            continue
-        schedule = read_schedule(root, state) if scope.cutoff else None
-        if scope_problems(scope, state, ledger, schedule) or source_byte_problems(
-            root, scope, state
-        ):
-            continue
-        sources = {row.source for row in scope.inventory if row.disposition == "provisional"}
-        for demand in scope.demands:
-            if demand.source not in sources or demand.target is None:
-                continue
-            if isinstance(demand, StudyDemand):
-                for block in demand.target.blocks:
-                    unit = units.setdefault(demand.target.unit, {})
-                    unit.setdefault(block, set()).add(demand.source)
-            else:
-                sheets.add(demand.source)
-    return units, sheets

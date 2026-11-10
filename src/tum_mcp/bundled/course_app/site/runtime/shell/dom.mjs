@@ -1,5 +1,5 @@
 import data from '../../data.mjs';
-import { texElement } from '../reading/mathml.mjs';
+import { inlineExpression } from '../reading/mathml.mjs';
 
 export function node(tag, className = '', text = '') {
   const element = document.createElement(tag);
@@ -30,8 +30,7 @@ export function studyText(tag, className = '', text = '') {
     else {
       // Only expressions the build validated are typeset; anything else stays literal text.
       const markup = Object.hasOwn(data.inlineMath || {}, match[2]) && data.inlineMath[match[2]];
-      const math = markup && texElement(match[2], { mathml: markup });
-      if (math) math.classList.add('inline-math');
+      const math = markup && inlineExpression(match[2], markup);
       element.append(math || match[0]);
     }
     start = match.index + match[0].length;

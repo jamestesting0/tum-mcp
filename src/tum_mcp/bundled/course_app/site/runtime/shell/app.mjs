@@ -36,6 +36,16 @@ function validRatings(value) {
     ? Object.fromEntries(Object.entries(value).filter(([key, rating]) => key.length < 300 && typeof rating === 'boolean')) : {};
 }
 const progress = { cards: validRatings(saved?.cards), questions: validRatings(saved?.questions) };
+for (const unit of data.units) {
+  const previous = unit.progressFrom;
+  if (!previous) continue;
+  for (const kind of ['cards', 'questions']) {
+    for (const key of previous[kind]) {
+      const rating = progress[kind][`${unit.key}:${previous.previous}:${key}`];
+      if (typeof rating === 'boolean') progress[kind][itemKey(unit, { key })] ??= rating;
+    }
+  }
+}
 const preferredTheme = readStored('study-space:theme', null);
 document.documentElement.dataset.theme = ['light', 'dark'].includes(preferredTheme) ? preferredTheme : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 const states = new Map(), answers = new Map(), views = ['content', 'flashcards', 'practice'];
@@ -282,7 +292,6 @@ function renderHome() {
     if (result.answered) status.push(`Practice ${practiceLabel(result)}`);
     if (result.rated) status.push(`Cards ${result.known} of ${result.cards} known`);
     const metadata = [path ? `${unit.minutes} min` : `${unit.label} · ${unit.minutes} min`];
-    if (unit.provisional) metadata.push(unit.provisional);
     list.append(topicRow(`#${unit.key}/content`, unit.title, metadata, status.join(' · ') || 'Not started'));
   }
   return [header, topics, studyPreparation(), resetButton()];
@@ -363,7 +372,6 @@ function render() {
       objectives.append(node('p', 'small objectives-label', 'Objectives'), append(node('ul'), ...unit.objectives.map(item => studyText('li', '', item.text))));
       unitEyebrow = node('p', 'eyebrow', `${breadcrumb} · ${unit.minutes} min`);
       heading.append(unitEyebrow, unitHeading, summary, objectives);
-      if (unit.provisional) heading.append(node('p', 'small', unit.provisional));
       headerDetails = [summary, objectives];
       const related = relatedWork(unit);
       if (related) { heading.append(related); headerDetails.push(related); }

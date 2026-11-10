@@ -3,7 +3,7 @@ import { fitMath, formulaParts, splitRelation, texElement } from './mathml.mjs';
 import { withMeanings } from './symbols.mjs';
 import { iconButton, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 
-const fitted = cell => { fitMath(cell, 0.8); return cell; };
+const fitted = cell => { fitMath(cell); return cell; };
 
 // Reasons go beside the working when the list is at least 30em wide and every line, hidden
 // walkthrough steps included, fits beside them at full size; then the lines align on their

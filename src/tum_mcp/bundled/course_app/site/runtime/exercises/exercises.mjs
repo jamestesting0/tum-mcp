@@ -53,8 +53,7 @@ export function exerciseOutline(current = '') {
     }
     const sheet = node('details', `unit-group exercise-sheet${starts ? ' group-start' : ''}`);
     sheet.open = group.exercises.some(item => item.key === current) || group === sets[0];
-    sheet.append(append(node('summary'), studyText('span', '', group.title),
-      ...(sheet.provisional ? [node('span', 'small', 'Provisional practice')] : [])));
+    sheet.append(append(node('summary'), studyText('span', '', group.title)));
     const list = node('div', 'group-children');
     for (const exercise of group.exercises) {
       const link = node('a', 'unit-link'); link.href = exerciseLink(group, exercise);
@@ -98,17 +97,16 @@ function exerciseList(state) {
       if (categoryLabel(group)) root.append(studyText('h2', 'topic-group', category));
     }
     root.append(studyText('h3', 'topic-group', group.title));
-    const meta = [group.week, due(group), group.provisional ? 'Provisional practice' : ''].filter(Boolean).join(' · ');
+    const meta = [group.week, due(group)].filter(Boolean).join(' · ');
     if (meta) root.append(node('p', 'small sheet-meta', meta));
     if (group.summary) root.append(studyText('p', 'sheet-summary', group.summary));
     for (const entry of pending.filter(item => item.set === group.key)) {
-      const label = entry.provisional ? 'Provisional practice still unprepared' : 'Not prepared yet';
-      root.append(studyText('p', 'small pending', `${label}: ${entry.labels.join(', ')}`));
+      root.append(studyText('p', 'small pending', `Not prepared yet: ${entry.labels.join(', ')}`));
     }
     root.append(append(node('ul', 'topic-list'), ...group.exercises.map(exercise =>
       topicRow(exerciseLink(group, exercise), `${exercise.label} · ${exercise.title}`, [], exerciseStatus(group, exercise, state)))));
   }
-  for (const [provisional, title] of [[false, 'Not prepared yet'], [true, 'Provisional practice']]) {
+  for (const [provisional, title] of [[false, 'Not prepared yet'], [true, 'Extra practice']]) {
     const entries = unstarted.filter(entry => Boolean(entry.provisional) === provisional);
     if (entries.length) root.append(preparationDisclosure({ title, noun: 'sheet',
       entries: entries.map(entry => ({ title: entry.source, labels: [entry.labels.join(', ')] })),
@@ -173,9 +171,6 @@ export function exercisePage(exercise, options) {
   const activityChanged = () => root.dispatchEvent(new Event('study-activity-change', { bubbles: true }));
   const eyebrow = studyText('p', 'eyebrow', options.eyebrow);
   header.append(eyebrow, heading);
-  if (sets.some(group => group.key === options.set && group.provisional)) {
-    header.append(node('p', 'small', 'Provisional practice'));
-  }
   if (exercise.kind === 'distilled') {
     const practice = node('p', 'small practice-for', 'Practice for ');
     exercise.distilled_from.forEach((key, index) => {
