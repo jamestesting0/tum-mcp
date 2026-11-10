@@ -3,7 +3,7 @@ import json
 import pytest
 from skill_lab import LabError
 from skill_lab.memory_bench import TEACHING, metrics
-from skill_lab.memory_bench_agent import cited, grade, plan_stage, protected_changes
+from skill_lab.memory_bench_agent import cited, grade, grade_learner, plan_stage, protected_changes
 
 NAMES = {
     "problem-1-2-1": {"exercises/set/s/exercise/problem-1-2-1"},
@@ -120,3 +120,29 @@ def test_stage_three_fills_three_trials_per_task_for_the_chosen_arms():
     tasks = [{"id": "R1"}]
     rows = [{"task": "R1", "arm": "B", "trial": 1, "success": True}]
     assert plan_stage(rows, tasks, 3, ("B",)) == [("R1", "B", 2), ("R1", "B", 3)]
+
+
+def test_learner_grading_checks_calls_events_and_final_lines():
+    task = {
+        "prompt": "For problem 1.2.2 I said the vacuum agent is rational because it cleans",
+        "setup": [["init", "on"]],
+        "checks": {
+            "no_calls": ["study learner brief"],
+            "events": {"item": "x/problem-1-2-2", "kinds": ["mistake"], "min": 1},
+            "final_line": {"VERDICT": "incorrect"},
+            "no_overlap_words": 8,
+        },
+    }
+    good = {
+        "calls": ["tum-mcp study learner mistake . --item problem-1-2-2"],
+        "events": [{"kind": "mistake", "item": "x/problem-1-2-2", "note": "Ignores wasted moves"}],
+        "answer": "No.\nVERDICT: incorrect.",
+    }
+    assert grade_learner(task, good, {})["success"]
+    copied = good | {"events": [good["events"][0] | {"note": task["prompt"]}]}
+    assert "copied chat text" in grade_learner(task, copied, {})["failed"]
+    nosy = good | {"calls": ["tum-mcp study learner brief ."], "answer": "VERDICT: correct"}
+    assert set(grade_learner(task, nosy, {})["failed"]) == {
+        "called study learner brief",
+        "VERDICT=correct",
+    }

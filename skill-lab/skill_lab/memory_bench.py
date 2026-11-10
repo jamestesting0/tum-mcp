@@ -266,7 +266,7 @@ class Selector:
         return cls("impact", tuple(sorted(args.items())))
 
 
-def build_cases(course: Path, queries: list[dict]) -> dict:
+def build_cases(course: Path, queries: list[dict], heldout: list[dict] = ()) -> dict:
     from tum_mcp.course.memory.store import load_inputs
 
     inputs = load_inputs(course)
@@ -311,21 +311,25 @@ def build_cases(course: Path, queries: list[dict]) -> dict:
         row | {"selector": Selector.context(query=row["query"], purpose="study", **TEACHING)}
         for row in statement_queries(inputs)
     ]
-    written = [
-        row
-        | {
-            "selector": Selector.context(
-                query=row["query"], purpose=row.get("purpose", "study"), **TEACHING
-            )
-        }
-        for row in queries
-    ]
+
+    def written(rows: list[dict]) -> list[dict]:
+        return [
+            row
+            | {
+                "selector": Selector.context(
+                    query=row["query"], purpose=row.get("purpose", "study"), **TEACHING
+                )
+            }
+            for row in rows
+        ]
+
     return {
         "fill": fill,
         "recall": recall,
         "impact": impact,
         "statements": statements,
-        "written": written,
+        "written": written(queries),
+        "heldout": written(heldout),
         "cited": {ref: sorted(keys) for ref, keys in cited.items()},
         "links": len(authored),
     }
@@ -458,18 +462,21 @@ def mutate(course: Path, source: str, change: str) -> None:
         state_path.write_text(json.dumps(value))
 
 
+GROUPS = ("fill", "recall", "impact", "statements", "written", "heldout")
+
+
 def run(name: str, label: str) -> dict:
     course = check_manifest(name)
     output = corpus(name) / "results" / label
     if output.exists():
         raise LabError(f"Result {label} exists; a baseline is never rerun. Use a new label.")
     queries = json.loads((corpus(name) / "queries.json").read_text())
+    held = corpus(name) / "queries-heldout.json"
+    heldout = json.loads(held.read_text()) if held.is_file() else []
     with memory_enabled():
-        cases = build_cases(course, queries)
+        cases = build_cases(course, queries, heldout)
         selectors = {
-            case["selector"].key: case["selector"]
-            for group in ("fill", "recall", "impact", "statements", "written")
-            for case in cases[group]
+            case["selector"].key: case["selector"] for group in GROUPS for case in cases[group]
         }
         packets = {key: call(course, selector) for key, selector in selectors.items()}
         mutations = run_mutations(course, cases)
@@ -482,7 +489,7 @@ def run(name: str, label: str) -> dict:
     output.mkdir(parents=True)
     serial = {
         group: [case | {"selector": case["selector"].key} for case in cases[group]]
-        for group in ("fill", "recall", "impact", "statements", "written")
+        for group in GROUPS
     }
     (output / "cases.json").write_text(json.dumps(serial | {"cited": cases["cited"]}))
     (output / "packets.json").write_text(json.dumps(packets))
@@ -591,29 +598,33 @@ def metrics(output: Path) -> dict:
         ranked(case, {f"study/unit/{u}" for u in case["gold_units"]})
         for case in cases["statements"]
     ]
-    written = []
-    for case in cases["written"]:
+
+    def scored(case: dict) -> dict:
         packet = packets[case["selector"]]
         got = set(items(case["selector"]))
         if case.get("expect") == "empty":
             ok = packet.get("status") in {"empty", "partial"} and not (
                 got & set(case.get("forbidden", []))
             )
-            written.append({"id": case["id"], "ok": ok, "rr": 1.0 if ok else 0.0, "forbidden": 0})
-            continue
+            return {"id": case["id"], "ok": ok, "rr": 1.0 if ok else 0.0, "forbidden": 0}
         required = set(case["required"])
         order = items(case["selector"])
         rank = next((i for i, ref in enumerate(order) if ref in required), None)
-        written.append(
-            {
-                "id": case["id"],
-                "ok": required <= got,
-                "rr": 0.0 if rank is None else 1 / (rank + 1),
-                "forbidden": len(got & set(case.get("forbidden", []))),
-                "top": order[:1],
-                "group": case.get("group"),
-            }
-        )
+        return {
+            "id": case["id"],
+            "ok": required <= got,
+            "rr": 0.0 if rank is None else 1 / (rank + 1),
+            "forbidden": len(got & set(case.get("forbidden", []))),
+            "top": order[:1],
+            "group": case.get("group"),
+        }
+
+    written = [scored(case) for case in cases["written"]]
+    heldout = [scored(case) for case in cases.get("heldout", [])]
+    impact_bytes = [
+        len(json.dumps(packets[case["selector"]], separators=(",", ":")))
+        for case in cases["impact"]
+    ]
     groups: dict[str, set[str]] = defaultdict(set)
     for row in written:
         if row.get("group"):
@@ -641,6 +652,7 @@ def metrics(output: Path) -> dict:
             "recall_complete_packets": mean(impact_recall),
             "partial_packets": impact_partial,
             "sources": len(cases["impact"]),
+            "mean_bytes": round(statistics.mean(impact_bytes)) if impact_bytes else None,
         },
         "mutations": {"flagged": len(flagged), "total": len(mutations)},
         "statement_queries": {
@@ -655,6 +667,12 @@ def metrics(output: Path) -> dict:
             "forbidden_hits": sum(row["forbidden"] for row in written),
             "paraphrase_groups_agreeing": sum(len(tops) == 1 for tops in groups.values()),
             "paraphrase_groups": len(groups),
+        },
+        "heldout_queries": {
+            "n": len(heldout),
+            "ok": sum(row["ok"] for row in heldout),
+            "mrr": mean([row["rr"] for row in heldout]),
+            "missed": [row["id"] for row in heldout if not row["ok"]],
         },
         "bytes_per_authored_hit": round(fill_bytes / hits) if hits else None,
         "latency_seconds": {

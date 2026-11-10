@@ -133,6 +133,139 @@ def grade(task: dict, text: str, names: dict[str, set[str]]) -> dict:
     }
 
 
+LEARNER_WRITE = re.compile(r"\bstudy\s+learner\s+(note|mistake|resolve|plan)\b")
+MANAGED = re.compile(r"<!-- tum-mcp:study:start -->.*?<!-- tum-mcp:study:end -->", re.S)
+
+
+def managed_block(variant_dir: Path) -> str:
+    """The course instructions of the build under test; a frozen course keeps the block
+    written at freeze time until a sync refreshes it, so each episode refreshes it here."""
+    script = (
+        "from tum_mcp.course.project.store import PRIVATE, agent_pointer;"
+        "print(agent_pointer(PRIVATE), end='')"
+    )
+    if not variants.python_of(variant_dir).is_file():
+        return "<!-- tum-mcp:study:start -->test<!-- tum-mcp:study:end -->"
+    done = subprocess.run(
+        [str(variants.python_of(variant_dir)), "-I", "-c", script],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return done.stdout
+
+
+def seed(shim: Path, workspace: Path, environment: dict, steps: list, *, on: bool) -> None:
+    """Write a task's synthetic learner record through the product CLI before the episode."""
+    last = ""
+
+    def cli(*args: str) -> dict:
+        done = subprocess.run(
+            [str(shim), "study", "learner", *args],
+            cwd=workspace,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if done.returncode:
+            raise LabError(f"Seeding {args[:2]} failed: {done.stderr.strip()[-300:]}")
+        return json.loads(done.stdout)
+
+    for step in steps:
+        match step:
+            case ["init", state]:
+                if on and state == "on":
+                    cli("enable", ".")
+            case ["mistake", item, note, source]:
+                last = cli("mistake", ".", "--item", item, "--note", note, "--source", source)["id"]
+            case ["resolve-last"]:
+                cli("resolve", ".", last)
+            case ["note", item, outcome, note, *offset]:
+                when = time.time() + 86400 * (offset[0] if offset else 0)
+                day = time.strftime("%Y-%m-%d", time.localtime(when))
+                cli("note", ".", "--item", item, "--outcome", outcome, "--note", note, "--on", day)
+            case unknown:
+                raise LabError(f"Unknown learner setup step {unknown}.")
+
+
+def learner_state(workspace: Path, agents_before: str) -> dict:
+    path = workspace / ".tum-mcp" / "learner" / "events.jsonl"
+    rows = [json.loads(line) for line in path.read_text().splitlines()] if path.is_file() else []
+    after = (workspace / "AGENTS.md").read_text()
+    added = [line for line in after.splitlines() if line not in agents_before.splitlines()]
+    heading = after.split("## Preferences", 1)
+    return {
+        "events": rows,
+        "events_file": path.is_file(),
+        "managed_changed": MANAGED.findall(after) != MANAGED.findall(agents_before),
+        "preferences_added": len(heading) == 2
+        and any(line in heading[1] for line in added if line.strip()),
+    }
+
+
+def final_value(text: str, key: str) -> str | None:
+    lines = [line for line in text.splitlines() if line.strip().upper().startswith(key + ":")]
+    return lines[-1].split(":", 1)[1].strip().strip("`*. ").casefold() if lines else None
+
+
+def grade_learner(task: dict, row: dict, names: dict[str, set[str]]) -> dict:
+    checks, calls, answer = task.get("checks", {}), row.get("calls", []), row.get("answer", "")
+    events = row.get("events", [])
+    failed = []
+    for needle in checks.get("no_calls", []):
+        if any(needle in call for call in calls):
+            failed.append(f"called {needle}")
+    for needle, (low, high) in checks.get("calls", {}).items():
+        count = sum(needle in call for call in calls)
+        if not low <= count <= high:
+            failed.append(f"{needle} x{count}")
+    writes = sum(bool(LEARNER_WRITE.search(call)) for call in calls)
+    if writes > checks.get("max_writes", 99):
+        failed.append(f"{writes} writes")
+    expect = checks.get("events", {})
+    if "count" in expect and len(events) != expect["count"]:
+        failed.append(f"{len(events)} events")
+    if expect.get("count") == 0 and row.get("events_file"):
+        failed.append("events file")
+    if "item" in expect:
+        found = [
+            e for e in events if e.get("item") == expect["item"] and e["kind"] in expect["kinds"]
+        ]
+        if len(found) < expect["min"]:
+            failed.append("no matching event")
+    if "absent_prefix" in expect and any(
+        (e.get("item") or "").startswith(expect["absent_prefix"]) for e in events
+    ):
+        failed.append("forgotten item remains")
+    for item in expect.get("present", []):
+        if not any(e.get("item") == item for e in events):
+            failed.append(f"{item} lost")
+    for key, value in checks.get("final_line", {}).items():
+        got = final_value(answer, key)
+        word = got.split()[0].strip(".,") if got else ""
+        if got is None or (word not in {"none", ""} if value == "none" else word != value):
+            failed.append(f"{key}={got}")
+    for text in checks.get("absent_text", []):
+        if text.casefold() in answer.casefold():
+            failed.append(f"mentioned {text}")
+    if size := checks.get("no_overlap_words"):
+        words = re.findall(r"\w+", task["prompt"].casefold())
+        spans = {" ".join(words[i : i + size]) for i in range(len(words) - size + 1)}
+        stored = " ".join(re.findall(r"\w+", json.dumps(events).casefold()))
+        if any(span in stored for span in spans):
+            failed.append("copied chat text")
+    if checks.get("preferences_line") and not row.get("preferences_added"):
+        failed.append("no preference line")
+    if row.get("managed_changed"):
+        failed.append("managed block edited")
+    if "required_any" in task:
+        refs, _, _ = cited(answer, names)
+        failed += [f"missing {group[0]}" for group in task["required_any"] if not refs & set(group)]
+        failed += [f"recommended {ref}" for ref in task.get("forbidden", []) if ref in refs]
+    return {"success": not failed, "recall": 0.0 if failed else 1.0, "failed": failed}
+
+
 def tree(root: Path) -> dict[str, str]:
     return {
         path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
@@ -207,6 +340,7 @@ def codex_runner(spec: ModelSpec, variant_dir: Path, home: Path, bin_dir: Path) 
             "seconds": round(time.monotonic() - clock, 1),
             "commands": len(commands),
             "memory_calls": sum(bool(MEMORY_CALL.search(c)) for c in commands),
+            "calls": [c[-300:] for c in commands],
         }
 
     return run
@@ -260,7 +394,11 @@ def disagreeing(rows: list[dict]) -> list[str]:
 
 
 def plan_stage(
-    rows: list[dict], tasks: list[dict], stage: int, arms: tuple[str, ...] = ("A", "B")
+    rows: list[dict],
+    tasks: list[dict],
+    stage: int,
+    arms: tuple[str, ...] = ("A", "B"),
+    trials: int = 3,
 ) -> list[tuple[str, str, int]]:
     """Stage 1: one trial per task; 2: trials 2-3 where arms disagreed; 3: trials 1-3 for all."""
     done = {(row["task"], row["arm"], row["trial"]) for row in rows}
@@ -276,7 +414,10 @@ def plan_stage(
             ]
         case 3:
             wanted = [
-                (task["id"], arm, trial) for arm in arms for task in tasks for trial in (1, 2, 3)
+                (task["id"], arm, trial)
+                for arm in arms
+                for task in tasks
+                for trial in range(1, task.get("trials", trials) + 1)
             ]
         case unreachable:
             raise LabError(f"Unknown stage {unreachable}.")
@@ -292,19 +433,22 @@ def run_stage(
     stage: int,
     *,
     arms: tuple[str, ...] = ("A", "B"),
+    tasks_file: str = "agent-tasks.json",
+    author: str = AUTHOR,
+    trials: int = 3,
     runner_factory: Callable[[Path, Path, Path], Runner] | None = None,
     installer: Callable[[Path, Path, Path, Path], list[str]] = install_arm,
 ) -> dict:
     course = check_manifest(name)
-    tasks = json.loads((corpus(name) / "agent-tasks.json").read_text())
+    tasks = json.loads((corpus(name) / tasks_file).read_text())
     output = corpus(name) / "agent" / label
     output.mkdir(parents=True, exist_ok=True)
     (output / "raw").mkdir(exist_ok=True)
     rows = episodes(output)
-    pending = plan_stage(rows, tasks, stage, arms)
+    pending = plan_stage(rows, tasks, stage, arms, trials)
     if not pending:
         return report(name, label)
-    spec = ModelSpec.parse(AUTHOR)
+    spec = ModelSpec.parse(author)
     home = paths.profile_home("codex")
     if runner_factory is None:
         models.validate(spec, role="author", profile_home=home)
@@ -316,14 +460,14 @@ def run_stage(
     else:
         variant_dir = paths.state() / "fake-variant"
     identity = {
-        "author": AUTHOR,
+        "author": author,
         "variant": variant_dir.name,
         "manifest": hashlib.sha256((corpus(name) / "manifest.json").read_bytes()).hexdigest(),
         # What the agent sees; gold corrections regrade stored answers and keep the identity.
         "prompts": hashlib.sha256(
             json.dumps([[task["id"], task["prompt"]] for task in tasks]).encode()
         ).hexdigest(),
-    }
+    } | ({"tasks": tasks_file} if tasks_file != "agent-tasks.json" else {})
     known = output / "identity.json"
     if known.is_file() and json.loads(known.read_text()) != identity:
         raise LabError("This label was run with another variant, corpus or task set.")
@@ -349,17 +493,19 @@ def run_stage(
             )
             shim.chmod(0o755)
             runner = runner_factory(bin_dir, home, variant_dir)
-            for arm in ("A", "B"):
+            block = managed_block(variant_dir)
+            for arm in ("A", "B", "L", "O"):
                 todo = [item for item in pending if item[1] == arm]
                 if not todo:
                     continue
                 config, data = scratch / arm / "config", scratch / arm / "data"
                 config.mkdir(parents=True)
                 data.mkdir(parents=True)
-                selection = {"schema_version": 1} | ({"course_memory": True} if arm == "B" else {})
+                memory = arm != "A"
+                selection = {"schema_version": 1} | ({"course_memory": True} if memory else {})
                 (config / "extensions.json").write_text(json.dumps(selection))
                 skills = installer(variant_dir, home, config, data)
-                if ("course-memory" in skills) != (arm == "B"):
+                if ("course-memory" in skills) != memory:
                     raise LabError(f"Arm {arm} installed the wrong skills: {skills}.")
                 environment = hosts.clean_environment(
                     {"TUM_MCP_CONFIG_DIR": str(config), "TUM_MCP_DATA_DIR": str(data)},
@@ -375,11 +521,27 @@ def run_stage(
                     shutil.rmtree(workspace, ignore_errors=True)
                     workspace.parent.mkdir(parents=True, exist_ok=True)
                     subprocess.run(["cp", "-cR", str(course), str(workspace)], check=True)
+                    agents = workspace / "AGENTS.md"
+                    agents.write_text(MANAGED.sub(lambda _: block, agents.read_text(), count=1))
+                    learner = "setup" in task
+                    if learner:
+                        seed(shim, workspace, environment, task["setup"], on=arm != "O")
                     before = tree(workspace)
+                    agents_before = (workspace / "AGENTS.md").read_text()
                     raw = output / "raw" / f"{task_id}-{arm}-{trial}.jsonl"
-                    result = runner(task["prompt"] + CONTRACT, workspace, environment, raw)
+                    contract = CONTRACT if not learner or "required_any" in task else ""
+                    result = runner(task["prompt"] + contract, workspace, environment, raw)
                     changes = protected_changes(before, tree(workspace))
-                    graded = grade(task, result["text"], names)
+                    if learner:
+                        result |= learner_state(workspace, agents_before)
+                        changes = [c for c in changes if c != "AGENTS.md"] + (
+                            ["AGENTS.md#managed"] if result["managed_changed"] else []
+                        )
+                    graded = (
+                        grade_learner(task, result | {"answer": result["text"]}, names)
+                        if learner
+                        else grade(task, result["text"], names)
+                    )
                     row = {
                         "task": task_id,
                         "kind": task["kind"],
@@ -404,14 +566,22 @@ def run_stage(
 
 
 def graded(name: str, label: str) -> list[dict]:
-    tasks = {
-        task["id"]: task for task in json.loads((corpus(name) / "agent-tasks.json").read_text())
-    }
+    known = corpus(name) / "agent" / label / "identity.json"
+    tasks_file = json.loads(known.read_text()).get("tasks", "agent-tasks.json")
+    tasks = {task["id"]: task for task in json.loads((corpus(name) / tasks_file).read_text())}
     names = aliases(check_manifest(name))
     # Grade from the stored answers with the current gold, so a gold correction never
     # needs a rerun; every arm is regraded alike.
     rows = episodes(corpus(name) / "agent" / label)
-    return [row | grade(tasks[row["task"]], row["answer"], names) for row in rows]
+    return [
+        row
+        | (
+            grade_learner(tasks[row["task"]], row, names)
+            if "setup" in tasks[row["task"]]
+            else grade(tasks[row["task"]], row["answer"], names)
+        )
+        for row in rows
+    ]
 
 
 def usage(row: dict, field: str) -> int:

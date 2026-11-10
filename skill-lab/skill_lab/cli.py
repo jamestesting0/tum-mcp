@@ -195,8 +195,17 @@ def cmd_memory_bench(args: argparse.Namespace) -> None:
         case "agent":
             from skill_lab import memory_bench_agent
 
-            arms = tuple(args.arms)
-            show(memory_bench_agent.run_stage(args.corpus, args.label, args.stage, arms=arms))
+            show(
+                memory_bench_agent.run_stage(
+                    args.corpus,
+                    args.label,
+                    args.stage,
+                    arms=tuple(args.arms),
+                    tasks_file=args.tasks,
+                    author=args.model,
+                    trials=args.trials,
+                )
+            )
         case "agent-compare":
             from skill_lab import memory_bench_agent
 
@@ -326,7 +335,10 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--label", default="baseline", help="run: result label; compare: candidate")
     p.add_argument("--base", default="baseline", help="compare: the stored baseline label")
     p.add_argument("--stage", type=int, choices=(1, 2, 3), default=1, help="agent: trial stage")
-    p.add_argument("--arms", choices=("A", "B", "AB"), default="AB", help="agent: arms to run")
+    p.add_argument("--arms", choices=("A", "B", "AB", "L", "O"), default="AB", help="agent: arms")
+    p.add_argument("--tasks", default="agent-tasks.json", help="agent: task file in the corpus")
+    p.add_argument("--model", default="codex:gpt-6.1-terra:high", help="agent: model spec")
+    p.add_argument("--trials", type=int, default=3, help="agent: stage 3 trials per task")
     p.set_defaults(func=cmd_memory_bench)
 
     p = sub.add_parser("clean", help="Delete old rounds' local state.")
