@@ -331,3 +331,16 @@ def test_links_file_is_read_through_the_snapshot(course):
         course, item="exam/concept/decorator", purpose="exercises", limit=4, max_bytes=8000
     )
     assert packet["gaps"][0]["reason"] == "Changed reason after the decision was recorded."
+
+
+def test_impact_lists_every_dependent_as_a_compact_row_with_its_owner(course):
+    packet = impact(course, "exam-ws23", limit=30, max_bytes=65536)
+    rows = {row["id"]: row for row in packet["items"]}
+    assert set(packet["direct"]) <= rows.keys()
+    assert all("locators" not in row and row["owner"] for row in rows.values())
+    assert packet["owners"] == sorted({rows[ref]["owner"] for ref in packet["direct"]})
+
+
+def test_free_text_with_no_course_words_returns_nothing(course):
+    packet = context(course, "tcp congestion window slow start", limit=4, max_bytes=8000)
+    assert packet["status"] == "empty" and packet["items"] == []
