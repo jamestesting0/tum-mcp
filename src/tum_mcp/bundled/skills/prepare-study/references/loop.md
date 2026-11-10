@@ -123,10 +123,11 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    author's polish pass, not another formal review round.
    **Check the batch.** `tum-mcp study build PROJECT`, `tum-mcp study visuals PROJECT`
    (desktop; fix every render defect in the content) and
-   `tum-mcp study visuals PROJECT --interact` (every stepper, Guide | Solution pill and the
-   search must respond). Contact sheets cover drawings and tables, not formulas,
-   derivations or code. Open affected excluded blocks in the built app, including
-   revealed answers; inspect clipping and readability at the requested widths.
+   `tum-mcp study visuals PROJECT --interact` (learner controls and formula layout).
+   A clipped equation or a scrollbar on the equation itself fails the interaction
+   receipt. Use the reported route, width and learning state to reproduce it.
+   Contact sheets cover drawings and tables. Open equations, derivations and code
+   in the built app to inspect readability and the quality of the working.
 8. **Check the whole requested draft before asking.** Fill the scope's teaching,
    practice and answer mappings. Check that each learner action actually exercises
    the recorded demand, and that the outline and introductory copy agree. Persist

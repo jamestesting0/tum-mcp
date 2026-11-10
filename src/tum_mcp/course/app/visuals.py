@@ -754,7 +754,9 @@ def check_interactions(
                 try:
                     for width in widths:
                         with browser.new_context(
-                            viewport={"width": WIDTHS[width], "height": 900}, color_scheme="light"
+                            viewport={"width": WIDTHS[width], "height": 900},
+                            color_scheme="light",
+                            reduced_motion="reduce",
                         ) as context:
                             page = context.new_page()
                             errors: list[str] = []
@@ -763,7 +765,16 @@ def check_interactions(
                                 try:
                                     _open(page, base + route)
                                     found = page.evaluate(
-                                        script, {"query": query if index == 0 else ""}
+                                        script,
+                                        {
+                                            "query": query if index == 0 else "",
+                                            "study": route[1:].split("/")[0]
+                                            if route.endswith("/content")
+                                            else None,
+                                            "exercise": route.rsplit("/", 1)[-1]
+                                            if route.startswith("#exercises/")
+                                            else None,
+                                        },
                                     )
                                     used += found["used"]
                                     issues = found["problems"]

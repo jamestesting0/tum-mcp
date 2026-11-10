@@ -241,9 +241,11 @@ any writing (`review run-checker --plans`, or `review plan-record` for a subagen
 answer), writes an answer key for anything
 computed (`.tum-mcp/checks/<item>.py`, compared with the content by `study verify`), lints
 each item as it is written (`study lint --item`) and finishes with the build, the render
-check and the interaction smoke (`study visuals --interact`, which uses every stepper,
-Guide | Solution pill and the search as a student would). It then asks before the review
-loop.
+check and the interaction smoke (`study visuals --interact`). The interaction check
+opens Study and Exercise learning states, measures rendered formulas, and fails the
+readiness receipt for any clipped formula or formula with its own scrollbar. An outer
+table may scroll as a unit when its formulas remain reachable. Use `--phone` to
+check phone and narrow layouts as well. It then asks before the review loop.
 
 Ask `review-course` to run the review loop (Phase B, `tum-mcp review`). Each round writes
 one packet per kind of item (study unit, exercise, exam pattern, cheatsheet, mock

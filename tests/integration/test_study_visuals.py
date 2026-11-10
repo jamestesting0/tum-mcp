@@ -10,6 +10,7 @@ from documents import content_file
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.browser_evidence import read_receipt
 from tum_mcp.course.app.build import build, read_content
 from tum_mcp.course.app.visuals import _visits, app_revision, report_path, visual_ids
 from tum_mcp.course.content.exercises import ExerciseContent
@@ -40,6 +41,82 @@ def add_corpus(project: Path) -> None:
     content["units"].append(json.loads(CORPUS.read_bytes()))
     path.write_text(json.dumps(content), encoding="utf-8")
     build(project, publish=False)
+
+
+@browser
+def test_formula_layout_holds_receipts_for_clipped_practice_and_scrolling_guide(
+    exercise_project: Path,
+) -> None:
+    project = exercise_project
+    study_file = content_file(project, "study")
+    study = json.loads(study_file.read_bytes())
+    unit = next(unit for unit in study["units"] if unit["key"] == "graphs")
+    unit["questions"][0]["hint"] = r"The practice expression is \(u+v=7\)."
+    unit["blocks"].append(
+        {
+            "kind": "table",
+            "caption": "Wide table",
+            "sources": [unit["sources"][0]["key"]],
+            "columns": ["Case", "Expression"],
+            "rows": [["Trial", r"\(a+b=3\)"]],
+        }
+    )
+    study_file.write_text(json.dumps(study), encoding="utf-8")
+    exercise_file = content_file(project, "exercises")
+    exercises = json.loads(exercise_file.read_bytes())
+    steps = exercises["sets"][0]["exercises"][0]["steps"]
+    steps[1]["hints"].append(r"The second step uses \(p+q=9\).")
+    exercise_file.write_text(json.dumps(exercises), encoding="utf-8")
+    build(project, publish=False)
+    css = project / "app/styles.css"
+    wide = (
+        css.read_text(encoding="utf-8")
+        + """
+      .table-region { max-width: 150px; }
+      .table-region table { min-width: 700px; }
+    """
+    )
+    css.write_text(wide, encoding="utf-8")
+    args = (
+        "visuals",
+        str(project),
+        "--interact",
+        "--unit",
+        "graphs",
+        "--exercise",
+        "sheet-1/sample-relaxation",
+        "--phone",
+        "--json",
+    )
+    clean = invoke(*args)
+    assert clean["passed"], clean["problems"]
+
+    css.write_text(
+        wide
+        + """
+      .question-hint .inline-math { width: 14px; overflow: hidden; }
+      .question-hint .inline-math > .tex { font-size: 18px !important; }
+      .exercise-hints .inline-math { overflow: scroll; }
+    """,
+        encoding="utf-8",
+    )
+    broken = invoke(*args)
+
+    assert not broken["passed"]
+    problems = {
+        issue["route"]: issue["problem"]
+        for issue in broken["problems"]
+        if issue["control"] == "math"
+    }
+    assert "Practice question 1" in problems["#graphs/content"]
+    assert "is clipped" in problems["#graphs/content"]
+    guide = "#exercises/sheet-1/sample-relaxation"
+    assert "Step 2" in problems[guide] and "has its own scrollbar" in problems[guide]
+    receipt = read_receipt(project)
+    assert receipt is not None
+    for width in ("phone", "narrow", "desktop"):
+        assert receipt.states[f"interact/{width}/#graphs/content"] is False
+        assert receipt.states[f"interact/{width}/{guide}"] is False
 
 
 @browser

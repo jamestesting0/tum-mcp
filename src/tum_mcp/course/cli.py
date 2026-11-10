@@ -599,9 +599,7 @@ def visuals(
     ] = False,
     interact: Annotated[
         bool,
-        typer.Option(
-            "--interact", help="Use every stepper, Guide | Solution pill and search instead."
-        ),
+        typer.Option("--interact", help="Check learner controls and formula layout instead."),
     ] = False,
     full: Annotated[bool, typer.Option("--json", help="Print the whole result.")] = False,
 ) -> None:
