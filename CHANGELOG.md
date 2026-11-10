@@ -1,22 +1,6 @@
 # Changes
 
-## Unreleased
-
-- Course Memory reads every link the course now holds: cheatsheet passages, exercises and
-  pattern workflows, pattern worked examples, mock variants, distilled practice,
-  past-question guidance prerequisites and lecture-note passages, and tags items with
-  their semester-map topic. Recorded "no link fits" decisions appear as `gaps`.
-- `study context --item` and `--concept` list the selected item first, then the items it
-  links to in the requested workspace, before weaker neighbours. `--concept` accepts
-  cheatsheet concept keys.
-- Locators and freshness use each block, question, flashcard, exercise step and lecture
-  note's own cited sources and pages, so slide pages no longer point at a recording.
-- The course-memory skill is shorter and read-only while answering: it no longer creates
-  `knowledge.json` on first use. Reviewed relationships are recorded only on request.
-- Packet paths carry the author's own explanation of a link (prerequisite guidance, exam
-  concept links, mock change notes). Agents answer navigation questions such as "which
-  exercises practise X" from the packet and open pages only to teach or quote them; in a
-  paired agent check this cut answer cost by about a third at equal accuracy.
+## 0.22.0 — 2026-11-10
 
 - Learning record: a private, per-course record of a student's attempts, mistakes (with
   the course source that corrects them) and next plan, so the agent picks up where the
@@ -33,6 +17,21 @@
 - `study impact` lists every dependent of a changed source as one compact row with its
   owner, instead of eight full items, plus the workflows and questions that use a changed
   item; packets are about half the size and no longer cut off for large slide decks.
+- Course Memory reads every link the course now holds: cheatsheet passages, exercises and
+  pattern workflows, pattern worked examples, mock variants, distilled practice,
+  past-question guidance prerequisites and lecture-note passages, and tags items with
+  their semester-map topic. Recorded "no link fits" decisions appear as `gaps`.
+- `study context --item` and `--concept` list the selected item first, then the items it
+  links to in the requested workspace, before weaker neighbours. `--concept` accepts
+  cheatsheet concept keys.
+- Locators and freshness use each block, question, flashcard, exercise step and lecture
+  note's own cited sources and pages, so slide pages no longer point at a recording.
+- The course-memory skill is shorter and read-only while answering: it no longer creates
+  `knowledge.json` on first use. Reviewed relationships are recorded only on request.
+- Packet paths carry the author's own explanation of a link (prerequisite guidance, exam
+  concept links, mock change notes). Agents answer navigation questions such as "which
+  exercises practise X" from the packet and open pages only to teach or quote them; in a
+  paired agent check this cut answer cost by about a third at equal accuracy.
 
 ## 0.21.0 — 2026-11-09
 
