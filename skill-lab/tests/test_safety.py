@@ -205,6 +205,19 @@ def test_the_broker_runs_the_interaction_check_and_a_lab_chosen_checker(tmp_path
 
     checker = checker_command(ModelSpec.parse("codex:gpt-6.1-terra:high"))
     assert request("study", "visuals", ".", "--exam", "--interact", "--json")[-1] == "--json"
+    learner = [
+        "study",
+        "visuals",
+        ".",
+        "--unit",
+        "bfs",
+        "--exercise",
+        "practice/trace",
+        "--learner",
+        "--phone",
+        "--json",
+    ]
+    assert request(*learner) == learner
     ran = request("review", "run-checker", ".", "--packet", "r1-p2")
     assert ran[:5] == ["review", "run-checker", ".", "--packet", "r1-p2"]
     template = ran[ran.index("--command") + 1]

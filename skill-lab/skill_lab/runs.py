@@ -38,7 +38,7 @@ def _broker_command(python: Path, arguments: list[str]) -> list[str]:
     return [str(python), "-I", "-m", "tum_mcp", *arguments]
 
 
-RENDER_OPTIONS = frozenset({"--exam", "--gallery", "--phone", "--interact", "--json"})
+RENDER_OPTIONS = frozenset({"--exam", "--gallery", "--phone", "--interact", "--learner", "--json"})
 PACKET = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{0,80}$")
 STEM = re.compile(r"[0-9]{2}_[a-z0-9][a-z0-9-]{0,80}")
 
