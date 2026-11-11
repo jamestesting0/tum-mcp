@@ -27,6 +27,7 @@ jobs:
           node-version: 22
       - name: Install
         run: |
+          sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
           uv sync --locked
           npm ci --prefix website
           uv run tum-mcp install --no-asr lecture audio-notes video-notes course-memory
