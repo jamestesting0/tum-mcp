@@ -91,3 +91,19 @@ def test_disabled_candidate_guard_cannot_start_a_trial(tmp_path, native_runtime,
     with pytest.raises(RuntimeError, match="enabled course guards"):
         install_variant.install_course_hooks(tmp_path)
     assert native_runtime[0].closed and not native_runtime[0].trusted
+
+
+def test_previous_standard_interrupt_timeout_is_replaced_not_duplicated(tmp_path, native_runtime):
+    from tum_mcp.clients.hook_config import render
+    from tum_mcp.clients.hosts import StdioLaunch
+
+    _, previous = render("codex", tmp_path, StdioLaunch(sys.executable, ("-m", "old", "serve")))
+    previous["Interrupt"][0]["hooks"][0]["timeout"] = 30
+    path = tmp_path / ".codex/hooks.json"
+    path.parent.mkdir()
+    path.write_text(json.dumps({"hooks": previous}))
+    install_variant.install_course_hooks(tmp_path)
+    current = json.loads(path.read_text())["hooks"]
+    assert all(len(entries) == 1 for entries in current.values())
+    assert current["Interrupt"][0]["hooks"][0]["timeout"] == 3
+    assert len(native_runtime[0].trusted) == 3

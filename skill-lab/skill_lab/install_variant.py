@@ -147,7 +147,15 @@ def install_course_hooks(home: Path) -> list[str]:
         path = home / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(body)
-    for change in writes("codex", home, hooks, {}):
+    settings = home / ".codex/hooks.json"
+    existing = json.loads(settings.read_text()).get("hooks", {}) if settings.exists() else {}
+    previous = {}
+    for event, entries in hooks.items():
+        known = list(entries)
+        if event == "Interrupt":
+            known.append({"hooks": [entries[0]["hooks"][0] | {"timeout": 30}]})
+        previous[event] = [entry for entry in existing.get(event, []) if entry in known]
+    for change in writes("codex", home, hooks, previous):
         change.path.parent.mkdir(parents=True, exist_ok=True)
         change.path.write_bytes(change.after)
     (home / HOOK_MARKER).write_text(json.dumps(hooks))
