@@ -1,0 +1,20 @@
+# Build output and local reference screenshots stay out of git.
+/dist/
+/references/captures/
+
+# The synthetic course keeps its state so `npm run course -- --build` reproduces it.
+!/course/.tum-mcp/
+/course/.tum-mcp/out/
+/course/.tum-mcp/*.lock
+/course/audio/.build/
+/course/videos/.build/
+
+# `tum-mcp study build` installs these from the package; only authored content is tracked.
+/course/app/index.html
+/course/app/styles.css
+/course/app/data.mjs
+/course/app/runtime/
+/course/app/assets/
+/course/app/lecture-assets/
+/course/app/.managed.json
+/course/app/.lecture-assets.json

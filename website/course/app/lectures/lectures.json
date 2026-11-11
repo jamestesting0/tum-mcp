@@ -1,0 +1,105 @@
+{
+  "schema_version": 3,
+  "course_key": "graph-search",
+  "lectures": [
+    "dijkstra-lecture"
+  ],
+  "evidence": [
+    {
+      "key": "speech-relax",
+      "source_key": "recording-02",
+      "source_sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3",
+      "kind": "subtitle",
+      "recording_id": 2,
+      "interval": {
+        "start_s": 70,
+        "end_s": 220
+      },
+      "reviewed": true
+    },
+    {
+      "key": "speech-trace",
+      "source_key": "recording-02",
+      "source_sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3",
+      "kind": "subtitle",
+      "recording_id": 2,
+      "interval": {
+        "start_s": 220,
+        "end_s": 450
+      },
+      "reviewed": true
+    },
+    {
+      "key": "frame-trace",
+      "source_key": "recording-02",
+      "source_sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3",
+      "kind": "frame",
+      "recording_id": 2,
+      "interval": {
+        "start_s": 364.9,
+        "end_s": 365.1
+      },
+      "reviewed": true
+    },
+    {
+      "key": "speech-settled",
+      "source_key": "recording-02",
+      "source_sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3",
+      "kind": "subtitle",
+      "recording_id": 2,
+      "interval": {
+        "start_s": 450,
+        "end_s": 585
+      },
+      "reviewed": true
+    },
+    {
+      "key": "frame-settled",
+      "source_key": "recording-02",
+      "source_sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3",
+      "kind": "frame",
+      "recording_id": 2,
+      "interval": {
+        "start_s": 499.9,
+        "end_s": 500.1
+      },
+      "reviewed": true
+    },
+    {
+      "key": "speech-negative",
+      "source_key": "recording-02",
+      "source_sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3",
+      "kind": "subtitle",
+      "recording_id": 2,
+      "interval": {
+        "start_s": 585,
+        "end_s": 680
+      },
+      "reviewed": true
+    },
+    {
+      "key": "frame-negative",
+      "source_key": "recording-02",
+      "source_sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3",
+      "kind": "frame",
+      "recording_id": 2,
+      "interval": {
+        "start_s": 629.9,
+        "end_s": 630.1
+      },
+      "reviewed": true
+    },
+    {
+      "key": "speech-organisation",
+      "source_key": "recording-02",
+      "source_sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3",
+      "kind": "subtitle",
+      "recording_id": 2,
+      "interval": {
+        "start_s": 680,
+        "end_s": 720
+      },
+      "reviewed": true
+    }
+  ]
+}

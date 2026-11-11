@@ -1,0 +1,480 @@
+{
+ "clients": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP?",
+    "bold"
+   ]
+  ],
+  [
+   [
+    " > ",
+    "accent"
+   ],
+   [
+    "○ Codex               ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Claude Code         ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Cursor              ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Antigravity         ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Other app (mcp.json)",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ]
+ ],
+ "clients-selected": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP?",
+    "bold"
+   ]
+  ],
+  [
+   [
+    "   ○ Codex               ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Claude Code         ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Cursor              ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    " > ",
+    "accent"
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Antigravity         ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Other app (mcp.json)",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ]
+ ],
+ "workflows": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP? Antigravity           not set up",
+    "bold"
+   ]
+  ],
+  [],
+  [
+   [
+    "Antigravity  – Not checked  TUM tools found; loading inside the app was not checked",
+    ""
+   ]
+  ],
+  [
+   [
+    "                            because its CLI is missing.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Add optional workflows? (Enter skips)",
+    "bold"
+   ]
+  ],
+  [
+   [
+    " > ",
+    "accent"
+   ],
+   [
+    "○ Lecture        Notes and highlights from lecture recordings.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ○ Audio Notes    Create spoken lessons from prepared Study content.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ○ Video Notes    Create narrated, animated explainers from prepared Study content.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ○ Course Memory  Connect course workspaces with optional, source-checked local…",
+    ""
+   ]
+  ]
+ ],
+ "workflows-selected": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP? Antigravity           not set up",
+    "bold"
+   ]
+  ],
+  [],
+  [
+   [
+    "Antigravity  – Not checked  TUM tools found; loading inside the app was not checked",
+    ""
+   ]
+  ],
+  [
+   [
+    "                            because its CLI is missing.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Add optional workflows? (Enter skips)",
+    "bold"
+   ]
+  ],
+  [
+   [
+    "   ",
+    ""
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Lecture        Notes and highlights from lecture recordings.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ",
+    ""
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Audio Notes    Create spoken lessons from prepared Study content.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ",
+    ""
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Video Notes    Create narrated, animated explainers from prepared Study content.",
+    ""
+   ]
+  ],
+  [
+   [
+    " > ",
+    "accent"
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Course Memory  Connect course workspaces with optional, source-checked local…",
+    ""
+   ]
+  ]
+ ],
+ "next": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP? Antigravity           not set up",
+    "bold"
+   ]
+  ],
+  [],
+  [
+   [
+    "Antigravity  – Not checked  TUM tools found; loading inside the app was not checked",
+    ""
+   ]
+  ],
+  [
+   [
+    "                            because its CLI is missing.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Add optional workflows? (Enter skips)",
+    "bold"
+   ]
+  ],
+  [],
+  [
+   [
+    "Next",
+    "bold"
+   ]
+  ],
+  [
+   [
+    "1. Restart Antigravity and open a new chat.",
+    ""
+   ]
+  ],
+  [
+   [
+    "2. Run tum-mcp login to sign in to campus services.",
+    ""
+   ]
+  ]
+ ]
+}

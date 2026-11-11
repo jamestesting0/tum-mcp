@@ -1,0 +1,386 @@
+{
+  "schema_version": 1,
+  "video": "01_dijkstra-s-algorithm",
+  "unit": "dijkstra",
+  "unit_hash": "6c76426d4cb56aad31d4f11bdc1606dfec23b8945d3c6a986ac8ea994d8c94e5",
+  "title": "Dijkstra's algorithm",
+  "language": "en",
+  "objectives": [
+    "relax",
+    "trace",
+    "negative"
+  ],
+  "chapters": [
+    {
+      "key": "c01",
+      "title": "Two moves",
+      "beats": [
+        {
+          "key": "b01",
+          "kind": "overview",
+          "intent": "Name the two moves before showing them, on the graph the course uses.",
+          "narration": [
+            "Dijkstra's algorithm finds the cheapest path when every edge has a weight.",
+            "It repeats two moves: settle the closest vertex, then relax the edges that leave it."
+          ],
+          "on_screen": [
+            {
+              "key": "settle",
+              "kind": "label",
+              "text": "Settle the closest vertex"
+            },
+            {
+              "key": "relax",
+              "kind": "label",
+              "text": "Relax its edges"
+            },
+            {
+              "key": "ns",
+              "kind": "label",
+              "text": "S"
+            },
+            {
+              "key": "na",
+              "kind": "label",
+              "text": "A"
+            },
+            {
+              "key": "nb",
+              "kind": "label",
+              "text": "B"
+            },
+            {
+              "key": "nc",
+              "kind": "label",
+              "text": "C"
+            },
+            {
+              "key": "nd",
+              "kind": "label",
+              "text": "D"
+            },
+            {
+              "key": "ne",
+              "kind": "label",
+              "text": "E"
+            },
+            {
+              "key": "ng",
+              "kind": "label",
+              "text": "G"
+            }
+          ],
+          "locators": [
+            {
+              "kind": "summary",
+              "ref": "summary",
+              "fingerprint": "8f34c8aa01adf594b621edcc7bf7afb7d652518ec58ff03e51ff1211a70c143c"
+            },
+            {
+              "kind": "block",
+              "ref": "blocks[2]",
+              "fingerprint": "2b6c895e7036042132856aea559d4d7243ec324e66abec7d272666524a0dcfd4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "c02",
+      "title": "Relaxation",
+      "beats": [
+        {
+          "key": "b02",
+          "kind": "mechanism",
+          "intent": "Show one relaxation lowering a tentative distance, with the rule beside it.",
+          "narration": [
+            "Vertex C is settled at four, and vertex B still has six.",
+            "The edge from C to B weighs one, so the route through C costs four plus one, which is five.",
+            "Five beats six, so relaxation lowers B to five and records C as its parent."
+          ],
+          "on_screen": [
+            {
+              "key": "c",
+              "kind": "label",
+              "text": "C"
+            },
+            {
+              "key": "b",
+              "kind": "label",
+              "text": "B"
+            },
+            {
+              "key": "dc",
+              "kind": "number",
+              "value": 4,
+              "decimals": 0
+            },
+            {
+              "key": "db",
+              "kind": "number",
+              "value": 6,
+              "decimals": 0
+            },
+            {
+              "key": "w",
+              "kind": "number",
+              "value": 1,
+              "decimals": 0
+            },
+            {
+              "key": "dnew",
+              "kind": "number",
+              "value": 5,
+              "decimals": 0
+            },
+            {
+              "key": "rule",
+              "kind": "math",
+              "typst": "d(v) <- min(d(v), d(u) + w(u, v))",
+              "source_latex": "d(v) \\gets \\min\\bigl(d(v),\\; d(u) + w(u, v)\\bigr)"
+            }
+          ],
+          "locators": [
+            {
+              "kind": "block",
+              "ref": "blocks[1]",
+              "fingerprint": "5e4737f242d6351921a285548ed42a60ff24ac86c54312bfab72d0125d155342"
+            },
+            {
+              "kind": "objective",
+              "ref": "relax",
+              "fingerprint": "8fdb19a59fd52006690d96b7e6a68937983eb46cce5cac72c787a9e62a2db219"
+            }
+          ],
+          "point": "Relaxation keeps the cheaper of two routes"
+        }
+      ]
+    },
+    {
+      "key": "c03",
+      "title": "Settle in order",
+      "beats": [
+        {
+          "key": "b03",
+          "kind": "instance",
+          "intent": "Trace the running example so the settle order and the two improvements are visible.",
+          "narration": [
+            "Start at S with distance zero.",
+            "Each time, settle the smallest open value: S, then E at one, then A at two.",
+            "Settling C at four lowers B from six to five and opens G at nine.",
+            "B gives D seven, and D lowers G to eight, the cheapest cost to G."
+          ],
+          "on_screen": [
+            {
+              "key": "hs",
+              "kind": "label",
+              "text": "S"
+            },
+            {
+              "key": "he",
+              "kind": "label",
+              "text": "E"
+            },
+            {
+              "key": "ha",
+              "kind": "label",
+              "text": "A"
+            },
+            {
+              "key": "hc",
+              "kind": "label",
+              "text": "C"
+            },
+            {
+              "key": "hb",
+              "kind": "label",
+              "text": "B"
+            },
+            {
+              "key": "hd",
+              "kind": "label",
+              "text": "D"
+            },
+            {
+              "key": "hg",
+              "kind": "label",
+              "text": "G"
+            },
+            {
+              "key": "ds",
+              "kind": "number",
+              "value": 0,
+              "decimals": 0
+            },
+            {
+              "key": "de",
+              "kind": "number",
+              "value": 1,
+              "decimals": 0
+            },
+            {
+              "key": "da",
+              "kind": "number",
+              "value": 2,
+              "decimals": 0
+            },
+            {
+              "key": "dc4",
+              "kind": "number",
+              "value": 4,
+              "decimals": 0
+            },
+            {
+              "key": "db5",
+              "kind": "number",
+              "value": 5,
+              "decimals": 0
+            },
+            {
+              "key": "dd",
+              "kind": "number",
+              "value": 7,
+              "decimals": 0
+            },
+            {
+              "key": "dg",
+              "kind": "number",
+              "value": 8,
+              "decimals": 0
+            }
+          ],
+          "locators": [
+            {
+              "kind": "block",
+              "ref": "blocks[3]",
+              "fingerprint": "c8c448bc944ab771a493fa04a58d75277c1f4bb72d6715a637cb6d3e237202c3"
+            },
+            {
+              "kind": "objective",
+              "ref": "trace",
+              "fingerprint": "c87fc9c42498b69b6f7040297a6fbc9b5962b1e99db2079d087c30aa0b86505b"
+            }
+          ],
+          "point": "Settle the smallest tentative distance"
+        }
+      ]
+    },
+    {
+      "key": "c04",
+      "title": "When it fails",
+      "beats": [
+        {
+          "key": "b04",
+          "kind": "pitfall",
+          "intent": "Show why a negative edge breaks the settled order.",
+          "narration": [
+            "This only works when no edge weight is negative.",
+            "Here X is settled at two before Y is looked at.",
+            "But Y costs three, and its edge to X weighs minus two, so X really costs one.",
+            "A settled value is final, so Dijkstra keeps the wrong distance of two."
+          ],
+          "on_screen": [
+            {
+              "key": "s",
+              "kind": "label",
+              "text": "S"
+            },
+            {
+              "key": "x",
+              "kind": "label",
+              "text": "X"
+            },
+            {
+              "key": "y",
+              "kind": "label",
+              "text": "Y"
+            },
+            {
+              "key": "wx",
+              "kind": "number",
+              "value": 2,
+              "decimals": 0
+            },
+            {
+              "key": "wy",
+              "kind": "number",
+              "value": 3,
+              "decimals": 0
+            },
+            {
+              "key": "wneg",
+              "kind": "number",
+              "value": -2,
+              "decimals": 0
+            },
+            {
+              "key": "wrong",
+              "kind": "label",
+              "text": "Settled at 2"
+            },
+            {
+              "key": "true",
+              "kind": "label",
+              "text": "True cost 1"
+            }
+          ],
+          "locators": [
+            {
+              "kind": "block",
+              "ref": "blocks[5]",
+              "fingerprint": "04c027a7b7bf4967d4c54d1047a9fbb1f40effb1bee1503b7f16c8a7fb501f66"
+            },
+            {
+              "kind": "objective",
+              "ref": "negative",
+              "fingerprint": "0c530713b1c34b49adeabb61b83aa45cbcfd181cc8c993d1f4cad94b0ab37eb0"
+            },
+            {
+              "kind": "block",
+              "ref": "blocks[4]",
+              "fingerprint": "488f469ee062f92ae9baed73c33f27ec1404a4009fa929f92ece6bf2a201bc7b"
+            }
+          ],
+          "point": "A negative edge undercuts a settled value"
+        },
+        {
+          "key": "b05",
+          "kind": "recap",
+          "intent": "Restate the loop and its condition in one line.",
+          "narration": [
+            "So: settle the smallest tentative distance, relax its edges, and keep every weight non-negative."
+          ],
+          "on_screen": [
+            {
+              "key": "r1",
+              "kind": "label",
+              "text": "Settle the smallest"
+            },
+            {
+              "key": "r2",
+              "kind": "label",
+              "text": "Relax its edges"
+            },
+            {
+              "key": "r3",
+              "kind": "label",
+              "text": "Weights never negative"
+            }
+          ],
+          "locators": [
+            {
+              "kind": "block",
+              "ref": "blocks[2]",
+              "fingerprint": "2b6c895e7036042132856aea559d4d7243ec324e66abec7d272666524a0dcfd4"
+            },
+            {
+              "kind": "block",
+              "ref": "blocks[4]",
+              "fingerprint": "488f469ee062f92ae9baed73c33f27ec1404a4009fa929f92ece6bf2a201bc7b"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

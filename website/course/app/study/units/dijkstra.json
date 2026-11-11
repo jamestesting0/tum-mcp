@@ -1,0 +1,838 @@
+{
+  "key": "dijkstra",
+  "label": "Lecture 2",
+  "title": "Dijkstra's algorithm",
+  "minutes": 20,
+  "summary": "Shortest paths by total weight with non-negative edges.",
+  "objectives": [
+    {
+      "key": "relax",
+      "text": "Apply relaxation to an edge."
+    },
+    {
+      "key": "trace",
+      "text": "Trace Dijkstra and read off a shortest path."
+    },
+    {
+      "key": "negative",
+      "text": "Explain why a negative edge breaks the method."
+    }
+  ],
+  "sources": [
+    {
+      "key": "lecture-02",
+      "sha256": "5b91704ad879bccbb6c8fd4f1640dc412bfcd45e2bbe7ed0d35a146f1e6b3c8b"
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "text",
+      "title": "Distance by weight",
+      "level": 1,
+      "sources": [
+        "lecture-02"
+      ],
+      "paragraphs": [
+        "Each edge now carries a weight \\(w(u, v) \\ge 0\\). The distance \\(d(s, v)\\) is the least total weight of a path from \\(s\\) to \\(v\\)."
+      ]
+    },
+    {
+      "kind": "formula",
+      "title": "Relaxation",
+      "level": 1,
+      "sources": [
+        "lecture-02"
+      ],
+      "latex": "d(v) \\gets \\min\\bigl(d(v),\\; d(u) + w(u, v)\\bigr)",
+      "plain": "Keep the shorter of the known route to \\(v\\) and the route through \\(u\\).",
+      "symbols": [
+        {
+          "symbol": "\\(d(v)\\)",
+          "meaning": "Tentative distance of v"
+        },
+        {
+          "symbol": "\\(w(u, v)\\)",
+          "meaning": "Weight of the edge from u to v"
+        }
+      ],
+      "conditions": "When \\(d(v)\\) decreases, \\(u\\) becomes the parent of \\(v\\)."
+    },
+    {
+      "kind": "text",
+      "title": "The loop",
+      "level": 1,
+      "sources": [
+        "lecture-02"
+      ],
+      "paragraphs": [
+        "Every vertex starts unsettled. Then:"
+      ],
+      "steps": [
+        "Start: give the source distance \\(0\\) and every other vertex \\(\\infty\\).",
+        "Choose: the unsettled vertex with the smallest tentative distance.",
+        "Settle: fix its distance.",
+        "Relax: try every edge leaving it."
+      ]
+    },
+    {
+      "kind": "walkthrough",
+      "key": "dijkstra-trace",
+      "title": "Trace from S",
+      "level": 1,
+      "sources": [
+        "lecture-02"
+      ],
+      "stage": {
+        "kind": "diagram",
+        "description": "The running example with weights: S–A 2, S–B 6, S–E 1, A–C 2, B–C 1, B–D 2, C–G 5, D–G 1.",
+        "nodes": [
+          {
+            "key": "s",
+            "label": "S",
+            "row": 1,
+            "col": 0,
+            "shape": "circle"
+          },
+          {
+            "key": "a",
+            "label": "A",
+            "row": 0,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "b",
+            "label": "B",
+            "row": 2,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "e",
+            "label": "E",
+            "row": 2,
+            "col": 0,
+            "shape": "circle"
+          },
+          {
+            "key": "c",
+            "label": "C",
+            "row": 0,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "d",
+            "label": "D",
+            "row": 2,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "g",
+            "label": "G",
+            "row": 1,
+            "col": 3,
+            "shape": "circle"
+          }
+        ],
+        "edges": [
+          {
+            "start": "s",
+            "end": "a",
+            "label": "2"
+          },
+          {
+            "start": "s",
+            "end": "b",
+            "label": "6"
+          },
+          {
+            "start": "s",
+            "end": "e",
+            "label": "1"
+          },
+          {
+            "start": "a",
+            "end": "c",
+            "label": "2"
+          },
+          {
+            "start": "b",
+            "end": "c",
+            "label": "1"
+          },
+          {
+            "start": "b",
+            "end": "d",
+            "label": "2"
+          },
+          {
+            "start": "c",
+            "end": "g",
+            "label": "5"
+          },
+          {
+            "start": "d",
+            "end": "g",
+            "label": "1"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "subgoal": "Start",
+          "action": "Set \\(d(S) = 0\\).",
+          "why": "Every other vertex starts at infinity.",
+          "frontier": [
+            "s"
+          ],
+          "state": [
+            {
+              "label": "Settled",
+              "value": "none"
+            },
+            {
+              "label": "Tentative",
+              "value": "\\(S = 0\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Grow from S",
+          "action": "Settle \\(S\\); relax to \\(A = 2\\), \\(B = 6\\), \\(E = 1\\).",
+          "why": "\\(S\\) is the only vertex with a finite distance.",
+          "active": [
+            "s"
+          ],
+          "frontier": [
+            "a",
+            "b",
+            "e"
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "s",
+              "end": "b"
+            },
+            {
+              "start": "s",
+              "end": "e"
+            }
+          ],
+          "state": [
+            {
+              "label": "Settled",
+              "value": "\\(S = 0\\)"
+            },
+            {
+              "label": "Tentative",
+              "value": "\\(A = 2,\\ B = 6,\\ E = 1\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Grow from S",
+          "action": "Settle \\(E\\) at 1; nothing changes.",
+          "why": "1 is the smallest tentative distance; \\(E\\) has no other neighbour.",
+          "active": [
+            "e"
+          ],
+          "visited": [
+            "s"
+          ],
+          "frontier": [
+            "a",
+            "b"
+          ],
+          "state": [
+            {
+              "label": "Settled",
+              "value": "\\(S = 0,\\ E = 1\\)"
+            },
+            {
+              "label": "Tentative",
+              "value": "\\(A = 2,\\ B = 6\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Grow from S",
+          "action": "Settle \\(A\\) at 2; relax to \\(C = 4\\).",
+          "why": "\\(2 + 2 = 4\\) through \\(A\\).",
+          "active": [
+            "a"
+          ],
+          "visited": [
+            "s",
+            "e"
+          ],
+          "frontier": [
+            "b",
+            "c"
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "c"
+            }
+          ],
+          "state": [
+            {
+              "label": "Settled",
+              "value": "\\(S, E, A\\)"
+            },
+            {
+              "label": "Tentative",
+              "value": "\\(B = 6,\\ C = 4\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Improve routes",
+          "action": "Settle \\(C\\) at 4; lower \\(B\\) to 5, set \\(G = 9\\).",
+          "why": "\\(4 + 1 = 5 < 6\\), so the route through \\(C\\) wins and \\(C\\) becomes the parent of \\(B\\).",
+          "active": [
+            "c"
+          ],
+          "visited": [
+            "s",
+            "e",
+            "a"
+          ],
+          "frontier": [
+            "b",
+            "g"
+          ],
+          "edges": [
+            {
+              "start": "c",
+              "end": "b"
+            },
+            {
+              "start": "c",
+              "end": "g"
+            }
+          ],
+          "state": [
+            {
+              "label": "Settled",
+              "value": "\\(S, E, A, C\\)"
+            },
+            {
+              "label": "Tentative",
+              "value": "\\(B = 5,\\ G = 9\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Improve routes",
+          "action": "Settle \\(B\\) at 5; relax to \\(D = 7\\).",
+          "why": "\\(5 + 2 = 7\\).",
+          "active": [
+            "b"
+          ],
+          "visited": [
+            "s",
+            "e",
+            "a",
+            "c"
+          ],
+          "frontier": [
+            "d",
+            "g"
+          ],
+          "edges": [
+            {
+              "start": "b",
+              "end": "d"
+            }
+          ],
+          "state": [
+            {
+              "label": "Settled",
+              "value": "\\(S, E, A, C, B\\)"
+            },
+            {
+              "label": "Tentative",
+              "value": "\\(D = 7,\\ G = 9\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Improve routes",
+          "action": "Settle \\(D\\) at 7; lower \\(G\\) to 8.",
+          "why": "\\(7 + 1 = 8 < 9\\).",
+          "active": [
+            "d"
+          ],
+          "visited": [
+            "s",
+            "e",
+            "a",
+            "c",
+            "b"
+          ],
+          "frontier": [
+            "g"
+          ],
+          "edges": [
+            {
+              "start": "d",
+              "end": "g"
+            }
+          ],
+          "state": [
+            {
+              "label": "Settled",
+              "value": "\\(S, E, A, C, B, D\\)"
+            },
+            {
+              "label": "Tentative",
+              "value": "\\(G = 8\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Done",
+          "action": "Settle \\(G\\) at 8.",
+          "why": "Parents give the path back to the source.",
+          "visited": [
+            "s",
+            "e",
+            "a",
+            "c",
+            "b",
+            "d",
+            "g"
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "a",
+              "end": "c"
+            },
+            {
+              "start": "c",
+              "end": "b"
+            },
+            {
+              "start": "b",
+              "end": "d"
+            },
+            {
+              "start": "d",
+              "end": "g"
+            }
+          ],
+          "state": [
+            {
+              "label": "Path",
+              "value": "\\(S \\to A \\to C \\to B \\to D \\to G\\)"
+            },
+            {
+              "label": "Cost",
+              "value": "\\(8\\)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "text",
+      "title": "Why a settled distance stays fixed",
+      "level": 1,
+      "sources": [
+        "lecture-02"
+      ],
+      "steps": [
+        "Take the vertex \\(u\\) with the smallest tentative distance.",
+        "Any other path to it leaves the settled set through a vertex whose tentative distance is at least that large.",
+        "Non-negative weights can only add to that, so no later path is shorter."
+      ]
+    },
+    {
+      "kind": "callout",
+      "tone": "pitfall",
+      "sources": [
+        "lecture-02"
+      ],
+      "situation": "Running Dijkstra from \\(S\\) with \\(w(S, X) = 2\\), \\(w(S, Y) = 3\\) and \\(w(Y, X) = -2\\).",
+      "wrong": "Settle \\(X\\) at 2 and keep it.",
+      "right": "The path through \\(Y\\) costs \\(3 + (-2) = 1\\).",
+      "why": "\\(X\\) was settled before \\(Y\\); the negative edge undercuts a value that is already final."
+    },
+    {
+      "kind": "table",
+      "title": "BFS and Dijkstra on the same graph",
+      "level": 2,
+      "sources": [
+        "lecture-02"
+      ],
+      "columns": [
+        "Method",
+        "Path to G",
+        "Edges",
+        "Cost"
+      ],
+      "rows": [
+        [
+          "BFS",
+          "\\(S \\to A \\to C \\to G\\)",
+          "\\(3\\)",
+          "\\(9\\)"
+        ],
+        [
+          "Dijkstra",
+          "\\(S \\to A \\to C \\to B \\to D \\to G\\)",
+          "\\(5\\)",
+          "\\(8\\)"
+        ]
+      ],
+      "caption": "Fewer edges is not the same as lower cost."
+    }
+  ],
+  "flashcards": [
+    {
+      "key": "relax-rule",
+      "objective": "relax",
+      "front": "Relax the edge \\((u, v)\\).",
+      "back": "\\(d(v) \\gets \\min(d(v), d(u) + w(u, v))\\); on a decrease, \\(u\\) becomes the parent of \\(v\\).",
+      "sources": [
+        "lecture-02"
+      ]
+    },
+    {
+      "key": "choose",
+      "objective": "trace",
+      "front": "Which vertex does Dijkstra settle next?",
+      "back": "The unsettled vertex with the smallest tentative distance.",
+      "sources": [
+        "lecture-02"
+      ]
+    },
+    {
+      "key": "non-negative",
+      "objective": "negative",
+      "front": "Which edge weights does Dijkstra need?",
+      "back": "Non-negative ones; a negative edge can undercut a distance that is already settled.",
+      "sources": [
+        "lecture-02"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "key": "relax-cb",
+      "objective": "relax",
+      "level": "apply",
+      "prompt": "\\(C\\) is being settled. What does relaxing the edge from \\(C\\) to \\(B\\) give?",
+      "options": [
+        {
+          "key": "a",
+          "text": "\\(d(B) = 5\\), parent \\(C\\)",
+          "feedback": "\\(4 + 1 = 5 < 6\\), so the route through \\(C\\) replaces the old one."
+        },
+        {
+          "key": "b",
+          "text": "\\(d(B) = 6\\), unchanged",
+          "feedback": "\\(4 + 1 = 5\\) is smaller than 6, so the value does change."
+        },
+        {
+          "key": "c",
+          "text": "\\(d(B) = 7\\)",
+          "feedback": "This adds the weight to the old value; relaxation never increases a distance."
+        },
+        {
+          "key": "d",
+          "text": "\\(d(C) = 7\\)",
+          "feedback": "Relaxing the edge from \\(C\\) updates \\(B\\), not \\(C\\)."
+        }
+      ],
+      "correct": "a",
+      "explanation": "\\(\\min(6, 4 + 1) = 5\\), and \\(C\\) becomes the parent of \\(B\\).",
+      "hint": "Compute \\(d(C) + w(C, B)\\) and compare.",
+      "sources": [
+        "lecture-02"
+      ],
+      "blocks": [
+        {
+          "kind": "table",
+          "title": "Before relaxing",
+          "sources": [
+            "lecture-02"
+          ],
+          "columns": [
+            "Quantity",
+            "Value"
+          ],
+          "rows": [
+            [
+              "\\(d(C)\\)",
+              "\\(4\\)"
+            ],
+            [
+              "\\(d(B)\\)",
+              "\\(6\\)"
+            ],
+            [
+              "\\(w(C, B)\\)",
+              "\\(1\\)"
+            ]
+          ],
+          "caption": "\\(C\\) is settled; \\(B\\) is not."
+        }
+      ]
+    },
+    {
+      "key": "settle-order",
+      "objective": "trace",
+      "level": "apply",
+      "prompt": "In which order does Dijkstra settle the running example from S?",
+      "options": [
+        {
+          "key": "a",
+          "text": "S, E, A, C, B, D, G",
+          "feedback": "Each step takes the smallest tentative distance: 0, 1, 2, 4, 5, 7, 8."
+        },
+        {
+          "key": "b",
+          "text": "S, A, B, E, C, D, G",
+          "feedback": "That is the BFS order; it ignores weights."
+        },
+        {
+          "key": "c",
+          "text": "S, E, A, B, C, D, G",
+          "feedback": "After \\(A\\), \\(C = 4\\) is smaller than \\(B = 6\\)."
+        },
+        {
+          "key": "d",
+          "text": "S, A, C, G, B, D, E",
+          "feedback": "\\(E = 1\\) is the smallest value after \\(S\\), so it is settled second."
+        }
+      ],
+      "correct": "a",
+      "explanation": "The settled distances are 0, 1, 2, 4, 5, 7 and 8, in that order.",
+      "hint": "Write the tentative distances after each step.",
+      "sources": [
+        "lecture-02"
+      ],
+      "blocks": [
+        {
+          "kind": "diagram",
+          "title": "Weighted running example",
+          "sources": [
+            "lecture-02"
+          ],
+          "description": "S–A 2, S–B 6, S–E 1, A–C 2, B–C 1, B–D 2, C–G 5, D–G 1.",
+          "nodes": [
+            {
+              "key": "s",
+              "label": "S",
+              "row": 1,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "a",
+              "label": "A",
+              "row": 0,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "row": 2,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "e",
+              "label": "E",
+              "row": 2,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "row": 0,
+              "col": 2,
+              "shape": "circle"
+            },
+            {
+              "key": "d",
+              "label": "D",
+              "row": 2,
+              "col": 2,
+              "shape": "circle"
+            },
+            {
+              "key": "g",
+              "label": "G",
+              "row": 1,
+              "col": 3,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a",
+              "label": "2"
+            },
+            {
+              "start": "s",
+              "end": "b",
+              "label": "6"
+            },
+            {
+              "start": "s",
+              "end": "e",
+              "label": "1"
+            },
+            {
+              "start": "a",
+              "end": "c",
+              "label": "2"
+            },
+            {
+              "start": "b",
+              "end": "c",
+              "label": "1"
+            },
+            {
+              "start": "b",
+              "end": "d",
+              "label": "2"
+            },
+            {
+              "start": "c",
+              "end": "g",
+              "label": "5"
+            },
+            {
+              "start": "d",
+              "end": "g",
+              "label": "1"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Dijkstra starts at S with distance 0.",
+              "active": [
+                "s"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "negative-edge",
+      "objective": "negative",
+      "level": "reason",
+      "prompt": "Dijkstra runs from \\(S\\) on this graph and reports \\(d(X) = 2\\). Why is that wrong?",
+      "options": [
+        {
+          "key": "a",
+          "text": "\\(X\\) is settled before the cheaper path through \\(Y\\) is found.",
+          "feedback": "Correct: the negative edge arrives after the value is final."
+        },
+        {
+          "key": "b",
+          "text": "Dijkstra skips every negative edge it meets.",
+          "feedback": "It relaxes them, but only after the target is settled."
+        },
+        {
+          "key": "c",
+          "text": "\\(Y\\) is settled before \\(X\\) is settled.",
+          "feedback": "\\(X\\) has the smaller tentative distance, so it is settled first."
+        },
+        {
+          "key": "d",
+          "text": "The priority queue breaks a tie the wrong way.",
+          "feedback": "There is no tie: \\(2\\) and \\(3\\) differ."
+        }
+      ],
+      "correct": "a",
+      "explanation": "\\(3 + (-2) = 1 < 2\\), but \\(X\\) was settled at 2 and is never revisited.",
+      "hint": "Which vertex is settled first?",
+      "sources": [
+        "lecture-02"
+      ],
+      "blocks": [
+        {
+          "kind": "diagram",
+          "title": "A negative edge",
+          "sources": [
+            "lecture-02"
+          ],
+          "description": "S links to X with weight 2 and to Y with weight 3; Y links to X with weight −2.",
+          "nodes": [
+            {
+              "key": "s",
+              "label": "S",
+              "row": 0,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "x",
+              "label": "X",
+              "row": 0,
+              "col": 2,
+              "shape": "circle"
+            },
+            {
+              "key": "y",
+              "label": "Y",
+              "row": 1,
+              "col": 1,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "x",
+              "directed": true,
+              "label": "2"
+            },
+            {
+              "start": "s",
+              "end": "y",
+              "directed": true,
+              "label": "3"
+            },
+            {
+              "start": "y",
+              "end": "x",
+              "directed": true,
+              "label": "−2"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Dijkstra starts at S.",
+              "active": [
+                "s"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "lectures": [
+    "dijkstra-lecture"
+  ]
+}

@@ -1,0 +1,350 @@
+{
+  "key": "trace-dijkstra",
+  "topic": "weighted",
+  "title": "Trace Dijkstra",
+  "summary": "Fill the table of tentative distances and read off the path.",
+  "cues": [
+    "A weighted graph and a table of tentative distances"
+  ],
+  "workflow": [
+    {
+      "do": "Start the table",
+      "why": "Every later value comes from this row.",
+      "apply": {
+        "text": "Source \\(0\\), every other vertex \\(\\infty\\)."
+      }
+    },
+    {
+      "do": "Settle the smallest open value",
+      "why": "With non-negative weights it can no longer improve.",
+      "apply": {
+        "text": "Circle it in the table; it never changes again."
+      }
+    },
+    {
+      "do": "Relax its edges",
+      "why": "Only edges out of the settled vertex can change values now.",
+      "apply": {
+        "math": [
+          "d(v) \\gets \\min(d(v),\\ d(u) + w(u, v))"
+        ],
+        "symbols": [
+          {
+            "symbol": "\\(u\\)",
+            "meaning": "The vertex just settled"
+          },
+          {
+            "symbol": "\\(v\\)",
+            "meaning": "One of its neighbours"
+          }
+        ]
+      }
+    },
+    {
+      "do": "Read the path from the parents",
+      "why": "Each decrease recorded the vertex it came through.",
+      "apply": {
+        "text": "Walk back from the target to the source, then reverse."
+      }
+    }
+  ],
+  "concepts": [
+    "relaxation",
+    "dijkstra-loop"
+  ],
+  "sources": [
+    {
+      "key": "past-paper",
+      "sha256": "cb9e17da9966983c605ed182558f55aa74b4bd52d75c89822eedfbaafa09d1eb"
+    }
+  ],
+  "examples": [
+    {
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "Task",
+          "sources": [
+            "past-paper"
+          ],
+          "paragraphs": [
+            "Run Dijkstra from \\(S\\). Give the tentative distances after each settled vertex and the shortest path to \\(C\\)."
+          ]
+        },
+        {
+          "kind": "diagram",
+          "title": "Graph",
+          "sources": [
+            "past-paper"
+          ],
+          "description": "S–A 4, S–B 1, B–A 2, A–C 1, B–C 5.",
+          "nodes": [
+            {
+              "key": "s",
+              "label": "S",
+              "row": 1,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "a",
+              "label": "A",
+              "row": 0,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "row": 2,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "row": 1,
+              "col": 2,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a",
+              "label": "4"
+            },
+            {
+              "start": "s",
+              "end": "b",
+              "label": "1"
+            },
+            {
+              "start": "b",
+              "end": "a",
+              "label": "2"
+            },
+            {
+              "start": "a",
+              "end": "c",
+              "label": "1"
+            },
+            {
+              "start": "b",
+              "end": "c",
+              "label": "5"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "Dijkstra starts at S."
+            }
+          ],
+          "state_labels": "caption"
+        }
+      ],
+      "solution": {
+        "answers": [
+          {
+            "blocks": [
+              {
+                "kind": "table",
+                "title": "Tentative distances",
+                "sources": [
+                  "past-paper"
+                ],
+                "columns": [
+                  "Settled",
+                  "\\(A\\)",
+                  "\\(B\\)",
+                  "\\(C\\)"
+                ],
+                "rows": [
+                  [
+                    "\\(S\\)",
+                    "\\(4\\)",
+                    "\\(1\\)",
+                    "\\(\\infty\\)"
+                  ],
+                  [
+                    "\\(B\\)",
+                    "\\(3\\)",
+                    "—",
+                    "\\(6\\)"
+                  ],
+                  [
+                    "\\(A\\)",
+                    "—",
+                    "—",
+                    "\\(4\\)"
+                  ],
+                  [
+                    "\\(C\\)",
+                    "—",
+                    "—",
+                    "—"
+                  ]
+                ],
+                "caption": "Path \\(S \\to B \\to A \\to C\\), cost \\(4\\)."
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "step": 1,
+          "prompt": "Which vertex is settled after \\(S\\)?",
+          "check": {
+            "kind": "text",
+            "answer": "B",
+            "feedback": "\\(d(B) = 1\\) is the smallest open value."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Settle",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(B\\) at \\(1\\)."
+              ]
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "prompt": "Relax the edges of \\(B\\). What is the new value of \\(A\\)?",
+          "check": {
+            "kind": "numeric",
+            "answer": 3,
+            "feedback": "\\(1 + 2 = 3 < 4\\)."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Relax",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(A = 3\\), \\(C = 6\\)."
+              ]
+            }
+          ]
+        },
+        {
+          "step": 3,
+          "prompt": "Settle \\(A\\) and relax. What is \\(d(C)\\)?",
+          "check": {
+            "kind": "numeric",
+            "answer": 4,
+            "feedback": "\\(3 + 1 = 4 < 6\\)."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Relax",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(C = 4\\)."
+              ]
+            }
+          ]
+        },
+        {
+          "step": 4,
+          "prompt": "Follow the parents back from \\(C\\). Which path is it?",
+          "check": {
+            "kind": "text",
+            "answer": "S, B, A, C",
+            "feedback": "\\(C\\) came through \\(A\\), \\(A\\) through \\(B\\)."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Path",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(S \\to B \\to A \\to C\\)"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "pitfalls": [
+    {
+      "situation": "Settling \\(A\\) at \\(4\\) because the edge from \\(S\\) is direct.",
+      "wrong": "\\(d(A) = 4\\)",
+      "right": "\\(d(A) = 3\\) through \\(B\\)",
+      "why": "Settle by the smallest value, not by the shortest edge list.",
+      "step": 2
+    }
+  ],
+  "drill": [
+    {
+      "key": "next-settled",
+      "prompt": "Open values: \\(A = 5\\), \\(B = 2\\), \\(C = 7\\). Which vertex is settled next?",
+      "blocks": [
+        {
+          "kind": "table",
+          "title": "Open values",
+          "sources": [
+            "past-paper"
+          ],
+          "columns": [
+            "Vertex",
+            "Tentative"
+          ],
+          "rows": [
+            [
+              "\\(A\\)",
+              "\\(5\\)"
+            ],
+            [
+              "\\(B\\)",
+              "\\(2\\)"
+            ],
+            [
+              "\\(C\\)",
+              "\\(7\\)"
+            ]
+          ],
+          "caption": "No vertex is settled among these yet."
+        }
+      ],
+      "check": {
+        "kind": "text",
+        "feedback": "The smallest open value is settled next.",
+        "answer": "B"
+      },
+      "explanation": "\\(2\\) is the smallest open value.",
+      "guide": [
+        {
+          "step": 2,
+          "prompt": "Which open value is smallest?",
+          "hint": "Compare the three numbers.",
+          "answer": [
+            {
+              "kind": "text",
+              "title": null,
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(B\\) with \\(2\\)."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

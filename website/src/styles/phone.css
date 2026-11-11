@@ -1,0 +1,40 @@
+@media (max-width: 760px) {
+  .site-header { padding-inline: 16px; height: 56px; }
+  .lockup { font-size: 17px; }
+  .lockup svg { width: 26px; height: 26px; }
+  .header-link { padding: 6px 8px; }
+  .hero { width: calc(100% - 32px); padding: 40px 0 20px; gap: var(--s4); }
+  h1 { font-size: 40px; }
+  .hero-sub { font-size: 17px; }
+  .hero-actions { width: 100%; flex-direction: column; align-items: stretch; }
+  .hero-cmd { padding-left: 14px; font-size: 12.5px; }
+  .hero-cmd code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+  .hero-start { justify-content: center; }
+  .host-tabs { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .host-tab { justify-content: center; padding: 0 8px; }
+  .track { height: calc(var(--steps, 12) * 70svh + 100svh); }
+  .sticky { top: 56px; height: calc(100svh - 56px); width: calc(100% - 24px); padding: 6px 0 8px; }
+  .stage-foot { flex-direction: column; align-items: stretch; gap: 4px; height: auto; min-height: 0; padding: 8px 0 14px; }
+  .caption { min-height: calc(2 * 1.45em); }
+  .caption { font-size: 14px; }
+  /* One row: Play, then the track; under it only the current chapter's name. */
+  .player { flex: none; gap: 10px; }
+  .play-button { width: 36px; height: 36px; }
+  .play-button::before { inset: -4px; }
+  .bar { padding: 16px 0; }
+  .bar-knob { top: 18px; }
+  .bar .seg-label { opacity: 0; font-size: 12px; }
+  .bar .seg[aria-current] .seg-label { opacity: 1; }
+  .bar-tip { bottom: calc(100% + 14px); }
+  .start, .site-footer { width: calc(100% - 32px); }
+  .start { padding-top: 24px; }
+  .header-group .header-extra { display: none; }
+  /* The header's GitHub and npm links are hidden here, so Get started lists them instead. */
+  .start-links .start-phone { display: inline; }
+  .start-links { column-gap: var(--s4); }
+  .header-actions { gap: var(--s2); }
+  .header-cta { height: 34px; padding: 0 12px; font-size: 14px; }
+  .finish { bottom: 96px; height: 48px; font-size: 16px; }
+  .command { padding-left: 12px; }
+  .command code { white-space: pre-wrap; overflow-wrap: anywhere; }
+}

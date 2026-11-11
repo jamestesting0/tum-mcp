@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="TUM MCP">
+  <defs>
+    <mask id="tm-gap" maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">
+      <rect width="48" height="48" fill="#fff"/>
+      <rect x="10" y="8.5" width="32" height="21" rx="3.5" transform="rotate(-11 26 19)" fill="#000" stroke="#000" stroke-width="5"/>
+    </mask>
+    <mask id="tm-lines" maskUnits="userSpaceOnUse" x="-8" y="-8" width="64" height="64">
+      <rect x="-8" y="-8" width="64" height="64" fill="#fff"/>
+      <path d="M16 16.5h20M16 23h11" fill="none" stroke="#000" stroke-width="2.75" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <rect x="4" y="21.5" width="32" height="21" rx="3.5" fill="var(--mark-back, #8db0d5)" mask="url(#tm-gap)"/>
+  <g transform="rotate(-11 26 19)"><rect x="10" y="8.5" width="32" height="21" rx="3.5" fill="var(--mark-front, #072140)" mask="url(#tm-lines)"/></g>
+</svg>

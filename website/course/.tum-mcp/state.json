@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "course": {
+    "key": "graph-search",
+    "title": "Graph Search",
+    "semester": "Synthetic course",
+    "synthetic": true,
+    "bindings": [
+      {
+        "key": "synthetic",
+        "provider": "sample",
+        "course_id": "graph-search",
+        "account_id": null
+      }
+    ]
+  },
+  "coverage": [
+    {
+      "binding": "synthetic",
+      "status": "complete",
+      "checked_at": "2026-11-10T09:00:00Z",
+      "note": "Synthetic sources written for the TUM MCP walkthrough."
+    }
+  ],
+  "resources": [
+    {
+      "resource": {
+        "key": "lecture-01",
+        "binding": "synthetic",
+        "kind": "content",
+        "title": "Lecture 1 · Breadth-first search",
+        "url": "https://example.invalid/graph-search/lecture-01",
+        "locator": "Slides 1–12",
+        "revision": "1",
+        "text": null,
+        "source_file": null
+      },
+      "path": "materials/content/material-lecture-01.md",
+      "sha256": "16eed4e19e02192e3955d60c86baab110646a03db48090fb675b6c9189bdcb88",
+      "status": "current"
+    },
+    {
+      "resource": {
+        "key": "lecture-02",
+        "binding": "synthetic",
+        "kind": "content",
+        "title": "Lecture 2 · Dijkstra's algorithm",
+        "url": "https://example.invalid/graph-search/lecture-02",
+        "locator": "Slides 1–12",
+        "revision": "1",
+        "text": null,
+        "source_file": null
+      },
+      "path": "materials/content/material-lecture-02.md",
+      "sha256": "5b91704ad879bccbb6c8fd4f1640dc412bfcd45e2bbe7ed0d35a146f1e6b3c8b",
+      "status": "current"
+    },
+    {
+      "resource": {
+        "key": "lecture-03",
+        "binding": "synthetic",
+        "kind": "content",
+        "title": "Lecture 3 · A* search",
+        "url": "https://example.invalid/graph-search/lecture-03",
+        "locator": "Slides 1–11",
+        "revision": "1",
+        "text": null,
+        "source_file": null
+      },
+      "path": "materials/content/material-lecture-03.md",
+      "sha256": "0ef5e1984a07f14707ba77c5be924c96a417211b829d176f5eb7deb8fff728dc",
+      "status": "current"
+    },
+    {
+      "resource": {
+        "key": "past-paper",
+        "binding": "synthetic",
+        "kind": "exam",
+        "title": "Past paper · Synthetic exam",
+        "url": "https://example.invalid/graph-search/past-paper",
+        "locator": "Questions 1–4",
+        "revision": "1",
+        "text": null,
+        "source_file": null
+      },
+      "path": "materials/exams/material-past-paper.md",
+      "sha256": "cb9e17da9966983c605ed182558f55aa74b4bd52d75c89822eedfbaafa09d1eb",
+      "status": "current"
+    },
+    {
+      "resource": {
+        "key": "recording-02",
+        "binding": "synthetic",
+        "kind": "content",
+        "title": "Recording · Lecture 2 · Dijkstra's algorithm",
+        "url": "https://example.invalid/graph-search/recording-02",
+        "locator": "0:00–12:00 transcript; board 6:05, 8:20, 10:30",
+        "revision": "1",
+        "text": null,
+        "source_file": null
+      },
+      "path": "materials/content/material-recording-02.md",
+      "sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3",
+      "status": "current"
+    },
+    {
+      "resource": {
+        "key": "sheet-01",
+        "binding": "synthetic",
+        "kind": "exercise",
+        "title": "Exercise sheet 1 · Graph search",
+        "url": "https://example.invalid/graph-search/sheet-01",
+        "locator": "Exercises 1–3",
+        "revision": "1",
+        "text": null,
+        "source_file": null
+      },
+      "path": "materials/exercises/material-sheet-01.md",
+      "sha256": "65bd42073a250e0de256707689847c5b430902872b00139d369cdb60f9f0bfe5",
+      "status": "current"
+    }
+  ],
+  "generation": "5522a99199276f9ebee1a42a174149d3b8cde2bf830b14704e68f0a559da13f6",
+  "agents_block_sha256": "0b3df2554be854eb1ceffed58f74ba295d02b51da14b588cdfe5d396d7dec7f1"
+}

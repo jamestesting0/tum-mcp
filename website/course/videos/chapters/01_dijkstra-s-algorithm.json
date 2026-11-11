@@ -1,0 +1,26 @@
+[
+  {
+    "key": "c01",
+    "title": "Two moves",
+    "start": 0.0,
+    "end": 11.0
+  },
+  {
+    "key": "c02",
+    "title": "Relaxation",
+    "start": 11.0,
+    "end": 27.2
+  },
+  {
+    "key": "c03",
+    "title": "Settle in order",
+    "start": 27.2,
+    "end": 45.3
+  },
+  {
+    "key": "c04",
+    "title": "When it fails",
+    "start": 45.3,
+    "end": 69.5
+  }
+]

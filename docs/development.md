@@ -239,6 +239,7 @@ tag and artifact integrity before pushing the release documentation.
 | `bundled/video_runtime/` | The isolated Video Notes render worker |
 | `npm/` | Private-runtime installation, updates, integrity and cleanup |
 | `tests/` | Synthetic backend, package and owned-browser checks |
+| `website/` | Development-only walkthrough page and its synthetic course; not packaged |
 
 Where to change what:
 
@@ -349,6 +350,17 @@ Chromium sign-in/MFA, read a PDF and forum, download a file, then restart and ch
 session reuse. Automated synthetic sign-in does not certify human SSO on every OS.
 For UI changes, exercise the generated app at narrow/wide widths in both themes;
 check keyboard navigation, reduced motion, source links and retained progress.
+
+## Walkthrough website
+
+`website/` builds `dist/tum-mcp-walkthrough.html`, a single-file walkthrough that embeds
+the bundled study app with a synthetic course. npm, the wheel and the sdist exclude it.
+The `Website` workflow builds it on pushes to `main` that touch `website/` or the study
+app and publishes it to GitHub Pages (https://jamestesting0.github.io/tum-mcp/). Run `npm run build` and `npm run check` in `website/` after
+changing it, or after changing the study app or the setup and login screens it shows
+(`npm run capture-cli` re-records them in throwaway homes); `website/README.md` lists the
+refresh commands. Its course is synthetic: never put real course material,
+accounts or sessions in it.
 
 ## Optional Video Notes runtime
 

@@ -1,0 +1,33 @@
+{
+  "key": "non-negative",
+  "topic": "weighted",
+  "title": "Needs non-negative weights",
+  "kind": "theorem",
+  "path": [
+    "Dijkstra"
+  ],
+  "line": "With \\(w \\ge 0\\), a settled distance never changes.",
+  "basis": "emphasized",
+  "sources": [
+    {
+      "key": "lecture-02",
+      "sha256": "5b91704ad879bccbb6c8fd4f1640dc412bfcd45e2bbe7ed0d35a146f1e6b3c8b"
+    }
+  ],
+  "details": [
+    {
+      "kind": "callout",
+      "tone": "pitfall",
+      "sources": [
+        "lecture-02"
+      ],
+      "situation": "\\(w(S, X) = 2\\), \\(w(S, Y) = 3\\), \\(w(Y, X) = -2\\).",
+      "wrong": "Settle \\(X\\) at \\(2\\).",
+      "right": "The path through \\(Y\\) costs \\(1\\).",
+      "why": "A negative edge undercuts a distance that is already final."
+    }
+  ],
+  "units": [
+    "dijkstra"
+  ]
+}

@@ -1,0 +1,719 @@
+{
+  "key": "astar",
+  "label": "Lecture 3",
+  "title": "A* search",
+  "minutes": 18,
+  "summary": "Aim the search at a goal with a heuristic that never overestimates.",
+  "objectives": [
+    {
+      "key": "score",
+      "text": "Compute \\(f = g + h\\) for open vertices."
+    },
+    {
+      "key": "admissible",
+      "text": "Check whether a heuristic is admissible and consistent."
+    },
+    {
+      "key": "trace",
+      "text": "Trace A* and compare it with Dijkstra."
+    }
+  ],
+  "sources": [
+    {
+      "key": "lecture-03",
+      "sha256": "0ef5e1984a07f14707ba77c5be924c96a417211b829d176f5eb7deb8fff728dc"
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "formula",
+      "title": "Expand by estimated total cost",
+      "level": 1,
+      "sources": [
+        "lecture-03"
+      ],
+      "latex": "f(v) = g(v) + h(v)",
+      "plain": "Cost so far plus estimated cost still to go.",
+      "symbols": [
+        {
+          "symbol": "\\(g(v)\\)",
+          "meaning": "Best known cost from the start"
+        },
+        {
+          "symbol": "\\(h(v)\\)",
+          "meaning": "Estimated cost from v to the goal"
+        }
+      ],
+      "conditions": "A* always expands the open vertex with the smallest \\(f\\)."
+    },
+    {
+      "kind": "table",
+      "title": "Heuristic for goal G",
+      "level": 1,
+      "sources": [
+        "lecture-03"
+      ],
+      "columns": [
+        "Vertex",
+        "\\(h(v)\\)",
+        "True cost to G",
+        "Admissible"
+      ],
+      "rows": [
+        [
+          "\\(S\\)",
+          "\\(7\\)",
+          "\\(8\\)",
+          "yes"
+        ],
+        [
+          "\\(A\\)",
+          "\\(5\\)",
+          "\\(6\\)",
+          "yes"
+        ],
+        [
+          "\\(B\\)",
+          "\\(3\\)",
+          "\\(3\\)",
+          "yes"
+        ],
+        [
+          "\\(C\\)",
+          "\\(3\\)",
+          "\\(4\\)",
+          "yes"
+        ],
+        [
+          "\\(D\\)",
+          "\\(1\\)",
+          "\\(1\\)",
+          "yes"
+        ],
+        [
+          "\\(E\\)",
+          "\\(8\\)",
+          "\\(9\\)",
+          "yes"
+        ],
+        [
+          "\\(G\\)",
+          "\\(0\\)",
+          "\\(0\\)",
+          "yes"
+        ]
+      ],
+      "caption": "Every estimate is at most the true remaining cost."
+    },
+    {
+      "kind": "definition",
+      "key": "admissible",
+      "sources": [
+        "lecture-03"
+      ],
+      "term": "Admissible heuristic",
+      "statement": "\\(h(v) \\le d(v, \\text{goal})\\) for every vertex \\(v\\): it never overestimates.",
+      "conditions": [
+        "With it, A* returns an optimal path."
+      ]
+    },
+    {
+      "kind": "definition",
+      "key": "consistent",
+      "sources": [
+        "lecture-03"
+      ],
+      "term": "Consistent heuristic",
+      "statement": "\\(h(u) \\le w(u, v) + h(v)\\) for every edge \\((u, v)\\), and \\(h(\\text{goal}) = 0\\).",
+      "conditions": [
+        "Consistent implies admissible.",
+        "A* then never reopens a vertex."
+      ]
+    },
+    {
+      "kind": "walkthrough",
+      "key": "astar-trace",
+      "title": "Trace from S to G",
+      "level": 1,
+      "sources": [
+        "lecture-03"
+      ],
+      "stage": {
+        "kind": "diagram",
+        "description": "The running example with weights: S–A 2, S–B 6, S–E 1, A–C 2, B–C 1, B–D 2, C–G 5, D–G 1.",
+        "nodes": [
+          {
+            "key": "s",
+            "label": "S",
+            "row": 1,
+            "col": 0,
+            "shape": "circle"
+          },
+          {
+            "key": "a",
+            "label": "A",
+            "row": 0,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "b",
+            "label": "B",
+            "row": 2,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "e",
+            "label": "E",
+            "row": 2,
+            "col": 0,
+            "shape": "circle"
+          },
+          {
+            "key": "c",
+            "label": "C",
+            "row": 0,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "d",
+            "label": "D",
+            "row": 2,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "g",
+            "label": "G",
+            "row": 1,
+            "col": 3,
+            "shape": "circle"
+          }
+        ],
+        "edges": [
+          {
+            "start": "s",
+            "end": "a",
+            "label": "2"
+          },
+          {
+            "start": "s",
+            "end": "b",
+            "label": "6"
+          },
+          {
+            "start": "s",
+            "end": "e",
+            "label": "1"
+          },
+          {
+            "start": "a",
+            "end": "c",
+            "label": "2"
+          },
+          {
+            "start": "b",
+            "end": "c",
+            "label": "1"
+          },
+          {
+            "start": "b",
+            "end": "d",
+            "label": "2"
+          },
+          {
+            "start": "c",
+            "end": "g",
+            "label": "5"
+          },
+          {
+            "start": "d",
+            "end": "g",
+            "label": "1"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "subgoal": "Start",
+          "action": "Open \\(S\\) with \\(g = 0\\), \\(f = 7\\).",
+          "why": "\\(f(S) = 0 + h(S) = 7\\).",
+          "frontier": [
+            "s"
+          ],
+          "state": [
+            {
+              "label": "Open (g, f)",
+              "value": "\\(S\\,(0, 7)\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Expand by smallest f",
+          "action": "Expand \\(S\\); open \\(A\\), \\(B\\), \\(E\\).",
+          "why": "\\(f(A) = 2 + 5 = 7\\), \\(f(B) = 6 + 3 = 9\\), \\(f(E) = 1 + 8 = 9\\).",
+          "active": [
+            "s"
+          ],
+          "frontier": [
+            "a",
+            "b",
+            "e"
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "s",
+              "end": "b"
+            },
+            {
+              "start": "s",
+              "end": "e"
+            }
+          ],
+          "state": [
+            {
+              "label": "Open (g, f)",
+              "value": "\\(A\\,(2, 7),\\ B\\,(6, 9),\\ E\\,(1, 9)\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Expand by smallest f",
+          "action": "Expand \\(A\\); open \\(C\\).",
+          "why": "\\(A\\) has the smallest \\(f\\), 7. \\(f(C) = 4 + 3 = 7\\).",
+          "active": [
+            "a"
+          ],
+          "visited": [
+            "s"
+          ],
+          "frontier": [
+            "b",
+            "e",
+            "c"
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "c"
+            }
+          ],
+          "state": [
+            {
+              "label": "Open (g, f)",
+              "value": "\\(C\\,(4, 7),\\ B\\,(6, 9),\\ E\\,(1, 9)\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Improve routes",
+          "action": "Expand \\(C\\); \\(B\\) improves to \\((5, 8)\\); open \\(G\\) at \\((9, 9)\\).",
+          "why": "\\(4 + 1 = 5 < 6\\), so \\(f(B) = 5 + 3 = 8\\).",
+          "active": [
+            "c"
+          ],
+          "visited": [
+            "s",
+            "a"
+          ],
+          "frontier": [
+            "b",
+            "e",
+            "g"
+          ],
+          "edges": [
+            {
+              "start": "c",
+              "end": "b"
+            },
+            {
+              "start": "c",
+              "end": "g"
+            }
+          ],
+          "state": [
+            {
+              "label": "Open (g, f)",
+              "value": "\\(B\\,(5, 8),\\ E\\,(1, 9),\\ G\\,(9, 9)\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Improve routes",
+          "action": "Expand \\(B\\); open \\(D\\) at \\((7, 8)\\).",
+          "why": "\\(f(D) = 7 + 1 = 8\\).",
+          "active": [
+            "b"
+          ],
+          "visited": [
+            "s",
+            "a",
+            "c"
+          ],
+          "frontier": [
+            "e",
+            "g",
+            "d"
+          ],
+          "edges": [
+            {
+              "start": "b",
+              "end": "d"
+            }
+          ],
+          "state": [
+            {
+              "label": "Open (g, f)",
+              "value": "\\(D\\,(7, 8),\\ E\\,(1, 9),\\ G\\,(9, 9)\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Improve routes",
+          "action": "Expand \\(D\\); \\(G\\) improves to \\((8, 8)\\).",
+          "why": "\\(7 + 1 = 8 < 9\\).",
+          "active": [
+            "d"
+          ],
+          "visited": [
+            "s",
+            "a",
+            "c",
+            "b"
+          ],
+          "frontier": [
+            "e",
+            "g"
+          ],
+          "edges": [
+            {
+              "start": "d",
+              "end": "g"
+            }
+          ],
+          "state": [
+            {
+              "label": "Open (g, f)",
+              "value": "\\(G\\,(8, 8),\\ E\\,(1, 9)\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Done",
+          "action": "Expand \\(G\\): goal reached at cost 8.",
+          "why": "\\(f(G) = 8\\) is the smallest; \\(E\\) with \\(f = 9\\) is never expanded.",
+          "visited": [
+            "s",
+            "a",
+            "c",
+            "b",
+            "d",
+            "g"
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "a",
+              "end": "c"
+            },
+            {
+              "start": "c",
+              "end": "b"
+            },
+            {
+              "start": "b",
+              "end": "d"
+            },
+            {
+              "start": "d",
+              "end": "g"
+            }
+          ],
+          "state": [
+            {
+              "label": "Expanded",
+              "value": "S, A, C, B, D, G"
+            },
+            {
+              "label": "Skipped",
+              "value": "E"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "table",
+      "title": "Dijkstra and A* on the same graph",
+      "level": 2,
+      "sources": [
+        "lecture-03"
+      ],
+      "columns": [
+        "Method",
+        "Vertices settled or expanded",
+        "Cost to G"
+      ],
+      "rows": [
+        [
+          "Dijkstra",
+          "\\(7\\)",
+          "\\(8\\)"
+        ],
+        [
+          "A*",
+          "\\(6\\)",
+          "\\(8\\)"
+        ]
+      ],
+      "caption": "A* skips \\(E\\) and still finds the optimal cost."
+    },
+    {
+      "kind": "callout",
+      "tone": "pitfall",
+      "sources": [
+        "lecture-03"
+      ],
+      "situation": "Raising \\(h(B)\\) to 4 to speed up the search.",
+      "wrong": "\\(h(B) = 4\\) is still a fine estimate.",
+      "right": "The true cost from \\(B\\) to \\(G\\) is 3, so \\(h(B) = 4\\) overestimates.",
+      "why": "An overestimate can make A* stop with a path that is not optimal."
+    }
+  ],
+  "flashcards": [
+    {
+      "key": "f-score",
+      "objective": "score",
+      "front": "What do \\(g\\), \\(h\\) and \\(f\\) mean in A*?",
+      "back": "\\(g\\) is the cost so far, \\(h\\) the estimate to the goal, \\(f = g + h\\) the estimated total.",
+      "sources": [
+        "lecture-03"
+      ]
+    },
+    {
+      "key": "admissible-card",
+      "objective": "admissible",
+      "front": "Admissible heuristic",
+      "back": "\\(h(v) \\le d(v, \\text{goal})\\) for every \\(v\\): never an overestimate.",
+      "sources": [
+        "lecture-03"
+      ]
+    },
+    {
+      "key": "h-zero",
+      "objective": "trace",
+      "front": "A* with \\(h = 0\\)",
+      "back": "Behaves like Dijkstra.",
+      "sources": [
+        "lecture-03"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "key": "f-of-b",
+      "objective": "score",
+      "level": "apply",
+      "prompt": "What is \\(f(B)\\)?",
+      "options": [
+        {
+          "key": "a",
+          "text": "\\(9\\)",
+          "feedback": "\\(6 + 3 = 9\\)."
+        },
+        {
+          "key": "b",
+          "text": "\\(3\\)",
+          "feedback": "That is \\(h(B)\\) alone; \\(f\\) adds the cost so far."
+        },
+        {
+          "key": "c",
+          "text": "\\(6\\)",
+          "feedback": "That is \\(g(B)\\) alone; \\(f\\) adds the estimate."
+        },
+        {
+          "key": "d",
+          "text": "\\(18\\)",
+          "feedback": "\\(f\\) is a sum, not a product."
+        }
+      ],
+      "correct": "a",
+      "explanation": "\\(f(B) = g(B) + h(B) = 6 + 3 = 9\\).",
+      "hint": "Add the two parts.",
+      "sources": [
+        "lecture-03"
+      ],
+      "blocks": [
+        {
+          "kind": "table",
+          "title": "Open list after expanding S",
+          "sources": [
+            "lecture-03"
+          ],
+          "columns": [
+            "Vertex",
+            "\\(g\\)",
+            "\\(h\\)"
+          ],
+          "rows": [
+            [
+              "\\(A\\)",
+              "\\(2\\)",
+              "\\(5\\)"
+            ],
+            [
+              "\\(B\\)",
+              "\\(6\\)",
+              "\\(3\\)"
+            ],
+            [
+              "\\(E\\)",
+              "\\(1\\)",
+              "\\(8\\)"
+            ]
+          ],
+          "caption": "Cost so far and estimate to \\(G\\)."
+        }
+      ]
+    },
+    {
+      "key": "not-admissible",
+      "objective": "admissible",
+      "level": "reason",
+      "prompt": "Which change makes the heuristic \\(h\\) no longer admissible?",
+      "options": [
+        {
+          "key": "a",
+          "text": "\\(h(B) = 4\\)",
+          "feedback": "The true cost from \\(B\\) is 3, so 4 overestimates."
+        },
+        {
+          "key": "b",
+          "text": "\\(h(D) = 0\\)",
+          "feedback": "0 never overestimates; it is only less informed."
+        },
+        {
+          "key": "c",
+          "text": "\\(h(A) = 6\\)",
+          "feedback": "The true cost from \\(A\\) is 6, so 6 is still allowed."
+        },
+        {
+          "key": "d",
+          "text": "\\(h(E) = 9\\)",
+          "feedback": "The true cost from \\(E\\) is 9, so 9 is still allowed."
+        }
+      ],
+      "correct": "a",
+      "explanation": "Admissible means no estimate exceeds the true remaining cost.",
+      "hint": "Compare each new value with the true cost column.",
+      "sources": [
+        "lecture-03"
+      ],
+      "blocks": [
+        {
+          "kind": "table",
+          "title": "True cost to G",
+          "sources": [
+            "lecture-03"
+          ],
+          "columns": [
+            "Vertex",
+            "True cost to G"
+          ],
+          "rows": [
+            [
+              "\\(A\\)",
+              "\\(6\\)"
+            ],
+            [
+              "\\(B\\)",
+              "\\(3\\)"
+            ],
+            [
+              "\\(D\\)",
+              "\\(1\\)"
+            ],
+            [
+              "\\(E\\)",
+              "\\(9\\)"
+            ]
+          ],
+          "caption": "Least total weight from each vertex to the goal."
+        }
+      ]
+    },
+    {
+      "key": "skip-e",
+      "objective": "trace",
+      "level": "reason",
+      "prompt": "A* reaches \\(G\\) while \\(E\\) is still open. What keeps \\(E\\) waiting?",
+      "options": [
+        {
+          "key": "a",
+          "text": "\\(f(E) = 9\\) is larger than \\(f(G) = 8\\).",
+          "feedback": "Correct: A* expands the smallest f, and the goal comes first."
+        },
+        {
+          "key": "b",
+          "text": "\\(E\\) has no edge to \\(G\\).",
+          "feedback": "Dijkstra still settles \\(E\\); a missing edge does not decide the order."
+        },
+        {
+          "key": "c",
+          "text": "\\(h(E)\\) is not admissible.",
+          "feedback": "\\(h(E) = 8 \\le 9\\), so it is admissible."
+        },
+        {
+          "key": "d",
+          "text": "\\(g(E)\\) is the largest cost so far.",
+          "feedback": "\\(g(E) = 1\\) is the smallest; the estimate makes the difference."
+        }
+      ],
+      "correct": "a",
+      "explanation": "\\(E\\) waits with \\(f = 9\\) while the goal is reached with \\(f = 8\\).",
+      "hint": "Compute \\(f(E)\\).",
+      "sources": [
+        "lecture-03"
+      ],
+      "blocks": [
+        {
+          "kind": "table",
+          "title": "Open list before the last step",
+          "sources": [
+            "lecture-03"
+          ],
+          "columns": [
+            "Vertex",
+            "\\(g\\)",
+            "\\(h\\)",
+            "\\(f\\)"
+          ],
+          "rows": [
+            [
+              "\\(G\\)",
+              "\\(8\\)",
+              "\\(0\\)",
+              "\\(8\\)"
+            ],
+            [
+              "\\(E\\)",
+              "\\(1\\)",
+              "\\(8\\)",
+              "\\(9\\)"
+            ]
+          ],
+          "caption": "A* expands the smallest f next."
+        }
+      ]
+    }
+  ]
+}

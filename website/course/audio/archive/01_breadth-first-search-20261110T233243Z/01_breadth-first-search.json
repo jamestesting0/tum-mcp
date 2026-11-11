@@ -1,0 +1,32 @@
+[
+  {
+    "key": "distance",
+    "title": "Distance by edge count",
+    "start": 0.0,
+    "end": 15.709999999999999
+  },
+  {
+    "key": "layers",
+    "title": "Layers",
+    "start": 15.709999999999999,
+    "end": 41.378
+  },
+  {
+    "key": "queue",
+    "title": "Why a queue keeps the order",
+    "start": 41.378,
+    "end": 67.67729999999999
+  },
+  {
+    "key": "mark",
+    "title": "Mark when you append",
+    "start": 67.67729999999999,
+    "end": 85.09329999999997
+  },
+  {
+    "key": "result",
+    "title": "What the search returns",
+    "start": 85.09329999999997,
+    "end": 109.6019
+  }
+]

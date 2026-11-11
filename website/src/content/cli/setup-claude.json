@@ -1,0 +1,522 @@
+{
+ "clients": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP?",
+    "bold"
+   ]
+  ],
+  [
+   [
+    " > ",
+    "accent"
+   ],
+   [
+    "○ Codex               ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Claude Code         ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Cursor              ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Antigravity         ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Other app (mcp.json)",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ]
+ ],
+ "clients-selected": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP?",
+    "bold"
+   ]
+  ],
+  [
+   [
+    "   ○ Codex               ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    " > ",
+    "accent"
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Claude Code         ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Cursor              ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Antigravity         ",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ],
+  [
+   [
+    "   ○ Other app (mcp.json)",
+    ""
+   ],
+   [
+    "  not set up",
+    "muted"
+   ]
+  ]
+ ],
+ "workflows": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP? Claude Code           not set up",
+    "bold"
+   ]
+  ],
+  [],
+  [
+   [
+    "Claude Code  ",
+    ""
+   ],
+   [
+    "! ",
+    "attention"
+   ],
+   [
+    "Needs action  MCP transport passed, but native client registration was",
+    ""
+   ]
+  ],
+  [
+   [
+    "                             not confirmed; inspect its TUM server and workspace",
+    ""
+   ]
+  ],
+  [
+   [
+    "                             permissions.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Add optional workflows? (Enter skips)",
+    "bold"
+   ]
+  ],
+  [
+   [
+    " > ",
+    "accent"
+   ],
+   [
+    "○ Lecture        Notes and highlights from lecture recordings.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ○ Audio Notes    Create spoken lessons from prepared Study content.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ○ Video Notes    Create narrated, animated explainers from prepared Study content.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ○ Course Memory  Connect course workspaces with optional, source-checked local…",
+    ""
+   ]
+  ]
+ ],
+ "workflows-selected": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP? Claude Code           not set up",
+    "bold"
+   ]
+  ],
+  [],
+  [
+   [
+    "Claude Code  ",
+    ""
+   ],
+   [
+    "! ",
+    "attention"
+   ],
+   [
+    "Needs action  MCP transport passed, but native client registration was",
+    ""
+   ]
+  ],
+  [
+   [
+    "                             not confirmed; inspect its TUM server and workspace",
+    ""
+   ]
+  ],
+  [
+   [
+    "                             permissions.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Add optional workflows? (Enter skips)",
+    "bold"
+   ]
+  ],
+  [
+   [
+    "   ",
+    ""
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Lecture        Notes and highlights from lecture recordings.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ",
+    ""
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Audio Notes    Create spoken lessons from prepared Study content.",
+    ""
+   ]
+  ],
+  [
+   [
+    "   ",
+    ""
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Video Notes    Create narrated, animated explainers from prepared Study content.",
+    ""
+   ]
+  ],
+  [
+   [
+    " > ",
+    "accent"
+   ],
+   [
+    "● ",
+    "bold"
+   ],
+   [
+    "Course Memory  Connect course workspaces with optional, source-checked local…",
+    ""
+   ]
+  ]
+ ],
+ "next": [
+  [
+   [
+    "TUM MCP",
+    "bold"
+   ],
+   [
+    "  Setup",
+    ""
+   ]
+  ],
+  [
+   [
+    "Adds TUM tools, skills and a course completion hook to the apps you choose. Their other",
+    ""
+   ]
+  ],
+  [
+   [
+    "settings stay as they are.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Which coding apps should use TUM MCP? Claude Code           not set up",
+    "bold"
+   ]
+  ],
+  [],
+  [
+   [
+    "Claude Code  ",
+    ""
+   ],
+   [
+    "! ",
+    "attention"
+   ],
+   [
+    "Needs action  MCP transport passed, but native client registration was",
+    ""
+   ]
+  ],
+  [
+   [
+    "                             not confirmed; inspect its TUM server and workspace",
+    ""
+   ]
+  ],
+  [
+   [
+    "                             permissions.",
+    ""
+   ]
+  ],
+  [],
+  [
+   [
+    "↑/↓ move · Space select · Enter confirm · Esc cancel",
+    ""
+   ]
+  ],
+  [
+   [
+    " Add optional workflows? (Enter skips)",
+    "bold"
+   ]
+  ],
+  [],
+  [
+   [
+    "Next",
+    "bold"
+   ]
+  ],
+  [
+   [
+    "1. Restart Claude Code and open a new chat.",
+    ""
+   ]
+  ],
+  [
+   [
+    "2. Run tum-mcp login to sign in to campus services.",
+    ""
+   ]
+  ]
+ ]
+}

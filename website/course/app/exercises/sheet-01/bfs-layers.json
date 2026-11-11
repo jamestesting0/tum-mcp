@@ -1,0 +1,454 @@
+{
+  "key": "bfs-layers",
+  "label": "Exercise 1",
+  "title": "BFS layers",
+  "sources": [
+    {
+      "key": "sheet-01",
+      "sha256": "65bd42073a250e0de256707689847c5b430902872b00139d369cdb60f9f0bfe5"
+    }
+  ],
+  "statement": [
+    {
+      "kind": "text",
+      "title": "Task",
+      "sources": [
+        "sheet-01"
+      ],
+      "paragraphs": [
+        "Run BFS from \\(P\\). Append neighbours in alphabetical order."
+      ]
+    },
+    {
+      "kind": "diagram",
+      "title": "Graph",
+      "sources": [
+        "sheet-01"
+      ],
+      "description": "P links to Q and R; Q and R link to T; R links to U; T and U link to V.",
+      "nodes": [
+        {
+          "key": "p",
+          "label": "P",
+          "row": 1,
+          "col": 0,
+          "shape": "circle"
+        },
+        {
+          "key": "q",
+          "label": "Q",
+          "row": 0,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "r",
+          "label": "R",
+          "row": 2,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "t",
+          "label": "T",
+          "row": 0,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "u",
+          "label": "U",
+          "row": 2,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "v",
+          "label": "V",
+          "row": 1,
+          "col": 3,
+          "shape": "circle"
+        }
+      ],
+      "edges": [
+        {
+          "start": "p",
+          "end": "q"
+        },
+        {
+          "start": "p",
+          "end": "r"
+        },
+        {
+          "start": "q",
+          "end": "t"
+        },
+        {
+          "start": "r",
+          "end": "t"
+        },
+        {
+          "start": "r",
+          "end": "u"
+        },
+        {
+          "start": "t",
+          "end": "v"
+        },
+        {
+          "start": "u",
+          "end": "v"
+        }
+      ],
+      "frames": [
+        {
+          "caption": "BFS starts at P."
+        }
+      ],
+      "state_labels": "caption"
+    },
+    {
+      "kind": "text",
+      "title": "Distances",
+      "sources": [
+        "sheet-01"
+      ],
+      "paragraphs": [
+        "Give \\(d(v)\\) for every vertex."
+      ],
+      "key": "part-a"
+    },
+    {
+      "kind": "text",
+      "title": "Parents",
+      "sources": [
+        "sheet-01"
+      ],
+      "paragraphs": [
+        "Give the parent of every vertex except the source."
+      ],
+      "key": "part-b"
+    },
+    {
+      "kind": "text",
+      "title": "One entry",
+      "sources": [
+        "sheet-01"
+      ],
+      "paragraphs": [
+        "Explain why \\(T\\) enters the queue only once."
+      ],
+      "key": "part-c"
+    }
+  ],
+  "parts": [
+    "a",
+    "b",
+    "c"
+  ],
+  "part_blocks": {
+    "a": "part-a",
+    "b": "part-b",
+    "c": "part-c"
+  },
+  "objectives": [
+    "Compute BFS distances and parents.",
+    "Explain marking on append."
+  ],
+  "prerequisites": [
+    {
+      "unit": "bfs",
+      "block": "bfs-queue",
+      "explanation": "The same queue procedure, run on the lecture graph."
+    }
+  ],
+  "steps": [
+    {
+      "key": "distances",
+      "part": "a",
+      "purpose": "Distances by layer.",
+      "prompt": "Fill in \\(d(v)\\) for each vertex.",
+      "check": {
+        "kind": "table",
+        "caption": "Distances from P",
+        "columns": [
+          "Distance"
+        ],
+        "rows": [
+          {
+            "label": "P",
+            "cells": [
+              {
+                "kind": "numeric",
+                "key": "d-p",
+                "answer": 0
+              }
+            ]
+          },
+          {
+            "label": "Q",
+            "cells": [
+              {
+                "kind": "numeric",
+                "key": "d-q",
+                "answer": 1
+              }
+            ]
+          },
+          {
+            "label": "R",
+            "cells": [
+              {
+                "kind": "numeric",
+                "key": "d-r",
+                "answer": 1
+              }
+            ]
+          },
+          {
+            "label": "T",
+            "cells": [
+              {
+                "kind": "numeric",
+                "key": "d-t",
+                "answer": 2
+              }
+            ]
+          },
+          {
+            "label": "U",
+            "cells": [
+              {
+                "kind": "numeric",
+                "key": "d-u",
+                "answer": 2
+              }
+            ]
+          },
+          {
+            "label": "V",
+            "cells": [
+              {
+                "kind": "numeric",
+                "key": "d-v",
+                "answer": 3
+              }
+            ]
+          }
+        ]
+      },
+      "hints": [
+        "Start with \\(d(P) = 0\\); its neighbours \\(Q\\) and \\(R\\) get \\(1\\).",
+        "Layer 2 holds the undiscovered neighbours of \\(Q\\) and \\(R\\)."
+      ],
+      "explanation": "Layers: \\(\\{P\\}\\), \\(\\{Q, R\\}\\), \\(\\{T, U\\}\\), \\(\\{V\\}\\)."
+    },
+    {
+      "key": "parents",
+      "part": "b",
+      "purpose": "Parents from the order of appending.",
+      "prompt": "Fill in the parent of each vertex.",
+      "check": {
+        "kind": "table",
+        "caption": "Parents",
+        "columns": [
+          "Parent"
+        ],
+        "rows": [
+          {
+            "label": "Q",
+            "cells": [
+              {
+                "kind": "text",
+                "key": "p-q",
+                "answer": "P"
+              }
+            ]
+          },
+          {
+            "label": "R",
+            "cells": [
+              {
+                "kind": "text",
+                "key": "p-r",
+                "answer": "P"
+              }
+            ]
+          },
+          {
+            "label": "T",
+            "cells": [
+              {
+                "kind": "text",
+                "key": "p-t",
+                "answer": "Q"
+              }
+            ]
+          },
+          {
+            "label": "U",
+            "cells": [
+              {
+                "kind": "text",
+                "key": "p-u",
+                "answer": "R"
+              }
+            ]
+          },
+          {
+            "label": "V",
+            "cells": [
+              {
+                "kind": "text",
+                "key": "p-v",
+                "answer": "T"
+              }
+            ]
+          }
+        ]
+      },
+      "hints": [
+        "\\(Q\\) is removed before \\(R\\), so it reaches \\(T\\) first."
+      ],
+      "explanation": "\\(T\\) is appended by \\(Q\\); \\(V\\) by \\(T\\), which leaves the queue before \\(U\\)."
+    },
+    {
+      "key": "once",
+      "part": "c",
+      "purpose": "Why marking on append matters.",
+      "prompt": "Why does \\(R\\) not append \\(T\\) again?",
+      "check": {
+        "kind": "choice",
+        "correct": "a",
+        "options": [
+          {
+            "key": "a",
+            "text": "\\(T\\) was marked when \\(Q\\) appended it.",
+            "feedback": "Correct: the mark is set on append, before R is removed."
+          },
+          {
+            "key": "b",
+            "text": "\\(T\\) has already left the queue.",
+            "feedback": "\\(T\\) is still waiting when \\(R\\) is removed."
+          },
+          {
+            "key": "c",
+            "text": "\\(R\\) is not adjacent to \\(T\\).",
+            "feedback": "The edge \\(R\\)–\\(T\\) exists."
+          },
+          {
+            "key": "d",
+            "text": "\\(T\\) is further from \\(P\\) than \\(R\\).",
+            "feedback": "Distance alone does not stop a vertex from being appended."
+          }
+        ]
+      },
+      "hints": [
+        "When is a vertex marked?"
+      ],
+      "explanation": "\\(T\\) enters once because \\(Q\\) marked it on append."
+    }
+  ],
+  "solution": {
+    "origin": "authored",
+    "answers": [
+      {
+        "label": "a",
+        "blocks": [
+          {
+            "kind": "table",
+            "title": "Distances",
+            "sources": [
+              "sheet-01"
+            ],
+            "columns": [
+              "Vertex",
+              "Distance"
+            ],
+            "rows": [
+              [
+                "\\(P\\)",
+                "\\(0\\)"
+              ],
+              [
+                "\\(Q\\)",
+                "\\(1\\)"
+              ],
+              [
+                "\\(R\\)",
+                "\\(1\\)"
+              ],
+              [
+                "\\(T\\)",
+                "\\(2\\)"
+              ],
+              [
+                "\\(U\\)",
+                "\\(2\\)"
+              ],
+              [
+                "\\(V\\)",
+                "\\(3\\)"
+              ]
+            ],
+            "caption": "One layer per distance."
+          }
+        ]
+      },
+      {
+        "label": "b",
+        "blocks": [
+          {
+            "kind": "table",
+            "title": "Parents",
+            "sources": [
+              "sheet-01"
+            ],
+            "columns": [
+              "Vertex",
+              "Parent"
+            ],
+            "rows": [
+              [
+                "\\(Q\\)",
+                "\\(P\\)"
+              ],
+              [
+                "\\(R\\)",
+                "\\(P\\)"
+              ],
+              [
+                "\\(T\\)",
+                "\\(Q\\)"
+              ],
+              [
+                "\\(U\\)",
+                "\\(R\\)"
+              ],
+              [
+                "\\(V\\)",
+                "\\(T\\)"
+              ]
+            ],
+            "caption": "Path to \\(V\\): \\(P \\to Q \\to T \\to V\\)."
+          }
+        ]
+      },
+      {
+        "label": "c",
+        "blocks": [
+          {
+            "kind": "text",
+            "title": "Answer",
+            "sources": [
+              "sheet-01"
+            ],
+            "paragraphs": [
+              "\\(Q\\) marks \\(T\\) when it appends it. When \\(R\\) is removed, \\(T\\) is already marked, so \\(R\\) skips it."
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

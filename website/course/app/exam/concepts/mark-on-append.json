@@ -1,0 +1,39 @@
+{
+  "key": "mark-on-append",
+  "topic": "unweighted",
+  "title": "Mark on append",
+  "kind": "pitfall",
+  "path": [
+    "BFS"
+  ],
+  "line": "Mark a vertex when it enters the queue, not when it leaves.",
+  "basis": "emphasized",
+  "sources": [
+    {
+      "key": "lecture-01",
+      "sha256": "16eed4e19e02192e3955d60c86baab110646a03db48090fb675b6c9189bdcb88"
+    }
+  ],
+  "details": [
+    {
+      "kind": "callout",
+      "tone": "pitfall",
+      "sources": [
+        "lecture-01"
+      ],
+      "situation": "Two removed vertices share an unmarked neighbour.",
+      "wrong": "Mark on removal: the neighbour enters the queue twice.",
+      "right": "Mark on append: the second vertex skips it.",
+      "why": "Each vertex enters once, so BFS stays linear."
+    }
+  ],
+  "units": [
+    "bfs"
+  ],
+  "exercises": [
+    {
+      "set": "sheet-01",
+      "exercise": "bfs-layers"
+    }
+  ]
+}

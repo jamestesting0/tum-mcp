@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "key": "breadth-first-search",
+  "stem": "01_breadth-first-search",
+  "title": "Lecture 1 · Breadth-first search",
+  "voice": "kokoro-heart",
+  "units": [
+    {
+      "kind": "unit",
+      "unit": "bfs"
+    }
+  ],
+  "chapters": [
+    {
+      "key": "distance",
+      "title": "Distance by edge count",
+      "covers": [
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[0]",
+            "fingerprint": "4652d7c7b481d8ef9e3725e927dee77611c5d080bd65807780d1a089a794d841"
+          },
+          "mode": "spoken"
+        },
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[1]",
+            "fingerprint": "bae55783b9213a6f46cd2ae6cf40b48ddbfcef1e8667bb6e1179c8e2dd74b415"
+          },
+          "mode": "spoken"
+        }
+      ],
+      "sentences": [
+        "In an unweighted graph, every edge counts as one step.",
+        "The distance from the start to a vertex is the least number of edges on any path between them.",
+        "The start itself is at distance zero, and a vertex you cannot reach at all has infinite distance."
+      ]
+    },
+    {
+      "key": "layers",
+      "title": "Layers",
+      "covers": [
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[2]",
+            "fingerprint": "bc571cc20cb35e5d856466831627694ac7f0a10051a65d81587d95b8071c3029"
+          },
+          "mode": "spoken"
+        },
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[3]",
+            "fingerprint": "13caf6d649a209b88e5758403a18fc756592bd6049cb31349739d5da066bbfba"
+          },
+          "mode": "spoken"
+        },
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "objective",
+            "ref": "layers",
+            "fingerprint": "dfb237108c390fe3a165f5bbf16eeb678544f52ee280e597d733b28a96d8347e"
+          },
+          "mode": "spoken"
+        }
+      ],
+      "sentences": [
+        "Breadth-first search finds these distances one layer at a time.",
+        "Layer zero holds only the start.",
+        "The next layer holds every neighbour of the current layer that has not been discovered yet.",
+        "In the running example, S alone is layer zero; A, B and E form layer one; C and D form layer two; and G is layer three.",
+        "So every vertex in layer k is exactly k edges from the start."
+      ]
+    },
+    {
+      "key": "queue",
+      "title": "Why a queue keeps the order",
+      "covers": [
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[4]",
+            "fingerprint": "082e8ba161df5f041fb21c6b0b6c2e142d7317800ba64549e4255bb7afaddb94"
+          },
+          "mode": "spoken"
+        },
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "objective",
+            "ref": "queue",
+            "fingerprint": "60dfc312ec8ec34f1f714a9ba61b5d6febce0be2bdfece453844206d6e5b4bcc"
+          },
+          "mode": "spoken"
+        }
+      ],
+      "sentences": [
+        "Breadth-first search keeps its waiting vertices in a first-in, first-out queue.",
+        "It removes the vertex at the front and appends its undiscovered neighbours at the back, one step further from the start.",
+        "Every vertex of one layer is appended before any vertex of the next, so the whole layer leaves the queue first.",
+        "In the example, C is appended while B and E are still waiting, so C comes out only after both of them."
+      ]
+    },
+    {
+      "key": "mark",
+      "title": "Mark when you append",
+      "covers": [
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[5]",
+            "fingerprint": "5b17959ae80e23c7512c2d2d9110b38467d62e97a8e856c240ab63f94c9d2a1b"
+          },
+          "mode": "spoken"
+        },
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "objective",
+            "ref": "mark",
+            "fingerprint": "da318506cd2a628b6d24a4c06091bc6e8de4065512a93b2e22d259bc9e61ce24"
+          },
+          "mode": "spoken"
+        }
+      ],
+      "sentences": [
+        "Mark a vertex as discovered the moment you append it, not when you remove it.",
+        "If you wait until removal, A and B both append C, and C enters the queue twice.",
+        "Marking on append keeps every vertex in the queue once, so the search stays linear in the size of the graph."
+      ]
+    },
+    {
+      "key": "result",
+      "title": "What the search returns",
+      "covers": [
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[6]",
+            "fingerprint": "bba89a5dc09366be6ffad4e367e2f68051fd2b2f944591880b3b518f358273ed"
+          },
+          "mode": "spoken"
+        },
+        {
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[7]",
+            "fingerprint": "c998a5ea932bc5f6a1e228427a4bd7dad5f12f6a9ec91dfd69d3c27ed496dca1"
+          },
+          "mode": "spoken"
+        }
+      ],
+      "sentences": [
+        "When the queue is empty, each vertex has its distance and a parent: the vertex that first appended it.",
+        "Follow the parents back from G, through C and A, to S.",
+        "Read in reverse, that is a shortest path by edge count.",
+        "Breadth-first search counts edges, not weights.",
+        "With weighted edges, the path it finds can cost more, and that is the job of Dijkstra's algorithm in the next lecture."
+      ]
+    }
+  ]
+}

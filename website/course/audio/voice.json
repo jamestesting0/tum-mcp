@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "preferred": "Local Kokoro for this synthetic walkthrough course",
+  "profiles": {
+    "kokoro-heart": {
+      "provider": "Kokoro",
+      "route": "local kokoro-onnx 0.6.1",
+      "voice": "af_heart",
+      "language": "en-us",
+      "model": "kokoro-v1.0-fp32",
+      "settings": {
+        "speed": 0.88
+      }
+    }
+  }
+}

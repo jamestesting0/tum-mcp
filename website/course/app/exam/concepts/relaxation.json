@@ -1,0 +1,41 @@
+{
+  "key": "relaxation",
+  "topic": "weighted",
+  "title": "Relaxation",
+  "kind": "formula",
+  "path": [
+    "Dijkstra"
+  ],
+  "line": "Keep the shorter of the known route to v and the route through u.",
+  "basis": "emphasized",
+  "sources": [
+    {
+      "key": "lecture-02",
+      "sha256": "5b91704ad879bccbb6c8fd4f1640dc412bfcd45e2bbe7ed0d35a146f1e6b3c8b"
+    }
+  ],
+  "formula": {
+    "latex": "d(v) \\gets \\min\\bigl(d(v),\\; d(u) + w(u, v)\\bigr)",
+    "plain": "d of v becomes the minimum of d of v and d of u plus w of u v",
+    "symbols": [
+      {
+        "symbol": "\\(d(v)\\)",
+        "meaning": "Tentative distance of v"
+      },
+      {
+        "symbol": "\\(w(u, v)\\)",
+        "meaning": "Edge weight"
+      }
+    ],
+    "conditions": "On a decrease, \\(u\\) becomes the parent of \\(v\\)."
+  },
+  "units": [
+    "dijkstra"
+  ],
+  "exercises": [
+    {
+      "set": "sheet-01",
+      "exercise": "dijkstra-trace"
+    }
+  ]
+}

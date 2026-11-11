@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Install TUM MCP, connect your coding agent and turn a course into a private study app.">
+  <title>TUM MCP · Walkthrough</title>
+  <link rel="icon" type="image/svg+xml" href="{{favicon}}">
+  <link rel="apple-touch-icon" href="{{appleIcon}}">
+  <script>{{themeBoot}}</script>
+  <style>{{styles}}</style>
+</head>
+<body>
+  <a class="skip" href="#get-started">Skip to Get started</a>
+  <header class="site-header">
+    <a class="lockup" href="#tour" aria-label="TUM MCP walkthrough">{{markInline}}<span>tum-mcp</span></a>
+    <nav class="header-actions" aria-label="Links">
+      <div class="header-group">
+        <a class="header-link header-extra" href="https://github.com/jamestesting0/tum-mcp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><span>GitHub</span></a>
+        <a class="header-link header-extra" href="https://www.npmjs.com/package/@jamestesting888/tum-mcp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z"/></svg><span>npm</span></a>
+        <span class="header-divider header-extra" aria-hidden="true"></span>
+        <button class="icon-button" type="button" data-theme-toggle aria-label="Use dark theme"></button>
+      </div>
+      <button class="header-cta" type="button" data-page-link="#get-started" data-cta><span data-cta-label>Get started</span></button>
+    </nav>
+  </header>
+  <main class="page" id="top" data-page="tour">
+    <section class="hero" aria-labelledby="title">
+      <h1 id="title">Your TUM courses,<br> in <span class="hero-agent"><span class="hero-mark" data-hero-mark></span><em data-hero-name>Codex</em></span>.</h1>
+      <p class="hero-sub">Sync a course from Moodle, and your agent turns it into a private study app.</p>
+      <div class="hero-actions">
+        <button class="hero-cmd" type="button" data-copy="npm i -g @jamestesting888/tum-mcp"><span class="hero-dollar" aria-hidden="true">$</span><code>npm i -g @jamestesting888/tum-mcp</code><span class="hero-copy" data-copy-label>Copy</span></button>
+        <button class="hero-start" type="button" data-start-tour><span class="hero-play" aria-hidden="true"></span>Start the tour</button>
+      </div>
+      <div class="host-tabs" role="tablist" aria-label="Coding agent">{{hostTabs}}</div>
+    </section>
+    <section class="story" aria-label="Walkthrough">
+      <div class="track" data-track>
+        {{chapterAnchors}}
+        <div class="sticky">
+          <div class="stage" data-stage aria-label="Animated walkthrough"></div>
+          <div class="stage-foot">
+            <p class="caption" aria-live="polite"><strong data-caption-title></strong> <span data-caption-line></span></p>
+            <div class="player">
+              <button class="play-button" type="button" data-play aria-label="Play tour" aria-pressed="false" aria-keyshortcuts="k"></button>
+              <div class="bar" data-bar role="slider" tabindex="0" aria-label="Tour position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">{{chapterLinks}}<span class="bar-knob" data-bar-knob aria-hidden="true"></span><span class="bar-tip" data-bar-tip aria-hidden="true"></span></div>
+              <span class="sr-only" data-player-status aria-live="polite"></span>
+            </div>
+          </div>
+          <button class="finish" type="button" data-page-link="#get-started" data-finish tabindex="-1" aria-hidden="true">Get started</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <main class="page page-start" id="start-page" data-page="start" aria-labelledby="start-title" hidden>
+    <section class="start">
+      <h1 id="start-title" tabindex="-1">Get started</h1>
+      <p class="start-needs">Needs Node.js 22.14+ and a Chromium browser.</p>
+      <ol class="commands">{{commands}}</ol>
+      <p class="start-links"><a href="https://github.com/jamestesting0/tum-mcp#readme">README</a><a href="https://github.com/jamestesting0/tum-mcp/blob/main/docs/setup.md">Setup guide</a><a href="https://github.com/jamestesting0/tum-mcp/blob/main/docs/study.md">Study guide</a><a class="start-phone" href="https://github.com/jamestesting0/tum-mcp">GitHub</a><a class="start-phone" href="https://www.npmjs.com/package/@jamestesting888/tum-mcp">npm</a></p>
+      <button class="start-back" type="button" data-page-link="#tour">Back to tour</button>
+    </section>
+    <footer class="site-footer">
+      <p>Unofficial · Not affiliated with TUM</p>
+      <button class="footer-link" type="button" data-disclaimer-open>Disclaimer</button>
+    </footer>
+    <dialog class="disclaimer" aria-labelledby="disclaimer-title" data-disclaimer>
+      <div class="disclaimer-body">
+        <button class="disclaimer-close" type="button" aria-label="Close" data-disclaimer-close></button>
+        <h2 id="disclaimer-title" tabindex="-1" autofocus>Disclaimer</h2>
+        <ul>
+          <li>TUM MCP is an independent project, not affiliated with or endorsed by the Technical University of Munich.</li>
+          <li>The course in this walkthrough is synthetic.</li>
+          <li>The sign-in scene recreates TUM’s public login pages with a made-up account.</li>
+          <li>TUM, Moodle and the agent marks of OpenAI, Anthropic, Anysphere and Google belong to their owners and only name their products.</li>
+        </ul>
+        <h3>Credits</h3>
+        <ul class="credits">{{credits}}</ul>
+      </div>
+    </dialog>
+  </main>
+  <script type="application/json" id="app-document">{{appDocument}}</script>
+  <script>{{script}}</script>
+</body>
+</html>

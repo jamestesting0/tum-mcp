@@ -1,0 +1,344 @@
+{
+  "key": "bfs-table",
+  "topic": "unweighted",
+  "title": "BFS distances and parents",
+  "summary": "Run the queue and fill one row per vertex.",
+  "cues": [
+    "An unweighted graph and a request for distances or parents"
+  ],
+  "workflow": [
+    {
+      "do": "Start the queue with the source",
+      "why": "The source is layer 0.",
+      "apply": {
+        "text": "Distance \\(0\\), no parent."
+      }
+    },
+    {
+      "do": "Remove the front, append its unmarked neighbours",
+      "why": "FIFO keeps the layers in order.",
+      "apply": {
+        "text": "Each appended vertex gets distance plus one and the removed vertex as parent; mark it now."
+      }
+    },
+    {
+      "do": "Fill the table when the queue is empty",
+      "why": "Every reachable vertex has been appended exactly once.",
+      "apply": {
+        "text": "One row per vertex: distance and parent."
+      }
+    }
+  ],
+  "concepts": [
+    "bfs-layers",
+    "mark-on-append"
+  ],
+  "sources": [
+    {
+      "key": "past-paper",
+      "sha256": "cb9e17da9966983c605ed182558f55aa74b4bd52d75c89822eedfbaafa09d1eb"
+    }
+  ],
+  "examples": [
+    {
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "Task",
+          "sources": [
+            "past-paper"
+          ],
+          "paragraphs": [
+            "Run BFS from \\(P\\), appending neighbours alphabetically. Give each distance and parent."
+          ]
+        },
+        {
+          "kind": "diagram",
+          "title": "Graph",
+          "sources": [
+            "past-paper"
+          ],
+          "description": "P links to Q and R; Q and R link to T.",
+          "nodes": [
+            {
+              "key": "p",
+              "label": "P",
+              "row": 1,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "q",
+              "label": "Q",
+              "row": 0,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "r",
+              "label": "R",
+              "row": 2,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "t",
+              "label": "T",
+              "row": 1,
+              "col": 2,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "p",
+              "end": "q"
+            },
+            {
+              "start": "p",
+              "end": "r"
+            },
+            {
+              "start": "q",
+              "end": "t"
+            },
+            {
+              "start": "r",
+              "end": "t"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "BFS starts at P."
+            }
+          ],
+          "state_labels": "caption"
+        }
+      ],
+      "solution": {
+        "answers": [
+          {
+            "blocks": [
+              {
+                "kind": "table",
+                "title": "Result",
+                "sources": [
+                  "past-paper"
+                ],
+                "columns": [
+                  "Vertex",
+                  "Distance",
+                  "Parent"
+                ],
+                "rows": [
+                  [
+                    "\\(Q\\)",
+                    "\\(1\\)",
+                    "\\(P\\)"
+                  ],
+                  [
+                    "\\(R\\)",
+                    "\\(1\\)",
+                    "\\(P\\)"
+                  ],
+                  [
+                    "\\(T\\)",
+                    "\\(2\\)",
+                    "\\(Q\\)"
+                  ]
+                ],
+                "caption": "\\(Q\\) reaches \\(T\\) first."
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "step": 1,
+          "prompt": "What does the queue hold at the start?",
+          "check": {
+            "kind": "text",
+            "answer": "P",
+            "feedback": "Only the source, with distance 0."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Start",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(P\\) with distance \\(0\\)."
+              ]
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "prompt": "Remove \\(P\\). Which vertices are appended?",
+          "check": {
+            "kind": "text",
+            "answer": "Q, R",
+            "feedback": "Both neighbours of P, in alphabetical order."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Append",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(Q\\) and \\(R\\) with distance \\(1\\)."
+              ]
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "prompt": "Remove \\(Q\\), then \\(R\\). Who is the parent of \\(T\\)?",
+          "check": {
+            "kind": "text",
+            "answer": "Q",
+            "feedback": "\\(Q\\) appends \\(T\\) first and marks it."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Parent",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(Q\\); \\(R\\) skips the marked \\(T\\)."
+              ]
+            }
+          ]
+        },
+        {
+          "step": 3,
+          "prompt": "The queue is empty. What is the distance of \\(T\\)?",
+          "check": {
+            "kind": "numeric",
+            "answer": 2,
+            "feedback": "\\(d(Q) + 1 = 2\\)."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Table",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(Q\\) and \\(R\\) at \\(1\\), \\(T\\) at \\(2\\)."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "pitfalls": [
+    {
+      "situation": "\\(R\\) is removed while \\(T\\) waits in the queue.",
+      "wrong": "Append \\(T\\) again with parent \\(R\\).",
+      "right": "Skip \\(T\\): it was marked when \\(Q\\) appended it.",
+      "why": "Marking on append keeps each vertex in the queue once.",
+      "step": 2
+    }
+  ],
+  "drill": [
+    {
+      "key": "layer-of-c",
+      "prompt": "BFS from \\(S\\). What is the distance of \\(C\\)?",
+      "blocks": [
+        {
+          "kind": "diagram",
+          "title": "Graph",
+          "sources": [
+            "past-paper"
+          ],
+          "description": "S links to A; A links to B; B links to C.",
+          "nodes": [
+            {
+              "key": "s",
+              "label": "S",
+              "row": 0,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "a",
+              "label": "A",
+              "row": 0,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "row": 0,
+              "col": 2,
+              "shape": "circle"
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "row": 0,
+              "col": 3,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "a",
+              "end": "b"
+            },
+            {
+              "start": "b",
+              "end": "c"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "BFS starts at S."
+            }
+          ],
+          "state_labels": "caption"
+        }
+      ],
+      "check": {
+        "kind": "text",
+        "feedback": "Three edges from S.",
+        "answer": "3"
+      },
+      "explanation": "\\(S \\to A \\to B \\to C\\) has three edges.",
+      "guide": [
+        {
+          "step": 2,
+          "prompt": "How many layers lie between S and C?",
+          "hint": "Count the edges on the only path.",
+          "answer": [
+            {
+              "kind": "text",
+              "title": null,
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "Layers \\(\\{A\\}\\), \\(\\{B\\}\\), \\(\\{C\\}\\): distance \\(3\\)."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "bfs-layers",
+  "topic": "unweighted",
+  "title": "BFS finds fewest-edge paths",
+  "kind": "theorem",
+  "path": [
+    "BFS"
+  ],
+  "line": "In an unweighted graph, BFS gives each vertex its least edge count \\(d(s, v)\\).",
+  "basis": "emphasized",
+  "sources": [
+    {
+      "key": "lecture-01",
+      "sha256": "16eed4e19e02192e3955d60c86baab110646a03db48090fb675b6c9189bdcb88"
+    }
+  ],
+  "details": [
+    {
+      "kind": "text",
+      "title": "How",
+      "sources": [
+        "lecture-01"
+      ],
+      "steps": [
+        "Layer 0 is the source.",
+        "Layer \\(k + 1\\) is every undiscovered neighbour of layer \\(k\\).",
+        "A FIFO queue processes the layers in order."
+      ]
+    }
+  ],
+  "units": [
+    "bfs"
+  ],
+  "exercises": [
+    {
+      "set": "sheet-01",
+      "exercise": "bfs-layers"
+    }
+  ]
+}

@@ -1,0 +1,266 @@
+{
+  "key": "heuristics",
+  "label": "Exercise 3",
+  "title": "Heuristics",
+  "sources": [
+    {
+      "key": "sheet-01",
+      "sha256": "65bd42073a250e0de256707689847c5b430902872b00139d369cdb60f9f0bfe5"
+    }
+  ],
+  "statement": [
+    {
+      "kind": "text",
+      "title": "Task",
+      "sources": [
+        "sheet-01"
+      ],
+      "paragraphs": [
+        "The heuristic below aims at \\(G\\). Decide for each change whether it stays admissible."
+      ]
+    },
+    {
+      "kind": "table",
+      "title": "Heuristic and true cost",
+      "sources": [
+        "sheet-01"
+      ],
+      "columns": [
+        "Vertex",
+        "\\(h(v)\\)",
+        "True cost to G"
+      ],
+      "rows": [
+        [
+          "\\(A\\)",
+          "\\(5\\)",
+          "\\(6\\)"
+        ],
+        [
+          "\\(B\\)",
+          "\\(3\\)",
+          "\\(3\\)"
+        ],
+        [
+          "\\(D\\)",
+          "\\(1\\)",
+          "\\(1\\)"
+        ]
+      ],
+      "caption": "From the running example of lecture 3."
+    },
+    {
+      "kind": "text",
+      "title": "Change (a)",
+      "sources": [
+        "sheet-01"
+      ],
+      "paragraphs": [
+        "\\(h(B) = 4\\)"
+      ],
+      "key": "part-a"
+    },
+    {
+      "kind": "text",
+      "title": "Change (b)",
+      "sources": [
+        "sheet-01"
+      ],
+      "paragraphs": [
+        "\\(h(D) = 0\\)"
+      ],
+      "key": "part-b"
+    },
+    {
+      "kind": "text",
+      "title": "Change (c)",
+      "sources": [
+        "sheet-01"
+      ],
+      "paragraphs": [
+        "\\(h(A) = 6\\)"
+      ],
+      "key": "part-c"
+    }
+  ],
+  "parts": [
+    "a",
+    "b",
+    "c"
+  ],
+  "part_blocks": {
+    "a": "part-a",
+    "b": "part-b",
+    "c": "part-c"
+  },
+  "objectives": [
+    "Check admissibility against the true remaining cost."
+  ],
+  "prerequisites": [
+    {
+      "unit": "astar",
+      "block": "admissible",
+      "explanation": "Admissible means no estimate exceeds the true remaining cost."
+    }
+  ],
+  "steps": [
+    {
+      "key": "b-four",
+      "part": "a",
+      "purpose": "An overestimate.",
+      "prompt": "Is \\(h(B) = 4\\) admissible?",
+      "check": {
+        "kind": "choice",
+        "correct": "b",
+        "options": [
+          {
+            "key": "a",
+            "text": "Admissible",
+            "feedback": "Compare the new value with the true cost to the goal."
+          },
+          {
+            "key": "b",
+            "text": "Not admissible: it overestimates",
+            "feedback": "\\(4 > 3\\): it overestimates."
+          },
+          {
+            "key": "c",
+            "text": "Not admissible: it underestimates",
+            "feedback": "Underestimating is allowed; only overestimating breaks admissibility."
+          },
+          {
+            "key": "d",
+            "text": "Cannot tell without checking consistency",
+            "feedback": "Admissibility compares each estimate with the true cost; consistency is a separate, stronger property."
+          }
+        ]
+      },
+      "hints": [
+        "The true cost from \\(B\\) is \\(3\\)."
+      ],
+      "explanation": "\\(4 > 3\\)."
+    },
+    {
+      "key": "d-zero",
+      "part": "b",
+      "purpose": "A weaker estimate.",
+      "prompt": "Is \\(h(D) = 0\\) admissible?",
+      "check": {
+        "kind": "choice",
+        "correct": "a",
+        "options": [
+          {
+            "key": "a",
+            "text": "Admissible",
+            "feedback": "\\(0 \\le 1\\): weaker, but allowed."
+          },
+          {
+            "key": "b",
+            "text": "Not admissible: it overestimates",
+            "feedback": "The new value is at most the true cost."
+          },
+          {
+            "key": "c",
+            "text": "Not admissible: it underestimates",
+            "feedback": "Underestimating is allowed; only overestimating breaks admissibility."
+          },
+          {
+            "key": "d",
+            "text": "Cannot tell without checking consistency",
+            "feedback": "Admissibility compares each estimate with the true cost; consistency is a separate, stronger property."
+          }
+        ]
+      },
+      "hints": [
+        "The true cost from \\(D\\) is \\(1\\)."
+      ],
+      "explanation": "\\(0 \\le 1\\)."
+    },
+    {
+      "key": "a-six",
+      "part": "c",
+      "purpose": "An exact estimate.",
+      "prompt": "Is \\(h(A) = 6\\) admissible?",
+      "check": {
+        "kind": "choice",
+        "correct": "a",
+        "options": [
+          {
+            "key": "a",
+            "text": "Admissible",
+            "feedback": "\\(6 \\le 6\\): an exact estimate is allowed."
+          },
+          {
+            "key": "b",
+            "text": "Not admissible: it overestimates",
+            "feedback": "The new value is at most the true cost."
+          },
+          {
+            "key": "c",
+            "text": "Not admissible: it underestimates",
+            "feedback": "Underestimating is allowed; only overestimating breaks admissibility."
+          },
+          {
+            "key": "d",
+            "text": "Cannot tell without checking consistency",
+            "feedback": "Admissibility compares each estimate with the true cost; consistency is a separate, stronger property."
+          }
+        ]
+      },
+      "hints": [
+        "The true cost from \\(A\\) is \\(6\\)."
+      ],
+      "explanation": "\\(6 \\le 6\\)."
+    }
+  ],
+  "solution": {
+    "origin": "authored",
+    "answers": [
+      {
+        "label": "a",
+        "blocks": [
+          {
+            "kind": "text",
+            "title": "Answer",
+            "sources": [
+              "sheet-01"
+            ],
+            "paragraphs": [
+              "Not admissible: \\(4 > 3\\)."
+            ]
+          }
+        ]
+      },
+      {
+        "label": "b",
+        "blocks": [
+          {
+            "kind": "text",
+            "title": "Answer",
+            "sources": [
+              "sheet-01"
+            ],
+            "paragraphs": [
+              "Admissible: \\(0 \\le 1\\)."
+            ]
+          }
+        ]
+      },
+      {
+        "label": "c",
+        "blocks": [
+          {
+            "kind": "text",
+            "title": "Answer",
+            "sources": [
+              "sheet-01"
+            ],
+            "paragraphs": [
+              "Admissible: \\(6 \\le 6\\)."
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

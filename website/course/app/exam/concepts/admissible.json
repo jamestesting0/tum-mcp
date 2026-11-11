@@ -1,0 +1,38 @@
+{
+  "key": "admissible",
+  "topic": "informed",
+  "title": "Admissible heuristic",
+  "kind": "definition",
+  "path": [
+    "A*"
+  ],
+  "line": "\\(h(v) \\le d(v, \\text{goal})\\) for every \\(v\\).",
+  "basis": "emphasized",
+  "sources": [
+    {
+      "key": "lecture-03",
+      "sha256": "0ef5e1984a07f14707ba77c5be924c96a417211b829d176f5eb7deb8fff728dc"
+    }
+  ],
+  "details": [
+    {
+      "kind": "text",
+      "title": "Consequence",
+      "sources": [
+        "lecture-03"
+      ],
+      "paragraphs": [
+        "With an admissible heuristic, A* returns an optimal path."
+      ]
+    }
+  ],
+  "units": [
+    "astar"
+  ],
+  "exercises": [
+    {
+      "set": "sheet-01",
+      "exercise": "heuristics"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "course_key": "graph-search",
+  "content_sha256": "cadbff199fcd39ee92f595eb66582a163838491e0e03c2bdd096509338df946e",
+  "exercises_sha256": "8e47e79c9998fe8f569e320505385713c4ce324fe1d246ffcc1d06b509b1cfcd",
+  "videos": [
+    {
+      "unit": "dijkstra",
+      "decision": "video",
+      "reason": "Relaxation and the settle order are clearest when the tentative distances change on screen beside the graph.",
+      "stem": "01_dijkstra-s-algorithm"
+    }
+  ]
+}

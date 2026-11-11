@@ -1,0 +1,185 @@
+{
+  "key": "dijkstra-lecture",
+  "title": "Lecture 2 · Dijkstra's algorithm",
+  "recording": {
+    "course_slug": "graph-search",
+    "course_id": 1,
+    "recording_id": 2,
+    "recorded_on": "2026-10-28",
+    "duration_s": 720,
+    "synthetic": true
+  },
+  "summary": "Relaxation on the board, a full trace of the running example, why settled distances stay fixed, and a negative-edge counterexample.",
+  "sources": [
+    {
+      "key": "recording-02",
+      "sha256": "f44921d9cb19c855e79f37a7755878fe1b65626d8039a9f54264b09749d2b7b3"
+    },
+    {
+      "key": "lecture-02",
+      "sha256": "5b91704ad879bccbb6c8fd4f1640dc412bfcd45e2bbe7ed0d35a146f1e6b3c8b"
+    }
+  ],
+  "checked_at": "2026-11-11T09:00:00Z",
+  "coverage": {
+    "status": "complete",
+    "eligible": [
+      {
+        "start_s": 0,
+        "end_s": 720
+      }
+    ],
+    "processed": [
+      {
+        "start_s": 0,
+        "end_s": 720
+      }
+    ],
+    "excluded": [],
+    "missing": [],
+    "reviewed": true
+  },
+  "notes": [
+    {
+      "key": "relax-b",
+      "title": "A cheaper route lowers a tentative distance",
+      "context": "On the board the edge from \\(S\\) gives \\(B\\) the tentative distance \\(6\\).",
+      "text": "Later the path through \\(C\\) offers \\(4 + 1 = 5\\), so relaxation lowers \\(d(B)\\) to \\(5\\) and makes \\(C\\) its parent.",
+      "passage": {
+        "unit": "dijkstra",
+        "block": "dijkstra-trace"
+      },
+      "sources": [
+        "lecture-02"
+      ],
+      "evidence": [
+        "speech-relax"
+      ]
+    },
+    {
+      "key": "sheet-two",
+      "title": "Exercise sheet 2 is released",
+      "context": "Announced at the end of the lecture.",
+      "text": "Questions about it go to the course forum.",
+      "evidence": [
+        "speech-organisation"
+      ]
+    }
+  ],
+  "highlights": [
+    {
+      "key": "full-trace",
+      "title": "Tracing Dijkstra on the running example",
+      "interval": {
+        "start_s": 220,
+        "end_s": 450
+      },
+      "teaches": "Each step settles the smallest tentative distance and relaxes its edges, ending with \\(d(G) = 8\\).",
+      "points": [
+        "The settled order is \\(S, E, A, C, B, D, G\\).",
+        "Two relaxations improve a value: \\(B\\) from \\(6\\) to \\(5\\), \\(G\\) from \\(9\\) to \\(8\\)."
+      ],
+      "sources": [
+        "lecture-02"
+      ],
+      "evidence": [
+        "speech-trace",
+        "frame-trace"
+      ],
+      "thumbnail": {
+        "evidence": "frame-trace",
+        "sha256": "dc8f463fb359ff47b611e5befa5c90b28fa556794ef3708db31e68d53bc83dbb",
+        "asset": "lecture-assets/dc8f463fb359ff47b611e5befa5c90b28fa556794ef3708db31e68d53bc83dbb.png",
+        "width": 640,
+        "height": 360,
+        "captured_at_s": 365
+      },
+      "steps": [
+        {
+          "subgoal": "Start",
+          "action": "Write \\(S = 0\\) and every other vertex at \\(\\infty\\).",
+          "why": "Only the source has a known distance.",
+          "at": 225
+        },
+        {
+          "subgoal": "Settle",
+          "action": "Settle \\(S\\), \\(E\\) and \\(A\\) in order of distance.",
+          "why": "\\(0 < 1 < 2\\): each is the smallest open value when it is chosen.",
+          "at": 290
+        },
+        {
+          "subgoal": "Relax",
+          "action": "Settle \\(C\\); lower \\(B\\) to \\(5\\), set \\(G = 9\\).",
+          "why": "\\(4 + 1 = 5 < 6\\).",
+          "at": 365
+        },
+        {
+          "subgoal": "Finish",
+          "action": "Settle \\(B\\), \\(D\\), then \\(G\\) at \\(8\\).",
+          "why": "\\(7 + 1 = 8 < 9\\) through \\(D\\).",
+          "at": 420
+        }
+      ],
+      "passage": {
+        "unit": "dijkstra",
+        "block": "dijkstra-trace"
+      }
+    },
+    {
+      "key": "settled-final",
+      "title": "Why a settled distance never changes",
+      "interval": {
+        "start_s": 450,
+        "end_s": 585
+      },
+      "teaches": "With non-negative weights, no path that leaves the settled set can undercut the smallest tentative distance.",
+      "points": [
+        "Any other path to the chosen vertex leaves the settled set first.",
+        "Non-negative edges after that point can only add cost."
+      ],
+      "sources": [
+        "lecture-02"
+      ],
+      "evidence": [
+        "speech-settled",
+        "frame-settled"
+      ],
+      "thumbnail": {
+        "evidence": "frame-settled",
+        "sha256": "4f3d68a6fced5e24e0daada7573ad753eab2053c5a724b1601492bf8992aec75",
+        "asset": "lecture-assets/4f3d68a6fced5e24e0daada7573ad753eab2053c5a724b1601492bf8992aec75.png",
+        "width": 640,
+        "height": 360,
+        "captured_at_s": 500
+      }
+    },
+    {
+      "key": "negative-edge",
+      "title": "A negative edge breaks the settled order",
+      "interval": {
+        "start_s": 585,
+        "end_s": 680
+      },
+      "teaches": "With \\(w(Y, X) = -2\\), \\(X\\) is settled at \\(2\\) although the path through \\(Y\\) costs \\(1\\).",
+      "points": [
+        "\\(X\\) has the smaller tentative distance, so it is settled first.",
+        "\\(3 + (-2) = 1\\) arrives after \\(X\\) is final."
+      ],
+      "sources": [
+        "lecture-02"
+      ],
+      "evidence": [
+        "speech-negative",
+        "frame-negative"
+      ],
+      "thumbnail": {
+        "evidence": "frame-negative",
+        "sha256": "68e98ffc4aa81322196583ed09f47274b618a73eefb9fe49bd0e2a0330fb117f",
+        "asset": "lecture-assets/68e98ffc4aa81322196583ed09f47274b618a73eefb9fe49bd0e2a0330fb117f.png",
+        "width": 640,
+        "height": 360,
+        "captured_at_s": 630
+      }
+    }
+  ]
+}

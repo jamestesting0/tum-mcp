@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "course_key": "graph-search",
+  "organization": "lectures",
+  "introduction": "Three ways to find shortest paths: count edges with BFS, add weights with Dijkstra, and aim at a goal with A*.",
+  "units": [
+    "bfs",
+    "dijkstra",
+    "astar"
+  ]
+}

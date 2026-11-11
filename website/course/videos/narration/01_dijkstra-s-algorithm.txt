@@ -1,0 +1,13 @@
+Dijkstra's algorithm
+
+Two moves
+Dijkstra's algorithm finds the cheapest path when every edge has a weight. It repeats two moves: settle the closest vertex, then relax the edges that leave it.
+
+Relaxation
+Vertex C is settled at four, and vertex B still has six. The edge from C to B weighs one, so the route through C costs four plus one, which is five. Five beats six, so relaxation lowers B to five and records C as its parent.
+
+Settle in order
+Start at S with distance zero. Each time, settle the smallest open value: S, then E at one, then A at two. Settling C at four lowers B from six to five and opens G at nine. B gives D seven, and D lowers G to eight, the cheapest cost to G.
+
+When it fails
+This only works when no edge weight is negative. Here X is settled at two before Y is looked at. But Y costs three, and its edge to X weighs minus two, so X really costs one. A settled value is final, so Dijkstra keeps the wrong distance of two. So: settle the smallest tentative distance, relax its edges, and keep every weight non-negative.

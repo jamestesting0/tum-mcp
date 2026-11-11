@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "course_key": "graph-search",
+  "sets": [
+    {
+      "key": "sheet-01",
+      "title": "Sheet 1",
+      "exercises": [
+        "bfs-layers",
+        "dijkstra-trace",
+        "heuristics"
+      ]
+    }
+  ]
+}

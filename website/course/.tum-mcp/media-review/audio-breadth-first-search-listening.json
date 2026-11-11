@@ -1,0 +1,286 @@
+{
+  "item": "audio/breadth-first-search",
+  "artifact_sha256": "d2494f5ea25bbcba6c5367d70d4c51d50799b75f7eec6b1d643f7bf8b65dbb78",
+  "method": "speech recognition (Whisper) aligned with the published script and timing",
+  "covers": "what was said, completeness, numbers and negations, timing, pauses and pace; not voice naturalness or prosody",
+  "duration": 117.8453,
+  "match": 0.975,
+  "words_per_minute": 186,
+  "flags": [],
+  "sentences": [
+    {
+      "key": "distance/1",
+      "text": "In an unweighted graph, every edge counts as one step.",
+      "start": 0.4,
+      "end": 3.856,
+      "heard": "In an unweighted graph, every edge counts as one step.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": -0.4,
+      "spoken_words": 10,
+      "spoken_seconds": 3.68
+    },
+    {
+      "key": "distance/2",
+      "text": "The distance from the start to a vertex is the least number of edges on any path between them.",
+      "start": 4.206,
+      "end": 9.9447,
+      "heard": "The distance from the start to a vertex is the least number of edges on any path between them.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.01,
+      "spoken_words": 19,
+      "spoken_seconds": 5.6
+    },
+    {
+      "key": "distance/3",
+      "text": "The start itself is at distance zero, and a vertex you cannot reach at all has infinite distance.",
+      "start": 10.2947,
+      "end": 16.5454,
+      "heard": "The start itself is at distance zero, and a vertex you cannot reach at all has infinite distance.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.01,
+      "spoken_words": 18,
+      "spoken_seconds": 6.06
+    },
+    {
+      "key": "layers/1",
+      "text": "Breadth-first search finds these distances one layer at a time.",
+      "start": 17.6454,
+      "end": 21.7627,
+      "heard": "Breadth -first search finds these distances one layer at a time.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.27,
+      "spoken_words": 11,
+      "spoken_seconds": 3.7
+    },
+    {
+      "key": "layers/2",
+      "text": "Layer zero holds only the start.",
+      "start": 22.1127,
+      "end": 24.2887,
+      "heard": "Layer zero holds only the start. The",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.33,
+      "spoken_words": 7,
+      "spoken_seconds": 2.34
+    },
+    {
+      "key": "layers/3",
+      "text": "The next layer holds every neighbour of the current layer that has not been discovered yet.",
+      "start": 24.6387,
+      "end": 29.78,
+      "heard": "The next layer holds every neighbor of the current layer that has not been discovered yet.",
+      "match": 0.938,
+      "missing": [
+        "neighbour"
+      ],
+      "gap": 1,
+      "offset": -0.62,
+      "spoken_words": 16,
+      "spoken_seconds": 5.52
+    },
+    {
+      "key": "layers/4",
+      "text": "In the running example, S alone is layer zero; A, B and E form layer one; C and D form layer two; and G is layer three.",
+      "start": 30.13,
+      "end": 39.3033,
+      "heard": "In the running example, S alone is layer 0. A, B, and E form layer 1, C and D form layer 2, and G is layer 3.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.07,
+      "spoken_words": 27,
+      "spoken_seconds": 8.98
+    },
+    {
+      "key": "layers/5",
+      "text": "So every vertex in layer k is exactly k edges from the start.",
+      "start": 39.6533,
+      "end": 44.1973,
+      "heard": "So every vertex in layer K is exactly K edges from the start.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.01,
+      "spoken_words": 13,
+      "spoken_seconds": 4.36
+    },
+    {
+      "key": "queue/1",
+      "text": "Breadth-first search keeps its waiting vertices in a first-in, first-out queue.",
+      "start": 45.2973,
+      "end": 50.14,
+      "heard": "Breadth first search keeps its waiting vertices in a first in, first out cue.",
+      "match": 0.929,
+      "missing": [
+        "queue"
+      ],
+      "gap": 1,
+      "offset": 0.26,
+      "spoken_words": 14,
+      "spoken_seconds": 4.38
+    },
+    {
+      "key": "queue/2",
+      "text": "It removes the vertex at the front and appends its undiscovered neighbours at the back, one step further from the start.",
+      "start": 50.49,
+      "end": 57.6367,
+      "heard": "It removes the vertex at the front and appends its neighbors at the back, one step further from the start.",
+      "match": 0.905,
+      "missing": [
+        "undiscovered",
+        "neighbours"
+      ],
+      "gap": 2,
+      "offset": -0.01,
+      "spoken_words": 20,
+      "spoken_seconds": 6.9
+    },
+    {
+      "key": "queue/3",
+      "text": "Every vertex of one layer is appended before any vertex of the next, so the whole layer leaves the queue first.",
+      "start": 57.9867,
+      "end": 64.664,
+      "heard": "Every vertex of one layer is appended before any vertex of the next, so the whole layer leaves the queue first.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.05,
+      "spoken_words": 21,
+      "spoken_seconds": 6.36
+    },
+    {
+      "key": "queue/4",
+      "text": "In the example, C is appended while B and E are still waiting, so C comes out only after both of them.",
+      "start": 65.014,
+      "end": 71.9473,
+      "heard": "In the example, C is appended while B and E are still waiting, so C comes out only after both of them.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": -0.01,
+      "spoken_words": 22,
+      "spoken_seconds": 6.86
+    },
+    {
+      "key": "mark/1",
+      "text": "Mark a vertex as discovered the moment you append it, not when you remove it.",
+      "start": 73.0473,
+      "end": 77.7193,
+      "heard": "Mark a vertex as discovered the moment you append it, not when you remove it.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.13,
+      "spoken_words": 15,
+      "spoken_seconds": 4.48
+    },
+    {
+      "key": "mark/2",
+      "text": "If you wait until removal, A and B both append C, and C enters the queue twice.",
+      "start": 78.0693,
+      "end": 83.5093,
+      "heard": "If you wait until removal, and B both append C, and C enters the queue twice,",
+      "match": 0.941,
+      "missing": [
+        "a"
+      ],
+      "gap": 1,
+      "offset": 0.01,
+      "spoken_words": 16,
+      "spoken_seconds": 5.14
+    },
+    {
+      "key": "mark/3",
+      "text": "Marking on append keeps every vertex in the queue once, so the search stays linear in the size of the graph.",
+      "start": 83.8593,
+      "end": 90.5793,
+      "heard": "Marking on a pen keeps every vertex in the queue once, so the search stays linear in the size of the graph.",
+      "match": 0.952,
+      "missing": [
+        "append"
+      ],
+      "gap": 1,
+      "offset": 0.16,
+      "spoken_words": 22,
+      "spoken_seconds": 6.34
+    },
+    {
+      "key": "result/1",
+      "text": "When the queue is empty, each vertex has its distance and a parent: the vertex that first appended it.",
+      "start": 91.6793,
+      "end": 98.0153,
+      "heard": "When the queue is empty, each vertex has its distance and apparent, the vertex that first appended it.",
+      "match": 0.895,
+      "missing": [
+        "a",
+        "parent"
+      ],
+      "gap": 2,
+      "offset": 0.06,
+      "spoken_words": 18,
+      "spoken_seconds": 6.28
+    },
+    {
+      "key": "result/2",
+      "text": "Follow the parents back from G, through C and A, to S.",
+      "start": 98.3653,
+      "end": 101.992,
+      "heard": "Follow the parents back from G, through C and A to S.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.05,
+      "spoken_words": 12,
+      "spoken_seconds": 3.4
+    },
+    {
+      "key": "result/3",
+      "text": "Read in reverse, that is a shortest path by edge count.",
+      "start": 102.342,
+      "end": 105.7553,
+      "heard": "Read in reverse, that is a shortest path by edge count.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.08,
+      "spoken_words": 11,
+      "spoken_seconds": 3.1
+    },
+    {
+      "key": "result/4",
+      "text": "Breadth-first search counts edges, not weights.",
+      "start": 106.1053,
+      "end": 108.9853,
+      "heard": "Breadth -first search counts edges, not weights. weights.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": 0.23,
+      "spoken_words": 8,
+      "spoken_seconds": 2.56
+    },
+    {
+      "key": "result/5",
+      "text": "With weighted edges, the path it finds can cost more, and that is the job of Dijkstra's algorithm in the next lecture.",
+      "start": 109.3353,
+      "end": 117.0366,
+      "heard": "With weighted edges, the path it finds can cost more. And that is the job of Dijkstra's algorithm in the next lecture.",
+      "match": 1.0,
+      "missing": [],
+      "gap": 0,
+      "offset": -0.04,
+      "spoken_words": 22,
+      "spoken_seconds": 7.56
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "key": "dijkstra-loop",
+  "topic": "weighted",
+  "title": "Dijkstra's loop",
+  "kind": "algorithm",
+  "path": [
+    "Dijkstra"
+  ],
+  "line": "Choose the smallest tentative distance, settle it, relax its edges.",
+  "basis": "emphasized",
+  "sources": [
+    {
+      "key": "lecture-02",
+      "sha256": "5b91704ad879bccbb6c8fd4f1640dc412bfcd45e2bbe7ed0d35a146f1e6b3c8b"
+    }
+  ],
+  "details": [
+    {
+      "kind": "text",
+      "title": "Steps",
+      "sources": [
+        "lecture-02"
+      ],
+      "steps": [
+        "Start: source \\(0\\), every other vertex \\(\\infty\\).",
+        "Choose: the unsettled vertex with the smallest tentative distance.",
+        "Settle: fix it.",
+        "Relax: every edge leaving it."
+      ]
+    }
+  ],
+  "units": [
+    "dijkstra"
+  ],
+  "exercises": [
+    {
+      "set": "sheet-01",
+      "exercise": "dijkstra-trace"
+    }
+  ]
+}

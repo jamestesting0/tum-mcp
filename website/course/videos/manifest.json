@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "course_key": "graph-search",
+  "videos": {
+    "01_dijkstra-s-algorithm": {
+      "stem": "01_dijkstra-s-algorithm",
+      "title": "Dijkstra's algorithm",
+      "language": "en",
+      "made_for_revision": "67568cb87fb5523836c93783611729f6d45f55524f624623afd825497f33f0e5",
+      "inputs": {
+        "storyboard": "0d958aeb550862bb7ab3cbb66fc4ced19cb26b5068aa766219a03fce11970ee3",
+        "scene": "cdd9fadd54dbe15e7c8002d7e00a018b3cd963247e92104dd6291c1e44024648",
+        "style": "8db1c49844f3bc3e6f259cec03df893744501d69130292e4c4a4cb89f7caf7e9",
+        "timing": "b2e55f47f2b0ec9deacc215ebd90bbfdec24a58607ad78ad91b1d7ed3ad7c19f",
+        "voice": "b9f2a0fac2bf7120ba72373e9b4d07afe1e627fee951078c21ced116ee96882a"
+      },
+      "render_profile": "manim-0.22.0-cp313-darwin-aarch64-4960ec4dda65-7ab6d3724853",
+      "narrated": true,
+      "duration": 69.5,
+      "files": {
+        "track": {
+          "path": "tracks/01_dijkstra-s-algorithm.mp4",
+          "sha256": "bf3dc0bcca4d1a3742b95b08bec9a41390fb543d51f3b6836f6c97d8939f572e",
+          "size": 3529122
+        },
+        "captions": {
+          "path": "captions/01_dijkstra-s-algorithm.vtt",
+          "sha256": "1576b0aee677630401ef83975e33a1d2440833570279181274fdb0ec03d56ad4",
+          "size": 1509
+        },
+        "chapters": {
+          "path": "chapters/01_dijkstra-s-algorithm.vtt",
+          "sha256": "e86af0d7fd05edc1bc91918e2c7d3899f8629c06a9391dbd070079722092777d",
+          "size": 198
+        },
+        "chapter_index": {
+          "path": "chapters/01_dijkstra-s-algorithm.json",
+          "sha256": "cacc6022a02cab5074105d3c28c859cdabcf16d0be2d99328be371663a4b6b2f",
+          "size": 364
+        },
+        "poster": {
+          "path": "posters/01_dijkstra-s-algorithm.jpg",
+          "sha256": "6c6247216fbc0ee1759937b2d1597c6f4e08310e5a7aaeba95a3fc6cd9004ae6",
+          "size": 82521
+        },
+        "transcript": {
+          "path": "narration/01_dijkstra-s-algorithm.txt",
+          "sha256": "2e611d50f3fbf032b9215d9ba2ecbf948459369cea175e55e586919c7297a9de",
+          "size": 1043
+        }
+      },
+      "checks": [
+        "container.mp4",
+        "video.h264",
+        "video.yuv420p",
+        "video.size",
+        "video.fps",
+        "video.duration",
+        "mp4.faststart",
+        "audio.aac",
+        "audio.format",
+        "audio.sync",
+        "audio.loudness",
+        "audio.true_peak",
+        "captions.valid",
+        "captions.ordered",
+        "captions.bounds",
+        "chapters.valid",
+        "chapters.ordered",
+        "chapters.bounds",
+        "poster.jpeg",
+        "layout.clear"
+      ],
+      "teaching_review": "reviews/01_dijkstra-s-algorithm-r-0e21ae6a.md",
+      "visual_review": "performed",
+      "run": "r-0e21ae6a",
+      "published_at": "2026-11-10T23:42:19.228054Z",
+      "reviews": [],
+      "voice_profile_key": "kokoro-heart",
+      "voice_profile": {
+        "provider": "Kokoro",
+        "route": "local kokoro-onnx 0.6.1",
+        "voice": "af_heart",
+        "language": "en-us",
+        "model": "kokoro-v1.0-fp32",
+        "settings": {
+          "speed": 0.88
+        }
+      },
+      "assets_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "source_references": [
+        {
+          "key": "lecture-02",
+          "sha256": "5b91704ad879bccbb6c8fd4f1640dc412bfcd45e2bbe7ed0d35a146f1e6b3c8b"
+        }
+      ],
+      "visuals": [
+        "c01/b01",
+        "c02/b02",
+        "c03/b03",
+        "c04/b04",
+        "c04/b05"
+      ],
+      "beats": [
+        {
+          "key": "b01",
+          "chapter": "c01",
+          "start": 0.0,
+          "duration": 11.011,
+          "cues": [
+            {
+              "start": 0.25,
+              "end": 5.029,
+              "text": "Dijkstra's algorithm finds the cheapest path when every edge has a weight.",
+              "audio": "b01_01-b6525e9f85.wav"
+            },
+            {
+              "start": 5.329,
+              "end": 10.811,
+              "text": "It repeats two moves: settle the closest vertex, then relax the edges that leave it.",
+              "audio": "b01_02-b5242f3b68.wav"
+            }
+          ]
+        },
+        {
+          "key": "b02",
+          "chapter": "c02",
+          "start": 11.011,
+          "duration": 16.175,
+          "cues": [
+            {
+              "start": 11.261,
+              "end": 15.08,
+              "text": "Vertex C is settled at four, and vertex B still has six.",
+              "audio": "b02_01-3072329152.wav"
+            },
+            {
+              "start": 15.38,
+              "end": 21.204,
+              "text": "The edge from C to B weighs one, so the route through C costs four plus one, which is five.",
+              "audio": "b02_02-7588133ecb.wav"
+            },
+            {
+              "start": 21.504,
+              "end": 26.987,
+              "text": "Five beats six, so relaxation lowers B to five and records C as its parent.",
+              "audio": "b02_03-6284ab01ef.wav"
+            }
+          ]
+        },
+        {
+          "key": "b03",
+          "chapter": "c03",
+          "start": 27.187,
+          "duration": 18.097,
+          "cues": [
+            {
+              "start": 27.437,
+              "end": 29.421,
+              "text": "Start at S with distance zero.",
+              "audio": "b03_01-f01ab72c7f.wav"
+            },
+            {
+              "start": 29.721,
+              "end": 34.99,
+              "text": "Each time, settle the smallest open value: S, then E at one, then A at two.",
+              "audio": "b03_02-33cbf32d1f.wav"
+            },
+            {
+              "start": 35.29,
+              "end": 40.154,
+              "text": "Settling C at four lowers B from six to five and opens G at nine.",
+              "audio": "b03_03-dde18a8594.wav"
+            },
+            {
+              "start": 40.454,
+              "end": 45.083,
+              "text": "B gives D seven, and D lowers G to eight, the cheapest cost to G.",
+              "audio": "b03_04-cb98cd8abc.wav"
+            }
+          ]
+        },
+        {
+          "key": "b04",
+          "chapter": "c04",
+          "start": 45.283,
+          "duration": 17.179,
+          "cues": [
+            {
+              "start": 45.533,
+              "end": 48.392,
+              "text": "This only works when no edge weight is negative.",
+              "audio": "b04_01-853463138a.wav"
+            },
+            {
+              "start": 48.692,
+              "end": 51.892,
+              "text": "Here X is settled at two before Y is looked at.",
+              "audio": "b04_02-94f093b033.wav"
+            },
+            {
+              "start": 52.192,
+              "end": 57.525,
+              "text": "But Y costs three, and its edge to X weighs minus two, so X really costs one.",
+              "audio": "b04_03-8815073670.wav"
+            },
+            {
+              "start": 57.825,
+              "end": 62.263,
+              "text": "A settled value is final, so Dijkstra keeps the wrong distance of two.",
+              "audio": "b04_04-faab014ee4.wav"
+            }
+          ]
+        },
+        {
+          "key": "b05",
+          "chapter": "c04",
+          "start": 62.463,
+          "duration": 6.999,
+          "cues": [
+            {
+              "start": 62.713,
+              "end": 69.262,
+              "text": "So: settle the smallest tentative distance, relax its edges, and keep every weight non-negative.",
+              "audio": "b05_01-e8be02adcd.wav"
+            }
+          ]
+        }
+      ],
+      "guidance_sha256": "029c246027f92fd82fc7edab92860b2c8a14752f7a3f81673e9be5f70ee6cd69",
+      "teaching_review_sha256": "b7739179baa44211ad78ee02fb5d9fdcfcebb526ad88633a1706259ec27ec3d7",
+      "unit": "dijkstra",
+      "unit_hash": "6c76426d4cb56aad31d4f11bdc1606dfec23b8945d3c6a986ac8ea994d8c94e5",
+      "chapters": [
+        {
+          "key": "c01",
+          "title": "Two moves",
+          "start": 0.0,
+          "end": 11.0
+        },
+        {
+          "key": "c02",
+          "title": "Relaxation",
+          "start": 11.0,
+          "end": 27.2
+        },
+        {
+          "key": "c03",
+          "title": "Settle in order",
+          "start": 27.2,
+          "end": 45.3
+        },
+        {
+          "key": "c04",
+          "title": "When it fails",
+          "start": 45.3,
+          "end": 69.5
+        }
+      ],
+      "objectives": [
+        "relax",
+        "trace",
+        "negative"
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "tum-mcp-website",
+  "private": true,
+  "description": "Scroll-driven walkthrough of TUM MCP, built into one self-contained HTML file.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "scripts": {
+    "dev": "node tools/dev.mjs",
+    "build": "node tools/build.mjs",
+    "check": "node tools/check.mjs",
+    "course": "node tools/course.mjs",
+    "capture-cli": "node tools/capture-cli.mjs"
+  },
+  "devDependencies": {
+    "@vscode/codicons": "^0.0.46-24",
+    "esbuild": "0.28.2"
+  }
+}

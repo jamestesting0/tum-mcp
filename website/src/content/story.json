@@ -1,0 +1,1085 @@
+{
+  "title": "Your TUM courses, in your coding agent.",
+  "course": {
+    "folder": "graph-search",
+    "title": "Graph Search"
+  },
+  "hosts": [
+    {
+      "key": "codex",
+      "label": "Codex",
+      "command": "$sync-course",
+      "row": 0
+    },
+    {
+      "key": "claude",
+      "label": "Claude Code",
+      "command": "/sync-course",
+      "row": 1
+    },
+    {
+      "key": "cursor",
+      "label": "Cursor",
+      "command": "$sync-course",
+      "row": 2
+    },
+    {
+      "key": "antigravity",
+      "label": "Antigravity",
+      "command": "$sync-course",
+      "row": 3
+    }
+  ],
+  "chapters": [
+    {
+      "key": "install",
+      "label": "Install"
+    },
+    {
+      "key": "choose",
+      "label": "Choose"
+    },
+    {
+      "key": "sync",
+      "label": "Sync"
+    },
+    {
+      "key": "build",
+      "label": "Build"
+    },
+    {
+      "key": "open",
+      "label": "Open"
+    },
+    {
+      "key": "extensions",
+      "label": "Extensions"
+    }
+  ],
+  "commands": [
+    "npm install --global @jamestesting888/tum-mcp@latest",
+    "tum-mcp setup",
+    "tum-mcp login",
+    "tum-mcp doctor"
+  ],
+  "steps": [
+    {
+      "key": "npm",
+      "chapter": "install",
+      "weight": 0.4,
+      "caption": {
+        "title": "Install",
+        "line": "Needs Node.js 22.14+ and a Chromium browser."
+      },
+      "focus": "terminal",
+      "terminal": {
+        "blocks": [
+          {
+            "command": "npm install --global @jamestesting888/tum-mcp@latest",
+            "type": true
+          },
+          {
+            "lines": [
+              [
+                [
+                  "",
+                  ""
+                ]
+              ],
+              [
+                [
+                  "added 1 package in 2s",
+                  ""
+                ]
+              ]
+            ],
+            "exits": true,
+            "hold": 500
+          }
+        ]
+      }
+    },
+    {
+      "key": "setup",
+      "chapter": "install",
+      "weight": 0.44,
+      "caption": {
+        "title": "Install",
+        "line": "Setup configures the agents you already use."
+      },
+      "focus": "terminal",
+      "terminal": {
+        "blocks": [
+          {
+            "command": "tum-mcp setup",
+            "type": true
+          },
+          {
+            "lines": [
+              [
+                [
+                  "Preparing the TUM MCP runtime; this takes about a minute the first time…",
+                  ""
+                ]
+              ]
+            ],
+            "hold": 600
+          },
+          {
+            "frame": "clients"
+          }
+        ]
+      }
+    },
+    {
+      "key": "pick-agent",
+      "chapter": "choose",
+      "weight": 0.4,
+      "caption": {
+        "title": "Choose your agent",
+        "line": "Nothing is preselected."
+      },
+      "focus": "terminal",
+      "terminal": {
+        "blocks": [
+          {
+            "command": "tum-mcp setup"
+          },
+          {
+            "lines": [
+              [
+                [
+                  "Preparing the TUM MCP runtime; this takes about a minute the first time…",
+                  ""
+                ]
+              ]
+            ],
+            "hold": 0
+          },
+          {
+            "frame": "clients",
+            "hold": 320
+          },
+          {
+            "sequence": "pick-agent",
+            "every": 420,
+            "hold": 700
+          }
+        ]
+      }
+    },
+    {
+      "key": "pick-workflows",
+      "chapter": "choose",
+      "weight": 0.66,
+      "caption": {
+        "title": "Add workflows",
+        "line": "Lecture, Audio Notes, Video Notes and Course Memory are optional."
+      },
+      "focus": "terminal",
+      "terminal": {
+        "blocks": [
+          {
+            "command": "tum-mcp setup"
+          },
+          {
+            "lines": [
+              [
+                [
+                  "Preparing the TUM MCP runtime; this takes about a minute the first time…",
+                  ""
+                ]
+              ]
+            ],
+            "hold": 0
+          },
+          {
+            "frame": "clients-picked",
+            "hold": 320
+          },
+          {
+            "sequence": "pick-workflows",
+            "every": 420,
+            "hold": 700
+          }
+        ]
+      }
+    },
+    {
+      "key": "installed",
+      "chapter": "choose",
+      "weight": 0.4,
+      "caption": {
+        "title": "Add workflows",
+        "line": "Restart the agent when setup asks."
+      },
+      "focus": "terminal",
+      "terminal": {
+        "blocks": [
+          {
+            "command": "tum-mcp setup"
+          },
+          {
+            "lines": [
+              [
+                [
+                  "Preparing the TUM MCP runtime; this takes about a minute the first time…",
+                  ""
+                ]
+              ]
+            ],
+            "hold": 0
+          },
+          {
+            "frame": "workflows-picked",
+            "hold": 320
+          },
+          {
+            "frame": "installed",
+            "exits": true,
+            "hold": 1000
+          }
+        ]
+      }
+    },
+    {
+      "key": "login",
+      "chapter": "choose",
+      "weight": 2.08,
+      "caption": {
+        "title": "Sign in",
+        "line": "Your browser handles TUM sign-in and MFA."
+      },
+      "focus": "terminal",
+      "terminal": {
+        "blocks": [
+          {
+            "command": "tum-mcp login",
+            "type": true
+          },
+          {
+            "sequence": "login-pick",
+            "every": 820,
+            "hold": 900
+          },
+          {
+            "frame": "login-opening",
+            "hold": 600
+          },
+          {
+            "browser": 7200
+          },
+          {
+            "frame": "login-done",
+            "exits": true,
+            "hold": 1200
+          }
+        ]
+      }
+    },
+    {
+      "key": "sync-ask",
+      "chapter": "sync",
+      "weight": 0.4,
+      "caption": {
+        "title": "Sync a course",
+        "line": "One folder per course."
+      },
+      "focus": "chat",
+      "folder": true,
+      "chat": {
+        "compose": "{command}"
+      }
+    },
+    {
+      "key": "sync-run",
+      "chapter": "sync",
+      "weight": 0.67,
+      "caption": {
+        "title": "Sync a course",
+        "line": "Sources land in materials/, with a course handbook."
+      },
+      "focus": "chat",
+      "folder": true,
+      "editor": "AGENTS.md",
+      "chat": {
+        "send": "{command}",
+        "messages": [
+          {
+            "role": "tool",
+            "kind": "mcp",
+            "name": "moodle_list_courses",
+            "detail": "current semester",
+            "result": "Graph Search"
+          },
+          {
+            "role": "tool",
+            "kind": "mcp",
+            "name": "moodle_list_course_materials",
+            "detail": "Graph Search",
+            "result": "6 materials"
+          },
+          {
+            "role": "tool",
+            "kind": "shell",
+            "name": "tum-mcp study init . --course \"Graph Search\"",
+            "result": "6 imported"
+          },
+          {
+            "role": "agent",
+            "text": "Graph Search is set up with 6 sources in materials/ and a handbook in .tum-mcp/course.md. Keep a private learning record of your attempts for this course?"
+          }
+        ],
+        "files": [
+          "AGENTS.md",
+          "materials/content/material-lecture-01.md",
+          "materials/content/material-lecture-02.md",
+          "materials/content/material-lecture-03.md",
+          "materials/content/material-recording-02.md",
+          "materials/exercises/material-sheet-01.md",
+          "materials/exams/material-past-paper.md",
+          ".tum-mcp/course.md"
+        ]
+      }
+    },
+    {
+      "key": "build-ask",
+      "chapter": "build",
+      "weight": 0.41,
+      "caption": {
+        "title": "Build workspaces",
+        "line": "Ask in your own words."
+      },
+      "focus": "chat",
+      "folder": true,
+      "editor": "AGENTS.md",
+      "chat": {
+        "compose": "No record, thanks. Prepare study, exercises and the exam."
+      }
+    },
+    {
+      "key": "build-run",
+      "chapter": "build",
+      "weight": 1.15,
+      "caption": {
+        "title": "Build workspaces",
+        "line": "Study, Exercises and Exam, from the course's own sources."
+      },
+      "focus": "chat",
+      "folder": true,
+      "editor": "app/study/units/bfs.json",
+      "chat": {
+        "send": "No record, thanks. Prepare study, exercises and the exam.",
+        "messages": [
+          {
+            "role": "tool",
+            "kind": "skill",
+            "name": "prepare-study",
+            "result": "3 units"
+          },
+          {
+            "role": "tool",
+            "kind": "edit",
+            "name": "app/study/units/bfs.json"
+          },
+          {
+            "role": "tool",
+            "kind": "edit",
+            "name": "app/study/units/dijkstra.json"
+          },
+          {
+            "role": "tool",
+            "kind": "edit",
+            "name": "app/study/units/astar.json"
+          },
+          {
+            "role": "tool",
+            "kind": "skill",
+            "name": "prepare-exercises",
+            "result": "Sheet 1, 3 exercises"
+          },
+          {
+            "role": "tool",
+            "kind": "skill",
+            "name": "prepare-exams",
+            "result": "8 entries, 3 patterns"
+          },
+          {
+            "role": "tool",
+            "kind": "shell",
+            "name": "tum-mcp study build .",
+            "result": "built"
+          },
+          {
+            "role": "agent",
+            "text": "Done: 3 Study units, Sheet 1 with guided exercises, and an Exam cheatsheet with 8 entries and 3 patterns. Run one review round?"
+          }
+        ],
+        "files": [
+          "app/study/course.json",
+          "app/study/units/bfs.json",
+          "app/study/units/dijkstra.json",
+          "app/study/units/astar.json",
+          "app/exercises/sets.json",
+          "app/exercises/sheet-01/bfs-layers.json",
+          "app/exercises/sheet-01/dijkstra-trace.json",
+          "app/exercises/sheet-01/heuristics.json",
+          "app/exam/exam.json",
+          "app/exam/patterns/trace-dijkstra.json"
+        ]
+      }
+    },
+    {
+      "key": "open-run",
+      "chapter": "open",
+      "weight": 0.75,
+      "caption": {
+        "title": "Open the app",
+        "line": "Click into it to use it."
+      },
+      "focus": "app",
+      "folder": true,
+      "terminal": {
+        "blocks": [
+          {
+            "command": "tum-mcp study",
+            "type": true
+          },
+          {
+            "lines": [
+              [
+                [
+                  "Study preview: ",
+                  ""
+                ],
+                [
+                  "http://127.0.0.1:8765/",
+                  "accent"
+                ]
+              ]
+            ]
+          }
+        ]
+      },
+      "app": "#home",
+      "guide": [
+        {
+          "at": 0.465,
+          "target": {
+            "css": "main a.resume"
+          },
+          "label": "Continue",
+          "line": "Opens the lesson you are on."
+        }
+      ]
+    },
+    {
+      "key": "open-study",
+      "chapter": "open",
+      "weight": 1.48,
+      "caption": {
+        "title": "Study",
+        "line": "Lessons with step-by-step runs, flashcards and practice."
+      },
+      "focus": "app",
+      "folder": true,
+      "app": "#dijkstra/content",
+      "guide": [
+        {
+          "target": {
+            "css": "main a",
+            "text": "^Dijkstra's algorithm"
+          },
+          "click": true,
+          "route": "#dijkstra/content",
+          "label": "Lessons",
+          "line": "Each lecture becomes a lesson.",
+          "at": 0.04
+        },
+        {
+          "at": 0.191,
+          "target": {
+            "css": "main a",
+            "text": "^Lecture 2 · Dijkstra"
+          },
+          "label": "Linked",
+          "line": "Its lecture, exercise and exam pattern."
+        },
+        {
+          "at": 0.461,
+          "target": {
+            "css": "main .walk-dot",
+            "nth": 1
+          },
+          "click": true,
+          "label": "Step by step",
+          "line": "Trace the algorithm one move at a time.",
+          "place": "below"
+        },
+        {
+          "at": 0.73,
+          "target": {
+            "css": "main button",
+            "text": "^Flashcards"
+          },
+          "click": true,
+          "label": "Flashcards",
+          "line": "Flip each card, then mark it.",
+          "after": {
+            "css": "main button.flashcard"
+          },
+          "place": "below"
+        }
+      ],
+      "appStart": "#home"
+    },
+    {
+      "key": "open-exercises",
+      "chapter": "open",
+      "weight": 2.05,
+      "caption": {
+        "title": "Exercises",
+        "line": "Guided steps, with the lesson one click away."
+      },
+      "focus": "app",
+      "folder": true,
+      "app": "#exercises/sheet-01/dijkstra-trace",
+      "guide": [
+        {
+          "target": {
+            "css": "summary.workspace-trigger"
+          },
+          "click": true,
+          "label": "Workspaces",
+          "line": "Next: Exercises.",
+          "at": 0.04,
+          "opens": true,
+          "after": {
+            "css": "details.workspace-picker[open] nav.workspace-menu"
+          },
+          "place": "above"
+        },
+        {
+          "target": {
+            "css": "a.workspace-item",
+            "text": "^Exercises$"
+          },
+          "click": true,
+          "route": "#exercises",
+          "label": "Exercises",
+          "line": "Your weekly sheets.",
+          "at": 0.138
+        },
+        {
+          "target": {
+            "css": "main a",
+            "text": "^Exercise 2 · Dijkstra trace"
+          },
+          "click": true,
+          "route": "#exercises/sheet-01/dijkstra-trace",
+          "label": "Exercise 2",
+          "line": "Open any exercise on the sheet.",
+          "at": 0.276
+        },
+        {
+          "at": 0.415,
+          "target": {
+            "css": "main button.recall-chip",
+            "text": "^Relaxation$"
+          },
+          "click": true,
+          "label": "Recall",
+          "line": "The rule from the lesson, right here."
+        },
+        {
+          "at": 0.61,
+          "target": {
+            "css": "main button.segment",
+            "text": "^Guide$"
+          },
+          "click": true,
+          "label": "Guide",
+          "line": "One step at a time."
+        },
+        {
+          "at": 0.805,
+          "target": {
+            "css": "main button.segment",
+            "text": "^Solution$"
+          },
+          "label": "Solution",
+          "line": "The worked answer, when you want it.",
+          "place": "above"
+        }
+      ],
+      "appStart": "#dijkstra/flashcards"
+    },
+    {
+      "key": "open-exam",
+      "chapter": "open",
+      "weight": 2.05,
+      "caption": {
+        "title": "Exam",
+        "line": "A cheatsheet with a semester map, and patterns to practise."
+      },
+      "focus": "app",
+      "folder": true,
+      "app": "#exam/sheet",
+      "guide": [
+        {
+          "target": {
+            "css": "summary.workspace-trigger"
+          },
+          "click": true,
+          "label": "Exam",
+          "line": "Cheatsheet, patterns and past papers.",
+          "at": 0.04,
+          "opens": true,
+          "after": {
+            "css": "details.workspace-picker[open] nav.workspace-menu"
+          },
+          "place": "above"
+        },
+        {
+          "target": {
+            "css": "a.workspace-item",
+            "text": "^Exam$"
+          },
+          "click": true,
+          "route": "#exam",
+          "label": "Exam",
+          "line": "Cheatsheet, patterns and past papers.",
+          "at": 0.138
+        },
+        {
+          "target": [
+            {
+              "css": "main a.button",
+              "text": "Cheatsheet$"
+            },
+            {
+              "css": "main a",
+              "text": "^Cheatsheet"
+            }
+          ],
+          "click": true,
+          "route": "#exam/sheet",
+          "label": "Cheatsheet",
+          "line": "The exam on one sheet.",
+          "at": 0.276
+        },
+        {
+          "at": 0.415,
+          "target": [
+            {
+              "css": "main .exam-map-frame"
+            },
+            {
+              "css": "main section.exam-map"
+            }
+          ],
+          "label": "Semester map",
+          "line": "How the ideas build on each other."
+        },
+        {
+          "at": 0.61,
+          "target": {
+            "css": "main summary.exam-entry-row",
+            "text": "^Relaxation"
+          },
+          "click": true,
+          "label": "Entries",
+          "line": "Each opens to its lesson and practice."
+        },
+        {
+          "at": 0.805,
+          "target": [
+            {
+              "css": "details.unit-group > summary",
+              "text": "^Exam patterns$"
+            },
+            {
+              "css": "button.outline-toggle"
+            }
+          ],
+          "label": "Exam patterns",
+          "line": "Methods to follow under time pressure."
+        }
+      ],
+      "appStart": "#exercises/sheet-01/dijkstra-trace"
+    },
+    {
+      "key": "ext-lecture",
+      "chapter": "extensions",
+      "weight": 2.41,
+      "caption": {
+        "title": "Lecture",
+        "line": "Notes and highlights with time ranges, from the recording."
+      },
+      "focus": "chat",
+      "folder": true,
+      "chat": {
+        "send": "Prepare notes for the Dijkstra recording.",
+        "messages": [
+          {
+            "role": "tool",
+            "kind": "skill",
+            "name": "prepare-lecture",
+            "result": "2 notes, 3 highlights"
+          },
+          {
+            "role": "tool",
+            "kind": "edit",
+            "name": "app/lectures/lectures/dijkstra-lecture.json"
+          },
+          {
+            "role": "tool",
+            "kind": "shell",
+            "name": "tum-mcp study build .",
+            "result": "built"
+          },
+          {
+            "role": "agent",
+            "text": "Lecture 2 now has 2 notes and 3 highlights, each with its time range and a board frame."
+          }
+        ],
+        "files": [
+          "app/lectures/lectures.json",
+          "app/lectures/lectures/dijkstra-lecture.json"
+        ]
+      },
+      "app": "#lectures/dijkstra-lecture",
+      "editor": "app/lectures/lectures/dijkstra-lecture.json",
+      "guide": [
+        {
+          "target": {
+            "css": "summary.workspace-trigger"
+          },
+          "click": true,
+          "label": "Lecture",
+          "line": "Notes from each recording.",
+          "at": 0.315,
+          "opens": true,
+          "after": {
+            "css": "details.workspace-picker[open] nav.workspace-menu"
+          },
+          "place": "above"
+        },
+        {
+          "target": {
+            "css": "a.workspace-item",
+            "text": "^Lecture$"
+          },
+          "click": true,
+          "route": "#lectures",
+          "label": "Lecture",
+          "line": "Notes from each recording.",
+          "at": 0.433
+        },
+        {
+          "target": {
+            "css": "main a",
+            "text": "^Lecture 2 · Dijkstra"
+          },
+          "click": true,
+          "route": "#lectures/dijkstra-lecture",
+          "label": "Lecture 2",
+          "line": "Open a lecture’s notes.",
+          "at": 0.55
+        },
+        {
+          "at": 0.668,
+          "target": {
+            "css": "main a.lecture-time",
+            "text": "^1:10$"
+          },
+          "label": "Time links",
+          "line": "Open the recording at that moment."
+        },
+        {
+          "at": 0.834,
+          "target": {
+            "css": "main button.lecture-recall"
+          },
+          "click": true,
+          "label": "Recall",
+          "line": "The lesson part it explains.",
+          "after": {
+            "css": "dialog[open] h2"
+          },
+          "place": "below"
+        }
+      ],
+      "appStart": "#exam/sheet"
+    },
+    {
+      "key": "ext-audio",
+      "chapter": "extensions",
+      "weight": 2.41,
+      "caption": {
+        "title": "Audio Notes",
+        "line": "Spoken lessons with chapters, for revising on the go."
+      },
+      "focus": "chat",
+      "folder": true,
+      "chat": {
+        "send": "Make audio notes for Lecture 1.",
+        "messages": [
+          {
+            "role": "tool",
+            "kind": "skill",
+            "name": "audio-notes",
+            "result": "5 chapters"
+          },
+          {
+            "role": "tool",
+            "kind": "shell",
+            "name": "tum-mcp audio-notes publish . 01_breadth-first-search",
+            "result": "1:58"
+          },
+          {
+            "role": "tool",
+            "kind": "shell",
+            "name": "tum-mcp audio-notes listen . 01_breadth-first-search",
+            "result": "no flags"
+          },
+          {
+            "role": "agent",
+            "text": "Lecture 1 is a 2-minute track with 5 chapters in the Audio workspace."
+          }
+        ],
+        "files": [
+          "audio/categories/01_breadth-first-search.json",
+          "audio/tracks/01_breadth-first-search.m4a"
+        ]
+      },
+      "app": "#audio/01_breadth-first-search",
+      "editor": "audio/categories/01_breadth-first-search.json",
+      "guide": [
+        {
+          "target": {
+            "css": "summary.workspace-trigger"
+          },
+          "click": true,
+          "label": "Audio",
+          "line": "Spoken lessons to listen to.",
+          "at": 0.315,
+          "opens": true,
+          "after": {
+            "css": "details.workspace-picker[open] nav.workspace-menu"
+          },
+          "place": "above"
+        },
+        {
+          "target": {
+            "css": "a.workspace-item",
+            "text": "^Audio$"
+          },
+          "click": true,
+          "route": "#audio",
+          "label": "Audio",
+          "line": "Spoken lessons to listen to.",
+          "at": 0.433
+        },
+        {
+          "target": {
+            "css": "main a",
+            "text": "^Lecture 1 · Breadth-first"
+          },
+          "click": true,
+          "route": "#audio/01_breadth-first-search",
+          "label": "Lecture 1",
+          "line": "Pick a track.",
+          "at": 0.55
+        },
+        {
+          "at": 0.668,
+          "target": {
+            "css": "main button.audio-main"
+          },
+          "label": "Listen",
+          "line": "Five chapters, about two minutes."
+        },
+        {
+          "at": 0.834,
+          "target": {
+            "css": "main a.audio-recall"
+          },
+          "label": "Recall",
+          "line": "Each chapter opens its lesson."
+        }
+      ],
+      "appStart": "#lectures/dijkstra-lecture"
+    },
+    {
+      "key": "ext-video",
+      "chapter": "extensions",
+      "weight": 2.24,
+      "caption": {
+        "title": "Video Notes",
+        "line": "Narrated explainers inside the lesson."
+      },
+      "focus": "chat",
+      "folder": true,
+      "chat": {
+        "send": "Explain Dijkstra's algorithm in a video.",
+        "messages": [
+          {
+            "role": "tool",
+            "kind": "skill",
+            "name": "video-notes",
+            "result": "4 chapters"
+          },
+          {
+            "role": "tool",
+            "kind": "edit",
+            "name": "videos/storyboards/01_dijkstra-s-algorithm.json"
+          },
+          {
+            "role": "tool",
+            "kind": "shell",
+            "name": "tum-mcp video-notes render . 01_dijkstra-s-algorithm --final",
+            "result": "checked"
+          },
+          {
+            "role": "tool",
+            "kind": "shell",
+            "name": "tum-mcp video-notes publish . 01_dijkstra-s-algorithm",
+            "result": "published"
+          },
+          {
+            "role": "agent",
+            "text": "A 69-second video with chapters and captions now plays in the Dijkstra lesson."
+          }
+        ],
+        "files": [
+          "videos/storyboards/01_dijkstra-s-algorithm.json",
+          "videos/tracks/01_dijkstra-s-algorithm.mp4"
+        ]
+      },
+      "app": "#dijkstra/content",
+      "editor": "videos/storyboards/01_dijkstra-s-algorithm.json",
+      "guide": [
+        {
+          "target": {
+            "css": "summary.workspace-trigger"
+          },
+          "click": true,
+          "label": "Study",
+          "line": "Videos play inside the lesson.",
+          "at": 0.391,
+          "opens": true,
+          "after": {
+            "css": "details.workspace-picker[open] nav.workspace-menu"
+          },
+          "place": "above"
+        },
+        {
+          "target": {
+            "css": "a.workspace-item",
+            "text": "^Study$"
+          },
+          "click": true,
+          "route": "#dijkstra/content",
+          "label": "Study",
+          "line": "Videos play inside the lesson.",
+          "at": 0.517
+        },
+        {
+          "at": 0.644,
+          "target": {
+            "css": "main .video-note .player-big"
+          },
+          "label": "Video explainer",
+          "line": "Narrated, in four chapters."
+        },
+        {
+          "at": 0.822,
+          "target": [
+            {
+              "css": "main .video-note .player-captions"
+            },
+            {
+              "css": "main .video-note a",
+              "text": "^Transcript$"
+            }
+          ],
+          "label": "Captions and transcript",
+          "line": "Follow along in text."
+        }
+      ],
+      "appStart": "#audio/01_breadth-first-search"
+    },
+    {
+      "key": "ext-memory",
+      "chapter": "extensions",
+      "weight": 2,
+      "caption": {
+        "title": "Course Memory",
+        "line": "Answers that follow the course’s own links."
+      },
+      "focus": "chat",
+      "folder": true,
+      "chat": {
+        "send": "How does A* relate to Dijkstra?",
+        "messages": [
+          {
+            "role": "tool",
+            "kind": "skill",
+            "name": "course-memory",
+            "result": "3 links"
+          },
+          {
+            "role": "agent",
+            "text": "A* is Dijkstra plus an estimate: it expands by f = g + h. With h = 0 both expand in the same order. Lecture 3 compares them on the same graph, and Exercise 3 practises the heuristic."
+          }
+        ],
+        "files": []
+      },
+      "app": "#astar/content",
+      "guide": [
+        {
+          "target": [
+            {
+              "css": "aside a",
+              "text": "^Lecture 3\\s*A\\* search"
+            }
+          ],
+          "click": true,
+          "route": "#astar/content",
+          "label": "Lecture 3",
+          "line": "The answer opens the lesson it cites.",
+          "at": 0.259
+        },
+        {
+          "target": {
+            "css": "main a",
+            "text": "^Exercise 3"
+          },
+          "label": "Linked",
+          "line": "Practice for the same idea.",
+          "at": 0.4
+        },
+        {
+          "target": {
+            "css": "main h2",
+            "text": "^Expand by estimated total cost$"
+          },
+          "label": "f = g + h",
+          "line": "The rule the answer explains.",
+          "at": 0.6
+        },
+        {
+          "target": {
+            "css": "main h3",
+            "text": "^Dijkstra and A\\* on the same graph$"
+          },
+          "label": "Compared",
+          "line": "Dijkstra and A* on one graph.",
+          "at": 0.8
+        }
+      ],
+      "appStart": "#dijkstra/content"
+    }
+  ]
+}

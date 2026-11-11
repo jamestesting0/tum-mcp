@@ -1,0 +1,984 @@
+{
+  "key": "bfs",
+  "label": "Lecture 1",
+  "title": "Breadth-first search",
+  "minutes": 15,
+  "summary": "Shortest paths by edge count, one layer at a time.",
+  "objectives": [
+    {
+      "key": "layers",
+      "text": "Compute BFS distances layer by layer."
+    },
+    {
+      "key": "queue",
+      "text": "Explain why a FIFO queue processes the layers in order."
+    },
+    {
+      "key": "mark",
+      "text": "Mark vertices when they are appended, and say what goes wrong otherwise."
+    }
+  ],
+  "sources": [
+    {
+      "key": "lecture-01",
+      "sha256": "16eed4e19e02192e3955d60c86baab110646a03db48090fb675b6c9189bdcb88"
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "text",
+      "title": "Distance by edge count",
+      "level": 1,
+      "sources": [
+        "lecture-01"
+      ],
+      "paragraphs": [
+        "In an unweighted graph every edge counts as one step."
+      ]
+    },
+    {
+      "kind": "definition",
+      "key": "edge-distance",
+      "sources": [
+        "lecture-01"
+      ],
+      "term": "Distance (unweighted)",
+      "statement": "\\(d(s, v)\\) is the least number of edges on any path from \\(s\\) to \\(v\\).",
+      "conditions": [
+        "\\(d(s, s) = 0\\).",
+        "A vertex with no path from \\(s\\) has distance \\(\\infty\\)."
+      ]
+    },
+    {
+      "kind": "diagram",
+      "key": "layers",
+      "title": "Layers of the running example",
+      "level": 2,
+      "sources": [
+        "lecture-01"
+      ],
+      "description": "Seven vertices. S links to A, B and E; A and B link to C; B links to D; C and D link to G.",
+      "nodes": [
+        {
+          "key": "s",
+          "label": "S",
+          "row": 1,
+          "col": 0,
+          "shape": "circle"
+        },
+        {
+          "key": "a",
+          "label": "A",
+          "row": 0,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "b",
+          "label": "B",
+          "row": 2,
+          "col": 1,
+          "shape": "circle"
+        },
+        {
+          "key": "e",
+          "label": "E",
+          "row": 2,
+          "col": 0,
+          "shape": "circle"
+        },
+        {
+          "key": "c",
+          "label": "C",
+          "row": 0,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "d",
+          "label": "D",
+          "row": 2,
+          "col": 2,
+          "shape": "circle"
+        },
+        {
+          "key": "g",
+          "label": "G",
+          "row": 1,
+          "col": 3,
+          "shape": "circle"
+        }
+      ],
+      "edges": [
+        {
+          "start": "s",
+          "end": "a"
+        },
+        {
+          "start": "s",
+          "end": "b"
+        },
+        {
+          "start": "s",
+          "end": "e"
+        },
+        {
+          "start": "a",
+          "end": "c"
+        },
+        {
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "start": "b",
+          "end": "d"
+        },
+        {
+          "start": "c",
+          "end": "g"
+        },
+        {
+          "start": "d",
+          "end": "g"
+        }
+      ],
+      "state_labels": "caption",
+      "frames": [
+        {
+          "caption": "Layer 0: S.",
+          "active": [
+            "s"
+          ]
+        },
+        {
+          "caption": "Layer 1: A, B, E, one edge from S.",
+          "visited": [
+            "s"
+          ],
+          "active": [
+            "a",
+            "b",
+            "e"
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "s",
+              "end": "b"
+            },
+            {
+              "start": "s",
+              "end": "e"
+            }
+          ]
+        },
+        {
+          "caption": "Layer 2: C, D, two edges from S.",
+          "visited": [
+            "s",
+            "a",
+            "b",
+            "e"
+          ],
+          "active": [
+            "c",
+            "d"
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "c"
+            },
+            {
+              "start": "b",
+              "end": "d"
+            }
+          ]
+        },
+        {
+          "caption": "Layer 3: G, three edges from S.",
+          "visited": [
+            "s",
+            "a",
+            "b",
+            "e",
+            "c",
+            "d"
+          ],
+          "active": [
+            "g"
+          ],
+          "edges": [
+            {
+              "start": "c",
+              "end": "g"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "text",
+      "title": "Build the layers",
+      "level": 1,
+      "sources": [
+        "lecture-01"
+      ],
+      "paragraphs": [
+        "Each layer is built from the one before it."
+      ],
+      "steps": [
+        "Start: layer 0 holds only \\(s\\).",
+        "Grow: layer \\(k + 1\\) holds every undiscovered neighbour of layer \\(k\\).",
+        "Stop: no layer adds a new vertex. A vertex in layer \\(k\\) is \\(k\\) edges from \\(s\\)."
+      ]
+    },
+    {
+      "kind": "walkthrough",
+      "key": "bfs-queue",
+      "title": "BFS with a queue",
+      "level": 1,
+      "sources": [
+        "lecture-01"
+      ],
+      "stage": {
+        "kind": "diagram",
+        "description": "The running example: S links to A, B and E; A and B link to C; B links to D; C and D link to G.",
+        "nodes": [
+          {
+            "key": "s",
+            "label": "S",
+            "row": 1,
+            "col": 0,
+            "shape": "circle"
+          },
+          {
+            "key": "a",
+            "label": "A",
+            "row": 0,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "b",
+            "label": "B",
+            "row": 2,
+            "col": 1,
+            "shape": "circle"
+          },
+          {
+            "key": "e",
+            "label": "E",
+            "row": 2,
+            "col": 0,
+            "shape": "circle"
+          },
+          {
+            "key": "c",
+            "label": "C",
+            "row": 0,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "d",
+            "label": "D",
+            "row": 2,
+            "col": 2,
+            "shape": "circle"
+          },
+          {
+            "key": "g",
+            "label": "G",
+            "row": 1,
+            "col": 3,
+            "shape": "circle"
+          }
+        ],
+        "edges": [
+          {
+            "start": "s",
+            "end": "a"
+          },
+          {
+            "start": "s",
+            "end": "b"
+          },
+          {
+            "start": "s",
+            "end": "e"
+          },
+          {
+            "start": "a",
+            "end": "c"
+          },
+          {
+            "start": "b",
+            "end": "c"
+          },
+          {
+            "start": "b",
+            "end": "d"
+          },
+          {
+            "start": "c",
+            "end": "g"
+          },
+          {
+            "start": "d",
+            "end": "g"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "subgoal": "Start",
+          "action": "Append \\(S\\) with \\(d(S) = 0\\).",
+          "why": "The search starts at the source.",
+          "frontier": [
+            "s"
+          ],
+          "state": [
+            {
+              "label": "Queue",
+              "value": "S"
+            },
+            {
+              "label": "Distances",
+              "value": "\\(S = 0\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Layer 1",
+          "action": "Remove \\(S\\); append \\(A\\), \\(B\\), \\(E\\) with distance 1.",
+          "why": "All three are undiscovered neighbours of \\(S\\).",
+          "active": [
+            "s"
+          ],
+          "frontier": [
+            "a",
+            "b",
+            "e"
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "s",
+              "end": "b"
+            },
+            {
+              "start": "s",
+              "end": "e"
+            }
+          ],
+          "state": [
+            {
+              "label": "Queue",
+              "value": "A, B, E"
+            },
+            {
+              "label": "Distances",
+              "value": "\\(A = B = E = 1\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Layer 2",
+          "action": "Remove \\(A\\); append \\(C\\) with distance 2.",
+          "why": "\\(A\\) entered the queue first.",
+          "active": [
+            "a"
+          ],
+          "visited": [
+            "s"
+          ],
+          "frontier": [
+            "b",
+            "e",
+            "c"
+          ],
+          "edges": [
+            {
+              "start": "a",
+              "end": "c"
+            }
+          ],
+          "state": [
+            {
+              "label": "Queue",
+              "value": "B, E, C"
+            },
+            {
+              "label": "Distances",
+              "value": "\\(C = 2\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Layer 2",
+          "action": "Remove \\(B\\); skip \\(C\\); append \\(D\\) with distance 2.",
+          "why": "\\(C\\) was marked when \\(A\\) appended it, so it does not enter twice.",
+          "active": [
+            "b"
+          ],
+          "visited": [
+            "s",
+            "a"
+          ],
+          "frontier": [
+            "e",
+            "c",
+            "d"
+          ],
+          "edges": [
+            {
+              "start": "b",
+              "end": "d"
+            }
+          ],
+          "state": [
+            {
+              "label": "Queue",
+              "value": "E, C, D"
+            },
+            {
+              "label": "Distances",
+              "value": "\\(D = 2\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Layer 2",
+          "action": "Remove \\(E\\); nothing to append.",
+          "why": "\\(E\\) has no undiscovered neighbour.",
+          "active": [
+            "e"
+          ],
+          "visited": [
+            "s",
+            "a",
+            "b"
+          ],
+          "frontier": [
+            "c",
+            "d"
+          ],
+          "state": [
+            {
+              "label": "Queue",
+              "value": "C, D"
+            }
+          ]
+        },
+        {
+          "subgoal": "Layer 3",
+          "action": "Remove \\(C\\); append \\(G\\) with distance 3.",
+          "why": "Every layer-1 vertex has left the queue, so layer 2 is processed now.",
+          "active": [
+            "c"
+          ],
+          "visited": [
+            "s",
+            "a",
+            "b",
+            "e"
+          ],
+          "frontier": [
+            "d",
+            "g"
+          ],
+          "edges": [
+            {
+              "start": "c",
+              "end": "g"
+            }
+          ],
+          "state": [
+            {
+              "label": "Queue",
+              "value": "D, G"
+            },
+            {
+              "label": "Distances",
+              "value": "\\(G = 3\\)"
+            }
+          ]
+        },
+        {
+          "subgoal": "Done",
+          "action": "Remove \\(D\\) and \\(G\\); the queue is empty.",
+          "why": "\\(G\\) is already marked, so \\(D\\) adds nothing.",
+          "visited": [
+            "s",
+            "a",
+            "b",
+            "e",
+            "c",
+            "d",
+            "g"
+          ],
+          "state": [
+            {
+              "label": "Queue",
+              "value": "empty"
+            },
+            {
+              "label": "Path to G",
+              "value": "\\(S \\to A \\to C \\to G\\)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "callout",
+      "tone": "pitfall",
+      "sources": [
+        "lecture-01"
+      ],
+      "situation": "Tracing BFS by hand and marking a vertex only when it leaves the queue.",
+      "wrong": "\\(A\\) and \\(B\\) both append \\(C\\): the queue holds \\(C\\) twice.",
+      "right": "Mark \\(C\\) when \\(A\\) appends it; \\(B\\) sees the mark and skips it.",
+      "why": "Marking on append keeps each vertex in the queue once, so the run stays linear."
+    },
+    {
+      "kind": "table",
+      "title": "What BFS returns",
+      "level": 1,
+      "sources": [
+        "lecture-01"
+      ],
+      "columns": [
+        "Vertex",
+        "Distance",
+        "Parent"
+      ],
+      "rows": [
+        [
+          "\\(S\\)",
+          "\\(0\\)",
+          "—"
+        ],
+        [
+          "\\(A\\)",
+          "\\(1\\)",
+          "\\(S\\)"
+        ],
+        [
+          "\\(B\\)",
+          "\\(1\\)",
+          "\\(S\\)"
+        ],
+        [
+          "\\(E\\)",
+          "\\(1\\)",
+          "\\(S\\)"
+        ],
+        [
+          "\\(C\\)",
+          "\\(2\\)",
+          "\\(A\\)"
+        ],
+        [
+          "\\(D\\)",
+          "\\(2\\)",
+          "\\(B\\)"
+        ],
+        [
+          "\\(G\\)",
+          "\\(3\\)",
+          "\\(C\\)"
+        ]
+      ],
+      "caption": "Follow parents back from \\(G\\): \\(G \\to C \\to A \\to S\\)."
+    },
+    {
+      "kind": "callout",
+      "tone": "note",
+      "sources": [
+        "lecture-01"
+      ],
+      "text": "BFS minimises edges, not weight. With edge weights, the path it returns can cost more; Dijkstra handles that case."
+    }
+  ],
+  "flashcards": [
+    {
+      "key": "next-layer",
+      "objective": "layers",
+      "front": "Which vertices form layer \\(k + 1\\) in BFS?",
+      "back": "The undiscovered neighbours of layer \\(k\\).",
+      "sources": [
+        "lecture-01"
+      ]
+    },
+    {
+      "key": "fifo",
+      "objective": "queue",
+      "front": "Why does BFS use a FIFO queue?",
+      "back": "Every vertex of layer \\(k\\) is appended before any vertex of layer \\(k + 1\\), so it also leaves first.",
+      "sources": [
+        "lecture-01"
+      ]
+    },
+    {
+      "key": "when-mark",
+      "objective": "mark",
+      "front": "When does BFS mark a vertex?",
+      "back": "When it is appended to the queue, so it enters the queue only once.",
+      "sources": [
+        "lecture-01"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "key": "layer-two",
+      "objective": "layers",
+      "level": "apply",
+      "prompt": "BFS starts at \\(S\\) on the running example. Which vertices form layer 2?",
+      "options": [
+        {
+          "key": "a",
+          "text": "\\(C\\) and \\(D\\)",
+          "feedback": "Both are two edges from \\(S\\): \\(S \\to A \\to C\\) and \\(S \\to B \\to D\\)."
+        },
+        {
+          "key": "b",
+          "text": "\\(C\\), \\(D\\) and \\(G\\)",
+          "feedback": "\\(G\\) is a neighbour of \\(C\\) and \\(D\\), so it needs one more edge: layer 3."
+        },
+        {
+          "key": "c",
+          "text": "\\(A\\), \\(B\\) and \\(E\\)",
+          "feedback": "These are one edge from \\(S\\): that is layer 1."
+        },
+        {
+          "key": "d",
+          "text": "Only \\(C\\)",
+          "feedback": "\\(D\\) is also two edges away, through \\(B\\)."
+        }
+      ],
+      "correct": "a",
+      "explanation": "Layer 1 is \\(\\{A, B, E\\}\\); their undiscovered neighbours are \\(C\\) and \\(D\\).",
+      "hint": "List layer 1 first, then its neighbours.",
+      "sources": [
+        "lecture-01"
+      ],
+      "blocks": [
+        {
+          "kind": "diagram",
+          "title": "Running example",
+          "sources": [
+            "lecture-01"
+          ],
+          "description": "S links to A, B and E; A and B link to C; B links to D; C and D link to G.",
+          "nodes": [
+            {
+              "key": "s",
+              "label": "S",
+              "row": 1,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "a",
+              "label": "A",
+              "row": 0,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "row": 2,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "e",
+              "label": "E",
+              "row": 2,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "row": 0,
+              "col": 2,
+              "shape": "circle"
+            },
+            {
+              "key": "d",
+              "label": "D",
+              "row": 2,
+              "col": 2,
+              "shape": "circle"
+            },
+            {
+              "key": "g",
+              "label": "G",
+              "row": 1,
+              "col": 3,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "s",
+              "end": "b"
+            },
+            {
+              "start": "s",
+              "end": "e"
+            },
+            {
+              "start": "a",
+              "end": "c"
+            },
+            {
+              "start": "b",
+              "end": "c"
+            },
+            {
+              "start": "b",
+              "end": "d"
+            },
+            {
+              "start": "c",
+              "end": "g"
+            },
+            {
+              "start": "d",
+              "end": "g"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "BFS starts at S.",
+              "active": [
+                "s"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "why-fifo",
+      "objective": "queue",
+      "level": "reason",
+      "prompt": "The queue after removing \\(A\\) holds \\(B\\), \\(E\\), \\(C\\). Why is \\(C\\) removed after \\(B\\) and \\(E\\)?",
+      "options": [
+        {
+          "key": "a",
+          "text": "\\(C\\) was appended last, and FIFO removes in append order.",
+          "feedback": "Correct: append order is layer order, and a FIFO queue keeps it."
+        },
+        {
+          "key": "b",
+          "text": "BFS sorts the queue by distance after each step.",
+          "feedback": "There is no sorting; the order comes from FIFO alone."
+        },
+        {
+          "key": "c",
+          "text": "\\(C\\) has more neighbours than \\(B\\) or \\(E\\).",
+          "feedback": "The number of neighbours does not change the queue order."
+        },
+        {
+          "key": "d",
+          "text": "Vertices are removed in alphabetical order.",
+          "feedback": "Alphabetical order would remove \\(C\\) before \\(E\\)."
+        }
+      ],
+      "correct": "a",
+      "explanation": "Vertices of layer 2 are appended behind every layer-1 vertex, and a FIFO queue never lets them overtake.",
+      "hint": "Look at the queue after removing A.",
+      "sources": [
+        "lecture-01"
+      ],
+      "blocks": [
+        {
+          "kind": "table",
+          "title": "Queue after removing A",
+          "sources": [
+            "lecture-01"
+          ],
+          "columns": [
+            "Position",
+            "Vertex",
+            "Layer"
+          ],
+          "rows": [
+            [
+              "\\(1\\)",
+              "\\(B\\)",
+              "\\(1\\)"
+            ],
+            [
+              "\\(2\\)",
+              "\\(E\\)",
+              "\\(1\\)"
+            ],
+            [
+              "\\(3\\)",
+              "\\(C\\)",
+              "\\(2\\)"
+            ]
+          ],
+          "caption": "Front of the queue first."
+        }
+      ]
+    },
+    {
+      "key": "twice",
+      "objective": "mark",
+      "level": "apply",
+      "prompt": "A student marks vertices when they leave the queue. Which vertex is appended twice while \\(A\\) and \\(B\\) are removed?",
+      "options": [
+        {
+          "key": "a",
+          "text": "\\(C\\)",
+          "feedback": "\\(A\\) and \\(B\\) are both adjacent to \\(C\\), and it is not marked yet."
+        },
+        {
+          "key": "b",
+          "text": "\\(D\\)",
+          "feedback": "Of \\(A\\) and \\(B\\), only \\(B\\) is adjacent to \\(D\\)."
+        },
+        {
+          "key": "c",
+          "text": "\\(E\\)",
+          "feedback": "\\(E\\) is adjacent only to \\(S\\)."
+        },
+        {
+          "key": "d",
+          "text": "\\(G\\)",
+          "feedback": "\\(G\\) is not adjacent to \\(A\\) or \\(B\\)."
+        }
+      ],
+      "correct": "a",
+      "explanation": "Without marking on append, \\(C\\) enters once from \\(A\\) and once from \\(B\\).",
+      "hint": "Which vertex is adjacent to both \\(A\\) and \\(B\\)?",
+      "sources": [
+        "lecture-01"
+      ],
+      "blocks": [
+        {
+          "kind": "diagram",
+          "title": "Running example",
+          "sources": [
+            "lecture-01"
+          ],
+          "description": "S links to A, B and E; A and B link to C; B links to D; C and D link to G.",
+          "nodes": [
+            {
+              "key": "s",
+              "label": "S",
+              "row": 1,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "a",
+              "label": "A",
+              "row": 0,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "b",
+              "label": "B",
+              "row": 2,
+              "col": 1,
+              "shape": "circle"
+            },
+            {
+              "key": "e",
+              "label": "E",
+              "row": 2,
+              "col": 0,
+              "shape": "circle"
+            },
+            {
+              "key": "c",
+              "label": "C",
+              "row": 0,
+              "col": 2,
+              "shape": "circle"
+            },
+            {
+              "key": "d",
+              "label": "D",
+              "row": 2,
+              "col": 2,
+              "shape": "circle"
+            },
+            {
+              "key": "g",
+              "label": "G",
+              "row": 1,
+              "col": 3,
+              "shape": "circle"
+            }
+          ],
+          "edges": [
+            {
+              "start": "s",
+              "end": "a"
+            },
+            {
+              "start": "s",
+              "end": "b"
+            },
+            {
+              "start": "s",
+              "end": "e"
+            },
+            {
+              "start": "a",
+              "end": "c"
+            },
+            {
+              "start": "b",
+              "end": "c"
+            },
+            {
+              "start": "b",
+              "end": "d"
+            },
+            {
+              "start": "c",
+              "end": "g"
+            },
+            {
+              "start": "d",
+              "end": "g"
+            }
+          ],
+          "frames": [
+            {
+              "caption": "A and B are removed next.",
+              "active": [
+                "a",
+                "b"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

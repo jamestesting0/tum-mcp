@@ -1,0 +1,287 @@
+{
+  "schema_version": 1,
+  "course_key": "graph-search",
+  "categories": {
+    "breadth-first-search": {
+      "key": "breadth-first-search",
+      "stem": "01_breadth-first-search",
+      "title": "Lecture 1 · Breadth-first search",
+      "units": [
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "semantic_sha256": "5fdd417ae8e4674d8b742a477d31a8ad37a7ccfc2b449df7e102f25d8da58a72"
+        }
+      ],
+      "category_sha256": "5c3107f5ab278b9b8679ffbf2bd66c3c2d367b3d3df2224e355f9fec8b3f242f",
+      "coverage": [
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[0]",
+            "fingerprint": "4652d7c7b481d8ef9e3725e927dee77611c5d080bd65807780d1a089a794d841"
+          },
+          "section": "distance",
+          "chapter": "distance",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[1]",
+            "fingerprint": "bae55783b9213a6f46cd2ae6cf40b48ddbfcef1e8667bb6e1179c8e2dd74b415"
+          },
+          "section": "distance",
+          "chapter": "distance",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[2]",
+            "fingerprint": "bc571cc20cb35e5d856466831627694ac7f0a10051a65d81587d95b8071c3029"
+          },
+          "section": "layers",
+          "chapter": "layers",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[3]",
+            "fingerprint": "13caf6d649a209b88e5758403a18fc756592bd6049cb31349739d5da066bbfba"
+          },
+          "section": "layers",
+          "chapter": "layers",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "objective",
+            "ref": "layers",
+            "fingerprint": "dfb237108c390fe3a165f5bbf16eeb678544f52ee280e597d733b28a96d8347e"
+          },
+          "section": "layers",
+          "chapter": "layers",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[4]",
+            "fingerprint": "082e8ba161df5f041fb21c6b0b6c2e142d7317800ba64549e4255bb7afaddb94"
+          },
+          "section": "queue",
+          "chapter": "queue",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "objective",
+            "ref": "queue",
+            "fingerprint": "60dfc312ec8ec34f1f714a9ba61b5d6febce0be2bdfece453844206d6e5b4bcc"
+          },
+          "section": "queue",
+          "chapter": "queue",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[5]",
+            "fingerprint": "5b17959ae80e23c7512c2d2d9110b38467d62e97a8e856c240ab63f94c9d2a1b"
+          },
+          "section": "mark",
+          "chapter": "mark",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "objective",
+            "ref": "mark",
+            "fingerprint": "da318506cd2a628b6d24a4c06091bc6e8de4065512a93b2e22d259bc9e61ce24"
+          },
+          "section": "mark",
+          "chapter": "mark",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[6]",
+            "fingerprint": "bba89a5dc09366be6ffad4e367e2f68051fd2b2f944591880b3b518f358273ed"
+          },
+          "section": "result",
+          "chapter": "result",
+          "mode": "spoken",
+          "reason": null
+        },
+        {
+          "kind": "unit",
+          "unit": "bfs",
+          "locator": {
+            "kind": "block",
+            "ref": "blocks[7]",
+            "fingerprint": "c998a5ea932bc5f6a1e228427a4bd7dad5f12f6a9ec91dfd69d3c27ed496dca1"
+          },
+          "section": "result",
+          "chapter": "result",
+          "mode": "spoken",
+          "reason": null
+        }
+      ],
+      "source_references": [
+        {
+          "key": "lecture-01",
+          "sha256": "16eed4e19e02192e3955d60c86baab110646a03db48090fb675b6c9189bdcb88"
+        }
+      ],
+      "script": {
+        "path": "scripts/01_breadth-first-search.txt",
+        "sha256": "ce2ce158ab8ba945a915d27759dbaa1911bf4a0c6d1d573dfea2500fe6173e37",
+        "size": 1825
+      },
+      "track": {
+        "path": "tracks/01_breadth-first-search.m4a",
+        "sha256": "d2494f5ea25bbcba6c5367d70d4c51d50799b75f7eec6b1d643f7bf8b65dbb78",
+        "size": 1811797
+      },
+      "chapters": {
+        "path": "chapters/01_breadth-first-search.json",
+        "sha256": "575ca42afd2a739d94f98725dd94a63b09b4344d979d3997bddbf12fcafd0acb",
+        "size": 577
+      },
+      "voice": {
+        "provider": "Kokoro",
+        "route": "local kokoro-onnx 0.6.1",
+        "voice": "af_heart",
+        "language": "en-us",
+        "model": "kokoro-v1.0-fp32",
+        "settings": {
+          "speed": 0.88
+        }
+      },
+      "chunk_inputs": [
+        {
+          "key": "distance_01-bb1ba72564",
+          "sha256": "25724c973fa470b6df251b8892b018c3548764221ba79f2d770ccc42fa9cf359"
+        },
+        {
+          "key": "distance_02-bd1880380b",
+          "sha256": "d90849f5f1540c099cafe00ef93ec3d5f37fb6318777d39742a87411d124b5fc"
+        },
+        {
+          "key": "distance_03-6279598413",
+          "sha256": "59d2709b14056dc4c81b91309f26e9dc80e4e102b94e462e65f63bb22b2a30c2"
+        },
+        {
+          "key": "layers_01-87a22e4e1d",
+          "sha256": "f95baa5f1eb9653a3617e5586672c49531fadae266932a643c659d3ae64ac070"
+        },
+        {
+          "key": "layers_02-43353bb11d",
+          "sha256": "5ebe1a0bf3f7b12ff8bd2222ab4b2de417314ff774429538775178032aaeaaea"
+        },
+        {
+          "key": "layers_03-6d1afe5ab4",
+          "sha256": "edecfad26cff25af0e69944e167046dd795a8fb492ff4d5d9223e723ed48431c"
+        },
+        {
+          "key": "layers_04-41c83972e2",
+          "sha256": "0e02cf93d2473eef056829167c1f2222f389777f458405e08d82de4f5fadb6be"
+        },
+        {
+          "key": "layers_05-6cff9643c5",
+          "sha256": "ebdab5fd3314b220f1262753d18a3c66105fca6866b8f301ae82afda04de4920"
+        },
+        {
+          "key": "queue_01-feb23baf2e",
+          "sha256": "596139e29b1f5ad99d354b89e790b2af5d6356420eb8bc83accfd7b3168535b2"
+        },
+        {
+          "key": "queue_02-a5ea5b205b",
+          "sha256": "3deef595b3e65252d08e307b3a126b1960bbd524ca792c2dcd5e0206497cc15f"
+        },
+        {
+          "key": "queue_03-6e84c09ffe",
+          "sha256": "911120d209b641819d33ae6415879c7f8d5503ff6b5c2d66c25ace2e0b21e797"
+        },
+        {
+          "key": "queue_04-1303904454",
+          "sha256": "18cff5617281132a73877bc63687bbeda794a07a488848c549475046de4ab89f"
+        },
+        {
+          "key": "mark_01-3a6100fc22",
+          "sha256": "4e549b5086337c88ee596e4c64da1496efc1f615ab41c6952cb55cc37f659aff"
+        },
+        {
+          "key": "mark_02-7e606e9892",
+          "sha256": "d656a8650169bcfafe0576ce249087f80bf856c751f7f9b8f3d2ddca7e9d8302"
+        },
+        {
+          "key": "mark_03-6e415d7810",
+          "sha256": "63a87cdc2c8b33f1f0891d04ff584b8ac215bf2f4418814a666d37d310415c72"
+        },
+        {
+          "key": "result_01-b5fae5a28c",
+          "sha256": "fc2cc8e153c2f99096529e246b8d9a195f580101aad4f2d09f9e153efbbe4144"
+        },
+        {
+          "key": "result_02-3d842c9e25",
+          "sha256": "14c0c30193ee7c4f6e97f16ebd3a3dbb2eda464a7d9ad3b899bb45687ac83522"
+        },
+        {
+          "key": "result_03-e613caf659",
+          "sha256": "92de437baf60b815f7855d36bf8c6d7e6ac8260849e7acf5bb4adbe7882601f5"
+        },
+        {
+          "key": "result_04-6fd7d22f1c",
+          "sha256": "9df7be118d24b5e92b4c8189f7e41916642edd64dd55c46af8ca059063a9250c"
+        },
+        {
+          "key": "result_05-a279a16ea0",
+          "sha256": "cb50aee8d8ad341bbbbfc51aba5cbd3b53897df40647d21e0abf0a0fd439d38c"
+        }
+      ],
+      "duration": 117.8453,
+      "teaching_review": {
+        "path": ".build/01_breadth-first-search/teaching-review.md",
+        "sha256": "093272f9e6bb4b352ce1c78abfac4e98351d497c02b9f10c604a61ea404a3245",
+        "guidance_sha256": "577c7f7dcc18324335babcd53fe46eda6cd0e3424ad5917c87bc3bde53660a02"
+      },
+      "validation": {
+        "path": ".build/01_breadth-first-search/validation.json",
+        "sha256": "9a0be713c9399a7027d19d2829336f2e4d0d057e7314fb4938a9143b161b5824"
+      }
+    }
+  }
+}

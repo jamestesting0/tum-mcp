@@ -1,0 +1,34 @@
+.ch-thread { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 6px; padding: 12px 16px 6px; font-size: 13px; line-height: 1.5; }
+.ch-user { display: flex; justify-content: flex-end; margin: 6px 0 4px; }
+.ch-bubble { max-width: 86%; padding: 7px 12px; border-radius: 14px; background: var(--wb-input); box-shadow: inset 0 0 0 1px var(--wb-input-border); white-space: pre-wrap; }
+.ch-agent { margin: 4px 0 6px; white-space: pre-wrap; }
+.ch-tool { display: flex; align-items: center; gap: 6px; min-height: 22px; color: var(--wb-muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; }
+.ch-tool-icon { font-size: 14px; flex: none; }
+.ch-verb { flex: none; }
+.ch-object { color: var(--wb-fg); overflow: hidden; text-overflow: ellipsis; }
+.ch-object.is-code { font: 12px/1.4 Menlo, 'SF Mono', monospace; }
+.ch-added { color: var(--wb-added); font: 12px Menlo, 'SF Mono', monospace; flex: none; }
+.ch-result { margin-left: auto; padding-left: 8px; flex: none; color: var(--wb-muted); }
+.ch-compose-slot { flex: none; padding: 8px 12px 12px; }
+.ch-composer { border-radius: 10px; background: var(--wb-input); box-shadow: inset 0 0 0 1px var(--wb-input-border); }
+.ch-input { min-height: 54px; padding: 10px 12px 4px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+.ch-placeholder { color: var(--wb-muted); }
+.ch-caret { display: inline-block; width: 1.5px; height: 1.1em; margin-left: 1px; vertical-align: text-bottom; background: var(--wb-fg); }
+.ch-controls { display: flex; align-items: center; gap: 4px; padding: 4px 8px 8px; }
+.ch-chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 6px; border-radius: 6px; color: var(--wb-muted); font-size: 12px; }
+.ch-chip .codicon { font-size: 14px; }
+.ch-chip .ch-chip-caret { font-size: 12px; }
+.ch-send { display: grid; place-items: center; width: 26px; height: 26px; margin-left: auto; border-radius: 50%; background: var(--wb-muted); color: var(--wb-editor); opacity: .45; }
+.ch-send.is-ready { background: var(--wb-fg); opacity: 1; }
+.ch-send .codicon { font-size: 15px; }
+
+.wb-cursor .ch-user { justify-content: stretch; }
+.wb-cursor .ch-bubble { max-width: none; width: 100%; border-radius: 8px; }
+.wb-cursor .ch-composer { border-radius: 12px; }
+.wb-cursor .ch-chip:first-child { background: var(--wb-hover); color: var(--wb-fg); }
+
+.wb-antigravity .ch-bubble { box-shadow: none; background: var(--wb-hover); border-radius: 16px; }
+.wb-antigravity .ch-composer { border-radius: 16px; box-shadow: inset 0 0 0 1px var(--wb-input-border), 0 6px 20px -10px rgb(26 115 232 / .35); }
+.wb-antigravity .ch-chip { color: var(--wb-fg); }
+.wb-antigravity .ch-send { width: 30px; height: 30px; background: var(--wb-accent); color: #fff; opacity: .55; }
+.wb-antigravity .ch-send.is-ready { background: var(--wb-accent); opacity: 1; }

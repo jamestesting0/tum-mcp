@@ -1,0 +1,29 @@
+/* Tokens shared with the study app (src/tum_mcp/bundled/course_app/site/styles.css).
+   `npm run check` fails when a shared value drifts from the app. Page-only tokens follow. */
+:root {
+  color-scheme: light;
+  --canvas: #ffffff; --surface: #f7f9fb; --aside: #f2f5f8;
+  --ink: #072140; --muted: #526477; --line: #d8e1e9;
+  --accent: #3070b3; --wash: #eaf2fa;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px;
+  --s6: 24px; --s8: 32px; --s12: 48px; --s16: 64px;
+  --r1: 6px; --r2: 12px;
+  --text-small: 14px; --text-ui: 15px; --text-body: 18px; --text-section: 24px;
+  --font-ui: 'Atkinson Hyperlegible Next', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: Menlo, Consolas, 'Cascadia Mono', 'Liberation Mono', 'DejaVu Sans Mono', monospace;
+  --target: 44px; --fast: 140ms; --ease: ease-out;
+
+  --mark-front: #072140; --mark-back: #8db0d5;
+  --stage-max: 1240px;
+  --stage-ratio: 16 / 10;
+  --shadow-stage: 0 1px 2px rgb(7 33 64 / .06), 0 24px 64px -24px rgb(7 33 64 / .28);
+  --slow: 420ms; --ease-out: cubic-bezier(.2, .7, .2, 1);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #101a28; --surface: #152236; --aside: #0b1420;
+  --ink: #e9eef5; --muted: #aabbd0; --line: #344253;
+  --accent: #8cbffa; --wash: #203b55;
+  --mark-front: #e9eef5; --mark-back: #54759c;
+  --shadow-stage: 0 1px 2px rgb(0 0 0 / .3), 0 28px 72px -24px rgb(0 0 0 / .6);
+}

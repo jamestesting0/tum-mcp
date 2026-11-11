@@ -1,0 +1,601 @@
+{
+  "schema_version": 1,
+  "course_key": "graph-search",
+  "profile": {
+    "format": "written",
+    "duration_minutes": 60,
+    "total_points": 24,
+    "allowed_aids": "No aids (synthetic exam).",
+    "languages": [
+      "English"
+    ],
+    "question_formats": [
+      "short"
+    ],
+    "sources": [
+      {
+        "key": "past-paper",
+        "sha256": "cb9e17da9966983c605ed182558f55aa74b4bd52d75c89822eedfbaafa09d1eb"
+      }
+    ]
+  },
+  "topics": [
+    {
+      "key": "unweighted",
+      "title": "Unweighted search",
+      "order": 1
+    },
+    {
+      "key": "weighted",
+      "title": "Weighted search",
+      "order": 2
+    },
+    {
+      "key": "informed",
+      "title": "Informed search",
+      "order": 3
+    }
+  ],
+  "sittings": [
+    {
+      "key": "synthetic-final",
+      "label": "Synthetic exam",
+      "held": "2026-02",
+      "kind": "final",
+      "variants": [
+        {
+          "key": "synthetic-final-a",
+          "label": "Exam",
+          "sources": [
+            {
+              "key": "past-paper",
+              "sha256": "cb9e17da9966983c605ed182558f55aa74b4bd52d75c89822eedfbaafa09d1eb",
+              "role": "paper"
+            }
+          ],
+          "total_points": 24,
+          "questions": [
+            {
+              "key": "q1",
+              "number": "1",
+              "points": 6,
+              "format": "short",
+              "patterns": [
+                "bfs-table"
+              ],
+              "concepts": [
+                "bfs-layers",
+                "mark-on-append"
+              ],
+              "locator": "Question 1",
+              "statement": [
+                {
+                  "kind": "text",
+                  "title": "Question 1",
+                  "sources": [
+                    "past-paper"
+                  ],
+                  "paragraphs": [
+                    "Run BFS from \\(S\\) on \\(S\\)–\\(A\\), \\(S\\)–\\(B\\), \\(A\\)–\\(C\\), \\(B\\)–\\(C\\), \\(C\\)–\\(D\\). Give the distance and parent of every vertex."
+                  ]
+                }
+              ],
+              "solution": {
+                "answers": [
+                  {
+                    "blocks": [
+                      {
+                        "kind": "table",
+                        "title": "Solution",
+                        "sources": [
+                          "past-paper"
+                        ],
+                        "columns": [
+                          "Vertex",
+                          "Distance",
+                          "Parent"
+                        ],
+                        "rows": [
+                          [
+                            "\\(A\\)",
+                            "\\(1\\)",
+                            "\\(S\\)"
+                          ],
+                          [
+                            "\\(B\\)",
+                            "\\(1\\)",
+                            "\\(S\\)"
+                          ],
+                          [
+                            "\\(C\\)",
+                            "\\(2\\)",
+                            "\\(A\\)"
+                          ],
+                          [
+                            "\\(D\\)",
+                            "\\(3\\)",
+                            "\\(C\\)"
+                          ]
+                        ],
+                        "caption": "Neighbours appended alphabetically."
+                      }
+                    ]
+                  }
+                ]
+              },
+              "guidance": {
+                "objectives": [
+                  "Fill a BFS table from the queue."
+                ],
+                "steps": [
+                  {
+                    "key": "layer-one",
+                    "purpose": "Layer 1",
+                    "prompt": "Remove \\(S\\). Which vertices are appended?",
+                    "hints": [
+                      "Both neighbours of \\(S\\), alphabetically."
+                    ],
+                    "check": {
+                      "kind": "text",
+                      "answer": "A, B",
+                      "feedback": "Distance \\(1\\), parent \\(S\\)."
+                    },
+                    "explanation": "\\(A\\) and \\(B\\) get distance \\(1\\)."
+                  },
+                  {
+                    "key": "parent-c",
+                    "purpose": "First discovery",
+                    "prompt": "Who appends \\(C\\)?",
+                    "hints": [
+                      "\\(A\\) leaves the queue before \\(B\\)."
+                    ],
+                    "check": {
+                      "kind": "text",
+                      "answer": "A",
+                      "feedback": "\\(A\\) is removed first and marks \\(C\\)."
+                    },
+                    "explanation": "\\(C\\) gets parent \\(A\\), distance \\(2\\)."
+                  },
+                  {
+                    "key": "distance-d",
+                    "purpose": "Last layer",
+                    "prompt": "What is the distance of \\(D\\)?",
+                    "hints": [
+                      "\\(D\\) is a neighbour of \\(C\\) only."
+                    ],
+                    "check": {
+                      "kind": "numeric",
+                      "answer": 3,
+                      "feedback": "\\(d(C) + 1 = 3\\)."
+                    },
+                    "explanation": "\\(d(D) = 3\\), parent \\(C\\)."
+                  }
+                ]
+              },
+              "marking": [
+                {
+                  "text": "Distances",
+                  "points": 3
+                },
+                {
+                  "text": "Parents",
+                  "points": 3
+                }
+              ],
+              "marking_basis": "authored"
+            },
+            {
+              "key": "q2",
+              "number": "2",
+              "points": 8,
+              "format": "short",
+              "patterns": [
+                "trace-dijkstra"
+              ],
+              "concepts": [
+                "relaxation",
+                "dijkstra-loop"
+              ],
+              "locator": "Question 2",
+              "statement": [
+                {
+                  "kind": "text",
+                  "title": "Question 2",
+                  "sources": [
+                    "past-paper"
+                  ],
+                  "paragraphs": [
+                    "Run Dijkstra from \\(S\\). Give the table of tentative distances after each settled vertex and the shortest path to \\(C\\)."
+                  ]
+                },
+                {
+                  "kind": "diagram",
+                  "title": "Graph",
+                  "sources": [
+                    "past-paper"
+                  ],
+                  "description": "S–A 4, S–B 1, B–A 2, A–C 1, B–C 5.",
+                  "nodes": [
+                    {
+                      "key": "s",
+                      "label": "S",
+                      "row": 1,
+                      "col": 0,
+                      "shape": "circle"
+                    },
+                    {
+                      "key": "a",
+                      "label": "A",
+                      "row": 0,
+                      "col": 1,
+                      "shape": "circle"
+                    },
+                    {
+                      "key": "b",
+                      "label": "B",
+                      "row": 2,
+                      "col": 1,
+                      "shape": "circle"
+                    },
+                    {
+                      "key": "c",
+                      "label": "C",
+                      "row": 1,
+                      "col": 2,
+                      "shape": "circle"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "start": "s",
+                      "end": "a",
+                      "label": "4"
+                    },
+                    {
+                      "start": "s",
+                      "end": "b",
+                      "label": "1"
+                    },
+                    {
+                      "start": "b",
+                      "end": "a",
+                      "label": "2"
+                    },
+                    {
+                      "start": "a",
+                      "end": "c",
+                      "label": "1"
+                    },
+                    {
+                      "start": "b",
+                      "end": "c",
+                      "label": "5"
+                    }
+                  ],
+                  "frames": [
+                    {
+                      "caption": "Dijkstra starts at S."
+                    }
+                  ],
+                  "state_labels": "caption"
+                }
+              ],
+              "solution": {
+                "answers": [
+                  {
+                    "blocks": [
+                      {
+                        "kind": "text",
+                        "title": "Solution",
+                        "sources": [
+                          "past-paper"
+                        ],
+                        "paragraphs": [
+                          "Settle \\(S, B, A, C\\) at \\(0, 1, 3, 4\\). Path \\(S \\to B \\to A \\to C\\), cost \\(4\\)."
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "guidance": {
+                "objectives": [
+                  "Trace Dijkstra in a table."
+                ],
+                "steps": [
+                  {
+                    "key": "first",
+                    "purpose": "First settle",
+                    "prompt": "Which vertex is settled after \\(S\\)?",
+                    "hints": [
+                      "Compare \\(A = 4\\) and \\(B = 1\\)."
+                    ],
+                    "check": {
+                      "kind": "text",
+                      "answer": "B",
+                      "feedback": "\\(B\\) has the smallest open value."
+                    },
+                    "explanation": "\\(B\\) at \\(1\\)."
+                  },
+                  {
+                    "key": "improve-a",
+                    "purpose": "Relax through B",
+                    "prompt": "What does relaxing \\(B\\) give \\(A\\)?",
+                    "hints": [
+                      "Compare \\(4\\) with \\(1 + 2\\)."
+                    ],
+                    "check": {
+                      "kind": "numeric",
+                      "answer": 3,
+                      "feedback": "\\(1 + 2 = 3 < 4\\)."
+                    },
+                    "explanation": "\\(A = 3\\) with parent \\(B\\)."
+                  },
+                  {
+                    "key": "cost-c",
+                    "purpose": "Finish",
+                    "prompt": "What is \\(d(C)\\)?",
+                    "hints": [
+                      "Settle \\(A\\), then relax its edge to \\(C\\)."
+                    ],
+                    "check": {
+                      "kind": "numeric",
+                      "answer": 4,
+                      "feedback": "\\(3 + 1 = 4 < 6\\)."
+                    },
+                    "explanation": "Path \\(S \\to B \\to A \\to C\\)."
+                  }
+                ]
+              },
+              "marking": [
+                {
+                  "text": "Correct table",
+                  "points": 5
+                },
+                {
+                  "text": "Path and cost",
+                  "points": 3
+                }
+              ],
+              "marking_basis": "authored"
+            },
+            {
+              "key": "q3",
+              "number": "3",
+              "points": 4,
+              "format": "short",
+              "patterns": [
+                "trace-dijkstra"
+              ],
+              "concepts": [
+                "non-negative"
+              ],
+              "locator": "Question 3",
+              "statement": [
+                {
+                  "kind": "text",
+                  "title": "Question 3",
+                  "sources": [
+                    "past-paper"
+                  ],
+                  "paragraphs": [
+                    "Give a graph with one negative edge on which Dijkstra returns a wrong distance, and name the step that goes wrong."
+                  ]
+                }
+              ],
+              "solution": {
+                "answers": [
+                  {
+                    "blocks": [
+                      {
+                        "kind": "text",
+                        "title": "Solution",
+                        "sources": [
+                          "past-paper"
+                        ],
+                        "paragraphs": [
+                          "\\(w(S, X) = 2\\), \\(w(S, Y) = 3\\), \\(w(Y, X) = -2\\): \\(X\\) is settled at \\(2\\) before \\(Y\\), but the path through \\(Y\\) costs \\(1\\)."
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "guidance": {
+                "objectives": [
+                  "Build a counterexample for negative edges."
+                ],
+                "steps": [
+                  {
+                    "key": "settle-early",
+                    "purpose": "Find the early settle",
+                    "prompt": "With \\(w(S, X) = 2\\), \\(w(S, Y) = 3\\), \\(w(Y, X) = -2\\), which vertex is settled right after \\(S\\)?",
+                    "hints": [
+                      "Compare \\(2\\) and \\(3\\)."
+                    ],
+                    "check": {
+                      "kind": "text",
+                      "answer": "X",
+                      "feedback": "\\(X\\) has \\(2\\), \\(Y\\) has \\(3\\)."
+                    },
+                    "explanation": "\\(X\\) is final at \\(2\\) before \\(Y\\) is settled."
+                  },
+                  {
+                    "key": "true-cost",
+                    "purpose": "Compare",
+                    "prompt": "What does the path through \\(Y\\) cost?",
+                    "hints": [
+                      "Add \\(3\\) and \\(-2\\)."
+                    ],
+                    "check": {
+                      "kind": "numeric",
+                      "answer": 1,
+                      "feedback": "\\(3 + (-2) = 1 < 2\\)."
+                    },
+                    "explanation": "\\(1 < 2\\), so the settled value was wrong."
+                  }
+                ]
+              },
+              "marking": [
+                {
+                  "text": "Valid graph",
+                  "points": 2
+                },
+                {
+                  "text": "Names the early settle",
+                  "points": 2
+                }
+              ],
+              "marking_basis": "authored"
+            },
+            {
+              "key": "q4",
+              "number": "4",
+              "points": 6,
+              "format": "short",
+              "patterns": [
+                "check-heuristic"
+              ],
+              "concepts": [
+                "consistent",
+                "admissible"
+              ],
+              "locator": "Question 4",
+              "statement": [
+                {
+                  "kind": "text",
+                  "title": "Question 4",
+                  "sources": [
+                    "past-paper"
+                  ],
+                  "paragraphs": [
+                    "A heuristic satisfies \\(h(u) \\le w(u, v) + h(v)\\) for every edge and \\(h(\\text{goal}) = 0\\). Show that it is admissible."
+                  ]
+                }
+              ],
+              "solution": {
+                "answers": [
+                  {
+                    "blocks": [
+                      {
+                        "kind": "text",
+                        "title": "Solution",
+                        "sources": [
+                          "past-paper"
+                        ],
+                        "paragraphs": [
+                          "Sum the inequality along a shortest path from \\(v\\) to the goal; the weights add up to \\(d(v, \\text{goal})\\) and the inner \\(h\\) terms cancel, leaving \\(h(v) \\le d(v, \\text{goal})\\)."
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "guidance": {
+                "objectives": [
+                  "Prove that consistency implies admissibility."
+                ],
+                "steps": [
+                  {
+                    "key": "path",
+                    "purpose": "Pick the path",
+                    "prompt": "Which path from \\(v\\) to the goal do you sum along?",
+                    "hints": [
+                      "Its total weight is the true cost."
+                    ],
+                    "check": {
+                      "kind": "text",
+                      "answer": "a shortest path",
+                      "feedback": "Its weights sum to \\(d(v, \\text{goal})\\)."
+                    },
+                    "explanation": "Take a shortest path \\(v = v_0, v_1, \\ldots, v_k = \\text{goal}\\)."
+                  },
+                  {
+                    "key": "telescope",
+                    "purpose": "Sum the edges",
+                    "prompt": "Summing \\(h(v_i) \\le w(v_i, v_{i+1}) + h(v_{i+1})\\) over the path gives what?",
+                    "hints": [
+                      "The inner \\(h\\) terms cancel and \\(h(\\text{goal}) = 0\\)."
+                    ],
+                    "check": {
+                      "kind": "text",
+                      "answer": "h(v) <= d(v, goal)",
+                      "feedback": "The weights add up to the true cost."
+                    },
+                    "explanation": "\\(h(v) \\le d(v, \\text{goal})\\): admissible."
+                  }
+                ]
+              },
+              "marking": [
+                {
+                  "text": "Uses a shortest path",
+                  "points": 2
+                },
+                {
+                  "text": "Telescopes the inequality",
+                  "points": 4
+                }
+              ],
+              "marking_basis": "authored"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "concepts": [
+    "bfs-layers",
+    "mark-on-append",
+    "relaxation",
+    "dijkstra-loop",
+    "non-negative",
+    "astar-score",
+    "admissible",
+    "consistent"
+  ],
+  "links": [
+    {
+      "start": "bfs-layers",
+      "end": "mark-on-append",
+      "kind": "requires"
+    },
+    {
+      "start": "bfs-layers",
+      "end": "dijkstra-loop",
+      "kind": "contrasts",
+      "note": "Edge count versus total weight."
+    },
+    {
+      "start": "relaxation",
+      "end": "dijkstra-loop",
+      "kind": "requires"
+    },
+    {
+      "start": "dijkstra-loop",
+      "end": "non-negative",
+      "kind": "requires"
+    },
+    {
+      "start": "dijkstra-loop",
+      "end": "astar-score",
+      "kind": "derives",
+      "note": "A* with h = 0 is Dijkstra."
+    },
+    {
+      "start": "consistent",
+      "end": "admissible",
+      "kind": "derives"
+    },
+    {
+      "start": "admissible",
+      "end": "astar-score",
+      "kind": "requires"
+    }
+  ],
+  "patterns": [
+    "bfs-table",
+    "trace-dijkstra",
+    "check-heuristic"
+  ],
+  "mocks": []
+}

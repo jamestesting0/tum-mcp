@@ -1,0 +1,32 @@
+{
+  "key": "consistent",
+  "topic": "informed",
+  "title": "Consistent heuristic",
+  "kind": "definition",
+  "path": [
+    "A*"
+  ],
+  "line": "\\(h(u) \\le w(u, v) + h(v)\\) for every edge, \\(h(\\text{goal}) = 0\\).",
+  "basis": "emphasized",
+  "sources": [
+    {
+      "key": "lecture-03",
+      "sha256": "0ef5e1984a07f14707ba77c5be924c96a417211b829d176f5eb7deb8fff728dc"
+    }
+  ],
+  "details": [
+    {
+      "kind": "text",
+      "title": "Consequence",
+      "sources": [
+        "lecture-03"
+      ],
+      "paragraphs": [
+        "Consistent implies admissible, and A* never reopens a vertex."
+      ]
+    }
+  ],
+  "units": [
+    "astar"
+  ]
+}

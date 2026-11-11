@@ -1,0 +1,40 @@
+{
+  "decisions": [
+    {
+      "item": "concept:non-negative",
+      "target": "exercises",
+      "reason": "Sheet 1 uses only non-negative weights; past-paper question 3 covers the counterexample.",
+      "outline": "3355c6cfa2b9f8fe"
+    },
+    {
+      "item": "concept:astar-score",
+      "target": "exercises",
+      "reason": "Sheet 1 asks about admissibility, not about f values.",
+      "outline": "3355c6cfa2b9f8fe"
+    },
+    {
+      "item": "concept:consistent",
+      "target": "exercises",
+      "reason": "Sheet 1 checks admissibility only.",
+      "outline": "3355c6cfa2b9f8fe"
+    },
+    {
+      "item": "lecture/dijkstra-lecture/sheet-two",
+      "target": "study",
+      "reason": "An organisational announcement with no lesson content.",
+      "outline": "585b12002f7969bf"
+    },
+    {
+      "item": "study/bfs",
+      "target": "lectures",
+      "reason": "Only the Lecture 2 recording is prepared; Lecture 1 has no recording in this course.",
+      "outline": "717efc8e37f78c5b"
+    },
+    {
+      "item": "study/astar",
+      "target": "lectures",
+      "reason": "Only the Lecture 2 recording is prepared; Lecture 3 has no recording in this course.",
+      "outline": "717efc8e37f78c5b"
+    }
+  ]
+}

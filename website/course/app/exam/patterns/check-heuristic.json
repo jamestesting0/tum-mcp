@@ -1,0 +1,395 @@
+{
+  "key": "check-heuristic",
+  "topic": "informed",
+  "title": "Check a heuristic",
+  "summary": "Decide whether a heuristic is admissible, consistent, or neither.",
+  "cues": [
+    "A table of h values and a question about optimality"
+  ],
+  "workflow": [
+    {
+      "do": "Decide what is asked",
+      "why": "The two properties need different comparisons.",
+      "cases": [
+        {
+          "when": "Admissible is asked",
+          "then": "Compare each h(v) with the true cost to the goal",
+          "apply": {
+            "math": [
+              "h(v) \\le d(v, \\text{goal})"
+            ],
+            "symbols": [
+              {
+                "symbol": "\\(h(v)\\)",
+                "meaning": "Estimate from v to the goal"
+              },
+              {
+                "symbol": "\\(d(v, \\text{goal})\\)",
+                "meaning": "True least cost from v to the goal"
+              }
+            ]
+          }
+        },
+        {
+          "when": "Consistent is asked",
+          "then": "Check every edge",
+          "apply": {
+            "math": [
+              "h(u) \\le w(u, v) + h(v)"
+            ],
+            "symbols": [
+              {
+                "symbol": "\\(w(u, v)\\)",
+                "meaning": "Weight of the edge from u to v"
+              },
+              {
+                "symbol": "\\(h(u)\\)",
+                "meaning": "Estimate at the edge start"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "do": "Find one violation or confirm all",
+      "why": "One violation is enough to say no.",
+      "apply": {
+        "text": "Name the vertex or edge that fails, with both numbers."
+      }
+    }
+  ],
+  "concepts": [
+    "admissible",
+    "consistent"
+  ],
+  "sources": [
+    {
+      "key": "past-paper",
+      "sha256": "cb9e17da9966983c605ed182558f55aa74b4bd52d75c89822eedfbaafa09d1eb"
+    }
+  ],
+  "examples": [
+    {
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "Task",
+          "sources": [
+            "past-paper"
+          ],
+          "paragraphs": [
+            "Is the heuristic admissible? True costs to \\(G\\): \\(A\\) 6, \\(B\\) 3, \\(D\\) 1."
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Heuristic",
+          "sources": [
+            "past-paper"
+          ],
+          "columns": [
+            "Vertex",
+            "\\(h(v)\\)"
+          ],
+          "rows": [
+            [
+              "\\(A\\)",
+              "\\(5\\)"
+            ],
+            [
+              "\\(B\\)",
+              "\\(4\\)"
+            ],
+            [
+              "\\(D\\)",
+              "\\(1\\)"
+            ]
+          ],
+          "caption": "Estimates to G."
+        }
+      ],
+      "solution": {
+        "answers": [
+          {
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Solution",
+                "sources": [
+                  "past-paper"
+                ],
+                "paragraphs": [
+                  "Not admissible: \\(h(B) = 4 > 3\\)."
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "step": 1,
+          "prompt": "Which property is asked?",
+          "case": 1,
+          "case_feedback": [
+            "Yes: compare each estimate with its true cost.",
+            "Consistency is about edges; this question asks about true costs."
+          ],
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Case",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "Admissible."
+              ]
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "prompt": "Which vertex violates it?",
+          "check": {
+            "kind": "text",
+            "answer": "B",
+            "feedback": "\\(4 > 3\\)."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Violation",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(h(B) = 4 > 3\\)."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "blocks": [
+        {
+          "kind": "text",
+          "title": "Task",
+          "sources": [
+            "past-paper"
+          ],
+          "paragraphs": [
+            "Is the heuristic consistent on the edge between \\(B\\) and \\(C\\)?"
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Edge",
+          "sources": [
+            "past-paper"
+          ],
+          "columns": [
+            "\\(w(B, C)\\)",
+            "\\(h(B)\\)",
+            "\\(h(C)\\)"
+          ],
+          "rows": [
+            [
+              "\\(1\\)",
+              "\\(3\\)",
+              "\\(3\\)"
+            ]
+          ],
+          "caption": "An undirected edge: check both directions."
+        }
+      ],
+      "solution": {
+        "answers": [
+          {
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Solution",
+                "sources": [
+                  "past-paper"
+                ],
+                "paragraphs": [
+                  "Yes in both directions: \\(3 \\le 1 + 3\\)."
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "step": 1,
+          "prompt": "Which property is asked?",
+          "case": 2,
+          "case_feedback": [
+            "Admissibility compares with true costs; this question names an edge.",
+            "Yes: check the edge inequality in both directions."
+          ],
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Case",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "Consistent."
+              ]
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "prompt": "Does \\(h(B) \\le w(B, C) + h(C)\\) hold?",
+          "check": {
+            "kind": "text",
+            "answer": "yes",
+            "feedback": "\\(3 \\le 4\\)."
+          },
+          "answer": [
+            {
+              "kind": "text",
+              "title": "Check",
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(3 \\le 1 + 3 = 4\\); the reverse direction gives the same numbers."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "pitfalls": [
+    {
+      "situation": "Reading \\(h(D) = 0\\) as a violation.",
+      "wrong": "An estimate below the true cost breaks admissibility.",
+      "right": "Only an estimate above the true cost breaks it.",
+      "why": "Admissible means never overestimating.",
+      "step": 2
+    }
+  ],
+  "drill": [
+    {
+      "key": "exact",
+      "prompt": "The true cost from \\(A\\) to the goal is \\(6\\). Is \\(h(A) = 6\\) admissible?",
+      "blocks": [
+        {
+          "kind": "table",
+          "title": "One vertex",
+          "sources": [
+            "past-paper"
+          ],
+          "columns": [
+            "\\(h(A)\\)",
+            "True cost"
+          ],
+          "rows": [
+            [
+              "\\(6\\)",
+              "\\(6\\)"
+            ]
+          ],
+          "caption": "An exact estimate."
+        }
+      ],
+      "check": {
+        "kind": "text",
+        "feedback": "\\(6 \\le 6\\).",
+        "answer": "yes"
+      },
+      "explanation": "An exact estimate never overestimates.",
+      "cases": [
+        {
+          "step": 1,
+          "case": 1
+        }
+      ],
+      "guide": [
+        {
+          "step": 2,
+          "prompt": "Is the estimate above the true cost?",
+          "hint": "Compare 6 with 6.",
+          "answer": [
+            {
+              "kind": "text",
+              "title": null,
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "No: they are equal, so it is admissible."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "edge-check",
+      "prompt": "Is the heuristic consistent on the edge from \\(U\\) to \\(V\\)?",
+      "blocks": [
+        {
+          "kind": "table",
+          "title": "Edge",
+          "sources": [
+            "past-paper"
+          ],
+          "columns": [
+            "\\(w(U, V)\\)",
+            "\\(h(U)\\)",
+            "\\(h(V)\\)"
+          ],
+          "rows": [
+            [
+              "\\(2\\)",
+              "\\(5\\)",
+              "\\(2\\)"
+            ]
+          ],
+          "caption": "One directed edge."
+        }
+      ],
+      "check": {
+        "kind": "text",
+        "feedback": "\\(5 > 2 + 2\\).",
+        "answer": "no"
+      },
+      "explanation": "\\(h(U) = 5\\) exceeds \\(w(U, V) + h(V) = 4\\).",
+      "cases": [
+        {
+          "step": 1,
+          "case": 2
+        }
+      ],
+      "guide": [
+        {
+          "step": 2,
+          "prompt": "Compare \\(h(U)\\) with \\(w(U, V) + h(V)\\).",
+          "hint": "Add the weight and the estimate at V.",
+          "answer": [
+            {
+              "kind": "text",
+              "title": null,
+              "sources": [
+                "past-paper"
+              ],
+              "paragraphs": [
+                "\\(5 > 4\\): not consistent on this edge."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

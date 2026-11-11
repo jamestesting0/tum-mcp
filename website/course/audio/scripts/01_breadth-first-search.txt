@@ -1,0 +1,31 @@
+Lecture 1 · Breadth-first search
+
+Distance by edge count
+In an unweighted graph, every edge counts as one step.
+The distance from the start to a vertex is the least number of edges on any path between them.
+The start itself is at distance zero, and a vertex you cannot reach at all has infinite distance.
+
+Layers
+Breadth-first search finds these distances one layer at a time.
+Layer zero holds only the start.
+The next layer holds every neighbour of the current layer that has not been discovered yet.
+In the running example, S alone is layer zero; A, B and E form layer one; C and D form layer two; and G is layer three.
+So every vertex in layer k is exactly k edges from the start.
+
+Why a queue keeps the order
+Breadth-first search keeps its waiting vertices in a first-in, first-out queue.
+It removes the vertex at the front and appends its undiscovered neighbours at the back, one step further from the start.
+Every vertex of one layer is appended before any vertex of the next, so the whole layer leaves the queue first.
+In the example, C is appended while B and E are still waiting, so C comes out only after both of them.
+
+Mark when you append
+Mark a vertex as discovered the moment you append it, not when you remove it.
+If you wait until removal, A and B both append C, and C enters the queue twice.
+Marking on append keeps every vertex in the queue once, so the search stays linear in the size of the graph.
+
+What the search returns
+When the queue is empty, each vertex has its distance and a parent: the vertex that first appended it.
+Follow the parents back from G, through C and A, to S.
+Read in reverse, that is a shortest path by edge count.
+Breadth-first search counts edges, not weights.
+With weighted edges, the path it finds can cost more, and that is the job of Dijkstra's algorithm in the next lecture.

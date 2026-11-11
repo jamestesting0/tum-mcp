@@ -1,0 +1,65 @@
+WEBVTT
+
+1
+00:00:00.250 --> 00:00:05.029
+Dijkstra's algorithm finds the cheapest path when every edge has a weight.
+
+2
+00:00:05.329 --> 00:00:10.811
+It repeats two moves: settle the closest vertex, then relax the edges that leave it.
+
+3
+00:00:11.261 --> 00:00:15.080
+Vertex C is settled at four, and vertex B still has six.
+
+4
+00:00:15.380 --> 00:00:20.686
+The edge from C to B weighs one, so the route through C costs four plus one, which
+
+5
+00:00:20.686 --> 00:00:21.204
+is five.
+
+6
+00:00:21.504 --> 00:00:26.987
+Five beats six, so relaxation lowers B to five and records C as its parent.
+
+7
+00:00:27.437 --> 00:00:29.421
+Start at S with distance zero.
+
+8
+00:00:29.721 --> 00:00:34.990
+Each time, settle the smallest open value: S, then E at one, then A at two.
+
+9
+00:00:35.290 --> 00:00:40.154
+Settling C at four lowers B from six to five and opens G at nine.
+
+10
+00:00:40.454 --> 00:00:45.083
+B gives D seven, and D lowers G to eight, the cheapest cost to G.
+
+11
+00:00:45.533 --> 00:00:48.392
+This only works when no edge weight is negative.
+
+12
+00:00:48.692 --> 00:00:51.892
+Here X is settled at two before Y is looked at.
+
+13
+00:00:52.192 --> 00:00:57.525
+But Y costs three, and its edge to X weighs minus two, so X really costs one.
+
+14
+00:00:57.825 --> 00:01:02.263
+A settled value is final, so Dijkstra keeps the wrong distance of two.
+
+15
+00:01:02.713 --> 00:01:08.366
+So: settle the smallest tentative distance, relax its edges, and keep every weight
+
+16
+00:01:08.366 --> 00:01:09.262
+non-negative.

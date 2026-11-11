@@ -1,0 +1,35 @@
+{
+  "key": "astar-score",
+  "topic": "informed",
+  "title": "A* score",
+  "kind": "formula",
+  "path": [
+    "A*"
+  ],
+  "line": "Cost so far plus the estimate to the goal; expand the smallest.",
+  "basis": "emphasized",
+  "sources": [
+    {
+      "key": "lecture-03",
+      "sha256": "0ef5e1984a07f14707ba77c5be924c96a417211b829d176f5eb7deb8fff728dc"
+    }
+  ],
+  "formula": {
+    "latex": "f(v) = g(v) + h(v)",
+    "plain": "f of v equals g of v plus h of v",
+    "symbols": [
+      {
+        "symbol": "\\(g(v)\\)",
+        "meaning": "Best known cost from the start"
+      },
+      {
+        "symbol": "\\(h(v)\\)",
+        "meaning": "Estimate to the goal"
+      }
+    ],
+    "conditions": "With \\(h = 0\\), A* is Dijkstra."
+  },
+  "units": [
+    "astar"
+  ]
+}
