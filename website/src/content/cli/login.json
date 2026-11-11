@@ -1,0 +1,170 @@
+{
+ "source": "Recorded by tools/capture-cli.mjs from `tum-mcp login` in a throwaway HOME with Lecture on; cancelled at the browser list, so no browser opened.",
+ "screens": {
+  "services": [
+   [
+    [
+     "TUM MCP",
+     "bold"
+    ],
+    [
+     "  Login",
+     ""
+    ]
+   ],
+   [],
+   [
+    [
+     "↑/↓ move · Space select · Enter confirm · Esc cancel",
+     ""
+    ]
+   ],
+   [
+    [
+     " Choose services to sign in to",
+     "bold"
+    ]
+   ],
+   [
+    [
+     " > ○ Moodle     Materials and downloads  Not set up",
+     ""
+    ]
+   ],
+   [
+    [
+     "   ○ Artemis    Exercises and feedback   Not set up",
+     ""
+    ]
+   ],
+   [
+    [
+     "   ○ Zulip      Course discussions       Not set up",
+     ""
+    ]
+   ],
+   [
+    [
+     "   ○ TUMonline  Studies and courses      Not set up",
+     ""
+    ]
+   ],
+   [
+    [
+     "   ○ TUM-Live   Lecture recordings       Not set up",
+     ""
+    ]
+   ]
+  ],
+  "services-selected": [
+   [
+    [
+     "TUM MCP",
+     "bold"
+    ],
+    [
+     "  Login",
+     ""
+    ]
+   ],
+   [],
+   [
+    [
+     "↑/↓ move · Space select · Enter confirm · Esc cancel",
+     ""
+    ]
+   ],
+   [
+    [
+     " Choose services to sign in to",
+     "bold"
+    ]
+   ],
+   [
+    [
+     " > ● Moodle     Materials and downloads  Not set up",
+     ""
+    ]
+   ],
+   [
+    [
+     "   ○ Artemis    Exercises and feedback   Not set up",
+     ""
+    ]
+   ],
+   [
+    [
+     "   ○ Zulip      Course discussions       Not set up",
+     ""
+    ]
+   ],
+   [
+    [
+     "   ○ TUMonline  Studies and courses      Not set up",
+     ""
+    ]
+   ],
+   [
+    [
+     "   ○ TUM-Live   Lecture recordings       Not set up",
+     ""
+    ]
+   ]
+  ],
+  "browser": [
+   [
+    [
+     "TUM MCP",
+     "bold"
+    ],
+    [
+     "  Login",
+     ""
+    ]
+   ],
+   [],
+   [
+    [
+     "↑/↓ move · Space select · Enter confirm · Esc cancel",
+     ""
+    ]
+   ],
+   [
+    [
+     " Choose services to sign in to Moodle     Materials and downloads  Not set up",
+     "bold"
+    ]
+   ],
+   [
+    [
+     "↑/↓ move · Enter choose · Esc cancel",
+     ""
+    ]
+   ],
+   [
+    [
+     " Choose browser",
+     "bold"
+    ]
+   ],
+   [
+    [
+     " > Google Chrome",
+     ""
+    ]
+   ],
+   [
+    [
+     "   Opera",
+     ""
+    ]
+   ],
+   [
+    [
+     "   Set up a saved profile…",
+     ""
+    ]
+   ]
+  ]
+ }
+}
