@@ -52,7 +52,7 @@ export function chapterParts(story) {
 
 export function commandList(story) {
   return story.commands.map(command =>
-    `<li class="command"><code>${escape(command)}</code><button class="copy" type="button" data-copy="${escape(command)}"><span data-copy-label>Copy</span></button></li>`).join('');
+    `<li class="command"><code>${escape(command)}</code><button class="copy" type="button" aria-label="Copy command" data-copy="${escape(command)}"><span class="copy-icon" data-copy-label aria-hidden="true"></span></button></li>`).join('');
 }
 
 export const credits = ['Editor icons: Codicons by Microsoft, CC BY 4.0', 'Type: Atkinson Hyperlegible Next, SIL Open Font License']

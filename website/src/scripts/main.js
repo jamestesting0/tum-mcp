@@ -424,15 +424,21 @@ addEventListener('resize', schedule);
 reducedMotion.addEventListener('change', update);
 update();
 
+// Copy buttons show a copy icon that turns into a check once the command is on the clipboard.
+// Where the clipboard is blocked, the command is selected instead, ready for the visitor to copy.
 for (const button of document.querySelectorAll('[data-copy]')) {
+  const label = button.dataset.copyLabel ?? button.getAttribute('aria-label');
+  button.querySelector('[data-copy-label]').append(stroke('copy', 16), stroke('check', 16));
+  let timer = 0;
   button.addEventListener('click', async () => {
-    const label = button.querySelector('[data-copy-label]');
     try {
       await navigator.clipboard.writeText(button.dataset.copy);
-      label.textContent = 'Copied';
+      button.classList.add('is-copied');
+      button.setAttribute('aria-label', 'Copied');
+      clearTimeout(timer);
+      timer = setTimeout(() => { button.classList.remove('is-copied'); button.setAttribute('aria-label', label); }, 1600);
     } catch {
-      label.textContent = 'Select and copy';
+      getSelection().selectAllChildren(button.closest('li')?.querySelector('code') ?? button.querySelector('code'));
     }
-    setTimeout(() => { label.textContent = 'Copy'; }, 1600);
   });
 }
