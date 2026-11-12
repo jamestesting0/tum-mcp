@@ -902,7 +902,8 @@ class WalkStep(Step):
         default=None,
         exclude_if=lambda value: value is None,
         description=(
-            "The nodes generated so far, so a search tree grows step by step; all when omitted."
+            "The nodes generated so far, so a search tree grows step by step. When omitted, "
+            "every node is drawn and a tree's nodes no step has reached yet stay faint."
         ),
     )
     # A table stage: the rows filled so far and the cells this step changed ("row:column").

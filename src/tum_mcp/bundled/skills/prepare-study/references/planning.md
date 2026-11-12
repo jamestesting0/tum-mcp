@@ -108,7 +108,7 @@ Teach a chosen example in full:
 
 1. **Its inputs.** The lecture's exact graph, weights, values, board, start and goal,
    labels and conventions (child order, tie-break, when the goal is tested).
-2. **Its picture.** A tree as a tree (`layout: "tree"`, growing through `visible_nodes`), a
+2. **Its picture.** A tree as a tree (`layout: "tree"`, growing as the lecture grows it), a
    weighted graph as a drawn graph with its costs on the edges, and a map, board or plot
    as the lecture's own crop when it is the clearest, walked through with `regions`
    ([picking the picture](representations.md#pick-the-picture-the-work-acts-on)). What the
