@@ -21,6 +21,7 @@ from importlib.util import find_spec
 from pathlib import Path
 
 MARKER = ".skill-lab-install.json"
+HOOK_MARKER = ".skill-lab-hooks.json"
 
 
 def toml_string(value: str) -> str:
@@ -55,6 +56,16 @@ def launch(proxy: str, block: str):
 
 
 def remove_previous(home: Path) -> None:
+    owned_hooks = home / HOOK_MARKER
+    if owned_hooks.is_file():
+        from tum_mcp.clients.hook_config import writes
+
+        for change in writes("codex", home, {}, json.loads(owned_hooks.read_text())):
+            if change.after is None:
+                change.path.unlink()
+            else:
+                change.path.write_bytes(change.after)
+        owned_hooks.unlink()
     marker = home / MARKER
     if not marker.is_file():
         return
@@ -118,7 +129,72 @@ def install_codex_profile(staged: Path, home: Path, entry_launch) -> list[str]:
     config = home / ".codex" / "config.toml"
     config.parent.mkdir(parents=True, exist_ok=True)
     config.write_text("\n".join(lines), encoding="utf-8")
-    return paths
+    return paths + install_course_hooks(home)
+
+
+def install_course_hooks(home: Path) -> list[str]:
+    if not find_spec("tum_mcp.clients") or not find_spec("tum_mcp.clients.hook_config"):
+        return []
+    from tum_mcp.clients.codex_runtime import Runtime
+    from tum_mcp.clients.hook_config import render, writes
+
+    hosts = client_module("hosts")
+    backend = hosts.StdioLaunch(
+        sys.executable, ("-I", "-m", "tum_mcp", "serve"), hosts.storage_environment()
+    )
+    files, hooks = render("codex", home, backend)
+    for name, body in files.items():
+        path = home / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(body)
+    for change in writes("codex", home, hooks, {}):
+        change.path.parent.mkdir(parents=True, exist_ok=True)
+        change.path.write_bytes(change.after)
+    (home / HOOK_MARKER).write_text(json.dumps(hooks))
+    commands = {entry["hooks"][0]["command"] for entries in hooks.values() for entry in entries}
+    runtime = Runtime(home)
+    try:
+        runtime.call(
+            "initialize",
+            {
+                "clientInfo": {"name": "tum-mcp-skill-lab", "version": "1"},
+                "capabilities": {"experimentalApi": True},
+            },
+        )
+
+        def listing():
+            return [
+                hook
+                for group in runtime.call("hooks/list", {"cwds": [str(home)]})["data"]
+                for hook in group["hooks"]
+                if hook.get("source") == "user"
+                and Path(hook["sourcePath"]) == home / ".codex/hooks.json"
+                and hook.get("command") in commands
+            ]
+
+        current = listing()
+        if len(current) != len(commands) or any(not hook["enabled"] for hook in current):
+            raise RuntimeError("The lab did not load the candidate's enabled course guards.")
+        runtime.call(
+            "config/batchWrite",
+            {
+                "edits": [
+                    {
+                        "keyPath": "hooks.state",
+                        "value": {
+                            hook["key"]: {"trusted_hash": hook["currentHash"]} for hook in current
+                        },
+                        "mergeStrategy": "upsert",
+                    }
+                ],
+                "reloadUserConfig": True,
+            },
+        )
+        if any(hook["trustStatus"] != "trusted" for hook in listing()):
+            raise RuntimeError("The lab could not verify trust for its candidate course guards.")
+    finally:
+        runtime.close()
+    return [*files, HOOK_MARKER]
 
 
 def main(argv: list[str]) -> int:
