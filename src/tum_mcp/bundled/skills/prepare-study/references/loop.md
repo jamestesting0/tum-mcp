@@ -40,8 +40,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    source's `sha256` from `.tum-mcp/state.json`. Record each worked demonstration once:
    its pages, what it shows and its inputs. Scan the text to find them and open the pages
    of the ones you teach; plans choose from this list
-   ([planning](planning.md#choose-the-lectures-examples)). `tum-mcp study digests PROJECT` lists
-   missing and stale ones. Plans, authors and checkers read the digest instead of the
+   ([planning](planning.md#choose-the-lectures-examples)). `tum-mcp study digests PROJECT`
+   lists missing and stale ones. Plans, authors and checkers read the digest instead of the
    whole source; open the source pages for anything the digest does not settle.
 3. **Check coverage before drafting.** Run
    `study report PROJECT --section coverage-plan --preparation ID`. This validates
@@ -141,8 +141,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    `tum-mcp study visuals PROJECT --interact`, narrowed with the same `--unit` and
    `--exercise` selectors for a bounded scope. Desktop is the check; add `--phone` only
    when the student asks about phones. `study visuals` redraws only items changed since
-   their last passing check (`unchanged` lists the rest), so rerun it freely after a fix. Read
-   `tum-mcp study report PROJECT --section readiness --preparation ID`.
+   their last passing check (`unchanged` lists the rest), so rerun it freely after a fix.
+   Read `tum-mcp study report PROJECT --section readiness --preparation ID`.
    Resolve required gaps before asking for formal review. Name the verified cutoff or
    selected subset, the workload and any excluded or unresolved sources, then ask:
    Ask whether to run one review round, using the student's terms; do not cite skill

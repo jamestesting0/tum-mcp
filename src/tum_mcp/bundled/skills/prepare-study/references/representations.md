@@ -80,7 +80,8 @@ write the teaching yourself beside it.
    it works on: `regions` outline boxes in image fractions (`x`, `y`, `w`, `h`, an optional
    `label`) and dim the rest, such as a tile and its goal square with its distance. Read
    the fractions off the grid preview each crop writes (`.tum-mcp/out/figure-grid.png`).
-   When the lecture builds a picture over several slides, crop each state and set the step's `frame`.
+   When the lecture builds a picture over several slides, crop each state and set the
+   step's `frame`.
 
 ## Algorithm traces
 
@@ -100,8 +101,10 @@ actual run; use the stage's node keys. Code marks its running `lines`, tables th
 `shown` rows or changed `cells`, derivations their `shown` lines, plots their `series`
 and SVG figures their `layers`. Clear marks that no longer apply when stepping back
 or switching runs. Draw a search tree with `layout: "tree"`: the app places its levels and
-keeps the lecture's shape however wide it is. List `visible_nodes` so the tree grows as
-nodes are generated, and put what the slide writes beside a node (its g, h and f, a
+keeps the lecture's shape however wide it is. When the lecture grows the tree as nodes are
+generated (A* on a map), list `visible_nodes`; otherwise the whole tree is drawn, as on
+slides that show it whole, and nodes no step has reached yet stay faint. Put what the slide
+writes beside a node (its g, h and f, a
 domain, a depth) in `node_values`, with the arithmetic (\(140 + 253 = 393\)). Derive
 graph marks and displayed state from the same computed trace, and include visual values
 in the answer key when computed. Do not invent a
