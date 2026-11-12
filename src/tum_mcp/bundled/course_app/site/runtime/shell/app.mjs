@@ -58,6 +58,7 @@ const narrow = matchMedia('(max-width: 799px)');
 const navigationState = { collapsed: narrow.matches };
 let currentIndex = 0, currentView = 'content', revising = false, home = false, reviewing = false;
 let main, unitHeading, unitEyebrow = null, step, headerDetails = [], syncMode = () => {};
+let disposeView = () => {};
 const tabButtons = new Map(), panels = new Map();
 const persistenceNote = node('p', 'notice'); persistenceNote.setAttribute('role', 'status');
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -313,6 +314,7 @@ function modePicker() {
   return group;
 }
 function render() {
+  disposeView(); disposeView = () => {};
   stopComments(); syncMode = () => {};
   const shell = node('div', 'shell');
   const exercisePage = workspace === 'exercises' ? renderExercises(location.hash.slice(1) || 'exercises', exercises) : null;
@@ -320,6 +322,7 @@ function render() {
   const examPage = workspace === 'exam' ? renderExam(location.hash.slice(1) || 'exam', readStored, store) : null;
   const audioPage = workspace === 'audio' ? renderAudio(location.hash.slice(1) || 'audio') : null;
   const notesPage = exercisePage || lecturePage || examPage || audioPage;
+  disposeView = notesPage?.dispose || (() => {});
   exercisePageView = exercisePage || (examPage?.navigateStep ? examPage : null);
   // A workspace's own home marks the course title as the current page, as the Study home does.
   navigationState.location = notesPage ? (notesPage.current ? workspace : 'home') : home ? 'home' : revising ? 'revision' : currentIndex;

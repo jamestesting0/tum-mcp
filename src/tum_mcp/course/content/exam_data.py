@@ -837,7 +837,7 @@ def exam_revisions(content: ExamContent) -> dict[str, str]:
 
 
 def render_exam(content: ExamContent) -> dict[str, JsonValue]:
-    from tum_mcp.course.content.exam_layout import layout
+    from tum_mcp.course.content.exam_layout import NARROW, layout
 
     value = compile_formulas(content.model_dump(mode="json", exclude_none=True))
     for concept, rendered in zip(content.concepts, value.get("concepts", []), strict=True):
@@ -852,5 +852,9 @@ def render_exam(content: ExamContent) -> dict[str, JsonValue]:
             rendered["revision"] = variant_revision(variant)
             rendered["replayable"] = variant.replayable
     value["statistics"] = exam_statistics(content)
-    value["map"] = layout(content)
+    wide = layout(content)
+    if wide["nodes"]:
+        narrow = layout(content, NARROW)
+        wide["narrow"] = {key: item for key, item in narrow.items() if key != "overview"}
+    value["map"] = wide
     return value

@@ -188,6 +188,10 @@ def test_cheatsheet_scans_filters_flags_and_maps(
         page.keyboard.down("Control")
         page.mouse.wheel(0, -300)
         page.keyboard.up("Control")
+        page.wait_for_function(
+            "before => document.querySelector('.exam-map-svg').getAttribute('viewBox') !== before",
+            arg=moved,
+        )
         zoomed = page.locator(".exam-map-svg").get_attribute("viewBox")
         assert zoomed and moved and float(zoomed.split()[2]) < float(moved.split()[2])
         # A node shows the same entry as the list, with its details, and stays open while the
@@ -207,7 +211,7 @@ def test_cheatsheet_scans_filters_flags_and_maps(
         expect(card).to_have_attribute("aria-label", "Loose coupling")
         page.locator('.exam-node[data-concept="observer"]').dispatch_event("click")
         expect(card.locator("details.exam-entry-details")).to_have_attribute("open", "")
-        page.get_by_role("button", name="Full screen").click()
+        page.get_by_role("button", name="Full screen", exact=True).click()
         expect(page.locator(".exam-map")).to_have_class(re.compile("expanded"))
         # Full screen keeps the entry beside the map, and Escape closes it before full screen.
         frame, pane = page.locator(".exam-map-scroll").bounding_box(), card.bounding_box()
@@ -215,10 +219,10 @@ def test_cheatsheet_scans_filters_flags_and_maps(
         page.keyboard.press("Escape")
         expect(card).to_be_hidden()
         expect(page.locator(".exam-map")).to_have_class(re.compile("expanded"))
-        page.get_by_role("button", name="Exit full screen").click()
+        page.get_by_role("button", name="Exit full screen", exact=True).click()
         expect(page.locator(".exam-map")).not_to_have_class(re.compile("expanded"))
     else:
-        expect(page.locator(".exam-map-scroll")).to_be_hidden()
+        expect(page.locator(".exam-map-scroll")).to_be_visible()
         page.locator(".exam-map-topic summary", has_text="Structural patterns").click()
         page.locator(".exam-map-item", has_text="Decorator").click()
         expect(page.locator(".exam-map-card")).to_contain_text("Untested")
