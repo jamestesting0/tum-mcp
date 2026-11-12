@@ -120,7 +120,8 @@ Teach a chosen example in full:
    input the lecture lacks to reach an ending: a run without a goal ends where its
    traversal ends (all nodes within the limit expanded, a cutoff).
 5. **One walkthrough per run.** Repeated rounds, such as iterative deepening's limits,
-   are subgoals of one walkthrough.
+   are subgoals of one walkthrough. Every worked run in the unit, a table of states
+   included, is a planned `example`; plan it or cut it.
 
 Compute the expected states from the lecture's inputs before authoring, and use
 run-keyed answer states so verification checks every step. Low cognitive load is about
