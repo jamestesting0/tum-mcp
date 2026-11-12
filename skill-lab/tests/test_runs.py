@@ -133,6 +133,61 @@ def test_default_workspaces_sit_outside_the_repository(monkeypatch):
     assert not paths.workspaces().is_relative_to(paths.REPO)
 
 
+def test_codex_tool_consent_gets_its_canned_reply_before_the_next_scenario_turn(
+    lab, monkeypatch, tmp_path
+):
+    from skill_lab.models import ModelSpec
+
+    executable = tmp_path / "fake-bin" / "codex"
+    executable.write_text(
+        f"#!{sys.executable}\n"
+        + textwrap.dedent(
+            """
+            import json, os, pathlib, sys
+            message = sys.argv[-1]
+            work = pathlib.Path.cwd()
+            with (work / "messages.txt").open("a") as messages:
+                messages.write(message + "\\n")
+            session = pathlib.Path(os.environ["HOME"]) / ".codex/sessions/rollout-t-consent.jsonl"
+            session.parent.mkdir(parents=True, exist_ok=True)
+            with session.open("a") as log:
+                log.write(json.dumps({"type": "turn_context", "payload": {
+                    "model": "gpt-6.1-terra"
+                }}) + "\\n")
+                log.write(json.dumps({"type": "response_item", "payload": {
+                    "type": "message", "role": "user"
+                }}) + "\\n")
+                if message.startswith("Set up"):
+                    log.write(json.dumps({"type": "response_item", "payload": {
+                        "type": "function_call", "name": "request_user_input_async",
+                        "arguments": json.dumps({"questions": [
+                            {"title": "Which course do you mean?"}
+                        ]})
+                    }}) + "\\n")
+            for event in (
+                {"type": "thread.started", "thread_id": "t-consent"},
+                {"type": "item.completed", "item": {
+                    "type": "agent_message", "text": "Waiting for the choice above."
+                }},
+                {"type": "turn.completed"},
+            ):
+                print(json.dumps(event))
+            """
+        )
+    )
+    executable.chmod(0o755)
+    record = execute(lab, author=ModelSpec.parse("codex:gpt-6.1-terra:high"))
+    assert record["status"] == "completed", record.get("error")
+    assert record["turns"][0]["replies"] == ["The AI course."]
+    assert record["turns"][1]["replies"] == []
+    workspace = paths.round_dir("r1") / "runs" / record["id"] / "workspace"
+    assert (workspace / "messages.txt").read_text().splitlines() == [
+        "Set up my course project.",
+        "The AI course.",
+        "Build lessons.",
+    ]
+
+
 def test_checkpoint_run_starts_after_the_named_turn(lab):
     first = execute(lab)
     record = execute(lab, checkpoint=f"{first['id']}@1")
