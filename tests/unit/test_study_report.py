@@ -442,6 +442,24 @@ def test_a_summary_that_repeats_an_objective_is_flagged() -> None:
     assert ("summary_repeats_objective", unit["key"]) not in {(f["flag"], f["item"]) for f in flags}
 
 
+def test_two_walkthroughs_over_the_same_drawing_are_flagged() -> None:
+    from importlib.resources import files
+
+    example = json.loads(
+        (files("tum_mcp") / "bundled/course_app/example/content.json").read_bytes()
+    )
+    content = study()
+    unit = content["units"][0]
+    walk = next(b for b in example["units"][0]["blocks"] if b.get("key") == "walkthrough-graph")
+    walk["sources"] = unit["blocks"][0]["sources"]
+    unit["blocks"].append(walk)
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert "repeated_example" not in {f["flag"] for f in flags}
+    unit["blocks"].append(walk | {"key": "replayed", "title": "Compare your trace"})
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert ("repeated_example", unit["key"]) in {(f["flag"], f["item"]) for f in flags}
+
+
 def test_a_worked_calculation_without_a_general_rule_is_flagged() -> None:
     content = study()
     unit = content["units"][0]
