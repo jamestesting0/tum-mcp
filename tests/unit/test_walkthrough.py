@@ -41,6 +41,55 @@ def test_run_keyed_answers_check_exact_state_in_each_run() -> None:
     assert "authored variant" in check({"primary": expected["primary"]})[0][0]
 
 
+def test_answer_keys_check_the_values_written_under_nodes() -> None:
+    from tum_mcp.course.checks.answers import compare
+
+    block = {"kind": "walkthrough", "key": "astar", "steps": [{"node_values": {"s": "f = 393"}}]}
+
+    def check(values: dict) -> tuple[list[str], int]:
+        return compare(block, {"walkthroughs": {"astar": {"primary": [{"@node_values": values}]}}})
+
+    assert check({"s": "f = 393"}) == ([], 1)
+    assert "the key computes 'f = 392'" in check({"s": "f = 392"})[0][0]
+    assert "under each node" in check({"s": "f = 393", "t": "f = 447"})[0][0]
+
+
+def tree(**change) -> dict:
+    nodes = [{"key": key, "label": key.upper()} for key in "abc"]
+    edges = [{"start": "a", "end": end, "directed": True} for end in "bc"]
+    stage = {"kind": "diagram", "layout": "tree", "description": "Tree.", "nodes": nodes}
+    step = {"action": "Expand A.", "why": "Root.", "active": ["a"], "visible_nodes": ["a"]}
+    return {
+        "kind": "walkthrough",
+        "sources": ["s"],
+        "stage": stage | {"edges": edges} | change,
+        "steps": [step, step | {"visible_nodes": None, "node_values": {"b": "h = 1"}}],
+    }
+
+
+def test_a_tree_stage_places_nodes_from_its_edges_and_reveals_them() -> None:
+    WalkthroughBlock.model_validate(tree())
+    early = tree()
+    early["steps"][0]["active"] = ["b"]
+    with pytest.raises(ValidationError, match="does not show yet"):
+        WalkthroughBlock.model_validate(early)
+    cases = [
+        (
+            {"nodes": [{"key": k, "label": k, "row": 0, "col": i} for i, k in enumerate("abc")]},
+            "drop row and col",
+        ),
+        ({"edges": [{"start": "a", "end": "b"}, {"start": "a", "end": "c"}]}, "directed"),
+        ({"edges": [{"start": "a", "end": "b", "directed": True}]}, "one root"),
+        (
+            {"edges": [{"start": s, "end": e, "directed": True} for s, e in ["ab", "cb", "ac"]]},
+            "one parent",
+        ),
+    ]
+    for change, message in cases:
+        with pytest.raises(ValidationError, match=message):
+            WalkthroughBlock.model_validate(tree(**change))
+
+
 def test_the_shipped_walkthroughs_render_their_stage() -> None:
     blocks = TypeAdapter(tuple[Block, ...]).validate_python(list(WALKS.values()))
     rendered = render_blocks(blocks)

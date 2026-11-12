@@ -7,7 +7,8 @@ A script prints one JSON object:
   number must equal it within 1e-9 (relative).
 - `exact_values`: content path -> complete expected value, with whitespace normalized in text.
 - `walkthroughs`: walkthrough block key -> runs (`primary`, and `variant` when authored).
-  Each run lists one object per step containing all state rows, matched exactly.
+  Each run lists one object per step containing all state rows, matched exactly, and
+  `"@node_values"`: node key -> value when the stage writes values under its nodes.
   A list of partial primary-run states is accepted for legacy keys.
 
 Scripts run isolated (`python -I`) in an empty folder with a time limit.
@@ -26,6 +27,8 @@ from pydantic import JsonValue
 from tum_mcp.course.project.store import confined
 
 TIMEOUT_S = 30
+# In a walkthrough step's expected state, the values written under its nodes.
+NODE_VALUES = "@node_values"
 STEP = re.compile(r"([^.\[\]]+)|\[(\d+)\]")
 
 
@@ -108,9 +111,24 @@ def _compare_runs(block: dict, runs: dict, key: str) -> tuple[list[str], int]:
             rows = step.get("state", [])
             actual = {row["label"]: row["value"] for row in rows}
             place = f"walkthrough {key}/{run} step {number}"
+            values = None
+            if isinstance(states, dict) and NODE_VALUES in states:
+                values = states[NODE_VALUES]
+                states = {label: state for label, state in states.items() if label != NODE_VALUES}
+                found = step.get("node_values", {})
+                if not isinstance(values, dict) or values.keys() != found.keys():
+                    problems.append(f"{place}: expected the value under each node exactly.")
+                    continue
+                for node, value in values.items():
+                    compared += 1
+                    if not _exact(found[node], value):
+                        problems.append(
+                            f"{place}: node {node} shows {found[node]!r}, "
+                            f"the key computes {value!r}"
+                        )
             if (
                 not isinstance(states, dict)
-                or not states
+                or not (states or values is not None)
                 or (states.keys() != actual.keys() or len(actual) != len(rows))
             ):
                 problems.append(f"{place}: expected each authored state row exactly once.")

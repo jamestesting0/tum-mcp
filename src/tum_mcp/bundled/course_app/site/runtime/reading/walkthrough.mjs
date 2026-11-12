@@ -1,6 +1,6 @@
 import { node, studyText, append, plainText, segmented } from '../shell/dom.mjs';
 import { iconButton, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
-import { drawGraph } from '../visuals/graph.mjs';
+import { drawGraph, setNodeValue } from '../visuals/graph.mjs';
 import { renderCode, languageName, lineSet, markLines } from './code.mjs';
 import { renderDerivation } from './derivation.mjs';
 import { renderPlot } from '../visuals/plot.mjs';
@@ -20,20 +20,34 @@ export function divergence(first, second) {
 function stageView(stage, renderBody, steps) {
   switch (stage.kind) {
     case 'diagram': {
-      const { graph, groups } = drawGraph(stage, plainText(stage.description));
-      return { element: append(node('div', 'graph-region'), graph), show(step) {
+      // Every value a node shows in any step, so the layout leaves room for the widest.
+      const values = Object.fromEntries(stage.nodes.map(item => [item.key, steps.map(step => step.node_values?.[item.key]).filter(Boolean)]));
+      const { graph, groups } = drawGraph(stage, plainText(stage.description), values);
+      const ends = new Map(stage.edges.map(edge => [`${edge.start}--${edge.end}`, edge]));
+      let current = null;
+      const show = step => {
+        current = step;
+        const shown = key => !step.visible_nodes || step.visible_nodes.includes(key);
         for (const [key, group] of groups) {
           const active = step.active.includes(key);
           group.classList.toggle('active', active);
           group.classList.toggle('visited', !active && step.visited.includes(key));
           group.classList.toggle('frontier', !active && step.frontier.includes(key));
+          group.setAttribute('visibility', shown(key) ? 'visible' : 'hidden');
+          setNodeValue(group, step.node_values?.[key]);
         }
         const marked = new Set(stage.edges.filter(edge => step.edges.some(mark =>
           (mark.start === edge.start && mark.end === edge.end) ||
           (!edge.directed && mark.start === edge.end && mark.end === edge.start)
         )).map(edge => `${edge.start}--${edge.end}`));
-        for (const line of graph.querySelectorAll('[data-edge-key], [data-arrow-key]')) line.classList.toggle('active', marked.has(line.dataset.edgeKey || line.dataset.arrowKey));
-      } };
+        for (const line of graph.querySelectorAll('[data-edge-key], [data-arrow-key], [data-label-edge]')) {
+          const key = line.dataset.edgeKey || line.dataset.arrowKey || line.dataset.labelEdge, edge = ends.get(key);
+          line.classList.toggle('active', marked.has(key));
+          line.setAttribute('visibility', !edge || (shown(edge.start) && shown(edge.end)) ? 'visible' : 'hidden');
+        }
+      };
+      graph.addEventListener('graphdraw', () => { if (current) show(current); });
+      return { element: append(node('div', 'graph-region'), graph), show };
     }
     case 'table': {
       const element = renderBody(stage), rows = [...element.querySelectorAll('tbody tr')];

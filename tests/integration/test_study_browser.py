@@ -20,6 +20,73 @@ def test_study_website_journeys_pass_in_the_checkout(course_browser: Browser) ->
     assert study_website(course_browser)["passed"]
 
 
+TREE_WALKTHROUGH = """async () => {
+    const { renderWalkthrough } = await import('./runtime/reading/walkthrough.mjs');
+    const keys = 'abcdefghijklmno'.split('');
+    const nodes = keys.map(key => ({ key, label: key.toUpperCase() }));
+    const edges = keys.slice(1).map((key, index) =>
+        ({ start: keys[Math.floor(index / 2)], end: key, directed: true }));
+    const step = (shown, values, active) => ({ action: `Expand ${active}`, why: 'Deepest first.',
+        active: [active], frontier: [], visited: [], edges: [], state: [],
+        visible_nodes: shown, node_values: values });
+    const stage = { kind: 'diagram', layout: 'tree', description: 'The tree.', nodes, edges };
+    const block = { stage,
+        steps: [step(['a', 'b', 'c'], { a: 'f = 3' }, 'a'),
+                step(keys, { a: 'f = 3', o: '\\(f = 12\\)' }, 'o')] };
+    document.querySelector('main').replaceChildren(renderWalkthrough(block, () => null));
+}"""
+
+
+def test_tree_walkthrough_keeps_the_lecture_shape_reveals_nodes_and_writes_values(
+    course_browser: Browser, project: Path
+) -> None:
+    from tum_mcp.course.app.preview import Handler, PreviewServer
+
+    with PreviewServer(
+        ("127.0.0.1", 0), partial(Handler, directory=str(project / "app"))
+    ) as server:
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            with course_browser.new_context(viewport={"width": 1440, "height": 900}) as context:
+                page = context.new_page()
+                page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+                page.locator("[data-block-index]").first.wait_for()
+                page.evaluate(TREE_WALKTHROUGH)
+                hidden = page.locator('[data-node-key="o"]')
+                expect(hidden).to_have_attribute("visibility", "hidden")
+                expect(page.locator('[data-node-key="a"] .node-value')).to_have_text("f = 3")
+                page.get_by_role("button", name="Next step", exact=True).click()
+                expect(hidden).to_have_attribute("visibility", "visible")
+                expect(page.locator('[data-node-key="o"] .node-value')).to_contain_text("f")
+                boxes = page.evaluate("""() => Object.fromEntries(
+                    [...document.querySelectorAll('[data-node-key]')]
+                    .map(group => { const box = group.getBBox(); return [group.dataset.nodeKey,
+                        [box.x, box.y, box.x + box.width, box.y + box.height]]; }))""")
+        finally:
+            server.shutdown()
+            worker.join(timeout=3)
+    centre = {key: (box[0] + box[2]) / 2 for key, box in boxes.items()}
+    middle = {key: (box[1] + box[3]) / 2 for key, box in boxes.items()}
+    levels = ["a", "bc", "defg", "hijklmno"]
+    for level in levels:
+        assert len({round(middle[key]) for key in level}) == 1
+        xs = [centre[key] for key in level]
+        assert xs == sorted(xs) and len(set(xs)) == len(xs)
+    for index, key in enumerate("abcdefg"):
+        left, right = "abcdefghijklmno"[2 * index + 1], "abcdefghijklmno"[2 * index + 2]
+        assert abs(centre[key] - (centre[left] + centre[right]) / 2) < 1
+    for one in boxes.values():
+        for other in boxes.values():
+            if one is not other:
+                assert (
+                    one[2] <= other[0]
+                    or other[2] <= one[0]
+                    or one[3] <= other[1]
+                    or other[3] <= one[1]
+                )
+
+
 def test_walkthrough_marks_only_the_traversed_direction(
     course_browser: Browser, project: Path
 ) -> None:
