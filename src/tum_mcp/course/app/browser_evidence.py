@@ -21,9 +21,18 @@ from tum_mcp.settings import Frozen
 
 class BrowserBuild(Frozen):
     build: Digest
+    # The renderer: templates and images, everything built except the content data.
+    shell: Digest
     checks: Digest
     browser: Digest
     managed: bool
+
+
+class Earlier(Frozen):
+    """A passing check from an earlier build of the same renderer, kept until rechecked."""
+
+    revision: str
+    captures: tuple[str, ...] = ()
 
 
 class BrowserReceipt(Frozen):
@@ -33,23 +42,46 @@ class BrowserReceipt(Frozen):
     captures: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     # Passing command results can be replayed for exactly the same request.
     results: dict[str, dict[str, JsonValue]] = Field(default_factory=dict)
+    # The revision of the item each check covered, so a rebuild keeps unchanged items' checks.
+    revisions: dict[str, str] = Field(default_factory=dict)
+    earlier: dict[str, Earlier] = Field(default_factory=dict)
+
+    def pending(self) -> dict[str, Earlier]:
+        """Earlier passes this build has not rechecked yet."""
+        return {key: value for key, value in self.earlier.items() if key not in self.states}
+
+    def carried(self, root: Path) -> dict[str, Earlier]:
+        """This build's passing checks, offered to the next build of the same renderer."""
+        passed = {
+            key: Earlier(revision=self.revisions[key], captures=self.captures.get(key, ()))
+            for key in self.states
+            if key in self.revisions and self.evidence(root, key)
+        }
+        return self.pending() | passed
 
     def evidence(self, root: Path, key: str) -> bool:
-        if self.states.get(key) is not True:
-            return False
-        if not key.startswith(("visual/phone/", "visual/desktop/")):
-            return True
-        captures = self.captures.get(key, ())
-        try:
-            return bool(captures) and all(
-                path.startswith(".tum-mcp/visuals/") and confined(root, path).is_file()
-                for path in captures
-            )
-        except CampusError:
-            return False
+        return self.states.get(key) is True and captured(root, key, self.captures.get(key, ()))
+
+
+def captured(root: Path, key: str, captures: tuple[str, ...]) -> bool:
+    """A visual check counts only with its contact sheets still on disk."""
+    if not key.startswith(("visual/phone/", "visual/desktop/")):
+        return True
+    try:
+        return bool(captures) and all(
+            path.startswith(".tum-mcp/visuals/") and confined(root, path).is_file()
+            for path in captures
+        )
+    except CampusError:
+        return False
 
 
 def build_files(root: Path) -> tuple[Digest, bool]:
+    hashes, managed = _built(root)
+    return digest(json.dumps(hashes, sort_keys=True).encode()), managed
+
+
+def _built(root: Path) -> tuple[dict[str, str], bool]:
     from tum_mcp.course.app.build import TEMPLATE_FILES
 
     data = read_bytes(confined(root, "app/data.mjs"))
@@ -79,7 +111,7 @@ def build_files(root: Path) -> tuple[Digest, bool]:
         if actual is None:
             raise CampusError(Code.ACTION_REQUIRED, f"The built app lacks {name}.")
         hashes[name] = digest(actual)
-    return digest(json.dumps(hashes, sort_keys=True).encode()), managed
+    return hashes, managed
 
 
 def browser_choice() -> BrowserChoice:
@@ -90,7 +122,11 @@ def browser_choice() -> BrowserChoice:
 
 
 def browser_identity(root: Path, browser: BrowserChoice) -> BrowserBuild:
-    build, managed = build_files(root)
+    hashes, managed = _built(root)
+    build = digest(json.dumps(hashes, sort_keys=True).encode())
+    shell = digest(
+        json.dumps({k: v for k, v in hashes.items() if k != "data.mjs"}, sort_keys=True).encode()
+    )
     executable = Path(browser.executable).resolve()
     stat = executable.stat()
     bundled = files("tum_mcp.bundled")
@@ -109,6 +145,7 @@ def browser_identity(root: Path, browser: BrowserChoice) -> BrowserBuild:
     ]
     return BrowserBuild(
         build=build,
+        shell=shell,
         checks=checks,
         browser=digest(json.dumps(host).encode()),
         managed=managed,
@@ -155,17 +192,19 @@ def save_receipt(
     result: tuple[str, dict[str, JsonValue]] | None = None,
     *,
     captures: dict[str, tuple[str, ...]] | None = None,
+    revisions: dict[str, str] | None = None,
 ) -> None:
     path = private_path(root, "browser-check.json")
     with FileLock(str(private_path(root, "update.lock"))):
         if build_files(root) != (identity.build, identity.managed):
             raise CampusError(Code.STALE_RESULT, "The built app changed during browser checks.")
         previous = read_receipt(root)
-        current = (
-            previous
-            if previous and previous.identity == identity
-            else BrowserReceipt(identity=identity)
-        )
+        if previous and previous.identity == identity:
+            current = previous
+        elif previous and _rebuilt(previous.identity, identity):
+            current = BrowserReceipt(identity=identity, earlier=previous.carried(root))
+        else:
+            current = BrowserReceipt(identity=identity)
         results = dict(current.results) if all(states.values()) else {}
         if result and result[1].get("passed") is True:
             results[result[0]] = result[1]
@@ -177,6 +216,7 @@ def save_receipt(
                     key: paths for key, paths in current.captures.items() if key not in states
                 }
                 | (captures or {}),
+                "revisions": current.revisions | (revisions or {}),
             }
         )
         apply(
@@ -193,6 +233,34 @@ def save_receipt(
 
 def result_key(kind: str, targets: Iterable[str], widths: Iterable[str]) -> str:
     return digest(json.dumps([kind, sorted(targets), list(widths)]).encode())
+
+
+def reusable(
+    root: Path, identity: BrowserBuild, revisions: dict[str, str]
+) -> dict[str, tuple[str, ...]]:
+    """Passing checks from an earlier build that still hold: the same renderer, checks and
+    browser drew it, and the item each covers is unchanged. Maps each such key to its captures."""
+    receipt = read_receipt(root)
+    if receipt is None or not identity.managed:
+        return {}
+    if receipt.identity == identity:
+        pool = receipt.pending()
+    elif _rebuilt(receipt.identity, identity):
+        pool = receipt.carried(root)
+    else:
+        return {}
+    return {
+        key: pool[key].captures
+        for key, revision in revisions.items()
+        if key in pool
+        and pool[key].revision == revision
+        and captured(root, key, pool[key].captures)
+    }
+
+
+def _rebuilt(before: BrowserBuild, after: BrowserBuild) -> bool:
+    """Only the content data changed: same templates, images, checks and browser."""
+    return before.managed and before.model_copy(update={"build": after.build}) == after
 
 
 def cached(

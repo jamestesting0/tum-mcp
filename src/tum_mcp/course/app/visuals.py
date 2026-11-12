@@ -30,6 +30,7 @@ from tum_mcp.course.app.browser_evidence import (
     browser_identity,
     cached,
     result_key,
+    reusable,
     save_receipt,
 )
 from tum_mcp.course.content.store import present
@@ -50,6 +51,8 @@ WIDTHS = {"phone": 390, "narrow": 600, "desktop": 1280}
 # Desktop is checked by default; phone and narrow widths only when asked (`--phone`).
 DEFAULT_WIDTHS = ("desktop",)
 SHEET_WIDTHS = ("phone", "desktop")
+# A visual present in the page but not shown at a width (a collapsed step, a closed panel).
+HIDDEN = {"code": "not_shown", "detail": "present but not shown at this width; not photographed"}
 # CSS pixels of screenshots per contact-sheet page, so a page stays legible when viewed whole.
 SHEET_HEIGHT = 1600
 VISUAL_KINDS = frozenset({"diagram", "uml", "plot", "figure", "table"})
@@ -341,10 +344,13 @@ def _open(page: "Page", url: str) -> None:
     page.evaluate(SETTLE)
 
 
-def _shoot(page: "Page", selector: str, width: int, *, widen: bool = False) -> bytes:
-    """Photograph an element whole: the viewport grows to fit it, so nothing is cut off."""
+def _shoot(page: "Page", selector: str, width: int, *, widen: bool = False) -> bytes | None:
+    """Photograph an element whole: the viewport grows to fit it, so nothing is cut off.
+    An element the page does not show at this width has nothing to photograph."""
     target = page.locator(selector).first
-    box = target.bounding_box() or {"width": 0, "height": 0}
+    box = target.bounding_box()
+    if box is None or not target.is_visible():
+        return None
     size = {
         "width": max(width, math.ceil(box["width"]) + 16) if widen else width,
         "height": max(900, math.ceil(box["height"]) + 120),
@@ -440,7 +446,11 @@ def _measure(
                                 )
                                 selector = f'[data-visual-shot="{entry["id"]}"]'
                                 taken = shots.setdefault(visit.item, [])
-                                taken.append((caption, _shoot(page, selector, pixels)))
+                                shot = _shoot(page, selector, pixels)
+                                if shot is None:
+                                    visual.widths[name]["findings"].append(HIDDEN)
+                                    continue
+                                taken.append((caption, shot))
                                 if entry["facts"].get("scrolls") and page.evaluate(
                                     UNROLL, entry["id"]
                                 ):
@@ -448,7 +458,8 @@ def _measure(
                                     page.evaluate(
                                         "document.getElementById('visual-unrolled').remove()"
                                     )
-                                    taken.append((f"{caption} · whole drawing", whole))
+                                    if whole is not None:
+                                        taken.append((f"{caption} · whole drawing", whole))
                         for key in visit.expected:
                             missing = visuals.setdefault(key, Visual(key, "missing", ""))
                             missing.widths.setdefault(name, {"findings": [NOT_DRAWN], "facts": {}})
@@ -552,9 +563,17 @@ def check_visuals(
     required = tuple(f"visual/{width}/{item}" for width in widths for item in revisions)
     if previous_result := cached(root, identity, request, required):
         return previous_result
+    keyed = {
+        f"visual/{width}/{item}": value for width in widths for item, value in revisions.items()
+    }
+    kept = reusable(root, identity, keyed)
+    unchanged = {
+        item for item in revisions if all(f"visual/{width}/{item}" in kept for width in widths)
+    }
+    fresh = [visit for visit in visits if visit.item not in unchanged]
     measured, sheets = (
-        _measure(root, site, visits, widths=widths, choice=choice, stamp=identity.build)
-        if visits
+        _measure(root, site, fresh, widths=widths, choice=choice, stamp=identity.build)
+        if fresh
         else ({}, {})
     )
     items = {
@@ -565,11 +584,12 @@ def check_visuals(
             "sheets": [path for width in widths for path in sheets.get((item, width), ())],
         }
         for item, value in revisions.items()
+        if item not in unchanged
     }
     defects = _defects(items)
     failed = {(defect["item"], defect["width"]) for defect in defects}
     states = {
-        f"visual/{width}/{item}": (item, width) not in failed
+        f"visual/{width}/{item}": item in unchanged or (item, width) not in failed
         for width in widths
         for item in revisions
     }
@@ -577,6 +597,7 @@ def check_visuals(
     result = {
         "passed": not defects,
         "checked": sorted(revisions),
+        **({"unchanged": sorted(unchanged)} if unchanged else {}),
         "defects": defects,
         "sheets": sorted(sheet for record in items.values() for sheet in record["sheets"]),
         **({"no_visuals": sorted(set(units) - selected)} if set(units) - selected else {}),
@@ -586,12 +607,26 @@ def check_visuals(
         identity,
         states,
         (request, result),
-        captures={f"visual/{width}/{item}": paths for (item, width), paths in sheets.items()},
+        captures={f"visual/{width}/{item}": paths for (item, width), paths in sheets.items()}
+        | {
+            f"visual/{width}/{item}": kept[f"visual/{width}/{item}"]
+            for width in widths
+            for item in unchanged
+        },
+        revisions=keyed,
     )
     with FileLock(str(private_path(root, "update.lock"))):
         app = app_revision(site)
         previous = read_report(root)
-        existing = previous["items"] if previous and previous["app"] == app else {}
+        existing = (
+            previous["items"]
+            if previous and previous["app"] == app
+            else {
+                item: record
+                for item, record in (previous["items"] if previous else {}).items()
+                if item in unchanged and record.get("revision") == revisions[item]
+            }
+        )
         private_write(
             report_path(root),
             (

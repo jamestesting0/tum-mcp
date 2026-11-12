@@ -276,3 +276,17 @@ def test_an_image_walkthrough_outlines_regions_on_the_picture_and_swaps_frames(
     assert all(abs(picture[key] - overlay[key]) < 1 for key in ("x", "y", "width", "height"))
     assert abs(outline["x"] - (picture["x"] + 0.1 * picture["width"])) < 3
     assert abs(outline["width"] - 0.25 * picture["width"]) < 4
+
+
+def test_a_visual_hidden_at_a_width_is_skipped_without_waiting(course_browser: Browser) -> None:
+    import time
+
+    from tum_mcp.course.app.visuals import _shoot
+
+    with course_browser.new_context(viewport={"width": 390, "height": 900}) as context:
+        page = context.new_page()
+        page.set_content('<div id="shown">a</div><div id="hidden" style="display:none">b</div>')
+        started = time.monotonic()
+        assert _shoot(page, "#hidden", 390) is None
+        assert time.monotonic() - started < 5
+        assert _shoot(page, "#shown", 390)

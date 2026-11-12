@@ -117,7 +117,9 @@ def test_receipts_merge_widths_and_cannot_certify_an_edited_build(project: Path)
 
     build(project, publish=False)
     digest, managed = build_files(project)
-    identity = BrowserBuild(build=digest, managed=managed, browser="1" * 64, checks="2" * 64)
+    identity = BrowserBuild(
+        build=digest, shell="3" * 64, managed=managed, browser="1" * 64, checks="2" * 64
+    )
     with ThreadPoolExecutor(max_workers=2) as pool:
         jobs = [
             pool.submit(save_receipt, project, identity, {width: True}, (width, {"passed": True}))
@@ -148,7 +150,9 @@ def test_visual_receipt_loses_its_evidence_when_the_capture_is_removed(project: 
 
     build(project, publish=False)
     digest, managed = build_files(project)
-    identity = BrowserBuild(build=digest, managed=managed, browser="1" * 64, checks="2" * 64)
+    identity = BrowserBuild(
+        build=digest, shell="3" * 64, managed=managed, browser="1" * 64, checks="2" * 64
+    )
     state = "visual/phone/study/graphs"
     relative = ".tum-mcp/visuals/graphs-phone.png"
     image = project / relative
@@ -164,3 +168,52 @@ def test_visual_receipt_loses_its_evidence_when_the_capture_is_removed(project: 
     image.unlink()
     assert not receipt.evidence(project, state)
     assert cached(project, identity, "request", [state]) is None
+
+
+def test_a_rebuild_keeps_passing_checks_of_unchanged_items_only(project: Path) -> None:
+    import json
+
+    from tum_mcp.course.app.browser_evidence import (
+        BrowserBuild,
+        build_files,
+        reusable,
+        save_receipt,
+    )
+
+    build(project, publish=False)
+    before = BrowserBuild(
+        build=build_files(project)[0],
+        shell="3" * 64,
+        managed=True,
+        browser="1" * 64,
+        checks="2" * 64,
+    )
+    sheets = {}
+    for item in ("a", "b"):
+        sheets[item] = f".tum-mcp/visuals/{item}.png"
+        (project / sheets[item]).parent.mkdir(exist_ok=True)
+        (project / sheets[item]).touch()
+    keys = {item: f"visual/desktop/study/{item}" for item in ("a", "b")}
+    save_receipt(
+        project,
+        before,
+        {keys["a"]: True, keys["b"]: True},
+        captures={keys[item]: (sheets[item],) for item in keys},
+        revisions={keys["a"]: "a1", keys["b"]: "b1"},
+    )
+    unit = next((project / "app/study/units").glob("*.json"))
+    data = json.loads(unit.read_text(encoding="utf-8"))
+    unit.write_text(json.dumps(data | {"title": data["title"] + " (edited)"}), encoding="utf-8")
+    build(project, publish=False)
+    after = before.model_copy(update={"build": build_files(project)[0]})
+    assert after.build != before.build
+    assert reusable(project, after, {keys["a"]: "a1", keys["b"]: "b2"}) == {
+        keys["a"]: (sheets["a"],)
+    }
+    renderer = after.model_copy(update={"shell": "4" * 64})
+    assert reusable(project, renderer, {keys["a"]: "a1"}) == {}
+
+    save_receipt(project, after, {keys["b"]: False}, revisions={keys["b"]: "b1"})
+    assert reusable(project, after, {keys["a"]: "a1", keys["b"]: "b1"}) == {
+        keys["a"]: (sheets["a"],)
+    }
