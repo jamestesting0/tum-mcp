@@ -17,7 +17,7 @@ from tum_mcp.git_ops import repository_url
 from tum_mcp.settings import Provider, find_account
 from tum_mcp.transport import API
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 
 
 @app.command("connect-git")

@@ -7,7 +7,7 @@ from tum_mcp.moodle.auth import SessionStore
 from tum_mcp.moodle.config import Paths
 from tum_mcp.moodle.login import login
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 
 
 @app.command("login")
