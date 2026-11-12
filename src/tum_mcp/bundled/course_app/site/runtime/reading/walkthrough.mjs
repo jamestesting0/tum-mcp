@@ -92,6 +92,7 @@ function stageView(stage, renderBody, steps) {
     }
     case 'figure': {
       const element = renderBody(stage);
+      if (stage.image) return imageStage(element, stage, steps);
       const named = new Set(steps.flatMap(step => step.layers || []));
       // Ids carry a per-figure prefix in the page; layers are named as authored.
       const layers = [...element.querySelectorAll('svg [id]')].filter(item => named.has(item.id.replace(/^figure-\d+-/, '')));
@@ -104,6 +105,46 @@ function stageView(stage, renderBody, steps) {
     }
     default: throw new Error('Unsupported walkthrough stage. Rebuild the site with a compatible renderer.');
   }
+}
+
+// A lecture figure the steps work on: each step may outline the parts it uses (the rest dims)
+// and may swap in another crop for a picture the lecture builds over several slides.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function imageStage(element, stage, steps) {
+  const image = element.querySelector('img'), frame = node('div', 'figure-frame');
+  image.loading = 'eager';
+  image.replaceWith(frame); frame.append(image);
+  for (const source of new Set(steps.map(step => step.frame).filter(Boolean))) new Image().src = source;
+  const overlay = document.createElementNS(SVG_NS, 'svg');
+  overlay.setAttribute('class', 'figure-regions'); overlay.setAttribute('viewBox', '0 0 1 1');
+  overlay.setAttribute('preserveAspectRatio', 'none'); overlay.setAttribute('aria-hidden', 'true');
+  const labels = node('div', 'figure-region-labels');
+  frame.append(overlay, labels);
+  return { element, show(step) {
+    const source = step.frame || stage.image;
+    if (image.getAttribute('src') !== source) image.src = source;
+    const regions = step.regions || [];
+    overlay.replaceChildren(); labels.replaceChildren();
+    frame.classList.toggle('marked', regions.length > 0);
+    if (!regions.length) return;
+    const dim = document.createElementNS(SVG_NS, 'path');
+    dim.setAttribute('class', 'figure-dim'); dim.setAttribute('fill-rule', 'evenodd');
+    dim.setAttribute('d', ['M0 0H1V1H0Z', ...regions.map(r => `M${r.x} ${r.y}h${r.w}v${r.h}h${-r.w}Z`)].join(''));
+    overlay.append(dim);
+    for (const region of regions) {
+      const outline = document.createElementNS(SVG_NS, 'rect');
+      for (const [name, value] of Object.entries({ x: region.x, y: region.y, width: region.w, height: region.h })) outline.setAttribute(name, value);
+      outline.setAttribute('class', 'figure-outline'); outline.setAttribute('vector-effect', 'non-scaling-stroke');
+      overlay.append(outline);
+      if (region.label) {
+        const tag = studyText('span', 'figure-region-label', region.label);
+        tag.style.left = `${region.x * 100}%`;
+        tag.style.top = `${(region.y < 0.08 ? region.y + region.h : region.y) * 100}%`;
+        tag.classList.toggle('below', region.y < 0.08);
+        labels.append(tag);
+      }
+    }
+  } };
 }
 
 function stateRows(step, before) {

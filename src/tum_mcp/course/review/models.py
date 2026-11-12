@@ -298,6 +298,7 @@ RULED_FLAGS: dict[str, str] = {
     "definition_refined": "correctness.source_match",
     "no_visual": "representation.shape_fits",
     "unstepped_table": "representation.shape_fits",
+    "slide_image": "representation.shape_fits",
     "thin_unit": "coverage.ledger_outcomes",
     "repeated_feedback": "practice.plausible_options",
     "long_section": "representation.shape_fits",

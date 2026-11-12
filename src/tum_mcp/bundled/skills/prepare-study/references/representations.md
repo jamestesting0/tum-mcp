@@ -58,13 +58,29 @@ first step: a walkthrough that marks one row and then announces the total demons
 nothing (`unstepped_table`). Work each item the lecture works, or give the finished
 table with its working beside it outside a walkthrough.
 
-**The lecture's own figure.** When a slide's figure is the clearest fixed picture (a
-dense map with its distances, a photo, a complex plot or board), show it as a figure
-`image` instead of redrawing it: render the page (for example
-`pdftoppm -f N -l N -r 150 -png -singlefile SOURCE.pdf OUT`), crop it to the figure and
-its own labels without the slide title, text and footer, save it under `figures/` and cite
-the page. Redraw instead when a walkthrough must mark it step by step, when its labels
-would be unreadable on a phone, or when the lesson needs it changed.
+### The lecture's own figures
+
+A slide often already holds the clearest picture. Use it, cropped to the visual, and
+write the teaching yourself beside it.
+
+| The picture | Use |
+| --- | --- |
+| A graph or tree a search runs on | Redraw it as a `diagram`: node values, a growing tree, the app's theme, readable on phones |
+| A dense map, board, plot, photo or physical setup the lecture draws well | The lecture's crop as a figure `image` |
+| A simple shape the lesson must change or label heavily | Redraw it as SVG ([figures](figures.md)) |
+
+1. **Find the visual.** `tum-mcp study figure PROJECT --key KEY --page N` lists the page's
+   figure regions and writes a preview with each one numbered; look at it.
+2. **Crop it.** `--region 2` (or `2+3` to keep two boards side by side) or
+   `--box x0,y0,x1,y1` in page fractions, with `--name romania-map`, saves
+   `figures/romania-map.png` sharply rendered and records its page. Crop the visual and its
+   own labels, never the slide title, bullets or footer (`slide_image`): the lesson says
+   those in its own words.
+3. **Walk through it.** A figure stage with that `image` lets each step point at the part
+   it works on: `regions` outline boxes in image fractions (`x`, `y`, `w`, `h`, an optional
+   `label`) and dim the rest, such as a tile and its goal square with its distance. Read
+   the fractions off the grid preview each crop writes (`.tum-mcp/out/figure-grid.png`).
+   When the lecture builds a picture over several slides, crop each state and set the step's `frame`.
 
 ## Algorithm traces
 

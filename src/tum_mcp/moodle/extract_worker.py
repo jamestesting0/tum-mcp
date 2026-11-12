@@ -73,6 +73,28 @@ def render_pdf_pages(body: bytes, numbers: Sequence[int]) -> list[bytes]:
         raise MoodleError(ErrorCode.EXTRACTION_FAILED, "PDF pages could not be rendered.") from None
 
 
+def pdf_figure_regions(body: bytes, number: int) -> dict:
+    """Candidate figure regions of one PDF page and a preview with them numbered."""
+    try:
+        result = json.loads(_run_worker(body, f"application/x-tum-pdf-regions:{number}"))
+        regions = [[float(value) for value in box] for box in result["regions"]]
+        return {"regions": regions, "preview": base64.b64decode(result["preview"], validate=True)}
+    except (ValueError, KeyError, TypeError):
+        raise MoodleError(ErrorCode.EXTRACTION_FAILED, "The page could not be read.") from None
+
+
+def crop_pdf_page(body: bytes, number: int, box: Sequence[float]) -> bytes:
+    """One region of a PDF page as a PNG, its empty margins trimmed."""
+    try:
+        corners = ",".join(f"{value:.4f}" for value in box)
+        result = json.loads(_run_worker(body, f"application/x-tum-pdf-crop:{number}:{corners}"))
+        return base64.b64decode(result["image"], validate=True)
+    except (ValueError, KeyError, TypeError):
+        raise MoodleError(
+            ErrorCode.EXTRACTION_FAILED, "The region could not be rendered."
+        ) from None
+
+
 def read_pdf_text(body: bytes) -> dict:
     """Read every page's text layer in one bounded worker pass, without OCR."""
     if len(body) > 50 * 1024 * 1024 or not body.startswith(b"%PDF-"):
@@ -153,6 +175,17 @@ if __name__ == "__main__":
             images.append(base64.b64encode(output.getvalue()).decode("ascii"))
         document.close()
         sys.stdout.write(json.dumps({"images": images}))
+    elif sys.argv[2].startswith(("application/x-tum-pdf-regions:", "application/x-tum-pdf-crop:")):
+        from tum_mcp.moodle.page_figures import crop, regions
+
+        _, number, *corners = sys.argv[2].split(":")
+        if corners:
+            image = crop(body, int(number), [float(value) for value in corners[0].split(",")])
+            sys.stdout.write(json.dumps({"image": base64.b64encode(image).decode("ascii")}))
+        else:
+            found, preview = regions(body, int(number))
+            encoded = base64.b64encode(preview).decode("ascii")
+            sys.stdout.write(json.dumps({"regions": found, "preview": encoded}))
     elif sys.argv[2].startswith("application/x-tum-pdf-"):
         from tum_mcp.moodle.extraction import PdfText
 

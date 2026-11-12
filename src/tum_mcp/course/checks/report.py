@@ -38,6 +38,7 @@ from tum_mcp.course.content.study import (
     has_visual,
 )
 from tum_mcp.course.project.models import StudyState
+from tum_mcp.course.project.paths import app_path
 
 # A prose paragraph frames an idea; anything longer becomes steps, points, a table or a figure.
 PARAGRAPH_WORDS = 45
@@ -1539,12 +1540,33 @@ def _prose(value: JsonValue, item: str = "") -> Iterator[tuple[str, str]]:
             return
 
 
+SLIDE_RATIOS = (4 / 3, 16 / 9, 16 / 10)
+
+
+def whole_slide(root: Path, image: str, cropped: dict | None) -> bool:
+    """A figure image that is a full slide: a crop covering most of its page, or an uncropped
+    PNG with a slide's proportions."""
+    if cropped is not None:
+        x0, y0, x1, y1 = cropped["box"]
+        return (x1 - x0) * (y1 - y0) > 0.8
+    path = app_path(root, image)
+    if not path.is_file():
+        return False
+    with path.open("rb") as file:
+        head = file.read(24)
+    if not head.startswith(b"\x89PNG"):
+        return False
+    width, height = int.from_bytes(head[16:20]), int.from_bytes(head[20:24])
+    return height > 0 and any(abs(width / height - ratio) < 0.02 for ratio in SLIDE_RATIOS)
+
+
 def citation_flags(
     root: Path, state: StudyState, documents: dict[str, object]
 ) -> list[dict[str, JsonValue]]:
     """Cited pages past the end of their source. Only sources whose text was read (cached) are
     counted, so the check never extracts a document. `documents` maps a flag item to the
     content it covers."""
+    from tum_mcp.course.sources.page_figures import figure_provenance
     from tum_mcp.course.sources.text import cached_record
 
     counts = {
@@ -1555,9 +1577,20 @@ def citation_flags(
         and (record := cached_record(root, item.sha256)) is not None
     }
     flags: list[dict[str, JsonValue]] = []
+    cropped = figure_provenance(root)
 
     def visit(item: str, value: object) -> None:
         if isinstance(value, dict):
+            if value.get("kind") == "figure" and isinstance(image := value.get("image"), str):
+                if whole_slide(root, image, cropped.get(image)):
+                    flags.append(
+                        {
+                            "item": item,
+                            "flag": "slide_image",
+                            "detail": f"'{image}' shows a whole slide. Crop the figure with "
+                            "`study figure` and write the slide's text as the lesson's own.",
+                        }
+                    )
             sources, pages = value.get("sources"), value.get("pages")
             if isinstance(pages, str) and isinstance(sources, list) and sources:
                 first = sources[0] if isinstance(sources[0], str) else sources[0].get("key")

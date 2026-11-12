@@ -13,7 +13,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | S1 | A rendered section never runs more than two authored paragraphs in a row; the rest is points, steps, an example, a table, a figure or a formula | `prose_run`, `long_section` |
 | S2 | A paragraph holds one idea in a few sentences | `dense_paragraph`, `inline_list`, `inline_steps` |
 | S3 | A worked case shows what is given, the working and the result (`example`, table or walkthrough), not a story | `example_in_prose`, `unworked_result`, `prose_calculation`, `compressed_working` |
-| S4 | Each idea has the shape that fits it: comparisons as tables, procedures stepped, models drawn, parallel cases as tables or examples | `no_visual`, `static_trace`, `static_walkthrough`, `graph_as_table`, `unstepped_table`, `representation.shape_fits` |
+| S4 | Each idea has the shape that fits it: comparisons as tables, procedures stepped, models drawn, parallel cases as tables or examples | `no_visual`, `static_trace`, `static_walkthrough`, `graph_as_table`, `unstepped_table`, `slide_image`, `representation.shape_fits` |
 | S5 | Objects the text names are shown, not described | `described_object`, `representation.shown_not_described` |
 | S6 | Every symbol and formula is LaTeX, with words in math set as text | `plain_math`, `math_word` |
 | S7 | Terms are defined before use and never redefined differently | `forward_term`, `definition_refined` |
