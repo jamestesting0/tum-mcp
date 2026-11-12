@@ -41,6 +41,7 @@ DROPPED_ENV = frozenset(
 class TurnResult:
     session_id: str | None = None
     text: str = ""
+    student_questions: str = ""
     model_reported: str | None = None
     usage: dict = field(default_factory=dict)
     cost_usd: float | None = None
@@ -207,6 +208,34 @@ def codex_session_model(home: Path, thread_id: str | None) -> str | None:
     return None
 
 
+def codex_student_questions(home: Path, thread_id: str | None) -> str:
+    if not thread_id:
+        return ""
+    questions = []
+    for path in sorted((home / ".codex" / "sessions").rglob(f"*{thread_id}*.jsonl")):
+        for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            try:
+                payload = json.loads(line).get("payload") or {}
+            except ValueError:
+                continue
+            if payload.get("type") == "message" and payload.get("role") == "user":
+                questions.clear()
+            if (
+                payload.get("type") != "function_call"
+                or payload.get("name") != "request_user_input_async"
+            ):
+                continue
+            try:
+                arguments = json.loads(payload.get("arguments", ""))
+            except ValueError:
+                continue
+            for question in arguments.get("questions", []):
+                title = question.get("title")
+                if isinstance(title, str) and title.strip():
+                    questions.append(title.strip().rstrip("?") + "?")
+    return "\n".join(questions)
+
+
 def parse_codex(events: list[dict], home: Path) -> TurnResult:
     result = TurnResult(events=events)
     messages = []
@@ -229,6 +258,7 @@ def parse_codex(events: list[dict], home: Path) -> TurnResult:
         result.is_error = True
         result.error = result.error or "Codex ended without completing the turn."
     result.model_reported = codex_session_model(home, result.session_id)
+    result.student_questions = codex_student_questions(home, result.session_id)
     return result
 
 

@@ -87,3 +87,39 @@ def test_clean_environment_isolates_home_and_drops_host_variables(monkeypatch, t
     assert environment["PATH"].startswith("/lab/bin")
     assert environment["EXTRA"] == "1"
     assert not {"CLAUDECODE", "CODEX_HOME", "VIRTUAL_ENV"} & set(environment)
+
+
+def test_codex_question_tool_survives_a_final_message_without_question_text(tmp_path):
+    log = tmp_path / ".codex" / "sessions" / "rollout-t-consent.jsonl"
+    log.parent.mkdir(parents=True)
+    entries = [
+        {"type": "turn_context", "payload": {"model": "gpt-6.1-terra"}},
+        {"type": "response_item", "payload": {"type": "message", "role": "user"}},
+        {
+            "type": "response_item",
+            "payload": {
+                "type": "function_call",
+                "name": "request_user_input_async",
+                "arguments": json.dumps(
+                    {"questions": [{"title": "Keep a private learning record?"}]}
+                ),
+            },
+        },
+    ]
+    log.write_text("\n".join(json.dumps(entry) for entry in entries))
+    events = [
+        {"type": "thread.started", "thread_id": "t-consent"},
+        {
+            "type": "item.completed",
+            "item": {"type": "agent_message", "text": "The consent question is pending above."},
+        },
+        {"type": "turn.completed"},
+    ]
+    result = hosts.parse_codex(events, tmp_path)
+    assert result.student_questions == "Keep a private learning record?"
+    log.write_text(
+        log.read_text()
+        + "\n"
+        + json.dumps({"type": "response_item", "payload": {"type": "message", "role": "user"}})
+    )
+    assert hosts.parse_codex(events, tmp_path).student_questions == ""

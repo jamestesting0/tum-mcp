@@ -473,6 +473,10 @@ def _run(
                     raw=run_dir / "raw" / f"{label}.jsonl",
                 )
                 session = result.session_id or session
+                question_text = result.student_questions or result.text
+                asked_student = bool(result.student_questions) or scenarios.asks_student(
+                    result.text
+                )
                 entry.setdefault("parts", []).append(
                     {
                         "label": label,
@@ -481,7 +485,7 @@ def _run(
                         "usage": result.usage,
                         "cost_usd": result.cost_usd,
                         "error": result.error if result.is_error else "",
-                        "ended_with_question": scenarios.asks_student(result.text),
+                        "ended_with_question": asked_student,
                     }
                 )
                 raw_text = (run_dir / "raw" / f"{label}.jsonl").read_text(encoding="utf-8")
@@ -490,9 +494,7 @@ def _run(
                     result.error = EXPIRED_MESSAGE
                 if result.is_error:
                     break
-                reply = (
-                    scenario.reply_to(result.text) if scenarios.asks_student(result.text) else None
-                )
+                reply = scenario.reply_to(question_text) if asked_student else None
                 if reply is None or attempt >= scenarios.MAX_REPLIES_PER_TURN:
                     break
                 attempt += 1

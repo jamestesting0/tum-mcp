@@ -8,7 +8,20 @@ def test_tracked_scenarios_parse_and_list_their_skills():
     assert {"setup-and-study", "exercises", "pick-course", "smoke"} <= set(names)
     for name in names:
         scenario = scenarios.load(name)
-        assert scenario.turns and scenario.replies.get("default")
+        assert scenario.turns
+
+
+def test_specific_replies_do_not_approve_unmatched_actions():
+    scenario = scenarios.parse(
+        {
+            "id": "consent",
+            "turns": ["Prepare my study lessons."],
+            "replies": {"learning record": "Keep the learning record off."},
+        },
+        "consent",
+    )
+    assert scenario.reply_to("Keep a private learning record?") == "Keep the learning record off."
+    assert scenario.reply_to("May I publish the course?") is None
 
 
 def test_local_override_merges_replies_and_can_replace_turns(lab_state):
