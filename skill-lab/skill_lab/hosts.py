@@ -219,7 +219,11 @@ def codex_student_questions(home: Path, thread_id: str | None) -> str:
             except ValueError:
                 continue
             if payload.get("type") == "message" and payload.get("role") == "user":
-                questions.clear()
+                if not any(
+                    part.get("text", "").lstrip().startswith("<hook_prompt ")
+                    for part in payload.get("content", [])
+                ):
+                    questions.clear()
             if (
                 payload.get("type") != "function_call"
                 or payload.get("name") != "request_user_input_async"
