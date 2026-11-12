@@ -1,0 +1,10 @@
+id: study-search-lectures
+turns:
+  - say: >-
+      Prepare my study lessons for the search lectures in Fundamentals of AI.
+    skills: [sync-course, prepare-study]
+  - say: >-
+      Review them and fix any issues.
+    skills: [review-course, prepare-study]
+replies:
+  learning record: Keep the learning record off.
