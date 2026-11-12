@@ -14,7 +14,6 @@ from tum_mcp.course.checks.plans import (
     gate_status,
     plan_problems,
     read_plan,
-    worked_decision_problems,
 )
 from tum_mcp.course.content.exercise_data import read_exercises, stale_exercises
 from tum_mcp.course.content.exercises import ExerciseContent
@@ -287,11 +286,6 @@ def assess(root: Path, identifier: str, context: "Context | None" = None) -> Rea
             )
             if status == "provisional":
                 provisional.append(key)
-            if scope.walkthrough_evidence and study and key.startswith("study/"):
-                unit = next(unit for unit in study.units if key == f"study/{unit.key}")
-                problems.extend(
-                    worked_decision_problems(plan, demands, unit, verified.get(key, {}))
-                )
         problems.extend(
             f"{key}: {flag['detail']}"
             for flag in context.flags_by_item.get(key, [])

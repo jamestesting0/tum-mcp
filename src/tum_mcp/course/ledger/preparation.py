@@ -162,14 +162,6 @@ def scope_problems(
         demands_by_source.setdefault(demand.source, []).append(demand)
     required = {entry.source for entry in scope.inventory if entry.included}
     problems: list[str] = []
-    if scope.walkthrough_evidence:
-        problems.extend(
-            f"{demand.source}/{demand.id}: record source decisions or a non-procedural reason."
-            for demand in scope.demands
-            if isinstance(demand, StudyDemand)
-            and demand.level != "recall"
-            and bool(demand.decisions) == bool(demand.non_procedural)
-        )
     if not required or not scope.demands:
         problems.append("Record at least one required source and demand.")
     if scope.cutoff:

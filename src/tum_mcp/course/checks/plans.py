@@ -12,18 +12,12 @@ from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
-from pydantic import Field, JsonValue, ValidationError
+from pydantic import Field, JsonValue, ValidationError, model_validator
 
 from tum_mcp.course.content.study import (
-    CodeBlock,
-    DerivationBlock,
-    DiagramBlock,
     Label,
     Text,
-    Unit,
-    WalkthroughBlock,
 )
-from tum_mcp.course.ledger.preparation import StudyDemand
 from tum_mcp.course.project.models import Digest, Key
 from tum_mcp.course.project.store import Write, apply, confined, private_name, read_bytes
 from tum_mcp.errors import CampusError, Code
@@ -42,6 +36,39 @@ STEPPED = "a walkthrough, a stepped diagram, a derivation walkthrough or a code 
 PICTURES = {"figure", "diagram", "uml", "tree"}
 
 
+# Concepts a student performs or reads off a picture: the lecture's own worked run teaches them.
+WORKED_KINDS = {"procedure", "algorithm", "model"}
+
+
+class Example(Frozen):
+    """The worked example a concept is taught on, chosen from the lecture's demonstrations."""
+
+    origin: Literal["source", "constructed"]
+    source: Key | None = Field(default=None, exclude_if=lambda value: value is None)
+    pages: Annotated[str, Field(min_length=1, max_length=40)] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    shows: Text = Field(
+        description="The decision, branch or result this example lets the student see, which "
+        "no other chosen example shows."
+    )
+    endpoint: Text = Field(description="Where the run ends, as the lecture shows or finishes it.")
+    block: Key
+    why: Text | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="For a constructed example: why the lecture has no example for this concept.",
+    )
+
+    @model_validator(mode="after")
+    def located(self) -> "Example":
+        if self.origin == "source" and not (self.source and self.pages):
+            raise ValueError("A lecture example names its source and pages.")
+        if self.origin == "constructed" and not self.why:
+            raise ValueError("A constructed example says why the lecture has none.")
+        return self
+
+
 class Concept(Frozen):
     name: Label
     kind: ConceptKind
@@ -54,6 +81,7 @@ class Concept(Frozen):
     blocks: tuple[Key, ...] = ()
     # Why the kind's default representation does not fit this concept.
     skip: Text | None = None
+    example: Example | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Part(Frozen):
@@ -176,6 +204,8 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
         if isinstance(block, dict) and block.get("key")
     }
     for concept in plan.concepts:
+        if concept.example and concept.example.block not in blocks:
+            problems.append(f"{concept.name}: the example block {concept.example.block} is missing")
         if missing := sorted(set(concept.blocks) - blocks.keys()):
             problems.append(f"{concept.name}: blocks not in the item: {', '.join(missing)}")
             continue
@@ -233,71 +263,16 @@ def coverage_reader(root: Path) -> CoverageReader:
     return read
 
 
-def worked_decision_problems(
-    plan: Plan,
-    demands: list[dict[str, JsonValue]],
-    unit: Unit | None = None,
-    verified: dict[str, JsonValue] | None = None,
-) -> list[str]:
-    expected = {}
-    problems = []
-    practice = {case.question for case in plan.practice}
-    for value in demands:
-        if value.get("kind") != "study":
-            continue
-        demand = StudyDemand.model_validate(value)
-        if demand.decisions and demand.target:
-            if demand.target.question not in practice:
-                problems.append(f"{plan.item}/{demand.id}: plan the mapped transfer question.")
-            for name, decision in demand.decisions.items():
-                expected[demand.source, demand.id, name] = (demand.target.blocks, decision.computed)
-    seen: set[tuple[str, str, str]] = set()
-    blocks = {block.key: block for block in unit.blocks} if unit else {}
-    for worked in plan.worked_decisions:
-        key = worked.source, worked.demand, worked.decision
-        at = f"{plan.item}/{worked.demand}/{worked.decision}"
-        if key in seen or key not in expected:
-            problems.append(f"{at}: duplicate or unknown worked decision.")
-            continue
-        seen.add(key)
-        targets, computed = expected[key]
-        if worked.block not in targets:
-            problems.append(f"{at}: the worked block must teach this demand.")
-            continue
-        if unit is None:
-            continue
-        block = blocks.get(worked.block)
-        if block is None or worked.source not in block.sources:
-            problems.append(f"{at}: missing worked block or cited source.")
-            continue
-        if isinstance(block, WalkthroughBlock):
-            steps = (
-                block.steps
-                if worked.run == "primary"
-                else (block.variant.steps if block.variant else ())
-            )
-            if worked.step is None or worked.step > len(steps):
-                problems.append(f"{at}: missing {worked.run} step {worked.step}.")
-            if computed:
-                runs = (verified or {}).get("checked_runs", {})
-                checked = runs.get(worked.block, {}) if isinstance(runs, dict) else {}
-                if not (verified or {}).get("passed") or not checked.get(worked.run):
-                    problems.append(f"{at}: check the full {worked.run} walkthrough states.")
-        elif isinstance(block, (CodeBlock, DerivationBlock, DiagramBlock)):
-            if computed and (
-                not worked.value_path
-                or not worked.value_path.startswith(f"blocks[{unit.blocks.index(block)}].")
-                or not (verified or {}).get("passed")
-                or worked.value_path not in ((verified or {}).get("exact_values") or [])
-            ):
-                problems.append(f"{at}: verify the worked state or result with an exact value.")
-        elif computed:
-            problems.append(f"{at}: use a walkthrough, diagram, derivation or code for this trace.")
-    problems.extend(
-        f"{plan.item}/{demand}/{name}: missing worked decision."
-        for _, demand, name in sorted(expected.keys() - seen)
-    )
-    return problems
+def example_problems(plan: Plan) -> list[str]:
+    """A Study concept that is performed or read off a picture is taught on a chosen example."""
+    if not plan.item.startswith("study/"):
+        return []
+    return [
+        f"{plan.item}/{concept.name}: choose the lecture example that teaches this {concept.kind}, "
+        "or say why the lecture has none."
+        for concept in plan.concepts
+        if concept.kind in WORKED_KINDS and concept.example is None and not concept.skip
+    ]
 
 
 def gate_status(
@@ -353,10 +328,8 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
         reasons = tuple(str(reason) for reason in answer.get("reasons", []))
         if verdict not in {"pass", "fail"} or (verdict == "fail" and not reasons):
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item}: pass, or fail with the reasons.")
-        if verdict == "pass" and coverage and coverage.get("walkthrough_evidence"):
-            problems = worked_decision_problems(plan, coverage["items"].get(item, []))
-            if problems:
-                raise CampusError(Code.ACTION_REQUIRED, " ".join(problems[:5]))
+        if verdict == "pass" and (problems := example_problems(plan)):
+            raise CampusError(Code.ACTION_REQUIRED, " ".join(problems[:5]))
         if (
             provenance == "same"
             and plan.gate
