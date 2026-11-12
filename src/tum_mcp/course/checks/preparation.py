@@ -8,7 +8,7 @@ from pydantic import Field, JsonValue
 
 from tum_mcp.course.app.browser_evidence import browser_choice, browser_identity, read_receipt
 from tum_mcp.course.app.build import current_data, read_content, stale_units
-from tum_mcp.course.app.visuals import WIDTHS, interaction_routes, shell_workspace
+from tum_mcp.course.app.visuals import DEFAULT_WIDTHS, interaction_routes, shell_workspace
 from tum_mcp.course.checks.plans import (
     coverage_reader,
     gate_status,
@@ -207,18 +207,16 @@ def _draft_items(
 def _browser_problems(root: Path, routes: list[str], visuals: set[str]) -> list[str]:
     receipt = read_receipt(root)
     if receipt is None:
-        return [
-            "Missing browser receipts. Run study visuals and study visuals --interact with --phone."
-        ]
+        return ["Missing browser receipts. Run study visuals and study visuals --interact."]
     identity = browser_identity(root, browser_choice())
     if not identity.managed or receipt.identity != identity:
         return ["Browser evidence is stale or the app has custom templates. Rebuild and recheck."]
     required = {
-        *(f"visual/{width}/{item}" for width in WIDTHS for item in visuals),
-        *(f"interact/{width}/{route}" for width in WIDTHS for route in routes),
+        *(f"visual/{width}/{item}" for width in DEFAULT_WIDTHS for item in visuals),
+        *(f"interact/{width}/{route}" for width in DEFAULT_WIDTHS for route in routes),
         *(
             f"shell/{width}/{theme}/{workspace}"
-            for width in WIDTHS
+            for width in DEFAULT_WIDTHS
             for theme in ("light", "dark")
             for workspace in {shell_workspace(route) for route in routes}
         ),

@@ -136,9 +136,11 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    practice and answer mappings. Check that each learner action actually exercises
    the recorded demand, and that the outline and introductory copy agree. Persist
    executable answer keys for computed demands, including results first checked in scratch work.
-   Build and run `tum-mcp study visuals PROJECT --phone` and
-   `tum-mcp study visuals PROJECT --interact --phone`. Narrow both invocations with the
-   same `--unit` and `--exercise` selectors for a bounded scope. Read
+   Build and run `tum-mcp study visuals PROJECT` and
+   `tum-mcp study visuals PROJECT --interact`, narrowed with the same `--unit` and
+   `--exercise` selectors for a bounded scope. Desktop is the check; add `--phone` only
+   when the student asks about phones. `study visuals` redraws only items changed since
+   their last passing check (`unchanged` lists the rest), so rerun it freely after a fix. Read
    `tum-mcp study report PROJECT --section readiness --preparation ID`.
    Resolve required gaps before asking for formal review. Name the verified cutoff or
    selected subset, the workload and any excluded or unresolved sources, then ask:

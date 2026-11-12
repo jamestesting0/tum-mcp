@@ -232,7 +232,9 @@ narrow (600 px) widths. It reports lines through nodes, labels that overlap or s
 line, text under 12 px, clipped text and drawings that differ from their block, writes
 contact sheets to `.tum-mcp/visuals/` and records the result in
 `.tum-mcp/visual-check.json`. Editing an item or updating the app makes its result stale,
-and `study report` lists items whose check is missing, stale or failing.
+and `study report` lists items whose check is missing, stale or failing. A rerun redraws
+only the items changed since their last passing check and lists the rest as `unchanged`;
+updating the app's templates, images or the checks themselves redraws everything.
 
 Authoring and review are separate. A prepare skill first drafts and checks its work
 (Phase A): it reads each source once into a digest (`.tum-mcp/digests/`, `study digests`),

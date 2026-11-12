@@ -30,7 +30,7 @@ packet's answer shape, check and correct the plans, and record the verdicts usin
 `review plan-record PROJECT --file ANSWERS --provenance same`. This provenance
 qualifies for draft readiness. Independent review has its own gate. Run scoped
 `study lint` during authoring, `study build PROJECT --local-only` for the combined
-draft, then both visual and interaction checks with `--phone` before checking
+draft, then both visual and interaction checks at desktop width before checking
 `study report PROJECT --section readiness --batch BATCH --json`.
 `-n logical --dist loadfile` (pytest-xdist) runs one worker per logical CPU and keeps
 each file's module-scoped browser on one worker; drop it to debug a test serially.
@@ -303,8 +303,10 @@ Before authoring, `study report PROJECT --section coverage-plan --preparation ID
 validates source requirements without reading a draft. New plans name their
 `preparation`; the plan packet supplies its coverage and approval records its
 fingerprint. A changed source scope reopens that plan check.
-The gate requires current build and browser evidence for the mapped items, including
-the phone and narrow checks from `study visuals --phone` and `--interact --phone`.
+The gate requires current build and desktop browser evidence for the mapped items from
+`study visuals` and `--interact`; phone and narrow checks (`--phone`) run on request.
+After a rebuild, `study visuals` keeps the passing checks of items whose content did not
+change (same templates, images, checks and browser) and redraws only the changed ones.
 Use `review start PROJECT --preparation ID` to review that scope. A new loop defaults
 to one round. Existing review scopes and explicitly requested budgets stay usable.
 

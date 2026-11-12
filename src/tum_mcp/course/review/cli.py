@@ -9,7 +9,7 @@ import typer
 from tum_mcp.course.review import loop, registry
 from tum_mcp.errors import CampusError, Code
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 
 
 def _echo(value: object) -> None:

@@ -116,7 +116,9 @@ def edit_first_block(project: Path) -> str:
 def test_visual_packet_links_the_current_captures(project: Path, evidence: str) -> None:
     key = next(key for key, visuals in loop.load(project).visuals.items() if visuals)
     build, managed = build_files(project)
-    identity = BrowserBuild(build=build, checks="a" * 64, browser="b" * 64, managed=managed)
+    identity = BrowserBuild(
+        build=build, shell="c" * 64, checks="a" * 64, browser="b" * 64, managed=managed
+    )
     directory = project / ".tum-mcp/visuals"
     directory.mkdir()
     sheets = {}
