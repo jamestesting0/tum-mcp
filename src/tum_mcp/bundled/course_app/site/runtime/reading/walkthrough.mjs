@@ -25,15 +25,24 @@ function stageView(stage, renderBody, steps) {
       const { graph, groups } = drawGraph(stage, plainText(stage.description), values);
       const ends = new Map(stage.edges.map(edge => [`${edge.start}--${edge.end}`, edge]));
       let current = null;
+      // A tree whose steps never say which nodes exist yet still shows every node, as the
+      // slides do, but the ones no step has generated so far stay faint until one does.
+      const grows = stage.layout === 'tree' && !steps.some(step => step.visible_nodes);
+      const reach = [];
+      for (const [index, step] of steps.entries()) {
+        reach.push(new Set([...(reach[index - 1] || []), ...(step.active || []), ...(step.frontier || []), ...(step.visited || [])]));
+      }
       const show = step => {
         current = step;
         const shown = key => !step.visible_nodes || step.visible_nodes.includes(key);
+        const reached = grows && reach[steps.indexOf(step)]?.size ? reach[steps.indexOf(step)] : null;
         for (const [key, group] of groups) {
           const active = step.active.includes(key);
           group.classList.toggle('active', active);
           group.classList.toggle('visited', !active && step.visited.includes(key));
           group.classList.toggle('frontier', !active && step.frontier.includes(key));
           group.setAttribute('visibility', shown(key) ? 'visible' : 'hidden');
+          group.classList.toggle('unreached', Boolean(reached) && !reached.has(key));
           setNodeValue(group, step.node_values?.[key]);
         }
         const marked = new Set(stage.edges.filter(edge => step.edges.some(mark =>
@@ -44,6 +53,7 @@ function stageView(stage, renderBody, steps) {
           const key = line.dataset.edgeKey || line.dataset.arrowKey || line.dataset.labelEdge, edge = ends.get(key);
           line.classList.toggle('active', marked.has(key));
           line.setAttribute('visibility', !edge || (shown(edge.start) && shown(edge.end)) ? 'visible' : 'hidden');
+          line.classList.toggle('unreached', Boolean(reached && edge) && !reached.has(edge.end));
         }
       };
       graph.addEventListener('graphdraw', () => { if (current) show(current); });

@@ -35,3 +35,41 @@ def test_a_study_algorithm_is_taught_on_a_chosen_example() -> None:
 def test_an_example_says_where_it_comes_from(change: dict, message: str) -> None:
     with pytest.raises(ValidationError, match=message):
         plan(example=UCS | change)
+
+
+def test_the_next_checker_sees_the_rejected_reasons_and_a_pass_carries_advice(tmp_path) -> None:
+    import json
+
+    from tum_mcp.course.checks.plans import plan_packet, record_gate
+
+    stored = tmp_path / ".tum-mcp/plans/study/search.json"
+    stored.parent.mkdir(parents=True)
+    stored.write_text(plan(example=UCS).model_dump_json(), encoding="utf-8")
+    fingerprint = plan(example=UCS).fingerprint()
+    reasons = ["The UCS run stops before B is improved to 278."]
+    record_gate(
+        tmp_path,
+        [
+            {
+                "item": "study/search",
+                "fingerprint": fingerprint,
+                "verdict": "fail",
+                "reasons": reasons,
+            }
+        ],
+        "fresh",
+    )
+    packet = plan_packet(tmp_path)
+    assert packet["plans"][0]["previous"] == reasons
+    assert packet["answer"]["items"][0]["advice"] == []
+
+    advice = ["Name the tie-break in the frontier caption."]
+    result = record_gate(
+        tmp_path,
+        [{"item": "study/search", "fingerprint": fingerprint, "verdict": "pass", "advice": advice}],
+        "fresh",
+    )
+    assert result["verdicts"]["study/search"]["advice"] == advice
+    saved = json.loads(stored.read_text(encoding="utf-8"))["gate"]
+    assert saved["verdict"] == "pass" and saved["advice"] == advice
+    assert plan_packet(tmp_path)["plans"] == []

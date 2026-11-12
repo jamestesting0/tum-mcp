@@ -514,6 +514,8 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 .figure-region-label { position: absolute; transform: translateY(calc(-100% - 3px)); padding: 0 6px; border-radius: var(--r1); background: var(--accent); color: var(--panel); font-size: 12px; font-weight: 650; line-height: 1.6; white-space: nowrap; }
 .figure-region-label.below { transform: translateY(3px); }
 .graph .edge.active, .graph .arrow.active { stroke: var(--accent); stroke-width: 4; }
+/* A tree node no step has generated yet: drawn, as on the slides, but faint until reached. */
+.graph g.unreached, .graph .unreached { opacity: .35; }
 .frame-state { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s1) var(--s4); margin: var(--s2) 0 0; font-size: var(--text-ui); }
 .frame-state dt { color: var(--muted); font-weight: 500; }
 .frame-state dd { margin: 0; overflow-wrap: anywhere; }

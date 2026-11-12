@@ -290,3 +290,34 @@ def test_a_visual_hidden_at_a_width_is_skipped_without_waiting(course_browser: B
         assert _shoot(page, "#hidden", 390) is None
         assert time.monotonic() - started < 5
         assert _shoot(page, "#shown", 390)
+
+
+def test_a_tree_without_a_reveal_order_keeps_unreached_nodes_faint(
+    course_browser: Browser, project: Path
+) -> None:
+    from tum_mcp.course.app.preview import Handler, PreviewServer
+
+    faint = TREE_WALKTHROUGH.replace("visible_nodes: shown, ", "")
+    with PreviewServer(
+        ("127.0.0.1", 0), partial(Handler, directory=str(project / "app"))
+    ) as server:
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            with course_browser.new_context() as context:
+                page = context.new_page()
+                page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+                page.locator("[data-block-index]").first.wait_for()
+                page.evaluate(faint)
+                leaf, root = (
+                    page.locator('[data-node-key="o"]'),
+                    page.locator('[data-node-key="a"]'),
+                )
+                expect(leaf).to_have_attribute("visibility", "visible")
+                expect(leaf).to_have_class(re.compile(r"\bunreached\b"))
+                expect(root).not_to_have_class(re.compile(r"\bunreached\b"))
+                page.get_by_role("button", name="Next step", exact=True).click()
+                expect(leaf).not_to_have_class(re.compile(r"\bunreached\b"))
+        finally:
+            server.shutdown()
+            worker.join(timeout=3)
