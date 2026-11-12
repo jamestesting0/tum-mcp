@@ -105,6 +105,19 @@ def test_codex_question_tool_survives_a_final_message_without_question_text(tmp_
                 ),
             },
         },
+        {
+            "type": "response_item",
+            "payload": {
+                "type": "message",
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": '<hook_prompt hook_run_id="stop:1">Continue.</hook_prompt>',
+                    }
+                ],
+            },
+        },
     ]
     log.write_text("\n".join(json.dumps(entry) for entry in entries))
     events = [
