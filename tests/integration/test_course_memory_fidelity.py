@@ -130,8 +130,10 @@ FIELDS = {
     "WalkStep.active": INTERNAL,
     "WalkStep.edges": INTERNAL,
     "WalkStep.frontier": INTERNAL,
+    "WalkStep.node_values": INTERNAL,
     "WalkStep.layers": INTERNAL,
     "WalkStep.series": INTERNAL,
+    "WalkStep.visible_nodes": INTERNAL,
     "WalkStep.visited": INTERNAL,
     "PlotArea.series": INTERNAL,
 }

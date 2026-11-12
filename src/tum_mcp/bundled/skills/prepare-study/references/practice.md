@@ -22,7 +22,11 @@ Ask only what the lesson teaches: every term, rule and fact a card or question n
 appears in the lesson's blocks first. A card whose answer lives only in the source
 teaches the source, not the lesson; add the idea to the lesson or drop the card.
 
-Do not count replay of a worked input and answer as application evidence. A new input
+Do not count replay of a worked input and answer as application evidence, and never
+repeat a worked walkthrough as a practice answer. A trace question asks for the decisive
+step on a changed input (which node is expanded next, with which f), each wrong option a
+real mistake (the wrong tie-break, g instead of f, the goal tested too early), and the
+feedback shows the working. A new input
 that requires the student to calculate or decide is valid routine application. A deeper
 transfer demand needs a consequential change in conditions, representation or decision;
 cosmetic renaming alone does not establish it. Choose the demand the objective needs,

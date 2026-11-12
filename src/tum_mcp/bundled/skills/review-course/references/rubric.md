@@ -53,6 +53,9 @@ where this table puts it:
 | A worked calculation whose reusable rule is never stated | Intuition |
 | Lines about the material ("the lecture groups…") | Clarity |
 | An outcome taught but never practised | Coverage |
+| A critical lecture example missing, or replaced by an invented case | Coverage |
+| A lecture example with changed inputs, skipped states or another picture (a tree drawn as a table) | Correctness |
+| The same mechanism worked twice, or a worked run replayed as a practice answer | Redundancy |
 | A formula lookup written as a decision step, or two first moves in one pattern | Organization |
 | Two cases of a decision step that overlap | Correctness |
 | A past instance or example that no case fits | Coverage |

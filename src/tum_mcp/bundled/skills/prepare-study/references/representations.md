@@ -59,13 +59,17 @@ graphs, set each step's `active`, `frontier`, `visited` and relevant `edges` fro
 actual run; use the stage's node keys. Code marks its running `lines`, tables their
 `shown` rows or changed `cells`, derivations their `shown` lines, plots their `series`
 and SVG figures their `layers`. Clear marks that no longer apply when stepping back
-or switching runs. Derive graph marks and displayed state from the same computed
+or switching runs. Draw a search tree with `layout: "tree"`: the app places its levels and
+keeps the lecture's shape however wide it is. List `visible_nodes` so the tree grows as
+nodes are generated, and put what the slide writes beside a node (its g, h and f, a
+domain, a depth) in `node_values`, with the arithmetic (\(140 + 253 = 393\)). Derive graph marks and displayed state from the same computed
 trace, and include visual values in the answer key when computed. Do not invent a
 changing highlight just to clear `static_walkthrough`. An intentionally fixed
 picture belongs beside ordinary explanation, outside a staged walkthrough.
 
-Use one small instance in a `walkthrough`. Each step does one operation: its `action` says
-what, its `why` says why it is allowed or chosen, and `note` names the mistake a student
+Run the lecture's own example in a `walkthrough`, with its inputs unchanged
+([choosing examples](planning.md#choose-the-lectures-examples)). Each step does one
+operation as the lecturer shows it, usually one expansion: its `action` says what, its `why` says why it is allowed or chosen, and `note` names the mistake a student
 makes at that moment when there is a typical one. Group the steps by `subgoal` (start,
 loop, stop). `state` rows show the data the student would otherwise track mentally; the app
 marks what changed since the previous step. Include a real failure and its undo when the
