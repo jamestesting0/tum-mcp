@@ -529,6 +529,19 @@ COMMON_WORDS = frozenset(
 )
 
 
+FROM_HEADERS = frozenset("from parent source tail".split())
+TO_HEADERS = frozenset("to child target head successor".split())
+EDGE_HEADERS = frozenset("edge edges arc arcs road roads".split())
+
+
+def graph_as_table(block: object) -> bool:
+    """A table that lists a graph's edges (from/to, or an edge column), which a drawing shows."""
+    if not isinstance(block, TableBlock):
+        return False
+    headers = {_normalized(column) for column in block.columns}
+    return bool(headers & EDGE_HEADERS) or bool(headers & FROM_HEADERS and headers & TO_HEADERS)
+
+
 def generic_table(block: object) -> bool:
     """A table whose every header is a placeholder, or whose caption only names a table."""
     if not isinstance(block, TableBlock):
@@ -654,6 +667,24 @@ def visual_state_flags(item: str, value: JsonValue) -> list[dict[str, JsonValue]
                 runs = [value, *([variant] if isinstance(variant, dict) else [])]
                 for run in runs:
                     states = [{key: step.get(key) for key in marks} for step in run["steps"]]
+                    rows = stage.get("rows")
+                    if (
+                        stage["kind"] == "table"
+                        and isinstance(rows, list)
+                        and len(run["steps"]) < len(rows)
+                        and not any(step.get("shown") for step in run["steps"])
+                    ):
+                        flags.append(
+                            {
+                                "item": item,
+                                "flag": "unstepped_table",
+                                "detail": f"Walkthrough '{value.get('title') or value.get('key')}' "
+                                f"shows all {len(rows)} rows from its first step and has "
+                                f"{len(run['steps'])} steps. Work each result in its own step and "
+                                "reveal its row with `shown`, or draw the object the work acts on "
+                                "(the board, the graph) and mark it step by step.",
+                            }
+                        )
                     if all(state == states[0] for state in states[1:]):
                         flags.append(
                             {
@@ -1054,6 +1085,15 @@ def quality_flags(
                 for block in question.blocks
             ),
         ):
+            if graph_as_table(block):
+                flag(
+                    location,
+                    "graph_as_table",
+                    f"'{_name(block)}' lists a graph's edges as rows. Draw the graph as a "
+                    '`diagram` (`layout: "tree"` for a tree) with the costs on its edges, and '
+                    "run any search on that drawing in a walkthrough with the frontier as a "
+                    "state row.",
+                )
             if generic_table(block):
                 flag(
                     location,

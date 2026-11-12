@@ -442,6 +442,72 @@ def test_a_summary_that_repeats_an_objective_is_flagged() -> None:
     assert ("summary_repeats_objective", unit["key"]) not in {(f["flag"], f["item"]) for f in flags}
 
 
+def test_a_graph_listed_as_edge_rows_is_flagged() -> None:
+    content = study()
+    unit = content["units"][0]
+    sources = unit["blocks"][0]["sources"]
+    unit["blocks"].append(
+        {
+            "kind": "table",
+            "key": "edges",
+            "sources": sources,
+            "caption": "Road costs.",
+            "columns": ["From", "To", "Cost"],
+            "rows": [["A", "B", "2"], ["A", "C", "3"]],
+        }
+    )
+    unit["blocks"].append(
+        {
+            "kind": "table",
+            "key": "schedule",
+            "sources": sources,
+            "caption": "Weekly sessions.",
+            "columns": ["Session", "Start", "End"],
+            "rows": [["Lecture", "10:00", "11:30"]],
+        }
+    )
+    flags = {
+        (f["flag"], f["item"]) for f in quality_flags(StudyContent.model_validate(content), None)
+    }
+    assert ("graph_as_table", f"{unit['key']}#{len(unit['blocks']) - 2}") in flags
+    assert ("graph_as_table", f"{unit['key']}#{len(unit['blocks']) - 1}") not in flags
+
+
+def test_a_table_walkthrough_showing_every_result_up_front_is_flagged() -> None:
+    content = study()
+    unit = content["units"][0]
+    rows = [[str(tile), str(distance)] for tile, distance in enumerate([3, 1, 2, 2, 2, 3, 3, 2], 1)]
+    walk = {
+        "kind": "walkthrough",
+        "key": "tiles",
+        "sources": unit["blocks"][0]["sources"],
+        "stage": {
+            "kind": "table",
+            "caption": "Tile distances.",
+            "columns": ["Tile", "Distance"],
+            "rows": rows,
+        },
+        "steps": [
+            {"action": "Measure tile 1.", "why": "Two rows and one column away.", "cells": ["1:1"]},
+            {"action": "Add the distances.", "why": "The blank is not counted."},
+        ],
+    }
+    unit["blocks"].append(walk)
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert "unstepped_table" in {f["flag"] for f in flags}
+    walk["steps"] = [
+        {
+            "action": f"Measure tile {n}.",
+            "why": "Rows plus columns away.",
+            "shown": n,
+            "cells": [f"{n}:1"],
+        }
+        for n in range(1, 9)
+    ]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert "unstepped_table" not in {f["flag"] for f in flags}
+
+
 def test_two_walkthroughs_over_the_same_drawing_are_flagged() -> None:
     from importlib.resources import files
 

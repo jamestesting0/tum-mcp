@@ -262,6 +262,8 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     # A rendered section with more than two authored paragraphs in a row (user decision).
     "prose_run": "representation",
     "generic_table": "representation",
+    # A graph given as an edge list: a drawing with weighted edges teaches it (user decision).
+    "graph_as_table": "representation",
     "all_of_above": "practice",
     "described_object": "representation",
     "prose_calculation": "representation",
@@ -295,6 +297,7 @@ RULED_FLAGS: dict[str, str] = {
     "inline_steps": "representation.shape_fits",
     "definition_refined": "correctness.source_match",
     "no_visual": "representation.shape_fits",
+    "unstepped_table": "representation.shape_fits",
     "thin_unit": "coverage.ledger_outcomes",
     "repeated_feedback": "practice.plausible_options",
     "long_section": "representation.shape_fits",

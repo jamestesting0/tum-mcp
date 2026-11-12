@@ -9,6 +9,7 @@ diagram's message in one sentence first; every node and edge must serve it.
 | The idea | Block |
 | --- | --- |
 | A network, map, chain over time, search graph, Bayes net, MDP, concept map | `diagram`: you place each node in a row and column |
+| A weighted graph the source gives as a list of edges | `diagram` with the weights on the edges, never a From/To/Cost table |
 | A search tree, game tree or recursion tree | `diagram` with `layout: "tree"`: give the parent-to-child edges in child order; the app places the levels |
 | An algorithm with a branch or a loop | `uml` with `diagram: flowchart` |
 | A linear procedure without branches | Numbered `steps` in a text block, not a flowchart |
