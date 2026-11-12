@@ -33,6 +33,12 @@ recording membership and eligible time; credentials stay inside the host process
 It does not install a recognizer or accept arbitrary URLs, imported-file paths or
 runtime-management commands.
 
+Checkpoint reuse compares the materialized installed source and project metadata with
+the source run's variant, including differences between base commits. Identical patched
+variants can resume; changes to earlier-used skills or code still require a fresh run.
+Restoration pauses only the copied task's old session ownership, retaining its source
+requirements and audit history. The source snapshot stays unchanged.
+
 ## Local checks
 
 Run the dev-only synthetic tests separately; they are not part of CI:

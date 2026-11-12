@@ -255,6 +255,16 @@ def restore(history: Path, turn: int, workspace: Path) -> None:
     ).stdout
     with tarfile.open(fileobj=io.BytesIO(archive)) as bundle:
         bundle.extractall(workspace, filter="data")
+    for project in projects(workspace):
+        path = project / ".tum-mcp/task.json"
+        if path.is_file():
+            task = json.loads(path.read_text(encoding="utf-8"))
+            if task.get("phase") in {"pending", "ready"}:
+                task.update(
+                    phase="paused",
+                    reason="Restored skill-lab checkpoint; previous session ownership is inactive.",
+                )
+                path.write_text(json.dumps(task, indent=2), encoding="utf-8")
 
 
 def projects(workspace: Path) -> list[Path]:
@@ -349,7 +359,11 @@ def execute(
     if checkpoint:
         source = parse_checkpoint(checkpoint, round_id)
         start = source[1]
-        refusal = scenarios.checkpoint_refusal(scenario, start, variants.touched_paths(variant_dir))
+        original = json.loads((source[0].parent / "run.json").read_text(encoding="utf-8"))
+        previous = paths.round_dir(original["round"]) / "variants" / original["variant"]
+        refusal = scenarios.checkpoint_refusal(
+            scenario, start, variants.changed_inputs(previous, variant_dir)
+        )
         if refusal:
             raise LabError(f"Checkpoint refused: {refusal}")
     campus_check()
