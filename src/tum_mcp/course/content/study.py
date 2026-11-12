@@ -357,12 +357,13 @@ def check_target_file(files: dict[str, ProjectFile], path: str) -> None:
 
 
 class Node(Frozen):
-    """A node on the diagram's lattice: the app sizes it from its label and spaces the cells."""
+    """A node on the diagram's lattice: the app sizes it from its label and spaces the cells.
+    A tree diagram places its nodes from the edges instead, so its nodes give no cell."""
 
     key: Key
     label: Annotated[str, Field(min_length=1, max_length=40)]
-    row: int = Field(ge=0, le=5)
-    col: int = Field(ge=0, le=5)
+    row: int | None = Field(default=None, ge=0, le=5, exclude_if=lambda value: value is None)
+    col: int | None = Field(default=None, ge=0, le=5, exclude_if=lambda value: value is None)
     shape: Literal["circle", "box"] = "circle"
 
     @model_validator(mode="after")
@@ -400,6 +401,29 @@ class Frame(Frozen):
     edges: tuple[EdgeRef, ...] = Field(default=(), max_length=20)
 
 
+def check_tree(nodes: tuple[Node, ...], edges: tuple[Edge, ...]) -> None:
+    if any(node.row is not None or node.col is not None for node in nodes):
+        raise ValueError("A tree diagram places its nodes from its edges; drop row and col.")
+    if any(not edge.directed or edge.start == edge.end for edge in edges):
+        raise ValueError("A tree's edges are directed from a parent to a child.")
+    parents = [edge.end for edge in edges]
+    if len(set(parents)) != len(parents):
+        raise ValueError("In a tree each node has one parent; draw a repeated state as a new node.")
+    roots = [node.key for node in nodes if node.key not in parents]
+    if len(roots) != 1:
+        raise ValueError("A tree diagram needs exactly one root.")
+    children: dict[str, list[str]] = {}
+    for edge in edges:
+        children.setdefault(edge.start, []).append(edge.end)
+    reached, waiting = set(), [roots[0]]
+    while waiting:
+        key = waiting.pop()
+        reached.add(key)
+        waiting.extend(children.get(key, []))
+    if len(reached) != len(nodes):
+        raise ValueError("Every node of a tree diagram hangs below its root.")
+
+
 class DiagramBlock(Sourced):
     kind: Literal["diagram"]
     description: Text
@@ -407,6 +431,11 @@ class DiagramBlock(Sourced):
     edges: tuple[Edge, ...] = Field(max_length=80)
     frames: tuple[Frame, ...] = Field(min_length=1, max_length=100)
     state_labels: Literal["traversal", "caption"] = "traversal"
+    # A tree (a search tree, a game tree) is drawn as one: its directed edges run from parent to
+    # child, in the order the children appear, and the app lays out the levels.
+    layout: Literal["lattice", "tree"] = Field(
+        default="lattice", exclude_if=lambda value: value == "lattice"
+    )
 
     @model_validator(mode="after")
     def linked(self) -> "DiagramBlock":
@@ -415,9 +444,14 @@ class DiagramBlock(Sourced):
             raise ValueError("Diagram nodes must have unique keys.")
         if any(edge.start not in ids or edge.end not in ids for edge in self.edges):
             raise ValueError("Diagram edge references an unknown node.")
-        cells = [(node.row, node.col) for node in self.nodes]
-        if len(set(cells)) != len(cells):
-            raise ValueError("Each diagram node needs its own row and column.")
+        if self.layout == "tree":
+            check_tree(self.nodes, self.edges)
+        else:
+            cells = [(node.row, node.col) for node in self.nodes]
+            if any(row is None or col is None for row, col in cells):
+                raise ValueError("Give each lattice node its row and column, or use a tree.")
+            if len(set(cells)) != len(cells):
+                raise ValueError("Each diagram node needs its own row and column.")
         if len({(edge.start, edge.end) for edge in self.edges}) != len(self.edges):
             raise ValueError("Draw each diagram edge once.")
         if any(
@@ -837,6 +871,12 @@ class WalkStep(Step):
     frontier: tuple[Key, ...] = ()
     visited: tuple[Key, ...] = ()
     edges: tuple[EdgeRef, ...] = Field(default=(), max_length=20)
+    # A short value written under a node at this step (its g, h and f, a domain, a depth).
+    node_values: dict[Key, Label] = Field(default_factory=dict, exclude_if=lambda value: not value)
+    # The nodes drawn so far, so a search tree grows as it is generated; all when omitted.
+    visible_nodes: tuple[Key, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     # A table stage: the rows filled so far and the cells this step changed ("row:column").
     # A formula stage: the lines of working written so far.
     shown: int | None = Field(default=None, ge=1)
@@ -892,7 +932,7 @@ Stage = Annotated[
     Field(discriminator="kind"),
 ]
 MARKS = {
-    "diagram": {"active", "frontier", "visited", "edges"},
+    "diagram": {"active", "frontier", "visited", "edges", "node_values", "visible_nodes"},
     "table": {"shown", "cells"},
     "code": {"lines"},
     "derivation": {"shown"},
@@ -903,7 +943,7 @@ MARKS = {
 
 def check_marks(stage: Stage | None, step: WalkStep) -> None:
     marked = {
-        name for name in set().union(*MARKS.values()) if getattr(step, name) not in ((), None)
+        name for name in set().union(*MARKS.values()) if getattr(step, name) not in ((), None, {})
     }
     allowed = MARKS[stage.kind] if stage is not None else set()
     if extra := marked - allowed:
@@ -918,10 +958,17 @@ def check_marks(stage: Stage | None, step: WalkStep) -> None:
             keys = {item.key for item in stage.nodes}
             pairs = {(edge.start, edge.end) for edge in stage.edges}
             pairs |= {(edge.end, edge.start) for edge in stage.edges if not edge.directed}
-            if not set(step.active + step.frontier + step.visited) <= keys:
+            marked = set(step.active + step.frontier + step.visited)
+            if not marked | set(step.node_values) | set(step.visible_nodes or ()) <= keys:
                 raise ValueError(f"Step '{step.action}' marks a node the stage does not draw.")
             if any((edge.start, edge.end) not in pairs for edge in step.edges):
                 raise ValueError(f"Step '{step.action}' marks an edge the stage does not draw.")
+            if step.visible_nodes is not None:
+                shown = set(step.visible_nodes)
+                if not (marked | set(step.node_values)) <= shown or any(
+                    not {edge.start, edge.end} <= shown for edge in step.edges
+                ):
+                    raise ValueError(f"Step '{step.action}' marks a node it does not show yet.")
         case TableStage():
             rows = step.shown or len(stage.rows)
             if rows > len(stage.rows) or any(

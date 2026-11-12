@@ -50,6 +50,17 @@ function wrap(text, size, limit = 176) {
 }
 
 function measure(item, limit, labelSize) {
+  // A node that shows a value (g, h, f, a domain) is a box with the value on a line under its
+  // name, sized for the widest value any step writes, so steps never move the drawing.
+  if (item.values?.length) {
+    const lines = hasMath(item.label) ? [item.label] : wrap(item.label, SIZES.box, limit);
+    const named = hasMath(item.label) ? labelSize(item.label, SIZES.box) : { width: Math.max(...lines.map(line => textWidth(line, SIZES.box))), height: lines.length * LINE };
+    const sizes = item.values.map(value => labelSize(value, SIZES.label));
+    const valueHeight = Math.max(LINE, ...sizes.map(size => size.height));
+    return { shape: 'box', lines, nameHeight: named.height, valueHeight,
+      w: Math.max(96, Math.ceil(named.width) + 32, ...sizes.map(size => Math.ceil(size.width) + 24)),
+      h: Math.ceil(named.height + valueHeight + 24) };
+  }
   if (hasMath(item.label)) {
     const { width, height } = labelSize(item.label, item.shape === 'box' ? SIZES.box : SIZES.circle);
     if (item.shape === 'box') return { lines: [item.label], w: Math.max(96, width + 32), h: Math.max(44, height + 16) };
@@ -107,6 +118,50 @@ export function layoutGraph(block, maxWidth = Infinity, labelSize = labelMetrics
 function layoutWith(block, { gap: GAP, wrap: limit, extra }, labelSize) {
   const nodes = block.nodes.map(item => ({ ...item, ...measure(item, limit, labelSize) }));
   const byKey = new Map(nodes.map(item => [item.key, item]));
+  if (block.layout === 'tree') placeTree(nodes, block.edges, byKey, GAP, GAP + extra);
+  else placeLattice(nodes, block.edges, byKey, GAP, extra, labelSize);
+  return routeAndLabel(block, nodes, byKey, labelSize);
+}
+
+// A tree keeps the lecture's shape: one level per depth, children left to right in the order
+// their edges are given, each subtree packed against its left neighbour at every level and
+// each parent centred over its children.
+function placeTree(nodes, edges, byKey, gap, vgap) {
+  const children = new Map(nodes.map(item => [item.key, []]));
+  const parent = new Set(edges.map(edge => edge.end));
+  for (const edge of edges) children.get(edge.start).push(edge.end);
+  const root = nodes.find(item => !parent.has(item.key)).key;
+  const depth = new Map([[root, 0]]), order = [root];
+  for (let index = 0; index < order.length; index++) for (const child of children.get(order[index])) { depth.set(child, depth.get(order[index]) + 1); order.push(child); }
+  // Each subtree returns its nodes' offsets from its root and its left and right edge per level.
+  const shape = key => {
+    const own = byKey.get(key), half = own.w / 2;
+    const kids = children.get(key).map(shape);
+    if (!kids.length) return { offsets: new Map([[key, 0]]), contour: [[-half, half]] };
+    const offsets = new Map(), contour = [], starts = [];
+    for (const kid of kids) {
+      const shift = contour.length ? Math.max(...kid.contour.slice(0, contour.length).map(([left], level) => contour[level][1] + gap - left)) : 0;
+      starts.push(shift);
+      for (const [member, x] of kid.offsets) offsets.set(member, x + shift);
+      kid.contour.forEach(([left, right], level) => {
+        contour[level] = contour[level] ? [Math.min(contour[level][0], left + shift), Math.max(contour[level][1], right + shift)] : [left + shift, right + shift];
+      });
+    }
+    const centre = (starts[0] + starts.at(-1)) / 2;
+    for (const [member, x] of offsets) offsets.set(member, x - centre);
+    offsets.set(key, 0);
+    return { offsets, contour: [[-half, half], ...contour.map(([left, right]) => [left - centre, right - centre])] };
+  };
+  const { offsets } = shape(root);
+  const levels = Math.max(...depth.values()) + 1;
+  const rowH = Array.from({ length: levels }, (_, level) => Math.max(0, ...nodes.filter(item => depth.get(item.key) === level).map(item => item.h)));
+  const ys = [];
+  rowH.forEach((h, level) => ys.push(level ? ys[level - 1] + rowH[level - 1] / 2 + vgap + h / 2 : h / 2));
+  for (const item of nodes) { item.x = offsets.get(item.key); item.y = ys[depth.get(item.key)]; }
+}
+
+function placeLattice(nodes, edges, byKey, GAP, extra, labelSize) {
+  const block = { edges };
   const cols = Math.max(...nodes.map(item => item.col)) + 1, rows = Math.max(...nodes.map(item => item.row)) + 1;
   const colW = Array.from({ length: cols }, (_, c) => Math.max(0, ...nodes.filter(item => item.col === c).map(item => item.w)));
   const rowH = Array.from({ length: rows }, (_, r) => Math.max(0, ...nodes.filter(item => item.row === r).map(item => item.h)));
@@ -123,7 +178,9 @@ function layoutWith(block, { gap: GAP, wrap: limit, extra }, labelSize) {
   colW.forEach((w, c) => xs.push(c ? xs[c - 1] + colW[c - 1] / 2 + hgap[c - 1] + w / 2 : w / 2));
   rowH.forEach((h, r) => ys.push(r ? ys[r - 1] + rowH[r - 1] / 2 + vgap[r - 1] + h / 2 : h / 2));
   for (const item of nodes) { item.x = xs[item.col]; item.y = ys[item.row]; }
+}
 
+function routeAndLabel(block, nodes, byKey, labelSize) {
   const pairs = new Set(block.edges.map(edge => `${edge.start}>${edge.end}`));
   const chords = block.edges.filter(edge => edge.start !== edge.end).map(edge => [byKey.get(edge.start), byKey.get(edge.end)]);
   // 1. Route: straight when the centre line is clear; otherwise a curve around the blocking nodes.
@@ -269,7 +326,7 @@ function arrow([x, y], [fx, fy]) {
 
 // The drawing at its natural size: 1 unit = 1 CSS pixel. On narrow screens it shrinks only until
 // its smallest text (14 px edge labels) reaches 12 px; beyond that its region scrolls sideways.
-export function drawGraph(block, label = '') {
+export function drawGraph(block, label = '', values = {}) {
   const maths = [...block.nodes, ...block.edges].map(item => item.label || '').filter(hasMath);
   const name = [label, ...new Set(maths.map(plainText))].filter(Boolean).join('. ');
   const graph = svgNode('svg', { class: 'graph', role: 'img', 'aria-label': name });
@@ -277,8 +334,11 @@ export function drawGraph(block, label = '') {
   const draw = () => {
     // The reading column is about 600 px wide; on a phone it is the viewport less its margins.
     const labelSize = labelMetrics();
-    const laid = layoutGraph(block, Math.min(620, (globalThis.innerWidth || 1280) - 72), labelSize);
+    const sized = { ...block, nodes: block.nodes.map(item => ({ ...item, values: values[item.key] })) };
+    const laid = layoutGraph(sized, Math.min(620, (globalThis.innerWidth || 1280) - 72), labelSize);
     paintGraph(graph, groups, laid, labelSize);
+    // A walkthrough re-applies its current step after a redraw (fonts loaded, resize).
+    graph.dispatchEvent(new Event('graphdraw'));
     return laid;
   };
   const laid = draw();
@@ -317,13 +377,16 @@ function paintGraph(graph, groups, laid, labelSize) {
     const group = svgNode('g', { class: classes.get(item.key) || (item.shape === 'box' ? 'node-box' : 'node-circle'), 'data-node-key': item.key, 'data-cx': item.x, 'data-cy': item.y, 'data-reach': Math.max(item.w, item.h) / 2 + 10 });
     group.append(item.shape === 'box' ? svgNode('rect', { x: item.x - item.w / 2, y: item.y - item.h / 2, width: item.w, height: item.h, rx: 6 }) : svgNode('circle', { cx: item.x, cy: item.y, r: item.r }));
     groups.set(item.key, group); graph.append(group);
+    // With a value line the name sits in the upper part of the box and the value under it.
+    const nameY = item.valueHeight ? item.y - item.h / 2 + 12 + item.nameHeight / 2 : item.y;
+    if (item.valueHeight) { group.dataset.valueX = item.x; group.dataset.valueY = item.y + item.h / 2 - 12 - item.valueHeight / 2; }
     if (hasMath(item.label)) {
-      group.append(mathLabel(item.label, item.x, item.y, item.shape === 'box' ? SIZES.box : SIZES.circle, labelSize));
+      group.append(mathLabel(item.label, item.x, nameY, item.shape === 'box' ? SIZES.box : SIZES.circle, labelSize));
       continue;
     }
-    const text = svgNode('text', { x: item.x, y: item.y });
+    const text = svgNode('text', { x: item.x, y: nameY });
     item.lines.forEach((line, index) => {
-      const span = svgNode('tspan', { x: item.x, y: item.y + (index - (item.lines.length - 1) / 2) * LINE, 'dominant-baseline': 'central' });
+      const span = svgNode('tspan', { x: item.x, y: nameY + (index - (item.lines.length - 1) / 2) * LINE, 'dominant-baseline': 'central' });
       span.textContent = line; text.append(span);
     });
     group.append(text);
@@ -333,7 +396,17 @@ function paintGraph(graph, groups, laid, labelSize) {
       graph.append(mathLabel(edge.label, edge.labelBox.cx, edge.labelBox.cy, SIZES.label, labelSize, { class: 'edge-label', 'data-label-edge': edge.key }));
       continue;
     }
-    const text = svgNode('text', { x: edge.labelBox.cx, y: edge.labelBox.cy, class: 'edge-label', 'dominant-baseline': 'central' });
+    const text = svgNode('text', { x: edge.labelBox.cx, y: edge.labelBox.cy, class: 'edge-label', 'dominant-baseline': 'central', 'data-label-edge': edge.key });
     text.textContent = edge.label; graph.append(text);
   }
+}
+
+// The value a step writes under a node, in the line the layout reserved for it.
+export function setNodeValue(group, value) {
+  group.querySelector('.node-value')?.remove();
+  if (!value || group.dataset.valueY === undefined) return;
+  const x = Number(group.dataset.valueX), y = Number(group.dataset.valueY);
+  if (hasMath(value)) { group.append(mathLabel(value, x, y, SIZES.label, labelMetrics(), { class: 'node-value' })); return; }
+  const text = svgNode('text', { x, y, class: 'node-value', 'dominant-baseline': 'central' });
+  text.textContent = value; group.append(text);
 }
