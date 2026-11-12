@@ -37,7 +37,9 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    cutoff unresolved even while a selected subset is ready.
 2. **Read each source once into a digest.** `.tum-mcp/digests/<source>.json` holds its
    stated outcomes, worked examples, definitions and figures with their pages, and the
-   source's `sha256` from `.tum-mcp/state.json`. `tum-mcp study digests PROJECT` lists
+   source's `sha256` from `.tum-mcp/state.json`. Record each worked demonstration once:
+   its pages, what it shows and its inputs. Scan the text to find them and open the pages
+   of the ones you teach; plans choose from this list ([planning](planning.md#choose-the-lectures-examples)). `tum-mcp study digests PROJECT` lists
    missing and stale ones. Plans, authors and checkers read the digest instead of the
    whole source; open the source pages for anything the digest does not settle.
 3. **Check coverage before drafting.** Run
@@ -48,8 +50,9 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    Do not replace a complete procedure with its first step or omit a promised result.
    **Plan every item.** `.tum-mcp/plans/<item>.json` (for example `plans/study/dfs.json`)
    names the item's outcomes and each concept with its `kind` (definition, fact, rule,
-   procedure, algorithm, model, comparison, cases), the worked `instance` that shows it and
-   the block keys that will teach it; an exercise plan names each `part` with its `answer`
+   procedure, algorithm, model, comparison, cases), the worked `instance` that shows it
+   (for a procedure, algorithm or model, the lecture `example` it is taught on) and the
+   block keys that will teach it; an exercise plan names each `part` with its `answer`
    and `method`. A kind brings a default shape (an algorithm is stepped through, a
    comparison is a table, a model is drawn, parallel `cases` are a table or one `example`
    each); give `skip` with the reason when it does not fit. Choose the kind from the idea:

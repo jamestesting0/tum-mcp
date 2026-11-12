@@ -28,7 +28,7 @@ like any filler.
 | One-line reminder of a prerequisite | Taught in an earlier course (profile) or a distant unit | Taught in the previous section |
 | Concrete case before the rule | The idea is abstract or notation-heavy | A simple fact, or the case would be artificial |
 | Name the parts first | The mechanism has several new parts to track (poles, angle, phase) | One new term |
-| Labelled steps, then a worked example | A procedure or calculation with interacting steps: one computed value per step, a `derivation`, or a trace; a `walkthrough` when the state changes line by line | Definitions and single facts: practise them instead |
+| Labelled steps, then a worked example | A procedure or calculation with interacting steps: the lecture's own example in full ([choosing examples](planning.md#choose-the-lectures-examples)), one computed value per step, a `derivation`, or a trace; a `walkthrough` when the state changes line by line | Definitions and single facts: practise them instead |
 | Running example | Several concepts act on one setting; keep its givens unchanged | Independent concepts, or a contrast needs another case |
 | Contrast, non-example or misconception | The idea is easily confused with a neighbour, or students hold a known wrong belief; a wrong move made at one moment is a `pitfall` callout (at most one per section) | Nothing nearby to confuse |
 | General rule after the case | A reusable rule exists: a formula block with every symbol, its conditions and when to use it; another application only if it tests a new condition or misconception | Descriptive or one-off content; extra arithmetic that tests only an already-known operation |

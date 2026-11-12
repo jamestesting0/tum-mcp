@@ -21,6 +21,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | S9 | Facts, values and citations match the cited pages | `arithmetic`, `citation_page`, `answer_key`, `correctness.source_match` |
 | S10 | The unit covers its recorded outcomes | `thin_unit`, `unrecorded_sources`, `coverage.ledger_outcomes` |
 | S11 | Sentences are the course's own, written from its sources; exemplars lend a shape, never text | `exemplar_copy` |
+| S12 | Procedures and algorithms are taught on the lecture's critical worked examples, each in full (inputs, picture, steps, endpoint); repeats of a mechanism are left out | the plan check (each one names its example), the report's repeated-example signal, `coverage.examples_selected`, `correctness.source_match`, `redundancy.said_once` |
 
 ## Practice (Study practice, Revision, guides, exam drills and mocks)
 

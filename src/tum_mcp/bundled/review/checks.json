@@ -4,7 +4,7 @@
     {
       "id": "correctness.source_match",
       "dimension": "correctness",
-      "rule": "every definition, claim and value agrees with the cited page. A taught procedure preserves initialization, explicitly scoped repetition, branches and result or failure exits; a correct worked trace or separate answer-key implementation cannot supply instructions missing from the published procedure.",
+      "rule": "every definition, claim and value agrees with the cited page. A taught procedure preserves initialization, explicitly scoped repetition, branches and result or failure exits; a correct worked trace or separate answer-key implementation cannot supply instructions missing from the published procedure. A lecture example the item teaches keeps the lecture's inputs, conventions and every state through its endpoint, drawn in the lecture's form (a tree as a tree); a smaller or changed case does not teach that example.",
       "pass": "The heuristic definition matches slide 4 word for word in meaning.",
       "fail": "The unit says A* expands the highest f first; the cited slide says lowest.",
       "profiles": [
@@ -16,7 +16,7 @@
         "lecture-selection"
       ],
       "scope": "block",
-      "version": 2,
+      "version": 3,
       "default_fail": true
     },
     {
@@ -749,7 +749,7 @@
     {
       "id": "redundancy.said_once",
       "dimension": "redundancy",
-      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A workflow expansion adds usable information beyond its visible step or case; copying or paraphrasing that line adds nothing, and a complete one-line verbal rule needs no expansion. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat.",
+      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A workflow expansion adds usable information beyond its visible step or case; copying or paraphrasing that line adds nothing, and a complete one-line verbal rule needs no expansion. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat. Working the same mechanism again on another object, or replaying a worked run as a practice answer, is a repeat.",
       "pass": "The rule is explained once and linked elsewhere.",
       "fail": "The same derivation appears in full in two sections.",
       "profiles": [
@@ -759,7 +759,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 2
+      "version": 3
     },
     {
       "id": "redundancy.text_restates_picture",
@@ -1228,6 +1228,19 @@
       ],
       "scope": "item",
       "version": 2,
+      "default_fail": true
+    },
+    {
+      "id": "coverage.examples_selected",
+      "dimension": "coverage",
+      "rule": "every critical worked example of the cited lecture pages is taught as the lecture's own example: the run of a procedure or calculation the student must perform, a decision, branch or failure the main run cannot show, or a case later material builds on. Compare the source digest's examples and the pages with the plan's chosen examples. Name a missing critical example with its pages, an invented case that replaces a lecture example, and a second example that shows nothing new.",
+      "pass": "Uniform-cost search is taught on the lecture's Romania subgraph, where B is improved from 310 to 278.",
+      "fail": "The lecture's A* Romania run is replaced by a four-node invented graph.",
+      "profiles": [
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 1,
       "default_fail": true
     },
     {

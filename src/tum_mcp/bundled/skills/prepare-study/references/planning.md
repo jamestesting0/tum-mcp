@@ -71,17 +71,57 @@ checker or a separate planning document.
 Routine application may use new values without becoming a deeper transfer task.
 Judge the required calculation or decision, not shared vocabulary or numbers alone.
 
-For new or substantively rewritten Study preparations, use
-`walkthrough_evidence: source_mapped` in the preparation. For each apply or reason
-demand, record the decisions the source actually requires, with locators, or explain
-why the demand is non-procedural. Map each decision in the plan's `worked_decisions`
-to a worked block and a primary or alternate step, or an exact checked content path.
-State inputs, show the changing state and explain the stop condition. Include a
-separate contrast when the first case cannot exercise a required branch. Compute
-the expected states from the case inputs before authoring. For executable traces,
-use run-keyed answer states so verification checks every step and every state row.
-The mapped practice question must ask the student to make a new decision and keep
-the answer hidden until attempted or revealed.
+## Choose the lecture's examples
+
+A lecture demonstrates its methods on worked examples. Choose the ones a student needs
+and teach each of them completely; leave the rest out. Read the source's `examples` in
+its digest: one line per worked demonstration with its pages, what it shows and its
+inputs (graph, weights, board, start and goal).
+
+An example is critical when at least one holds:
+
+| Critical when | For example |
+| --- | --- |
+| It is the lecture's run of a procedure or calculation the student must perform | The breadth-first run to a goal; A* on the Romania map; h1 and h2 on the 8-puzzle |
+| It shows a decision, branch or failure the main run cannot | A path cost improved before the goal is removed; a cutoff versus a failure; a heuristic that loops; a reopened node |
+| Later material or the exercises build on it | The map or board that later lectures reuse |
+
+Leave out the same mechanism run again on another object, motivation and application
+pictures without workable inputs, empirical tables (state the finding and cite the page)
+and partial illustrations the main run already covers. Teach one main example per
+mechanism. Add a second only when it shows something the first cannot; a contrast on
+the same input is a `variant` run of one walkthrough. Construct an example only when
+the lecture has none for the concept, or for practice. There is no quota.
+
+For each `procedure`, `algorithm` or `model` concept, the plan names its `example`:
+`origin` (`source` or `constructed`), `source` and `pages`, what it `shows`, its
+`endpoint` and the `block` that teaches it; a constructed example says `why`. The plan
+check refuses such a concept without one, unless `skip` explains why it is not worked.
+
+```json
+"example": {"origin": "source", "source": "uninformed", "pages": "52-56",
+  "shows": "B is reached at 310, then improved to 278 before it is removed",
+  "endpoint": "B removed with g = 278, path S-R-P-B", "block": "ucs-romania"}
+```
+
+Teach a chosen example in full:
+
+1. **Its inputs.** The lecture's exact graph, weights, values, board, start and goal,
+   labels and conventions (child order, tie-break, when the goal is tested).
+2. **Its picture.** A tree as a tree, a map as a map, a board as a board, with the values
+   the slide writes beside its nodes ([representations](representations.md#algorithm-traces)).
+3. **Its steps.** One step is one operation the lecturer shows, usually one expansion:
+   never several expansions in one step, never finer than the slides.
+4. **Every state to its endpoint.** Show every state the slides show and any step a student
+   needs between them. When the slides stop early and the result matters, finish the run
+   and say where the lecture stops.
+5. **One walkthrough per run.** Repeated rounds, such as iterative deepening's limits,
+   are subgoals of one walkthrough.
+
+Compute the expected states from the lecture's inputs before authoring, and use
+run-keyed answer states so verification checks every step. Low cognitive load is about
+how an example is presented (one step at a time, the change highlighted, the reason
+stated), never about a smaller or easier example.
 
 ## Check the plan before writing
 
