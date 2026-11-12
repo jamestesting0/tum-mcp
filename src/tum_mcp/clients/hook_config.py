@@ -55,7 +55,11 @@ def render(
             event: [
                 {
                     "hooks": [
-                        {"type": "command", "command": f"{command} --event {event}", "timeout": 30}
+                        {
+                            "type": "command",
+                            "command": f"{command} --event {event}",
+                            "timeout": 3 if event == "Interrupt" else 30,
+                        }
                     ]
                 }
             ]

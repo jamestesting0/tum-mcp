@@ -133,6 +133,13 @@ its candidates compare only within one host, model and effort; `--author` on `la
 another comparison group. A run whose host reports a different model is marked
 `invalid-model`.
 
+Codex trials install the candidate's course-task guards alongside its skills and
+filtered MCP entry. The lab verifies their enabled state and trusts only those exact
+definitions through Codex's native hooks API. The guard uses the candidate's Python
+backend; a stale guard from an older experiment cannot certify its task. Failure to
+load or verify these guards stops installation before the model run. Other hook
+entries are preserved.
+
 ## Boundaries
 
 - Campus access is read-only. A filter in front of the TUM server hides and refuses

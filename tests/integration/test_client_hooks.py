@@ -35,6 +35,8 @@ def test_hook_install_update_and_removal_preserve_unrelated_settings(
     assert target.read_bytes() == before
     current = json.loads(before)
     assert current["personal"] == original["personal"]
+    if host == "codex":
+        assert current["hooks"]["Interrupt"][-1]["hooks"][0]["timeout"] == 3
     if host == "antigravity":
         assert current["other-plugin"] == hooks["other-plugin"]
     else:
