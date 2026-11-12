@@ -62,8 +62,8 @@ and SVG figures their `layers`. Clear marks that no longer apply when stepping b
 or switching runs. Draw a search tree with `layout: "tree"`: the app places its levels and
 keeps the lecture's shape however wide it is. List `visible_nodes` so the tree grows as
 nodes are generated, and put what the slide writes beside a node (its g, h and f, a
-domain, a depth) in `node_values`, with the arithmetic (\(140 + 253 = 393\)). Derive graph marks and displayed state from the same computed
-trace, and include visual values in the answer key when computed. Do not invent a
+domain, a depth) in `node_values`, with the arithmetic (\(140 + 253 = 393\)). Derive
+graph marks and displayed state from the same computed trace, and include visual values in the answer key when computed. Do not invent a
 changing highlight just to clear `static_walkthrough`. An intentionally fixed
 picture belongs beside ordinary explanation, outside a staged walkthrough.
 

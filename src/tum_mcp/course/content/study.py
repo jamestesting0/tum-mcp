@@ -431,10 +431,13 @@ class DiagramBlock(Sourced):
     edges: tuple[Edge, ...] = Field(max_length=80)
     frames: tuple[Frame, ...] = Field(min_length=1, max_length=100)
     state_labels: Literal["traversal", "caption"] = "traversal"
-    # A tree (a search tree, a game tree) is drawn as one: its directed edges run from parent to
-    # child, in the order the children appear, and the app lays out the levels.
     layout: Literal["lattice", "tree"] = Field(
-        default="lattice", exclude_if=lambda value: value == "lattice"
+        default="lattice",
+        exclude_if=lambda value: value == "lattice",
+        description=(
+            "tree for a search, game or recursion tree: edges run parent to child in child "
+            "order and the app places the levels; nodes then need no row or col."
+        ),
     )
 
     @model_validator(mode="after")
@@ -871,11 +874,20 @@ class WalkStep(Step):
     frontier: tuple[Key, ...] = ()
     visited: tuple[Key, ...] = ()
     edges: tuple[EdgeRef, ...] = Field(default=(), max_length=20)
-    # A short value written under a node at this step (its g, h and f, a domain, a depth).
-    node_values: dict[Key, Label] = Field(default_factory=dict, exclude_if=lambda value: not value)
-    # The nodes drawn so far, so a search tree grows as it is generated; all when omitted.
+    node_values: dict[Key, Label] = Field(
+        default_factory=dict,
+        exclude_if=lambda value: not value,
+        description=(
+            "What the slide writes beside a node at this step, with its arithmetic "
+            "(f = 140 + 253 = 393, a domain, a depth); keep node labels to the name."
+        ),
+    )
     visible_nodes: tuple[Key, ...] | None = Field(
-        default=None, exclude_if=lambda value: value is None
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "The nodes generated so far, so a search tree grows step by step; all when omitted."
+        ),
     )
     # A table stage: the rows filled so far and the cells this step changed ("row:column").
     # A formula stage: the lines of working written so far.

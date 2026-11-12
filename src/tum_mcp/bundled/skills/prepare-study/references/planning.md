@@ -108,8 +108,10 @@ Teach a chosen example in full:
 
 1. **Its inputs.** The lecture's exact graph, weights, values, board, start and goal,
    labels and conventions (child order, tie-break, when the goal is tested).
-2. **Its picture.** A tree as a tree, a map as a map, a board as a board, with the values
-   the slide writes beside its nodes ([representations](representations.md#algorithm-traces)).
+2. **Its picture.** A tree as a tree (`layout: "tree"`, growing through `visible_nodes`), a
+   map as a map, a board as a board. What the slide writes beside a node (g, h, f with
+   their sum) goes in the step's `node_values`, not into the node label
+   ([representations](representations.md#algorithm-traces)).
 3. **Its steps.** One step is one operation the lecturer shows, usually one expansion:
    never several expansions in one step, never finer than the slides.
 4. **Every state to its endpoint.** Show every state the slides show and any step a student
