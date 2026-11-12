@@ -13,7 +13,7 @@ from tum_mcp.settings import Provider, find_account
 from tum_mcp.transport import API
 from tum_mcp.workspace import workflow_status
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 
 
 @app.command("review-start")
