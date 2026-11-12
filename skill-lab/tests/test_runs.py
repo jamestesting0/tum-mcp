@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -85,6 +86,9 @@ def lab(lab_state, tmp_path, monkeypatch):
     (variant / "variant.json").write_text(
         json.dumps({"name": "base", "spec": {"ref": "WORKTREE", "patches": []}})
     )
+    (variant / "repo/src/tum_mcp").mkdir(parents=True)
+    (variant / "repo/src/tum_mcp/example.py").write_text("value = 1\n")
+    (variant / "repo/pyproject.toml").write_text('[project]\nname = "synthetic"\n')
     installs = []
     return installs
 
@@ -196,6 +200,63 @@ def test_checkpoint_run_starts_after_the_named_turn(lab):
     run_dir = paths.round_dir("r1") / "runs" / record["id"]
     messages = (run_dir / "workspace" / "messages.txt").read_text().splitlines()
     assert messages[-1] == "Build lessons." and messages[0] == "Set up my course project."
+
+
+def test_checkpoint_reuses_the_identical_installed_patch(lab, tmp_path):
+    variant = paths.round_dir("r1") / "variants/base"
+    patch = tmp_path / "sync.patch"
+    patch.write_text(
+        "--- a/src/tum_mcp/bundled/skills/sync-course/SKILL.md\n"
+        "+++ b/src/tum_mcp/bundled/skills/sync-course/SKILL.md\n"
+    )
+    record = json.loads((variant / "variant.json").read_text())
+    record["spec"]["patches"] = [{"path": str(patch), "sha256": "recorded"}]
+    (variant / "variant.json").write_text(json.dumps(record))
+    first = execute(lab)
+    resumed = execute(lab, checkpoint=f"{first['id']}@1")
+    assert resumed["status"] == "completed"
+    assert [turn["turn"] for turn in resumed["turns"]] == [2]
+
+
+def test_checkpoint_refuses_changed_code_in_a_new_base_without_a_patch(lab):
+    first = execute(lab)
+    old = paths.round_dir("r1") / "variants/base"
+    new = old.with_name("changed-base")
+    shutil.copytree(old, new)
+    record = json.loads((new / "variant.json").read_text())
+    record["spec"]["ref"] = "another-base"
+    (new / "variant.json").write_text(json.dumps(record))
+    (new / "repo/src/tum_mcp/example.py").write_text("value = 2\n")
+    with pytest.raises(LabError, match="changes code"):
+        runs.execute(
+            "r1",
+            "changed-base",
+            checkpoint=f"{first['id']}@1",
+            installer=lambda *args: lab.append(args),
+            campus_check=lambda: None,
+            python=__import__("pathlib").Path(sys.executable),
+        )
+
+
+def test_checkpoint_restore_releases_only_copied_task_ownership(lab, tmp_path):
+    first = execute(lab)
+    run_dir = paths.round_dir("r1") / "runs" / first["id"]
+    original = {
+        "phase": "pending",
+        "owner": "codex:previous",
+        "requirements": {"lecture": {"source_cases": {"source/case": "original"}}},
+    }
+    task = run_dir / "workspace/.tum-mcp/task.json"
+    task.write_text(json.dumps(original))
+    runs.snapshot(run_dir / "history.git", run_dir / "workspace", 3)
+    destination = tmp_path / "restored"
+    destination.mkdir()
+    runs.restore(run_dir / "history.git", 3, destination)
+    restored = json.loads((destination / ".tum-mcp/task.json").read_text())
+    assert restored["phase"] == "paused"
+    assert restored["owner"] == original["owner"]
+    assert restored["requirements"] == original["requirements"]
+    assert json.loads(task.read_text()) == original
 
 
 def test_credential_text_quarantines_the_run(lab, monkeypatch, lab_state):

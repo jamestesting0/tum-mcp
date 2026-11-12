@@ -147,3 +147,19 @@ def touched_paths(variant_dir: Path) -> list[str]:
     for entry in spec["patches"]:
         found.update(safety.patch_paths(Path(entry["path"]).read_text(encoding="utf-8")))
     return sorted(found)
+
+
+def changed_inputs(before: Path, after: Path) -> list[str]:
+    inputs = []
+    for directory in (before, after):
+        repo = directory / "repo"
+        if not (repo / "src").is_dir() or not (repo / "pyproject.toml").is_file():
+            raise LabError("Checkpoint comparison requires both materialized variant sources.")
+        files = [repo / "pyproject.toml", *(repo / "src").rglob("*")]
+        inputs.append({p.relative_to(repo).as_posix(): p for p in files if p.is_file()})
+    old, new = inputs
+    return sorted(
+        name
+        for name in old.keys() | new.keys()
+        if name not in old or name not in new or old[name].read_bytes() != new[name].read_bytes()
+    )
