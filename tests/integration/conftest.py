@@ -14,12 +14,18 @@ from tum_mcp.moodle.browsers import discover_browsers
 
 
 @pytest.fixture(scope="module")
-def course_browser() -> Iterator[Browser]:
+def course_playwright():
     """Keep Playwright's event loop out of later async MCP tests; isolate each context."""
+    with sync_playwright() as playwright:
+        yield playwright
+
+
+@pytest.fixture(scope="module")
+def course_browser(course_playwright) -> Iterator[Browser]:
     choices = discover_browsers()
     assert choices, "The requested browser QA requires an existing Chromium browser."
-    with browser_driver(choices[0]), sync_playwright() as playwright:
-        browser = launch_loopback_browser(playwright.chromium, choices[0])
+    with browser_driver(choices[0]):
+        browser = launch_loopback_browser(course_playwright.chromium, choices[0])
         try:
             yield browser
         finally:

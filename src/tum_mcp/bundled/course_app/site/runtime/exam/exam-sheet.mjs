@@ -14,7 +14,7 @@ export function renderSheet(focusKey) {
     root.append(node('p', '', 'The cheatsheet has not been prepared yet.'));
     return { root, heading, title: 'Cheatsheet', items: [] };
   }
-  root.append(renderMap());
+  const map = renderMap(); root.append(map);
   const entries = [], same = list => new Set(list.map(concept => citedBy(concept).join(' '))).size === 1;
   // Shared sources are cited once: for the page when every entry shares them, else per section.
   const pageWide = same(exam.concepts);
@@ -53,5 +53,5 @@ export function renderSheet(focusKey) {
       });
     }
   }
-  return { root, heading, title: 'Cheatsheet', items: exam.concepts.map(concept => `concept:${concept.key}`) };
+  return { root, heading, title: 'Cheatsheet', items: exam.concepts.map(concept => `concept:${concept.key}`), dispose: () => map.dispose?.() };
 }

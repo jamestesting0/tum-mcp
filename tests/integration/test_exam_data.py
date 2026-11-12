@@ -5,8 +5,8 @@ import pytest
 from material_fixture import exam_document, exam_project, pdf_bytes
 
 from tum_mcp.course.content.exam import Concept, ExamContent
-from tum_mcp.course.content.exam_data import exam_report, exam_statistics, stale_exam
-from tum_mcp.course.content.exam_layout import NODE_GAP, NODE_WIDTH, layout
+from tum_mcp.course.content.exam_data import exam_report, exam_statistics, render_exam, stale_exam
+from tum_mcp.course.content.exam_layout import NARROW, NODE_GAP, NODE_WIDTH, layout
 from tum_mcp.course.project.store import load_state
 
 
@@ -186,6 +186,24 @@ def test_layout_is_deterministic_layered_and_non_overlapping(content: ExamConten
             right - left >= NODE_WIDTH + NODE_GAP for left, right in zip(xs, xs[1:], strict=False)
         )
     assert first["overview"]["links"] == []
+
+
+def test_phone_layout_stacks_the_same_map_into_one_readable_column(content: ExamContent) -> None:
+    wide, narrow = layout(content), layout(content, NARROW)
+    assert {node["key"] for node in narrow["nodes"]} == {node["key"] for node in wide["nodes"]}
+    assert narrow["edges"] == wide["edges"]
+    regions = narrow["regions"]
+    pairs = zip(regions, regions[1:], strict=False)
+    assert all(one["y"] + one["height"] < other["y"] for one, other in pairs)
+    for column, region in enumerate(regions):
+        tops = [node["y"] for node in narrow["nodes"] if node["column"] == column]
+        assert len(tops) == len(set(tops))
+        assert region["x"] + NARROW.padding <= min(
+            node["x"] for node in narrow["nodes"] if node["column"] == column
+        )
+    # A 390 px phone frame (350 px inside) shows the whole width with 14 px card text.
+    assert narrow["width"] * 14 / 13 <= 350 - 32
+    assert render_exam(content)["map"]["narrow"]["nodes"] == narrow["nodes"]
 
 
 def test_a_wrapped_band_keeps_a_link_clear_of_other_cards() -> None:

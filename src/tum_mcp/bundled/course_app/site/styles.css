@@ -998,14 +998,14 @@ button.lecture-recall { margin-top: var(--s2); }
 .exam-entry-cues dd { margin: 0; line-height: 1.55; }
 @media (max-width: 480px) { .exam-entry-cues { grid-template-columns: minmax(0, 1fr); row-gap: var(--s1); } .exam-entry-cues dd + dt { margin-top: var(--s2); } .exam-cue { height: auto; } }
 .exam-badge { color: var(--muted); }
-.exam-map-scroll { position: relative; width: 100%; min-height: 240px; max-height: min(72vh, 720px); overflow: hidden; border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.exam-map-scroll { position: relative; width: 100%; min-height: 240px; max-height: min(72vh, 720px); overflow: hidden; border: 1px solid var(--line); border-radius: var(--r2); background: var(--surface); cursor: grab; touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; }
 .exam-map-scroll.panning { cursor: grabbing; }
 .exam-map-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .exam-map-svg { display: block; width: 100%; height: 100%; font-family: var(--font-ui); }
 .exam-map.expanded { position: fixed; inset: 0; z-index: 40; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--s3); margin: 0; padding: var(--s4); background: var(--canvas); }
 /* min-height 0 lets the frame shrink to the screen, so the legend at its foot stays visible. */
 .exam-map.expanded .exam-map-frame { display: flex; min-height: 0; }
-.exam-map.expanded .exam-map-scroll { flex: 1; height: auto; max-height: none; aspect-ratio: auto !important; }
+.exam-map.expanded .exam-map-scroll { touch-action: none; flex: 1; height: auto; max-height: none; aspect-ratio: auto !important; }
 .exam-map.expanded .exam-map-overview { display: none; }
 /* Full screen keeps the map and the selected entry together: a pane beside the map, or a sheet
    under it on narrow screens, each scrolling on its own. */
@@ -1061,8 +1061,15 @@ button.exam-map-tool svg { width: 16px; height: 16px; fill: none; stroke: curren
 .exam-map-topic-list { margin: 0 0 var(--s3); padding: 0; list-style: none; }
 button.exam-map-item { display: flex; justify-content: space-between; gap: var(--s3); width: 100%; text-align: start; }
 @media (max-width: 719px) {
-  .exam-map:not(.expanded) :is(.exam-map-frame, .exam-map-legend) { display: none; }
   .exam-map:not(.expanded) .exam-map-overview { display: block; }
+}
+.exam-map-modal { inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: var(--canvas); color: var(--ink); }
+.exam-map-modal .exam-map.expanded { padding: max(var(--s4), env(safe-area-inset-top)) max(var(--s4), env(safe-area-inset-right)) max(var(--s4), env(safe-area-inset-bottom)) max(var(--s4), env(safe-area-inset-left)); }
+@media (max-width: 719px) {
+  .exam-map:not(.expanded) .exam-map-scroll { max-height: none; }
+  button.exam-map-tool { min-width: var(--target); min-height: var(--target); }
+  .exam-map.expanded .exam-map-frame { min-height: 160px; }
+  .exam-map.expanded .exam-map-card { max-height: 35dvh; }
 }
 .exam-topic > h2, .exam-topic > .section-heading { margin-top: var(--s8); }
 .exam-topic > h2, .exam-topic > .section-heading > h2 { font-size: var(--text-section); }

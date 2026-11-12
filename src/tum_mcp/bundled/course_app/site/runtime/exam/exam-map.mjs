@@ -41,7 +41,11 @@ function legendItem(dashed, text) {
 const READABLE = 0.75;
 
 export function renderMap() {
-  const map = exam.map;
+  // Phones draw the same map reflowed into one column (built as `narrow`), shown whole at the
+  // screen's width; crossing the breakpoint redraws it with the other arrangement.
+  const phone = matchMedia('(max-width: 719px)');
+  const map = phone.matches && exam.map?.narrow ? exam.map.narrow : exam.map;
+  const compact = map !== exam.map;
   const root = node('section', 'exam-map'); root.setAttribute('aria-labelledby', 'exam-map-title');
   const title = node('h2', '', 'Semester map'); title.id = 'exam-map-title';
   const heading = append(node('div', 'section-heading exam-map-heading'), title);
@@ -83,7 +87,7 @@ export function renderMap() {
     status.textContent = `Selected: ${plainTitle(key)}`;
     if (focus) elements.get(key).focus();
     // In full screen the details sit beside the map, which narrows: keep the node in view.
-    if (root.classList.contains('expanded')) requestAnimationFrame(() => reveal(position.get(key)));
+    if (root.classList.contains('expanded') || matchMedia('(max-width: 719px)').matches) requestAnimationFrame(() => { if (!disposed) reveal(position.get(key)); });
   }
   function deselect() {
     const key = selected;
@@ -160,7 +164,9 @@ export function renderMap() {
       const free = side => [a, b].every(end => !members.some(item => item.y === end.y && (item.x - end.x) * side > 0));
       const side = free(-1) ? -1 : free(1) ? 1 : 0;
       if (!side) return null;
-      const x = side < 0 ? Math.min(...members.map(item => item.x)) - 8 : Math.max(...members.map(item => item.x)) + width + 8;
+      // The reflowed phone map leaves room beside its single column for the arrowhead.
+      const aside = compact ? 14 : 8;
+      const x = side < 0 ? Math.min(...members.map(item => item.x)) - aside : Math.max(...members.map(item => item.x)) + width + aside;
       const out = side < 0 ? a.x : a.x + width, into = (side < 0 ? b.x : b.x + width) + side * (arrow ? head : 0);
       return rounded([[out, a.y + height / 2], [x, a.y + height / 2], [x, b.y + height / 2], [into, b.y + height / 2]]);
     };
@@ -247,12 +253,16 @@ export function renderMap() {
     elements.set(item.key, group); svg.append(group);
   }
   // The canvas: a viewBox over the build-time layout that the student moves and zooms.
+  const lifetime = new AbortController(), signal = lifetime.signal;
+  let disposed = false;
   const view = { x: 0, y: 0, scale: 1 };
   const clamp = value => Math.min(3, Math.max(0.2, value));
   let fitted = false;
   function apply() {
+    if (disposed) return;
     const width = scroller.clientWidth, height = scroller.clientHeight;
     if (width && height) svg.setAttribute('viewBox', `${view.x} ${view.y} ${width / view.scale} ${height / view.scale}`);
+    scroller.dataset.scale = String(view.scale);
   }
   // Fit shows the whole map. Opening it, the map fills the frame's width at a readable size and
   // starts at its first topics; the student drags along the semester.
@@ -260,9 +270,13 @@ export function renderMap() {
     const width = scroller.clientWidth, height = scroller.clientHeight;
     if (!width || !height) return;
     const across = (width - 32) / map.width;
-    view.scale = clamp(whole ? Math.min(across, (height - 32) / map.height, 1.25) : Math.min(Math.max(across, READABLE), 1.25));
+    const inline = compact && !root.classList.contains('expanded');
+    view.scale = clamp(whole && !inline ? Math.min(across, (height - 32) / map.height, 1.25) : Math.min(Math.max(across, phone.matches ? 14 / 13 : READABLE), 1.25));
+    // Inline on a phone, the frame grows to the whole reflowed map and the page scrolls past it.
+    if (inline) scroller.style.height = `${Math.ceil(map.height * view.scale + 32)}px`;
+    const room = inline ? map.height * view.scale + 32 : height;
     const start = (size, room) => size * view.scale <= room - 32 ? (size - room / view.scale) / 2 : -16 / view.scale;
-    view.x = start(map.width, width); view.y = start(map.height, height);
+    view.x = start(map.width, width); view.y = start(map.height, room);
     fitted = true; apply();
   }
   function zoomAt(factor, cx = scroller.clientWidth / 2, cy = scroller.clientHeight / 2) {
@@ -276,39 +290,58 @@ export function renderMap() {
     if (!inside) { view.x = item.x + map.node_width / 2 - width / 2; view.y = item.y + map.node_height / 2 - height / 2; apply(); }
   }
   const pointers = new Map();
-  let travelled = 0, spread = 0, suppressClick = false;
+  let travelled = 0, pinch = null, suppressClick = false, pressed = null;
   const local = event => { const box = scroller.getBoundingClientRect(); return [event.clientX - box.left, event.clientY - box.top]; };
+  const contacts = () => {
+    const [[ax, ay], [bx, by]] = pointers.values(), box = scroller.getBoundingClientRect();
+    return { distance: Math.hypot(ax - bx, ay - by), x: (ax + bx) / 2 - box.left, y: (ay + by) / 2 - box.top };
+  };
   scroller.addEventListener('pointerdown', event => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    pointers.set(event.pointerId, [event.clientX, event.clientY]); travelled = 0;
-    if (pointers.size === 2) { const [[ax, ay], [bx, by]] = pointers.values(); spread = Math.hypot(ax - bx, ay - by); }
-  });
+    if (event.button > 0) return;
+    if (!pointers.size) { suppressClick = false; travelled = 0; pressed = event.target.closest('[data-concept]')?.dataset.concept || null; }
+    pointers.set(event.pointerId, [event.clientX, event.clientY]);
+    scroller.setPointerCapture(event.pointerId);
+    if (pointers.size === 2) {
+      pinch = contacts(); travelled = Infinity; pressed = null;
+      for (const id of pointers.keys()) scroller.setPointerCapture(id);
+    }
+  }, { signal });
   scroller.addEventListener('pointermove', event => {
     const last = pointers.get(event.pointerId);
     if (!last) return;
     pointers.set(event.pointerId, [event.clientX, event.clientY]);
+    if (pointers.size > 2) return;
     if (pointers.size === 2) {
-      const [[ax, ay], [bx, by]] = pointers.values(), distance = Math.hypot(ax - bx, ay - by);
-      const box = scroller.getBoundingClientRect();
-      if (spread) zoomAt(distance / spread, (ax + bx) / 2 - box.left, (ay + by) / 2 - box.top);
-      spread = distance; travelled = Infinity; return;
+      const current = contacts();
+      if (pinch && pinch.distance) {
+        const wx = view.x + pinch.x / view.scale, wy = view.y + pinch.y / view.scale;
+        view.scale = clamp(view.scale * current.distance / pinch.distance);
+        view.x = wx - current.x / view.scale; view.y = wy - current.y / view.scale; apply();
+      }
+      pinch = current; return;
     }
     const dx = event.clientX - last[0], dy = event.clientY - last[1];
+    if (!root.classList.contains('expanded') && event.pointerType !== 'mouse' && Math.abs(dx) <= Math.abs(dy)) return;
     travelled += Math.abs(dx) + Math.abs(dy);
-    if (travelled > 4) {
-      if (!scroller.hasPointerCapture(event.pointerId)) { scroller.setPointerCapture(event.pointerId); scroller.classList.add('panning'); }
-      pan(dx, dy);
+    if (travelled > 6) {
+      if (!scroller.hasPointerCapture(event.pointerId)) scroller.setPointerCapture(event.pointerId);
+      scroller.classList.add('panning'); pan(dx, dy);
     }
-  });
-  const release = event => {
+  }, { signal });
+  function release(event) {
     if (!pointers.delete(event.pointerId)) return;
-    if (travelled > 4) suppressClick = true;
+    const tapped = event.type === 'pointerup' && !pointers.size && travelled <= 6 && pressed;
+    if (travelled > 6 || tapped) suppressClick = true;
+    if (scroller.hasPointerCapture(event.pointerId)) scroller.releasePointerCapture(event.pointerId);
+    pinch = null;
+    if (tapped && document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-concept]')?.dataset.concept === pressed) select(pressed);
+    if (!pointers.size) pressed = null;
     if (!pointers.size) scroller.classList.remove('panning');
-    spread = 0;
-  };
-  scroller.addEventListener('pointerup', release); scroller.addEventListener('pointercancel', release);
-  // A drag ends with a click on whatever is under the pointer; it must not select a node.
-  scroller.addEventListener('click', event => { if (suppressClick) { suppressClick = false; event.stopPropagation(); event.preventDefault(); } }, true);
+  }
+  for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) scroller.addEventListener(name, release, { signal });
+  scroller.addEventListener('click', event => {
+    if (suppressClick) { suppressClick = false; event.stopPropagation(); event.preventDefault(); }
+  }, { signal, capture: true });
   scroller.addEventListener('wheel', event => {
     const full = root.classList.contains('expanded');
     if (!(event.ctrlKey || event.metaKey) && !full) return;
@@ -326,13 +359,48 @@ export function renderMap() {
     event.preventDefault();
   });
   const full = tool('Full screen', ICONS.enter, () => toggleFull(), 'exam-map-full');
+  const dialog = node('dialog', 'exam-map-modal');
+  dialog.setAttribute('aria-labelledby', 'exam-map-title');
+  const placeholder = node('div');
+  let reading = null, locks = [];
+  function openFallback() {
+    reading = { x: scrollX, y: scrollY, main: root.closest('main'), top: root.closest('main')?.scrollTop };
+    placeholder.style.height = root.getBoundingClientRect().height + 'px';
+    root.before(placeholder); dialog.append(root); document.body.append(dialog);
+    locks = [...new Set([document.documentElement, document.body, reading.main].filter(Boolean))]
+      .map(element => ({ element, overflow: element.style.overflow }));
+    for (const lock of locks) lock.element.style.overflow = 'hidden';
+    dialog.showModal(); setExpanded(true); full.focus({ preventScroll: true });
+  }
+  function closeFallback() {
+    if (!dialog.open) return;
+    cancelPointers(); dialog.close();
+    placeholder.replaceWith(root); dialog.remove();
+    for (const lock of locks) lock.element.style.overflow = lock.overflow;
+    locks = []; setExpanded(false);
+    if (reading.main) reading.main.scrollTop = reading.top;
+    window.scrollTo(reading.x, reading.y); full.focus({ preventScroll: true });
+  }
+  dialog.addEventListener('cancel', event => {
+    event.preventDefault();
+    if (!card.hidden) deselect(); else closeFallback();
+  }, { signal });
+  function cancelPointers() {
+    const captured = [...pointers.keys()]; pointers.clear();
+    for (const id of captured) if (scroller.hasPointerCapture(id)) scroller.releasePointerCapture(id);
+    pinch = null; travelled = 0; suppressClick = false; pressed = null;
+    scroller.classList.remove('panning');
+  }
   function toggleFull() {
+    if (dialog.open) { closeFallback(); return; }
     if (document.fullscreenElement === root) { document.exitFullscreen(); return; }
     if (root.classList.contains('expanded')) { setExpanded(false); return; }
-    if (root.requestFullscreen) root.requestFullscreen().catch(() => setExpanded(true)); else setExpanded(true);
+    if (matchMedia('(max-width: 719px)').matches || !root.requestFullscreen) openFallback();
+    else root.requestFullscreen().catch(() => { if (!disposed) openFallback(); });
   }
   function setExpanded(on) {
-    root.classList.toggle('expanded', on);
+    cancelPointers(); root.classList.toggle('expanded', on);
+    scroller.style.height = '';
     const name = on ? 'Exit full screen' : 'Full screen';
     full.setAttribute('aria-label', name); full.title = name; full.querySelector('path').setAttribute('d', on ? ICONS.exit : ICONS.enter);
     requestAnimationFrame(() => fit(false));
@@ -351,10 +419,25 @@ export function renderMap() {
   heading.append(full);
   const tools = append(node('div', 'exam-map-tools'), tool('Zoom out', ICONS.out, () => zoomAt(0.8)), tool('Zoom in', ICONS.in, () => zoomAt(1.25)), tool('Fit', ICONS.fit, () => fit()));
   const legend = append(node('div', 'exam-map-legend'), legendItem(false, 'builds on'), legendItem(true, 'easy to confuse'));
-  new ResizeObserver((entries, observer) => {
+  let measured = 0;
+  const observer = new ResizeObserver((entries, observer) => {
     if (!scroller.isConnected) { observer.disconnect(); return; }
+    // The inline phone map follows the screen's width; its own height change is not a resize.
+    if (compact && !root.classList.contains('expanded') && scroller.clientWidth !== measured) { measured = scroller.clientWidth; fit(false); return; }
     if (fitted) apply(); else fit(false);
-  }).observe(scroller);
+  });
+  observer.observe(scroller);
+  phone.addEventListener('change', () => {
+    if (!root.isConnected || !exam.map?.narrow) return;
+    const fresh = renderMap(), retire = root.dispose;
+    retire(); root.replaceWith(fresh); root.dispose = () => fresh.dispose();
+  }, { signal });
+  root.dispose = () => {
+    closeFallback(); disposed = true; lifetime.abort(); observer.disconnect(); cancelPointers();
+    document.removeEventListener('fullscreenchange', onFullscreen);
+    if (document.fullscreenElement === root) document.exitFullscreen();
+    dialog.remove();
+  };
   scroller.append(svg);
   // Phones show topics first; a topic opens its concepts as a list.
   const overview = node('div', 'exam-map-overview');
