@@ -86,7 +86,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    `tum-mcp review plan-record PROJECT --file ANSWER --provenance same`. A passing
    same-author verdict can complete draft readiness. It does not replace independent
    review or a current independent verdict. Check changed plans again and repair rejected
-   plans before writing.
+   plans before writing. A checker fails a plan only for a blocking problem; its `advice`
+   comes with a pass, so apply what improves the lesson without another check.
    Read the complete batch locally before this call and fix all detectable omissions
    together. Do not request independent checks of unchanged approved plans. Changing
    only an artifact key elsewhere in the batch does not change the source requirements.

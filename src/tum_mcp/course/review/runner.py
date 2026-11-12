@@ -65,9 +65,9 @@ REPAIR_PROMPT = (
 PLAN_PROMPT = (
     "You are a fresh plan checker. You did not write these plans. Read the plan packet at "
     "{packet}, the digests in .tum-mcp/digests/ and, where a digest does not settle it, the "
-    "source pages they cite. Answer the packet's `ask` for every plan. Hunt for weak plans: an "
-    "instance that restates its concept is not a worked instance. Reply with only the answers "
-    "JSON object."
+    "source pages they cite. Answer the packet's `ask` for every plan. Hunt for the blocking "
+    "problems the `ask` names (an instance that only restates its concept is no case at all) "
+    "and give other improvements as `advice`. Reply with only the answers JSON object."
 )
 
 

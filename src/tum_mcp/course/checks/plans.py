@@ -104,6 +104,8 @@ class Approval(Frozen):
     fingerprint: str
     verdict: Literal["pass", "fail"]
     reasons: tuple[Text, ...] = ()
+    # Improvements a checker suggests without failing the plan.
+    advice: tuple[Text, ...] = Field(default=(), exclude_if=lambda value: not value)
     provenance: Literal["fresh", "same"]
     coverage_fingerprint: Digest | None = Field(
         default=None, exclude_if=lambda value: value is None
@@ -326,6 +328,7 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
             )
         verdict = answer.get("verdict")
         reasons = tuple(str(reason) for reason in answer.get("reasons", []))
+        advice = tuple(str(note) for note in answer.get("advice", []))
         if verdict not in {"pass", "fail"} or (verdict == "fail" and not reasons):
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item}: pass, or fail with the reasons.")
         if verdict == "pass" and (problems := example_problems(plan)):
@@ -347,6 +350,7 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
             fingerprint=plan.fingerprint(),
             verdict=verdict,
             reasons=reasons,
+            advice=advice,
             provenance=provenance,
             coverage_fingerprint=coverage["scope"]["fingerprint"] if coverage else None,
             batches=batches,
@@ -354,7 +358,11 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
         body = json.dumps(plan.model_copy(update={"gate": gate}).model_dump(mode="json"), indent=2)
         writes.append(Write(name, original, body.encode()))
         recorded.append(item)
-        verdicts[item] = {"verdict": verdict, "reasons": list(reasons)}
+        verdicts[item] = {
+            "verdict": verdict,
+            "reasons": list(reasons),
+            **({"advice": list(advice)} if advice else {}),
+        }
     apply(root, tuple(writes))
     return {
         "recorded": recorded,
@@ -366,7 +374,8 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
             else (
                 "Author a provisional draft from these same-author checks."
                 if provenance == "same"
-                else "Author the requested items from these plans; reuse unchanged approvals."
+                else "Author the requested items from these plans; reuse unchanged approvals. "
+                "Apply any advice that improves the lesson; it needs no further check."
             )
         ),
     }
@@ -421,6 +430,11 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                     if items
                     else {}
                 ),
+                **(
+                    {"previous": list(plan.gate.reasons)}
+                    if plan.gate and plan.gate.verdict == "fail"
+                    else {}
+                ),
             }
             for plan in waiting
         ],
@@ -436,13 +450,25 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                     ),
                     "verdict": "pass|fail",
                     "reasons": [],
+                    "advice": [],
                 }
                 for plan in waiting
             ]
         },
         "ask": (
-            "For each plan: does every concept have a worked instance that shows it (a concrete "
-            "case, not the concept restated), does each "
+            "Fail a plan only for a blocking problem: a fact, value or convention that "
+            "contradicts the source; a critical lecture example left out (the run of a "
+            "procedure the student must perform, a decision or failure the main run cannot "
+            "show) or one changed, shrunk or replaced by an invented case; a stated outcome "
+            "left untaught; an idea used before it is taught; or a wrong solved practice "
+            "answer. List every other improvement under `advice`: the author sees it, and it "
+            "does not fail the plan. When a plan lists `previous` reasons, first check each "
+            "against the revised plan and never repeat one the revision fixed. "
+            "For each plan: does each concept come with a concrete case (a definition, rule "
+            "or comparison needs one short case, not a constructed worked run; a procedure, "
+            "algorithm or model needs the lecture's own worked example, taught in full; a "
+            "lecture calculation whose result the lesson states, such as a heuristic computed "
+            "on the lecture's board, is a procedure with that example), does each "
             "kind get a fitting representation (or a real reason to skip it), does the order "
             "build each idea before it is used, and does it cover its outcomes? "
             "Compare each procedure, algorithm or model concept's `example` with the source "
