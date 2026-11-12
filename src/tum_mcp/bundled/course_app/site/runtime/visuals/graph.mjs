@@ -198,6 +198,9 @@ function routeAndLabel(block, nodes, byKey, labelSize) {
         .reduce((sum, [p, q]) => sum + points.slice(1).filter((point, i) => crosses(points[i], point, [p.x, p.y], [q.x, q.y])).length, 0);
     };
     // The two arrows of a two-way pair bow apart, each to its own right, so each keeps its label.
+    // A tree's edges run straight from a parent's bottom to a child's top, between level bands
+    // no box can occupy, so they never need to bend.
+    if (block.layout === 'tree') return { ...result, ctrl: null, bowed: false };
     const bowed = two && clear([mx + nx * 26, my + ny * 26]);
     let ctrl = bowed ? [mx + nx * 26, my + ny * 26] : null;
     if (!ctrl && (two || !clear(null))) {
@@ -224,7 +227,8 @@ function routeAndLabel(block, nodes, byKey, labelSize) {
   for (const route of routes.filter(item => !item.loop)) for (const [n, other, end] of [[route.a, route.b, 'start'], [route.b, route.a, 'end']]) {
     if (n.r) continue;
     // A bowed pair leaves through the sides that face each other, each arrow on its own half.
-    const toward = route.ctrl || [other.x, other.y], side = sideOf(n, route.bowed ? [other.x, other.y] : toward);
+    const toward = route.ctrl || [other.x, other.y];
+    const side = block.layout === 'tree' ? (end === 'start' ? 'bottom' : 'top') : sideOf(n, route.bowed ? [other.x, other.y] : toward);
     const key = `${n.key}:${side}`, along = side === 'top' || side === 'bottom' ? toward[0] : toward[1];
     (slots.get(key) || slots.set(key, []).get(key)).push({ route, end, along, side, n });
   }
@@ -379,7 +383,7 @@ function paintGraph(graph, groups, laid, labelSize) {
     groups.set(item.key, group); graph.append(group);
     // With a value line the name sits in the upper part of the box and the value under it.
     const nameY = item.valueHeight ? item.y - item.h / 2 + 12 + item.nameHeight / 2 : item.y;
-    if (item.valueHeight) { group.dataset.valueX = item.x; group.dataset.valueY = item.y + item.h / 2 - 12 - item.valueHeight / 2; }
+    if (item.valueHeight) { group.dataset.valueX = item.x; group.dataset.valueY = item.y + item.h / 2 - 12 - item.valueHeight / 2; group.dataset.valueW = item.w - 16; }
     if (hasMath(item.label)) {
       group.append(mathLabel(item.label, item.x, nameY, item.shape === 'box' ? SIZES.box : SIZES.circle, labelSize));
       continue;
@@ -406,7 +410,9 @@ export function setNodeValue(group, value) {
   group.querySelector('.node-value')?.remove();
   if (!value || group.dataset.valueY === undefined) return;
   const x = Number(group.dataset.valueX), y = Number(group.dataset.valueY);
-  if (hasMath(value)) { group.append(mathLabel(value, x, y, SIZES.label, labelMetrics(), { class: 'node-value' })); return; }
+  // The value line spans the box, which was sized for the widest value with room to spare.
+  const room = (text, size) => ({ width: Number(group.dataset.valueW), height: labelMetrics()(text, size).height + 8 });
+  if (hasMath(value)) { group.append(mathLabel(value, x, y, SIZES.label, room, { class: 'node-value' })); return; }
   const text = svgNode('text', { x, y, class: 'node-value', 'dominant-baseline': 'central' });
   text.textContent = value; group.append(text);
 }

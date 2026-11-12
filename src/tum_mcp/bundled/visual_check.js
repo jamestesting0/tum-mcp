@@ -55,7 +55,7 @@
     if (root.closest('#exercise-question')) return `statement:${index}`;
     return `block:${index}`;
   };
-  const roots = [...document.querySelectorAll('main svg.graph, main .uml-region, main .plot-drawing > svg, main figure.figure > svg, main figure.figure > img, main .table-region')]
+  const roots = [...document.querySelectorAll('main svg.graph, main .uml-region, main .plot-drawing > svg, main figure.figure > svg, main figure.figure > img, main figure.figure > .figure-frame > img, main .table-region')]
     .filter(root => root.getClientRects().length && !root.closest('details:not([open])'));
   for (const root of roots) {
     const kind = root.matches('.uml-region') ? 'uml' : root.matches('svg.graph') ? 'diagram' : root.closest('.plot') ? 'plot' : root.matches('.table-region') ? 'table' : 'figure';
@@ -146,7 +146,7 @@
     if (kind === 'diagram') {
       differ('nodes', nodes.map(n => n.key), block.nodes.map(n => n.key));
       const sourceText = label => label.dataset.graphMath || [...label.querySelectorAll('tspan')].map(span => span.textContent).join(' ') || label.textContent;
-      differ('node labels', [...svg.querySelectorAll('g[data-node-key] :is(text,foreignObject)')].map(sourceText), block.nodes.map(n => n.label.replace(/\s+/g, ' ')));
+      differ('node labels', [...svg.querySelectorAll('g[data-node-key] :is(text,foreignObject):not(.node-value)')].map(sourceText), block.nodes.map(n => n.label.replace(/\s+/g, ' ')));
       differ('edges', edges.map(edge => edge.key), block.edges.map(edge => `${edge.start}--${edge.end}`));
       differ('arrows', [...svg.querySelectorAll('path.arrow')].map(arrow => arrow.dataset.arrowKey), block.edges.filter(edge => edge.directed).map(edge => `${edge.start}--${edge.end}`));
       differ('edge labels', labels.map(sourceText), block.edges.filter(edge => edge.label).map(edge => edge.label));
