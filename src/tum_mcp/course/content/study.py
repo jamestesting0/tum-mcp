@@ -387,6 +387,22 @@ class StateRow(Frozen):
     value: Annotated[str, Field(min_length=1, max_length=300), AfterValidator(validate_inline)]
 
 
+class Region(Frozen):
+    """A part of a figure image a step points at, in fractions of the image from its top left."""
+
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    w: float = Field(gt=0, le=1)
+    h: float = Field(gt=0, le=1)
+    label: Label | None = None
+
+    @model_validator(mode="after")
+    def inside(self) -> "Region":
+        if self.x + self.w > 1.001 or self.y + self.h > 1.001:
+            raise ValueError("A region lies inside its image: x + w and y + h are at most 1.")
+        return self
+
+
 class EdgeRef(Frozen):
     start: Key
     end: Key
@@ -898,6 +914,23 @@ class WalkStep(Step):
     # A plot stage: the series drawn so far; a figure stage: the layers (SVG ids) shown.
     series: tuple[Key, ...] | None = None
     layers: tuple[Key, ...] | None = None
+    regions: tuple[Region, ...] = Field(
+        default=(),
+        max_length=8,
+        exclude_if=lambda value: not value,
+        description=(
+            "On a figure image: the parts this step works on, outlined while the rest dims "
+            "(a tile and its goal square, a city on the lecture's map)."
+        ),
+    )
+    frame: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "On a figure image: another crop from figures/ shown at this step, for a picture "
+            "the lecture builds up over several slides."
+        ),
+    )
 
 
 # A stage is the picture the steps move over; it borrows the visual it is, without the
@@ -949,7 +982,7 @@ MARKS = {
     "code": {"lines"},
     "derivation": {"shown"},
     "plot": {"series"},
-    "figure": {"layers"},
+    "figure": {"layers", "regions", "frame"},
 }
 
 
@@ -1000,6 +1033,10 @@ def check_marks(stage: Stage | None, step: WalkStep) -> None:
         case FigureStage():
             if stage.svg is None and step.layers:
                 raise ValueError("Figure layers are SVG groups; an image has none.")
+            if stage.image is None and (step.regions or step.frame):
+                raise ValueError("Regions and frames mark an image; a drawn figure uses layers.")
+            if step.frame is not None and not FIGURE_IMAGE.fullmatch(step.frame):
+                raise ValueError("A frame is a file in figures/ ending .png, .jpg or .webp.")
             if any(f'id="{layer}"' not in (stage.svg or "") for layer in step.layers or ()):
                 raise ValueError(f"Step '{step.action}' shows a layer the figure does not draw.")
         case None:

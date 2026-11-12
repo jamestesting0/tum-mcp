@@ -384,6 +384,39 @@ def text(
 
 
 @app.command(rich_help_panel="Sources")
+def figure(
+    project: Path,
+    key: Annotated[str, typer.Option(help="Inventory resource key of a PDF.")],
+    page: Annotated[int, typer.Option(min=1, help="Page number.")],
+    region: Annotated[
+        str | None, typer.Option(help="Listed region to crop, or several merged: 2 or 2+3.")
+    ] = None,
+    box: Annotated[
+        str | None, typer.Option(help="Page fractions x0,y0,x1,y1 from the top left.")
+    ] = None,
+    name: Annotated[str | None, typer.Option(help="Saves figures/NAME.png in the app.")] = None,
+) -> None:
+    """List a page's figure regions with a numbered preview, or crop one into the app."""
+    from tum_mcp.course.sources.page_figures import crop_figure, page_regions
+
+    root = project.expanduser().resolve()
+    if region is None and box is None:
+        result = page_regions(root, key, page)
+    elif name is None:
+        raise CampusError(Code.INVALID_RESPONSE, "Name the figure with --name.")
+    else:
+        try:
+            numbers = [int(part) for part in region.split("+")] if region else None
+            corners = [float(part) for part in box.split(",")] if box else None
+        except ValueError:
+            raise CampusError(
+                Code.INVALID_RESPONSE, "Use --region 2 or 2+3, or --box x0,y0,x1,y1."
+            ) from None
+        result = crop_figure(root, key, page, name, regions=numbers, box=corners)
+    typer.echo(json.dumps(result, indent=2))
+
+
+@app.command(rich_help_panel="Sources")
 def find(
     project: Path,
     query: Annotated[

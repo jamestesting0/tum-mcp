@@ -467,6 +467,8 @@ def figure_images(value: JsonValue) -> Iterator[str]:
         case {"kind": "figure", "image": str() as image}:
             yield image
         case dict():
+            if isinstance(frame := value.get("frame"), str):
+                yield frame
             for item in value.values():
                 yield from figure_images(item)
         case list():

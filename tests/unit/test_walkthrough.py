@@ -187,3 +187,45 @@ def test_a_variant_differing_only_in_reasons_is_not_a_variant() -> None:
     value["variant"]["steps"] = [step | {"why": "Reworded."} for step in value["steps"]]
     with pytest.raises(ValidationError, match="different step"):
         WalkthroughBlock.model_validate(value)
+
+
+def image_walk(**step_change) -> dict:
+    step = {"action": "Measure tile 1.", "why": "Two rows and one column away."}
+    return {
+        "kind": "walkthrough",
+        "key": "tiles",
+        "sources": ["notes"],
+        "stage": {"kind": "figure", "alt": "Start and goal boards.", "image": "figures/boards.png"},
+        "steps": [
+            step | {"regions": [{"x": 0.1, "y": 0.2, "w": 0.1, "h": 0.3, "label": "3"}]},
+            step | step_change,
+        ],
+    }
+
+
+def test_an_image_stage_marks_regions_and_swaps_frames() -> None:
+    walk = WalkthroughBlock.model_validate(image_walk(frame="figures/boards-2.png"))
+    assert walk.steps[0].regions[0].label == "3" and walk.steps[1].frame == "figures/boards-2.png"
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"regions": [{"x": 0.8, "y": 0, "w": 0.3, "h": 0.1}]}, "inside its image"),
+        ({"frame": "../boards.png"}, "file in figures/"),
+    ],
+)
+def test_image_marks_stay_on_the_image(change: dict, message: str) -> None:
+    with pytest.raises(ValidationError, match=message):
+        WalkthroughBlock.model_validate(image_walk(**change))
+
+
+def test_a_drawn_figure_takes_layers_not_regions() -> None:
+    walk = image_walk()
+    walk["stage"] = {
+        "kind": "figure",
+        "alt": "A box.",
+        "svg": '<svg viewBox="0 0 320 200"><rect id="a" x="1" y="1" width="9" height="9"/></svg>',
+    }
+    with pytest.raises(ValidationError, match="Regions and frames mark an image"):
+        WalkthroughBlock.model_validate(walk)

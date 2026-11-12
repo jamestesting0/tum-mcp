@@ -221,3 +221,58 @@ def test_secondary_browser_smoke_loads_compiled_assets_and_rejects_missing_modul
         assert result["passed"]
         assert result["views"] == ["content", "flashcards", "practice"]
         assert result["widths"] == [390, 1440]
+
+
+IMAGE_WALKTHROUGH = """async () => {
+    const { renderWalkthrough } = await import('./runtime/reading/walkthrough.mjs');
+    const { renderBlockBody } = await import('./runtime/reading/reading.mjs');
+    const step = (action, more) => ({ action, why: 'Rows plus columns.', active: [], frontier: [],
+        visited: [], edges: [], state: [], ...more });
+    const block = { stage: { kind: 'figure', alt: 'Two boards.', image: 'figures/board.png' },
+        steps: [step('Measure tile 1.',
+                     { regions: [{ x: 0.1, y: 0.2, w: 0.25, h: 0.5, label: '3' }] }),
+                step('The next state.', { frame: 'figures/board-2.png' })] };
+    document.querySelector('main').replaceChildren(renderWalkthrough(block, renderBlockBody));
+}"""
+
+
+def test_an_image_walkthrough_outlines_regions_on_the_picture_and_swaps_frames(
+    course_browser: Browser, project: Path
+) -> None:
+    from PIL import Image
+
+    from tum_mcp.course.app.preview import Handler, PreviewServer
+
+    figures = project / "app" / "figures"
+    figures.mkdir(exist_ok=True)
+    Image.new("RGB", (800, 400), "white").save(figures / "board.png")
+    Image.new("RGB", (800, 400), "lightgray").save(figures / "board-2.png")
+    with PreviewServer(
+        ("127.0.0.1", 0), partial(Handler, directory=str(project / "app"))
+    ) as server:
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            with course_browser.new_context(viewport={"width": 390, "height": 844}) as context:
+                page = context.new_page()
+                page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+                page.locator("[data-block-index]").first.wait_for()
+                page.evaluate(IMAGE_WALKTHROUGH)
+                image = page.locator(".figure-frame img")
+                expect(image).to_have_js_property("complete", True)
+                expect(page.locator(".figure-outline")).to_have_count(1)
+                expect(page.locator(".figure-region-label")).to_have_text("3")
+                picture, overlay, outline = (
+                    page.locator(selector).bounding_box()
+                    for selector in (".figure-frame img", ".figure-regions", ".figure-outline")
+                )
+                page.get_by_role("button", name="Next step", exact=True).click()
+                expect(image).to_have_attribute("src", "figures/board-2.png")
+                expect(page.locator(".figure-outline")).to_have_count(0)
+        finally:
+            server.shutdown()
+            worker.join(timeout=3)
+    assert picture and overlay and outline
+    assert all(abs(picture[key] - overlay[key]) < 1 for key in ("x", "y", "width", "height"))
+    assert abs(outline["x"] - (picture["x"] + 0.1 * picture["width"])) < 3
+    assert abs(outline["width"] - 0.25 * picture["width"]) < 4

@@ -109,11 +109,11 @@ Teach a chosen example in full:
 1. **Its inputs.** The lecture's exact graph, weights, values, board, start and goal,
    labels and conventions (child order, tie-break, when the goal is tested).
 2. **Its picture.** A tree as a tree (`layout: "tree"`, growing through `visible_nodes`), a
-   weighted graph as a drawn graph with its costs on the edges, a map as a map (the
-   slide's own figure when it is the clearest), a board as a board
-   ([picking the picture](representations.md#pick-the-picture-the-work-acts-on)). What the slide writes beside a node (g, h, f with
-   their sum) goes in the step's `node_values`, not into the node label
-   ([representations](representations.md#algorithm-traces)).
+   weighted graph as a drawn graph with its costs on the edges, and a map, board or plot
+   as the lecture's own crop when it is the clearest, walked through with `regions`
+   ([picking the picture](representations.md#pick-the-picture-the-work-acts-on)). What the
+   slide writes beside a node (g, h, f with their sum) goes in the step's `node_values`,
+   not into the node label ([representations](representations.md#algorithm-traces)).
 3. **Its steps.** One step is one operation the lecturer shows, usually one expansion:
    never several expansions in one step, never finer than the slides.
 4. **Every state to its endpoint.** Show every state the slides show and any step a student

@@ -55,6 +55,7 @@ where this table puts it:
 | An outcome taught but never practised | Coverage |
 | A critical lecture example missing, or replaced by an invented case | Coverage |
 | A lecture example with changed inputs, skipped states or another picture (a tree drawn as a table) | Correctness |
+| A graph given as an edge table, a walkthrough whose results show before its steps, or a whole slide pasted where a crop and the lesson's own words belong | Representation |
 | The same mechanism worked twice, or a worked run replayed as a practice answer | Redundancy |
 | A formula lookup written as a decision step, or two first moves in one pattern | Organization |
 | Two cases of a decision step that overlap | Correctness |
