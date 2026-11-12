@@ -114,7 +114,9 @@ Teach a chosen example in full:
    never several expansions in one step, never finer than the slides.
 4. **Every state to its endpoint.** Show every state the slides show and any step a student
    needs between them. When the slides stop early and the result matters, finish the run
-   and say where the lecture stops.
+   with the lecture's own inputs and say where the lecture stops. Never add a goal, value or
+   input the lecture lacks to reach an ending: a run without a goal ends where its
+   traversal ends (all nodes within the limit expanded, a cutoff).
 5. **One walkthrough per run.** Repeated rounds, such as iterative deepening's limits,
    are subgoals of one walkthrough.
 
