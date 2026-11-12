@@ -29,6 +29,7 @@ from tum_mcp.course.content.study import (
     CodeBlock,
     DerivationBlock,
     DiagramBlock,
+    GraphStage,
     StudyContent,
     TableBlock,
     TextBlock,
@@ -706,6 +707,20 @@ def quality_flags(
             )
         seen_symbols |= symbols
         seen_terms |= terms
+        # Two walkthroughs over the same drawing usually replay one run, often as a practice
+        # answer; a contrast on the same input belongs in one walkthrough as its variant.
+        drawings: dict[str, list[str]] = {}
+        for block in unit.blocks:
+            if isinstance(block, WalkthroughBlock) and isinstance(block.stage, GraphStage):
+                drawn = block.stage.model_dump_json(include={"nodes", "edges"})
+                drawings.setdefault(drawn, []).append(block.key or block.title or "untitled")
+        for repeated in (keys for keys in drawings.values() if len(keys) > 1):
+            flag(
+                unit.key,
+                "repeated_example",
+                f"Walkthroughs {', '.join(repeated)} step through the same drawing. Keep one run "
+                "per example: show a contrast as its variant, and let practice change the input.",
+            )
         worked = any(
             block.kind == "derivation"
             or (
