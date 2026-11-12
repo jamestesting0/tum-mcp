@@ -42,6 +42,30 @@ through delegation to the handler and resulting state. A new event may need a
 context method as well as interface and state methods; naming the new class alone
 does not show how a caller reaches it.
 
+## Pick the picture the work acts on
+
+Choose the component a student grasps fastest: the one they would sketch on paper.
+
+| The data | Show it as | Never |
+| --- | --- | --- |
+| A graph or tree, even when the source lists its edges | A `diagram` with the costs on the edges (`layout: "tree"` for a tree); a search on it is a walkthrough over that drawing, the frontier a `state` row | A From/To/Cost table and a table of frontier rows (`graph_as_table`) |
+| A board, grid or array | The board itself, marking the square or cell being worked | A list of coordinates |
+| Values per item, a comparison, a lookup the steps consult | A table | A table of results the steps never reach |
+
+Every step changes what the student sees. A result appears in the step that computes it
+(table rows through `shown`, node values through `node_values`), never all at once in the
+first step: a walkthrough that marks one row and then announces the total demonstrates
+nothing (`unstepped_table`). Work each item the lecture works, or give the finished
+table with its working beside it outside a walkthrough.
+
+**The lecture's own figure.** When a slide's figure is the clearest fixed picture (a
+dense map with its distances, a photo, a complex plot or board), show it as a figure
+`image` instead of redrawing it: render the page (for example
+`pdftoppm -f N -l N -r 150 -png -singlefile SOURCE.pdf OUT`), crop it to the figure and
+its own labels without the slide title, text and footer, save it under `figures/` and cite
+the page. Redraw instead when a walkthrough must mark it step by step, when its labels
+would be unreadable on a phone, or when the lesson needs it changed.
+
 ## Algorithm traces
 
 Give the reusable procedure separately from its worked trace. Use source-style

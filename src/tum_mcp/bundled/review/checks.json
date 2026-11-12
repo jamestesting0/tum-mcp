@@ -749,7 +749,7 @@
     {
       "id": "redundancy.said_once",
       "dimension": "redundancy",
-      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A workflow expansion adds usable information beyond its visible step or case; copying or paraphrasing that line adds nothing, and a complete one-line verbal rule needs no expansion. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat. Working the same mechanism again on another object (a second cost-ordered run beside the lecture's main one, even as a table of states), or replaying a worked run as a practice answer, is a repeat.",
+      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A workflow expansion adds usable information beyond its visible step or case; copying or paraphrasing that line adds nothing, and a complete one-line verbal rule needs no expansion. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat. Working the same mechanism again on another object, or replaying a worked run as a practice answer, is a repeat.",
       "pass": "The rule is explained once and linked elsewhere.",
       "fail": "The same derivation appears in full in two sections.",
       "profiles": [
