@@ -328,8 +328,7 @@ function arrow([x, y], [fx, fy]) {
   return `M${x - 10 * ux + 5 * uy},${y - 10 * uy - 5 * ux} L${x},${y} L${x - 10 * ux - 5 * uy},${y - 10 * uy + 5 * ux}`;
 }
 
-// The drawing at its natural size: 1 unit = 1 CSS pixel. On narrow screens it shrinks only until
-// its smallest text (14 px edge labels) reaches 12 px; beyond that its region scrolls sideways.
+// The drawing at its natural size: 1 unit = 1 CSS pixel.
 export function drawGraph(block, label = '', values = {}) {
   const maths = [...block.nodes, ...block.edges].map(item => item.label || '').filter(hasMath);
   const name = [label, ...new Set(maths.map(plainText))].filter(Boolean).join('. ');
@@ -340,12 +339,49 @@ export function drawGraph(block, label = '', values = {}) {
     const labelSize = labelMetrics();
     const sized = { ...block, nodes: block.nodes.map(item => ({ ...item, values: values[item.key] })) };
     const laid = layoutGraph(sized, Math.min(620, (globalThis.innerWidth || 1280) - 72), labelSize);
-    paintGraph(graph, groups, laid, labelSize);
+    const smallest = Math.min(
+      ...sized.nodes.map(item => item.values?.length || item.shape === 'box' ? SIZES.box : SIZES.circle),
+      ...(sized.nodes.some(item => item.values?.length) || sized.edges.some(item => item.label) ? [SIZES.label] : [])
+    );
+    paintGraph(graph, groups, laid, labelSize, smallest);
     // A walkthrough re-applies its current step after a redraw (fonts loaded, resize).
     graph.dispatchEvent(new Event('graphdraw'));
     return laid;
   };
   const laid = draw();
+  requestAnimationFrame(() => {
+    const region = graph.closest('.graph-region'), reading = graph.closest('.reading');
+    if (!region || !reading) return;
+    const layout = reading.parentElement;
+    const fit = () => {
+      region.style.width = ''; region.style.marginLeft = ''; region.style.marginRight = '';
+      graph.style.minWidth = `${Math.ceil(Number(graph.dataset.naturalWidth) * 12 / (innerWidth < 1200 ? SIZES.label : Number(graph.dataset.smallestText)))}px`;
+      if (innerWidth < 1200) return;
+      const column = region.getBoundingClientRect(), area = layout.getBoundingClientRect();
+      const outline = layout.querySelector('.page-outline');
+      const outlineBox = outline?.getClientRects().length ? outline.getBoundingClientRect() : null;
+      const right = Math.min(area.right, outlineBox?.left ?? area.right);
+      const available = Math.max(column.width, right - area.left);
+      const width = Math.min(parseFloat(graph.style.minWidth), available);
+      if (width <= column.width) return;
+      const left = Math.max(area.left, Math.min(column.left - (width - column.width) / 2, right - width));
+      region.style.width = `${width}px`;
+      region.style.marginLeft = `${left - column.left}px`;
+      region.style.marginRight = `${column.width - width - (left - column.left)}px`;
+    };
+    // The reading area changes width only when the window resizes or the outline or reference
+    // panel opens. Fitting sets the region's margins, so a size observer on the area would see
+    // its own change (a ResizeObserver loop); a resize listener cannot.
+    const refit = () => {
+      if (!graph.isConnected) { removeEventListener('resize', refit); changes.disconnect(); return; }
+      requestAnimationFrame(fit);
+    };
+    const changes = new MutationObserver(refit);
+    addEventListener('resize', refit);
+    changes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-contents', 'data-reference'] });
+    graph.addEventListener('graphdraw', fit);
+    fit();
+  });
   if (maths.length && document.fonts?.status === 'loading') {
     document.fonts.ready.then(() => { if (graph.isConnected) draw(); });
   }
@@ -364,14 +400,16 @@ function mathLabel(value, x, y, size, labelSize, attributes = {}) {
   return box;
 }
 
-function paintGraph(graph, groups, laid, labelSize) {
+function paintGraph(graph, groups, laid, labelSize, smallest) {
   const activeEdges = new Set([...graph.querySelectorAll('.edge.active')].map(path => path.dataset.edgeKey));
   const classes = new Map([...groups].map(([key, group]) => [key, group.getAttribute('class')]));
   graph.replaceChildren();
   graph.setAttribute('viewBox', `${laid.left} ${laid.top} ${laid.width} ${laid.height}`);
   graph.setAttribute('width', Math.round(laid.width));
   graph.setAttribute('height', Math.round(laid.height));
-  graph.style.minWidth = `${Math.ceil(laid.width * 12 / SIZES.label)}px`;
+  graph.dataset.naturalWidth = laid.width;
+  graph.dataset.smallestText = smallest;
+  graph.style.minWidth = `${Math.ceil(laid.width * 12 / (innerWidth < 1200 ? SIZES.label : smallest))}px`;
   for (const edge of laid.edges) {
     const active = activeEdges.has(edge.key) ? ' active' : '';
     graph.append(svgNode('path', { d: edge.path, class: 'edge' + active, 'data-edge-key': edge.key }));

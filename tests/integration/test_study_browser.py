@@ -1,5 +1,6 @@
 import os
 import re
+import struct
 from functools import partial
 from pathlib import Path
 from threading import Thread
@@ -87,6 +88,95 @@ def test_tree_walkthrough_keeps_the_lecture_shape_reveals_nodes_and_writes_value
                 )
 
 
+@pytest.mark.parametrize("width", [1280, 1440])
+@pytest.mark.parametrize("contents", ["open", "closed"])
+@pytest.mark.parametrize("valued", [False, True])
+def test_wide_tree_fits_available_reading_space(
+    course_browser: Browser, project: Path, width: int, contents: str, valued: bool
+) -> None:
+    from tum_mcp.course.app.preview import Handler, PreviewServer
+
+    with PreviewServer(
+        ("127.0.0.1", 0), partial(Handler, directory=str(project / "app"))
+    ) as server:
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            with course_browser.new_context(viewport={"width": width, "height": 900}) as context:
+                page = context.new_page()
+                page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+                page.locator("[data-block-index]").first.wait_for()
+                page.evaluate(
+                    """async ({contents, valued}) => {
+                      const { renderWalkthrough } =
+                        await import('./runtime/reading/walkthrough.mjs');
+                      const reading = document.querySelector('.reading');
+                      reading.parentElement.classList.add('has-contents');
+                      document.documentElement.dataset.contents = contents;
+                      const nodes = Array.from({length: 15}, (_, i) =>
+                        ({key: String(i), label: `City ${i}`, shape: 'box'}));
+                      const edges = nodes.slice(1).map((item, i) =>
+                        ({start: String(Math.floor(i / 2)), end: item.key}));
+                      const step = {action: 'Expand', why: 'Continue.', active: ['0'],
+                        visited: [], frontier: ['1'], edges: [], state: []};
+                      if (valued) step.node_values = Object.fromEntries(
+                        nodes.map(item => [item.key, '2 + 3 = 5']));
+                      const block = {stage: {kind:'diagram', layout:'tree',
+                        description:'Tree', nodes, edges}, steps:[step]};
+                      const small = renderWalkthrough({stage: {...block.stage,
+                        nodes: nodes.slice(0, 3), edges: edges.slice(0, 2)},
+                        steps: [{...step, active: [], frontier: []}]}, () => null);
+                      small.id = 'small-test-tree';
+                      const wide = renderWalkthrough(block, () => null);
+                      wide.id = 'wide-test-tree';
+                      reading.append(small, wide);
+                      await new Promise(resolve =>
+                        requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                    }""",
+                    {"contents": contents, "valued": valued},
+                )
+                graph = page.locator("#wide-test-tree .graph-region")
+                metrics = graph.evaluate("""region => {
+                  const r = region.getBoundingClientRect();
+                  const main = document.querySelector('main').getBoundingClientRect();
+                  const outline = document.querySelector('.page-outline');
+                  const o = outline && outline.getClientRects().length
+                    ? outline.getBoundingClientRect() : null;
+                  const nodes = [...region.querySelectorAll('[data-node-key]')]
+                    .map(n => n.getBoundingClientRect());
+                  return {scroll: region.scrollWidth - region.clientWidth,
+                    inside: nodes.every(n => n.left >= r.left - 1 && n.right <= r.right + 1 &&
+                      n.left >= main.left && n.right <= main.right &&
+                      (!o || n.right <= o.left + 1)),
+                    natural: Number(region.querySelector('svg').dataset.naturalWidth)};
+                }""")
+                assert metrics["natural"] > 850
+                assert metrics["scroll"] <= 1 and metrics["inside"], metrics
+                expect(page.locator("#wide-test-tree .walk-legend-item")).to_have_count(3)
+                expect(page.locator("#small-test-tree .walk-legend")).to_have_count(0)
+                assert page.locator("#small-test-tree .graph-region").evaluate(
+                    "region => !region.style.width && !region.style.marginLeft"
+                )
+                if width == 1440 and contents == "open" and valued:
+                    from tum_mcp.course.app.visuals import _shoot
+
+                    shot = _shoot(page, "#wide-test-tree", width)
+                    assert shot is not None
+                    assert struct.unpack(">I", shot[16:20])[0] >= metrics["natural"] * 12 / 14
+                    page.evaluate("""async () => {
+                      document.documentElement.dataset.reference = 'open';
+                      await new Promise(resolve =>
+                        requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                    }""")
+                    assert graph.evaluate("""region => {
+                      const main = document.querySelector('main').getBoundingClientRect();
+                      return region.getBoundingClientRect().right <= main.right - 440 + 1;
+                    }""")
+        finally:
+            server.shutdown()
+            worker.join(timeout=3)
+
+
 def test_walkthrough_marks_only_the_traversed_direction(
     course_browser: Browser, project: Path
 ) -> None:
@@ -121,6 +211,10 @@ def test_walkthrough_marks_only_the_traversed_direction(
                 forward = page.locator('[data-edge-key="s--g"]')
                 reverse = page.locator('[data-edge-key="g--s"]')
                 expect(forward).to_have_class("edge active")
+                legend = page.locator(".walk-legend")
+                expect(legend.locator(".walk-legend-item")).to_have_count(2)
+                expect(legend.locator(".active")).to_have_count(1)
+                expect(legend.locator(".visited")).to_have_count(1)
                 expect(reverse).to_have_class("edge")
                 previous = page.get_by_role("button", name="Previous step", exact=True)
                 expect(previous).to_be_enabled()

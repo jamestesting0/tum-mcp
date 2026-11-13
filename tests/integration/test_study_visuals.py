@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from documents import content_file
+from playwright.sync_api import Page
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
@@ -266,9 +267,15 @@ def test_corpus_passes_and_an_edit_makes_its_check_stale(project: Path) -> None:
     widths = {width for visual in record["visuals"] for width in visual["widths"]}
     assert widths == {"desktop"}
     assert "study/visuals" not in render(project)["unchecked"]
-    # When the unit changes, its check is stale until it runs again.
+    assert invoke("visuals", str(project), "--unit", "visuals", "--json") == checked
     path = content_file(project, "study")
     content = json.loads(path.read_bytes())
+    content["units"][0]["summary"] += " Revised."
+    path.write_text(json.dumps(content), encoding="utf-8")
+    build(project, publish=False)
+    reused = invoke("visuals", str(project), "--unit", "visuals", "--json")
+    assert reused["passed"] and reused["unchanged"] == ["study/visuals"]
+    # When the unit changes, its check is stale until it runs again.
     content["units"][-1]["summary"] += " Revised."
     path.write_text(json.dumps(content), encoding="utf-8")
     assert "study/visuals" in render(project)["stale"]
@@ -326,6 +333,57 @@ def test_walkthrough_stages_are_measured_without_losing_their_authored_geometry(
     assert any(
         block.kind == "walkthrough" and block.stage.kind == "diagram" for block in unit.blocks
     )
+
+
+@browser
+def test_walkthrough_last_steps_are_measured_and_captured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.course.app import visuals
+
+    project = tmp_path / "demo"
+    assert CliRunner().invoke(app, ["study", "demo", str(project)]).exit_code == 0
+    css = project / "app" / "styles.css"
+    css.write_text(
+        css.read_text(encoding="utf-8")
+        + '\n.graph g.active[data-node-key="g"] text { font-size: 6px !important; }\n'
+        + '.graph-region:has([data-node-key="g"]) { width: 120px !important; }\n',
+        encoding="utf-8",
+    )
+    captions: list[str] = []
+    original = visuals._sheets
+
+    def sheets(page: Page, shots: list[tuple[str, bytes]], width: int, stem: Path) -> list[Path]:
+        captions.extend(caption for caption, _ in shots)
+        return original(page, shots, width, stem)
+
+    monkeypatch.setattr(visuals, "_sheets", sheets)
+    result = invoke("visuals", str(project), "--unit", "components", "--json")
+    unit = next(unit for unit in read_content(project).units if unit.key == "components")
+    index = next(i for i, block in enumerate(unit.blocks) if block.key == "walkthrough-graph")
+    visual_id = f"block:{index}"
+    assert any(
+        defect["visual"] == visual_id
+        and defect["code"] == "tiny_text"
+        and defect["detail"].endswith(" (last step)")
+        for defect in result["defects"]
+    )
+    assert (
+        sum(
+            f" · {visual_id} · " in caption and caption.endswith(" · last step")
+            for caption in captions
+        )
+        == 2
+    )
+    assert (
+        sum(
+            f" · {visual_id} · " in caption and caption.endswith(" · last step · whole drawing")
+            for caption in captions
+        )
+        == 2
+    )
+    assert any(note["visual"] == visual_id for note in result["notes"])
+    assert all(defect["code"] != "scrolls" for defect in result["defects"])
 
 
 @browser

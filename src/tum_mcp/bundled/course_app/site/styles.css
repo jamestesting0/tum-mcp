@@ -1388,6 +1388,9 @@ svg.uml .uml-action rect, svg.uml .uml-io path, svg.uml .uml-decision path, svg.
 .walk { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); margin-top: var(--s4); }
 .walk > .segmented { justify-self: start; }
 .walk-stage > .block-body > :first-child, .walk-stage .table-region, .walk-stage .derivation { margin-top: 0; }
+.walk-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s1) var(--s4); margin-top: var(--s2); color: var(--muted); font-size: var(--text-small); }
+.walk-legend-item { display: inline-flex; align-items: center; gap: var(--s1); }
+.walk-legend-swatch { width: 18px; height: 18px; margin: 0; }
 .walk-card { display: grid; gap: var(--s2); min-height: 6.5em; padding-left: var(--s4); border-left: 3px solid var(--accent); }
 .walk .walk-card > p, .walk .walk-card > dl { margin: 0; }
 .walk-eyebrow { color: var(--muted); }

@@ -1,7 +1,7 @@
 # Visual pass
 
 Score every drawn visual (diagram, UML diagram, flowchart, plot, figure, table) the way the
-student sees it: from its desktop contact sheet (phone sheets only when asked), with the render
+student sees it: from its contact sheets, with the render
 findings and the cited source page beside it. Never score a visual from its JSON.
 Formulas, derivations and code are absent from these contact sheets. Inspect their
 affected passages and revealed answers in the built app; an empty sheet selection
@@ -13,7 +13,7 @@ A right endpoint cannot repair an incorrect or missing intermediate construction
 ## Evidence
 
 1. `tum-mcp study visuals PROJECT` writes `.tum-mcp/visual-check.json` and the sheets
-   `.tum-mcp/visuals/<item>-desktop-N.png` (and `<item>-phone-N.png` with `--phone`). Each picture carries
+   `.tum-mcp/visuals/<item>-desktop-N.png`. Each picture carries
    its title, its key (`block:3`, `question:q1:0`, `statement:0`, `step:trace:1`) and the
    codes it was flagged with. A drawing that scrolls sideways appears twice: as the
    student first sees it and whole, captioned "whole drawing".
@@ -34,7 +34,9 @@ The render check's defects decide a criterion before you look:
 | `label_overlap`, `label_on_line`, `label_on_node`, `clipped_text`, `tiny_text` | Legibility at 1 |
 | `tall_visual`, `tall_cell`, `table_scrolls` | Legibility at 2 |
 
-`scrolls` is a note, not a defect: judge it under Legibility.
+Walkthroughs are photographed at their first and last steps. A graph stage that still
+scrolls at desktop appears under `notes` in the visuals summary. `scrolls` is a note,
+not a defect: judge it under Legibility.
 
 ## Rubric
 
@@ -46,7 +48,7 @@ Representation score never exceeds its weakest visual.
 | Fidelity | Says exactly what the source says: every node, edge, direction, label and value; nothing invented or dropped; discrete things drawn discrete; real scales | A simplification the text does not mention | A wrong, invented or dropped element; a misleading scale |
 | Form | The kind of block fits the idea, as in prepare-study's [representation table](../../prepare-study/references/representations.md#choose-the-representation); how it is arranged is Layout | A workable but weaker form, such as a table for a decision tree | A form that hides the idea, such as numbered steps for a network |
 | Layout | Reading order kept; main path straight; meaningful positions (map, timeline, ring) kept; no crossing or bend the structure does not force | One avoidable crossing, bend or detour | The structure cannot be followed |
-| Legibility | Every label beside its own mark and clear of the others; text at least 12 px on a phone; the drawing fits the phone column, or scrolls only because it cannot be narrower | A phone scroll the content could avoid; crowded labels | A hard-gate finding |
+| Legibility | Every label beside its own mark and clear of the others; readable text; the drawing fits the available column, or scrolls only because it cannot be narrower | Avoidable scrolling or crowded labels | A hard-gate finding |
 | Focus | One message; a picture's caption states it, a table of cases may name what it lists; colour and frames mark only what the caption discusses | Two messages, a picture whose caption names it or explains its symbols instead of its point, or a caption whose point the picture does not show | No visible message |
 | Convention | The notation's rules: UML arrowheads, multiplicities and compartments; flowchart decisions as questions with labelled exits; a probability mass function as stems; a log axis labelled with real values; axis titles with units | One rule broken without changing what the picture says | A rule broken so the picture says something else |
 

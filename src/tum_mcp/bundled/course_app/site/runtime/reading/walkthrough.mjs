@@ -32,6 +32,30 @@ function stageView(stage, renderBody, steps) {
       for (const [index, step] of steps.entries()) {
         reach.push(new Set([...(reach[index - 1] || []), ...(step.active || []), ...(step.frontier || []), ...(step.visited || [])]));
       }
+      const used = new Set();
+      steps.forEach((step, index) => {
+        for (const item of stage.nodes) {
+          if (step.visible_nodes && !step.visible_nodes.includes(item.key)) continue;
+          if (step.active.includes(item.key)) used.add('active');
+          else {
+            if (step.visited.includes(item.key)) used.add('visited');
+            if (step.frontier.includes(item.key)) used.add('frontier');
+          }
+          if (grows && reach[index].size && !reach[index].has(item.key)) used.add('unreached');
+        }
+      });
+      const legend = node('div', 'graph walk-legend');
+      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['visited', 'Expanded'], ['unreached', 'Not reached yet']]) {
+        if (!used.has(state)) continue;
+        const swatch = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        swatch.setAttribute('class', 'walk-legend-swatch'); swatch.setAttribute('viewBox', '0 0 18 18'); swatch.setAttribute('aria-hidden', 'true');
+        const group = document.createElementNS(swatch.namespaceURI, 'g');
+        group.setAttribute('class', state);
+        const circle = document.createElementNS(swatch.namespaceURI, 'circle');
+        circle.setAttribute('cx', '9'); circle.setAttribute('cy', '9'); circle.setAttribute('r', '6');
+        group.append(circle); swatch.append(group);
+        legend.append(append(node('span', 'walk-legend-item'), swatch, node('span', '', label)));
+      }
       const show = step => {
         current = step;
         const shown = key => !step.visible_nodes || step.visible_nodes.includes(key);
@@ -57,7 +81,7 @@ function stageView(stage, renderBody, steps) {
         }
       };
       graph.addEventListener('graphdraw', () => { if (current) show(current); });
-      return { element: append(node('div', 'graph-region'), graph), show };
+      return { element: append(node('div', 'graph-region'), graph), legend: used.size ? legend : null, show };
     }
     case 'table': {
       const element = renderBody(stage), rows = [...element.querySelectorAll('tbody tr')];
@@ -212,6 +236,7 @@ export function renderWalkthrough(block, renderBody) {
   if (block.stage) {
     view = stageView(block.stage, renderBody, runs.flatMap(item => item.steps));
     stage.append(view.element);
+    if (view.legend) stage.append(view.legend);
   } else stage.hidden = true;
   let choice = null;
   if (runs.length > 1) {
