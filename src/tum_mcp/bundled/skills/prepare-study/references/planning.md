@@ -72,13 +72,13 @@ Judge the required calculation or decision, not shared vocabulary or numbers alo
 
 ## Choose the lecture's examples
 
-A lecture demonstrates its methods on worked examples. Choose the ones a student needs
-and teach each of them completely; leave the rest out. Read the source's `examples` in
-its digest: one line per worked demonstration with its pages, what it shows and its
+A lecture teaches ideas through worked examples and figures. Choose the ones a student
+needs and teach each of them completely; leave the rest out. Read the source's `examples`
+and `figures` in its digest: each demonstration names its pages, what it shows and its
 inputs and conventions.
 
-The weakness is incomplete example selection: explanatory demonstrations can be lost
-when only exercises or end-to-end calculations are recorded.
+The weakness is incomplete example selection: a demonstration of a rule, comparison,
+property, theorem or definition can be lost when only procedures get planned examples.
 
 An example is critical when it teaches a procedure the student must perform, shows a
 decision or failure the main example cannot, supports later work, or explains why a
@@ -95,12 +95,18 @@ demonstrations when they teach different decisions, even on the same object.
 Construct an example only when
 the lecture has none for the concept, or for practice. There is no quota.
 
-For each `procedure`, `algorithm` or `model` concept, the plan names its `example`:
+For each concept taught through a selected source demonstration, the plan names its
+`example`, whatever the concept's kind:
 `origin` (`source` or `constructed`), `source` and `pages`, what it `shows`, its
 `endpoint` and the `block` that teaches it; a constructed example says `why`. Use `shows`
-to name the inputs, picture and decisive working or test, not only the concept.
-Keep the source pages through that decision and conclusion, not just the setup. The plan
-check refuses such a concept without one, unless `skip` explains why it is not worked.
+to name the inputs, representation and decisive working or test, not only the concept.
+A geometric proof keeps its construction; a physical law keeps its free-body diagram;
+a legal distinction keeps the contrasting cases and their decisive facts.
+Mentioning the idea in `instance` does not select its demonstration.
+Keep the source pages through that decision and conclusion, not just the setup.
+Only `procedure`, `algorithm` and `model` concepts require an `example` or a `skip`
+reason. Other concepts without a source demonstration need no `example`; never construct
+one just to fill the field.
 
 ```json
 "example": {"origin": "source", "source": "lecture", "pages": "12-14",

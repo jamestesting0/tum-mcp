@@ -1342,8 +1342,9 @@ def test_selected_examples_reach_review_with_their_actual_teaching_blocks(projec
             "kind": "rule",
             "instance": "Two cells contribute 2 and 3 joules, for 5 joules in total.",
             "example": {
-                "origin": "constructed",
-                "why": "No worked accumulation in the source.",
+                "origin": "source",
+                "source": unit["sources"][0]["key"],
+                "pages": "3-4",
                 "shows": "Draw the cells and add each cell's contribution to the running sum.",
                 "endpoint": "The final sum is 5 joules.",
                 "block": "heat-grid",
@@ -1405,6 +1406,11 @@ def test_selected_examples_reach_review_with_their_actual_teaching_blocks(projec
     checks["intuition.concepts_instanced"]["evidence"] = "Goal test; Heat accumulation."
     checks["coverage.examples_selected"]["evidence"] = "Both concepts are mentioned."
     with pytest.raises(CampusError, match="needs a comparison of each planned example"):
+        loop.record(project, response, "fresh")
+    checks["coverage.examples_selected"]["evidence"] = (
+        "Goal test: goal-run draws A-B and returns when B is generated."
+    )
+    with pytest.raises(CampusError, match=r"missing Heat accumulation \(heat-grid\)"):
         loop.record(project, response, "fresh")
     checks["coverage.examples_selected"]["evidence"] = (
         "Goal test: goal-run draws A-B and returns when B is generated. "

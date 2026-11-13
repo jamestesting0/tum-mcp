@@ -1233,14 +1233,14 @@
     {
       "id": "coverage.examples_selected",
       "dimension": "coverage",
-      "rule": "every critical worked example of the cited lecture pages is taught as the lecture's own example: a run the student must perform, a decision or failure the main run cannot show, or reasoning that explains validity, limits or costs. Compare the source digest and pages with every concept's planned example and its actual example_block in the rendered item. For each selected example, explain whether its inputs and conventions, natural representation, decisive tests and working, and endpoint or comparison survive. Name the concept and planned block in evidence. A concept mention, one correct total or a different worked case cannot satisfy the selected example. A circuit's probabilities need their measurement working; a legal case needs its decisive exception and disposition. Judge the teaching, not a step count or template. Useful continuations beyond the lecture are allowed; covering less is not. Name any missing critical example with its pages, substituted example, or repeat that adds nothing.",
+      "rule": "every critical source demonstration is taught as the source's own example: a run the student must perform, a decision or failure the main run cannot show, or reasoning that explains validity, limits or costs. Compare the source digest and pages with every planned example and its actual example_block, regardless of concept kind. Compare the rendered block's representation with the source picture, not just its text or result. For each selected example, explain whether its inputs and conventions, natural representation, decisive tests and working, and endpoint or comparison survive. Name the concept and planned block in evidence. A concept mention, one correct total or a different worked case cannot satisfy the selected example. A theorem keeps its geometric construction; a law keeps its labelled circuit and working; a contrasting legal case keeps its decisive facts and disposition. Judge the teaching, not a step count or template. Useful continuations beyond the lecture are allowed; covering less is not. Name any missing critical example with its pages, substituted example, or repeat that adds nothing.",
       "pass": "Uniform-cost search is taught on the lecture's Romania subgraph, where B is improved from 310 to 278.",
       "fail": "The lecture's A* Romania run is replaced by a four-node invented graph.",
       "profiles": [
         "study-unit"
       ],
       "scope": "item",
-      "version": 2,
+      "version": 3,
       "default_fail": true
     },
     {

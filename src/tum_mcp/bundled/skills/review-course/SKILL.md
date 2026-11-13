@@ -78,12 +78,15 @@ scores.
       `needs_ruling` gets a ruling in `flags`: a finding about it, or `not_applicable` with why; the gate
       holds until each has one. `intuition.concepts_instanced` is answered concept by
       concept from the packet's `concepts`. For `coverage.examples_selected`, compare
-      each concept's `example` with its `example_block`, source pages and rendered steps.
-      Name the concept and planned block in evidence. Judge whether the actual inputs,
-      picture, decisive tests and working, and endpoint or comparison survive.
+      each planned `example` with its `example_block`, source pages and rendering,
+      regardless of the concept's kind. Compare the block's representation with the
+      source picture, not just its text or result. Name the concept and planned block
+      in evidence. Judge whether the actual inputs, picture, decisive tests and working,
+      and endpoint or comparison survive.
       A concept mention, correct total or different example cannot replace that example.
-      A circuit needs its measurement working; a case needs its decisive exception
-      and disposition. Inspect intermediate states when those carry the reasoning.
+      A theorem keeps its geometric construction; a law keeps its labelled circuit
+      and working; a contrasting legal case keeps its decisive facts and disposition.
+      Inspect intermediate states when those carry the reasoning.
       Do not count steps or force a template. A finding is resolved only with the rewritten
       passage quoted, and only when that passage reads well on its own.
       Also inspect concepts added after planning; adding a glossary paragraph to justify

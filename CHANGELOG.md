@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Critical source demonstrations are planned and reviewed as examples for every concept kind.
 - Walkthrough review checks source step granularity and flags merged operations that hide intermediate states.
 - A walkthrough can hold up to 200 steps (was 40), so a complete process stays in one
   walkthrough; the skills say length is never a reason to drop, merge or split steps.

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tum_mcp.course.checks.plans import Plan, example_problems
+from tum_mcp.course.checks.plans import Plan, example_problems, plan_problems
 
 UCS = {
     "origin": "source",
@@ -20,11 +20,23 @@ def plan(item: str = "study/search", **concept) -> Plan:
     return Plan.model_validate({"item": item, "concepts": [base | concept]})
 
 
-def test_a_study_algorithm_is_taught_on_a_chosen_example() -> None:
-    assert example_problems(plan(example=UCS)) == []
-    assert "choose the lecture example" in example_problems(plan())[0]
-    assert example_problems(plan(skip="Only named here; taught in the next unit.")) == []
-    assert example_problems(plan(item="exercise/sheet-1/1")) == []
+@pytest.mark.parametrize("kind", ["procedure", "algorithm", "model"])
+def test_a_worked_study_concept_requires_an_example_or_skip(kind: str) -> None:
+    assert example_problems(plan(kind=kind, example=UCS)) == []
+    assert "choose the lecture example" in example_problems(plan(kind=kind))[0]
+    assert example_problems(plan(kind=kind, skip="Only named here; taught next.")) == []
+    assert example_problems(plan(item="exercise/sheet-1/1", kind=kind)) == []
+
+
+def test_a_comparison_without_a_source_demonstration_needs_no_example() -> None:
+    current = plan(
+        name="Civil and criminal burdens of proof",
+        kind="comparison",
+        instance="An evenly balanced civil claim fails because neither side is more likely.",
+        blocks=["burdens"],
+    )
+    assert example_problems(current) == []
+    assert plan_problems(current, {"blocks": [{"key": "burdens", "kind": "table"}]}, None) == []
 
 
 @pytest.mark.parametrize(
@@ -34,9 +46,17 @@ def test_a_study_algorithm_is_taught_on_a_chosen_example() -> None:
         ({"origin": "constructed", "source": None, "pages": None}, "why the lecture has none"),
     ],
 )
-def test_an_example_says_where_it_comes_from(change: dict, message: str) -> None:
+@pytest.mark.parametrize("kind", ["algorithm", "rule", "comparison"])
+def test_an_example_says_where_it_comes_from(kind: str, change: dict, message: str) -> None:
     with pytest.raises(ValidationError, match=message):
-        plan(example=UCS | change)
+        plan(kind=kind, example=UCS | change)
+
+
+@pytest.mark.parametrize("field", ["shows", "endpoint", "block"])
+def test_a_rule_example_requires_its_teaching_payload(field: str) -> None:
+    with pytest.raises(ValidationError) as error:
+        plan(kind="rule", example={key: value for key, value in UCS.items() if key != field})
+    assert error.value.errors()[0]["loc"] == ("concepts", 0, "example", field)
 
 
 def test_the_next_checker_sees_the_rejected_reasons_and_a_pass_carries_advice(tmp_path) -> None:
@@ -215,6 +235,67 @@ def test_unused_digest_examples_respect_source_and_page_overlap(tmp_path) -> Non
         ("other", "50-52"),
         ("other", "57"),
     }
+
+
+@pytest.mark.parametrize(
+    ("name", "source", "shows", "endpoint"),
+    [
+        (
+            "A-star contour thresholds",
+            "informed",
+            "Draw the map's nested 380, 400 and 420 contours and locate the goal at cost 418.",
+            "The goal lies inside 420; regions above 418 cannot improve that route.",
+        ),
+        (
+            "Kirchhoff current law",
+            "circuits",
+            "Draw the labelled junction with 2 A and 3 A entering and one unknown current leaving.",
+            "The outgoing current is 5 A by charge conservation.",
+        ),
+    ],
+)
+def test_a_rule_source_example_is_digest_matched_and_linked_to_its_picture(
+    tmp_path: Path, name: str, source: str, shows: str, endpoint: str
+) -> None:
+    import json
+
+    from tum_mcp.course.checks.plans import plan_packet
+
+    example = {
+        "origin": "source",
+        "source": source,
+        "pages": "3-5",
+        "shows": shows,
+        "endpoint": endpoint,
+        "block": "picture",
+    }
+    current = plan(name=name, kind="rule", instance=endpoint, example=example)
+    stored = tmp_path / ".tum-mcp/plans/study/search.json"
+    stored.parent.mkdir(parents=True)
+    stored.write_text(current.model_dump_json())
+    digests = tmp_path / ".tum-mcp/digests"
+    digests.mkdir()
+    (digests / f"{source}.json").write_text(
+        json.dumps(
+            {
+                "source": source,
+                "sha256": "0" * 64,
+                "examples": [
+                    {"pages": "3-5", "text": shows},
+                    {"pages": "8", "text": "Another demonstration."},
+                ],
+            }
+        )
+    )
+    packet = plan_packet(tmp_path)
+    assert packet["unused_examples"] == [
+        {"source": source, "kind": "example", "pages": "8", "text": "Another demonstration."}
+    ]
+    assert packet["plans"][0]["concepts"][0]["example"] == example
+    assert plan_problems(current, {"blocks": []}, None) == [
+        f"{name}: the example block picture is missing"
+    ]
+    assert plan_problems(current, {"blocks": [{"key": "picture", "kind": "figure"}]}, None) == []
 
 
 @pytest.mark.parametrize(

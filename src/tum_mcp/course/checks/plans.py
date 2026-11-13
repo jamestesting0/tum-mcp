@@ -37,7 +37,7 @@ STEPPED = "a walkthrough, a stepped diagram, a derivation walkthrough or a code 
 PICTURES = {"figure", "diagram", "uml", "tree"}
 
 
-# Concepts a student performs or reads off a picture: the lecture's own worked run teaches them.
+# Only these kinds require an example or skip; a selected example can teach any kind.
 WORKED_KINDS = {"procedure", "algorithm", "model"}
 
 
@@ -545,7 +545,7 @@ def _unused_examples(root: Path, waiting: list[Plan]) -> list[JsonValue]:
     for plan in waiting:
         for concept in plan.concepts:
             example = concept.example
-            if concept.kind in WORKED_KINDS and example and example.source and example.pages:
+            if example and example.source and example.pages:
                 used.setdefault(example.source, set()).update(_pages(example.pages))
     folder = confined(root, ".tum-mcp/digests")
     unused: list[JsonValue] = []
@@ -657,12 +657,17 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "and costs; exercises retain requested parts. Check all learner actions, clauses "
             "and final results, not just a first step. Never narrow scope to fit the draft.\n"
             "3. Check each concept has a concrete case, a fitting representation or a real "
-            "skip reason, and prerequisites before use. Definitions, rules and comparisons "
-            "need short cases, not invented worked runs. Define core terms and properties "
+            "skip reason, and prerequisites before use. Definitions, rules and comparisons can "
+            "use short cases when no source demonstration is needed; do not invent worked runs. "
+            "Define core terms and properties "
             "used in comparisons, headings and conditions, with their defining conditions "
             "and a useful case; a method-specific guarantee is not a general definition.\n"
-            "4. Compare Study procedures, algorithms, models and stated lecture calculations "
-            "with digest examples, figures and source pages. On the first check judge "
+            "4. Compare critical Study demonstrations of any concept kind with digest "
+            "examples, figures and source pages. A critical source example or figure that "
+            "teaches a rule, comparison, property, theorem or definition is planned as that "
+            "concept's `example`, naming its representation. Mentioning its idea in `instance` "
+            "text does not select it. A concept without a source demonstration needs no "
+            "example unless its kind requires one. On the first check judge "
             "unused_examples "
             "as selection context: a required method run, a new decision, branch or failure, "
             "a case later material builds on, or a worked argument, calculation or visual "
