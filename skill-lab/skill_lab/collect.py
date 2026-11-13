@@ -40,6 +40,11 @@ def transcript_stats(run_dir: Path, host: str) -> dict:
     tools: Counter[str] = Counter()
     errors = 0
     tokens = 0
+    output_chars = 0
+    # Codex reports a thread's usage cumulatively at every turn.completed, so a turn's own
+    # tokens are the difference from the thread's previous report.
+    thread, seen = "", {}
+    turn_tokens: list[int] = []
     for path in sorted((run_dir / "transcript").glob("*.jsonl")):
         for line in path.read_text(encoding="utf-8").splitlines():
             event = json.loads(line)
@@ -58,26 +63,57 @@ def transcript_stats(run_dir: Path, host: str) -> dict:
                     tokens += int(usage.get("output_tokens") or 0)
             else:
                 item = event.get("item") or {}
+                if event.get("type") == "thread.started":
+                    thread = str(event.get("thread_id") or "")
                 if event.get("type") == "item.completed" and item.get("type") in {
                     "command_execution",
                     "mcp_tool_call",
                 }:
                     name = item.get("tool") or item.get("type")
                     tools[str(name)] += 1
+                    output_chars += len(item.get("aggregated_output") or "")
                     if item.get("status") == "failed" or item.get("exit_code") not in (None, 0):
                         errors += 1
                 if event.get("type") == "turn.completed":
                     usage = event.get("usage") or {}
-                    tokens += int(usage.get("input_tokens") or 0)
-                    tokens += int(usage.get("output_tokens") or 0)
+                    total = int(usage.get("input_tokens") or 0) + int(
+                        usage.get("output_tokens") or 0
+                    )
+                    turn_tokens.append(total - seen.get(thread, 0))
+                    seen[thread] = total
+    if host != "claude":
+        tokens = sum(seen.values())
     campus = sum(n for name, n in tools.items() if "tum" in name or "moodle" in name)
     return {
         "tool_calls": sum(tools.values()),
         "campus_calls": campus,
         "tool_errors": errors,
         "tokens": tokens,
+        **({"turn_tokens": turn_tokens} if turn_tokens else {}),
+        **({"output_chars": output_chars} if host != "claude" else {}),
         "top_tools": dict(tools.most_common(12)),
     }
+
+
+def review_stats(workspace: Path) -> dict:
+    """Checker sessions the lab broker ran, and the review verdicts they recorded."""
+    plans = packets = 0
+    for path in (workspace / ".lab-broker").glob("*.response.json"):
+        try:
+            stdout = json.loads(path.read_text(encoding="utf-8")).get("stdout") or ""
+            answer = json.loads(stdout)
+        except ValueError:
+            continue
+        if "verdicts" in answer:
+            plans += 1
+        elif "opened" in answer:
+            packets += 1
+    verdicts: Counter[str] = Counter()
+    for path in workspace.glob("**/.tum-mcp/review/packets/*.answer.json"):
+        for item in json.loads(path.read_text(encoding="utf-8")).get("items") or []:
+            for check in (item.get("checks") or {}).values():
+                verdicts[str(check.get("verdict"))] += 1
+    return {"plan_checks": plans, "packet_checks": packets, "verdicts": dict(verdicts)}
 
 
 def files_outside_project(run_dir: Path, project: str | None) -> list[str]:
@@ -113,6 +149,7 @@ def collect_run(round_id: str, run_id: str, *, visuals: bool = True) -> dict:
         "lessons_built": bool(project and present(project, "study")),
         "exercises_built": bool(project and present(project, "exercises")),
         **transcript_stats(run_dir, host),
+        **review_stats(workspace),
         "files_outside_project": files_outside_project(run_dir, record.get("project")),
     }
     if project is not None:

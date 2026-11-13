@@ -107,6 +107,11 @@ lab round status r1
 lab clean --keep 3
 ```
 
+`lab collect` writes each run's `metrics.json`. Codex reports a thread's token usage
+cumulatively, so `tokens` is each thread's final total and `turn_tokens` lists what each
+turn added. It also counts command output characters, the plan and packet checker
+sessions the broker ran, and the review verdicts by kind (pass, fail, uncertain).
+
 Rounds run one after another. Within a round, `--all-authors` runs the round's author and
 its `--matrix` authors at once, one trial per host. The judge pairs runs by author model only:
 a baseline and a candidate compare when the same host, model and effort wrote them. Their
