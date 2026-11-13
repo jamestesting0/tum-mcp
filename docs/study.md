@@ -258,21 +258,28 @@ table may scroll as a unit when its formulas remain reachable. Use `--phone` to
 check phone and narrow layouts as well. It then asks before the review loop.
 
 Ask `review-course` to run the review loop (Phase B, `tum-mcp review`). Each round writes
-one packet per kind of item (study unit, exercise, exam pattern, cheatsheet, mock
+bounded packets per kind of item (study unit, exercise, exam pattern, cheatsheet, mock
 question, lecture entry, course): the checks with a pass and a fail example each
 (`review checklist --profile P`), the items' passages with block ids, the report flags,
-the answer keys' results and the cited sources' digests. Fresh checkers, sessions that did
+the answer keys' results and the cited sources' digests. An oversized item is split at
+60 requested checks, visual scores, fixes and rulings per batch. Every batch keeps the
+item's full passages, outline, sources and captures, with the same content fingerprint.
+All batches must be recorded before the item has current scores or passes the gate.
+Fresh checkers, sessions that did
 not write the content, answer with a verdict per check and quoted findings; `review
 record` refuses answers for changed content or unquoted passages. The maker fixes by
 check (`review fix` is refused while the quoted passage is unchanged and takes several
 `--finding`), rejects a wrong finding with its reason or keeps a score-2 finding the content
 cannot fix. `review findings` lists the open findings, one line each, grouped by block. A
 defect is filed once, under the check that owns it, with the other checks it fails linked
-to it. Finish all original findings and draft repairs before `review verify` writes
-one verification pass in the same round:
+to it. Reworded retries with the same owner, location and quote keep the existing
+open or fixed finding. Finish all original findings and draft repairs before `review verify`:
 fresh checkers confirm or reopen each fix and judge again every check the repairs made
 stale, so the round can close with current verdicts. After that pass, repair only findings
-it opened. Those repairs stay unverified until the student asks for another round.
+it opened, then run `review verify` again. This second pass asks everything stale only
+for items changed since the first pass, including checks, visuals, fixed findings and
+rulings. Each round permits at most two verify passes. Repairs after the second remain
+unverified until the student asks for another round.
 Close-round names every fixed but unverified finding and every stale or incomplete item;
 stale verdicts never count as current scores. Checkers get the cited
 slide pages as images, the lesson's heading outline and the terms earlier lessons define. A verdict holds
@@ -300,6 +307,11 @@ Missing question context is not advisory: authored questions pair their text wit
 useful code, a diagram, formula, table or plot, and a checker cannot waive that gate.
 Teaching checks assess every concept, including additions made after planning, and
 objective checks require source evidence rather than promoting illustrative asides.
+Checkers read changed blocks against their cited pages and the reference selection.
+A demand for another worked example names the decision existing runs cannot show;
+otherwise it is not a defect. Walkthroughs mark the lecture's endpoint at that step,
+start each reason with a step-specific clause, and name a board's coordinate convention
+once before using it in a calculation.
 The headless checker gets up to two targeted repairs of missing or invalid entries.
 If entries still fail, it saves the valid answers, keeps the packet pending and reports
 the remaining problems with a failing exit status. Uncertain verdicts require a

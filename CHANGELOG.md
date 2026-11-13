@@ -2,17 +2,25 @@
 
 ## Unreleased
 
-- A review round now checks its own repairs. `review verify` sends each fixed finding
+- A review round now checks its own repairs with up to two verify passes. The second
+  checks only items changed since the first, asking everything stale for those items.
+  `review verify` sends each fixed finding
   and every check the repairs made stale to a fresh checker in the same round, so a
   round can end with current verdicts instead of unchecked fixes. `review findings`
   lists open findings compactly, `review fix` takes several findings, and a defect is
   filed once under its owning check with the other checks it fails linked to it.
+  Reworded retries keep the existing open or fixed defect at the same location and quote.
+- Oversized review items split into batches of at most 60 requested checks, visuals,
+  fixes and rulings. Each keeps the full lesson, source and capture context; every
+  batch must be recorded before the item has current scores or passes its gate.
 - Reviewers see the cited slide pages, the lesson's outline, the terms earlier lessons
   define and each walkthrough at its last step, and record why an answer was refused.
   Only missing or invalid entries are asked again, for up to two repairs. If entries
   still fail, valid answers are saved and the packet stays pending. Uncertain verdicts
   name the specific unavailable evidence. Close-round lists fixed but unverified
-  findings and stale items; all draft repairs finish before the verify pass.
+  findings and stale items; repairs after the second verify pass stay unverified.
+  Checkers compare repaired blocks with cited pages and the reference selection, and
+  justify added worked examples by the decision existing runs cannot show.
 - The plan check lists every blocking problem in its first pass, keeps the history of
   earlier reasons and advice. Later new blockers, including earlier advice, must name
   a changed concept or give new source evidence; otherwise they become advice. Plans
@@ -26,7 +34,9 @@
   and a lesson that opens with an untitled block. Two walkthroughs over one drawing
   now need a ruling instead of a removal, so different lecture runs on one tree stay.
   Repeated reasons and graph nodes no step reveals are invariant defects. Computed
-  steps show their inputs and arithmetic, rather than only their results.
+  steps show their inputs and arithmetic, rather than only their results. Runs that
+  continue past the lecture's endpoint mark it at that step, reasons start with a
+  step-specific clause, and board calculations state their coordinate convention once.
 - Transcript metrics count usage in the recorded turn and part order, including
   replies, so cumulative token deltas are chronological.
 - Authoring is faster: `study schema --example KIND` prints a valid block, the skills
