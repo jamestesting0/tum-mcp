@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A walkthrough can hold up to 200 steps (was 40), so a complete process stays in one
+  walkthrough; the skills say length is never a reason to drop, merge or split steps.
 - Visual checks reach the last step of long walkthroughs through the jump menu, and
   interaction smoke counts menu entries. Grid stages now receive contact sheets too.
   The website tour advances long runs with Next step instead of targeting absent dots.

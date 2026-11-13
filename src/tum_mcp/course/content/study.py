@@ -1162,11 +1162,16 @@ def check_marks(stage: Stage | None, step: WalkStep) -> None:
             assert_never(unreachable)
 
 
+# A guard against runaway content only. The step menu keeps long runs navigable, so a
+# complete process never has to be cut or split to fit.
+MAX_WALK_STEPS = 200
+
+
 class Variant(Frozen):
     """A second run over the same stage, such as another algorithm or another input."""
 
     label: Label
-    steps: tuple[WalkStep, ...] = Field(min_length=2, max_length=40)
+    steps: tuple[WalkStep, ...] = Field(min_length=2, max_length=MAX_WALK_STEPS)
 
 
 class WalkthroughBlock(Sourced):
@@ -1175,7 +1180,7 @@ class WalkthroughBlock(Sourced):
 
     kind: Literal["walkthrough"]
     stage: Stage | None = None
-    steps: tuple[WalkStep, ...] = Field(min_length=2, max_length=40)
+    steps: tuple[WalkStep, ...] = Field(min_length=2, max_length=MAX_WALK_STEPS)
     # With a variant: the name of each run and what differs where they part.
     label: Label | None = None
     variant: Variant | None = None

@@ -21,6 +21,19 @@ def table() -> dict:
     return copy.deepcopy(WALKS["walkthrough-table"])
 
 
+def test_a_long_process_fits_in_one_walkthrough() -> None:
+    block = graph()
+    steps = [copy.deepcopy(block["steps"][i % len(block["steps"])]) for i in range(120)]
+    for i, step in enumerate(steps):
+        step["subgoal"] = f"Phase {i // 30 + 1}"
+    block["steps"] = steps
+
+    walk = TypeAdapter(Block).validate_python(block)
+
+    assert isinstance(walk, WalkthroughBlock)
+    assert len(walk.steps) == 120
+
+
 def test_run_keyed_answers_check_exact_state_in_each_run() -> None:
     from tum_mcp.course.checks.answers import compare
 

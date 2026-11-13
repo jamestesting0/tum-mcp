@@ -132,7 +132,9 @@ The weakness is a selected example that loses the evidence for its teaching poin
    intermediate calculations alone do not establish that point. Do not add a comparator
    when the example teaches no comparison.
 5. **One walkthrough per process.** Keep a continuous run, derivation, proof, simulation
-   or case history in one walkthrough. Group its phases with `subgoal`; do not repeat
+   or case history in one walkthrough, with every step it needs. Length is never a reason
+   to drop, merge or split steps: the app's step menu keeps long walkthroughs easy to move
+   through. Group its phases with `subgoal`; do not repeat
    the picture and restart numbering in consecutive widgets. Iterations of a solver
    and stages of a reaction stay together. Separate blocks are useful for genuinely
    different inputs or decisions, such as contrasting two experimental setups.
