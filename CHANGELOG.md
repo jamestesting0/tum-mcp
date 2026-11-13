@@ -9,10 +9,14 @@
   filed once under its owning check with the other checks it fails linked to it.
 - Reviewers see the cited slide pages, the lesson's outline, the terms earlier lessons
   define and each walkthrough at its last step, and record why an answer was refused.
-  Only the refused entries are asked again.
+  Only missing or invalid entries are asked again, for up to two repairs. If entries
+  still fail, valid answers are saved and the packet stays pending. Uncertain verdicts
+  name the specific unavailable evidence. Close-round lists fixed but unverified
+  findings and stale items; all draft repairs finish before the verify pass.
 - The plan check lists every blocking problem in its first pass, keeps the history of
-  earlier reasons and advice, and only escalates earlier advice when the plan changed
-  or new evidence is given. It shows the lecture examples no plan uses as selection
+  earlier reasons and advice. Later new blockers, including earlier advice, must name
+  a changed concept or give new source evidence; otherwise they become advice. Plans
+  are checked as a batch. It shows the lecture examples no plan uses as selection
   context.
 - Wide search trees fit on desktop: drawings scale to their 12 px text floor and then
   use the free margin beside the column. Graph walkthroughs show a one-line legend of
@@ -21,6 +25,10 @@
   step drops, a static copy of a walkthrough's drawing, a search run given as a table
   and a lesson that opens with an untitled block. Two walkthroughs over one drawing
   now need a ruling instead of a removal, so different lecture runs on one tree stay.
+  Repeated reasons and graph nodes no step reveals are invariant defects. Computed
+  steps show their inputs and arithmetic, rather than only their results.
+- Transcript metrics count usage in the recorded turn and part order, including
+  replies, so cumulative token deltas are chronological.
 - Authoring is faster: `study schema --example KIND` prints a valid block, the skills
   show the answer-key contract and filled batch and preparation files, readiness prints
   a summary by default (`--json` for everything), and reviewers no longer ask for phone

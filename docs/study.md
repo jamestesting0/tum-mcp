@@ -70,6 +70,10 @@ outputs in `.tum-mcp/batches/ID.json` (`study schema batch`) before drafting.
 Forecast questions use `exam/mock/MOCK/QUESTION` item keys. A pattern batch also
 checks its visible cheatsheet. Write every declared Study, Exercise and pattern plan
 before launching the fresh plan checker; it checks the pending plans together.
+Repair pending lesson plans together before another batch check. The first pass keeps
+all blockers. A later new reason must name a concept changed since the previous check
+or map to new source evidence; otherwise it is recorded as advice. Earlier unresolved
+reasons remain blockers when repeated.
 Study and Exercise source requirements first pass
 `study report PROJECT --section coverage-plan --preparation ID`, independently of
 authored content. Plans name that `preparation`; their approval records its fingerprint
@@ -264,10 +268,13 @@ check (`review fix` is refused while the quoted passage is unchanged and takes s
 `--finding`), rejects a wrong finding with its reason or keeps a score-2 finding the content
 cannot fix. `review findings` lists the open findings, one line each, grouped by block. A
 defect is filed once, under the check that owns it, with the other checks it fails linked
-to it. After the repairs, `review verify` writes one verification pass in the same round:
+to it. Finish all original findings and draft repairs before `review verify` writes
+one verification pass in the same round:
 fresh checkers confirm or reopen each fix and judge again every check the repairs made
-stale, so the round can close with current verdicts. Repairs made after that pass are
-reported as unverified until the student asks for another round. Checkers get the cited
+stale, so the round can close with current verdicts. After that pass, repair only findings
+it opened. Those repairs stay unverified until the student asks for another round.
+Close-round names every fixed but unverified finding and every stale or incomplete item;
+stale verdicts never count as current scores. Checkers get the cited
 slide pages as images, the lesson's heading outline and the terms earlier lessons define. A verdict holds
 until the blocks it covered change, so a later loop asks only about new and changed
 items. `review close-round` computes the gate and writes `.tum-mcp/loop/scorecard.md`;
@@ -293,7 +300,12 @@ Missing question context is not advisory: authored questions pair their text wit
 useful code, a diagram, formula, table or plot, and a checker cannot waive that gate.
 Teaching checks assess every concept, including additions made after planning, and
 objective checks require source evidence rather than promoting illustrative asides.
-The headless checker gets one targeted repair attempt if its answer format is refused.
+The headless checker gets up to two targeted repairs of missing or invalid entries.
+If entries still fail, it saves the valid answers, keeps the packet pending and reports
+the remaining problems with a failing exit status. Uncertain verdicts require a
+`missing` field naming the specific artifact or source page that cannot be opened and
+why. A sampled check whose likeliest failures pass is a pass; incomplete inspection is
+not unavailable evidence.
 
 Workspace profiles keep the shared dimensions but tailor their evidence: exercise
 reviews preserve released statements and assess each part's guide and answer rather
