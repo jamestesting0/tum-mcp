@@ -33,7 +33,7 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
       for (const run of runs) {
         let reached = new Set();
         for (const step of run) {
-          reached = new Set([...reached, ...(step.active || []), ...(step.frontier || []), ...(step.cutoff || []), ...(step.visited || [])]);
+          reached = new Set([...reached, ...(step.active || []), ...(step.discarded || []), ...(step.frontier || []), ...(step.cutoff || []), ...(step.visited || [])]);
           reach.set(step, reached);
         }
       }
@@ -43,6 +43,7 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
           if (step.visible_nodes && !step.visible_nodes.includes(item.key)) continue;
           if (grows && reach.get(step).size && !reach.get(step).has(item.key)) used.add('unreached');
           else if (step.active.includes(item.key)) used.add('active');
+          else if (step.discarded?.includes(item.key)) used.add('discarded');
           else if (step.frontier.includes(item.key)) used.add('frontier');
           else if (step.cutoff?.includes(item.key)) used.add('cutoff');
           else if (step.visited.includes(item.key)) used.add('visited');
@@ -50,7 +51,7 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
         }
       });
       const legend = node('div', 'graph walk-legend');
-      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['cutoff', 'Cut off'], ['visited', 'Expanded'], ['unreached', 'Not reached yet'], ['unmarked', 'No current role']]) {
+      for (const [state, label] of [['active', 'Current'], ['discarded', 'Discarded'], ['frontier', 'Frontier'], ['cutoff', 'Cut off'], ['visited', 'Expanded'], ['unreached', 'Not reached yet'], ['unmarked', 'No current role']]) {
         if (!used.has(state)) continue;
         const swatch = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         swatch.setAttribute('class', 'walk-legend-swatch'); swatch.setAttribute('viewBox', '0 0 18 18'); swatch.setAttribute('aria-hidden', 'true');
@@ -67,12 +68,14 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
         const reached = grows && reach.get(step).size ? reach.get(step) : null;
         for (const [key, group] of groups) {
           const active = step.active.includes(key);
-          const frontier = !active && step.frontier.includes(key);
-          const cutoff = !active && !frontier && (step.cutoff?.includes(key) || false);
+          const discarded = !active && (step.discarded?.includes(key) || false);
+          const frontier = !active && !discarded && step.frontier.includes(key);
+          const cutoff = !active && !discarded && !frontier && (step.cutoff?.includes(key) || false);
           group.classList.toggle('active', active);
+          group.classList.toggle('discarded', discarded);
           group.classList.toggle('frontier', frontier);
           group.classList.toggle('cutoff', cutoff);
-          group.classList.toggle('visited', !active && !frontier && !cutoff && step.visited.includes(key));
+          group.classList.toggle('visited', !active && !discarded && !frontier && !cutoff && step.visited.includes(key));
           group.setAttribute('visibility', shown(key) ? 'visible' : 'hidden');
           group.classList.toggle('unreached', Boolean(reached) && !reached.has(key));
           setNodeValue(group, step.node_values?.[key]);
@@ -162,13 +165,13 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
           grid.cells.forEach((row, r) => row.forEach((_, c) => {
             const cell = `${r + 1}:${c + 1}`;
             const marks = (step.grid_marks || []).filter(mark => mark.grid === grid.key && mark.cell === cell).map(mark => mark.mark || 'active');
-            const state = ['active', 'frontier', 'path', 'visited'].find(mark => marks.includes(mark));
+            const state = ['active', 'discarded', 'frontier', 'path', 'visited'].find(mark => marks.includes(mark));
             used.add(state || (grid.shaded?.includes(cell) ? 'shaded' : 'unmarked'));
           }));
         }
       }
       const legend = node('div', 'graph walk-legend');
-      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['visited', 'Done'], ['path', 'Path'], ['shaded', 'Shaded'], ['unmarked', 'No current role']]) {
+      for (const [state, label] of [['active', 'Current'], ['discarded', 'Discarded'], ['frontier', 'Frontier'], ['visited', 'Done'], ['path', 'Path'], ['shaded', 'Shaded'], ['unmarked', 'No current role']]) {
         if (!used.has(state)) continue;
         const swatch = node('span', `grid-swatch ${state}`); swatch.setAttribute('aria-hidden', 'true');
         legend.append(append(node('span', 'walk-legend-item'), swatch, node('span', '', label)));

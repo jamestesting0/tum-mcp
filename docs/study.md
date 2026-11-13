@@ -179,6 +179,14 @@ within the same request. Unchanged units and reviewed material are retained. The
 skill audits objective coverage, technical accuracy and distractors, and writes in
 short, direct sentences that keep necessary terms and conditions.
 
+Selected source examples may record `states` (distinct states counted on the cited pages)
+and `phases` (their names). Report and lint flag a walkthrough below that floor or missing
+its `subgoal` groups. Keep the whole process in one walkthrough; extra steps are allowed.
+Summary-only sources and constructed examples need no state count. Graph nodes and grid
+cells use `discarded` for rejected or pruned items, distinct from cutoff and unreached
+states; answer keys can check graph roles with `@discarded`. A selected picture's teaching
+payload includes how to read its regions, boundaries, directions and legend.
+
 The course home introduces the course, resumes where you left off and lists topics
 with progress. Each view ends with a Next link through cards and practice to the
 next unit. Revision pools cards and questions from the topics you choose (all topics

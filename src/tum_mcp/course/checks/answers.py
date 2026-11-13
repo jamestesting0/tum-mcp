@@ -10,6 +10,7 @@ A script prints one JSON object:
   Each run lists one object per step containing all state rows, matched exactly, and
   `"@node_values"`: node key -> value when the stage writes values under its nodes;
   `"@cutoff"`: node keys cut off at this step, when supplied by the key;
+  `"@discarded"`: rejected or pruned node keys at this step, when supplied by the key;
   `"@grid"`: "grid:row:column" -> the value a grid stage shows in that cell after this
   step (authored cells plus every `grid_values` change so far in the run).
   A list of partial primary-run states is accepted for legacy keys.
@@ -116,16 +117,19 @@ def _compare_runs(block: dict, runs: dict, key: str) -> tuple[list[str], int]:
             actual = {row["label"]: row["value"] for row in rows}
             place = f"walkthrough {key}/{run} step {number}"
             values = None
-            cutoff = isinstance(states, dict) and "@cutoff" in states
-            if cutoff:
-                expected_cutoff = states["@cutoff"]
-                states = {label: state for label, state in states.items() if label != "@cutoff"}
-                compared += 1
-                found_cutoff = step.get("cutoff", [])
-                if not _exact(found_cutoff, expected_cutoff):
-                    problems.append(
-                        f"{place}: cutoff is {found_cutoff!r}, the key computes {expected_cutoff!r}"
-                    )
+            roles = False
+            for role in ("cutoff", "discarded"):
+                field = f"@{role}"
+                if isinstance(states, dict) and field in states:
+                    roles = True
+                    expected_role = states[field]
+                    states = {label: state for label, state in states.items() if label != field}
+                    compared += 1
+                    found_role = step.get(role, [])
+                    if not _exact(found_role, expected_role):
+                        problems.append(
+                            f"{place}: {role} is {found_role!r}, the key computes {expected_role!r}"
+                        )
             grid = isinstance(states, dict) and GRID in states
             if grid:
                 board = _board(block, steps[:number])
@@ -157,7 +161,7 @@ def _compare_runs(block: dict, runs: dict, key: str) -> tuple[list[str], int]:
                         )
             if (
                 not isinstance(states, dict)
-                or not (states or values is not None or cutoff or grid)
+                or not (states or values is not None or roles or grid)
                 or (states.keys() != actual.keys() or len(actual) != len(rows))
             ):
                 problems.append(f"{place}: expected each authored state row exactly once.")

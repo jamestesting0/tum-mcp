@@ -59,6 +59,16 @@ class Example(Frozen):
         "inconclusive endpoint is valid; a useful continuation beyond the lecture is allowed."
     )
     block: Key
+    states: Annotated[int, Field(strict=True, ge=1)] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Number of distinct states the cited source pages show for this run.",
+    )
+    phases: tuple[Label, ...] = Field(
+        default=(),
+        exclude_if=lambda value: not value,
+        description="The source's phase names, used as walkthrough subgoal groups.",
+    )
     why: Text | None = Field(
         default=None,
         exclude_if=lambda value: value is None,
@@ -216,6 +226,7 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
         problems.append(f"outcomes not in the ledger: {', '.join(unknown)}")
     if value is None:
         return problems
+    problems.extend(str(flag["detail"]) for flag in example_state_flags(plan, value))
     questions = {question["key"]: question for question in value.get("questions", [])}
     for case in plan.practice:
         if case.question not in questions:
@@ -263,6 +274,45 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
         if planned != list(declared):
             problems.append(f"parts {planned} do not match the exercise's parts {declared}")
     return problems
+
+
+def example_state_flags(plan: Plan, value: dict) -> list[dict[str, JsonValue]]:
+    """Compare a selected walkthrough with the source states and phases its planner counted."""
+    blocks = {block.get("key"): block for block in value.get("blocks", [])}
+    flags: list[dict[str, JsonValue]] = []
+    for concept in plan.concepts:
+        example = concept.example
+        if example is None or (block := blocks.get(example.block)) is None:
+            continue
+        if block.get("kind") != "walkthrough":
+            continue
+        steps = block["steps"]
+        item = f"{plan.item.removeprefix('study/')}/{example.block}"
+        if example.states is not None and len(steps) < example.states:
+            flags.append(
+                {
+                    "item": item,
+                    "flag": "source_states_missing",
+                    "detail": f"{concept.name}: walkthrough {example.block} has {len(steps)} "
+                    f"steps for {example.states} planned source states. Restore the source's "
+                    "states in this one walkthrough; never drop, merge or split steps "
+                    "to shorten it.",
+                }
+            )
+        groups = {_normalized(step["subgoal"]) for step in steps if step.get("subgoal")}
+        missing = [phase for phase in example.phases if _normalized(phase) not in groups]
+        if example.phases and (missing or any(not step.get("subgoal") for step in steps)):
+            flags.append(
+                {
+                    "item": item,
+                    "flag": "source_phases_missing",
+                    "detail": f"{concept.name}: group walkthrough {example.block}'s steps with "
+                    f"`subgoal` covering the planned source phases: {', '.join(example.phases)}."
+                    + (f" Missing: {', '.join(missing)}." if missing else "")
+                    + " Keep all steps in this one walkthrough, including any continuation.",
+                }
+            )
+    return flags
 
 
 def coverage_reader(root: Path) -> CoverageReader:
@@ -681,6 +731,8 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "and working, and endpoint or comparison. Page overlap or a concept mention does "
             "not establish that the selected demonstration is complete. Keep the source range "
             "that contains its decisive test and conclusion, not just its setup. "
+            "When an example records states or phases, verify the count of distinct states "
+            "and the phase names against its cited source pages. They are a floor, not a cap. "
             "Finish incomplete source working with its original inputs when the result matters. "
             "Going beyond the source is fine; covering less is not. Do not invent missing "
             "givens or a desired result to force an ending. For each additional example "

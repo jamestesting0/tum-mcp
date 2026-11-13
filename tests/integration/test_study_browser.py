@@ -430,8 +430,9 @@ def test_a_tree_without_a_reveal_order_keeps_unreached_nodes_faint(
             worker.join(timeout=3)
 
 
-def test_cutoff_nodes_are_reached_and_legend_respects_state_precedence(
-    course_browser: Browser, project: Path
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_cutoff_and_discarded_nodes_are_reached_and_legend_respects_state_precedence(
+    course_browser: Browser, project: Path, theme: str
 ) -> None:
     from tum_mcp.course.app.preview import Handler, PreviewServer
 
@@ -445,41 +446,61 @@ def test_cutoff_nodes_are_reached_and_legend_respects_state_precedence(
                 page = context.new_page()
                 page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
                 page.locator("[data-block-index]").first.wait_for()
+                page.evaluate("theme => document.documentElement.dataset.theme = theme", theme)
                 page.evaluate("""async () => {
                   const { renderWalkthrough } = await import('./runtime/reading/walkthrough.mjs');
-                  const nodes = 'abcde'.split('').map(key => ({key, label: key.toUpperCase()}));
-                  const edges = 'bcde'.split('').map(end => ({start:'a', end, directed:true}));
-                  const step = (active, frontier, cutoff, visited) =>
-                    ({action:'Search', why:'Follow the depth limit.', active, frontier,
-                      cutoff, visited, edges:[], state:[]});
+                  const nodes = 'abcdef'.split('').map(key => ({key, label: key.toUpperCase()}));
+                  const edges = 'bcdef'.split('').map(end => ({start:'a', end, directed:true}));
+                  const step = (active, frontier, cutoff, visited, discarded) =>
+                    ({action:'Discard E after its repeated-state test.',
+                      why:'E repeats a reached state. C stops at the depth limit.',
+                      active, frontier, cutoff, visited, discarded, edges:[], state:[]});
                   const block = {stage:{kind:'diagram', layout:'tree',
                     description:'Tree', nodes, edges},
-                    steps:[step(['a'], ['a','b'], ['a','b','c'], ['a','b','c','d']),
-                           step(['a'], [], [], ['d'])]};
+                    steps:[step(['a'], ['a','b','e'], ['a','b','c','e'],
+                                ['a','b','c','d','e'], ['e']),
+                           step(['a'], [], [], ['d'], [])]};
                   document.querySelector('main').replaceChildren(
                     renderWalkthrough(block, () => null));
                 }""")
                 legend = page.locator(".walk-legend")
                 expect(legend.get_by_text("Cut off", exact=True)).to_be_visible()
-                states = [("a", "active"), ("b", "frontier"), ("c", "cutoff"), ("d", "visited")]
+                expect(legend.get_by_text("Discarded", exact=True)).to_be_visible()
+                states = [
+                    ("a", "active"),
+                    ("b", "frontier"),
+                    ("c", "cutoff"),
+                    ("d", "visited"),
+                    ("e", "discarded"),
+                ]
                 for key, state in states:
                     element = page.locator(f'[data-node-key="{key}"]')
                     expect(element).to_have_class(re.compile(rf"\b{state}\b"))
-                    for other in {"active", "frontier", "cutoff", "visited"} - {state}:
+                    for other in {"active", "frontier", "cutoff", "visited", "discarded"} - {state}:
                         expect(element).not_to_have_class(re.compile(rf"\b{other}\b"))
-                expect(page.locator('[data-node-key="e"]')).to_have_class(
+                expect(page.locator('[data-node-key="f"]')).to_have_class(
                     re.compile(r"\bunreached\b")
                 )
                 expect(page.locator('[data-node-key="c"]')).not_to_have_class(
                     re.compile(r"\bunreached\b")
                 )
+                expect(page.locator('[data-node-key="e"]')).not_to_have_class(
+                    re.compile(r"\bunreached\b")
+                )
+                page.screenshot(path=str(project.parent / f"discarded-graph-{theme}.png"))
                 page.get_by_role("button", name="Next step", exact=True).click()
+                expect(page.locator('[data-node-key="e"]')).not_to_have_class(
+                    re.compile(r"\b(discarded|unreached)\b")
+                )
                 expect(page.locator('[data-node-key="c"]')).not_to_have_class(
                     re.compile(r"\bunreached\b")
                 )
                 page.evaluate(TREE_WALKTHROUGH)
                 expect(
                     page.locator(".walk-legend").get_by_text("Cut off", exact=True)
+                ).to_have_count(0)
+                expect(
+                    page.locator(".walk-legend").get_by_text("Discarded", exact=True)
                 ).to_have_count(0)
                 # Explicitly shown nodes without a semantic mark still have a visible style.
                 page.evaluate("""async () => {
@@ -499,6 +520,28 @@ def test_cutoff_nodes_are_reached_and_legend_respects_state_precedence(
         finally:
             server.shutdown()
             worker.join(timeout=3)
+
+
+def test_search_ignores_discarded_node_keys(course_browser: Browser, project: Path) -> None:
+    server, worker = _serve(project)
+    try:
+        with course_browser.new_context() as context:
+            page = context.new_page()
+            page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+            page.locator("[data-block-index]").first.wait_for()
+            matches = page.evaluate("""async () => {
+                const { default: data } = await import('./data.mjs');
+                const block = data.units[0].blocks[0];
+                block.discarded = ['discardednodeidentifier'];
+                block.paragraphs = ['Searchable explanationword.'];
+                const { search } = await import('./runtime/shell/search.mjs');
+                return [search('discardednodeidentifier').length,
+                        search('explanationword').length];
+            }""")
+            assert matches == [0, 1]
+    finally:
+        server.shutdown()
+        worker.join(timeout=3)
 
 
 LONG_WALK = """async ({ count, long }) => {
@@ -606,15 +649,17 @@ def test_stepping_a_long_explanation_keeps_the_page_still(
         worker.join(timeout=3)
 
 
+@pytest.mark.parametrize("theme", ["light", "dark"])
 def test_a_grid_stage_marks_cells_draws_moves_and_keeps_written_values(
-    course_browser: Browser, project: Path
+    course_browser: Browser, project: Path, theme: str
 ) -> None:
     server, worker = _serve(project)
     try:
-        with course_browser.new_context() as context:
+        with course_browser.new_context(viewport={"width": 1440, "height": 900}) as context:
             page = context.new_page()
             page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
             page.locator("[data-block-index]").first.wait_for()
+            page.evaluate("theme => document.documentElement.dataset.theme = theme", theme)
             page.evaluate("""async () => {
                 const { renderWalkthrough } = await import('./runtime/reading/walkthrough.mjs');
                 const at = (grid, cell, mark) => ({ grid, cell, mark });
@@ -629,7 +674,8 @@ def test_a_grid_stage_marks_cells_draws_moves_and_keeps_written_values(
                       grid_arrows: [{ start: { grid: 'start', cell: '1:1' },
                         end: { grid: 'goal', cell: '1:2' }, label: '0 + 1' }] },
                     { action: 'Tile 2.', why: 'One row down, one left.', state: [],
-                      grid_marks: [at('start', '1:1', 'visited'), at('start', '2:2', 'active')],
+                      grid_marks: [at('start', '1:1', 'visited'), at('start', '2:2', 'active'),
+                        at('goal', '1:1', 'discarded'), at('goal', '1:1', 'frontier')],
                       grid_values: [{ grid: 'start', cell: '1:2', value: '1' }],
                       grid_arrows: [{ start: { grid: 'start', cell: '2:2' },
                         end: { grid: 'start', cell: '1:1' } }] },
@@ -643,12 +689,14 @@ def test_a_grid_stage_marks_cells_draws_moves_and_keeps_written_values(
             expect(page.locator(".grid-arrow")).to_have_count(1)
             expect(page.locator(".grid-arrow-label")).to_have_text("0 + 1")
             expect(page.locator(".walk-legend .walk-legend-item")).to_have_text(
-                ["Current", "Done", "Shaded", "No current role"]
+                ["Current", "Discarded", "Done", "Shaded", "No current role"]
             )
             page.get_by_role("button", name="Next step", exact=True).click()
             expect(cell("start:1:1")).to_have_class("grid-cell visited")
             expect(cell("start:2:2")).to_have_class("grid-cell active")
             expect(cell("goal:1:2")).to_have_class("grid-cell")
+            expect(cell("goal:1:1")).to_have_class("grid-cell discarded")
+            page.screenshot(path=str(project.parent / f"discarded-grid-{theme}.png"))
             elbow = re.compile(r"^M\S+ \S+L\S+ \S+L")
             expect(page.locator(".grid-arrow")).to_have_attribute("d", elbow)
             expect(page.locator(".grid-arrow-label")).to_have_count(0)
@@ -656,6 +704,7 @@ def test_a_grid_stage_marks_cells_draws_moves_and_keeps_written_values(
             expect(value).to_have_text("1")
             page.get_by_role("button", name="Next step", exact=True).click()
             expect(page.locator(".grid-arrow")).to_have_count(0)
+            expect(cell("goal:1:1")).to_have_class("grid-cell")
             expect(value).to_have_text("1")
             page.get_by_role("button", name="Previous step", exact=True).click()
             page.get_by_role("button", name="Previous step", exact=True).click()

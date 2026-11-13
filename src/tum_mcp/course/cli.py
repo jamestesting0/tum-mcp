@@ -320,7 +320,7 @@ def report(
 
     semantics = cache(lambda: knowledge_revision(root))
     media = cache(lambda: discover(root, state, content))
-    quality = cache(lambda: quality_flags(content, exercises))
+    quality = cache(lambda: quality_flags(content, exercises, root=root))
     parts = {
         "quality": quality,
         "structure": lambda: course_map(

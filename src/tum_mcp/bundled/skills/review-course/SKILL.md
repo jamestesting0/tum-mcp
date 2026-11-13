@@ -81,13 +81,15 @@ scores.
       each planned `example` with its `example_block`, source pages and rendering,
       regardless of the concept's kind. Compare the block's representation with the
       source picture, not just its text or result. Name the concept and planned block
-      in evidence. Judge whether the actual inputs, picture, decisive tests and working,
-      and endpoint or comparison survive.
+      in evidence. Judge whether the actual inputs, picture and how to read it, decisive
+      tests and working, and endpoint or comparison survive. Check planned `states` and
+      `phases` against the source and this one walkthrough's steps and `subgoal` groups.
       A concept mention, correct total or different example cannot replace that example.
       A theorem keeps its geometric construction; a law keeps its labelled circuit
       and working; a contrasting legal case keeps its decisive facts and disposition.
       Inspect intermediate states when those carry the reasoning.
-      Do not count steps or force a template. A finding is resolved only with the rewritten
+      A state count is a floor, not proof of complete teaching or a template.
+      A finding is resolved only with the rewritten
       passage quoted, and only when that passage reads well on its own.
       Also inspect concepts added after planning; adding a glossary paragraph to justify
       new flashcards does not teach those concepts. For objectives, cite the actual
@@ -171,7 +173,8 @@ Repair gotchas:
   shows the state after one operation at source granularity or finer, never coarser.
   Two pops, algebraic transformations, simulation ticks or proof inferences need their
   intermediate states. One atomic action touching several items stays one step, such
-  as expanding a node and pushing its children or applying one matrix row operation.
+  as applying one matrix row operation. Preserve source states between selection and
+  individual child insertions.
   Never drop or merge steps to shorten the run; the app handles its length.
 - The weakness is lost teaching during cleanup. Remove content only when it is wrong
   or said twice. Preserve each selected example's inputs, representation, decisive

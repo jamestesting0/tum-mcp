@@ -272,6 +272,8 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "static_walkthrough": "representation",
     "dropped_node_value": "representation",
     "never_shown_nodes": "representation",
+    "source_states_missing": "correctness",
+    "source_phases_missing": "organization",
     "unworked_result": "representation",
     "text_only_question": "representation",
     "bare_workflow": "representation",

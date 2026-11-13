@@ -465,6 +465,7 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 .graph .edge-label { font-size: 14px; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
 .graph .visited circle, .graph .visited rect { fill: var(--wash); stroke: var(--accent); }
 .graph .cutoff circle, .graph .cutoff rect { fill: var(--warning); stroke: var(--warning-ink); stroke-width: 2.5; }
+.graph .discarded circle, .graph .discarded rect { fill: color-mix(in srgb, var(--error) 12%, var(--panel)); stroke: var(--error); stroke-width: 2.5; stroke-dasharray: 2 3; }
 .graph .active circle, .graph .active rect { fill: var(--accent); stroke: var(--accent); }
 .graph .active text { fill: var(--canvas); }
 .graph-math-text { display: inline-block; white-space: nowrap; font: 18px var(--font-ui); }
@@ -1448,10 +1449,12 @@ button.walk-jump:hover, button.walk-jump[aria-expanded="true"] { background: var
 .grid-cell.visited rect { fill: var(--wash); }
 .grid-cell.path rect { fill: var(--wash); stroke: var(--accent); stroke-width: 2.5; }
 .grid-cell.frontier rect { fill: var(--panel); stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 5 4; }
+.grid-cell.discarded rect { fill: color-mix(in srgb, var(--error) 12%, var(--panel)); stroke: var(--error); stroke-width: 2.5; stroke-dasharray: 2 3; }
 .grid-cell.active rect { fill: var(--accent); stroke: var(--accent); }
 .grid-figure text { fill: var(--ink); font: 18px var(--font-ui); text-anchor: middle; dominant-baseline: central; }
 .grid-figure .grid-value { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
 .grid-cell.visited .grid-value, .grid-cell.path .grid-value { stroke: var(--wash); }
+.grid-cell.discarded .grid-value { stroke: color-mix(in srgb, var(--error) 12%, var(--panel)); }
 .grid-cell.active .grid-value { stroke: var(--accent); }
 .grid-cell.shaded .grid-value { stroke: var(--line); }
 .grid-cell.active text { fill: var(--canvas); font-weight: 650; }
@@ -1467,6 +1470,7 @@ button.walk-jump:hover, button.walk-jump[aria-expanded="true"] { background: var
 .grid-swatch.visited { background: var(--wash); }
 .grid-swatch.path { background: var(--wash); border: 2px solid var(--accent); }
 .grid-swatch.frontier { border: 2px dashed var(--accent); }
+.grid-swatch.discarded { background: color-mix(in srgb, var(--error) 12%, var(--panel)); border: 2px dotted var(--error); }
 .walk-trace td, .walk-trace th { vertical-align: top; }
 .walk-trace td:nth-child(3) { min-width: 16em; }
 .walk-trace .walk-subgoal th { text-align: left; color: var(--muted); font-weight: 600; }

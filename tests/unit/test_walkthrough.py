@@ -67,13 +67,14 @@ def test_answer_keys_check_the_values_written_under_nodes() -> None:
     assert "under each node" in check({"s": "f = 393", "t": "f = 447"})[0][0]
 
 
-def test_answer_keys_compare_cutoff_nodes_when_supplied() -> None:
+@pytest.mark.parametrize("mark", ["cutoff", "discarded"])
+def test_answer_keys_compare_node_roles_when_supplied(mark: str) -> None:
     from tum_mcp.course.checks.answers import compare
 
-    block = {"kind": "walkthrough", "key": "dls", "steps": [{"cutoff": ["b"]}]}
+    block = {"kind": "walkthrough", "key": "dls", "steps": [{mark: ["b"]}]}
 
     def key(nodes: list[str]) -> dict:
-        return {"walkthroughs": {"dls": {"primary": [{"@cutoff": nodes}]}}}
+        return {"walkthroughs": {"dls": {"primary": [{f"@{mark}": nodes}]}}}
 
     assert compare(block, key(["b"])) == ([], 1)
     assert compare(block, key(["c"]))[0]
@@ -92,15 +93,23 @@ def tree(**change) -> dict:
     }
 
 
-def test_cutoff_nodes_must_be_drawn_and_visible() -> None:
+@pytest.mark.parametrize("mark", ["cutoff", "discarded"])
+def test_node_roles_must_be_drawn_and_visible(mark: str) -> None:
     value = tree()
-    value["steps"][1]["cutoff"] = ["b"]
-    assert WalkthroughBlock.model_validate(value).steps[1].cutoff == ("b",)
-    value["steps"][1]["cutoff"] = ["z"]
+    value["steps"][1][mark] = ["b"]
+    assert getattr(WalkthroughBlock.model_validate(value).steps[1], mark) == ("b",)
+    value["steps"][1][mark] = ["z"]
     with pytest.raises(ValidationError, match="node the stage does not draw"):
         WalkthroughBlock.model_validate(value)
-    value["steps"][1].update(cutoff=["b"], visible_nodes=["a"])
+    value["steps"][1].update({mark: ["b"], "visible_nodes": ["a"]})
     with pytest.raises(ValidationError, match="node it does not show yet"):
+        WalkthroughBlock.model_validate(value)
+
+
+def test_a_discarded_node_cannot_be_active_in_the_same_step() -> None:
+    value = tree()
+    value["steps"][0]["discarded"] = ["a"]
+    with pytest.raises(ValidationError, match="active and discarded"):
         WalkthroughBlock.model_validate(value)
 
 
@@ -319,6 +328,16 @@ def test_a_grid_stage_accepts_cells_inside_its_grids_only() -> None:
     ):
         with pytest.raises(ValidationError, match=message):
             adapter.validate_python(bad)
+
+
+def test_a_grid_cell_can_be_discarded_but_not_active_at_the_same_time() -> None:
+    value = grid_walk()
+    mark = {"grid": "maze", "cell": "1:1", "mark": "discarded"}
+    value["steps"][0]["grid_marks"] = [mark]
+    assert WalkthroughBlock.model_validate(value).steps[0].grid_marks[0].mark == "discarded"
+    value["steps"][0]["grid_marks"].append(mark | {"mark": "active"})
+    with pytest.raises(ValidationError, match="active and discarded"):
+        WalkthroughBlock.model_validate(value)
 
 
 def test_answer_keys_compare_grid_cells_after_each_step() -> None:

@@ -1122,7 +1122,7 @@
     {
       "id": "representation.process_shown",
       "dimension": "representation",
-      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. Each step shows the state after one operation, at the cited source's granularity or finer, never coarser. Compare the actions and intermediate states with the source pages: separate pops, algebraic transformations, simulation ticks, proof inferences and transaction postings each keep their own state. One atomic action affecting several items stays one step, such as expanding a node and pushing all its children or applying one matrix row operation. Keep the whole process in one walkthrough; never drop or merge steps to shorten it. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, grid cells and moves, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it. Values the student compares across steps remain attached to their nodes, cells or marks while needed, rather than surviving only in changing prose. Do not retain obsolete values as current or add quantities the reasoning does not use. The legend or direct labels explain every state actually drawn, including neutral or not-yet-reached states when styled differently.",
+      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. Each step shows the state after one operation, at the cited source's granularity or finer, never coarser. Compare the actions and intermediate states with the source pages: separate pops, algebraic transformations, simulation ticks, proof inferences and transaction postings each keep their own state. One atomic action affecting several items stays one step, such as applying one matrix row operation. Preserve source states between selection and individual child insertions. Keep the whole process in one walkthrough; never drop or merge steps to shorten it. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, grid cells and moves, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it. Values the student compares across steps remain attached to their nodes, cells or marks while needed, rather than surviving only in changing prose. Do not retain obsolete values as current or add quantities the reasoning does not use. The legend or direct labels explain every state actually drawn, including neutral or not-yet-reached states when styled differently.",
       "pass": "Each pop in a search or transformation in a derivation shows its resulting state, including every state on the cited pages.",
       "fail": "'Remove one item from the stack, then the next' or 'Subtract three, then divide by two' shows only the second result and hides an intermediate state. A finished table or number without its working also fails.",
       "profiles": [
@@ -1132,7 +1132,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 4,
+      "version": 5,
       "default_fail": true,
       "teaching": true,
       "replaces": [
@@ -1233,14 +1233,14 @@
     {
       "id": "coverage.examples_selected",
       "dimension": "coverage",
-      "rule": "every critical source demonstration is taught as the source's own example: a run the student must perform, a decision or failure the main run cannot show, or reasoning that explains validity, limits or costs. Compare the source digest and pages with every planned example and its actual example_block, regardless of concept kind. Compare the rendered block's representation with the source picture, not just its text or result. For each selected example, explain whether its inputs and conventions, natural representation, decisive tests and working, and endpoint or comparison survive. Name the concept and planned block in evidence. A concept mention, one correct total or a different worked case cannot satisfy the selected example. A theorem keeps its geometric construction; a law keeps its labelled circuit and working; a contrasting legal case keeps its decisive facts and disposition. Judge the teaching, not a step count or template. Useful continuations beyond the lecture are allowed; covering less is not. Name any missing critical example with its pages, substituted example, or repeat that adds nothing.",
+      "rule": "every critical source demonstration is taught as the source's own example: a run the student must perform, a decision or failure the main run cannot show, or reasoning that explains validity, limits or costs. Compare the source digest and pages with every planned example and its actual example_block, regardless of concept kind. Compare the rendered block's representation with the source picture, not just its text or result. For each selected example, explain whether its inputs and conventions, natural representation and how to read the picture, decisive tests and working, and endpoint or comparison survive. Explain what regions, boundaries, directions or legend marks mean where the reasoning uses them. Name the concept and planned block in evidence. A concept mention, one correct total or a different worked case cannot satisfy the selected example. A theorem keeps its geometric construction; a law keeps its labelled circuit and working; a contrasting legal case keeps its decisive facts and disposition. Judge the teaching, not a template; a planned source state count is only a floor. Useful continuations beyond the lecture are allowed; covering less is not. Name any missing critical example with its pages, substituted example, or repeat that adds nothing.",
       "pass": "Uniform-cost search is taught on the lecture's Romania subgraph, where B is improved from 310 to 278.",
       "fail": "The lecture's A* Romania run is replaced by a four-node invented graph.",
       "profiles": [
         "study-unit"
       ],
       "scope": "item",
-      "version": 3,
+      "version": 4,
       "default_fail": true
     },
     {

@@ -214,7 +214,7 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
             for pair in undecided(root, content, exercises, exam, lectures)
         ]
     flags = [
-        *quality_flags(content, exercises),
+        *quality_flags(content, exercises, root=root),
         *links,
         *(forward_terms(content) if content else ()),
         *sheet_flags(exam),

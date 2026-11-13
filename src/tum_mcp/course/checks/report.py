@@ -14,6 +14,7 @@ from pathlib import Path
 
 from pydantic import JsonValue
 
+from tum_mcp.course.checks.plans import example_state_flags, read_plan
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.latex import (
     INLINE_SPANS,
@@ -717,7 +718,7 @@ def visual_state_flags(item: str, value: JsonValue) -> list[dict[str, JsonValue]
 
 
 def quality_flags(
-    content: StudyContent | None, exercises: ExerciseContent | None
+    content: StudyContent | None, exercises: ExerciseContent | None, *, root: Path | None = None
 ) -> list[dict[str, JsonValue]]:
     """Measurable signs of hard-to-learn content; each is a prompt to review, not a rule."""
     flags: list[dict[str, JsonValue]] = []
@@ -738,6 +739,8 @@ def quality_flags(
     seen_symbols: set[str] = set()
     seen_terms: set[str] = set()
     for unit in units:
+        if root is not None and (plan := read_plan(root, f"study/{unit.key}")) is not None:
+            flags.extend(example_state_flags(plan, unit.model_dump(mode="json")))
         flags.extend(variable_flags(unit.key, unit.model_dump(mode="json")))
         flags.extend(visual_state_flags(unit.key, unit.model_dump(mode="json")))
         opening, symbols, terms = _opening(unit.blocks, seen_symbols, seen_terms)

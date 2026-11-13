@@ -40,6 +40,49 @@ def test_a_comparison_without_a_source_demonstration_needs_no_example() -> None:
 
 
 @pytest.mark.parametrize(
+    ("name", "phases"),
+    [
+        ("Depth-limited search", ["Limit 0", "Limit 1"]),
+        ("Gaussian elimination", ["Forward elimination", "Back substitution"]),
+    ],
+)
+def test_source_states_are_a_floor_in_one_grouped_walkthrough(name: str, phases: list[str]) -> None:
+    current = plan(
+        name=name,
+        example=UCS | {"states": 4, "phases": phases},
+        blocks=["ucs-romania"],
+    )
+    steps = [{"subgoal": phase} for phase in phases for _ in range(2)]
+    block = {"key": "ucs-romania", "kind": "walkthrough", "steps": steps}
+    assert plan_problems(current, {"blocks": [block]}, None) == []
+    assert plan_problems(current, {"blocks": [block | {"steps": steps[:-1]}]}, None)
+    assert plan_problems(current, {"blocks": [block | {"steps": steps + [steps[-1]]}]}, None) == []
+    assert plan_problems(
+        current, {"blocks": [block | {"steps": [{"subgoal": phases[0]}] * 4}]}, None
+    )
+    assert plan_problems(current, {"blocks": [block | {"steps": [*steps, {}]}]}, None)
+
+
+def test_summary_and_constructed_examples_have_no_invented_state_floor() -> None:
+    summary = plan(example=UCS, blocks=["ucs-romania"])
+    constructed = plan(
+        example=UCS | {"origin": "constructed", "why": "The source gives no worked run."},
+        blocks=["ucs-romania"],
+    )
+    value = {"blocks": [{"key": "ucs-romania", "kind": "walkthrough", "steps": [{}]}]}
+    assert plan_problems(summary, value, None) == []
+    assert plan_problems(constructed, value, None) == []
+    assert "states" not in summary.model_dump(mode="json")["concepts"][0]["example"]
+    assert "phases" not in summary.model_dump(mode="json")["concepts"][0]["example"]
+
+
+@pytest.mark.parametrize("states", [0, -1, 1.5, True])
+def test_source_state_count_is_a_positive_whole_number(states: int | float) -> None:
+    with pytest.raises(ValidationError):
+        plan(example=UCS | {"states": states})
+
+
+@pytest.mark.parametrize(
     ("change", "message"),
     [
         ({"pages": None}, "names its source and pages"),

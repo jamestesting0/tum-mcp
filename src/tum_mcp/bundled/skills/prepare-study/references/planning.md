@@ -100,6 +100,12 @@ For each concept taught through a selected source demonstration, the plan names 
 `origin` (`source` or `constructed`), `source` and `pages`, what it `shows`, its
 `endpoint` and the `block` that teaches it; a constructed example says `why`. Use `shows`
 to name the inputs, representation and decisive working or test, not only the concept.
+For a source run, optionally record `states`, the number of distinct states its cited
+pages show, counted while reading them. Record its phase names in `phases` when they
+help navigate the run, such as depth limits, elimination passes or simulation rounds.
+The plan checker verifies these against the pages. The walkthrough keeps at least
+those states and uses `subgoal` groups for those phases. A summary-only source or a
+constructed example needs no state count. More steps are fine.
 A geometric proof keeps its construction; a physical law keeps its free-body diagram;
 a legal distinction keeps the contrasting cases and their decisive facts.
 Mentioning the idea in `instance` does not select its demonstration.
@@ -120,6 +126,8 @@ The weakness is a selected example that loses the evidence for its teaching poin
 1. **Its inputs.** Preserve the lecture's exact givens, labels, assumptions and conventions.
    The weakness is a smaller substitute that drops the source example's difficulty.
 2. **Its picture.** Show the object the reasoning acts on, in its natural form.
+   Explain how to read the picture: what a region, boundary or direction means.
+   A phase diagram needs its regions' meaning; a circuit needs its current convention.
    Use the lecture's crop when it is clearest
    ([picking the picture](representations.md#pick-the-picture-the-work-acts-on)).
    Do not force an argument or classification into a graph or an animated process.
@@ -143,8 +151,9 @@ The weakness is a selected example that loses the evidence for its teaching poin
    state after one operation at source granularity or finer, never coarser. Separate pops,
    algebraic transformations, simulation ticks, table-row updates, proof inferences and
    transaction postings keep their intermediate states. One atomic action touching several
-   items stays one step, such as expanding a node and pushing all its children or applying
-   one matrix row operation. Length is never a reason to drop, merge or split steps:
+   items stays one step, such as applying one matrix row operation. A selection and
+   separate child insertions keep the states the source shows. Length is never a reason
+   to drop, merge or split steps:
    the app's step menu handles long walkthroughs. Group its phases with `subgoal`; do not repeat
    the picture and restart numbering in consecutive widgets. Iterations of a solver
    and stages of a reaction stay together. Separate blocks are useful for genuinely

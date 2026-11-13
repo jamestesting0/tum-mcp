@@ -89,12 +89,16 @@ export function drawGrids(block, { captions = (block.arrows || []).some(arrow =>
 
   function show({ marks = [], arrows: moves = [], values = new Map() } = {}) {
     for (const [key, parts] of cells) {
-      for (const part of parts) part.classList.remove('active', 'frontier', 'visited', 'path');
+      for (const part of parts) part.classList.remove('active', 'discarded', 'frontier', 'visited', 'path');
       const authored = block.grids.find(grid => key.startsWith(`${grid.key}:`));
       const [row, column] = key.slice(authored.key.length + 1).split(':').map(Number);
       texts.get(key).textContent = values.has(key) ? values.get(key) : authored.cells[row - 1][column - 1];
     }
-    for (const mark of marks) for (const part of cells.get(`${mark.grid}:${mark.cell}`) || []) part.classList.add(mark.mark || 'active');
+    for (const [key, parts] of cells) {
+      const roles = marks.filter(mark => `${mark.grid}:${mark.cell}` === key).map(mark => mark.mark || 'active');
+      const role = ['active', 'discarded', 'frontier', 'path', 'visited'].find(mark => roles.includes(mark));
+      if (role) for (const part of parts) part.classList.add(role);
+    }
     arrows.replaceChildren(); notes.replaceChildren();
     moves.forEach(drawArrow);
     drawLabels(moves);

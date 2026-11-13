@@ -105,7 +105,7 @@ an independent hidden implementation does not check missing published instructio
 This is a small author dry run of the existing example, not another formal review.
 
 A staged walkthrough shows the state of its picture, not only a new caption. On
-graphs, set each step's `active`, `frontier`, `visited`, `cutoff` and relevant `edges` from the
+graphs, set each step's `active`, `frontier`, `visited`, `cutoff`, `discarded` (rejected or pruned, never merely unreached; grids use the same mark) and relevant `edges` from the
 actual run; use the stage's node keys. Code marks its running `lines`, tables their
 `shown` rows or changed `cells`, derivations their `shown` lines, plots their `series`
 and SVG figures their `layers`. Grids mark cells with `grid_marks`, draw moves with

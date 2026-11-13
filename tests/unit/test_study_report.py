@@ -21,6 +21,103 @@ def exercises() -> dict:
     return json.loads((FIXTURES / "exercises.json").read_bytes())
 
 
+@pytest.mark.parametrize(
+    ("name", "stage", "marks"),
+    [
+        (
+            "Search",
+            {
+                "kind": "diagram",
+                "layout": "tree",
+                "description": "The search input.",
+                "nodes": [{"key": "a", "label": "A"}, {"key": "b", "label": "B"}],
+                "edges": [{"start": "a", "end": "b", "directed": True}],
+            },
+            [{"active": ["a"]}, {"active": ["b"]}],
+        ),
+        (
+            "Derivation",
+            {"kind": "derivation", "groups": [{"lines": [{"latex": "1+1"}, {"latex": "2"}]}]},
+            [{"shown": 1}, {"shown": 2}],
+        ),
+    ],
+)
+def test_report_and_lint_hold_source_states_and_phase_gaps(
+    tmp_path: Path, name: str, stage: dict, marks: list[dict]
+) -> None:
+    from types import SimpleNamespace
+
+    from tum_mcp.course.checks.plans import Plan
+    from tum_mcp.course.cli import _lint_item
+    from tum_mcp.course.review.models import INVARIANT_FLAGS
+
+    value = study()
+    unit = value["units"][0]
+    block = {
+        "key": "process",
+        "kind": "walkthrough",
+        "sources": [unit["sources"][0]["key"]],
+        "stage": stage,
+        "steps": [
+            {"action": "Prepare.", "why": "Use the input.", "subgoal": "Prepare"} | marks[0],
+            {"action": "Compute.", "why": "Apply the rule.", "subgoal": "Compute"} | marks[1],
+        ],
+    }
+    unit["blocks"] = [block]
+    current = Plan.model_validate(
+        {
+            "item": f"study/{unit['key']}",
+            "concepts": [
+                {
+                    "name": name,
+                    "kind": "algorithm",
+                    "instance": "Compute the stated input.",
+                    "blocks": ["process"],
+                    "example": {
+                        "origin": "source",
+                        "source": unit["sources"][0]["key"],
+                        "pages": "1-3",
+                        "shows": "The source run.",
+                        "endpoint": "Its computed result.",
+                        "block": "process",
+                        "states": 3,
+                        "phases": ["Prepare", "Compute"],
+                    },
+                }
+            ],
+        }
+    )
+    path = tmp_path / f".tum-mcp/plans/{current.item}.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(current.model_dump_json())
+    for count, grouped, expected in [
+        (2, True, {"source_states_missing"}),
+        (3, False, {"source_phases_missing"}),
+        (4, True, set()),
+    ]:
+        block["steps"] = [block["steps"][0]] + [
+            {"action": "Compute.", "why": "Apply the rule.", "subgoal": "Compute"} | marks[1]
+            for _ in range(count - 1)
+        ]
+        if not grouped:
+            block["steps"][-1].pop("subgoal")
+        content = StudyContent.model_validate(value)
+        found = [
+            flag
+            for flag in quality_flags(content, None, root=tmp_path)
+            if flag["flag"] in {"source_states_missing", "source_phases_missing"}
+        ]
+        assert {flag["flag"] for flag in found} == expected
+        assert all(flag["item"] == f"{unit['key']}/process" for flag in found)
+        assert all(flag["flag"] in INVARIANT_FLAGS for flag in found)
+        context = SimpleNamespace(
+            flags_by_item={current.item: found},
+            items={current.item: SimpleNamespace(value=unit)},
+            answer_keys=[],
+        )
+        assert _lint_item(tmp_path, context, current.item, None)["passed"] is (not expected)
+
+
 def test_walkthrough_quality_signals_and_visibility_boundaries() -> None:
     catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
     value = study()
