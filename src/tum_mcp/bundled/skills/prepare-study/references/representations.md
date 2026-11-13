@@ -105,7 +105,9 @@ keeps the lecture's shape however wide it is. When the lecture grows the tree as
 generated (A* on a map), list `visible_nodes`; otherwise the whole tree is drawn, as on
 slides that show it whole, and nodes no step has reached yet stay faint. Put what the slide
 writes beside a node (its g, h and f, a
-domain, a depth) in `node_values`, with the arithmetic (\(140 + 253 = 393\)). Derive
+domain, a depth) in `node_values`, with the arithmetic (\(140 + 253 = 393\)). Each step
+lists the value of every visible node: values do not carry forward. The graph walkthrough
+shows its node-state legend automatically. Derive
 graph marks and displayed state from the same computed trace, and include visual values
 in the answer key when computed. Do not invent a
 changing highlight just to clear `static_walkthrough`. An intentionally fixed
@@ -113,8 +115,10 @@ picture belongs beside ordinary explanation, outside a staged walkthrough.
 
 Run the lecture's own example in a `walkthrough`, with its inputs unchanged
 ([choosing examples](planning.md#choose-the-lectures-examples)). Each step does one
-operation as the lecturer shows it, usually one expansion: its `action` says what, its
-`why` says why it is allowed or chosen, and `note` names the mistake a student
+operation as the lecturer shows it, usually one expansion. Compute the states in code first.
+Its `action` says what; its `why` uses that step's numbers and the rule that forces the
+operation, never a sentence repeated across steps. Show how each computed value is obtained:
+a tile distance shows its row difference plus its column difference. `note` names the mistake a student
 makes at that moment when there is a typical one. Group the steps by `subgoal` (start,
 loop, stop). `state` rows show the data the student would otherwise track mentally; the app
 marks what changed since the previous step. Include a real failure and its undo when the

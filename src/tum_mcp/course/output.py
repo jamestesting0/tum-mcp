@@ -29,7 +29,14 @@ def summarize(value: JsonValue, depth: int = 0) -> JsonValue:
             return value
 
 
-def emit(root: Path, command: str, result: JsonValue, *, full: bool) -> None:
+def emit(
+    root: Path,
+    command: str,
+    result: JsonValue,
+    *,
+    full: bool,
+    summary: dict[str, JsonValue] | None = None,
+) -> None:
     name = f"{PRIVATE}/out/{command}.json"
     path = confined(root, name)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -38,5 +45,21 @@ def emit(root: Path, command: str, result: JsonValue, *, full: bool) -> None:
     if full:
         typer.echo(text)
         return
-    summary = {"summary": summarize(result), "full": name}
+    if summary is None:
+        summary = {"summary": summarize(result), "full": name}
+    else:
+        summary = summary | {"full": name}
+        lines = []
+        for key, value in summary.items():
+            if key == "items" and isinstance(value, dict):
+                entries = [
+                    f"    {json.dumps(item)}: {json.dumps(status, ensure_ascii=False)}"
+                    for item, status in value.items()
+                ]
+                rendered = "{\n" + ",\n".join(entries) + "\n  }" if entries else "{}"
+            else:
+                rendered = json.dumps(value, ensure_ascii=False)
+            lines.append(f"  {json.dumps(key)}: {rendered}")
+        typer.echo("{\n" + ",\n".join(lines) + "\n}")
+        return
     typer.echo(json.dumps(summary, indent=2, ensure_ascii=False))

@@ -6,9 +6,14 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from pydantic import TypeAdapter, ValidationError
 
+from tum_mcp.course.checks.batch import Batch
+from tum_mcp.course.project.models import Key
+from tum_mcp.course.project.store import private_path, read_bytes
 from tum_mcp.course.workflow import tasks
 from tum_mcp.course.workflow.hooks import Host, handle
+from tum_mcp.errors import CampusError, Code
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
@@ -16,12 +21,26 @@ app = typer.Typer(pretty_exceptions_show_locals=False)
 @app.command()
 def start(
     project: Path,
-    batch: Annotated[str, typer.Option()],
+    batch: Annotated[str, typer.Option(help="Batch ID for .tum-mcp/batches/<ID>.json.")],
     review_rounds: Annotated[int, typer.Option(min=0, max=20)] = 0,
     owner: Annotated[str | None, typer.Option(help="Identity supplied by the host hook.")] = None,
 ) -> None:
     """Track the requested batch; add review rounds only when already authorized."""
-    typer.echo(tasks.begin(project.resolve(), batch, review_rounds, owner=owner).model_dump_json())
+    root = project.resolve()
+    path = f".tum-mcp/batches/{batch}.json"
+    try:
+        batch_id = TypeAdapter(Key).validate_python(batch)
+        body = read_bytes(private_path(root, f"batches/{batch_id}.json"))
+        if body is None:
+            raise CampusError(
+                Code.ACTION_REQUIRED, f"Missing {path}; see tum-mcp study schema batch."
+            )
+        Batch.model_validate_json(body)
+    except ValidationError as exc:
+        raise CampusError(
+            Code.ACTION_REQUIRED, f"Invalid {path}; see tum-mcp study schema batch."
+        ) from exc
+    typer.echo(tasks.begin(root, batch_id, review_rounds, owner=owner).model_dump_json())
 
 
 @app.command()

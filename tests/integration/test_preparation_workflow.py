@@ -107,7 +107,17 @@ def bounded_scope(project: Path) -> tuple[Path, dict]:
 
 def readiness(project: Path) -> dict:
     result = CliRunner().invoke(
-        app, ["study", "report", str(project), "--section", "readiness", "--preparation", "bounded"]
+        app,
+        [
+            "study",
+            "report",
+            str(project),
+            "--section",
+            "readiness",
+            "--preparation",
+            "bounded",
+            "--json",
+        ],
     )
     assert result.exit_code == 0, result.output
     return json.loads(result.output)["readiness"]

@@ -115,7 +115,10 @@ Teach a chosen example in full:
    slide writes beside a node (g, h, f with their sum) goes in the step's `node_values`,
    not into the node label ([representations](representations.md#algorithm-traces)).
 3. **Its steps.** One step is one operation the lecturer shows, usually one expansion:
-   never several expansions in one step, never finer than the slides.
+   never several expansions in one step, never finer than the slides. Compute states in
+   code first. Write each step's `why` from its own numbers and the rule that forces it,
+   not a sentence repeated across steps. Show computed working: a tile distance shows
+   its row difference plus its column difference.
 4. **Every state to its endpoint.** Show every state the slides show and any step a student
    needs between them. When the slides stop early and the result matters, finish the run
    with the lecture's own inputs and say where the lecture stops. Never add a goal, value or
@@ -125,8 +128,8 @@ Teach a chosen example in full:
    are subgoals of one walkthrough. Every worked run in the unit, a table of states
    included, is a planned `example`; plan it or cut it.
 
-Compute the expected states from the lecture's inputs before authoring, and use
-run-keyed answer states so verification checks every step. Low cognitive load is about
+Each step lists the value of every visible node in `node_values`; values are not carried
+from earlier steps. Use run-keyed answer states so verification checks every step. Low cognitive load is about
 how an example is presented (one step at a time, the change highlighted, the reason
 stated), never about a smaller or easier example.
 

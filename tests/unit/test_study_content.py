@@ -2,19 +2,37 @@ import json
 from collections import deque
 from importlib.resources import files
 from pathlib import Path
+from typing import get_args
 
 import httpx2
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from tum_mcp.artemis import Artemis
 from tum_mcp.course.content.latex import safe_mathml
-from tum_mcp.course.content.study import Objective, StudyContent
+from tum_mcp.course.content.study import Block, Objective, Stage, StudyContent
 from tum_mcp.course.project.models import Resource
 from tum_mcp.credentials import Credential
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Account, Provider
 from tum_mcp.transport import API
+
+
+def test_example_catalogue_validates_and_covers_block_and_stage_kinds() -> None:
+    catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    blocks = TypeAdapter(Block)
+    stages = TypeAdapter(Stage)
+    for name, value in catalogue.items():
+        (stages if name.startswith("stage-") else blocks).validate_python(value)
+    block_kinds = {
+        value["kind"] for name, value in catalogue.items() if not name.startswith("stage-")
+    }
+    assert block_kinds == {
+        cls.model_fields["kind"].annotation.__args__[0] for cls in get_args(get_args(Block)[0])
+    }
+    assert {value["kind"] for name, value in catalogue.items() if name.startswith("stage-")} == {
+        cls.model_fields["kind"].annotation.__args__[0] for cls in get_args(get_args(Stage)[0])
+    }
 
 
 def test_explore_preserves_legacy_core_progress_but_changes_teaching_review() -> None:
