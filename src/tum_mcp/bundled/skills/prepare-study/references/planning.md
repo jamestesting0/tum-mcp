@@ -60,11 +60,10 @@ unit whose limitation it resolves.
 For application/reasoning objectives, also plan the questions in `practice`, before
 writing options. Each entry has `question` (its stable question key), `contrast` (the
 worked case it differs from and the unworked input or decision), and `answer` (the new
-input, result and shortest valid reasoning). For example, after a DFS trace that reaches
-a goal, ask about an unreachable goal behind a cycle: the student must decide whether
-visited-state tracking permits termination, rather than replay the demonstrated pop
-order. Solve that new case now. A changed start/goal on the same graph can work when it
-changes the reasoning; different names or numbers alone are insufficient.
+input, result and shortest valid reasoning). The weakness is practice that replays a
+solved case without requiring the intended decision. Change a relevant condition or
+input, then solve the new case now. Reusing the same setting is useful when the required
+reasoning changes. Renaming alone does not establish transfer.
 Recall-only objectives need no invented transfer case. Released exercise statements
 remain faithful to their source. This is part of the existing plan check, not another
 checker or a separate planning document.
@@ -76,22 +75,24 @@ Judge the required calculation or decision, not shared vocabulary or numbers alo
 A lecture demonstrates its methods on worked examples. Choose the ones a student needs
 and teach each of them completely; leave the rest out. Read the source's `examples` in
 its digest: one line per worked demonstration with its pages, what it shows and its
-inputs (graph, weights, board, start and goal).
+inputs and conventions.
 
-An example is critical when at least one holds:
+The weakness is incomplete example selection: explanatory demonstrations can be lost
+when only exercises or end-to-end calculations are recorded.
 
-| Critical when | For example |
-| --- | --- |
-| It is the lecture's run of a procedure or calculation the student must perform | The breadth-first run to a goal; A* on the Romania map; h1 and h2 on the 8-puzzle |
-| It shows a decision, branch or failure the main run cannot | A path cost improved before the goal is removed; a cutoff versus a failure; a heuristic that loops; a reopened node |
-| Later material or the exercises build on it | The map or board that later lectures reuse |
-| It shows why a method works or what it costs | The node counts that make iterative deepening affordable; A*'s f-contours; the search tree that repeats a state |
+An example is critical when it teaches a procedure the student must perform, shows a
+decision or failure the main example cannot, supports later work, or explains why a
+method works or what it costs. This includes an algorithm's effort count, a physics
+conservation argument and a legal case that establishes an exception. Judge what the
+student must understand, not the subject or the example's format.
 
 Leave out the same mechanism run again on another object, motivation and application
 pictures without workable inputs, empirical tables (state the finding and cite the page)
 and partial illustrations the main run already covers. Teach one main example per
 mechanism. Add a second only when it shows something the first cannot; a contrast on
-the same input is a `variant` run of one walkthrough. Construct an example only when
+the same input can be a `variant` run of one walkthrough. Keep distinct source
+demonstrations when they teach different decisions, even on the same object.
+Construct an example only when
 the lecture has none for the concept, or for practice. There is no quota.
 
 For each `procedure`, `algorithm` or `model` concept, the plan names its `example`:
@@ -100,38 +101,42 @@ For each `procedure`, `algorithm` or `model` concept, the plan names its `exampl
 check refuses such a concept without one, unless `skip` explains why it is not worked.
 
 ```json
-"example": {"origin": "source", "source": "uninformed", "pages": "52-56",
-  "shows": "B is reached at 310, then improved to 278 before it is removed",
-  "endpoint": "B removed with g = 278, path S-R-P-B", "block": "ucs-romania"}
+"example": {"origin": "source", "source": "lecture", "pages": "12-14",
+  "shows": "The boundary condition changes which rule applies",
+  "endpoint": "The source's worked conclusion", "block": "boundary-case"}
 ```
 
-Teach a chosen example in full:
+Teach a chosen example in full.
+The weakness is a selected example that loses the evidence for its teaching point.
 
-1. **Its inputs.** The lecture's exact graph, weights, values, board, start and goal,
-   labels and conventions (child order, tie-break, when the goal is tested).
-2. **Its picture.** A tree as a tree (`layout: "tree"`, growing as the lecture grows it), a
-   weighted graph as a drawn graph with its costs on the edges, and a map, board or plot
-   as the lecture's own crop when it is the clearest, walked through with `regions`
-   ([picking the picture](representations.md#pick-the-picture-the-work-acts-on)). What the
-   slide writes beside a node (g, h, f with their sum) goes in the step's `node_values`,
-   not into the node label ([representations](representations.md#algorithm-traces)).
-3. **Its steps.** One step is one operation the lecturer shows, usually one expansion:
-   never several expansions in one step, never finer than the slides. Compute states in
-   code first. Write each step's `why` from its own numbers and the rule that forces it,
-   not a sentence repeated across steps. A computed value shows its inputs and arithmetic
-   in its `why` or a state row. For tile 3, show the start and goal coordinates:
-   row 2 to 0, column 1 to 2, so \(\lvert 2-0\rvert + \lvert 1-2\rvert = 3\).
-4. **Every state to its endpoint.** Show every state the slides show and any step a student
+1. **Its inputs.** Preserve the lecture's exact givens, labels, assumptions and conventions.
+   The weakness is a smaller substitute that drops the source example's difficulty.
+2. **Its picture.** Show the object the reasoning acts on, in its natural form.
+   Use the lecture's crop when it is clearest
+   ([picking the picture](representations.md#pick-the-picture-the-work-acts-on)).
+   Do not force an argument or classification into a graph or an animated process.
+3. **Its decisive working.** Preserve each operation the lecturer shows and its order. Compute
+   numerical states in code first; check qualitative reasoning against the source.
+   The weakness is unexplained working: a result or a repeated rule hides the step's
+   own justification. Use the step's facts and the rule that licenses it. A calculation
+   shows the original inputs, substitutions and arithmetic in `why` or a state row.
+   An argument needs its premises and inference, not invented numbers.
+4. **Its endpoint and teaching result.** Show every state the slides show and any step a student
    needs between them. When the slides stop early and the result matters, finish the run
-   with the lecture's own inputs. Never add a goal, value or
-   input the lecture lacks to reach an ending: a run without a goal ends where its
-   traversal ends (all nodes within the limit expanded, a cutoff).
-5. **One walkthrough per run.** Repeated rounds, such as iterative deepening's limits,
+   with the lecture's own inputs. Going beyond the lecture is fine; covering less is not.
+   Never invent a missing input or desired result to force an ending. An unresolved
+   case may end at a justified limit or an inconclusive result. Preserve the comparison
+   or result that makes the example's point, including its interpretation. Correct
+   intermediate calculations alone do not establish that point. Do not add a comparator
+   when the example teaches no comparison.
+5. **One walkthrough per run.** Repeated rounds of one process
    are subgoals of one walkthrough. Every worked run in the unit, a table of states
    included, is a planned `example`; plan it or cut it.
 
-Each step lists the value of every visible node in `node_values`; values are not carried
-from earlier steps. Use run-keyed answer states so verification checks every step. Low cognitive load is about
+The weakness is disappearing evidence: a later display loses facts the learner still needs.
+For a graph stage, each step lists its visible node values in `node_values`; values do
+not carry forward. A node without a value in the source needs no invented one.
+Use run-keyed answer states so verification checks every step. Low cognitive load is about
 how an example is presented (one step at a time, the change highlighted, the reason
 stated), never about a smaller or easier example.
 

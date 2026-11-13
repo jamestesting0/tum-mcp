@@ -1,7 +1,7 @@
 # Visual pass
 
 Score every drawn visual (diagram, UML diagram, flowchart, plot, figure, table) the way the
-student sees it: from its contact sheets, with the render
+student sees it: from its desktop contact sheets (phone only when asked), with the render
 findings and the cited source page beside it. Never score a visual from its JSON.
 Formulas, derivations and code are absent from these contact sheets. Inspect their
 affected passages and revealed answers in the built app; an empty sheet selection
@@ -34,7 +34,10 @@ The render check's defects decide a criterion before you look:
 | `label_overlap`, `label_on_line`, `label_on_node`, `clipped_text`, `tiny_text` | Legibility at 1 |
 | `tall_visual`, `tall_cell`, `table_scrolls` | Legibility at 2 |
 
-Walkthroughs are photographed at their first and last steps. A graph stage that still
+The weakness is judging a changing explanation from only its endpoint.
+Walkthroughs are photographed at their first and last steps. Inspect intermediate
+states when the reasoning depends on them; endpoint captures alone cannot establish it.
+A graph stage that still
 scrolls at desktop appears under `notes` in the visuals summary. `scrolls` is a note,
 not a defect: judge it under Legibility.
 
@@ -46,7 +49,7 @@ Representation score never exceeds its weakest visual.
 | Criterion | 3 means | 2 | 1 |
 | --- | --- | --- | --- |
 | Fidelity | Says exactly what the source says: every node, edge, direction, label and value; nothing invented or dropped; discrete things drawn discrete; real scales | A simplification the text does not mention | A wrong, invented or dropped element; a misleading scale |
-| Form | The kind of block fits the idea, as in prepare-study's [representation table](../../prepare-study/references/representations.md#choose-the-representation); how it is arranged is Layout | A workable but weaker form, such as a table for a decision tree | A form that hides the idea, such as numbered steps for a network |
+| Form | The kind of block fits the idea, as in prepare-study's [representation table](../../prepare-study/references/representations.md#choose-the-representation); how it is arranged is Layout | A workable but weaker form, such as a table for a decision tree | A form that hides the idea, such as numbered steps for a network or a table of coordinates for a board |
 | Layout | Reading order kept; main path straight; meaningful positions (map, timeline, ring) kept; no crossing or bend the structure does not force | One avoidable crossing, bend or detour | The structure cannot be followed |
 | Legibility | Every label beside its own mark and clear of the others; readable text; the drawing fits the available column, or scrolls only because it cannot be narrower | Avoidable scrolling or crowded labels | A hard-gate finding |
 | Focus | One message; a picture's caption states it, a table of cases may name what it lists; colour and frames mark only what the caption discusses | Two messages, a picture whose caption names it or explains its symbols instead of its point, or a caption whose point the picture does not show | No visible message |
@@ -55,7 +58,8 @@ Representation score never exceeds its weakest visual.
 ## Calibrate
 
 `tum-mcp study visuals PROJECT --gallery` draws the [calibration gallery](visual-gallery.json)
-with this app at both widths, each picture captioned with its key only. Most verdicts come
+with this app, each picture captioned with its key only. Use desktop captures; add phone
+captures only when requested. Most verdicts come
 from the course owner's own review; the rest follow a rule from prepare-study's guides, and
 each entry says which. Score three pictures before opening the file, then compare your
 score on the criterion each verdict names. A disagreement means you misread a criterion:

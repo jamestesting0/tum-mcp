@@ -22,7 +22,7 @@ HOSTS = {
     "codex": ["codex", "exec", "--sandbox", "read-only", "--skip-git-repo-check", "{prompt}"],
 }
 VISUAL_GUIDANCE = (
-    "For requested visuals, open the item's current captures under "
+    "For requested visuals, open the item's current desktop captures (phone only when asked) under "
     "`visual_sheets` before scoring. Use all six criteria with integer scores of 1, 2 or 3 "
     "when supported by the evidence. Never guess a score for a capture you could not inspect."
 )
@@ -57,7 +57,7 @@ PROMPT = (
     "page that cannot be opened and why. Incomplete sampling or 'not independently verified' "
     "is not unavailable evidence: a sampled check whose likeliest failures pass is a pass. For "
     "correctness.recomputed and correctness.answer_key, inspect the key script's inputs against "
-    "the slides and spot-check: a passing key proves agreement, not correctness. "
+    "the sources and spot-check: a passing key proves agreement, not correctness. "
     "Quote word for word from the passage at its location. "
     "Reply with only the answers JSON object."
 )

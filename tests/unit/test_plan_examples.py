@@ -217,6 +217,41 @@ def test_unused_digest_examples_respect_source_and_page_overlap(tmp_path) -> Non
     }
 
 
+@pytest.mark.parametrize(
+    "description",
+    [
+        "The phase diagram shows when a conservation argument stops applying.",
+        "The class diagram shows which object owns the lifecycle transition.",
+    ],
+)
+def test_figures_only_digest_entries_reach_selection_even_on_a_selected_page(
+    tmp_path: Path, description: str
+) -> None:
+    import json
+
+    from tum_mcp.course.checks.plans import plan_packet
+
+    directory = tmp_path / ".tum-mcp/plans/study"
+    directory.mkdir(parents=True)
+    (directory / "search.json").write_text(plan(example=UCS).model_dump_json())
+    digests = tmp_path / ".tum-mcp/digests"
+    digests.mkdir()
+    (digests / "uninformed.json").write_text(
+        json.dumps(
+            {
+                "source": "uninformed",
+                "sha256": "0" * 64,
+                "figures": [{"pages": "53", "text": description}],
+            }
+        )
+    )
+    packet = plan_packet(tmp_path)
+    assert packet["unused_examples"] == [
+        {"source": "uninformed", "pages": "53", "text": description, "kind": "figure"}
+    ]
+    assert packet["answer"]["items"][0]["reasons"] == []
+
+
 def test_changed_concept_can_escalate_advice_without_new_evidence(tmp_path) -> None:
     import json
 

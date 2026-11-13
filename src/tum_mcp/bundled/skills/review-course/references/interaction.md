@@ -1,6 +1,6 @@
 # Interaction pass
 
-Work the item in the app as a student, at the supplied width, with
+Work the item in the app as a student, at desktop width (phone only when asked), with
 `tum-mcp study serve PROJECT`. Drive a browser when the host can; otherwise work from the
 data and the contact sheets and say which steps you could not try. This pass scores
 Practice.

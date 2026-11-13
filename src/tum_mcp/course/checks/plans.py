@@ -549,9 +549,11 @@ def _unused_examples(root: Path, waiting: list[Plan]) -> list[JsonValue]:
         digest = read_digest(root, path.stem)
         if digest:
             unused.extend(
-                {"source": digest.source, "pages": entry.pages, "text": entry.text}
-                for entry in digest.examples
-                if not (_pages(entry.pages) & used.get(digest.source, set()))
+                {"source": digest.source, "kind": kind, "pages": entry.pages, "text": entry.text}
+                for kind, entries in (("example", digest.examples), ("figure", digest.figures))
+                for entry in entries
+                # A figure can teach a separate idea on the same page as a selected example.
+                if kind == "figure" or not (_pages(entry.pages) & used.get(digest.source, set()))
             )
     return unused
 
@@ -656,22 +658,29 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "used in comparisons, headings and conditions, with their defining conditions "
             "and a useful case; a method-specific guarantee is not a general definition.\n"
             "4. Compare Study procedures, algorithms, models and stated lecture calculations "
-            "with digest examples and source pages. On the first check judge unused_examples "
+            "with digest examples, figures and source pages. On the first check judge "
+            "unused_examples "
             "as selection context: a required method run, a new decision, branch or failure, "
-            "a case later material builds on, or a worked count, figure or tree the lecture "
-            "uses to show why a method works or what it costs can be critical. Write nothing "
+            "a case later material builds on, or a worked argument, calculation or visual "
+            "that explains a method's validity, limits or costs can be critical. Judge the "
+            "learning need; decorative illustrations without reasoning or usable inputs are "
+            "not worked demonstrations. The kind marker distinguishes examples and figures; "
+            "figures remain context even on selected pages because page overlap does not "
+            "prove their idea is taught. This is selection context, not a quota. Write nothing "
             "for the rest. "
             "Keep critical lecture examples complete: inputs, conventions, steps and endpoint. "
-            "Finish an incomplete slide run with its original inputs; a goal-free traversal "
-            "ends naturally, without inventing a goal or value. For each additional example "
+            "Finish incomplete source working with its original inputs when the result matters. "
+            "Going beyond the source is fine; covering less is not. Do not invent missing "
+            "givens or a desired result to force an ending. For each additional example "
             "of one mechanism say what it shows that the first cannot; otherwise it is a repeat. "
             "Leave out repeated mechanisms on another object, applications without workable "
             "inputs and empirical tables. Construct a case only when the lecture has none.\n"
             "5. For Study application or reasoning, check each practice case has its solved "
             "result and an unworked input or decision. Routine new inputs are valid; require "
             "substantive transfer when the objective does. A general rule is not a solved "
-            "assessment case; an unchanged worked input tests recall. A changed start, goal "
-            "or ordering on the same graph may change the reasoning. Recall-only objectives "
+            "assessment case; an unchanged worked input tests recall. Reusing a setting can "
+            "be valid when a changed condition or input changes the required reasoning. "
+            "Do not demand a new setting for routine application. Recall-only objectives "
             "and released exercise statements need no invented transfer case. Check contrasts "
             "against solved examples and reserve assessment cases for practice.\n"
             "6. Fail only for source contradictions, missing or altered critical examples, "

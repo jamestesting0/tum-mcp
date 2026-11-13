@@ -4,7 +4,7 @@ from importlib.resources import files
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 
 from tum_mcp.course.checks.report import arithmetic_errors, quality_flags
 from tum_mcp.course.content.exercises import ExerciseContent
@@ -133,11 +133,14 @@ def test_graph_stage_nodes_must_be_shown_in_a_step(show_all: str) -> None:
         assert hidden[0]["item"] == f"{unit['key']}/trace"
 
 
-def test_repeated_step_reasons_hold_readiness_without_a_ruling() -> None:
+def test_repeated_step_reasons_require_judgment_without_lowering_the_teaching_bar() -> None:
+    from tum_mcp.course.review import registry
     from tum_mcp.course.review.models import INVARIANT_FLAGS, RULED_FLAGS
 
-    assert INVARIANT_FLAGS["repeated_step_reason"] == "intuition"
-    assert "repeated_step_reason" not in RULED_FLAGS
+    assert RULED_FLAGS["repeated_step_reason"] == "intuition.reasons"
+    assert "repeated_step_reason" not in INVARIANT_FLAGS
+    check = registry.checks()["intuition.reasons"]
+    assert check.default_fail and check.teaching
 
 
 @pytest.mark.parametrize(
@@ -148,12 +151,44 @@ def test_repeated_step_reasons_hold_readiness_without_a_ruling() -> None:
             ["Tile 1 moves to its goal.", "Tile 2 moves to its goal.", "Tile 3 moves to its goal."],
             True,
         ),
+        (
+            [
+                "Sample 1 follows the reaction rule.",
+                "Sample 2 follows the reaction rule.",
+                "Sample 3 follows the reaction rule.",
+            ],
+            True,
+        ),
+        (
+            [
+                "Article 4 satisfies the legal test.",
+                "Article 5 satisfies the legal test.",
+                "Article 6 satisfies the legal test.",
+            ],
+            True,
+        ),
         (["B is a leaf.", "C is a leaf."], False),
         (
             [
                 "Tile 1: |2-0| + |1-2| = 3.",
                 "Tile 2: |1-0| + |0-0| = 1.",
                 "Tile 3: |1-2| + |0-2| = 3.",
+            ],
+            False,
+        ),
+        (
+            [
+                r"Sample 1: \(2 \cdot 3 = 6\) mol by the reaction ratio.",
+                r"Sample 2: \(4 \cdot 3 = 12\) mol by the reaction ratio.",
+                r"Sample 3: \(5 \cdot 3 = 15\) mol by the reaction ratio.",
+            ],
+            False,
+        ),
+        (
+            [
+                "Article 4 applies because the seller is a business.",
+                "Article 5 fails because the buyer is acting professionally.",
+                "Article 6 is excluded by the signed waiver.",
             ],
             False,
         ),
@@ -189,6 +224,111 @@ def test_trace_table_is_not_flagged_in_question_context() -> None:
     assert "trace_as_table" not in {
         f["flag"] for f in quality_flags(StudyContent.model_validate(value), None)
     }
+
+
+@pytest.mark.parametrize(
+    "columns,rows,flagged",
+    [
+        (
+            ["Iteration", "Estimate", "Residual"],
+            [["1", "2", "1"], ["2", "1.5", ".25"], ["3", "1.4", ".04"]],
+            True,
+        ),
+        (
+            ["Step", "Established facts", "Applicable provision"],
+            [
+                ["1", "Offer", "Formation"],
+                ["2", "Acceptance", "Formation"],
+                ["3", "Breach", "Remedy"],
+            ],
+            True,
+        ),
+        (
+            ["Phase", "Molecular state"],
+            [["Binding", "Bound"], ["Catalysis", "Intermediate"], ["Release", "Free"]],
+            True,
+        ),
+        (["Time", "Temperature"], [["0", "20"], ["1", "21"], ["2", "22"]], False),
+        (
+            ["Method", "State"],
+            [["Explicit", "Known"], ["Implicit", "Solved"], ["Mixed", "Both"]],
+            False,
+        ),
+        (
+            ["Step", "Instruction"],
+            [["1", "Read the claim"], ["2", "Identify the rule"], ["3", "State the conclusion"]],
+            False,
+        ),
+        (["Iteration", "Estimate"], [["1", "2"], ["2", "1.5"]], False),
+        (["Step", "State"], [["1", "Same"], ["2", "Same"], ["3", "Same"]], False),
+    ],
+)
+def test_process_table_signal_distinguishes_states_from_observations_and_instructions(
+    columns: list[str], rows: list[list[str]], flagged: bool
+) -> None:
+    value = study()
+    unit = value["units"][0]
+    unit["blocks"] = [
+        {
+            "kind": "table",
+            "key": "process",
+            "title": "Working",
+            "sources": [unit["sources"][0]["key"]],
+            "caption": "Successive records",
+            "columns": columns,
+            "rows": rows,
+        }
+    ]
+    found = quality_flags(StudyContent.model_validate(value), None)
+    assert any(flag["flag"] == "trace_as_table" for flag in found) is flagged
+
+
+@pytest.mark.parametrize(
+    "stage,steps",
+    [
+        (
+            {
+                "kind": "table",
+                "caption": "Mass balance",
+                "columns": ["Species", "Moles"],
+                "rows": [["Reactant", "2"], ["Product", "4"]],
+            },
+            [
+                {"action": "Record reactant.", "why": "The input is two moles.", "shown": 1},
+                {"action": "Record product.", "why": "The ratio doubles it.", "shown": 2},
+            ],
+        ),
+        (
+            {"kind": "code", "language": "python", "code": "state = 'ready'\nstate = 'done'"},
+            [
+                {"action": "Initialize.", "why": "No request has run.", "lines": "1"},
+                {"action": "Complete.", "why": "The request returned.", "lines": "2"},
+            ],
+        ),
+    ],
+)
+def test_reused_stages_are_ruled_on_across_representations(
+    stage: dict[str, JsonValue], steps: list[dict[str, JsonValue]]
+) -> None:
+    value = study()
+    unit = value["units"][0]
+    sources = [unit["sources"][0]["key"]]
+    static = stage | {"key": "reference", "title": "Input", "sources": sources}
+    if stage["kind"] == "code":
+        static["explanation"] = "The object's lifecycle."
+    walk = {
+        "kind": "walkthrough",
+        "key": "worked",
+        "sources": sources,
+        "stage": stage,
+        "steps": steps,
+    }
+    unit["blocks"] = [static, walk, walk | {"key": "replayed"}]
+    found = quality_flags(StudyContent.model_validate(value), None)
+    assert {str(flag["flag"]) for flag in found} >= {"duplicate_stage", "repeated_example"}
+    unit["blocks"] = [walk]
+    found = quality_flags(StudyContent.model_validate(value), None)
+    assert not {str(flag["flag"]) for flag in found} & {"duplicate_stage", "repeated_example"}
 
 
 @pytest.mark.parametrize("verb", ["points", "marks", "refers"])

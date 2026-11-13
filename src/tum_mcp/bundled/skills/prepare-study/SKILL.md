@@ -66,9 +66,12 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    unit as its plan decided, with the moves that fit each idea and the block types the
    schema offers ([content](references/content.md)). Use `tum-mcp study schema --example list`
    to list block examples and `tum-mcp study schema --example KIND` to print one.
+   The weakness is an opening whose purpose the learner cannot identify.
    Draft the heading outline first: major topics,
    their cases/examples, and any necessary detail. Set levels by those relationships
-   rather than making every passage a level-1 section. On a new site, prove one unit
+   rather than making every passage a level-1 section. Place an unframed opening under
+   its topic heading; a self-contained opening needs no extra framing just to clear a flag.
+   On a new site, prove one unit
    with the hardest required formats and `study visuals PROJECT --unit UNIT`, then author
    the rest in batches. Record changed
    decisions in the plan. Before writing options, solve each [practice question](references/practice.md)

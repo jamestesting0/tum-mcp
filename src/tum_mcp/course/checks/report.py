@@ -31,6 +31,7 @@ from tum_mcp.course.content.study import (
     DerivationBlock,
     DiagramBlock,
     GraphStage,
+    Sourced,
     StudyContent,
     TableBlock,
     TextBlock,
@@ -47,7 +48,7 @@ PARAGRAPH_SENTENCES = 2
 RUN_ON_WORDS = 30
 SECTION_WORDS = 70
 STATEMENT_WORDS = 80
-# About one 390 px phone screen: a question beyond this scrolls before the student can answer.
+# A long question can split attention; these thresholds prompt review of its needed context.
 QUESTION_WORDS = 80
 QUESTION_TABLE_ROWS = 6
 # A one-row table whose cell is a sentence holds the case's prose, not data.
@@ -616,6 +617,16 @@ def stepped(block: object) -> bool:
     )
 
 
+def _stage_content(block: Sourced) -> str:
+    """Compare teaching objects without their section labels or separate explanations."""
+    body = block.model_dump(
+        mode="json",
+        exclude=set(Sourced.model_fields)
+        | {"caption", "description", "frames", "walkthrough", "explanation"},
+    )
+    return json.dumps(body, sort_keys=True)
+
+
 def _sections(blocks: tuple) -> list[tuple[str, list]]:
     """Blocks grouped as the app shows them: a titled block and the untitled ones after it."""
     sections: list[tuple[str, list]] = []
@@ -742,60 +753,80 @@ def quality_flags(
         seen_terms |= terms
         drawings: dict[str, list[str]] = {}
         for block in unit.blocks:
-            if isinstance(block, WalkthroughBlock) and isinstance(block.stage, GraphStage):
-                drawn = block.stage.model_dump_json(include={"nodes", "edges"})
+            if isinstance(block, WalkthroughBlock) and block.stage is not None:
+                drawn = _stage_content(block.stage)
                 drawings.setdefault(drawn, []).append(block.key or block.title or "untitled")
         for repeated in (keys for keys in drawings.values() if len(keys) > 1):
             flag(
                 unit.key,
                 "repeated_example",
-                f"Walkthroughs {', '.join(repeated)} step through the same drawing. Keep one run "
-                "when each is the lecture's run of a different mechanism; otherwise keep one "
-                "and show the contrast as its variant.",
+                f"Walkthroughs {', '.join(repeated)} use the same teaching object. Check what "
+                "each adds. Keep distinct source demonstrations or methods that teach different "
+                "decisions; combine a contrast as a variant when it fits one explanation.",
             )
         if unit.blocks:
             first = unit.blocks[0]
-            if first.kind in {"table", "diagram", "figure"} and not first.title:
+            if first.kind not in {"text", "definition"} and not first.title:
                 flag(
                     unit.key,
                     "untitled_opening",
                     f"The lesson opens with the untitled block '{_name(first)}'. Open with the "
-                    "titled section it belongs to, and place the block inside that section.",
+                    "titled section it belongs to if the opening lacks context. A self-contained "
+                    "opening whose purpose is already clear can stay.",
                 )
         stages = [
             block.stage
             for block in unit.blocks
-            if isinstance(block, WalkthroughBlock) and isinstance(block.stage, GraphStage)
+            if isinstance(block, WalkthroughBlock) and block.stage is not None
         ]
         for block in unit.blocks:
             location = f"{unit.key}/{block.key or _name(block)}"
             if isinstance(block, TableBlock) and (
                 len(block.rows) >= 3
-                and re.match(r"^\s*(step|action|operation|iteration)\b", block.columns[0], re.I)
+                and re.match(
+                    r"^\s*(step|action|operation|iteration|stage|phase|round|transition)\b",
+                    block.columns[0],
+                    re.I,
+                )
                 and any(
-                    re.search(r"frontier|stack|queue|reached|visited", column, re.I)
-                    for column in block.columns
+                    len({row[index] for row in block.rows}) > 1
+                    and (
+                        re.search(
+                            r"\b(state|snapshot|before|after|configuration|frontier|stack|queue|"
+                            r"reached|visited)\b",
+                            column,
+                            re.I,
+                        )
+                        or (
+                            all(re.fullmatch(r"\s*\d+[.)]?\s*", row[0]) for row in block.rows)
+                            and not re.search(
+                                r"\b(instruction|action|rule|reason|explanation|purpose)\b",
+                                column,
+                                re.I,
+                            )
+                        )
+                    )
+                    for index, column in enumerate(block.columns[1:], start=1)
                 )
             ):
                 flag(
                     location,
                     "trace_as_table",
-                    f"Table '{_name(block)}' lists a search run as rows. Run it as a "
-                    "walkthrough over the drawn graph or tree, with the frontier as a state row.",
+                    f"Table '{_name(block)}' appears to list successive process states. Check "
+                    "whether stepping through the object would explain how each state follows. "
+                    "Keep a table when comparison, lookup or recorded observations are the "
+                    "learning task; do not turn an instruction list into a simulated process.",
                 )
-            if isinstance(block, DiagramBlock) and len(block.frames) == 1:
-                nodes = {(node.key, node.label) for node in block.nodes}
-                edges = sorted(edge.model_dump_json() for edge in block.edges)
-                if any(
-                    nodes == {(node.key, node.label) for node in stage.nodes}
-                    and edges == sorted(edge.model_dump_json() for edge in stage.edges)
-                    for stage in stages
-                ):
+            if block.kind in MARKS and not (
+                isinstance(block, DiagramBlock) and len(block.frames) > 1
+            ):
+                if any(_stage_content(block) == _stage_content(stage) for stage in stages):
                     flag(
                         location,
                         "duplicate_stage",
-                        f"Diagram '{_name(block)}' draws the same graph as a walkthrough in this "
-                        "lesson. Let the walkthrough's first step show it, and remove the copy.",
+                        f"Block '{_name(block)}' repeats a walkthrough's teaching object. "
+                        "Use the walkthrough's first step when the copy adds nothing. Keep a "
+                        "separate reference or comparison when it serves a distinct learning need.",
                     )
             if not isinstance(block, WalkthroughBlock):
                 continue
@@ -814,18 +845,18 @@ def quality_flags(
                         location,
                         "never_shown_nodes",
                         f"Walkthrough '{_name(block)}' never shows {', '.join(hidden)}. "
-                        "Reveal them when the run generates or cuts them off. If the lecture "
-                        "draws the whole tree but the run stops before reaching them, leave out "
-                        "`visible_nodes` so they stay faint; drop them only if the lecture does "
+                        "Reveal each source element when it is used or stopped by a limit. "
+                        "If the source shows the whole structure, leave out `visible_nodes` "
+                        "so unreached nodes stay faint; drop them only if the source does "
                         "not draw them.",
                     )
             for steps in runs:
                 reasons = Counter(
                     " ".join(
                         re.sub(
-                            r"^(?:[A-Z]|[Tt]ile \d+)\b",
+                            r"^[a-z][\w-]*(?:\s+\d+)?\b",
                             "<item>",
-                            re.sub(r"\\[()\[\]]|\$+", "", step.why),
+                            re.sub(r"\\[()\[\]]|\$+", "", step.why).casefold(),
                         )
                         .casefold()
                         .split()
@@ -838,8 +869,9 @@ def quality_flags(
                             location,
                             "repeated_step_reason",
                             f"Walkthrough '{_name(block)}' gives the same reason on {count} "
-                            "steps. Write each step's reason from its own numbers and the rule "
-                            "that forces that step.",
+                            "steps, allowing for renamed subjects. Check whether the step's own "
+                            "facts and working justify its rule. Keep shared wording when that "
+                            "evidence is shown; otherwise supply the missing reasoning.",
                         )
                 if isinstance(block.stage, GraphStage):
                     nodes = {node.key for node in block.stage.nodes}
@@ -1138,8 +1170,8 @@ def quality_flags(
                     f"{unit.key}/{question.key}",
                     "long_question",
                     f"{len(question.blocks)} context block(s), {rows} table rows and {words} "
-                    "words of prompt and options do not fit one screen; keep the one "
-                    "picture the question needs and trim the rest.",
+                    "words of prompt and options may split attention. Keep needed givens "
+                    "together and remove repetition; do not cut teaching to meet a word count.",
                 )
             prompt = question.prompt.casefold()
             for block in question.blocks:

@@ -585,8 +585,8 @@
     {
       "id": "intuition.reasons",
       "dimension": "intuition",
-      "rule": "every step of a procedure says why it is allowed. A computed value shows its inputs and arithmetic in its why or a state row: a tile distance gives start and goal coordinates and the absolute row and column differences; a path cost adds the prior cost and edge cost. Stating only the differences or total is incomplete working.",
-      "pass": "Each walkthrough step says why: 'C has the smallest f, so it goes next.'",
+      "rule": "every step connects its own facts to the rule that permits it. A computed value shows the original inputs, conventions, substitutions and arithmetic in its why or visible working. A qualitative decision shows its premises and inference. A result or a restated rule alone is incomplete reasoning. Shared wording is valid when the step's own evidence is already shown; do not force arithmetic on a qualitative argument.",
+      "pass": "Each step's facts and working show why its rule applies and how the result follows.",
       "fail": "Steps say what happens but never why it is allowed.",
       "profiles": [
         "exam-mock-question",
@@ -596,7 +596,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 2,
+      "version": 3,
       "default_fail": true,
       "teaching": true
     },

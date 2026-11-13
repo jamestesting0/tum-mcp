@@ -32,8 +32,10 @@ closest call, the passage that came nearest to failing, under `evidence`.
 A problem costs one point, in one dimension. When a symptom could fit two, score it
 where this table puts it:
 
+The weakness is one teaching problem counted as several defects.
 File each defect once under the owner check from this table. Put other asked checks
 the same defect fails in the finding's `also`; the owner alone determines its score.
+Separate failures still get separate findings, even when they occur in one passage.
 
 | The student meets | Score it under |
 | --- | --- |
@@ -58,7 +60,7 @@ the same defect fails in the finding's `also`; the owner alone determines its sc
 | An outcome taught but never practised | Coverage |
 | A critical lecture example missing, or replaced by an invented case | Coverage |
 | A lecture example with changed inputs, skipped states or another picture (a tree drawn as a table) | Correctness |
-| A graph given as an edge table, a walkthrough whose results show before its steps, or a whole slide pasted where a crop and the lesson's own words belong | Representation |
+| A graph given as an edge table, a board or grid given as a table of coordinates, a walkthrough whose results show before its steps, or a whole slide pasted where a crop and the lesson's own words belong | Representation |
 | The same mechanism worked twice, or a worked run replayed as a practice answer | Redundancy |
 | A formula lookup written as a decision step, or two first moves in one pattern | Organization |
 | Two cases of a decision step that overlap | Correctness |
@@ -251,7 +253,10 @@ The student leaves knowing why the idea works and when to use it, not only its s
   finding.
 - `intuition.concrete_first`: where the idea is abstract or notation-heavy, a worked example
   or picture comes before the general rule.
-- `intuition.reasons`: every step of a procedure says why it is allowed.
+- `intuition.reasons`: every step connects its own facts to the rule that permits it.
+  Calculations show the inputs, substitutions and arithmetic; qualitative decisions
+  show their premises and inference. Repeated wording is a signal to inspect, not proof
+  of missing reasoning when the step's evidence is already visible.
 - `intuition.misconception`: where students hold a known wrong belief, it is named and shown
   to fail.
 - `intuition.prediction`: where the item asks for one, the student predicts before a result

@@ -42,30 +42,36 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    with the edit tool, not shell heredocs. `study lint PROJECT` without `--item` checks all
    items. Readiness prints a summary; add `--json` for the full result.
 
-   Example `.tum-mcp/batches/search.json`:
+   Example `.tum-mcp/batches/topic.json`:
 
    ```json
-   {"course_key":"ai","request":"Study search.","items":["study/search"],"preparations":["search"]}
+   {"course_key":"course","request":"Study the selected topic.","items":["study/topic"],"preparations":["topic"]}
    ```
 
-   Example `.tum-mcp/preparation/search.json`:
+   Example `.tum-mcp/preparation/topic.json`:
 
    ```json
    {
-     "course_key":"ai", "semester":"winter", "workspaces":["study"],
+     "course_key":"course", "semester":"winter", "workspaces":["study"],
      "mode":"selected_sources",
-     "inventory":[{"source":"search-slides","disposition":"required","basis":"source",
+     "inventory":[{"source":"topic-slides","disposition":"required","basis":"source",
        "reason":"The requested lecture.","locator":"pages 1-20"}],
-     "demands":[{"id":"trace","source":"search-slides","kind":"study",
-       "text":"Trace breadth-first search.","locator":"pages 10-12",
-       "outcome":"trace-search","level":"apply"}]
+     "demands":[{"id":"apply","source":"topic-slides","kind":"study",
+       "text":"Apply the method and justify the result.","locator":"pages 10-12",
+       "outcome":"apply-method","level":"apply"}]
    }
    ```
 2. **Read each source once into a digest.** `.tum-mcp/digests/<source>.json` holds its
    stated outcomes, worked examples, definitions and figures with their pages, and the
-   source's `sha256` from `.tum-mcp/state.json`. Record each worked demonstration once:
-   its pages, what it shows and its inputs. Scan the text to find them and open the pages
-   of the ones you teach; plans choose from this list
+   source's `sha256` from `.tum-mcp/state.json`. Record every demonstration in `examples`
+   and every figure that carries an idea in `figures`, with pages, what it teaches and
+   any inputs. One source item may serve both purposes.
+   The weakness is a source inventory that misses explanatory demonstrations.
+   Include worked arguments and visuals that establish why an idea works, its limits or
+   its costs, even when they are not labelled as examples. A decorative illustration
+   without a teaching point is not a teaching figure or a worked demonstration.
+   Scan the text to find them and open the pages of the ones you
+   teach; plans choose only from this list, so a demonstration missing here is never taught
    ([planning](planning.md#choose-the-lectures-examples)). `tum-mcp study digests PROJECT`
    lists missing and stale ones. Plans, authors and checkers read the digest instead of the
    whole source; open the source pages for anything the digest does not settle.
@@ -75,7 +81,7 @@ review-course) has fresh checkers read it. The session that wrote an item never 
       source inventory, outcomes, original sheet parts and targets without authored content.
       Resolve gaps first. Each target's reason names the action and result, including every
       source clause. Do not replace a complete procedure with its first step or omit a result.
-   2. **Plan every item.** `.tum-mcp/plans/<item>.json` (for example `plans/study/dfs.json`)
+   2. **Plan every item.** `.tum-mcp/plans/<item>.json` (for example `plans/study/topic.json`)
    names the item's outcomes and each concept with its `kind` (definition, fact, rule,
    procedure, algorithm, model, comparison, cases), the worked `instance` that shows it
    (for a procedure, algorithm or model, the lecture `example` it is taught on) and the
@@ -94,6 +100,7 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    Changing requirements later requires a new plan check, not silently smaller coverage.
    4. For Study application/reasoning, include solved `practice` cases contrasting the
    worked example with a meaningful new condition or decision (see planning.md).
+   The weakness is planning fragments without their shared coverage and dependencies.
    For every bounded batch, including Study lessons alone, prepare all requested plans
    before one fresh plan check. The checker holds when a declared batch still lacks
    plans; do not call it after each individual lesson or pattern. Fix rejected plans together;
@@ -116,6 +123,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    comes with a pass. Apply useful advice in the lesson itself, not in the approved plan:
    any plan edit changes its fingerprint and needs a new check. Fix each failing reason
    completely in one revision, including every part the reason names.
+   The weakness is partial repair: fixing one symptom leaves the same teaching gap open.
+   Keep unchanged approvals; an unrelated wording improvement does not require replanning.
    Read the complete batch locally before this call and fix all detectable omissions
    together. Do not request independent checks of unchanged approved plans. Changing
    only an artifact key elsewhere in the batch does not change the source requirements.
@@ -124,20 +133,22 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    compares its JSON with the content. Reuse solved plan instances unless the input or
    method changed.
 
+   The weakness is a checked endpoint with unchecked intermediate reasoning.
    Each walkthrough has a `primary` run and a `variant` when authored. Each run has one
    object per step, with every state row exactly once and `@node_values` for computed node
    values, and `@cutoff` for the cutoff node keys when checked. Each step is a full
    snapshot. `values` maps content paths to expected values.
+   Verify each authored run; this does not require inventing a variant.
    For example, adapt the paths, block key and computed inputs to the lesson:
 
    ```python
    import json
 
 
-   def run(start):
+   def run(initial):
        return [
-           {"Frontier": start, "@node_values": {start.lower(): "0"}},
-           {"Frontier": "G", "@node_values": {start.lower(): "0", "g": "1"}},
+           {"Total": str(initial)},
+           {"Total": str(initial + 1)},
        ]
 
 
@@ -145,15 +156,16 @@ review-course) has fresh checkers read it. The session that wrote an item never 
        json.dumps(
            {
                "values": {"blocks[0].result": 1},
-               "walkthroughs": {"trace": {"primary": run("S"), "variant": run("A")}},
+               "walkthroughs": {"working": {"primary": run(0), "variant": run(2)}},
            }
        )
    )
    ```
 6. **Write each item, then lint it.** Edit the item's own file under `app/` with your edit
    tools (no scripts that rewrite whole workspaces). Write each question's context, options
-   and feedback for that question: a helper that fills one template across questions gives
-   every wrong option the same feedback and wraps sentences in one-row tables. While its
+   and feedback for that question. The weakness is feedback detached from the learner's error:
+   a template that merely repeats the rule cannot explain why this option fails.
+   Shared components are fine; each explanation still uses this question's facts. While its
    source and plan are fresh, follow the published procedure on the worked input and a
    relevant boundary case; check the actual loop scope, branches and exits, not an
    independent hidden implementation.
@@ -162,12 +174,14 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    `tum-mcp study lint PROJECT --item ITEM`: schema, report flags, the plan's links and the
    answer key in seconds. Fix every invariant flag; read every other flag and fix it or
    keep it for a stated reason. Text-only questions are invariant defects; even a
-   checker's waiver cannot clear them. Fix `dropped_node_value`, `repeated_step_reason`
+   checker's waiver cannot clear them. Fix `dropped_node_value`
    and `never_shown_nodes`. Flags for a ruling include
-   `duplicate_stage`, `untitled_opening`, `trace_as_table`,
+   `duplicate_stage`, `untitled_opening`, `trace_as_table`, `repeated_step_reason`,
    `repeated_example`, inline lists, a shorter definition than the course's, and a lesson
-   without a visual. Two runs on one drawing stay when each is the lecture's run of a
-   different mechanism. Flags for a ruling are ruled on
+   without a visual. Shared objects can support distinct methods or decisions.
+   A table can be a valid comparison or reference; a repeated reason can be valid when
+   its step's evidence is already shown. Judge what the learner needs, not the flag alone.
+   Flags for a ruling are ruled on
    again by the checkers, and the gate holds until each has a ruling.
 7. **Read the assembled draft once before browser checks.** Check prerequisites and
    Recall links against the content actually prepared, and consistency across items.
@@ -228,9 +242,11 @@ provisional sheets and unknown lecture dates. Give counts for checked computatio
 browser routes and reviewed items separately. For an already-running local preview,
 compare its served `data.mjs` with this project's build before linking the stable origin.
 
-Finish all original findings and draft repairs before `review verify`. After that pass,
-repair only findings it opened and report those repairs as unverified. Another independent
-check needs another round requested by the student; stale verdicts do not carry forward.
+The weakness is reporting repaired content with stale evidence.
+Finish original findings and draft repairs before `review verify`. Follow review-course's
+existing verify passes within the authorized round. Report any repairs after its last
+pass as unverified; stale verdicts do not carry forward. A new round needs the student's
+request. Reuse passing evidence when the content it covers has not changed.
 
 review-course drives `tum-mcp review`: fresh checkers read packets, the maker fixes by
 check, code re-runs the checks above, and the gate passes when correctness and coverage are

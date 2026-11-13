@@ -49,6 +49,8 @@ scores.
       already rejected with their reasons. An oversized item is split into batches of
       checks, visuals, fixes and rulings. Each retains the full passages, outline, sources
       and captures; every batch must be recorded before its scores are current.
+      The weakness is partial review presented as complete. Splitting a packet changes
+      its workload, not its context or the checks required for a pass.
       For items that need visual scores,
       `visual_sheets` links the available captures of the current
       draft. Use those images when scoring the six visual criteria.
@@ -67,6 +69,8 @@ scores.
       Uncertain needs a `missing` field naming the specific artifact or source page
       that cannot be opened and why. Incomplete sampling is not unavailable evidence.
       A sampled check whose likeliest failures pass is a pass.
+      The weakness is confusing a review limit with a content defect. Name unavailable
+      evidence precisely; do not infer failure from silence or pass an unread check.
       Checkers look at cited source pages for logic checks as well as the digest.
       Reuse matching page images under `.tum-mcp/cache/pages/<sha256>/` in read-only
       sessions. The author can render a missing cited page with
@@ -112,7 +116,9 @@ scores.
       `tum-mcp review verify PROJECT` in the open round. Give its packets to fresh
       checkers and record every batch. Read every changed block against its cited source
       pages and the reference selection. A finding demanding another worked example
-      must name the decision the existing runs cannot show; otherwise it is not a defect.
+      must name the missing understanding or decision the existing examples cannot show;
+      otherwise it is not a defect. The weakness is repetition added without a teaching
+      purpose. A distinct source demonstration or needed boundary case can still be essential.
       Repair only findings this pass opened, then run `review verify PROJECT` again.
       This second pass asks all stale checks, visuals, fixes and rulings only for items
       changed since the first pass. Record its fresh answers, then close. There are at
@@ -141,10 +147,19 @@ Missing question context holds the gate even if a checker waives its flag. Refra
 question around a useful object or case; a decorative picture does not fix it.
 
 Repair gotchas:
-- Repair inside the section the finding sits in.
-- Use the representation the idea has: draw graphs, not tables of states.
-- Remove content only when it is wrong or said twice.
-- Never cut teaching to close an unrelated finding or fit an unrequested width.
+- The weakness is a detached repair. Repair inside the section the finding sits in;
+  a course dependency may instead need a linked repair in its earlier home.
+- The weakness is a representation chosen by habit. Show the object and the changes
+  that explain the idea. Keep tables for comparisons and lookup, and a static picture
+  when its structure is the point; do not force every subject into a walkthrough.
+- The weakness is lost teaching during cleanup. Remove content only when it is wrong
+  or said twice. Preserve each selected example's inputs, representation, decisive
+  working, endpoint and the comparison or result that explains its point through repairs.
+  A useful continuation beyond the lecture is fine; covering less is not. Do not add a
+  comparison the example does not need. Keep distinct examples that teach different decisions.
+- The weakness is fitting the viewport by shrinking the lesson. Never cut teaching to
+  close an unrelated finding or fit an unrequested width. Judge scrolling by legibility
+  at the requested desktop width; preserve the full source example.
 
 ## What each profile reads
 
