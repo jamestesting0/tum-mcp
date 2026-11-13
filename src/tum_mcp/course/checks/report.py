@@ -800,9 +800,36 @@ def quality_flags(
             if not isinstance(block, WalkthroughBlock):
                 continue
             runs = (block.steps, *((block.variant.steps,) if block.variant else ()))
+            if isinstance(block.stage, GraphStage):
+                nodes = {node.key for node in block.stage.nodes}
+                shown = set().union(
+                    *(
+                        nodes if step.visible_nodes is None else set(step.visible_nodes)
+                        for steps in runs
+                        for step in steps
+                    )
+                )
+                if hidden := sorted(nodes - shown):
+                    flag(
+                        location,
+                        "never_shown_nodes",
+                        f"Walkthrough '{_name(block)}' never shows {', '.join(hidden)}. "
+                        "Reveal them when the run generates or cuts them off. If the lecture "
+                        "draws the whole tree but the run stops before reaching them, leave out "
+                        "`visible_nodes` so they stay faint; drop them only if the lecture does "
+                        "not draw them.",
+                    )
             for steps in runs:
                 reasons = Counter(
-                    " ".join(re.sub(r"\\[()\[\]]|\$+", "", step.why).casefold().split())
+                    " ".join(
+                        re.sub(
+                            r"^(?:[A-Z]|[Tt]ile \d+)\b",
+                            "<item>",
+                            re.sub(r"\\[()\[\]]|\$+", "", step.why),
+                        )
+                        .casefold()
+                        .split()
+                    )
                     for step in steps
                 )
                 for count in reasons.values():

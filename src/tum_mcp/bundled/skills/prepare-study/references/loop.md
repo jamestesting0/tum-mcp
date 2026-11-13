@@ -94,9 +94,9 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    Changing requirements later requires a new plan check, not silently smaller coverage.
    4. For Study application/reasoning, include solved `practice` cases contrasting the
    worked example with a meaningful new condition or decision (see planning.md).
-   For a bounded mixed batch, prepare all requested Study, Exercise and Exam plans
+   For every bounded batch, including Study lessons alone, prepare all requested plans
    before one fresh plan check. The checker holds when a declared batch still lacks
-   plans; do not call it after each individual pattern. Fix rejected plans together;
+   plans; do not call it after each individual lesson or pattern. Fix rejected plans together;
    do not launch a checker
    when `review plans PROJECT` lists no pending plans.
 4. **Pass the plan gate.** `tum-mcp review plans PROJECT` gives the plans waiting for a
@@ -159,8 +159,9 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    `tum-mcp study lint PROJECT --item ITEM`: schema, report flags, the plan's links and the
    answer key in seconds. Fix every invariant flag; read every other flag and fix it or
    keep it for a stated reason. Text-only questions are invariant defects; even a
-   checker's waiver cannot clear them. Fix `dropped_node_value`. Flags for a ruling include
-   `repeated_step_reason`, `duplicate_stage`, `untitled_opening`, `trace_as_table`,
+   checker's waiver cannot clear them. Fix `dropped_node_value`, `repeated_step_reason`
+   and `never_shown_nodes`. Flags for a ruling include
+   `duplicate_stage`, `untitled_opening`, `trace_as_table`,
    `repeated_example`, inline lists, a shorter definition than the course's, and a lesson
    without a visual. Two runs on one drawing stay when each is the lecture's run of a
    different mechanism. Flags for a ruling are ruled on
@@ -223,6 +224,10 @@ At handoff, reconcile the handbook and final summary with the scope report, incl
 provisional sheets and unknown lecture dates. Give counts for checked computations,
 browser routes and reviewed items separately. For an already-running local preview,
 compare its served `data.mjs` with this project's build before linking the stable origin.
+
+Finish all original findings and draft repairs before `review verify`. After that pass,
+repair only findings it opened and report those repairs as unverified. Another independent
+check needs another round requested by the student; stale verdicts do not carry forward.
 
 review-course drives `tum-mcp review`: fresh checkers read packets, the maker fixes by
 check, code re-runs the checks above, and the gate passes when correctness and coverage are

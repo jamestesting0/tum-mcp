@@ -117,8 +117,9 @@ Teach a chosen example in full:
 3. **Its steps.** One step is one operation the lecturer shows, usually one expansion:
    never several expansions in one step, never finer than the slides. Compute states in
    code first. Write each step's `why` from its own numbers and the rule that forces it,
-   not a sentence repeated across steps. Show computed working: a tile distance shows
-   its row difference plus its column difference.
+   not a sentence repeated across steps. A computed value shows its inputs and arithmetic
+   in its `why` or a state row. For tile 3, show the start and goal coordinates:
+   row 2 to 0, column 1 to 2, so \(\lvert 2-0\rvert + \lvert 1-2\rvert = 3\).
 4. **Every state to its endpoint.** Show every state the slides show and any step a student
    needs between them. When the slides stop early and the result matters, finish the run
    with the lecture's own inputs and say where the lecture stops. Never add a goal, value or

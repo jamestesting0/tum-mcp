@@ -117,8 +117,11 @@ Run the lecture's own example in a `walkthrough`, with its inputs unchanged
 ([choosing examples](planning.md#choose-the-lectures-examples)). Each step does one
 operation as the lecturer shows it, usually one expansion. Compute the states in code first.
 Its `action` says what; its `why` uses that step's numbers and the rule that forces the
-operation, never a sentence repeated across steps. Show how each computed value is obtained:
-a tile distance shows its row difference plus its column difference. `note` names the mistake a student
+operation, never a sentence repeated across steps. A computed value shows its inputs and
+arithmetic in `why` or a state row. For tile 3, show row 2 to 0 and column 1 to 2,
+then \(\lvert 2-0\rvert + \lvert 1-2\rvert = 3\); a path cost shows the prior
+cost plus the edge cost. The differences or total alone are not the working.
+`note` names the mistake a student
 makes at that moment when there is a typical one. Group the steps by `subgoal` (start,
 loop, stop). `state` rows show the data the student would otherwise track mentally; the app
 marks what changed since the previous step. Include a real failure and its undo when the

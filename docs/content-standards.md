@@ -22,8 +22,9 @@ fails while a flag has no row or a row names a check that no longer exists.
 | S10 | The unit covers its recorded outcomes | `thin_unit`, `unrecorded_sources`, `coverage.ledger_outcomes` |
 | S11 | Sentences are the course's own, written from its sources; exemplars lend a shape, never text | `exemplar_copy` |
 | S12 | Procedures and algorithms are taught on the lecture's critical worked examples, each in full (inputs, picture, steps, endpoint); repeats of a mechanism are left out | the plan check (each one names its example), `repeated_example`, `coverage.examples_selected`, `correctness.source_match`, `redundancy.said_once` |
-| S13 | Each walkthrough step teaches: its reason comes from that step's own numbers and the rule that forces it, and every visible node keeps the value the slide shows | `repeated_step_reason`, `dropped_node_value`, `intuition.reasons` |
+| S13 | Each walkthrough step teaches: its reason comes from that step's own inputs, arithmetic and rule; three identical reasons in a run (including identifier substitutions) are invariant defects, and every visible node keeps the value the slide shows | invariant `repeated_step_reason`, `dropped_node_value`, `intuition.reasons` |
 | S14 | Each drawing appears once, as the walkthrough that works on it; a lesson opens under its first heading | `duplicate_stage`, `untitled_opening` |
+| S15 | A growing graph walkthrough reveals every stage node when generated or cut off; nodes the lecture does not draw are removed from the stage | invariant `never_shown_nodes` |
 
 ## Practice (Study practice, Revision, guides, exam drills and mocks)
 

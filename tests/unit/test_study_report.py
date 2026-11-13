@@ -98,6 +98,81 @@ def test_walkthrough_variant_is_checked_as_a_separate_run() -> None:
     assert found.count("dropped_node_value") == 1
 
 
+@pytest.mark.parametrize("show_all", ["hidden", "default", "variant"])
+def test_graph_stage_nodes_must_be_shown_in_a_step(show_all: str) -> None:
+    catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    value = study()
+    unit = value["units"][0]
+    walk = deepcopy(catalogue["walkthrough-tree"])
+    walk.update(key="trace", sources=[unit["sources"][0]["key"]])
+    walk["stage"]["nodes"].append({"key": "c", "label": "C"})
+    walk["stage"]["edges"].append({"start": "b", "end": "c", "directed": True})
+    walk["steps"] = [
+        {"action": "Start.", "why": "Begin at A.", "visible_nodes": ["a"]},
+        {"action": "Cut off.", "why": "B reaches the limit.", "visible_nodes": ["a", "b"]},
+    ]
+    if show_all == "default":
+        walk["steps"][-1].pop("visible_nodes")
+    if show_all == "variant":
+        walk.update(label="Primary", contrast="The variant reveals the cut-off branch.")
+        walk["variant"] = {
+            "label": "Variant",
+            "steps": [
+                {"action": "Start at A.", "why": "A is initial.", "visible_nodes": ["a"]},
+                {"action": "Reveal C.", "why": "C is cut off.", "visible_nodes": ["a", "b", "c"]},
+            ],
+        }
+    unit["blocks"] = [walk]
+    flags = quality_flags(StudyContent.model_validate(value), None)
+    hidden = [flag for flag in flags if flag["flag"] == "never_shown_nodes"]
+    assert bool(hidden) is (show_all == "hidden")
+    if hidden:
+        from tum_mcp.course.review.models import INVARIANT_FLAGS
+
+        assert "never_shown_nodes" in INVARIANT_FLAGS
+        assert hidden[0]["item"] == f"{unit['key']}/trace"
+
+
+def test_repeated_step_reasons_hold_readiness_without_a_ruling() -> None:
+    from tum_mcp.course.review.models import INVARIANT_FLAGS, RULED_FLAGS
+
+    assert INVARIANT_FLAGS["repeated_step_reason"] == "intuition"
+    assert "repeated_step_reason" not in RULED_FLAGS
+
+
+@pytest.mark.parametrize(
+    "reasons, flagged",
+    [
+        (["B is a leaf.", "C is a leaf.", "D is a leaf."], True),
+        (
+            ["Tile 1 moves to its goal.", "Tile 2 moves to its goal.", "Tile 3 moves to its goal."],
+            True,
+        ),
+        (["B is a leaf.", "C is a leaf."], False),
+        (
+            [
+                "Tile 1: |2-0| + |1-2| = 3.",
+                "Tile 2: |1-0| + |0-0| = 1.",
+                "Tile 3: |1-2| + |0-2| = 3.",
+            ],
+            False,
+        ),
+    ],
+)
+def test_repeated_reason_threshold_keeps_distinct_working(
+    reasons: list[str], flagged: bool
+) -> None:
+    catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    value = study()
+    unit = value["units"][0]
+    walk = deepcopy(catalogue["walkthrough-tree"])
+    walk.update(key="trace", sources=[unit["sources"][0]["key"]])
+    walk["steps"] = [{"action": "Expand.", "why": why} for why in reasons]
+    unit["blocks"] = [walk]
+    flags = quality_flags(StudyContent.model_validate(value), None)
+    assert any(flag["flag"] == "repeated_step_reason" for flag in flags) is flagged
+
+
 def test_trace_table_is_not_flagged_in_question_context() -> None:
     value = study()
     unit = value["units"][0]

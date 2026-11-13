@@ -57,7 +57,9 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    student who meets the topic for the first time: write or update the course's
    teaching profile, then a teaching plan for each new or restructured unit, and check
    it before writing ([planning](references/planning.md)): each unit's structured plan in
-   `.tum-mcp/plans/study/<key>.json` passes the plan gate before you write it
+   `.tum-mcp/plans/study/<key>.json` is ready with every other requested unit's plan
+   before one batch plan check. Repair pending plans together and submit them in one
+   check, rather than checking each lesson as you finish it. Each passes before authoring
    ([draft checks](references/loop.md)).
 3. **Author.** Read [teaching](references/teaching.md) and
    [writing](references/writing.md) before writing a new or restructured unit. Teach each
