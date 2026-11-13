@@ -494,7 +494,7 @@ def test_cutoff_nodes_are_reached_and_legend_respects_state_precedence(
                     steps:[first,last]}, () => null));
                 }""")
                 expect(
-                    page.locator(".walk-legend").get_by_text("Unmarked", exact=True)
+                    page.locator(".walk-legend").get_by_text("No current role", exact=True)
                 ).to_be_visible()
         finally:
             server.shutdown()
@@ -643,7 +643,7 @@ def test_a_grid_stage_marks_cells_draws_moves_and_keeps_written_values(
             expect(page.locator(".grid-arrow")).to_have_count(1)
             expect(page.locator(".grid-arrow-label")).to_have_text("0 + 1")
             expect(page.locator(".walk-legend .walk-legend-item")).to_have_text(
-                ["Current", "Done", "Shaded", "Unmarked"]
+                ["Current", "Done", "Shaded", "No current role"]
             )
             page.get_by_role("button", name="Next step", exact=True).click()
             expect(cell("start:1:1")).to_have_class("grid-cell visited")

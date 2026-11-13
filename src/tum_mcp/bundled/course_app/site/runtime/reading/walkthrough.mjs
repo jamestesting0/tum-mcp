@@ -50,7 +50,7 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
         }
       });
       const legend = node('div', 'graph walk-legend');
-      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['cutoff', 'Cut off'], ['visited', 'Expanded'], ['unreached', 'Not reached yet'], ['unmarked', 'Unmarked']]) {
+      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['cutoff', 'Cut off'], ['visited', 'Expanded'], ['unreached', 'Not reached yet'], ['unmarked', 'No current role']]) {
         if (!used.has(state)) continue;
         const swatch = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         swatch.setAttribute('class', 'walk-legend-swatch'); swatch.setAttribute('viewBox', '0 0 18 18'); swatch.setAttribute('aria-hidden', 'true');
@@ -168,7 +168,7 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
         }
       }
       const legend = node('div', 'graph walk-legend');
-      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['visited', 'Done'], ['path', 'Path'], ['shaded', 'Shaded'], ['unmarked', 'Unmarked']]) {
+      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['visited', 'Done'], ['path', 'Path'], ['shaded', 'Shaded'], ['unmarked', 'No current role']]) {
         if (!used.has(state)) continue;
         const swatch = node('span', `grid-swatch ${state}`); swatch.setAttribute('aria-hidden', 'true');
         legend.append(append(node('span', 'walk-legend-item'), swatch, node('span', '', label)));
