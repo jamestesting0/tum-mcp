@@ -288,7 +288,16 @@ def example_state_flags(plan: Plan, value: dict) -> list[dict[str, JsonValue]]:
             continue
         steps = block["steps"]
         item = f"{plan.item.removeprefix('study/')}/{example.block}"
-        if example.states is not None and len(steps) < example.states:
+        if example.origin == "source" and example.states is None:
+            flags.append(
+                {
+                    "item": item,
+                    "flag": "source_states_missing",
+                    "detail": f"{concept.name}: source walkthrough {example.block} needs "
+                    "`states` counted from its cited pages before its steps can be checked.",
+                }
+            )
+        elif example.states is not None and len(steps) < example.states:
             flags.append(
                 {
                     "item": item,
@@ -592,24 +601,40 @@ def _pages(value: str) -> set[int]:
 def _unused_examples(root: Path, waiting: list[Plan]) -> list[JsonValue]:
     from tum_mcp.course.sources.digests import read_digest
 
-    used: dict[str, set[int]] = {}
+    planned: dict[str, list[tuple[str, set[int]]]] = {}
     for plan in waiting:
         for concept in plan.concepts:
             example = concept.example
             if example and example.source and example.pages:
-                used.setdefault(example.source, set()).update(_pages(example.pages))
+                planned.setdefault(example.source, []).append(
+                    (example.pages, _pages(example.pages))
+                )
     folder = confined(root, ".tum-mcp/digests")
     unused: list[JsonValue] = []
     for path in sorted(folder.glob("*.json")):
         digest = read_digest(root, path.stem)
-        if digest:
-            unused.extend(
-                {"source": digest.source, "kind": kind, "pages": entry.pages, "text": entry.text}
-                for kind, entries in (("example", digest.examples), ("figure", digest.figures))
-                for entry in entries
+        if not digest:
+            continue
+        ranges = planned.get(digest.source, [])
+        for kind, entries in (("example", digest.examples), ("figure", digest.figures)):
+            for entry in entries:
+                pages = _pages(entry.pages)
+                # A planned example inside this entry's pages selects the same demonstration.
                 # A figure can teach a separate idea on the same page as a selected example.
-                if kind == "figure" or not (_pages(entry.pages) & used.get(digest.source, set()))
-            )
+                if kind == "example" and any(within <= pages for _, within in ranges):
+                    continue
+                item: dict[str, JsonValue] = {
+                    "source": digest.source,
+                    "kind": kind,
+                    "pages": entry.pages,
+                    "text": entry.text,
+                }
+                # A wider planned range can contain a separate demonstration; let the
+                # checker judge it instead of hiding it.
+                wider = [label for label, within in ranges if kind == "example" and pages & within]
+                if wider:
+                    item["overlaps_planned"] = wider[0]
+                unused.append(item)
     return unused
 
 
@@ -720,7 +745,9 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "text does not select it. A concept without a source demonstration needs no "
             "example unless its kind requires one. On the first check judge "
             "unused_examples "
-            "as selection context: a required method run, a new decision, branch or failure, "
+            "as selection context; an entry marked overlaps_planned lies inside a wider "
+            "planned page range, so judge whether it is a separate demonstration. "
+            "A required method run, a new decision, branch or failure, "
             "a case later material builds on, or a worked argument, calculation or visual "
             "that explains a method's validity, limits or costs can be critical. Judge the "
             "learning need; decorative illustrations without reasoning or usable inputs are "
@@ -732,8 +759,12 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "and working, and endpoint or comparison. Page overlap or a concept mention does "
             "not establish that the selected demonstration is complete. Keep the source range "
             "that contains its decisive test and conclusion, not just its setup. "
-            "When an example records states or phases, verify the count of distinct states "
-            "and the phase names against its cited source pages. They are a floor, not a cap. "
+            "For every source example, count the distinct states on its cited pages. "
+            "If the pages show several states and `states` is missing, fail the plan "
+            "and name the count you see. Require `phases` when the source groups the run. "
+            "Verify recorded counts and phase names against the pages. A source showing "
+            "one finished state or a constructed example needs no source state count. "
+            "Recorded states are a floor, not a cap. "
             "Finish incomplete source working with its original inputs when the result matters. "
             "Going beyond the source is fine; covering less is not. Do not invent missing "
             "givens or a desired result to force an ending. For each additional example "

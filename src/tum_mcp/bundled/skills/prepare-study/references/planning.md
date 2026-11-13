@@ -100,12 +100,15 @@ For each concept taught through a selected source demonstration, the plan names 
 `origin` (`source` or `constructed`), `source` and `pages`, what it `shows`, its
 `endpoint` and the `block` that teaches it; a constructed example says `why`. Use `shows`
 to name the inputs, representation and decisive working or test, not only the concept.
-For a source run, optionally record `states`, the number of distinct states its cited
-pages show, counted while reading them. Record its phase names in `phases` when they
-help navigate the run, such as depth limits, elimination passes or simulation rounds.
-The plan checker verifies these against the pages. The walkthrough keeps at least
-those states and uses `subgoal` groups for those phases. A summary-only source or a
-constructed example needs no state count. More steps are fine.
+When the cited pages show more than one state, record `states`, counted while reading
+them. This includes a growing proof tree, a derivation, simulation ticks, a per-item
+calculation and a staged construction. Record `phases` when the source groups the run,
+such as depth limits, elimination passes or simulation rounds. The plan checker fails
+a missing count and names the count it sees. It verifies counts and phase names against
+the pages. A source example taught as a walkthrough needs `states` so code can check its
+steps. The walkthrough keeps at least those states and uses `subgoal` groups for those
+phases. A source showing only a finished picture or a constructed example needs no
+source state count. More steps are fine.
 A geometric proof keeps its construction; a physical law keeps its free-body diagram;
 a legal distinction keeps the contrasting cases and their decisive facts.
 Mentioning the idea in `instance` does not select its demonstration.

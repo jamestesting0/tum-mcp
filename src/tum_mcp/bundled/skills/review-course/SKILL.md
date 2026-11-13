@@ -84,8 +84,9 @@ scores.
       regardless of the concept's kind. Compare the block's representation with the
       source picture, not just its text or result. Name the concept and planned block
       in evidence. Judge whether the actual inputs, picture and how to read it, decisive
-      tests and working, and endpoint or comparison survive. Check planned `states` and
-      `phases` against the source and this one walkthrough's steps and `subgoal` groups.
+      tests and working, and endpoint or comparison survive. Require `states` for multi-state
+      sources and `phases` for source groups. Check both against the source and this one
+      walkthrough's steps and `subgoal` groups.
       A concept mention, correct total or different example cannot replace that example.
       A theorem keeps its geometric construction; a law keeps its labelled circuit
       and working; a contrasting legal case keeps its decisive facts and disposition.

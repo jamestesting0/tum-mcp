@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Source examples with several states must plan their count and source phases; source walkthroughs without a count block readiness and review.
 - Course review aligns teaching checks with prepared scope, complete process steps and expanded cheatsheet details.
 - Planned examples can retain source state counts and phases; report and lint require their
   states and subgoal groups in one complete walkthrough. Extra steps remain valid.

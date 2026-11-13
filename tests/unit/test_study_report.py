@@ -89,12 +89,18 @@ def test_report_and_lint_hold_source_states_and_phase_gaps(
     )
     path = tmp_path / f".tum-mcp/plans/{current.item}.json"
     path.parent.mkdir(parents=True)
-    path.write_text(current.model_dump_json())
-    for count, grouped, expected in [
-        (2, True, {"source_states_missing"}),
-        (3, False, {"source_phases_missing"}),
-        (4, True, set()),
+    for count, grouped, states, expected in [
+        (2, True, None, {"source_states_missing"}),
+        (2, True, 3, {"source_states_missing"}),
+        (3, False, 3, {"source_phases_missing"}),
+        (4, True, 3, set()),
     ]:
+        planned = current.model_dump(mode="json")
+        if states is None:
+            planned["concepts"][0]["example"].pop("states")
+        else:
+            planned["concepts"][0]["example"]["states"] = states
+        path.write_text(json.dumps(planned))
         block["steps"] = [block["steps"][0]] + [
             {"action": "Compute.", "why": "Apply the rule.", "subgoal": "Compute"} | marks[1]
             for _ in range(count - 1)

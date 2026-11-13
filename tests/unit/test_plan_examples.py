@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tum_mcp.course.checks.plans import Plan, example_problems, plan_problems
+from tum_mcp.course.checks.plans import Plan, example_problems, example_state_flags, plan_problems
 
 UCS = {
     "origin": "source",
@@ -63,14 +63,60 @@ def test_source_states_are_a_floor_in_one_grouped_walkthrough(name: str, phases:
     assert plan_problems(current, {"blocks": [block | {"steps": [*steps, {}]}]}, None)
 
 
-def test_summary_and_constructed_examples_have_no_invented_state_floor() -> None:
-    summary = plan(example=UCS, blocks=["ucs-romania"])
+@pytest.mark.parametrize(
+    ("name", "source", "shows", "endpoint"),
+    [
+        (
+            "Growing search tree",
+            "search",
+            "Draw the root, its children, then the next expansion.",
+            "The same state occurs on two distinct paths.",
+        ),
+        (
+            "Gaussian elimination",
+            "linear-algebra",
+            "Show the initial matrix and each row operation.",
+            "The triangular system has the same solutions.",
+        ),
+    ],
+)
+def test_source_walkthrough_requires_a_state_count_even_with_phases(
+    name: str, source: str, shows: str, endpoint: str
+) -> None:
+    current = plan(
+        name=name,
+        example=UCS
+        | {
+            "source": source,
+            "shows": shows,
+            "endpoint": endpoint,
+            "phases": ["Prepare", "Compute"],
+        },
+        blocks=["ucs-romania"],
+    )
+    value = {
+        "blocks": [
+            {
+                "key": "ucs-romania",
+                "kind": "walkthrough",
+                "steps": [{"subgoal": "Prepare"}, {"subgoal": "Compute"}],
+            }
+        ]
+    }
+    flags = example_state_flags(current, value)
+    assert [flag["flag"] for flag in flags] == ["source_states_missing"]
+    assert plan_problems(current, value, None) == [flags[0]["detail"]]
+
+
+def test_finished_picture_and_constructed_run_need_no_source_state_count() -> None:
+    summary = plan(kind="rule", example=UCS, blocks=["ucs-romania"])
     constructed = plan(
         example=UCS | {"origin": "constructed", "why": "The source gives no worked run."},
         blocks=["ucs-romania"],
     )
     value = {"blocks": [{"key": "ucs-romania", "kind": "walkthrough", "steps": [{}]}]}
-    assert plan_problems(summary, value, None) == []
+    picture = {"blocks": [{"key": "ucs-romania", "kind": "figure"}]}
+    assert plan_problems(summary, picture, None) == []
     assert plan_problems(constructed, value, None) == []
     assert "states" not in summary.model_dump(mode="json")["concepts"][0]["example"]
     assert "phases" not in summary.model_dump(mode="json")["concepts"][0]["example"]
@@ -273,10 +319,13 @@ def test_unused_digest_examples_respect_source_and_page_overlap(tmp_path) -> Non
             )
         )
     unused = plan_packet(tmp_path)["unused_examples"]
-    assert {(entry["source"], entry["pages"]) for entry in unused} == {
-        ("uninformed", "57"),
-        ("other", "50-52"),
-        ("other", "57"),
+    assert {
+        (entry["source"], entry["pages"], entry.get("overlaps_planned")) for entry in unused
+    } == {
+        ("uninformed", "50-52", "52-56"),
+        ("uninformed", "57", None),
+        ("other", "50-52", None),
+        ("other", "57", None),
     }
 
 
@@ -374,6 +423,59 @@ def test_figures_only_digest_entries_reach_selection_even_on_a_selected_page(
         {"source": "uninformed", "pages": "53", "text": description, "kind": "figure"}
     ]
     assert packet["answer"]["items"][0]["reasons"] == []
+
+
+@pytest.mark.parametrize(
+    ("planned", "inside"),
+    [
+        ("Two boards and their tile distances.", "The effort of a heuristic on 100 instances."),
+        ("A full proof of the triangle inequality.", "A worked counterexample in two dimensions."),
+    ],
+)
+def test_a_wider_planned_range_does_not_hide_a_separate_example_inside_it(
+    tmp_path: Path, planned: str, inside: str
+) -> None:
+    import json
+
+    from tum_mcp.course.checks.plans import plan_packet
+
+    example = {
+        "origin": "source",
+        "source": "lecture",
+        "pages": "42-47",
+        "shows": planned,
+        "endpoint": planned,
+        "block": "picture",
+    }
+    stored = tmp_path / ".tum-mcp/plans/study/search.json"
+    stored.parent.mkdir(parents=True)
+    stored.write_text(plan(kind="rule", example=example).model_dump_json())
+    digests = tmp_path / ".tum-mcp/digests"
+    digests.mkdir()
+    (digests / "lecture.json").write_text(
+        json.dumps(
+            {
+                "source": "lecture",
+                "sha256": "0" * 64,
+                "examples": [
+                    {"pages": "42-47", "text": planned},
+                    {"pages": "44-45", "text": inside},
+                ],
+            }
+        )
+    )
+
+    unused = plan_packet(tmp_path)["unused_examples"]
+
+    assert unused == [
+        {
+            "source": "lecture",
+            "kind": "example",
+            "pages": "44-45",
+            "text": inside,
+            "overlaps_planned": "42-47",
+        }
+    ]
 
 
 def test_changed_concept_can_escalate_advice_without_new_evidence(tmp_path: Path) -> None:
