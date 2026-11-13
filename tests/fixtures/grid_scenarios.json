@@ -1,0 +1,1748 @@
+{
+ "walkthroughs": [
+  {
+   "kind": "walkthrough",
+   "key": "manhattan-grid",
+   "title": "Sum Manhattan distances on the boards",
+   "sources": [
+    "bfs"
+   ],
+   "stage": {
+    "kind": "grid",
+    "description": "The 8-puzzle start board beside its goal board, rows and columns 0 to 2.",
+    "grids": [
+     {
+      "key": "start",
+      "label": "Start",
+      "cells": [
+       [
+        "7",
+        "2",
+        "4"
+       ],
+       [
+        "5",
+        "",
+        "6"
+       ],
+       [
+        "8",
+        "3",
+        "1"
+       ]
+      ],
+      "row_labels": [
+       "0",
+       "1",
+       "2"
+      ],
+      "col_labels": [
+       "0",
+       "1",
+       "2"
+      ]
+     },
+     {
+      "key": "goal",
+      "label": "Goal",
+      "cells": [
+       [
+        "",
+        "1",
+        "2"
+       ],
+       [
+        "3",
+        "4",
+        "5"
+       ],
+       [
+        "6",
+        "7",
+        "8"
+       ]
+      ],
+      "row_labels": [
+       "0",
+       "1",
+       "2"
+      ],
+      "col_labels": [
+       "0",
+       "1",
+       "2"
+      ]
+     }
+    ]
+   },
+   "steps": [
+    {
+     "action": "Count tile \\(1\\).",
+     "why": "It stands at row \\(2\\), column \\(2\\) and belongs at row \\(0\\), column \\(1\\): \\(|2-0| + |2-1| = 3\\).",
+     "state": [
+      {
+       "label": "Rows moved",
+       "value": "2"
+      },
+      {
+       "label": "Columns moved",
+       "value": "1"
+      },
+      {
+       "label": "Running total",
+       "value": "3"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "start",
+       "cell": "3:3",
+       "mark": "active"
+      },
+      {
+       "grid": "goal",
+       "cell": "1:2",
+       "mark": "active"
+      },
+      {
+       "grid": "start",
+       "cell": "1:2",
+       "mark": "path"
+      }
+     ],
+     "grid_arrows": [
+      {
+       "start": {
+        "grid": "start",
+        "cell": "3:3"
+       },
+       "end": {
+        "grid": "start",
+        "cell": "1:2"
+       },
+       "label": "2 + 1"
+      }
+     ]
+    },
+    {
+     "action": "Count tile \\(2\\).",
+     "why": "It stands at row \\(0\\), column \\(1\\) and belongs at row \\(0\\), column \\(2\\): \\(|0-0| + |1-2| = 1\\).",
+     "state": [
+      {
+       "label": "Rows moved",
+       "value": "0"
+      },
+      {
+       "label": "Columns moved",
+       "value": "1"
+      },
+      {
+       "label": "Running total",
+       "value": "4"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "start",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:2",
+       "mark": "active"
+      },
+      {
+       "grid": "goal",
+       "cell": "1:3",
+       "mark": "active"
+      },
+      {
+       "grid": "start",
+       "cell": "1:3",
+       "mark": "path"
+      }
+     ],
+     "grid_arrows": [
+      {
+       "start": {
+        "grid": "start",
+        "cell": "1:2"
+       },
+       "end": {
+        "grid": "start",
+        "cell": "1:3"
+       },
+       "label": "0 + 1"
+      }
+     ]
+    },
+    {
+     "action": "Count tile \\(3\\).",
+     "why": "It stands at row \\(2\\), column \\(1\\) and belongs at row \\(1\\), column \\(0\\): \\(|2-1| + |1-0| = 2\\).",
+     "state": [
+      {
+       "label": "Rows moved",
+       "value": "1"
+      },
+      {
+       "label": "Columns moved",
+       "value": "1"
+      },
+      {
+       "label": "Running total",
+       "value": "6"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "start",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "3:2",
+       "mark": "active"
+      },
+      {
+       "grid": "goal",
+       "cell": "2:1",
+       "mark": "active"
+      },
+      {
+       "grid": "start",
+       "cell": "2:1",
+       "mark": "path"
+      }
+     ],
+     "grid_arrows": [
+      {
+       "start": {
+        "grid": "start",
+        "cell": "3:2"
+       },
+       "end": {
+        "grid": "start",
+        "cell": "2:1"
+       },
+       "label": "1 + 1"
+      }
+     ]
+    },
+    {
+     "action": "Count tile \\(4\\).",
+     "why": "It stands at row \\(0\\), column \\(2\\) and belongs at row \\(1\\), column \\(1\\): \\(|0-1| + |2-1| = 2\\).",
+     "state": [
+      {
+       "label": "Rows moved",
+       "value": "1"
+      },
+      {
+       "label": "Columns moved",
+       "value": "1"
+      },
+      {
+       "label": "Running total",
+       "value": "8"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "start",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:3",
+       "mark": "active"
+      },
+      {
+       "grid": "goal",
+       "cell": "2:2",
+       "mark": "active"
+      },
+      {
+       "grid": "start",
+       "cell": "2:2",
+       "mark": "path"
+      }
+     ],
+     "grid_arrows": [
+      {
+       "start": {
+        "grid": "start",
+        "cell": "1:3"
+       },
+       "end": {
+        "grid": "start",
+        "cell": "2:2"
+       },
+       "label": "1 + 1"
+      }
+     ]
+    },
+    {
+     "action": "Count tile \\(5\\).",
+     "why": "It stands at row \\(1\\), column \\(0\\) and belongs at row \\(1\\), column \\(2\\): \\(|1-1| + |0-2| = 2\\).",
+     "state": [
+      {
+       "label": "Rows moved",
+       "value": "0"
+      },
+      {
+       "label": "Columns moved",
+       "value": "2"
+      },
+      {
+       "label": "Running total",
+       "value": "10"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "start",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "2:1",
+       "mark": "active"
+      },
+      {
+       "grid": "goal",
+       "cell": "2:3",
+       "mark": "active"
+      },
+      {
+       "grid": "start",
+       "cell": "2:3",
+       "mark": "path"
+      }
+     ],
+     "grid_arrows": [
+      {
+       "start": {
+        "grid": "start",
+        "cell": "2:1"
+       },
+       "end": {
+        "grid": "start",
+        "cell": "2:3"
+       },
+       "label": "0 + 2"
+      }
+     ]
+    },
+    {
+     "action": "Count tile \\(6\\).",
+     "why": "It stands at row \\(1\\), column \\(2\\) and belongs at row \\(2\\), column \\(0\\): \\(|1-2| + |2-0| = 3\\).",
+     "state": [
+      {
+       "label": "Rows moved",
+       "value": "1"
+      },
+      {
+       "label": "Columns moved",
+       "value": "2"
+      },
+      {
+       "label": "Running total",
+       "value": "13"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "start",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "2:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "2:3",
+       "mark": "active"
+      },
+      {
+       "grid": "goal",
+       "cell": "3:1",
+       "mark": "active"
+      },
+      {
+       "grid": "start",
+       "cell": "3:1",
+       "mark": "path"
+      }
+     ],
+     "grid_arrows": [
+      {
+       "start": {
+        "grid": "start",
+        "cell": "2:3"
+       },
+       "end": {
+        "grid": "start",
+        "cell": "3:1"
+       },
+       "label": "1 + 2"
+      }
+     ]
+    },
+    {
+     "action": "Count tile \\(7\\).",
+     "why": "It stands at row \\(0\\), column \\(0\\) and belongs at row \\(2\\), column \\(1\\): \\(|0-2| + |0-1| = 3\\).",
+     "state": [
+      {
+       "label": "Rows moved",
+       "value": "2"
+      },
+      {
+       "label": "Columns moved",
+       "value": "1"
+      },
+      {
+       "label": "Running total",
+       "value": "16"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "start",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "2:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "2:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:1",
+       "mark": "active"
+      },
+      {
+       "grid": "goal",
+       "cell": "3:2",
+       "mark": "active"
+      }
+     ],
+     "grid_arrows": [
+      {
+       "start": {
+        "grid": "start",
+        "cell": "1:1"
+       },
+       "end": {
+        "grid": "start",
+        "cell": "3:2"
+       },
+       "label": "2 + 1"
+      }
+     ]
+    },
+    {
+     "action": "Count tile \\(8\\).",
+     "why": "It stands at row \\(2\\), column \\(0\\) and belongs at row \\(2\\), column \\(2\\): \\(|2-2| + |0-2| = 2\\).",
+     "state": [
+      {
+       "label": "Rows moved",
+       "value": "0"
+      },
+      {
+       "label": "Columns moved",
+       "value": "2"
+      },
+      {
+       "label": "Running total",
+       "value": "18"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "start",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "2:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "2:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "start",
+       "cell": "3:1",
+       "mark": "active"
+      },
+      {
+       "grid": "goal",
+       "cell": "3:3",
+       "mark": "active"
+      }
+     ],
+     "grid_arrows": [
+      {
+       "start": {
+        "grid": "start",
+        "cell": "3:1"
+       },
+       "end": {
+        "grid": "start",
+        "cell": "3:3"
+       },
+       "label": "0 + 2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "walkthrough",
+   "key": "maze-wave",
+   "title": "Breadth-first search fills a maze",
+   "sources": [
+    "bfs"
+   ],
+   "stage": {
+    "kind": "grid",
+    "description": "A five by five maze with walls; S top left, G bottom right.",
+    "grids": [
+     {
+      "key": "maze",
+      "cells": [
+       [
+        "S",
+        "",
+        "",
+        "",
+        ""
+       ],
+       [
+        "",
+        "",
+        "",
+        "",
+        ""
+       ],
+       [
+        "",
+        "",
+        "",
+        "",
+        ""
+       ],
+       [
+        "",
+        "",
+        "",
+        "",
+        ""
+       ],
+       [
+        "",
+        "",
+        "",
+        "",
+        "G"
+       ]
+      ],
+      "shaded": [
+       "1:4",
+       "2:1",
+       "2:2",
+       "2:4",
+       "4:2",
+       "4:3",
+       "4:4",
+       "5:4"
+      ]
+     }
+    ]
+   },
+   "steps": [
+    {
+     "subgoal": "Spread the wave",
+     "action": "Start at \\(S\\) with distance \\(0\\).",
+     "why": "Breadth-first search reaches cells in order of distance, so the first number a cell gets is its shortest distance.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "0"
+      },
+      {
+       "label": "New cells",
+       "value": "1"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "active"
+      }
+     ],
+     "grid_values": []
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(1\\) into every open neighbour of a \\(0\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(0\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "1"
+      },
+      {
+       "label": "New cells",
+       "value": "1"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "value": "1"
+      }
+     ]
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(2\\) into every open neighbour of a \\(1\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(1\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "2"
+      },
+      {
+       "label": "New cells",
+       "value": "1"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "value": "2"
+      }
+     ]
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(3\\) into every open neighbour of a \\(2\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(2\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "3"
+      },
+      {
+       "label": "New cells",
+       "value": "1"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "value": "3"
+      }
+     ]
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(4\\) into every open neighbour of a \\(3\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(3\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "4"
+      },
+      {
+       "label": "New cells",
+       "value": "1"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:3",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "3:3",
+       "value": "4"
+      }
+     ]
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(5\\) into every open neighbour of a \\(4\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(4\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "5"
+      },
+      {
+       "label": "New cells",
+       "value": "2"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:2",
+       "mark": "active"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:4",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "3:2",
+       "value": "5"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:4",
+       "value": "5"
+      }
+     ]
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(6\\) into every open neighbour of a \\(5\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(5\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "6"
+      },
+      {
+       "label": "New cells",
+       "value": "2"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:4",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:1",
+       "mark": "active"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:5",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "3:1",
+       "value": "6"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:5",
+       "value": "6"
+      }
+     ]
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(7\\) into every open neighbour of a \\(6\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(6\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "7"
+      },
+      {
+       "label": "New cells",
+       "value": "3"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:4",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:5",
+       "mark": "active"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:1",
+       "mark": "active"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:5",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "2:5",
+       "value": "7"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:1",
+       "value": "7"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:5",
+       "value": "7"
+      }
+     ]
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(8\\) into every open neighbour of a \\(7\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(7\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "8"
+      },
+      {
+       "label": "New cells",
+       "value": "3"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:4",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:5",
+       "mark": "active"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:1",
+       "mark": "active"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:5",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "1:5",
+       "value": "8"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:1",
+       "value": "8"
+      }
+     ]
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(9\\) into every open neighbour of a \\(8\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(8\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "9"
+      },
+      {
+       "label": "New cells",
+       "value": "1"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:4",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:2",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "5:2",
+       "value": "9"
+      }
+     ]
+    },
+    {
+     "subgoal": "Spread the wave",
+     "action": "Write \\(10\\) into every open neighbour of a \\(9\\).",
+     "why": "Each of these cells is one move from a cell at distance \\(9\\) and was not reached before.",
+     "state": [
+      {
+       "label": "Distance",
+       "value": "10"
+      },
+      {
+       "label": "New cells",
+       "value": "1"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:3",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:4",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:5",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "maze",
+       "cell": "5:3",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "maze",
+       "cell": "5:3",
+       "value": "10"
+      }
+     ]
+    },
+    {
+     "subgoal": "Read the path back",
+     "action": "From \\(G\\), step to a neighbour one smaller until \\(S\\).",
+     "why": "Every number drops by one per move, so this walk is a shortest path of 8 moves.",
+     "state": [
+      {
+       "label": "Path length",
+       "value": "8"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "maze",
+       "cell": "5:5",
+       "mark": "path"
+      },
+      {
+       "grid": "maze",
+       "cell": "4:5",
+       "mark": "path"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:5",
+       "mark": "path"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:4",
+       "mark": "path"
+      },
+      {
+       "grid": "maze",
+       "cell": "3:3",
+       "mark": "path"
+      },
+      {
+       "grid": "maze",
+       "cell": "2:3",
+       "mark": "path"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:3",
+       "mark": "path"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:2",
+       "mark": "path"
+      },
+      {
+       "grid": "maze",
+       "cell": "1:1",
+       "mark": "path"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "walkthrough",
+   "key": "matrix-entry",
+   "title": "One entry of a matrix product",
+   "sources": [
+    "bfs"
+   ],
+   "stage": {
+    "kind": "grid",
+    "description": "Matrices A, B and the product C = AB, with row and column numbers.",
+    "grids": [
+     {
+      "key": "a",
+      "label": "A",
+      "cells": [
+       [
+        "1",
+        "2",
+        "0"
+       ],
+       [
+        "3",
+        "1",
+        "2"
+       ]
+      ],
+      "row_labels": [
+       "1",
+       "2"
+      ],
+      "col_labels": [
+       "1",
+       "2",
+       "3"
+      ]
+     },
+     {
+      "key": "b",
+      "label": "B",
+      "cells": [
+       [
+        "2",
+        "1",
+        "0"
+       ],
+       [
+        "1",
+        "0",
+        "4"
+       ],
+       [
+        "0",
+        "3",
+        "1"
+       ]
+      ],
+      "row_labels": [
+       "1",
+       "2",
+       "3"
+      ],
+      "col_labels": [
+       "1",
+       "2",
+       "3"
+      ]
+     },
+     {
+      "key": "c",
+      "label": "C = AB",
+      "cells": [
+       [
+        "",
+        "",
+        ""
+       ],
+       [
+        "",
+        "",
+        ""
+       ]
+      ],
+      "row_labels": [
+       "1",
+       "2"
+      ],
+      "col_labels": [
+       "1",
+       "2",
+       "3"
+      ]
+     }
+    ]
+   },
+   "steps": [
+    {
+     "action": "Multiply \\(a_{21} = 3\\) by \\(b_{11} = 2\\).",
+     "why": "Entry \\(c_{21}\\) pairs row \\(2\\) of \\(A\\) with column \\(1\\) of \\(B\\); pair \\(1\\) adds \\(6\\).",
+     "state": [
+      {
+       "label": "Sum so far",
+       "value": "6"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "a",
+       "cell": "2:1"
+      },
+      {
+       "grid": "b",
+       "cell": "1:1"
+      },
+      {
+       "grid": "c",
+       "cell": "2:1",
+       "mark": "frontier"
+      }
+     ]
+    },
+    {
+     "action": "Multiply \\(a_{22} = 1\\) by \\(b_{21} = 1\\).",
+     "why": "Entry \\(c_{21}\\) pairs row \\(2\\) of \\(A\\) with column \\(1\\) of \\(B\\); pair \\(2\\) adds \\(1\\).",
+     "state": [
+      {
+       "label": "Sum so far",
+       "value": "7"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "a",
+       "cell": "2:2"
+      },
+      {
+       "grid": "b",
+       "cell": "2:1"
+      },
+      {
+       "grid": "a",
+       "cell": "2:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "b",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "c",
+       "cell": "2:1",
+       "mark": "frontier"
+      }
+     ]
+    },
+    {
+     "action": "Multiply \\(a_{23} = 2\\) by \\(b_{31} = 0\\).",
+     "why": "Entry \\(c_{21}\\) pairs row \\(2\\) of \\(A\\) with column \\(1\\) of \\(B\\); pair \\(3\\) adds \\(0\\).",
+     "state": [
+      {
+       "label": "Sum so far",
+       "value": "7"
+      }
+     ],
+     "grid_marks": [
+      {
+       "grid": "a",
+       "cell": "2:3"
+      },
+      {
+       "grid": "b",
+       "cell": "3:1"
+      },
+      {
+       "grid": "a",
+       "cell": "2:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "a",
+       "cell": "2:2",
+       "mark": "visited"
+      },
+      {
+       "grid": "b",
+       "cell": "1:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "b",
+       "cell": "2:1",
+       "mark": "visited"
+      },
+      {
+       "grid": "c",
+       "cell": "2:1",
+       "mark": "active"
+      }
+     ],
+     "grid_values": [
+      {
+       "grid": "c",
+       "cell": "2:1",
+       "value": "7"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "static": {
+  "kind": "grid",
+  "title": "Grid",
+  "sources": [
+   "components"
+  ],
+  "description": "An exam room seen from the front: rows A to C, seats 1 to 6, taken seats filled, your seat B5 marked, and the way to it from the door beside C6.",
+  "grids": [
+   {
+    "key": "room",
+    "label": "Exam room",
+    "cells": [
+     [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+     ],
+     [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+     ],
+     [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+     ]
+    ],
+    "row_labels": [
+     "A",
+     "B",
+     "C"
+    ],
+    "col_labels": [
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6"
+    ],
+    "shaded": [
+     "1:2",
+     "1:4",
+     "2:1",
+     "2:3",
+     "2:6",
+     "3:2",
+     "3:5"
+    ]
+   }
+  ],
+  "marks": [
+   {
+    "grid": "room",
+    "cell": "2:5",
+    "mark": "active"
+   }
+  ],
+  "arrows": [
+   {
+    "start": {
+     "grid": "room",
+     "cell": "3:6"
+    },
+    "end": {
+     "grid": "room",
+     "cell": "2:5"
+    }
+   }
+  ]
+ }
+}

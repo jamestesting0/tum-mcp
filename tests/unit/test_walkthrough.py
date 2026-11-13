@@ -253,3 +253,67 @@ def test_a_drawn_figure_takes_layers_not_regions() -> None:
     }
     with pytest.raises(ValidationError, match="Regions and frames mark an image"):
         WalkthroughBlock.model_validate(walk)
+
+
+def grid_walk() -> dict:
+    return {
+        "kind": "walkthrough",
+        "key": "maze",
+        "sources": [WALKS["walkthrough-graph"]["sources"][0]],
+        "stage": {
+            "kind": "grid",
+            "description": "A two by two maze.",
+            "grids": [{"key": "maze", "cells": [["S", ""], ["", "G"]], "shaded": ["1:2"]}],
+        },
+        "steps": [
+            {
+                "action": "Start.",
+                "why": "S is distance 0.",
+                "grid_marks": [{"grid": "maze", "cell": "1:1"}],
+            },
+            {
+                "action": "Reach the cell below.",
+                "why": "One move from S.",
+                "grid_marks": [{"grid": "maze", "cell": "2:1", "mark": "frontier"}],
+                "grid_values": [{"grid": "maze", "cell": "2:1", "value": "1"}],
+                "grid_arrows": [
+                    {
+                        "start": {"grid": "maze", "cell": "1:1"},
+                        "end": {"grid": "maze", "cell": "2:1"},
+                    }
+                ],
+            },
+        ],
+    }
+
+
+def test_a_grid_stage_accepts_cells_inside_its_grids_only() -> None:
+    adapter = TypeAdapter(Block)
+    adapter.validate_python(grid_walk())
+    outside = grid_walk()
+    outside["steps"][1]["grid_marks"][0]["cell"] = "3:1"
+    unknown = grid_walk()
+    unknown["steps"][1]["grid_arrows"][0]["end"]["grid"] = "goal"
+    ragged = grid_walk()
+    ragged["stage"]["grids"][0]["cells"] = [["S", ""], ["G"]]
+    on_graph = graph()
+    on_graph["steps"][0]["grid_marks"] = [{"grid": "maze", "cell": "1:1"}]
+    for bad, message in (
+        (outside, "outside the grid"),
+        (unknown, "No grid 'goal'"),
+        (ragged, "rows of equal length"),
+        (on_graph, "grid_marks"),
+    ):
+        with pytest.raises(ValidationError, match=message):
+            adapter.validate_python(bad)
+
+
+def test_answer_keys_compare_grid_cells_after_each_step() -> None:
+    from tum_mcp.course.checks.answers import compare
+
+    def check(cells: dict) -> tuple[list[str], int]:
+        runs = {"primary": [{"@grid": {"maze:2:1": ""}}, {"@grid": cells}]}
+        return compare(grid_walk(), {"walkthroughs": {"maze": runs}})
+
+    assert check({"maze:2:1": "1", "maze:1:1": "S"}) == ([], 3)
+    assert "cell maze:2:1 shows '1', the key computes '2'" in check({"maze:2:1": "2"})[0][0]

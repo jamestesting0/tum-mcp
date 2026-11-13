@@ -110,6 +110,7 @@ TEMPLATE_FILES = (
     "runtime/study/recall.mjs",
     "runtime/study/revision.mjs",
     "runtime/visuals/graph.mjs",
+    "runtime/visuals/grid.mjs",
     "runtime/visuals/plot.mjs",
     "runtime/visuals/uml-layout.mjs",
     "runtime/visuals/uml.mjs",

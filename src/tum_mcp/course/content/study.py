@@ -1,7 +1,7 @@
 """Source-linked study content with editable LaTeX and legacy MathML inputs."""
 
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from typing import Annotated, Literal, assert_never
 
 from pydantic import (
@@ -801,6 +801,100 @@ class UmlBlock(Sourced):
         return self
 
 
+# A cell of a grid, "row:column" counted from 1 as in tables, whatever the shown labels say.
+GridRef = Annotated[str, Field(pattern=r"^[1-9][0-9]?:[1-9][0-9]?$")]
+CellText = Annotated[str, Field(max_length=12), AfterValidator(validate_inline)]
+
+
+class Grid(Frozen):
+    """One board of cells: a puzzle state, a maze, a matrix, a seating plan."""
+
+    key: Key
+    label: Label | None = None
+    # The cell values row by row; an empty string leaves the cell blank.
+    cells: tuple[tuple[CellText, ...], ...] = Field(min_length=1, max_length=12)
+    # Index labels along the edges, such as 0 1 2 for coordinates or A B C for seats.
+    row_labels: tuple[CellText, ...] = ()
+    col_labels: tuple[CellText, ...] = ()
+    # Cells drawn solid, such as maze walls or taken seats.
+    shaded: tuple[GridRef, ...] = Field(default=(), max_length=144)
+
+    @model_validator(mode="after")
+    def rectangular(self) -> "Grid":
+        width = len(self.cells[0])
+        if not 1 <= width <= 12 or any(len(row) != width for row in self.cells):
+            raise ValueError(f"Grid '{self.key}' needs rows of equal length (1 to 12 cells).")
+        if self.row_labels and len(self.row_labels) != len(self.cells):
+            raise ValueError(f"Grid '{self.key}' needs one row label per row.")
+        if self.col_labels and len(self.col_labels) != width:
+            raise ValueError(f"Grid '{self.key}' needs one column label per column.")
+        check_cells(self, self.shaded, "shades")
+        return self
+
+
+def check_cells(grid: Grid, cells: Iterable[str], what: str) -> None:
+    for cell in cells:
+        row, _, column = cell.partition(":")
+        if int(row) > len(grid.cells) or int(column) > len(grid.cells[0]):
+            raise ValueError(f"Grid '{grid.key}' {what} cell {cell}, outside the grid.")
+
+
+class GridPoint(Frozen):
+    grid: Key
+    cell: GridRef
+
+
+class GridMark(GridPoint):
+    """A cell picked out: the current one, the frontier, cells done, or a path."""
+
+    mark: Literal["active", "frontier", "visited", "path"] = "active"
+
+
+class GridValue(GridPoint):
+    """A cell's new value from this step on, such as a distance written into a maze."""
+
+    value: CellText
+
+
+class GridArrow(Frozen):
+    """A move between two cells, within one grid or from one grid to another. It runs along
+    the cell edges: along the start row, then down or up the target column, so its two legs
+    show the row and column offset and never cross a value. Its label goes under the grid."""
+
+    start: GridPoint
+    end: GridPoint
+    label: Annotated[str, Field(max_length=30), AfterValidator(validate_inline)] = ""
+
+
+def check_grid_refs(
+    grids: tuple[Grid, ...],
+    points: Iterable[GridPoint],
+    arrows: Iterable[GridArrow] = (),
+) -> None:
+    named = {grid.key: grid for grid in grids}
+    for point in [*points, *(end for arrow in arrows for end in (arrow.start, arrow.end))]:
+        if point.grid not in named:
+            raise ValueError(f"No grid '{point.grid}' is drawn.")
+        check_cells(named[point.grid], (point.cell,), "marks")
+
+
+class GridBlock(Sourced):
+    """Labelled grids side by side, where the position of a value carries its meaning."""
+
+    kind: Literal["grid"]
+    description: Text
+    grids: tuple[Grid, ...] = Field(min_length=1, max_length=3)
+    marks: tuple[GridMark, ...] = Field(default=(), max_length=40)
+    arrows: tuple[GridArrow, ...] = Field(default=(), max_length=12)
+
+    @model_validator(mode="after")
+    def placed(self) -> "GridBlock":
+        if len({grid.key for grid in self.grids}) != len(self.grids):
+            raise ValueError("Each grid needs its own key.")
+        check_grid_refs(self.grids, self.marks, self.arrows)
+        return self
+
+
 StepVisual = Annotated[
     TableBlock | DiagramBlock | PlotBlock | FigureBlock, Field(discriminator="kind")
 ]
@@ -913,6 +1007,17 @@ class WalkStep(Step):
     cells: tuple[CellRef, ...] = Field(default=(), max_length=20)
     # A code stage: the lines running at this step.
     lines: LineRange | None = None
+    # A grid stage: the cells picked out, the moves drawn, and cell values changed from
+    # this step on.
+    grid_marks: tuple[GridMark, ...] = Field(
+        default=(), max_length=40, exclude_if=lambda value: not value
+    )
+    grid_arrows: tuple[GridArrow, ...] = Field(
+        default=(), max_length=12, exclude_if=lambda value: not value
+    )
+    grid_values: tuple[GridValue, ...] = Field(
+        default=(), max_length=40, exclude_if=lambda value: not value
+    )
     # A plot stage: the series drawn so far; a figure stage: the layers (SVG ids) shown.
     series: tuple[Key, ...] | None = None
     layers: tuple[Key, ...] | None = None
@@ -974,8 +1079,15 @@ class FigureStage(FigureBlock):
     sources: tuple[Key, ...] = ()
 
 
+class GridStage(GridBlock):
+    sources: tuple[Key, ...] = ()
+    # Steps mark the cells; the stage only draws the grids.
+    marks: tuple[GridMark, ...] = Field(default=(), max_length=0)
+    arrows: tuple[GridArrow, ...] = Field(default=(), max_length=0)
+
+
 Stage = Annotated[
-    GraphStage | TableStage | CodeStage | FormulaStage | PlotStage | FigureStage,
+    GraphStage | TableStage | CodeStage | FormulaStage | PlotStage | FigureStage | GridStage,
     Field(discriminator="kind"),
 ]
 MARKS = {
@@ -985,6 +1097,7 @@ MARKS = {
     "derivation": {"shown"},
     "plot": {"series"},
     "figure": {"layers", "regions", "frame"},
+    "grid": {"grid_marks", "grid_arrows", "grid_values"},
 }
 
 
@@ -1041,6 +1154,8 @@ def check_marks(stage: Stage | None, step: WalkStep) -> None:
                 raise ValueError("A frame is a file in figures/ ending .png, .jpg or .webp.")
             if any(f'id="{layer}"' not in (stage.svg or "") for layer in step.layers or ()):
                 raise ValueError(f"Step '{step.action}' shows a layer the figure does not draw.")
+        case GridStage():
+            check_grid_refs(stage.grids, (*step.grid_marks, *step.grid_values), step.grid_arrows)
         case None:
             pass
         case unreachable:
@@ -1147,6 +1262,7 @@ Block = Annotated[
     | FilesBlock
     | TreeBlock
     | FigureBlock
+    | GridBlock
     | WalkthroughBlock,
     Field(discriminator="kind"),
 ]
@@ -1166,10 +1282,11 @@ VISUAL_KINDS = frozenset(
         "files",
         "tree",
         "figure",
+        "grid",
     }
 )
 VISUAL_RULE = (
-    "a figure, code snippet, diagram, UML diagram, tree, formula, derivation, table or plot "
+    "a figure, code snippet, diagram, UML diagram, tree, grid, formula, derivation, table or plot "
     "beside its text"
 )
 
@@ -1227,6 +1344,7 @@ def render_blocks(blocks: tuple[Block, ...]) -> list[dict[str, JsonValue]]:
                 | FilesBlock()
                 | TreeBlock()
                 | FigureBlock()
+                | GridBlock()
             ):
                 pass
             case unreachable:

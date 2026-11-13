@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import struct
@@ -471,3 +472,236 @@ def test_cutoff_nodes_are_reached_and_legend_respects_state_precedence(
         finally:
             server.shutdown()
             worker.join(timeout=3)
+
+
+LONG_WALK = """async ({ count, long }) => {
+    const { renderWalkthrough } = await import('./runtime/reading/walkthrough.mjs');
+    const why = long ? 'This reason is long on purpose. '.repeat(40) : 'Deepest first.';
+    const nodes = [{ key: 'a', label: 'A', row: 0, col: 0 },
+        { key: 'b', label: 'B', row: 0, col: 1 }];
+    const steps = Array.from({ length: count }, (_, i) => ({
+        subgoal: `Limit ${Math.floor(i * 3 / count)}`, action: `Step number ${i + 1}.`, why,
+        active: [i % 2 ? 'b' : 'a'], frontier: [], visited: [], edges: [], state: [] }));
+    const walk = renderWalkthrough({ stage: { kind: 'diagram', description: 'Two nodes.',
+        nodes, edges: [{ start: 'a', end: 'b' }] }, steps }, () => null);
+    const filler = document.createElement('div'); filler.style.height = '2000px';
+    const top = document.createElement('div'); top.style.height = '600px';
+    document.querySelector('main').replaceChildren(top, walk, filler);
+}"""
+
+
+def _serve(project: Path):
+    from tum_mcp.course.app.preview import Handler, PreviewServer
+
+    server = PreviewServer(("127.0.0.1", 0), partial(Handler, directory=str(project / "app")))
+    worker = Thread(target=server.serve_forever, daemon=True)
+    worker.start()
+    return server, worker
+
+
+def test_a_long_walkthrough_keeps_one_row_of_adjacent_controls_and_jumps(
+    course_browser: Browser, project: Path
+) -> None:
+    server, worker = _serve(project)
+    try:
+        for width in (1440, 390):
+            with course_browser.new_context(viewport={"width": width, "height": 800}) as context:
+                page = context.new_page()
+                page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+                page.locator("[data-block-index]").first.wait_for()
+                page.evaluate(LONG_WALK, {"count": 60, "long": False})
+                controls = page.locator(".walk-controls")
+                expect(controls.locator(".walk-dot")).to_have_count(0)
+                boxes = page.evaluate(
+                    """() => ['Previous step', 'Next step', 'All steps', 'jump'].map(name => {
+                        const button = [...document.querySelectorAll('.walk-controls button')]
+                            .find(item => name === 'jump' ? item.matches('.walk-jump')
+                                : (item.getAttribute('aria-label') || item.textContent) === name);
+                        const box = button.getBoundingClientRect();
+                        return { top: box.top, bottom: box.bottom,
+                            left: box.left, right: box.right };
+                    })"""
+                )
+                previous, following, whole, position = boxes
+                assert max(box["top"] for box in boxes) < min(box["bottom"] for box in boxes)
+                assert 0 <= position["left"] - previous["right"] <= 8
+                assert 0 <= following["left"] - position["right"] <= 8
+                assert whole["right"] <= width
+                jump = controls.locator(".walk-jump")
+                expect(jump.locator(".walk-jump-count")).to_have_text("Step 1 of 60")
+                expect(jump.locator(".walk-jump-group")).to_have_text("Limit 0")
+                jump.click()
+                page.locator(".walk-menu-group").nth(2).click()
+                expect(jump.locator(".walk-jump-count")).to_have_text("Step 41 of 60")
+                expect(jump).to_be_focused()
+                jump.click()
+                expect(page.locator('.walk-menu-step[aria-current="step"]')).to_be_focused()
+                page.keyboard.press("ArrowDown")
+                page.keyboard.press("Enter")
+                expect(jump.locator(".walk-jump-count")).to_have_text("Step 42 of 60")
+                jump.click()
+                page.keyboard.press("Escape")
+                expect(page.locator(".walk-menu")).to_be_hidden()
+                page.keyboard.press("ArrowRight")
+                expect(jump.locator(".walk-jump-count")).to_have_text("Step 43 of 60")
+                page.keyboard.press("ArrowLeft")
+                expect(jump.locator(".walk-jump-count")).to_have_text("Step 42 of 60")
+    finally:
+        server.shutdown()
+        worker.join(timeout=3)
+
+
+def test_stepping_a_long_explanation_keeps_the_page_still(
+    course_browser: Browser, project: Path
+) -> None:
+    server, worker = _serve(project)
+    try:
+        with course_browser.new_context(viewport={"width": 1280, "height": 700}) as context:
+            page = context.new_page()
+            page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+            page.locator("[data-block-index]").first.wait_for()
+            page.evaluate(LONG_WALK, {"count": 26, "long": True})
+            centre = "item => item.scrollIntoView({block: 'center'})"
+            page.locator(".walk-controls").evaluate(centre)
+            place = """() => [
+                Math.round(document.scrollingElement.scrollTop
+                    + document.querySelector('main').scrollTop),
+                Math.round(document.querySelector('.walk-controls').getBoundingClientRect().top)]"""
+            before = page.evaluate(place)
+            assert 0 < before[1] < 700, "the controls sit in view under the picture"
+            following = page.get_by_role("button", name="Next step", exact=True)
+            for number in range(2, 6):
+                following.click()
+                expect(page.locator(".walk-jump-count")).to_have_text(f"Step {number} of 26")
+                assert page.evaluate(place) == before
+    finally:
+        server.shutdown()
+        worker.join(timeout=3)
+
+
+def test_a_grid_stage_marks_cells_draws_moves_and_keeps_written_values(
+    course_browser: Browser, project: Path
+) -> None:
+    server, worker = _serve(project)
+    try:
+        with course_browser.new_context() as context:
+            page = context.new_page()
+            page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+            page.locator("[data-block-index]").first.wait_for()
+            page.evaluate("""async () => {
+                const { renderWalkthrough } = await import('./runtime/reading/walkthrough.mjs');
+                const at = (grid, cell, mark) => ({ grid, cell, mark });
+                const stage = { kind: 'grid', description: 'Start and goal.', grids: [
+                    { key: 'start', label: 'Start', cells: [['1', ''], ['', '2']],
+                      row_labels: ['0', '1'], col_labels: ['0', '1'] },
+                    { key: 'goal', label: 'Goal', cells: [['', '1'], ['2', '']] }] };
+                const steps = [
+                    { action: 'Tile 1.', why: 'One column right.', state: [],
+                      grid_marks: [at('start', '1:1', 'active'), at('goal', '1:2', 'active')],
+                      grid_arrows: [{ start: { grid: 'start', cell: '1:1' },
+                        end: { grid: 'goal', cell: '1:2' }, label: '0 + 1' }] },
+                    { action: 'Tile 2.', why: 'One row down, one left.', state: [],
+                      grid_marks: [at('start', '1:1', 'visited'), at('start', '2:2', 'active')],
+                      grid_values: [{ grid: 'start', cell: '1:2', value: '1' }],
+                      grid_arrows: [{ start: { grid: 'start', cell: '2:2' },
+                        end: { grid: 'start', cell: '1:1' } }] },
+                    { action: 'Done.', why: 'Written values stay.', state: [], grid_marks: [] }];
+                const walk = renderWalkthrough({ stage, steps }, () => null);
+                document.querySelector('main').replaceChildren(walk);
+            }""")
+            cell = lambda key: page.locator(f'[data-cell="{key}"]')  # noqa: E731
+            expect(cell("start:1:1")).to_have_class("grid-cell active")
+            expect(cell("goal:1:2")).to_have_class("grid-cell active")
+            expect(page.locator(".grid-arrow")).to_have_count(1)
+            expect(page.locator(".grid-arrow-label")).to_have_text("0 + 1")
+            expect(page.locator(".walk-legend .walk-legend-item")).to_have_count(2)
+            page.get_by_role("button", name="Next step", exact=True).click()
+            expect(cell("start:1:1")).to_have_class("grid-cell visited")
+            expect(cell("start:2:2")).to_have_class("grid-cell active")
+            expect(cell("goal:1:2")).to_have_class("grid-cell")
+            elbow = re.compile(r"^M\S+ \S+L\S+ \S+L")
+            expect(page.locator(".grid-arrow")).to_have_attribute("d", elbow)
+            expect(page.locator(".grid-arrow-label")).to_have_count(0)
+            value = page.locator(".grid-value").nth(1)
+            expect(value).to_have_text("1")
+            page.get_by_role("button", name="Next step", exact=True).click()
+            expect(page.locator(".grid-arrow")).to_have_count(0)
+            expect(value).to_have_text("1")
+            page.get_by_role("button", name="Previous step", exact=True).click()
+            page.get_by_role("button", name="Previous step", exact=True).click()
+            expect(value).to_have_text("")
+    finally:
+        server.shutdown()
+        worker.join(timeout=3)
+
+
+GRID_CLEARANCE = """() => {
+    const hits = [];
+    for (const figure of document.querySelectorAll('.grid-figure')) {
+        const values = [...figure.querySelectorAll('.grid-value')]
+            .filter(item => item.textContent.trim()).map(item => item.getBBox());
+        const cells = [...figure.querySelectorAll('.grid-cell rect')].map(item => item.getBBox());
+        const meets = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width
+            && a.y < b.y + b.height && b.y < a.y + a.height;
+        for (const path of figure.querySelectorAll('.grid-arrow')) {
+            const points = [...path.getAttribute('d').matchAll(/[ML]([-\\d.]+) ([-\\d.]+)/g)]
+                .map(match => [Number(match[1]), Number(match[2])]);
+            const boxes = points.slice(1).map(([x, y], index) => {
+                const [px, py] = points[index];
+                return { x: Math.min(x, px) - 3, y: Math.min(y, py) - 3,
+                    width: Math.abs(x - px) + 6, height: Math.abs(y - py) + 6 };
+            });
+            const [hx, hy] = points.at(-1);
+            boxes.push({ x: hx - 9, y: hy - 9, width: 18, height: 18 });
+            for (const box of boxes) {
+                if (values.some(value => meets(box, value))) hits.push('arrow');
+            }
+        }
+        for (const label of figure.querySelectorAll('.grid-arrow-label')) {
+            const box = label.getBBox();
+            if ([...values, ...cells].some(item => meets(box, item))) hits.push(label.textContent);
+        }
+    }
+    return hits;
+}"""
+
+
+@pytest.mark.parametrize("width", [1440, 390])
+def test_grid_arrows_and_labels_never_cover_a_cell_value(
+    course_browser: Browser, project: Path, width: int
+) -> None:
+    scenarios = json.loads(
+        (Path(__file__).parents[1] / "fixtures/grid_scenarios.json").read_bytes()
+    )
+    server, worker = _serve(project)
+    try:
+        with course_browser.new_context(viewport={"width": width, "height": 900}) as context:
+            page = context.new_page()
+            page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+            page.locator("[data-block-index]").first.wait_for()
+            page.evaluate(
+                """async block => {
+                    const { renderBlockBody } = await import('./runtime/reading/reading.mjs');
+                    document.querySelector('main').replaceChildren(renderBlockBody(block));
+                }""",
+                scenarios["static"],
+            )
+            expect(page.locator(".grid-arrow")).to_have_count(1)
+            assert page.evaluate(GRID_CLEARANCE) == []
+            for block in scenarios["walkthroughs"]:
+                page.evaluate(
+                    """async block => {
+                        const { renderWalkthrough } =
+                            await import('./runtime/reading/walkthrough.mjs');
+                        const walk = renderWalkthrough(block, () => null);
+                        document.querySelector('main').replaceChildren(walk);
+                    }""",
+                    block,
+                )
+                following = page.get_by_role("button", name="Next step", exact=True)
+                for number in range(len(block["steps"])):
+                    assert page.evaluate(GRID_CLEARANCE) == [], (block["key"], number + 1)
+                    following.click()
+    finally:
+        server.shutdown()
+        worker.join(timeout=3)
