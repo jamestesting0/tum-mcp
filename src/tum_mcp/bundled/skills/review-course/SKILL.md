@@ -77,7 +77,14 @@ scores.
       `tum-mcp study text PROJECT --key K --pages N --images`. Every report flag marked
       `needs_ruling` gets a ruling in `flags`: a finding about it, or `not_applicable` with why; the gate
       holds until each has one. `intuition.concepts_instanced` is answered concept by
-      concept from the packet's `concepts`. A finding is resolved only with the rewritten
+      concept from the packet's `concepts`. For `coverage.examples_selected`, compare
+      each concept's `example` with its `example_block`, source pages and rendered steps.
+      Name the concept and planned block in evidence. Judge whether the actual inputs,
+      picture, decisive tests and working, and endpoint or comparison survive.
+      A concept mention, correct total or different example cannot replace that example.
+      A circuit needs its measurement working; a case needs its decisive exception
+      and disposition. Inspect intermediate states when those carry the reasoning.
+      Do not count steps or force a template. A finding is resolved only with the rewritten
       passage quoted, and only when that passage reads well on its own.
       Also inspect concepts added after planning; adding a glossary paragraph to justify
       new flashcards does not teach those concepts. For objectives, cite the actual
@@ -152,6 +159,11 @@ Repair gotchas:
 - The weakness is a representation chosen by habit. Show the object and the changes
   that explain the idea. Keep tables for comparisons and lookup, and a static picture
   when its structure is the point; do not force every subject into a walkthrough.
+- The weakness is one continuous process split across widgets. Consecutive walkthroughs
+  that repeat a stage need a ruling on the actual inputs and decisions. A confirmed split
+  run, proof, derivation, simulation or case history is a must-fix, not kept polish.
+  Use one walkthrough with phases as `subgoal`. Separate blocks can teach different inputs
+  or decisions; a deliberate before/after comparison is valid.
 - The weakness is lost teaching during cleanup. Remove content only when it is wrong
   or said twice. Preserve each selected example's inputs, representation, decisive
   working, endpoint and the comparison or result that explains its point through repairs.

@@ -87,9 +87,13 @@ def _without_links(value: JsonValue) -> JsonValue:
 
 
 def _item(root: Path, key: str, profile: str, title: str, value: dict) -> ReviewItem:
+    from tum_mcp.course.checks.plans import read_plan
+
     blocks = blocks_of(_without_links(value))
     if script := answer_key(root, key):
         blocks["answer-key"] = script
+    if plan := read_plan(root, key):
+        blocks["teaching-plan"] = plan.fingerprint()
     return ReviewItem(key, profile, title, value, blocks)
 
 

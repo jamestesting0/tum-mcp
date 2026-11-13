@@ -95,7 +95,7 @@
     {
       "id": "clarity.one_reading",
       "dimension": "clarity",
-      "rule": "short, direct sentences; one idea per paragraph; every sentence reads once, without mapping 'these', 'respectively' or 'the former' back onto earlier clauses.",
+      "rule": "short, direct sentences; one idea per paragraph; every sentence reads once, without mapping 'these', 'respectively' or 'the former' back onto earlier clauses. State labels distinguish running or provisional values from returned results: a running balance or current hypothesis is not final while work remains. A callout's kind agrees with its content. Pitfall describes a wrong move and its correction, not a correct state or an ordinary limit.",
       "pass": "'A* adds g and h. The smallest sum goes first.'",
       "fail": "'These judge resemblance and outcome, respectively.' sends the reader back to sort two earlier clauses.",
       "profiles": [
@@ -105,7 +105,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 2
+      "version": 3
     },
     {
       "id": "clarity.terms_defined",
@@ -749,7 +749,7 @@
     {
       "id": "redundancy.said_once",
       "dimension": "redundancy",
-      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A workflow expansion adds usable information beyond its visible step or case; copying or paraphrasing that line adds nothing, and a complete one-line verbal rule needs no expansion. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat. For each worked example beyond the first on one mechanism, show what it adds that the first cannot; if nothing, it is a repeat. Replaying a worked run as a practice answer is a repeat.",
+      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A workflow expansion adds usable information beyond its visible step or case; copying or paraphrasing that line adds nothing, and a complete one-line verbal rule needs no expansion. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat. For each worked example beyond the first on one mechanism, show what it adds that the first cannot; if nothing, it is a repeat. One continuous process stays in one walkthrough: group its phases with subgoal rather than repeat its picture and restart step numbering across consecutive widgets. A confirmed split run, proof, simulation, derivation or case history must be repaired, not kept as polish. Separate blocks are valid for genuinely different inputs or decisions, including before/after contrasts. Replaying a worked run as a practice answer is a repeat.",
       "pass": "The rule is explained once and linked elsewhere.",
       "fail": "The same derivation appears in full in two sections.",
       "profiles": [
@@ -759,7 +759,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 4
+      "version": 5
     },
     {
       "id": "redundancy.text_restates_picture",
@@ -1122,7 +1122,7 @@
     {
       "id": "representation.process_shown",
       "dimension": "representation",
-      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it.",
+      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, grid cells and moves, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it. Values the student compares across steps remain attached to their nodes, cells or marks while needed, rather than surviving only in changing prose. Do not retain obsolete values as current or add quantities the reasoning does not use. The legend or direct labels explain every state actually drawn, including neutral or not-yet-reached states when styled differently.",
       "pass": "The A* run is a walkthrough: each step shows the frontier and why the next node is chosen.",
       "fail": "A finished table of frontiers, or 'Manhattan distance is 18' with no counting shown.",
       "profiles": [
@@ -1132,7 +1132,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 2,
+      "version": 3,
       "default_fail": true,
       "teaching": true,
       "replaces": [
@@ -1233,14 +1233,14 @@
     {
       "id": "coverage.examples_selected",
       "dimension": "coverage",
-      "rule": "every critical worked example of the cited lecture pages is taught as the lecture's own example: the run of a procedure or calculation the student must perform, a decision, branch or failure the main run cannot show, or a case later material builds on. Compare the source digest's examples and the pages with the plan's chosen examples. Name a missing critical example with its pages, an invented case that replaces a lecture example, and a second example that shows nothing new.",
+      "rule": "every critical worked example of the cited lecture pages is taught as the lecture's own example: a run the student must perform, a decision or failure the main run cannot show, or reasoning that explains validity, limits or costs. Compare the source digest and pages with every concept's planned example and its actual example_block in the rendered item. For each selected example, explain whether its inputs and conventions, natural representation, decisive tests and working, and endpoint or comparison survive. Name the concept and planned block in evidence. A concept mention, one correct total or a different worked case cannot satisfy the selected example. A circuit's probabilities need their measurement working; a legal case needs its decisive exception and disposition. Judge the teaching, not a step count or template. Useful continuations beyond the lecture are allowed; covering less is not. Name any missing critical example with its pages, substituted example, or repeat that adds nothing.",
       "pass": "Uniform-cost search is taught on the lecture's Romania subgraph, where B is improved from 310 to 278.",
       "fail": "The lecture's A* Romania run is replaced by a four-node invented graph.",
       "profiles": [
         "study-unit"
       ],
       "scope": "item",
-      "version": 1,
+      "version": 2,
       "default_fail": true
     },
     {

@@ -234,7 +234,8 @@ visual, including exercise Solution, Compare and transfer-answer blocks, in an i
 Chrome, Edge or Chromium at desktop (1280 px) width; `--phone` adds phone (390 px) and
 narrow (600 px) widths. It reports lines through nodes, labels that overlap or sit on a
 line, text under 12 px, clipped text and drawings that differ from their block. Each
-walkthrough is measured and photographed at its first and its last step, so an overlap that
+walkthrough is measured and photographed at its first and its last step for every run,
+including grid stages and long walkthroughs reached through the jump menu. An overlap that
 appears only as a search tree grows is caught. Walkthrough controls (previous, the step
 position with a jump menu, next) sit in one row under the picture; only short walkthroughs
 show step dots. Boards, mazes and other spatial work use a `grid` stage whose arrows and
@@ -316,7 +317,17 @@ otherwise it is not a defect. Walkthroughs start each reason with a step-specifi
 and name a board's coordinate convention
 once before using it in a calculation.
 Graph walkthroughs distinguish `cutoff` nodes generated at a depth limit from
-expanded nodes, and include them in the reached tree.
+expanded nodes, and include them in the reached tree. Graph and grid legends explain
+every drawn state, including unmarked, shaded and not-yet-reached states when present.
+Keep one continuous process in one walkthrough with phases grouped by `subgoal`.
+Consecutive walkthroughs that repeat a stage need a ruling: a split process must be
+joined, while different inputs or decisions can justify separate blocks.
+Review packets retain each planned example beside its actual teaching block.
+The checker compares inputs, representation, decisive working and tests, and the endpoint
+or comparison against the source and rendering. A concept mention or different example
+does not satisfy that selection. Changing a teaching plan invalidates its earlier review.
+State labels distinguish running values from final results, and Pitfall is reserved for
+a wrong move. Values needed for comparisons across steps remain on the drawing.
 The headless checker gets up to two targeted repairs of missing or invalid entries.
 If entries still fail, it saves the valid answers, keeps the packet pending and reports
 the remaining problems with a failing exit status. Uncertain verdicts require a

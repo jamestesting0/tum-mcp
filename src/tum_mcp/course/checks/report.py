@@ -779,8 +779,26 @@ def quality_flags(
             for block in unit.blocks
             if isinstance(block, WalkthroughBlock) and block.stage is not None
         ]
-        for block in unit.blocks:
+        for index, block in enumerate(unit.blocks):
             location = f"{unit.key}/{block.key or _name(block)}"
+            previous = unit.blocks[index - 1] if index else None
+            if (
+                isinstance(block, WalkthroughBlock)
+                and block.stage is not None
+                and isinstance(previous, WalkthroughBlock)
+                and previous.stage is not None
+                and _stage_content(block.stage) == _stage_content(previous.stage)
+            ):
+                flag(
+                    location,
+                    "duplicate_stage",
+                    f"Consecutive walkthroughs '{_name(previous)}' and '{_name(block)}' "
+                    "repeat the same stage drawing and reset step numbering. If they continue "
+                    "one run, derivation, proof, simulation or case history, this must be fixed: "
+                    "keep the complete process in one walkthrough, with phases grouped by "
+                    "`subgoal`. Separate blocks are valid for different inputs or decisions, "
+                    "such as a before/after contrast; judge the actual working, not the titles.",
+                )
             if isinstance(block, TableBlock) and (
                 len(block.rows) >= 3
                 and re.match(

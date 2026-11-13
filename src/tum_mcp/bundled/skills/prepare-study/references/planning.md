@@ -97,13 +97,15 @@ the lecture has none for the concept, or for practice. There is no quota.
 
 For each `procedure`, `algorithm` or `model` concept, the plan names its `example`:
 `origin` (`source` or `constructed`), `source` and `pages`, what it `shows`, its
-`endpoint` and the `block` that teaches it; a constructed example says `why`. The plan
+`endpoint` and the `block` that teaches it; a constructed example says `why`. Use `shows`
+to name the inputs, picture and decisive working or test, not only the concept.
+Keep the source pages through that decision and conclusion, not just the setup. The plan
 check refuses such a concept without one, unless `skip` explains why it is not worked.
 
 ```json
 "example": {"origin": "source", "source": "lecture", "pages": "12-14",
-  "shows": "The boundary condition changes which rule applies",
-  "endpoint": "The source's worked conclusion", "block": "boundary-case"}
+  "shows": "At the given temperature and pressure, draw the phase boundary and use its position to choose the conservation rule",
+  "endpoint": "The final phase and energy balance agree at the boundary", "block": "boundary-case"}
 ```
 
 Teach a chosen example in full.
@@ -129,13 +131,15 @@ The weakness is a selected example that loses the evidence for its teaching poin
    or result that makes the example's point, including its interpretation. Correct
    intermediate calculations alone do not establish that point. Do not add a comparator
    when the example teaches no comparison.
-5. **One walkthrough per run.** Repeated rounds of one process
-   are subgoals of one walkthrough. Every worked run in the unit, a table of states
+5. **One walkthrough per process.** Keep a continuous run, derivation, proof, simulation
+   or case history in one walkthrough. Group its phases with `subgoal`; do not repeat
+   the picture and restart numbering in consecutive widgets. Iterations of a solver
+   and stages of a reaction stay together. Separate blocks are useful for genuinely
+   different inputs or decisions, such as contrasting two experimental setups.
+   Every worked run in the unit, a table of states
    included, is a planned `example`; plan it or cut it.
 
-The weakness is disappearing evidence: a later display loses facts the learner still needs.
-For a graph stage, each step lists its visible node values in `node_values`; values do
-not carry forward. A node without a value in the source needs no invented one.
+For comparison values, follow the [stage annotation guidance](representations.md#algorithm-traces).
 Use run-keyed answer states so verification checks every step. Low cognitive load is about
 how an example is presented (one step at a time, the change highlighted, the reason
 stated), never about a smaller or easier example.

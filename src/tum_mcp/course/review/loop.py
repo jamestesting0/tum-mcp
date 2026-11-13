@@ -487,11 +487,26 @@ def start(
 CONCEPT_CHECK = "intuition.concepts_instanced"
 
 
-def _concepts(root: Path, key: str) -> list[dict[str, JsonValue]]:
-    """The item's planned concepts, so a checker answers concept by concept."""
-    plan = read_plan(root, key)
+def _concepts(root: Path, item: ReviewItem) -> list[dict[str, JsonValue]]:
+    """Keep selected examples beside the actual block that is meant to teach each one."""
+    plan = read_plan(root, item.key)
     return [
         {"name": c.name, "kind": c.kind, "instance": c.instance, "blocks": list(c.blocks)}
+        | (
+            {
+                "example": c.example.model_dump(mode="json"),
+                "example_block": next(
+                    (
+                        {"location": f"blocks[{index}]", "content": block}
+                        for index, block in enumerate(item.value.get("blocks", []))
+                        if block.get("key") == c.example.block
+                    ),
+                    None,
+                ),
+            }
+            if c.example
+            else {}
+        )
         for c in (plan.concepts if plan else ())
     ]
 
@@ -770,7 +785,7 @@ def _packets(
                 "digests": _digests(context.root, item.value),
                 "source_pages": _page_evidence(context.root, item.value),
                 **_study_context(context, item),
-                "concepts": _concepts(context.root, key),
+                "concepts": _concepts(context.root, item),
                 "blocks": sorted(item.blocks),
                 "passages": _passages(item),
                 **({"evidence": item.evidence} if item.evidence else {}),
@@ -1280,6 +1295,24 @@ def _record_item(
                     check_id,
                     f"{key}: {check_id} names every planned concept with the block that shows "
                     f"it; missing {', '.join(skipped[:4])}.",
+                )
+                continue
+        if verdict == "pass" and check_id == "coverage.examples_selected":
+            evidence = str(given.get("evidence", "")).casefold()
+            if skipped := [
+                f"{c['name']} ({c['example']['block']})"
+                for c in asked.get("concepts", [])
+                if c.get("example")
+                and (
+                    c["name"].casefold() not in evidence
+                    or c["example"]["block"].casefold() not in evidence
+                )
+            ]:
+                problem(
+                    "check",
+                    check_id,
+                    f"{key}: {check_id} needs a comparison of each planned example with its "
+                    f"teaching block; missing {', '.join(skipped)}.",
                 )
                 continue
         if verdict not in {"pass", "fail", "uncertain"}:

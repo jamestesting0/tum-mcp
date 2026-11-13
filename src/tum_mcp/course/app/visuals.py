@@ -55,7 +55,7 @@ SHEET_WIDTHS = ("phone", "desktop")
 HIDDEN = {"code": "not_shown", "detail": "present but not shown at this width; not photographed"}
 # CSS pixels of screenshots per contact-sheet page, so a page stays legible when viewed whole.
 SHEET_HEIGHT = 1600
-VISUAL_KINDS = frozenset({"diagram", "uml", "plot", "figure", "table"})
+VISUAL_KINDS = frozenset({"diagram", "uml", "plot", "figure", "grid", "table"})
 DEFECTS = frozenset(
     {
         "render_error",
@@ -160,6 +160,7 @@ def _exam_visuals(exam: "ExamContent") -> dict[str, "Block"]:
     from tum_mcp.course.content.study import (
         DiagramBlock,
         FigureBlock,
+        GridBlock,
         PlotBlock,
         TableBlock,
         UmlBlock,
@@ -169,9 +170,9 @@ def _exam_visuals(exam: "ExamContent") -> dict[str, "Block"]:
     found: dict[str, Block] = {}
 
     def walk(value: object, path: str) -> None:
-        if isinstance(value, DiagramBlock | FigureBlock | PlotBlock | TableBlock | UmlBlock) or (
-            isinstance(value, WalkthroughBlock) and drawn(value)
-        ):
+        if isinstance(
+            value, DiagramBlock | FigureBlock | GridBlock | PlotBlock | TableBlock | UmlBlock
+        ) or (isinstance(value, WalkthroughBlock) and drawn(value)):
             found[f"exam:{path}"] = value
         elif isinstance(value, BaseModel):
             for name in type(value).model_fields:
@@ -488,7 +489,12 @@ def _measure(
                             for run in range(max(1, runs.count())):
                                 if run:
                                     runs.nth(run).click()
-                                walk.locator(".walk-dot").last.click()
+                                jump = walk.locator(".walk-jump")
+                                if jump.count():
+                                    jump.click()
+                                    walk.locator(".walk-menu-step").last.click()
+                                else:
+                                    walk.locator(".walk-dot").last.click()
                                 page.evaluate(SETTLE)
                                 later = page.evaluate(
                                     measure, {"step": visit.step, "expected": visit.expected}

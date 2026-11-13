@@ -1316,6 +1316,113 @@ def test_the_concept_check_is_answered_for_every_planned_concept(project: Path) 
     loop.record(project, answers, "fresh")
 
 
+def test_selected_examples_reach_review_with_their_actual_teaching_blocks(project: Path) -> None:
+    from tum_mcp.course.app.build import read_content
+
+    path = content_file(project, "study")
+    document = json.loads(path.read_bytes())
+    unit = document["units"][0]
+    key = f"study/{unit['key']}"
+    examples = [
+        {
+            "name": "Goal test",
+            "kind": "algorithm",
+            "instance": "Start at A, goal B, stop when B is generated.",
+            "example": {
+                "origin": "source",
+                "source": unit["sources"][0]["key"],
+                "pages": "1-2",
+                "shows": "Draw the A-B tree and test B on generation before adding successors.",
+                "endpoint": "Return A-B without expanding B.",
+                "block": "goal-run",
+            },
+        },
+        {
+            "name": "Heat accumulation",
+            "kind": "rule",
+            "instance": "Two cells contribute 2 and 3 joules, for 5 joules in total.",
+            "example": {
+                "origin": "constructed",
+                "why": "No worked accumulation in the source.",
+                "shows": "Draw the cells and add each cell's contribution to the running sum.",
+                "endpoint": "The final sum is 5 joules.",
+                "block": "heat-grid",
+            },
+        },
+    ]
+    catalogue = json.loads((files("tum_mcp.bundled") / "exemplars/blocks.json").read_bytes())
+    graph = catalogue["walkthrough-tree"] | {
+        "key": "goal-run",
+        "sources": [unit["sources"][0]["key"]],
+    }
+    graph["steps"][-1].update(
+        action="Generate B and return A-B.",
+        why="B passes the goal test on generation.",
+        active=["b"],
+        cutoff=[],
+    )
+    grid = {
+        "kind": "walkthrough",
+        "key": "heat-grid",
+        "sources": graph["sources"],
+        "stage": {
+            "kind": "grid",
+            "description": "Two cells with heat contributions.",
+            "grids": [{"key": "heat", "cells": [["2", "3"]]}],
+        },
+        "steps": [
+            {
+                "action": "Add the first cell.",
+                "why": "The running sum is 2 joules.",
+                "grid_marks": [{"grid": "heat", "cell": "1:1"}],
+            },
+            {
+                "action": "Add the second cell.",
+                "why": r"The final sum is \(2 + 3 = 5\) joules.",
+                "grid_marks": [{"grid": "heat", "cell": "1:2"}],
+            },
+        ],
+    }
+    unit["blocks"].extend([graph, grid])
+    path.write_text(json.dumps(document))
+    planned = {"item": key, "concepts": examples}
+    target = project / ".tum-mcp/plans" / f"{key}.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(planned))
+    loop.start(project, workspaces=("study",))
+    sent = packets(project, loop.next_round(project))
+    packet = next(p for p in sent if p["items"][0]["item"] == key)
+    entry = packet["items"][0]
+    actual = next(u for u in read_content(project).units if u.key == unit["key"])
+    paired = zip(entry["concepts"], examples, actual.blocks[-2:], strict=True)
+    for concept, expected, block in paired:
+        assert concept["example"] == expected["example"]
+        assert concept["example_block"]["content"] == block.model_dump(mode="json")
+        index = len(unit["blocks"]) - 2 + examples.index(expected)
+        assert concept["example_block"]["location"] == f"blocks[{index}]"
+    response = answer(packet)
+    checks = response["items"][0]["checks"]
+    checks["intuition.concepts_instanced"]["evidence"] = "Goal test; Heat accumulation."
+    checks["coverage.examples_selected"]["evidence"] = "Both concepts are mentioned."
+    with pytest.raises(CampusError, match="needs a comparison of each planned example"):
+        loop.record(project, response, "fresh")
+    checks["coverage.examples_selected"]["evidence"] = (
+        "Goal test: goal-run draws A-B and returns when B is generated. "
+        "Heat accumulation: heat-grid marks each cell, adds 2 and 3 and concludes 5 joules."
+    )
+    loop.record(project, response, "fresh")
+    for other in sent:
+        if other["id"] != packet["id"]:
+            loop.record(project, answer(other), "fresh")
+    # A later change to the selected endpoint must invalidate this review, even with no edit
+    # to the lesson itself. Gate provenance alone must not do so.
+    planned["concepts"][0]["example"]["endpoint"] = "Also show the reached set."
+    target.write_text(json.dumps(planned))
+    waiting = loop.verify_round(project)
+    entries = [e for p in packets(project, waiting) for e in p["items"] if e["item"] == key]
+    assert entries and "coverage.examples_selected" in entries[0]["needs"]
+
+
 @pytest.mark.parametrize("repair_valid", [True, False])
 def test_a_refused_checker_answer_repairs_or_reports_saved_partial_results(
     project: Path, tmp_path: Path, repair_valid: bool

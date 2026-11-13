@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Visual checks reach the last step of long walkthroughs through the jump menu, and
+  interaction smoke counts menu entries. Grid stages now receive contact sheets too.
+  The website tour advances long runs with Next step instead of targeting absent dots.
+- Review packets preserve selected examples beside their teaching blocks and require
+  an example-by-example comparison. Plan changes invalidate earlier reviews.
+  Consecutive copies of one process must be joined with subgoal groups; distinct inputs
+  or decisions remain valid. Graph and grid legends cover every drawn state.
 - Long walkthroughs stay compact: previous, the step position and next sit in one row
   under the picture, with a progress track split by step group and a jump menu. Step dots
   remain only for short walkthroughs, so long explanations no longer push the controls away.

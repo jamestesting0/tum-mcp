@@ -326,6 +326,19 @@ def test_reused_stages_are_ruled_on_across_representations(
     unit["blocks"] = [static, walk, walk | {"key": "replayed"}]
     found = quality_flags(StudyContent.model_validate(value), None)
     assert {str(flag["flag"]) for flag in found} >= {"duplicate_stage", "repeated_example"}
+    assert any(
+        flag["flag"] == "duplicate_stage" and flag["item"] == f"{unit['key']}/replayed"
+        for flag in found
+    )
+    # A different input on the same representation is a comparison, not a fragmented run.
+    other_stage = deepcopy(stage)
+    if stage["kind"] == "table":
+        other_stage["rows"] = [["Reactant", "3"], ["Product", "6"]]
+    else:
+        other_stage["code"] = "state = 'waiting'\nstate = 'cancelled'"
+    unit["blocks"] = [walk, walk | {"key": "other-input", "stage": other_stage}]
+    found = quality_flags(StudyContent.model_validate(value), None)
+    assert "duplicate_stage" not in {flag["flag"] for flag in found}
     unit["blocks"] = [walk]
     found = quality_flags(StudyContent.model_validate(value), None)
     assert not {str(flag["flag"]) for flag in found} & {"duplicate_stage", "repeated_example"}

@@ -50,10 +50,14 @@ class Example(Frozen):
         default=None, exclude_if=lambda value: value is None
     )
     shows: Text = Field(
-        description="The decision, branch or result this example lets the student see, which "
-        "no other chosen example shows."
+        description="The example's inputs and conventions, the object to show, and the decisive "
+        "working or test that makes its teaching point. Include what other chosen examples "
+        "cannot show."
     )
-    endpoint: Text = Field(description="Where the run ends, as the lecture shows or finishes it.")
+    endpoint: Text = Field(
+        description="The full endpoint and the result or comparison it teaches. A justified "
+        "inconclusive endpoint is valid; a useful continuation beyond the lecture is allowed."
+    )
     block: Key
     why: Text | None = Field(
         default=None,
@@ -668,7 +672,10 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "figures remain context even on selected pages because page overlap does not "
             "prove their idea is taught. This is selection context, not a quota. Write nothing "
             "for the rest. "
-            "Keep critical lecture examples complete: inputs, conventions, steps and endpoint. "
+            "Keep critical lecture examples complete: inputs, representation, decisive tests "
+            "and working, and endpoint or comparison. Page overlap or a concept mention does "
+            "not establish that the selected demonstration is complete. Keep the source range "
+            "that contains its decisive test and conclusion, not just its setup. "
             "Finish incomplete source working with its original inputs when the result matters. "
             "Going beyond the source is fine; covering less is not. Do not invent missing "
             "givens or a desired result to force an ending. For each additional example "

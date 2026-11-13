@@ -393,6 +393,12 @@ def test_a_tree_without_a_reveal_order_keeps_unreached_nodes_faint(
     from tum_mcp.course.app.preview import Handler, PreviewServer
 
     faint = TREE_WALKTHROUGH.replace("visible_nodes: shown, ", "")
+    faint = faint.replace(
+        "document.querySelector('main').replaceChildren",
+        "block.label = 'First run'; block.variant = {label: 'Second run', "
+        "steps: structuredClone(block.steps)}; block.contrast = 'Independent restart.'; "
+        "document.querySelector('main').replaceChildren",
+    )
     with PreviewServer(
         ("127.0.0.1", 0), partial(Handler, directory=str(project / "app"))
     ) as server:
@@ -410,9 +416,15 @@ def test_a_tree_without_a_reveal_order_keeps_unreached_nodes_faint(
                 )
                 expect(leaf).to_have_attribute("visibility", "visible")
                 expect(leaf).to_have_class(re.compile(r"\bunreached\b"))
+                expect(
+                    page.locator(".walk-legend").get_by_text("Not reached yet", exact=True)
+                ).to_be_visible()
                 expect(root).not_to_have_class(re.compile(r"\bunreached\b"))
                 page.get_by_role("button", name="Next step", exact=True).click()
                 expect(leaf).not_to_have_class(re.compile(r"\bunreached\b"))
+                page.get_by_role("button", name="Previous step", exact=True).click()
+                page.get_by_role("button", name="Second run", exact=True).click()
+                expect(leaf).to_have_class(re.compile(r"\bunreached\b"))
         finally:
             server.shutdown()
             worker.join(timeout=3)
@@ -469,6 +481,21 @@ def test_cutoff_nodes_are_reached_and_legend_respects_state_precedence(
                 expect(
                     page.locator(".walk-legend").get_by_text("Cut off", exact=True)
                 ).to_have_count(0)
+                # Explicitly shown nodes without a semantic mark still have a visible style.
+                page.evaluate("""async () => {
+                  const { renderWalkthrough } = await import('./runtime/reading/walkthrough.mjs');
+                  const first = {action:'Inspect the input.', why:'No node has been selected.',
+                    active:[], frontier:[], visited:[], edges:[], state:[],
+                    visible_nodes:['a','b']};
+                  const last = {...first, action:'Select A.', active:['a']};
+                  document.querySelector('main').replaceChildren(renderWalkthrough({
+                    stage:{kind:'diagram', description:'A pair.', nodes:[
+                      {key:'a',label:'A'}, {key:'b',label:'B'}], edges:[]},
+                    steps:[first,last]}, () => null));
+                }""")
+                expect(
+                    page.locator(".walk-legend").get_by_text("Unmarked", exact=True)
+                ).to_be_visible()
         finally:
             server.shutdown()
             worker.join(timeout=3)
@@ -594,7 +621,8 @@ def test_a_grid_stage_marks_cells_draws_moves_and_keeps_written_values(
                 const stage = { kind: 'grid', description: 'Start and goal.', grids: [
                     { key: 'start', label: 'Start', cells: [['1', ''], ['', '2']],
                       row_labels: ['0', '1'], col_labels: ['0', '1'] },
-                    { key: 'goal', label: 'Goal', cells: [['', '1'], ['2', '']] }] };
+                    { key: 'goal', label: 'Goal', cells: [['', '1'], ['2', '']],
+                      shaded: ['2:2'] }] };
                 const steps = [
                     { action: 'Tile 1.', why: 'One column right.', state: [],
                       grid_marks: [at('start', '1:1', 'active'), at('goal', '1:2', 'active')],
@@ -614,7 +642,9 @@ def test_a_grid_stage_marks_cells_draws_moves_and_keeps_written_values(
             expect(cell("goal:1:2")).to_have_class("grid-cell active")
             expect(page.locator(".grid-arrow")).to_have_count(1)
             expect(page.locator(".grid-arrow-label")).to_have_text("0 + 1")
-            expect(page.locator(".walk-legend .walk-legend-item")).to_have_count(2)
+            expect(page.locator(".walk-legend .walk-legend-item")).to_have_text(
+                ["Current", "Done", "Shaded", "Unmarked"]
+            )
             page.get_by_role("button", name="Next step", exact=True).click()
             expect(cell("start:1:1")).to_have_class("grid-cell visited")
             expect(cell("start:2:2")).to_have_class("grid-cell active")

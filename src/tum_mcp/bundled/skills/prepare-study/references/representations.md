@@ -63,8 +63,9 @@ Keep a table when rows are records and columns are attributes, such as methods c
 by cost; there a cell's place means nothing. Keep a table for comparison, lookup or observations read together;
 keep a fixed picture outside a walkthrough when nothing meaningful changes.
 The weakness is duplicated teaching objects without a new purpose. Let the walkthrough's
-first step introduce its object when a static copy adds nothing. Keep a separate reference
-or comparison when the learner needs to inspect it alongside the working.
+first step introduce its object when a static copy adds nothing.
+For process boundaries, follow the [example plan](planning.md#choose-the-lectures-examples).
+Keep a separate reference or comparison when the learner needs it alongside the working.
 
 ### The lecture's own figures
 
@@ -117,10 +118,14 @@ The weakness is hidden source structure. Use `visible_nodes` when the source bui
 graph gradually, and reveal every part the source uses. When the source shows the whole
 structure, leave `visible_nodes` out; unreached nodes stay faint. Remove a node only
 when it does not belong to the source example.
+Keep quantities the learner compares across steps on the drawing, such as branch costs,
+cell temperatures or probability weights. Changing prose alone loses that comparison.
 Put changing annotations in `node_values`, separate from stable node labels.
 Each step lists the value of every visible annotated node: values do not carry forward.
 Do not invent values for unannotated nodes. The graph walkthrough
-shows its node-state legend automatically. Derive
+shows its node-state legend automatically. Replace obsolete values rather than presenting
+them as current. Check that every drawn state is explained,
+including an unmarked or not-yet-reached node or cell when its style differs. Derive
 graph marks and displayed state from the same computed trace, and include visual values
 in the answer key when computed. Do not invent a
 changing highlight just to clear `static_walkthrough`. An intentionally fixed
@@ -141,12 +146,15 @@ The weakness is missing calculation inputs. State the conventions the result dep
 then show the original inputs, substitutions and arithmetic in `why` or a state row.
 A total or an intermediate difference alone is not complete working. For a qualitative
 step, show the relevant facts and inference instead of forcing arithmetic.
-`note` names the mistake a student
-makes at that moment when there is a typical one. Group the steps by `subgoal` (start,
-loop, stop). `state` rows show the data the student would otherwise track mentally; the app
+`note` renders as Pitfall. Use it only for a mistake a student makes at that moment.
+A correct state or ordinary stopping limit belongs in `action`, `why` or `state`,
+or a `callout` with `tone: note` when it adds a separate condition.
+Use the [planned subgoals](planning.md#choose-the-lectures-examples).
+`state` rows show the data the student would otherwise track mentally; the app
 marks what changed since the previous step.
 The weakness is an interim value mistaken for a final conclusion. Label provisional
-values by their role, and announce a result only when its stopping condition holds.
+values by their role, such as Running total for a partial sum or Current hypothesis
+for a provisional diagnosis. Announce a final result only when its stopping condition holds.
 A method that permits an inconclusive result should say so, not force a success or failure.
 Include a real failure and its undo when the
 procedure backtracks. A finished table of results without the steps is flagged

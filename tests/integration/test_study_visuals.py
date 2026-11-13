@@ -336,16 +336,34 @@ def test_walkthrough_stages_are_measured_without_losing_their_authored_geometry(
 
 
 @browser
+@pytest.mark.parametrize("long", [False, True], ids=["dots", "jump-menu"])
 def test_walkthrough_last_steps_are_measured_and_captured(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, long: bool
 ) -> None:
     from tum_mcp.course.app import visuals
 
     project = tmp_path / "demo"
     assert CliRunner().invoke(app, ["study", "demo", str(project)]).exit_code == 0
+    if long:
+        path = content_file(project, "study")
+        content = json.loads(path.read_bytes())
+        walk = next(
+            block
+            for block in content["units"][0]["blocks"]
+            if block.get("key") == "walkthrough-graph"
+        )
+        for count, run in ((8, walk), (9, walk["variant"])):
+            steps = run["steps"]
+            steps[-1:-1] = [
+                steps[-2] | {"action": f"Inspect pending branch {index}."}
+                for index in range(count - len(steps))
+            ]
+        path.write_text(json.dumps(content), encoding="utf-8")
+        build(project, publish=False)
     css = project / "app" / "styles.css"
+    clean_css = css.read_text(encoding="utf-8")
     css.write_text(
-        css.read_text(encoding="utf-8")
+        clean_css
         + '\n.graph g.active[data-node-key="g"] text { font-size: 6px !important; }\n'
         + '.graph-region:has([data-node-key="g"]) { width: 120px !important; }\n',
         encoding="utf-8",
@@ -384,6 +402,42 @@ def test_walkthrough_last_steps_are_measured_and_captured(
     )
     assert any(note["visual"] == visual_id for note in result["notes"])
     assert all(defect["code"] != "scrolls" for defect in result["defects"])
+    if long:
+        # The interaction checker must count menu entries rather than absent dots too.
+        css.write_text(clean_css, encoding="utf-8")
+        interacted = invoke("visuals", str(project), "--unit", "components", "--interact", "--json")
+        assert interacted["problems"] == []
+
+
+@browser
+def test_grid_walkthroughs_receive_first_and_last_step_captures(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.course.app import visuals
+
+    path = content_file(project, "study")
+    content = json.loads(path.read_bytes())
+    unit = content["units"][0]
+    scenario = json.loads((CORPUS.parent / "grid_scenarios.json").read_bytes())["walkthroughs"][0]
+    scenario["sources"] = [unit["sources"][0]["key"]]
+    unit["blocks"] = [scenario]
+    path.write_text(json.dumps(content), encoding="utf-8")
+    build(project, publish=False)
+    captions: list[str] = []
+    original = visuals._sheets
+
+    def sheets(page: Page, shots: list[tuple[str, bytes]], width: int, stem: Path) -> list[Path]:
+        captions.extend(caption for caption, _ in shots)
+        return original(page, shots, width, stem)
+
+    monkeypatch.setattr(visuals, "_sheets", sheets)
+    result = invoke("visuals", str(project), "--unit", unit["key"], "--json")
+
+    assert result["passed"], result["defects"]
+    record = json.loads(report_path(project).read_bytes())["items"][f"study/{unit['key']}"]
+    assert [(entry["id"], entry["kind"]) for entry in record["visuals"]] == [("block:0", "grid")]
+    assert sum(caption.endswith(" · last step") for caption in captions) == 1
+    assert len(captions) == 2
 
 
 @browser

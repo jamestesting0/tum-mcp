@@ -29,23 +29,28 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
       // A tree whose steps never say which nodes exist yet still shows every node, as the
       // slides do, but the ones no step has generated so far stay faint until one does.
       const grows = stage.layout === 'tree' && !steps.some(step => step.visible_nodes);
-      const reach = [];
-      for (const [index, step] of steps.entries()) {
-        reach.push(new Set([...(reach[index - 1] || []), ...(step.active || []), ...(step.frontier || []), ...(step.cutoff || []), ...(step.visited || [])]));
+      const reach = new Map();
+      for (const run of runs) {
+        let reached = new Set();
+        for (const step of run) {
+          reached = new Set([...reached, ...(step.active || []), ...(step.frontier || []), ...(step.cutoff || []), ...(step.visited || [])]);
+          reach.set(step, reached);
+        }
       }
       const used = new Set();
-      steps.forEach((step, index) => {
+      steps.forEach(step => {
         for (const item of stage.nodes) {
           if (step.visible_nodes && !step.visible_nodes.includes(item.key)) continue;
-          if (step.active.includes(item.key)) used.add('active');
+          if (grows && reach.get(step).size && !reach.get(step).has(item.key)) used.add('unreached');
+          else if (step.active.includes(item.key)) used.add('active');
           else if (step.frontier.includes(item.key)) used.add('frontier');
           else if (step.cutoff?.includes(item.key)) used.add('cutoff');
           else if (step.visited.includes(item.key)) used.add('visited');
-          if (grows && reach[index].size && !reach[index].has(item.key)) used.add('unreached');
+          else used.add('unmarked');
         }
       });
       const legend = node('div', 'graph walk-legend');
-      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['cutoff', 'Cut off'], ['visited', 'Expanded'], ['unreached', 'Not reached yet']]) {
+      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['cutoff', 'Cut off'], ['visited', 'Expanded'], ['unreached', 'Not reached yet'], ['unmarked', 'Unmarked']]) {
         if (!used.has(state)) continue;
         const swatch = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         swatch.setAttribute('class', 'walk-legend-swatch'); swatch.setAttribute('viewBox', '0 0 18 18'); swatch.setAttribute('aria-hidden', 'true');
@@ -59,7 +64,7 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
       const show = step => {
         current = step;
         const shown = key => !step.visible_nodes || step.visible_nodes.includes(key);
-        const reached = grows && reach[steps.indexOf(step)]?.size ? reach[steps.indexOf(step)] : null;
+        const reached = grows && reach.get(step).size ? reach.get(step) : null;
         for (const [key, group] of groups) {
           const active = step.active.includes(key);
           const frontier = !active && step.frontier.includes(key);
@@ -84,7 +89,7 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
         }
       };
       graph.addEventListener('graphdraw', () => { if (current) show(current); });
-      return { element: append(node('div', 'graph-region'), graph), legend: used.size ? legend : null, show };
+      return { element: append(node('div', 'graph-region'), graph), legend: [...used].some(state => state !== 'unmarked') ? legend : null, show };
     }
     case 'table': {
       const element = renderBody(stage), rows = [...element.querySelectorAll('tbody tr')];
@@ -151,14 +156,24 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
         }
       }
       const { svg, show } = drawGrids(stage, { captions: steps.some(step => (step.grid_arrows || []).some(arrow => arrow.label)) });
-      const used = new Set(steps.flatMap(step => (step.grid_marks || []).map(mark => mark.mark || 'active')));
+      const used = new Set();
+      for (const step of steps) {
+        for (const grid of stage.grids) {
+          grid.cells.forEach((row, r) => row.forEach((_, c) => {
+            const cell = `${r + 1}:${c + 1}`;
+            const marks = (step.grid_marks || []).filter(mark => mark.grid === grid.key && mark.cell === cell).map(mark => mark.mark || 'active');
+            const state = ['active', 'frontier', 'path', 'visited'].find(mark => marks.includes(mark));
+            used.add(state || (grid.shaded?.includes(cell) ? 'shaded' : 'unmarked'));
+          }));
+        }
+      }
       const legend = node('div', 'graph walk-legend');
-      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['visited', 'Done'], ['path', 'Path']]) {
+      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['visited', 'Done'], ['path', 'Path'], ['shaded', 'Shaded'], ['unmarked', 'Unmarked']]) {
         if (!used.has(state)) continue;
         const swatch = node('span', `grid-swatch ${state}`); swatch.setAttribute('aria-hidden', 'true');
         legend.append(append(node('span', 'walk-legend-item'), swatch, node('span', '', label)));
       }
-      return { element: append(node('div', 'grid-region'), svg), legend: used.size > 1 ? legend : null, show(step) {
+      return { element: append(node('div', 'grid-region'), svg), legend: [...used].some(state => state !== 'unmarked') ? legend : null, show(step) {
         show({ marks: step.grid_marks || [], arrows: step.grid_arrows || [], values: values.get(step) });
       } };
     }

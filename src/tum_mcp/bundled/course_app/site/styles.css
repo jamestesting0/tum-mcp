@@ -1462,6 +1462,7 @@ button.walk-jump:hover, button.walk-jump[aria-expanded="true"] { background: var
 .grid-arrow-casing { fill: none; stroke: var(--panel); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
 .grid-figure .grid-arrow-label { fill: var(--accent); font-size: 14px; font-weight: 650; paint-order: stroke; stroke: var(--panel); stroke-width: 5px; stroke-linejoin: round; }
 .grid-swatch { width: 14px; height: 14px; border: 1px solid var(--muted); border-radius: 2px; background: var(--panel); }
+.grid-swatch.shaded { background: var(--line); }
 .grid-swatch.active { background: var(--accent); border-color: var(--accent); }
 .grid-swatch.visited { background: var(--wash); }
 .grid-swatch.path { background: var(--wash); border: 2px solid var(--accent); }
