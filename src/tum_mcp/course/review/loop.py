@@ -55,9 +55,16 @@ from tum_mcp.settings import Frozen
 DEFAULT_ROUNDS: Final = 1
 PACKET_CHARS = 60_000
 # One checker reply must hold a quoted verdict per check: trial checkers completed packets of
-# up to about 100 short verdicts and gave up on 100 to 312 long ones.
-PACKET_VERDICTS = 60
+# up to about 100 short verdicts and gave up on 100 to 312 long ones. A study lesson's checks
+# carry quoted evidence and visual scores; in the ce7 pilot one lesson of about 72 tasks never
+# got past 9 verdicts, so a packet (or one lesson's batch) asks for at most 30.
+PACKET_VERDICTS = 30
 GATED = ("correctness", "coverage")
+REPAIR_GUIDANCE = (
+    "Read every changed block against its cited source pages and the reference selection. "
+    "A finding demanding an added worked example must name the decision the existing runs "
+    "cannot show; otherwise it is not a defect."
+)
 
 
 class RoundLog(Frozen):
@@ -70,6 +77,8 @@ class RoundLog(Frozen):
     resolved: int = Field(default=0, ge=0)
     gate: bool | None = None
     verified: bool = False
+    verify_passes: int = Field(default=0, ge=0, le=2)
+    verify_fingerprints: dict[str, str] = Field(default_factory=dict)
 
     @property
     def pending_packets(self) -> tuple[str, ...]:
@@ -134,6 +143,7 @@ class Context:
     flags_by_item: dict[str, list[dict[str, JsonValue]]] = field(default_factory=dict)
     answer_keys: list[dict[str, JsonValue]] = field(default_factory=list)
     preparation: Readiness | None = None
+    pending_packets: dict[str, list[str]] = field(default_factory=dict)
 
     def record(self, key: str) -> ItemRecord:
         if key not in self.records:
@@ -259,6 +269,15 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
         if not result["passed"]
     ]
     context = Context(root, items, flags, visual_ids(content, exercises), answer_keys=answer_keys)
+    if (loop_state := read_state(root)) and loop_state.rounds:
+        for packet_id in loop_state.rounds[-1].pending_packets:
+            packet = json.loads(
+                confined(
+                    root, private_name(Path("."), f"review/packets/{packet_id}.json")
+                ).read_bytes()
+            )
+            for entry in packet["items"]:
+                context.pending_packets.setdefault(entry["item"], []).append(packet_id)
     for flag in flags:
         source = str(flag["item"])
         targets = (
@@ -334,7 +353,12 @@ def item_tasks(context: Context, key: str) -> dict[str, JsonValue]:
         or record.checks[check.id].verdict == "uncertain"
     ]
     verify = [finding.id for finding in record.findings if finding.status == "fixed"]
-    visuals = [] if _visuals_current(context, key, record) else list(context.visuals.get(key, []))
+    reviewed = (
+        {visual.visual for visual in record.visuals}
+        if record.visuals_fingerprint == digest(item.blocks)
+        else set()
+    )
+    visuals = [visual for visual in context.visuals.get(key, []) if visual not in reviewed]
     rule = [k for k in ruled_flags(context, key) if not _ruling_current(record, k, item)]
     return {"needs": needs, "verify": verify, "visuals": visuals, "rule": rule}
 
@@ -617,15 +641,56 @@ def verify_round(root: Path) -> dict[str, JsonValue]:
     if state is None or not state.rounds or state.rounds[-1].closed is not None:
         raise CampusError(Code.ACTION_REQUIRED, "Open a round with tum-mcp review next first.")
     log = state.rounds[-1]
-    if log.verified:
-        raise CampusError(Code.ACTION_REQUIRED, "This round already has a verify pass.")
+    passes = max(log.verify_passes, int(log.verified))
+    if passes >= 2:
+        raise CampusError(
+            Code.ACTION_REQUIRED,
+            "This round already has two verify passes; the student must ask for another round.",
+        )
     if log.answered is None or log.pending_packets:
-        raise CampusError(Code.ACTION_REQUIRED, "Record all original packets before verification.")
+        raise CampusError(
+            Code.ACTION_REQUIRED, "Record all original packets and verify packets first."
+        )
     _bind_preparation(context, state)
     if context.preparation:
         _require_ready(context.preparation)
-    packets, writes = _packets(context, state, state.round, verify=True)
-    log = log.model_copy(update={"packets": (*log.packets, *packets), "verified": True})
+    fingerprints = log.verify_fingerprints
+    if passes and not fingerprints:
+        fingerprints = {
+            entry["item"]: entry["fingerprint"]
+            for packet_id in log.packets
+            if packet_id.startswith(f"r{state.round}v-")
+            for entry in json.loads(
+                confined(
+                    context.root, private_name(Path("."), f"review/packets/{packet_id}.json")
+                ).read_bytes()
+            )["items"]
+        }
+    scope = tuple(
+        key
+        for key in state.scope
+        if key in context.items
+        and (
+            not passes
+            or (key in fingerprints and packet_fingerprint(context.items[key]) != fingerprints[key])
+            or (key not in fingerprints and bool(_changed(context.root, context.items[key])))
+        )
+    )
+    packets, writes = _packets(
+        context, state.model_copy(update={"scope": scope}), state.round, verify=passes + 1
+    )
+    log = log.model_copy(
+        update={
+            "packets": (*log.packets, *packets),
+            "verified": True,
+            "verify_passes": passes + 1,
+            "verify_fingerprints": {
+                key: packet_fingerprint(context.items[key])
+                for key in state.scope
+                if key in context.items
+            },
+        }
+    )
     writes.append(
         _state_write(context.root, state.model_copy(update={"rounds": (*state.rounds[:-1], log)}))
     )
@@ -634,7 +699,7 @@ def verify_round(root: Path) -> dict[str, JsonValue]:
 
 
 def _packets(
-    context: Context, state: LoopState, number: int, *, verify: bool
+    context: Context, state: LoopState, number: int, *, verify: int
 ) -> tuple[list[str], list[Write]]:
     sheets = current_sheets(context.root) if context.visuals else {}
     groups: dict[str, list[dict[str, JsonValue]]] = {}
@@ -663,7 +728,7 @@ def _packets(
                     else {}
                 ),
                 **tasks,
-                **({"visual_sheets": sheets[key]} if tasks["visuals"] and key in sheets else {}),
+                **({"visual_sheets": sheets[key]} if key in sheets else {}),
                 "verify": [
                     finding.model_dump(mode="json", exclude={"blocks_at_open"})
                     for finding in record.findings
@@ -729,8 +794,32 @@ def _packets(
             verdicts += asked
         if batch:
             batches.append(batch)
+        packet_items = {}
         for index, items in enumerate(batches, 1):
-            packet_id = f"r{number}{'v' if verify else ''}-{profile}-{index}"
+            phase = "v2" if verify == 2 else "v" if verify else ""
+            packet_id = f"r{number}{phase}-{profile}-{index}"
+            tasks = [
+                (task, value)
+                for task in ("needs", "verify", "visuals", "rule")
+                for value in items[0][task]
+            ]
+            if len(items) != 1 or len(tasks) <= PACKET_VERDICTS:
+                packet_items[packet_id] = items
+                continue
+            for offset in range(0, len(tasks), PACKET_VERDICTS):
+                selected = tasks[offset : offset + PACKET_VERDICTS]
+                entry = items[0] | {
+                    task: [value for name, value in selected if name == task]
+                    for task in ("needs", "verify", "visuals", "rule")
+                }
+                entry["report"] = [
+                    flag | {"needs_ruling": flag.get("key") in entry["rule"]}
+                    if flag.get("needs_ruling")
+                    else flag
+                    for flag in entry["report"]
+                ]
+                packet_items[f"{packet_id}b{offset // PACKET_VERDICTS + 1}"] = [entry]
+        for packet_id, items in packet_items.items():
             packet = {
                 "id": packet_id,
                 "round": number,
@@ -740,7 +829,8 @@ def _packets(
                     "skills/review-course/references/"
                     + ("course.md" if profile == "course" else "profiles.md")
                 )
-                .read_text(encoding="utf-8"),
+                .read_text(encoding="utf-8")
+                + ("\n\n" + REPAIR_GUIDANCE if verify else ""),
                 "checks": [check.brief() for check in registry.judged(profile)],
                 "items": items,
                 **(
@@ -1024,19 +1114,23 @@ def _record_item(
             )
             continue
         also = raw.get("also", [])
-        if (
-            not isinstance(also, list)
-            or any(not isinstance(link, str) for link in also)
-            or any(link == check.id or link not in asked["needs"] for link in also)
-            or any(answer.get("checks", {}).get(link, {}).get("verdict") != "fail" for link in also)
-        ):
+        if not isinstance(also, list) or any(not isinstance(link, str) for link in also):
             problem(
                 "finding",
                 str(index),
-                f"{key}: finding for {check.id} has invalid also checks {also}; "
-                "each must be another asked check with a fail verdict.",
+                f"{key}: finding for {check.id} has a malformed also list; give check ids.",
             )
             continue
+        # A link only lets another failing, asked check rest on this finding. A link to a
+        # check that passed or was not asked carries nothing, so it is dropped rather than
+        # costing the whole finding (which would orphan the owner's fail verdict).
+        also = [
+            link
+            for link in also
+            if link != check.id
+            and link in asked["needs"]
+            and answer.get("checks", {}).get(link, {}).get("verdict") == "fail"
+        ]
         if not quoted(quote, _at(passages, location)):
             matches = [path for path, text in passages if quoted(quote, [(path, text)])]
             if len(matches) != 1:
@@ -1106,13 +1200,13 @@ def _record_item(
             (
                 finding
                 for finding in findings
-                if finding.opened == number
-                and finding.status != "verified"
-                and (finding.check, finding.location, finding.quote)
-                == (candidate.check, candidate.location, candidate.quote)
-                and (finding.why, finding.fix, finding.score)
-                == (candidate.why, candidate.fix, candidate.score)
-                and set(finding.also) == set(candidate.also)
+                if finding.status in LIVE
+                and (
+                    finding.check == candidate.check
+                    or finding.check in candidate.also
+                    or candidate.check in finding.also
+                )
+                and (finding.location, finding.quote) == (candidate.location, candidate.quote)
             ),
             None,
         )
@@ -1235,11 +1329,10 @@ def _record_item(
             contradicted = [
                 check_id
                 for check_id in (target.check, *target.also)
-                if answer.get("checks", {}).get(check_id, {}).get("verdict") == "fail"
-                and not any(
-                    finding.id != target.id and check_id in (finding.check, *finding.also)
-                    for finding in reported
-                )
+                if (verdict := verdicts.get(check_id)) is not None
+                and is_current(verdict, checks[check_id], item)
+                and verdict.verdict == "fail"
+                and not any(finding_id != target.id for finding_id in verdict.finding_ids)
             ]
             if contradicted:
                 problem(
@@ -1298,22 +1391,32 @@ def _record_item(
         valid_visuals = []
         for visual in answer.get("visuals", []):
             try:
-                valid_visuals.append(VisualReview.model_validate(visual))
+                reviewed = VisualReview.model_validate(visual)
             except ValidationError as error:
                 problem(
                     "visual",
                     str(visual.get("visual", "")),
                     f"{key}: visual scores invalid ({error.errors()[0]['msg']}).",
                 )
-        visuals = tuple(valid_visuals)
-        if missing := set(asked["visuals"]) - {visual.visual for visual in visuals}:
+                continue
+            if reviewed.visual not in asked["visuals"]:
+                problem("visual", reviewed.visual, f"{key}: visual not asked: {reviewed.visual}.")
+                continue
+            valid_visuals.append(reviewed)
+        if missing := set(asked["visuals"]) - {visual.visual for visual in valid_visuals}:
             for visual in sorted(missing):
                 if not any(
                     p["kind"] == "visual" and p["item"] == key and p["id"] == visual
                     for p in problems
                 ):
                     problem("visual", visual, f"{key}: visual not scored: {visual}.")
-        fingerprint = digest(item.blocks)
+        current = digest(item.blocks)
+        visuals = (
+            tuple(v for v in visuals if v.visual not in asked["visuals"])
+            if fingerprint == current
+            else ()
+        ) + tuple(valid_visuals)
+        fingerprint = current
     context.records[key] = record.model_copy(
         update={
             "checks": verdicts,
@@ -1423,6 +1526,8 @@ def item_gate(context: Context, key: str) -> list[str]:
     item, record = context.items[key], context.record(key)
     profile = item.profile
     problems: list[str] = []
+    if pending := context.pending_packets.get(key):
+        problems.append(f"unanswered packets: {', '.join(pending)}")
     dimensions = registry.dimensions(profile)
     scores = record.scores(dimensions)
     for check in registry.for_profile(profile):
@@ -1580,7 +1685,7 @@ def scorecard(
         provenance["provisional"] += provisional
         provenance["unreviewed"] += not (independently_checked or provisional)
         finding_status.update(finding.status for finding in record.findings)
-        fully_scored = all(
+        fully_scored = not context.pending_packets.get(key) and all(
             (verdict := record.checks.get(check.id)) and is_current(verdict, check, item)
             for check in registry.judged(profile)
         )
@@ -1666,7 +1771,7 @@ def scorecard(
         },
         "needs_your_eye": eye,
         "late_findings": late,
-        # Fixes made after their item's last check: only another round can verify them.
+        # Fixes made after the item's last check still need independent verification.
         "fixes_to_verify": sum(
             f.status == "fixed" for key in in_scope for f in context.record(key).findings
         ),
@@ -1776,7 +1881,9 @@ def status(root: Path) -> dict[str, JsonValue]:
     elif open_round:
         if pending:
             action = "Record the pending packets, fix findings, then run review verify."
-        elif card["fixes_to_verify"] and not state.rounds[-1].verified:
+        elif (card["fixes_to_verify"] or card["stale_items"]) and max(
+            state.rounds[-1].verify_passes, int(state.rounds[-1].verified)
+        ) < 2:
             action = "tum-mcp review verify PROJECT"
         else:
             action = "Fix the recorded findings, then close the round."

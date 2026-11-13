@@ -54,7 +54,7 @@ def next_command(project: Path) -> None:
 
 @app.command()
 def verify(project: Path) -> None:
-    """Write one fresh verification pass in the current round."""
+    """Write a fresh verification pass, up to two in the current round."""
     _echo(loop.verify_round(project))
 
 

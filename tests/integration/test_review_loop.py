@@ -18,6 +18,12 @@ from tum_mcp.errors import CampusError
 RULED = "The situation is one plain fact the prompt states."
 
 
+@pytest.fixture(autouse=True)
+def one_packet_per_item(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the fixture lesson in one packet; batching tests set their own smaller bound."""
+    monkeypatch.setattr(loop, "PACKET_VERDICTS", 100)
+
+
 def packets(project: Path, opened: dict) -> list[dict]:
     return [
         json.loads((project / entry["path"]).read_text(encoding="utf-8"))
@@ -169,21 +175,37 @@ def test_one_defect_can_fail_four_checks_without_multiple_scores(
 @pytest.mark.parametrize(
     "linked", [["clarity.one_reading"], ["clarity.case_observable"], ["cohesion.linked"]]
 )
-def test_finding_rejects_invalid_linked_check(project: Path, linked: list[str]) -> None:
+def test_finding_keeps_owner_and_drops_invalid_linked_check(
+    project: Path, linked: list[str]
+) -> None:
     loop.start(project, workspaces=("study",))
     packet = packets(project, loop.next_round(project))[0]
     key = packet["items"][0]["item"]
     response = answer(packet, fail={key: "clarity.one_reading"})
     response["items"][0]["findings"][0]["also"] = linked
 
-    with pytest.raises(CampusError) as error:
+    loop.record(project, response, "fresh")
+
+    findings = loop.load(project).record(key).findings
+    assert [(f.check, f.also) for f in findings] == [("clarity.one_reading", ())]
+
+
+def test_finding_refuses_malformed_also(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    key = packet["items"][0]["item"]
+    response = answer(packet, fail={key: "clarity.one_reading"})
+    response["items"][0]["findings"][0]["also"] = "clarity.case_observable"
+
+    with pytest.raises(CampusError, match="also"):
         loop.record(project, response, "fresh")
 
-    assert linked[0] in error.value.message
     assert not loop.load(project).record(key).findings
 
 
-def test_also_rejects_current_profile_check_not_asked_in_packet(project: Path) -> None:
+def test_also_drops_current_profile_check_not_asked_in_packet(project: Path) -> None:
+    from tum_mcp.course.review.ledger import read_record
+
     loop.start(project, workspaces=("study",))
     original = packets(project, loop.next_round(project))
     entry = original[0]["items"][0]
@@ -205,8 +227,10 @@ def test_also_rejects_current_profile_check_not_asked_in_packet(project: Path) -
         current
     ]
 
-    with pytest.raises(CampusError, match=current):
-        loop.record(project, response, "fresh")
+    loop.record(project, response, "fresh")
+
+    stored = read_record(project, key).findings[-1]
+    assert stored.check == "clarity.one_reading" and stored.also == ()
 
 
 def test_old_review_record_without_also_still_loads(project: Path) -> None:
@@ -500,12 +524,65 @@ def test_same_round_verify_waits_for_packets_and_rechecks_repairs(project: Path)
     assert entry["changed"]
     with pytest.raises(CampusError, match="unanswered packets"):
         loop.close_round(project)
-    with pytest.raises(CampusError, match="already has a verify"):
+    with pytest.raises(CampusError, match="Record all.*packets"):
         loop.verify_round(project)
     for packet in verification:
         loop.record(project, answer(packet), "fresh")
     assert loop.load(project).record(key).findings[0].status == "verified"
     assert loop.read_state(project).round == 1
+
+
+def test_second_verify_scopes_all_stale_tasks_to_changed_items(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = content_file(project, "study")
+    document = json.loads(path.read_bytes())
+    document["units"][0]["questions"][0].update(level="apply", blocks=[])
+    path.write_text(json.dumps(document))
+    loop.start(project, workspaces=("study",))
+    check_all(project)
+    key = edit_first_block(project)
+    first = packets(project, loop.verify_round(project))
+    for packet in first:
+        loop.record(project, answer(packet, fail={key: "clarity.one_reading"}), "fresh")
+    finding = loop.load(project).record(key).findings[0]
+    edit_first_block(project)
+    loop.change(project, key, finding.id, "fixed")
+    expected = loop.item_tasks(loop.load(project), key)
+    assert all(expected[task] for task in ("needs", "visuals", "verify", "rule"))
+    monkeypatch.setattr(loop, "PACKET_VERDICTS", 8)
+
+    second = packets(project, loop.verify_round(project))
+
+    assert {e["item"] for p in second for e in p["items"]} == {key}
+    assert {p["id"] for p in first}.isdisjoint(p["id"] for p in second)
+    for task in ("needs", "visuals", "rule"):
+        assert [v for p in second for e in p["items"] for v in e[task]] == expected[task]
+    assert [f["id"] for p in second for e in p["items"] for f in e["verify"]] == [finding.id]
+    for packet in second:
+        loop.record(project, answer(packet), "fresh")
+    assert loop.load(project).record(key).findings[0].status == "verified"
+    assert loop.read_state(project).round == 1
+    with pytest.raises(CampusError, match="student.*another round"):
+        loop.verify_round(project)
+
+
+def test_second_verify_does_not_retry_unchanged_uncertainty(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    check_all(project)
+    key = edit_first_block(project)
+    for packet in packets(project, loop.verify_round(project)):
+        response = answer(packet)
+        check = next(iter(response["items"][0]["checks"]))
+        response["items"][0]["checks"][check].update(
+            verdict="uncertain", missing="slides.pdf page 4 cannot be opened: file missing."
+        )
+        loop.record(project, response, "fresh")
+
+    assert loop.verify_round(project)["packets"] == []
+    assert loop.item_tasks(loop.load(project), key)["needs"] == [check]
+    with pytest.raises(CampusError, match="student.*another round"):
+        loop.verify_round(project)
 
 
 def test_bulk_fix_validates_all_before_changing_any(project: Path) -> None:
@@ -917,9 +994,51 @@ def test_recording_an_answered_packet_again_cannot_duplicate_findings(project: P
     assert repeated["opened"] == 0
     assert loop.load(project).record(key) == before
     assert loop.read_state(project) == state
-    response["items"][0]["findings"][0]["why"] = "A distinct defect in the same passage."
-    assert loop.record(project, response, "fresh")["opened"] == 1
-    assert len(loop.load(project).record(key).findings) == 2
+    response["items"][0]["findings"][0].update(
+        why="The same defect described differently.", fix="A reworded repair.", score=1
+    )
+    assert loop.record(project, response, "fresh")["opened"] == 0
+    assert loop.load(project).record(key) == before
+
+
+@pytest.mark.parametrize("status", ["open", "fixed"])
+def test_reworded_retry_keeps_existing_defect_across_rounds(project: Path, status: str) -> None:
+    loop.start(project, budget=2, workspaces=("study",))
+    check_all(project, fail={"study/graphs": "clarity.one_reading"})
+    key = "study/graphs"
+    original = loop.load(project).record(key).findings[0]
+    edit_first_block(project)
+    if status == "fixed":
+        loop.change(project, key, original.id, "fixed")
+    original = loop.load(project).record(key).findings[0]
+    loop.close_round(project)
+    packet = packets(project, loop.next_round(project))[0]
+    response = answer(packet, fail={key: original.check})
+    entry = next(e for e in response["items"] if e["item"] == key)
+    entry["findings"] = [
+        {
+            "check": original.check,
+            "quote": original.quote,
+            "location": original.location,
+            "why": "Reworded after a partial reply.",
+            "fix": "Restated repair.",
+            "score": 1,
+        }
+    ]
+    for verification in entry["verify"]:
+        verification["resolved"] = False
+
+    result = loop.record(project, response, "fresh")
+
+    assert result["opened"] == 0
+    findings = loop.load(project).record(key).findings
+    assert len(findings) == 1
+    assert findings[0].id == original.id
+    assert (findings[0].why, findings[0].fix, findings[0].score) == (
+        original.why,
+        original.fix,
+        original.score,
+    )
 
 
 def test_the_gate_wants_fresh_checkers_for_correctness(project: Path) -> None:
@@ -945,9 +1064,14 @@ def test_cli_uses_one_round_unless_a_budget_is_requested(project: Path) -> None:
     assert json.loads(result.output)["budget"] == 3
 
 
-def test_a_packet_asks_no_more_verdicts_than_one_checker_reply_can_hold(project: Path) -> None:
+def test_a_packet_asks_no_more_verdicts_than_one_checker_reply_can_hold(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Trial checkers gave up on packets asking for 100 to 312 quoted verdicts.
+    monkeypatch.setattr(loop, "PACKET_VERDICTS", 8)
     loop.start(project, workspaces=("study",))
+    context = loop.load(project)
+    expected = {key: loop.item_tasks(context, key) for key in loop.read_state(project).scope}
     opened = packets(project, loop.next_round(project))
     assert len(opened) > 1
     for packet in opened:
@@ -955,7 +1079,51 @@ def test_a_packet_asks_no_more_verdicts_than_one_checker_reply_can_hold(project:
             sum(len(entry[task]) for task in ("needs", "verify", "visuals", "rule"))
             for entry in packet["items"]
         ]
-        assert len(counts) == 1 or sum(counts) <= loop.PACKET_VERDICTS
+        assert sum(counts) <= loop.PACKET_VERDICTS
+    for key, tasks in expected.items():
+        entries = [e for p in opened for e in p["items"] if e["item"] == key]
+        for task in ("needs", "verify", "visuals", "rule"):
+            assert [v for e in entries for v in e[task]] == tasks[task]
+        for entry in entries:
+            assert entry["fingerprint"] == loop.packet_fingerprint(context.items[key])
+            assert entry["passages"] == loop._passages(context.items[key])
+            for field in ("outline", "earlier_terms", "source_pages", "digests", "visual_sheets"):
+                assert entry.get(field) == entries[0].get(field)
+            assert {flag["key"] for flag in entry["report"] if flag.get("needs_ruling")} == set(
+                entry["rule"]
+            )
+
+
+@pytest.mark.parametrize("bound", [1, len(registry.judged("study-unit"))])
+def test_item_needs_every_batch_before_scores_are_current(
+    project: Path, monkeypatch: pytest.MonkeyPatch, bound: int
+) -> None:
+    monkeypatch.setattr(loop, "PACKET_VERDICTS", bound)
+    loop.start(project, workspaces=("study",))
+    before = loop.load(project)
+    expected = {key: loop.item_tasks(before, key) for key in loop.read_state(project).scope}
+    sent = packets(project, loop.next_round(project))
+    first = sent[0]
+    key = first["items"][0]["item"]
+    loop.record(project, answer(first), "fresh")
+
+    context = loop.load(project)
+    assert set(loop.item_tasks(context, key)["needs"]) == (
+        set(expected[key]["needs"]) - set(first["items"][0]["needs"])
+    )
+    assert loop.item_tasks(context, key)["visuals"] or loop.item_tasks(context, key)["rule"]
+    assert any("unanswered" in p for p in loop.item_gate(context, key))
+    card = loop.scorecard(context, loop.read_state(project))
+    assert next(row for row in card["items"] if row["item"] == key)["scores"] == {}
+    for packet in reversed(sent[1:]):
+        loop.record(project, answer(packet), "fresh")
+    context = loop.load(project)
+    assert loop.item_tasks(context, key) == {"needs": [], "verify": [], "visuals": [], "rule": []}
+    assert not any("unanswered" in p for p in loop.item_gate(context, key))
+    card = loop.scorecard(context, loop.read_state(project))
+    assert next(row for row in card["items"] if row["item"] == key)["scores"]
+    for item, visuals in context.visuals.items():
+        assert {v.visual for v in context.record(item).visuals} == set(visuals)
 
 
 def test_closing_with_unanswered_packets_requires_an_explicit_choice(project: Path) -> None:

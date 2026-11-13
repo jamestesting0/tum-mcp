@@ -37,6 +37,7 @@ PROMPT = (
     "packet's scope_dispositions, reading .tum-mcp/coverage.json and the source pages when "
     "needed. Do not regenerate coverage reports or browser receipts in this read-only "
     "session; the packet already contains current deterministic results. "
+    f"{loop.REPAIR_GUIDANCE} "
     "For lecture-selection, read the full compact transcript in the item's "
     "`evidence`, check every selection and omission, and inspect the comparison materials. "
     "For every item, answer every check in its "

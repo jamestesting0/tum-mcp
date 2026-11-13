@@ -42,11 +42,14 @@ scores.
    When review is newly approved after a draft-only handoff, register that batch with
    `study task start PROJECT --batch ID --review-rounds N` using the authorized budget.
 2. **Each round.**
-   1. `tum-mcp review next PROJECT` writes one packet per profile under
+   1. `tum-mcp review next PROJECT` writes bounded packets per profile under
       `.tum-mcp/review/packets/`. Each holds its checks with a pass and a fail example,
       the items with their passages and block ids, the report flags, the answer key's
       result, the digests of the cited sources, the findings to verify and the findings
-      already rejected with their reasons. For items that need visual scores,
+      already rejected with their reasons. An oversized item is split into batches of
+      checks, visuals, fixes and rulings. Each retains the full passages, outline, sources
+      and captures; every batch must be recorded before its scores are current.
+      For items that need visual scores,
       `visual_sheets` links the available captures of the current
       draft. Use those images when scoring the six visual criteria.
       Desktop is the check; use `--phone` only when the student asks.
@@ -83,7 +86,9 @@ scores.
       Edit the item files, then `tum-mcp review fix PROJECT --item ITEM --finding F`
       (refused while the quoted passage is unchanged; name `--block` when you fixed it
       elsewhere). A finding that is wrong: `review reject` with the reason the content is
-      right; the next checker sees it. A score-2 finding the content cannot fix (the
+      right; the next checker sees it. A retry with the same owner, location and quote
+      keeps the existing open or fixed finding even when its wording changes.
+      A score-2 finding the content cannot fix (the
       source gives no smaller example): `review keep` with the reason.
    5. Check changed claims and citations against the named source pages; matching source
       hashes do not establish that a page supports a new claim. Lint changed items with
@@ -104,10 +109,15 @@ scores.
       scorecard without opening another round. New corroborating sources are permitted
       while the original source revisions, request and required demands stay fixed.
    6. Finish every original finding and draft repair before running
-      `tum-mcp review verify PROJECT` once in the open round. Give its packets to fresh
-      checkers and record their answers. After this pass, repair only findings it opened
-      where possible. Report those subsequent repairs as unverified; another check needs another
-      round requested by the student.
+      `tum-mcp review verify PROJECT` in the open round. Give its packets to fresh
+      checkers and record every batch. Read every changed block against its cited source
+      pages and the reference selection. A finding demanding another worked example
+      must name the decision the existing runs cannot show; otherwise it is not a defect.
+      Repair only findings this pass opened, then run `review verify PROJECT` again.
+      This second pass asks all stale checks, visuals, fixes and rulings only for items
+      changed since the first pass. Record its fresh answers, then close. There are at
+      most two verify passes per round. Report repairs after the second as unverified;
+      another check needs another round requested by the student.
    7. `tum-mcp review close-round PROJECT` computes the gate and writes
       `.tum-mcp/loop/scorecard.md`. Use `review status` to check progress while a
       round is open. If a packet cannot be recorded, finish the available repairs
