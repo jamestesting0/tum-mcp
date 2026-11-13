@@ -85,6 +85,7 @@ An example is critical when at least one holds:
 | It is the lecture's run of a procedure or calculation the student must perform | The breadth-first run to a goal; A* on the Romania map; h1 and h2 on the 8-puzzle |
 | It shows a decision, branch or failure the main run cannot | A path cost improved before the goal is removed; a cutoff versus a failure; a heuristic that loops; a reopened node |
 | Later material or the exercises build on it | The map or board that later lectures reuse |
+| It shows why a method works or what it costs | The node counts that make iterative deepening affordable; A*'s f-contours; the search tree that repeats a state |
 
 Leave out the same mechanism run again on another object, motivation and application
 pictures without workable inputs, empirical tables (state the finding and cite the page)

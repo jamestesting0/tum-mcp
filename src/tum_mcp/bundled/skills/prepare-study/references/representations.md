@@ -100,7 +100,8 @@ graphs, set each step's `active`, `frontier`, `visited`, `cutoff` and relevant `
 actual run; use the stage's node keys. Code marks its running `lines`, tables their
 `shown` rows or changed `cells`, derivations their `shown` lines, plots their `series`
 and SVG figures their `layers`. Clear marks that no longer apply when stepping back
-or switching runs. Draw a search tree with `layout: "tree"`: the app places its levels and
+or switching runs. When a frontier keeps an outdated entry, as a lazy priority queue does,
+the step says the entry is outdated and how the run skips it. Draw a search tree with `layout: "tree"`: the app places its levels and
 keeps the lecture's shape however wide it is. When the lecture grows the tree as nodes are
 generated (A* on a map), list `visible_nodes`; otherwise the whole tree is drawn, as on
 slides that show it whole, and nodes no step has reached yet stay faint. Put what the slide
