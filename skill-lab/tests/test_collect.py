@@ -10,6 +10,16 @@ def _write(path, events):
 def test_codex_usage_is_counted_once_per_thread(tmp_path):
     transcript = tmp_path / "transcript"
     transcript.mkdir()
+    (tmp_path / "run.json").write_text(
+        json.dumps(
+            {
+                "turns": [
+                    {"turn": 1, "parts": [{"label": "turn-1"}, {"label": "turn-1-reply-1"}]},
+                    {"turn": 2, "parts": [{"label": "turn-2"}]},
+                ]
+            }
+        )
+    )
     command = {
         "type": "item.completed",
         "item": {"type": "command_execution", "aggregated_output": "abcd", "exit_code": 0},
@@ -19,7 +29,14 @@ def test_codex_usage_is_counted_once_per_thread(tmp_path):
         [
             {"type": "thread.started", "thread_id": "t"},
             command,
-            {"type": "turn.completed", "usage": {"input_tokens": 100, "output_tokens": 10}},
+            {"type": "turn.completed", "usage": {"input_tokens": 53027776}},
+        ],
+    )
+    _write(
+        transcript / "turn-1-reply-1.jsonl",
+        [
+            {"type": "thread.started", "thread_id": "t"},
+            {"type": "turn.completed", "usage": {"input_tokens": 53366734}},
         ],
     )
     _write(
@@ -27,14 +44,14 @@ def test_codex_usage_is_counted_once_per_thread(tmp_path):
         [
             {"type": "thread.started", "thread_id": "t"},
             command,
-            {"type": "turn.completed", "usage": {"input_tokens": 250, "output_tokens": 20}},
+            {"type": "turn.completed", "usage": {"input_tokens": 114658765}},
         ],
     )
 
     stats = transcript_stats(tmp_path, "codex")
 
-    assert stats["tokens"] == 270
-    assert stats["turn_tokens"] == [110, 160]
+    assert stats["tokens"] == 114658765
+    assert stats["turn_tokens"] == [53027776, 338958, 61292031]
     assert stats["output_chars"] == 8
     assert stats["tool_calls"] == 2
 

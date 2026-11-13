@@ -45,42 +45,45 @@ def transcript_stats(run_dir: Path, host: str) -> dict:
     # tokens are the difference from the thread's previous report.
     thread, seen = "", {}
     turn_tokens: list[int] = []
-    for path in sorted((run_dir / "transcript").glob("*.jsonl")):
-        for line in path.read_text(encoding="utf-8").splitlines():
-            event = json.loads(line)
-            if host == "claude":
-                message = event.get("message") if isinstance(event.get("message"), dict) else {}
-                for block in message.get("content") or []:
-                    if not isinstance(block, dict):
-                        continue
-                    if block.get("type") == "tool_use":
-                        tools[str(block.get("name"))] += 1
-                    elif block.get("type") == "tool_result" and block.get("is_error"):
-                        errors += 1
-                if event.get("type") == "result":
-                    usage = event.get("usage") or {}
-                    tokens += int(usage.get("input_tokens") or 0)
-                    tokens += int(usage.get("output_tokens") or 0)
-            else:
-                item = event.get("item") or {}
-                if event.get("type") == "thread.started":
-                    thread = str(event.get("thread_id") or "")
-                if event.get("type") == "item.completed" and item.get("type") in {
-                    "command_execution",
-                    "mcp_tool_call",
-                }:
-                    name = item.get("tool") or item.get("type")
-                    tools[str(name)] += 1
-                    output_chars += len(item.get("aggregated_output") or "")
-                    if item.get("status") == "failed" or item.get("exit_code") not in (None, 0):
-                        errors += 1
-                if event.get("type") == "turn.completed":
-                    usage = event.get("usage") or {}
-                    total = int(usage.get("input_tokens") or 0) + int(
-                        usage.get("output_tokens") or 0
-                    )
-                    turn_tokens.append(total - seen.get(thread, 0))
-                    seen[thread] = total
+    record = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    for turn in sorted(record["turns"], key=lambda entry: entry["turn"]):
+        for part in turn["parts"]:
+            path = run_dir / "transcript" / f"{part['label']}.jsonl"
+            for line in path.read_text(encoding="utf-8").splitlines():
+                event = json.loads(line)
+                if host == "claude":
+                    message = event.get("message") if isinstance(event.get("message"), dict) else {}
+                    for block in message.get("content") or []:
+                        if not isinstance(block, dict):
+                            continue
+                        if block.get("type") == "tool_use":
+                            tools[str(block.get("name"))] += 1
+                        elif block.get("type") == "tool_result" and block.get("is_error"):
+                            errors += 1
+                    if event.get("type") == "result":
+                        usage = event.get("usage") or {}
+                        tokens += int(usage.get("input_tokens") or 0)
+                        tokens += int(usage.get("output_tokens") or 0)
+                else:
+                    item = event.get("item") or {}
+                    if event.get("type") == "thread.started":
+                        thread = str(event.get("thread_id") or "")
+                    if event.get("type") == "item.completed" and item.get("type") in {
+                        "command_execution",
+                        "mcp_tool_call",
+                    }:
+                        name = item.get("tool") or item.get("type")
+                        tools[str(name)] += 1
+                        output_chars += len(item.get("aggregated_output") or "")
+                        if item.get("status") == "failed" or item.get("exit_code") not in (None, 0):
+                            errors += 1
+                    if event.get("type") == "turn.completed":
+                        usage = event.get("usage") or {}
+                        total = int(usage.get("input_tokens") or 0) + int(
+                            usage.get("output_tokens") or 0
+                        )
+                        turn_tokens.append(total - seen.get(thread, 0))
+                        seen[thread] = total
     if host != "claude":
         tokens = sum(seen.values())
     campus = sum(n for name, n in tools.items() if "tum" in name or "moodle" in name)
