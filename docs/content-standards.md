@@ -13,7 +13,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | S1 | A rendered section never runs more than two authored paragraphs in a row; the rest is points, steps, an example, a table, a figure or a formula | `prose_run`, `long_section` |
 | S2 | A paragraph holds one idea in a few sentences | `dense_paragraph`, `inline_list`, `inline_steps` |
 | S3 | A worked case shows what is given, the working and the result (`example`, table or walkthrough), not a story | `example_in_prose`, `unworked_result`, `prose_calculation`, `compressed_working` |
-| S4 | Each idea has the shape that fits it: comparisons as tables, procedures stepped, models drawn, parallel cases as tables or examples | `no_visual`, `static_trace`, `static_walkthrough`, `graph_as_table`, `unstepped_table`, `slide_image`, `representation.shape_fits` |
+| S4 | Each idea has the shape that fits it: comparisons as tables, procedures stepped, models drawn, parallel cases as tables or examples | `no_visual`, `static_trace`, `static_walkthrough`, `graph_as_table`, `trace_as_table`, `unstepped_table`, `slide_image`, `representation.shape_fits` |
 | S5 | Objects the text names are shown, not described | `described_object`, `representation.shown_not_described` |
 | S6 | Every symbol and formula is LaTeX, with words in math set as text | `plain_math`, `math_word` |
 | S7 | Terms are defined before use and never redefined differently | `forward_term`, `definition_refined` |
@@ -21,7 +21,9 @@ fails while a flag has no row or a row names a check that no longer exists.
 | S9 | Facts, values and citations match the cited pages | `arithmetic`, `citation_page`, `answer_key`, `correctness.source_match` |
 | S10 | The unit covers its recorded outcomes | `thin_unit`, `unrecorded_sources`, `coverage.ledger_outcomes` |
 | S11 | Sentences are the course's own, written from its sources; exemplars lend a shape, never text | `exemplar_copy` |
-| S12 | Procedures and algorithms are taught on the lecture's critical worked examples, each in full (inputs, picture, steps, endpoint); repeats of a mechanism are left out | the plan check (each one names its example), the report's repeated-example signal, `coverage.examples_selected`, `correctness.source_match`, `redundancy.said_once` |
+| S12 | Procedures and algorithms are taught on the lecture's critical worked examples, each in full (inputs, picture, steps, endpoint); repeats of a mechanism are left out | the plan check (each one names its example), `repeated_example`, `coverage.examples_selected`, `correctness.source_match`, `redundancy.said_once` |
+| S13 | Each walkthrough step teaches: its reason comes from that step's own numbers and the rule that forces it, and every visible node keeps the value the slide shows | `repeated_step_reason`, `dropped_node_value`, `intuition.reasons` |
+| S14 | Each drawing appears once, as the walkthrough that works on it; a lesson opens under its first heading | `duplicate_stage`, `untitled_opening` |
 
 ## Practice (Study practice, Revision, guides, exam drills and mocks)
 

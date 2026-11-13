@@ -1,4 +1,6 @@
 import json
+from copy import deepcopy
+from importlib.resources import files
 from pathlib import Path
 
 import pytest
@@ -17,6 +19,110 @@ def study() -> dict:
 
 def exercises() -> dict:
     return json.loads((FIXTURES / "exercises.json").read_bytes())
+
+
+def test_walkthrough_quality_signals_and_visibility_boundaries() -> None:
+    catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    value = study()
+    unit = value["units"][0]
+    source = unit["sources"][0]["key"]
+    walk = deepcopy(catalogue["walkthrough-tree"])
+    walk.update(key="trace", sources=[source])
+    walk["steps"] = [
+        {
+            "action": "Start.",
+            "why": r"Use \(A\).",
+            "visible_nodes": ["a"],
+            "node_values": {"a": "1"},
+        },
+        {"action": "Next.", "why": "use $A$.", "visible_nodes": ["a", "b"]},
+        {"action": "Finish.", "why": r"USE \[A\].", "visible_nodes": ["b"]},
+    ]
+    diagram = deepcopy(catalogue["diagram-tree"])
+    diagram.update(key="input", sources=[source])
+    trace = {
+        "kind": "table",
+        "key": "trace-table",
+        "sources": [source],
+        "caption": "Search trace",
+        "columns": ["Step number", "Frontier state"],
+        "rows": [["1", "A"], ["2", "B"], ["3", "C"]],
+    }
+    unit["blocks"] = [diagram, walk, trace]
+    flags = quality_flags(StudyContent.model_validate(value), None)
+    relevant = [
+        f
+        for f in flags
+        if f["flag"]
+        in {
+            "untitled_opening",
+            "duplicate_stage",
+            "trace_as_table",
+            "repeated_step_reason",
+            "dropped_node_value",
+        }
+    ]
+    assert [f["flag"] for f in relevant].count("dropped_node_value") == 1
+    assert {f["flag"] for f in relevant} == {
+        "untitled_opening",
+        "duplicate_stage",
+        "trace_as_table",
+        "repeated_step_reason",
+        "dropped_node_value",
+    }
+    assert next(f["item"] for f in relevant if f["flag"] == "dropped_node_value") == (
+        f"{unit['key']}/trace"
+    )
+
+
+def test_walkthrough_variant_is_checked_as_a_separate_run() -> None:
+    catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    value = study()
+    unit = value["units"][0]
+    walk = deepcopy(catalogue["walkthrough-tree"])
+    walk.update(key="trace", sources=[unit["sources"][0]["key"]])
+    walk["label"] = "Primary"
+    walk["contrast"] = "The variant starts with a different move."
+    walk["variant"] = {
+        "label": "Variant",
+        "steps": [
+            {"action": "Start.", "why": "Same reason.", "node_values": {"a": "1"}},
+            {"action": "Expand.", "why": "Same reason."},
+            {"action": "Finish.", "why": "Same reason."},
+        ],
+    }
+    unit["blocks"].append(walk)
+    flags = quality_flags(StudyContent.model_validate(value), None)
+    found = [f["flag"] for f in flags if f["item"] == f"{unit['key']}/trace"]
+    assert found.count("repeated_step_reason") == 1
+    assert found.count("dropped_node_value") == 1
+
+
+def test_trace_table_is_not_flagged_in_question_context() -> None:
+    value = study()
+    unit = value["units"][0]
+    source = unit["sources"][0]["key"]
+    unit["questions"][0]["blocks"] = [
+        {
+            "kind": "table",
+            "sources": [source],
+            "caption": "Trace",
+            "columns": ["Iteration", "Queue"],
+            "rows": [["1", "A"], ["2", "B"], ["3", "C"]],
+        }
+    ]
+    assert "trace_as_table" not in {
+        f["flag"] for f in quality_flags(StudyContent.model_validate(value), None)
+    }
+
+
+@pytest.mark.parametrize("verb", ["points", "marks", "refers"])
+def test_meta_reference_includes_indirect_lecture_verbs(verb: str) -> None:
+    value = study()
+    value["units"][0]["blocks"][0]["paragraphs"] = [f"The lecture {verb} to this case."]
+    assert "meta_reference" in {
+        f["flag"] for f in quality_flags(StudyContent.model_validate(value), None)
+    }
 
 
 def test_a_graph_walkthrough_cannot_change_only_its_text() -> None:

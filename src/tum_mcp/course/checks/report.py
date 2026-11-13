@@ -5,6 +5,7 @@ import json
 import operator
 import re
 import statistics
+from collections import Counter
 from collections.abc import Iterator
 from functools import cache
 from importlib.resources import files
@@ -71,7 +72,7 @@ META_REFERENCE = re.compile(
     r"\b(?:the|this|our) (?:lecture|course|slides?|lesson|section|page|unit|chapter|textbook) "
     r"(?:groups?|says?|states?|shows?|focus(?:es)?|lists?|defines?|describes?|covers?|calls?|"
     r"presents?|introduces?|explains?|treats?|uses?|gives?|tests?|checks?|notes?|mentions?|"
-    r"discuss(?:es)?|assumes?|emphasi[sz]es?)\b"
+    r"discuss(?:es)?|assumes?|emphasi[sz]es?|points?|marks?|refers?)\b"
     r"|\bauthored (?:example|network|dataset|domain|chain|trace|graph)\b"
     r"|\b(?:in|as) the (?:table|diagram|figure)(?: above| below)?(?: shows)?,",
     re.IGNORECASE,
@@ -739,8 +740,6 @@ def quality_flags(
             )
         seen_symbols |= symbols
         seen_terms |= terms
-        # Two walkthroughs over the same drawing usually replay one run, often as a practice
-        # answer; a contrast on the same input belongs in one walkthrough as its variant.
         drawings: dict[str, list[str]] = {}
         for block in unit.blocks:
             if isinstance(block, WalkthroughBlock) and isinstance(block.stage, GraphStage):
@@ -751,8 +750,92 @@ def quality_flags(
                 unit.key,
                 "repeated_example",
                 f"Walkthroughs {', '.join(repeated)} step through the same drawing. Keep one run "
-                "per example: show a contrast as its variant, and let practice change the input.",
+                "when each is the lecture's run of a different mechanism; otherwise keep one "
+                "and show the contrast as its variant.",
             )
+        if unit.blocks:
+            first = unit.blocks[0]
+            if first.kind in {"table", "diagram", "figure"} and not first.title:
+                flag(
+                    unit.key,
+                    "untitled_opening",
+                    f"The lesson opens with the untitled block '{_name(first)}'. Open with the "
+                    "titled section it belongs to, and place the block inside that section.",
+                )
+        stages = [
+            block.stage
+            for block in unit.blocks
+            if isinstance(block, WalkthroughBlock) and isinstance(block.stage, GraphStage)
+        ]
+        for block in unit.blocks:
+            location = f"{unit.key}/{block.key or _name(block)}"
+            if isinstance(block, TableBlock) and (
+                len(block.rows) >= 3
+                and re.match(r"^\s*(step|action|operation|iteration)\b", block.columns[0], re.I)
+                and any(
+                    re.search(r"frontier|stack|queue|reached|visited", column, re.I)
+                    for column in block.columns
+                )
+            ):
+                flag(
+                    location,
+                    "trace_as_table",
+                    f"Table '{_name(block)}' lists a search run as rows. Run it as a "
+                    "walkthrough over the drawn graph or tree, with the frontier as a state row.",
+                )
+            if isinstance(block, DiagramBlock) and len(block.frames) == 1:
+                nodes = {(node.key, node.label) for node in block.nodes}
+                edges = sorted(edge.model_dump_json() for edge in block.edges)
+                if any(
+                    nodes == {(node.key, node.label) for node in stage.nodes}
+                    and edges == sorted(edge.model_dump_json() for edge in stage.edges)
+                    for stage in stages
+                ):
+                    flag(
+                        location,
+                        "duplicate_stage",
+                        f"Diagram '{_name(block)}' draws the same graph as a walkthrough in this "
+                        "lesson. Let the walkthrough's first step show it, and remove the copy.",
+                    )
+            if not isinstance(block, WalkthroughBlock):
+                continue
+            runs = (block.steps, *((block.variant.steps,) if block.variant else ()))
+            for steps in runs:
+                reasons = Counter(
+                    " ".join(re.sub(r"\\[()\[\]]|\$+", "", step.why).casefold().split())
+                    for step in steps
+                )
+                for count in reasons.values():
+                    if count >= 3:
+                        flag(
+                            location,
+                            "repeated_step_reason",
+                            f"Walkthrough '{_name(block)}' gives the same reason on {count} "
+                            "steps. Write each step's reason from its own numbers and the rule "
+                            "that forces that step.",
+                        )
+                if isinstance(block.stage, GraphStage):
+                    nodes = {node.key for node in block.stage.nodes}
+                    for index, (previous, current) in enumerate(pairwise(steps), start=2):
+                        visible_before = (
+                            nodes if previous.visible_nodes is None else set(previous.visible_nodes)
+                        )
+                        visible_now = (
+                            nodes if current.visible_nodes is None else set(current.visible_nodes)
+                        )
+                        dropped = sorted(
+                            previous.node_values.keys()
+                            & visible_before
+                            & visible_now - current.node_values.keys()
+                        )
+                        if dropped:
+                            flag(
+                                location,
+                                "dropped_node_value",
+                                f"Walkthrough '{_name(block)}' step {index} drops the values of "
+                                f"{', '.join(dropped)}. Each step lists the value of every "
+                                "visible node, including unchanged ones.",
+                            )
         worked = any(
             block.kind == "derivation"
             or (
@@ -1028,7 +1111,7 @@ def quality_flags(
                     f"{unit.key}/{question.key}",
                     "long_question",
                     f"{len(question.blocks)} context block(s), {rows} table rows and {words} "
-                    "words of prompt and options do not fit one phone screen; keep the one "
+                    "words of prompt and options do not fit one screen; keep the one "
                     "picture the question needs and trim the rest.",
                 )
             prompt = question.prompt.casefold()
