@@ -111,11 +111,14 @@ def checker_command(spec: ModelSpec) -> list[str]:
             "--strict-mcp-config", "--allowedTools", ",".join(JUDGE_ALLOWED),
             "--disallowedTools", "Bash,Write,Edit,WebFetch,WebSearch",
         ]  # fmt: skip
-    return [
+    command = [
         "codex", "exec", "--skip-git-repo-check", "-m", spec.model,
         "-c", f'model_reasoning_effort="{spec.effort}"', "-s", "read-only",
-        "-c", "mcp_servers={}", "{prompt}",
+        "-c", "mcp_servers={}",
     ]  # fmt: skip
+    if spec.tier == "fast":
+        command += ["-c", 'service_tier="priority"']
+    return [*command, "{prompt}"]
 
 
 def codex_command(
@@ -139,6 +142,8 @@ def codex_command(
         "-c",
         f'model_reasoning_effort="{spec.effort}"',
     ]
+    if spec.tier == "fast":
+        command += ["-c", 'service_tier="priority"']
     if judge:
         command += ["-s", "read-only", "-c", "mcp_servers={}"]
     else:

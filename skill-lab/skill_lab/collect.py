@@ -7,6 +7,7 @@ from collections import Counter
 from pathlib import Path
 
 from skill_lab import paths, variants
+from skill_lab.models import ModelSpec
 from skill_lab.runs import storage_environment
 from tum_mcp.course.content.store import present
 
@@ -144,6 +145,9 @@ def collect_run(round_id: str, run_id: str, *, visuals: bool = True) -> dict:
         "run": run_id,
         "status": record["status"],
         "minutes": record.get("minutes"),
+        "speed_tier": record.get("speed_tier")
+        or ModelSpec.parse(record["author"]).tier
+        or "standard",
         "questions_answered": sum(len(turn.get("replies", [])) for turn in record["turns"]),
         "project_created": project is not None,
         "delivered": bool(

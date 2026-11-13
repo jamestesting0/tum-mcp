@@ -454,6 +454,7 @@ def _run(
         "variant": variant_name,
         "variant_spec": json.loads((variant_dir / "variant.json").read_text())["spec"],
         "author": str(spec),
+        "speed_tier": spec.tier or "standard",
         "scenario": scenario.id,
         "start_turn": start,
         "checkpoint": checkpoint,

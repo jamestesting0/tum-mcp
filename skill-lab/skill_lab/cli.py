@@ -239,10 +239,10 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--base", help="Git ref or WORKTREE for --fresh (default HEAD).")
     p.add_argument("--scenario")
     p.add_argument("--confirm-scenario")
-    p.add_argument("--author", help="host:model:effort")
-    p.add_argument("--judge", help="host:model:effort for probe judging")
-    p.add_argument("--confirm-judge", action="append", help="repeatable host:model:effort")
-    p.add_argument("--matrix", action="append", help="extra author host:model:effort")
+    p.add_argument("--author", help="host:model:effort[:fast]")
+    p.add_argument("--judge", help="host:model:effort[:fast] for probe judging")
+    p.add_argument("--confirm-judge", action="append", help="repeatable host:model:effort[:fast]")
+    p.add_argument("--matrix", action="append", help="extra author host:model:effort[:fast]")
     p.add_argument(
         "--baseline",
         action="append",
@@ -271,7 +271,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("round")
     p.add_argument("--variant", required=True)
     p.add_argument("--repeat", type=int, default=1)
-    p.add_argument("--author", help="override host:model:effort (new comparison group)")
+    p.add_argument("--author", help="override host:model:effort[:fast] (new comparison group)")
     p.add_argument(
         "--all-authors",
         action="store_true",
@@ -301,13 +301,13 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("round")
     p.add_argument("--pairs", nargs="*")
     p.add_argument("--confirm", action="store_true")
-    p.add_argument("--judge", action="append", help="override judge host:model:effort")
+    p.add_argument("--judge", action="append", help="override judge host:model:effort[:fast]")
     p.set_defaults(func=cmd_judge)
 
     p = sub.add_parser("review", help="Blind agent review of single runs (other host's judge).")
     p.add_argument("round")
     p.add_argument("--run", action="append", required=True)
-    p.add_argument("--judge", action="append", help="override reviewer host:model:effort")
+    p.add_argument("--judge", action="append", help="override reviewer host:model:effort[:fast]")
     p.set_defaults(func=cmd_review)
 
     p = sub.add_parser("human", help="Record your review of a run; collects in-app comments.")
@@ -337,7 +337,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--stage", type=int, choices=(1, 2, 3), default=1, help="agent: trial stage")
     p.add_argument("--arms", choices=("A", "B", "AB", "L", "O"), default="AB", help="agent: arms")
     p.add_argument("--tasks", default="agent-tasks.json", help="agent: task file in the corpus")
-    p.add_argument("--model", default="codex:gpt-6.1-terra:high", help="agent: model spec")
+    p.add_argument("--model", default=models.DEFAULT_AUTHORS["codex"], help="agent: model spec")
     p.add_argument("--trials", type=int, default=3, help="agent: stage 3 trials per task")
     p.set_defaults(func=cmd_memory_bench)
 

@@ -108,12 +108,13 @@ def inherited_baselines(previous: str | None) -> list[str]:
     """The previous round's result per author: its newest completed run of each author."""
     if not previous:
         return []
-    newest: dict[str, dict] = {}
+    newest: dict[tuple[str, ...], dict] = {}
     for run in runs_of(previous):
+        author = tuple(run["author"].split(":")[:3])
         if run["status"] == "completed" and (
-            run["author"] not in newest or run["started"] > newest[run["author"]]["started"]
+            author not in newest or run["started"] > newest[author]["started"]
         ):
-            newest[run["author"]] = run
+            newest[author] = run
     return [f"{previous}/{run['id']}" for run in newest.values()]
 
 
@@ -170,11 +171,34 @@ def check_budget(round_id: str, kind: str, adding: int = 1) -> None:
 
 def status_rows(round_id: str) -> list[dict]:
     rows = []
+    baselines = []
+    for reference in load(round_id).get("baselines") or []:
+        source, run_id = reference.split("/", 1)
+        baselines.extend(run for run in runs_of(source) if run["id"] == run_id)
     for run in runs_of(round_id):
         metrics_path = paths.round_dir(round_id) / "runs" / run["id"] / "metrics.json"
         metrics = (
             json.loads(metrics_path.read_text(encoding="utf-8")) if metrics_path.is_file() else {}
         )
+        tier = run.get("speed_tier") or ModelSpec.parse(run["author"]).tier or "standard"
+        baseline = next(
+            (
+                base
+                for base in baselines
+                if base["author"].split(":")[:3] == run["author"].split(":")[:3]
+            ),
+            None,
+        )
+        comparison = None
+        if baseline is not None:
+            base_tier = (
+                baseline.get("speed_tier") or ModelSpec.parse(baseline["author"]).tier or "standard"
+            )
+            comparison = {"baseline": f"{baseline['round']}/{baseline['id']}"}
+            if tier != base_tier:
+                comparison["timing"] = "not comparable (fast vs standard tier)"
+            elif run.get("minutes") is not None and baseline.get("minutes") is not None:
+                comparison["delta_minutes"] = round(run["minutes"] - baseline["minutes"], 1)
         rows.append(
             {
                 "run": run["id"],
@@ -183,6 +207,8 @@ def status_rows(round_id: str) -> list[dict]:
                 "status": run["status"],
                 "turns": len(run.get("turns", [])),
                 "minutes": run.get("minutes"),
+                "speed_tier": tier,
+                "baseline_timing": comparison,
                 "delivered": metrics.get("delivered"),
                 "inventory": (run.get("inventory_hash") or "")[:10],
                 "human_review": (paths.round_dir(round_id) / "human" / f"{run['id']}.md").is_file(),

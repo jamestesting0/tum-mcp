@@ -22,7 +22,7 @@ from skill_lab import LabError, hosts, models, paths, runs, safety, variants
 from skill_lab.memory_bench import check_manifest, corpus, memory_enabled, owner
 from skill_lab.models import ModelSpec
 
-AUTHOR = "codex:gpt-6.1-terra:high"
+AUTHOR = models.DEFAULT_AUTHORS["codex"]
 CAP = 72
 TIMEOUT = 600
 PROTECTED = ("app/", "materials/", "AGENTS.md")
@@ -547,6 +547,7 @@ def run_stage(
                         "kind": task["kind"],
                         "arm": arm,
                         "trial": trial,
+                        "speed_tier": spec.tier or "standard",
                         **graded,
                         "protected_writes": changes,
                         "over_trigger": task["kind"] == "control" and result["memory_calls"] > 0,
@@ -567,7 +568,9 @@ def run_stage(
 
 def graded(name: str, label: str) -> list[dict]:
     known = corpus(name) / "agent" / label / "identity.json"
-    tasks_file = json.loads(known.read_text()).get("tasks", "agent-tasks.json")
+    identity = json.loads(known.read_text())
+    tasks_file = identity.get("tasks", "agent-tasks.json")
+    tier = ModelSpec.parse(identity["author"]).tier or "standard"
     tasks = {task["id"]: task for task in json.loads((corpus(name) / tasks_file).read_text())}
     names = aliases(check_manifest(name))
     # Grade from the stored answers with the current gold, so a gold correction never
@@ -575,6 +578,7 @@ def graded(name: str, label: str) -> list[dict]:
     rows = episodes(corpus(name) / "agent" / label)
     return [
         row
+        | {"speed_tier": row.get("speed_tier", tier)}
         | (
             grade_learner(tasks[row["task"]], row, names)
             if "setup" in tasks[row["task"]]
@@ -649,6 +653,18 @@ def summarize(rows: list[dict], pairs: tuple[tuple[str, str], ...]) -> dict:
     ratios = {}
     for left, right in pairs:
         for name, metric in METRICS.items():
+            tiers = {
+                row.get("speed_tier", "standard") for row in rows if row["arm"] in (left, right)
+            }
+            if name == "seconds" and len(tiers) > 1:
+                ratios[f"{left}/{right} {name}"] = {
+                    "median": None,
+                    "interval": None,
+                    "tasks": 0,
+                    "controls": None,
+                    "timing": "not comparable (fast vs standard tier)",
+                }
+                continue
             per_task = {
                 t: mean(t, left, metric) / mean(t, right, metric)
                 for t in tasks
@@ -666,6 +682,10 @@ def summarize(rows: list[dict], pairs: tuple[tuple[str, str], ...]) -> dict:
             }
     return {
         "episodes": {arm: sum(len(by[(t, arm)]) for t in tasks) for arm in arms},
+        "speed_tiers": {
+            arm: sorted({row.get("speed_tier", "standard") for row in rows if row["arm"] == arm})
+            for arm in arms
+        },
         "trials_per_task": {arm: sorted({len(by[(t, arm)]) for t in tasks}) for arm in arms},
         "success": success,
         "per_task_success": {
@@ -763,7 +783,7 @@ def render(summary: dict, title: str) -> str:
     lines = [
         f"# {title}",
         "",
-        f"Model {AUTHOR}; episodes {summary['episodes']}; trials per task "
+        f"Speed tiers {summary['speed_tiers']}; episodes {summary['episodes']}; trials per task "
         f"{summary['trials_per_task']}; reported models: "
         f"{', '.join(summary['models_reported']) or 'none'}.",
         "",
@@ -786,7 +806,8 @@ def render(summary: dict, title: str) -> str:
         "| Paired ratio (per-task means) | Median | 95% interval | Tasks | Controls median |",
         "| --- | --- | --- | --- | --- |",
         *(
-            f"| {name} | {round(v['median'], 3) if v['median'] is not None else None} | "
+            f"| {name} | "
+            f"{v.get('timing') or (round(v['median'], 3) if v['median'] is not None else None)} | "
             f"{tuple(round(x, 3) for x in v['interval']) if v['interval'] else None} | "
             f"{v['tasks']} | {round(v['controls'], 3) if v.get('controls') is not None else None} |"
             for name, v in summary["ratios"].items()
