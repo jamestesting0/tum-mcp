@@ -112,6 +112,531 @@ def edit_first_block(project: Path) -> str:
     return f"study/{unit['key']}"
 
 
+@pytest.mark.parametrize("separate_findings", [False, True])
+def test_one_defect_can_fail_four_checks_without_multiple_scores(
+    project: Path, separate_findings: bool
+) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    response = answer(packet)
+    item = response["items"][0]
+    checks = (
+        "clarity.one_reading",
+        "cohesion.linked",
+        "intuition.reasons",
+        "representation.shape_fits",
+    )
+    for check in checks:
+        item["checks"][check] = {"verdict": "fail", "method": "read"}
+    passage = packet["items"][0]["passages"][0]
+    finding = {
+        "check": checks[0],
+        "location": passage["path"],
+        "quote": passage["text"],
+        "why": "The student encounters an unclear step.",
+        "fix": "Explain the step.",
+        "score": 2,
+    }
+    if separate_findings:
+        item["findings"] = [
+            finding,
+            *[
+                finding | {"check": check, "why": f"Another description {index}.", "score": 1}
+                for index, check in enumerate(checks[1:], 1)
+            ],
+        ]
+    else:
+        item["findings"] = [finding | {"also": list(checks[1:])}]
+
+    result = loop.record(project, response, "fresh")
+
+    record = loop.load(project).record(item["item"])
+    assert result["opened"] == 1
+    assert len(record.findings) == 1
+    stored = record.findings[0]
+    assert stored.check == checks[0] and stored.also == checks[1:]
+    assert stored.why == finding["why"] and stored.fix == finding["fix"]
+    assert stored.score == (1 if separate_findings else 2)
+    scores = record.scores(registry.dimensions("study-unit"))
+    assert scores["clarity"] == stored.score
+    assert {scores[name] for name in ("cohesion", "intuition", "representation")} == {3}
+    assert all(record.checks[check].verdict == "fail" for check in checks)
+    assert all(record.checks[check].finding_ids == (stored.id,) for check in checks)
+    assert loop.record(project, response, "fresh")["opened"] == 0
+    assert loop.load(project).record(item["item"]) == record
+
+
+@pytest.mark.parametrize(
+    "linked", [["clarity.one_reading"], ["clarity.case_observable"], ["cohesion.linked"]]
+)
+def test_finding_rejects_invalid_linked_check(project: Path, linked: list[str]) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    key = packet["items"][0]["item"]
+    response = answer(packet, fail={key: "clarity.one_reading"})
+    response["items"][0]["findings"][0]["also"] = linked
+
+    with pytest.raises(CampusError) as error:
+        loop.record(project, response, "fresh")
+
+    assert linked[0] in error.value.message
+    assert not loop.load(project).record(key).findings
+
+
+def test_also_rejects_current_profile_check_not_asked_in_packet(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    original = packets(project, loop.next_round(project))
+    entry = original[0]["items"][0]
+    key = entry["item"]
+    current = "correctness.source_match"
+    unchanged = [block for block in entry["blocks"] if block.startswith("blocks:")][-1]
+    for packet in original:
+        loop.record(project, answer(packet, covers={key: {current: [unchanged]}}), "fresh")
+    edit_first_block(project)
+    packet = next(
+        p
+        for p in packets(project, loop.verify_round(project))
+        if any(item["item"] == key for item in p["items"])
+    )
+    entry = next(item for item in packet["items"] if item["item"] == key)
+    assert current not in entry["needs"]
+    response = answer(packet, fail={key: "clarity.one_reading"})
+    next(item for item in response["items"] if item["item"] == key)["findings"][0]["also"] = [
+        current
+    ]
+
+    with pytest.raises(CampusError, match=current):
+        loop.record(project, response, "fresh")
+
+
+def test_old_review_record_without_also_still_loads(project: Path) -> None:
+    from tum_mcp.course.review.ledger import read_record
+
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    key = packet["items"][0]["item"]
+    loop.record(project, answer(packet, fail={key: "clarity.one_reading"}), "fresh")
+    path = project / f".tum-mcp/review/items/{key}.json"
+    stored = json.loads(path.read_bytes())
+    stored["findings"][0].pop("also", None)
+    path.write_text(json.dumps(stored))
+
+    assert read_record(project, key).findings[0].also == ()
+
+
+def test_findings_with_different_quotes_are_not_merged(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    key = packet["items"][0]["item"]
+    response = answer(packet, fail={key: "clarity.one_reading"})
+    original = response["items"][0]["findings"][0]
+    other = next(
+        passage
+        for passage in packet["items"][0]["passages"]
+        if passage["path"] == original["location"]
+    )
+    assert len(other["text"]) > len(original["quote"])
+    response["items"][0]["findings"].append(original | {"quote": other["text"]})
+
+    assert loop.record(project, response, "fresh")["opened"] == 2
+    assert len(loop.load(project).record(key).findings) == 2
+
+
+def test_verifying_owner_clears_linked_teaching_failures(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    original = packets(project, loop.next_round(project))
+    key = original[0]["items"][0]["item"]
+    owner, linked = "clarity.one_reading", "intuition.reasons"
+    for packet in original:
+        response = answer(packet, fail={key: owner})
+        if packet is original[0]:
+            item = response["items"][0]
+            item["checks"][linked] = {"verdict": "fail", "method": "read"}
+            item["findings"][0]["also"] = [linked]
+        loop.record(project, response, "fresh")
+    finding = loop.load(project).record(key).findings[0]
+    edit_first_block(project)
+    loop.change(project, key, finding.id, "fixed")
+    verify = packets(project, loop.verify_round(project))
+    for packet in verify:
+        loop.record(project, answer(packet), "fresh")
+    context = loop.load(project)
+    record = context.record(key)
+    assert record.findings[0].status == "verified"
+    assert record.findings[0].verified_provenance == "fresh"
+    # A current failing teaching verdict linked only to this verified finding has no open defect.
+    checks = dict(record.checks)
+    checks[linked] = checks[linked].model_copy(
+        update={"verdict": "fail", "finding_ids": (finding.id,)}
+    )
+    context.records[key] = record.model_copy(update={"checks": checks})
+
+    assert not any(linked in issue for issue in loop.item_gate(context, key))
+    old_rejection = record.findings[0].model_copy(
+        update={"id": "F2", "status": "rejected", "reason": "The old case was correct."}
+    )
+    context.records[key] = record.model_copy(
+        update={"checks": checks, "findings": (*record.findings, old_rejection)}
+    )
+    assert not any(linked in issue for issue in loop.item_gate(context, key))
+    checks[linked] = checks[linked].model_copy(update={"provenance": "user"})
+    context.records[key] = record.model_copy(update={"checks": checks})
+    assert any(
+        issue == f"{linked}: teaching check not passed" for issue in loop.item_gate(context, key)
+    )
+    checks[linked] = checks[linked].model_copy(update={"round": 2, "provenance": "fresh"})
+    context.records[key] = record.model_copy(update={"checks": checks})
+    assert any(
+        issue == f"{linked}: teaching check not passed" for issue in loop.item_gate(context, key)
+    )
+
+
+def test_linked_failure_still_blocks_if_another_finding_is_open(project: Path) -> None:
+    from tum_mcp.course.review.ledger import Finding, Verdict
+
+    context = loop.load(project)
+    key = next(key for key in context.items if key.startswith("study/"))
+    item = context.items[key]
+    linked = "intuition.reasons"
+    check = registry.checks()[linked]
+    verdict = Verdict(
+        verdict="fail",
+        method="read",
+        round=1,
+        provenance="fresh",
+        fingerprint=loop.covered(item, ("*",), linked),
+        version=check.version,
+        finding_ids=("F1", "F2"),
+    )
+    resolved = Finding(
+        id="F1",
+        check="clarity.one_reading",
+        also=(linked,),
+        quote="One sentence.",
+        location="title",
+        why="A defect.",
+        fix="Fix it.",
+        status="verified",
+        opened=1,
+        closed=1,
+        verified_provenance="fresh",
+        block="title",
+    )
+    active = resolved.model_copy(update={"id": "F2", "status": "open", "closed": None})
+    record = context.record(key)
+    context.records[key] = record.model_copy(
+        update={"checks": {**record.checks, linked: verdict}, "findings": (resolved, active)}
+    )
+
+    assert any(
+        issue == f"{linked}: teaching check not passed" for issue in loop.item_gate(context, key)
+    )
+
+
+def test_provisional_verification_does_not_clear_a_teaching_failure(project: Path) -> None:
+    from tum_mcp.course.review.ledger import Finding, Verdict
+
+    context = loop.load(project)
+    key = next(key for key in context.items if key.startswith("study/"))
+    item = context.items[key]
+    linked = "intuition.reasons"
+    check = registry.checks()[linked]
+    verdict = Verdict(
+        verdict="fail",
+        method="read",
+        round=1,
+        provenance="fresh",
+        fingerprint=loop.covered(item, ("*",), linked),
+        version=check.version,
+        finding_ids=("F1",),
+    )
+    finding = Finding(
+        id="F1",
+        check="clarity.one_reading",
+        also=(linked,),
+        quote="One sentence.",
+        location="title",
+        why="A defect.",
+        fix="Fix it.",
+        status="verified",
+        opened=1,
+        closed=1,
+        verified_provenance="same",
+        block="title",
+    )
+    record = context.record(key)
+    context.records[key] = record.model_copy(
+        update={"checks": {**record.checks, linked: verdict}, "findings": (finding,)}
+    )
+
+    assert any(
+        issue == f"{linked}: teaching check not passed" for issue in loop.item_gate(context, key)
+    )
+
+
+def test_flag_ruling_accepts_a_linked_finding(project: Path) -> None:
+    path = content_file(project, "study")
+    document = json.loads(path.read_bytes())
+    unit = document["units"][0]
+    unit["questions"][0].update(level="apply", blocks=[])
+    path.write_text(json.dumps(document))
+    key = f"study/{unit['key']}"
+    loop.start(project, workspaces=("study",))
+    packet = next(
+        p
+        for p in packets(project, loop.next_round(project))
+        if any(entry["item"] == key for entry in p["items"])
+    )
+    response = answer(packet, fail={key: "clarity.one_reading"})
+    item = next(entry for entry in response["items"] if entry["item"] == key)
+    linked = "representation.picture_carries_data"
+    item["checks"][linked] = {"verdict": "fail", "method": "read"}
+    item["findings"][0]["also"] = [linked]
+    flag = next(entry for entry in item["flags"] if entry["key"].startswith("text_only_question@"))
+    flag["ruling"] = "finding"
+
+    loop.record(project, response, "fresh")
+
+    record = loop.load(project).record(key)
+    assert record.rulings[flag["key"]].ruling == "finding"
+    assert record.findings[0].also == (linked,)
+
+
+def test_new_failed_verdict_cannot_be_resolved_by_the_same_finding(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    original = packets(project, loop.next_round(project))
+    key = original[0]["items"][0]["item"]
+    owner, linked = "clarity.one_reading", "intuition.reasons"
+    for packet in original:
+        response = answer(packet, fail={key: owner})
+        if packet is original[0]:
+            response["items"][0]["checks"][linked] = {"verdict": "fail", "method": "read"}
+            response["items"][0]["findings"][0]["also"] = [linked]
+        loop.record(project, response, "fresh")
+    finding = loop.load(project).record(key).findings[0]
+    edit_first_block(project)
+    loop.change(project, key, finding.id, "fixed")
+    packet = next(
+        p
+        for p in packets(project, loop.verify_round(project))
+        if any(entry["item"] == key for entry in p["items"])
+    )
+    response = answer(packet)
+    item = next(entry for entry in response["items"] if entry["item"] == key)
+    item["checks"][linked] = {"verdict": "fail", "method": "read"}
+    item["findings"].append(
+        {
+            "check": owner,
+            "also": [linked],
+            "location": finding.location,
+            "quote": finding.quote,
+            "why": finding.why,
+            "fix": finding.fix,
+            "score": finding.score,
+        }
+    )
+
+    with pytest.raises(CampusError, match="cannot be resolved while its checks fail"):
+        loop.record(project, response, "fresh")
+
+    assert loop.load(project).record(key).findings[0].status == "fixed"
+
+
+def test_new_loop_does_not_reuse_an_old_verified_finding(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    original = packets(project, loop.next_round(project))
+    key = original[0]["items"][0]["item"]
+    owner, linked = "clarity.one_reading", "intuition.reasons"
+    for packet in original:
+        response = answer(packet, fail={key: owner})
+        if packet is original[0]:
+            response["items"][0]["checks"][linked] = {"verdict": "fail", "method": "read"}
+            response["items"][0]["findings"][0]["also"] = [linked]
+        loop.record(project, response, "fresh")
+    finding = loop.load(project).record(key).findings[0]
+    edit_first_block(project)
+    loop.change(project, key, finding.id, "fixed")
+    for packet in packets(project, loop.verify_round(project)):
+        loop.record(project, answer(packet), "fresh")
+    loop.close_round(project)
+    edit_first_block(project)
+    loop.start(project, workspaces=("study",))
+    packet = next(
+        p
+        for p in packets(project, loop.next_round(project))
+        if any(entry["item"] == key for entry in p["items"])
+    )
+    response = answer(packet, fail={key: owner})
+    item = next(entry for entry in response["items"] if entry["item"] == key)
+    item["checks"][linked] = {"verdict": "fail", "method": "read"}
+    item["findings"][0]["also"] = [linked]
+
+    result = loop.record(project, response, "fresh")
+
+    assert result["opened"] == 1
+    record = loop.load(project).record(key)
+    assert [f.status for f in record.findings] == ["verified", "open"]
+    assert any(linked in issue for issue in loop.item_gate(loop.load(project), key))
+
+
+def test_same_round_verify_waits_for_packets_and_rechecks_repairs(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    original = packets(project, loop.next_round(project))
+    key = original[0]["items"][0]["item"]
+    with pytest.raises(CampusError, match="Record all original packets"):
+        loop.verify_round(project)
+    for packet in original:
+        loop.record(project, answer(packet, fail={key: "clarity.one_reading"}), "fresh")
+    finding = loop.load(project).record(key).findings[0]
+    assert edit_first_block(project) == key
+    loop.change(project, key, finding.id, "fixed")
+
+    verification = packets(project, loop.verify_round(project))
+
+    assert all(packet["id"].startswith("r1v-") for packet in verification)
+    entry = next(e for p in verification for e in p["items"] if e["item"] == key)
+    assert [f["id"] for f in entry["verify"]] == [finding.id]
+    assert "clarity.one_reading" in entry["needs"]
+    assert entry["changed"]
+    with pytest.raises(CampusError, match="unanswered packets"):
+        loop.close_round(project)
+    with pytest.raises(CampusError, match="already has a verify"):
+        loop.verify_round(project)
+    for packet in verification:
+        loop.record(project, answer(packet), "fresh")
+    assert loop.load(project).record(key).findings[0].status == "verified"
+    assert loop.read_state(project).round == 1
+
+
+def test_bulk_fix_validates_all_before_changing_any(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    key = packet["items"][0]["item"]
+    loop.record(project, answer(packet, fail={key: "clarity.one_reading"}), "fresh")
+    finding = loop.load(project).record(key).findings[0]
+    edit_first_block(project)
+    with pytest.raises(CampusError, match="no finding"):
+        loop.fix_many(project, key, (finding.id, "F999"))
+    assert loop.load(project).record(key).findings[0].status == "open"
+
+
+def test_unique_mislocated_finding_quote_is_relocated(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    key = packet["items"][0]["item"]
+    response = answer(packet, fail={key: "clarity.one_reading"})
+    finding = response["items"][0]["findings"][0]
+    original_location = finding["location"]
+    finding["location"] = "title"
+    loop.record(project, response, "fresh")
+    assert loop.load(project).record(key).findings[0].location == original_location
+
+
+def test_uncertain_verdict_is_asked_again_in_verify_pass(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    original = packets(project, loop.next_round(project))
+    key = original[0]["items"][0]["item"]
+    check = original[0]["items"][0]["needs"][0]
+    for packet in original:
+        response = answer(packet)
+        if packet is original[0]:
+            response["items"][0]["checks"][check]["verdict"] = "uncertain"
+        loop.record(project, response, "fresh")
+    verification = packets(project, loop.verify_round(project))
+    entry = next(e for p in verification for e in p["items"] if e["item"] == key)
+    assert check in entry["needs"]
+
+
+def test_verify_reports_added_and_removed_blocks(project: Path) -> None:
+    path = content_file(project, "study")
+    document = json.loads(path.read_bytes())
+    document["units"][0]["blocks"][0]["key"] = "old-block"
+    path.write_text(json.dumps(document))
+    loop.start(project, workspaces=("study",))
+    original = packets(project, loop.next_round(project))
+    for packet in original:
+        loop.record(project, answer(packet), "fresh")
+    document["units"][0]["blocks"][0]["key"] = "new-block"
+    path.write_text(json.dumps(document))
+
+    verification = packets(project, loop.verify_round(project))
+
+    key = f"study/{document['units'][0]['key']}"
+    changed = next(e["changed"] for p in verification for e in p["items"] if e["item"] == key)
+    assert {"blocks:old-block", "blocks:new-block"} <= set(changed)
+
+
+def test_partial_checker_repair_preserves_other_verdicts_and_logs_problems(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.course.review import runner
+
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    complete = answer(packet)
+    first = complete["items"][0]
+    missing = next(iter(first["checks"]))
+    partial = {"items": [{"item": first["item"], "checks": {missing: first["checks"][missing]}}]}
+    del first["checks"][missing]
+    replies = iter((complete, partial))
+    monkeypatch.setattr(runner, "_ask", lambda *args: next(replies))
+
+    runner.run(project, packet["id"], "codex")
+
+    stored = loop.load(project).record(first["item"])
+    assert set(stored.checks) == set(packet["items"][0]["needs"])
+    history = json.loads(
+        (project / f".tum-mcp/review/packets/{packet['id']}.problems.json").read_bytes()
+    )
+    assert {(p["item"], p["kind"], p["id"]) for p in history[0]} == {
+        (first["item"], "check", missing)
+    }
+
+
+def test_packet_renders_cited_pages_and_supplies_prior_definitions(tmp_path: Path) -> None:
+    from material_fixture import material_project, minimal_unit, pdf_bytes
+
+    from tum_mcp.course.project.store import load_state
+
+    project = material_project(
+        tmp_path, {"slides": ("content", pdf_bytes([f"Page {i}" for i in range(1, 14)]))}
+    )
+    state = load_state(project)
+    source = state.resources[0].sha256
+    first = minimal_unit("first", "slides", source)
+    first["blocks"][0] = {
+        "kind": "definition",
+        "title": "A term",
+        "term": "Previous term",
+        "statement": "An earlier definition.",
+        "sources": ["slides"],
+    }
+    second = minimal_unit("second", "slides", source)
+    second["blocks"][0]["pages"] = "1-14"
+    content_file(project, "study").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "course_key": state.course.key,
+                "organization": "topics",
+                "introduction": "Synthetic content.",
+                "units": [first, second],
+            }
+        )
+    )
+    loop.start(project, workspaces=("study",))
+
+    sent = packets(project, loop.next_round(project))
+
+    item = next(e for p in sent for e in p["items"] if e["item"] == "study/second")
+    assert item["outline"] == [{"title": "Idea", "level": 1}]
+    assert item["earlier_terms"] == ["Previous term"]
+    pages = item["source_pages"][0]
+    assert set(pages["cached"]) == {str(i) for i in range(1, 14)}
+    assert set(pages["failed"]) == {"14"}
+    assert all((project / path).is_file() for path in pages["cached"].values())
+
+
 @pytest.mark.parametrize("evidence", ["current", "stale-draft", "missing-phone"])
 def test_visual_packet_links_the_current_captures(project: Path, evidence: str) -> None:
     key = next(key for key, visuals in loop.load(project).visuals.items() if visuals)
@@ -536,7 +1061,8 @@ def test_a_refused_checker_answer_gets_one_repair_pass(
         "if 'were refused' not in prompt:\n"
         "    result['items'][0]['checks'].pop(next(iter(result['items'][0]['checks'])))\n"
         f"elif {not repair_valid!r}:\n"
-        "    result['items'][0]['checks'].pop(list(result['items'][0]['checks'])[-1])\n"
+        "    result['items'][0]['checks'][next(iter(result['items'][0]['checks']))]['quote']"
+        " = 'absent evidence'\n"
         "print(json.dumps(result))\n"
     )
     result = CliRunner().invoke(
@@ -560,7 +1086,7 @@ def test_a_refused_checker_answer_gets_one_repair_pass(
     sent = json.loads((folder / f"{packet_id}.json").read_bytes())
     saved = json.loads((folder / f"{packet_id}.answer.json").read_bytes())
     expected = sent["items"][0]["needs"]
-    assert set(saved["items"][0]["checks"]) == set(expected if repair_valid else expected[:-1])
+    assert set(saved["items"][0]["checks"]) == set(expected)
 
 
 def test_partial_current_verdicts_do_not_look_like_a_complete_perfect_score(project: Path) -> None:

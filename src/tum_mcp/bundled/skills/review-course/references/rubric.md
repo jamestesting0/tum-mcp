@@ -32,6 +32,9 @@ closest call, the passage that came nearest to failing, under `evidence`.
 A problem costs one point, in one dimension. When a symptom could fit two, score it
 where this table puts it:
 
+File each defect once under the owner check from this table. Put other asked checks
+the same defect fails in the finding's `also`; the owner alone determines its score.
+
 | The student meets | Score it under |
 | --- | --- |
 | Text, a caption or a question's table that repeats its picture or prompt | Redundancy |
@@ -159,7 +162,7 @@ What the student has to hold in mind at once.
   and short incidental `n/2` are fine.
 - `cognitive_load.state_shown`: the state of a procedure is shown, not tracked mentally.
 - `cognitive_load.together`: text and the picture it refers to sit together.
-- `cognitive_load.fits_phone`: a question fits one phone screen; a large step has a middle
+- `cognitive_load.fits_phone`: a large step has a middle
   hint.
 - `cognitive_load.fits_student`: Study can be followed by a first-time reader who knows
   the teaching profile's prerequisites, without over-explaining what they already know;

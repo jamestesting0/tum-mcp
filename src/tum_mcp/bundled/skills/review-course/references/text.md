@@ -46,7 +46,7 @@ Clarity, Cohesion and Cognitive load; the rules come from prepare-study's
 7. Check every object the text names: a matrix, vector, table, graph or state is shown,
    not described by its entries (`representation.shown_not_described`, scored in the
    visuals pass). Then check every caption and question: a caption states the point of
-   its picture; a question asks one thing and fits one phone screen. What a passage, caption or prompt
+   its picture; a question asks one thing. What a passage, caption or prompt
    repeats is scored in the [structure pass](structure.md).
 8. Mark lines that talk about the material ("The lecture groups…", "Authored example")
    or tell the student to work or compare; they teach nothing.

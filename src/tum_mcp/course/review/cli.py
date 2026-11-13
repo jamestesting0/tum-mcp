@@ -53,6 +53,12 @@ def next_command(project: Path) -> None:
 
 
 @app.command()
+def verify(project: Path) -> None:
+    """Write one fresh verification pass in the current round."""
+    _echo(loop.verify_round(project))
+
+
+@app.command()
 def record(
     project: Path,
     file: Annotated[Path, typer.Option(help="A checker's answers for one packet, as JSON.")],
@@ -73,13 +79,45 @@ def record(
 def fix(
     project: Path,
     item: Annotated[str, typer.Option(help="Item key.")],
-    finding: Annotated[str, typer.Option(help="Finding id, such as F3.")],
+    finding: Annotated[list[str], typer.Option(help="Finding id; repeat for several.")],
     block: Annotated[
         str | None, typer.Option(help="The block you changed, when not the quoted one.")
     ] = None,
 ) -> None:
     """Mark a finding fixed; refused while its passage is unchanged."""
-    _echo(loop.change(project, item, finding, "fixed", block=block).model_dump(mode="json"))
+    updated = loop.fix_many(project, item, tuple(finding), block)
+    _echo([entry.model_dump(mode="json") for entry in updated])
+
+
+@app.command()
+def findings(
+    project: Path,
+    item: Annotated[str | None, typer.Option(help="Limit to one item.")] = None,
+    status: Annotated[Literal["open", "all"], typer.Option()] = "open",
+    json_output: Annotated[bool, typer.Option("--json", help="Show complete records.")] = False,
+) -> None:
+    """List findings by item and block."""
+    context = loop.load(project)
+    keys = [loop.resolve_item(context.items, item)] if item else sorted(context.items)
+    rows = sorted(
+        (
+            {"item": key, **finding.model_dump(mode="json")}
+            for key in keys
+            for finding in context.record(key).findings
+            if status == "all" or finding.status in loop.LIVE
+        ),
+        key=lambda row: (row["item"], row["block"], row["id"]),
+    )
+    if json_output:
+        _echo(rows)
+        return
+    for row in rows:
+        why = " ".join(row["why"].split())[:100]
+        fix_text = " ".join(row["fix"].split())[:100]
+        typer.echo(
+            f"{row['item']} | {row['id']} | {row['check']} | {row['block']} | "
+            f"{row['status']} | {why} | {fix_text}"
+        )
 
 
 @app.command()

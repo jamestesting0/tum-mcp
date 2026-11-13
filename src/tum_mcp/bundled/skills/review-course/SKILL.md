@@ -47,8 +47,9 @@ scores.
       the items with their passages and block ids, the report flags, the answer key's
       result, the digests of the cited sources, the findings to verify and the findings
       already rejected with their reasons. For items that need visual scores,
-      `visual_sheets` links the available phone and desktop captures of the current
+      `visual_sheets` links the available captures of the current
       draft. Use those images when scoring the six visual criteria.
+      Desktop is the check; use `--phone` only when the student asks.
    2. Give each packet to a fresh checker as its whole brief. When the host supports
       concurrent checker sessions, start independent packets together and leave the draft
       unchanged until all answers are recorded. The checker answers in the packet's
@@ -99,7 +100,11 @@ scores.
       Repair can also finish after the round has closed: it updates the current
       scorecard without opening another round. New corroborating sources are permitted
       while the original source revisions, request and required demands stay fixed.
-   6. `tum-mcp review close-round PROJECT` computes the gate and writes
+   6. After repairs, run `tum-mcp review verify PROJECT` once in the open round. Give its
+      packets to fresh checkers, record their answers and repair findings they open where
+      possible. Report those subsequent repairs as unverified; another check needs another
+      round requested by the student.
+   7. `tum-mcp review close-round PROJECT` computes the gate and writes
       `.tum-mcp/loop/scorecard.md`. Use `review status` to check progress while a
       round is open. If a packet cannot be recorded, finish the available repairs
       before deliberately closing with `--incomplete` and report the missing review.
@@ -120,6 +125,12 @@ pass while the course stays open, and publishing waits for both. A spent budget 
 made after their last check says so; `review extend PROJECT --rounds 1` verifies them.
 Missing question context holds the gate even if a checker waives its flag. Reframe the
 question around a useful object or case; a decorative picture does not fix it.
+
+Repair gotchas:
+- Repair inside the section the finding sits in.
+- Use the representation the idea has: draw graphs, not tables of states.
+- Remove content only when it is wrong or said twice.
+- Never cut teaching to close an unrelated finding or fit an unrequested width.
 
 ## What each profile reads
 

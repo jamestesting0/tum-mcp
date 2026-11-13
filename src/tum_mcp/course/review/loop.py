@@ -68,6 +68,7 @@ class RoundLog(Frozen):
     opened: int = Field(default=0, ge=0)
     resolved: int = Field(default=0, ge=0)
     gate: bool | None = None
+    verified: bool = False
 
     @property
     def pending_packets(self) -> tuple[str, ...]:
@@ -329,6 +330,7 @@ def item_tasks(context: Context, key: str) -> dict[str, JsonValue]:
         check.id
         for check in registry.judged(item.profile)
         if not is_current(record.checks.get(check.id), check, item)
+        or record.checks[check.id].verdict == "uncertain"
     ]
     verify = [finding.id for finding in record.findings if finding.status == "fixed"]
     visuals = [] if _visuals_current(context, key, record) else list(context.visuals.get(key, []))
@@ -473,11 +475,20 @@ def _passages(item: ReviewItem) -> list[dict[str, str]]:
     return [{"path": path, "text": text} for path, text in item.passages()]
 
 
-def _changed(item: ReviewItem, record: ItemRecord) -> list[str]:
-    seen: dict[str, str] = {}
-    for finding in record.findings:
-        seen.update(finding.blocks_at_open)
-    return sorted(block for block, value in item.blocks.items() if seen.get(block, value) != value)
+def _snapshot_name(key: str) -> str:
+    return private_name(Path("."), f"review/blocks/{key}.json")
+
+
+def _changed(root: Path, item: ReviewItem) -> list[str]:
+    body = read_bytes(confined(root, _snapshot_name(item.key)))
+    if body is None:
+        return []
+    seen = json.loads(body)
+    return sorted(
+        block
+        for block in seen.keys() | item.blocks.keys()
+        if seen.get(block) != item.blocks.get(block)
+    )
 
 
 def _cited(value: object, found: set[str]) -> set[str]:
@@ -503,6 +514,73 @@ def _digests(root: Path, value: dict) -> list[dict[str, JsonValue]]:
     ]
 
 
+def _page_evidence(root: Path, value: dict) -> list[dict[str, JsonValue]]:
+    from tum_mcp.course.sources.text import page_images
+
+    cited: dict[str, set[int]] = {}
+
+    def visit(entry: object) -> None:
+        if isinstance(entry, dict):
+            pages = entry.get("pages")
+            sources = entry.get("sources")
+            if isinstance(pages, str) and isinstance(sources, list):
+                start, _, end = pages.partition("-")
+                if start.isdigit() and (not end or end.isdigit()):
+                    for source in sources:
+                        key = source if isinstance(source, str) else source.get("key")
+                        if isinstance(key, str):
+                            cited.setdefault(key, set()).update(
+                                range(int(start), int(end or start) + 1)
+                            )
+            for child in entry.values():
+                visit(child)
+        elif isinstance(entry, list):
+            for child in entry:
+                visit(child)
+
+    visit(value)
+    results = []
+    for key, pages in cited.items():
+        cached: dict[str, str] = {}
+        failed: dict[str, str] = {}
+        ordered = sorted(pages)
+        for offset in range(0, len(ordered), 12):
+            batch = ordered[offset : offset + 12]
+            try:
+                cached.update({str(n): path for n, path in page_images(root, key, batch).items()})
+            except (CampusError, OSError, ValueError) as error:
+                for number in batch:
+                    try:
+                        cached.update(
+                            {str(n): path for n, path in page_images(root, key, [number]).items()}
+                        )
+                    except (CampusError, OSError, ValueError) as page_error:
+                        failed[str(number)] = str(page_error or error)
+        results.append({"source": key, "cached": cached, "failed": failed})
+    return results
+
+
+def _study_context(context: Context, item: ReviewItem) -> dict[str, JsonValue]:
+    if item.profile != "study-unit":
+        return {}
+    outline = [
+        {"title": block["title"], "level": block["level"]}
+        for block in item.value.get("blocks", [])
+        if block.get("title")
+    ]
+    earlier = []
+    for key, previous in context.items.items():
+        if key == item.key:
+            break
+        if previous.profile == "study-unit":
+            earlier.extend(
+                block["term"]
+                for block in previous.value.get("blocks", [])
+                if block.get("kind") == "definition"
+            )
+    return {"outline": outline, "earlier_terms": earlier}
+
+
 def next_round(root: Path) -> dict[str, JsonValue]:
     """Open the next round and write its packets: one profile each, small enough to read."""
     context = load(root)
@@ -522,6 +600,41 @@ def next_round(root: Path) -> dict[str, JsonValue]:
     if context.preparation:
         _require_ready(context.preparation)
     number = state.round + 1
+    packets, writes = _packets(context, state, number, verify=False)
+    log = RoundLog(round=number, started=_now(), packets=tuple(packets), answered=())
+    writes.append(
+        _state_write(context.root, state.model_copy(update={"rounds": (*state.rounds, log)}))
+    )
+    apply(context.root, tuple(writes))
+    return _packet_result(number, state.budget, packets)
+
+
+def verify_round(root: Path) -> dict[str, JsonValue]:
+    """Refresh stale verdicts and verify fixes within the current round."""
+    context = load(root)
+    state = read_state(context.root)
+    if state is None or not state.rounds or state.rounds[-1].closed is not None:
+        raise CampusError(Code.ACTION_REQUIRED, "Open a round with tum-mcp review next first.")
+    log = state.rounds[-1]
+    if log.verified:
+        raise CampusError(Code.ACTION_REQUIRED, "This round already has a verify pass.")
+    if log.answered is None or log.pending_packets:
+        raise CampusError(Code.ACTION_REQUIRED, "Record all original packets before verification.")
+    _bind_preparation(context, state)
+    if context.preparation:
+        _require_ready(context.preparation)
+    packets, writes = _packets(context, state, state.round, verify=True)
+    log = log.model_copy(update={"packets": (*log.packets, *packets), "verified": True})
+    writes.append(
+        _state_write(context.root, state.model_copy(update={"rounds": (*state.rounds[:-1], log)}))
+    )
+    apply(context.root, tuple(writes))
+    return _packet_result(state.round, state.budget, packets)
+
+
+def _packets(
+    context: Context, state: LoopState, number: int, *, verify: bool
+) -> tuple[list[str], list[Write]]:
     sheets = current_sheets(context.root) if context.visuals else {}
     groups: dict[str, list[dict[str, JsonValue]]] = {}
     for key in state.scope:
@@ -584,11 +697,13 @@ def next_round(root: Path) -> dict[str, JsonValue]:
                     )
                     for flag in context.flags_by_item.get(key, [])
                 ],
-                "changed": _changed(item, record),
+                "changed": _changed(context.root, item),
                 "answer_key": next(
                     (entry for entry in context.answer_keys if entry["item"] == key), None
                 ),
                 "digests": _digests(context.root, item.value),
+                "source_pages": _page_evidence(context.root, item.value),
+                **_study_context(context, item),
                 "concepts": _concepts(context.root, key),
                 "blocks": sorted(item.blocks),
                 "passages": _passages(item),
@@ -614,7 +729,7 @@ def next_round(root: Path) -> dict[str, JsonValue]:
         if batch:
             batches.append(batch)
         for index, items in enumerate(batches, 1):
-            packet_id = f"r{number}-{profile}-{index}"
+            packet_id = f"r{number}{'v' if verify else ''}-{profile}-{index}"
             packet = {
                 "id": packet_id,
                 "round": number,
@@ -643,14 +758,13 @@ def next_round(root: Path) -> dict[str, JsonValue]:
                 )
             )
             packets.append(packet_id)
-    log = RoundLog(round=number, started=_now(), packets=tuple(packets), answered=())
-    writes.append(
-        _state_write(context.root, state.model_copy(update={"rounds": (*state.rounds, log)}))
-    )
-    apply(context.root, tuple(writes))
+    return packets, writes
+
+
+def _packet_result(number: int, budget: int, packets: list[str]) -> dict[str, JsonValue]:
     return {
         "round": number,
-        "budget": state.budget,
+        "budget": budget,
         "packets": [
             {
                 "packet": packet_id,
@@ -683,6 +797,7 @@ ANSWER_FORMAT: dict[str, JsonValue] = {
             "findings": [
                 {
                     "check": "a check id of this packet",
+                    "also": ["other checks asked for this item that this defect also fails"],
                     "quote": "word for word from the passage at location",
                     "location": "the passage path",
                     "why": "what the student meets and why it fails",
@@ -746,6 +861,17 @@ def _block(item: ReviewItem, location: str) -> str:
     return head
 
 
+class AnswerError(CampusError):
+    problems: list[dict[str, str]]
+
+    def __init__(self, problems: list[dict[str, str]]) -> None:
+        self.problems = problems
+        super().__init__(
+            Code.INVALID_RESPONSE,
+            "Answers need fixing: " + " ".join(problem["message"] for problem in problems),
+        )
+
+
 def record(
     root: Path,
     answers: dict,
@@ -768,24 +894,48 @@ def record(
     packet = json.loads(body)
     number = state.rounds[-1].round
     asked = {entry["item"]: entry for entry in packet["items"]}
-    problems: list[str] = []
+    problems: list[dict[str, str]] = []
     opened = resolved = 0
     for answer in answers.get("items", []):
         key = answer.get("item")
         if key not in asked:
-            problems.append(f"{key}: not in packet {packet_id}.")
+            problems.append(
+                {
+                    "item": str(key),
+                    "kind": "item",
+                    "id": str(key),
+                    "message": f"{key}: not in packet {packet_id}.",
+                }
+            )
             continue
         item = context.items.get(key)
         if item is None or packet_fingerprint(item) != asked[key]["fingerprint"]:
-            problems.append(f"{key}: the content changed since the packet; take a new round.")
+            problems.append(
+                {
+                    "item": key,
+                    "kind": "item",
+                    "id": key,
+                    "message": f"{key}: the content changed since the packet; take a new round.",
+                }
+            )
             continue
         recorded = _record_item(context, item, asked[key], answer, number, provenance, problems)
         opened += recorded[0]
         resolved += recorded[1]
     missing = sorted(set(asked) - {answer.get("item") for answer in answers.get("items", [])})
-    problems.extend(f"{key}: not answered." for key in missing)
+    problems.extend(
+        {"item": key, "kind": "item", "id": key, "message": f"{key}: not answered."}
+        for key in missing
+    )
     if problems:
-        raise CampusError(Code.INVALID_RESPONSE, "Answers need fixing: " + " ".join(problems[:20]))
+        name = private_name(Path("."), f"review/packets/{packet_id}.problems.json")
+        previous = read_bytes(confined(context.root, name))
+        history = json.loads(previous) if previous else []
+        apply(
+            context.root,
+            (Write(name, previous, json.dumps([*history, problems], indent=2).encode()),),
+        )
+        raise AnswerError(problems)
     log = state.rounds[-1].model_copy(
         update={
             "opened": state.rounds[-1].opened + opened,
@@ -797,6 +947,15 @@ def record(
         context.root,
         (
             *(record_write(context.root, rec) for rec in context.records.values()),
+            *(
+                Write(
+                    name,
+                    read_bytes(confined(context.root, name)),
+                    json.dumps(context.items[key].blocks, sort_keys=True).encode(),
+                )
+                for key in asked
+                for name in (_snapshot_name(key),)
+            ),
             _state_write(
                 context.root, state.model_copy(update={"rounds": (*state.rounds[:-1], log)})
             ),
@@ -812,7 +971,7 @@ def _record_item(
     answer: dict,
     number: int,
     provenance: str,
-    problems: list[str],
+    problems: list[dict[str, str]],
 ) -> tuple[int, int]:
     key = item.key
     record = context.record(key)
@@ -821,41 +980,83 @@ def _record_item(
     verdicts = dict(record.checks)
     findings = list(record.findings)
     next_id = 1 + max((int(f.id[1:]) for f in findings), default=0)
-    new: list[Finding] = []
-    reported: list[Finding] = []
-    for raw in answer.get("findings", []):
+    candidates: list[Finding] = []
+
+    def problem(kind: str, identifier: str, message: str) -> None:
+        problems.append({"item": key, "kind": kind, "id": identifier, "message": message})
+
+    for index, raw in enumerate(answer.get("findings", [])):
         check = checks.get(raw.get("check", ""))
         location = str(raw.get("location", ""))
         quote = str(raw.get("quote", ""))
         if check is None:
-            problems.append(f"{key}: finding check {raw.get('check')} is not asked here.")
+            problem(
+                "finding", str(index), f"{key}: finding check {raw.get('check')} is not asked here."
+            )
+            continue
+        also = raw.get("also", [])
+        if (
+            not isinstance(also, list)
+            or any(not isinstance(link, str) for link in also)
+            or any(link == check.id or link not in asked["needs"] for link in also)
+            or any(answer.get("checks", {}).get(link, {}).get("verdict") != "fail" for link in also)
+        ):
+            problem(
+                "finding",
+                str(index),
+                f"{key}: finding for {check.id} has invalid also checks {also}; "
+                "each must be another asked check with a fail verdict.",
+            )
             continue
         if not quoted(quote, _at(passages, location)):
-            problems.append(f"{key}: finding quote for {check.id} is not at {location}.")
-            continue
+            matches = [path for path, text in passages if quoted(quote, [(path, text)])]
+            if len(matches) != 1:
+                problem(
+                    "finding",
+                    str(index),
+                    f"{key}: finding quote for {check.id} is not at {location}.",
+                )
+                continue
+            location = matches[0]
         if not raw.get("why") or not raw.get("fix"):
-            problems.append(f"{key}: finding for {check.id} needs why and fix.")
+            problem("finding", str(index), f"{key}: finding for {check.id} needs why and fix.")
             continue
         score = 1 if str(raw.get("score")) == "1" else 2
-        existing = next(
+        duplicate = next(
             (
                 finding
-                for finding in (*findings, *new)
-                if finding.opened == number
-                and (finding.check, finding.location, finding.quote) == (check.id, location, quote)
-                and (finding.why, finding.fix, finding.score) == (raw["why"], raw["fix"], score)
+                for finding in candidates
+                if (finding.location, finding.quote) == (location, quote)
             ),
             None,
         )
-        if existing is not None:
-            reported.append(existing)
+        if duplicate is not None:
+            if check.id != duplicate.check and (
+                check.id not in asked["needs"]
+                or answer.get("checks", {}).get(check.id, {}).get("verdict") != "fail"
+            ):
+                problem(
+                    "finding",
+                    str(index),
+                    f"{key}: merged check {check.id} must be asked and fail.",
+                )
+                continue
+            linked = tuple(
+                dict.fromkeys(
+                    link for link in (*duplicate.also, check.id, *also) if link != duplicate.check
+                )
+            )
+            candidates[candidates.index(duplicate)] = duplicate.model_copy(
+                update={"also": linked, "score": min(duplicate.score, score)}
+            )
             continue
         block = _block(item, location)
         previous = verdicts.get(check.id)
-        new.append(
+        candidates.append(
             Finding(
-                id=f"F{next_id}",
+                id=f"F{next_id + len(candidates)}",
                 check=check.id,
+                also=tuple(dict.fromkeys(also)),
                 quote=quote,
                 location=location,
                 why=raw["why"],
@@ -869,14 +1070,34 @@ def _record_item(
                 and is_current(previous, check, item),
             )
         )
-        reported.append(new[-1])
-        next_id += 1
-    failed = {finding.check for finding in reported}
+    new: list[Finding] = []
+    reported: list[Finding] = []
+    for candidate in candidates:
+        existing = next(
+            (
+                finding
+                for finding in findings
+                if finding.opened == number
+                and finding.status != "verified"
+                and (finding.check, finding.location, finding.quote)
+                == (candidate.check, candidate.location, candidate.quote)
+                and (finding.why, finding.fix, finding.score)
+                == (candidate.why, candidate.fix, candidate.score)
+                and set(finding.also) == set(candidate.also)
+            ),
+            None,
+        )
+        if existing is not None:
+            reported.append(existing)
+        else:
+            new.append(candidate)
+            reported.append(candidate)
+    failed = {check_id for finding in reported for check_id in (finding.check, *finding.also)}
     missing = [
         check_id for check_id in asked["needs"] if answer.get("checks", {}).get(check_id) is None
     ]
-    if missing:
-        problems.append(f"{key}: missing verdicts for {', '.join(missing)}.")
+    for check_id in missing:
+        problem("check", check_id, f"{key}: missing verdict for {check_id}.")
     for check_id in asked["needs"]:
         check = checks[check_id]
         given = answer.get("checks", {}).get(check_id)
@@ -885,37 +1106,43 @@ def _record_item(
         verdict = given.get("verdict")
         covers = tuple(given.get("covers") or ("*",)) if check.scope == "block" else ("*",)
         if any(block != "*" and block not in item.blocks for block in covers):
-            problems.append(f"{key}: {check_id} covers unknown blocks.")
+            problem("check", check_id, f"{key}: {check_id} covers unknown blocks.")
             continue
         closest = None
         if verdict == "fail" and check_id not in failed:
-            problems.append(f"{key}: {check_id} fails but no finding names it.")
+            problem("check", check_id, f"{key}: {check_id} fails but no finding names it.")
             continue
         if verdict in {"pass", "uncertain"}:
             location = str(given.get("location", ""))
             if not (
                 given.get("reason") and quoted(str(given.get("quote", "")), _at(passages, location))
             ):
-                problems.append(
-                    f"{key}: {check_id} needs a quote found at its location and a reason."
+                problem(
+                    "check",
+                    check_id,
+                    f"{key}: {check_id} needs a quote found at its location and a reason.",
                 )
                 continue
             closest = ClosestCall(quote=given["quote"], location=location, reason=given["reason"])
         if verdict == "pass" and check.default_fail and not given.get("evidence"):
-            problems.append(f"{key}: {check_id} passes only with cited evidence.")
+            problem("check", check_id, f"{key}: {check_id} passes only with cited evidence.")
             continue
         if verdict == "pass" and check_id == CONCEPT_CHECK:
             evidence = str(given.get("evidence", "")).casefold()
             if skipped := [
                 c["name"] for c in asked.get("concepts", []) if c["name"].casefold() not in evidence
             ]:
-                problems.append(
+                problem(
+                    "check",
+                    check_id,
                     f"{key}: {check_id} names every planned concept with the block that shows "
-                    f"it; missing {', '.join(skipped[:4])}."
+                    f"it; missing {', '.join(skipped[:4])}.",
                 )
                 continue
         if verdict not in {"pass", "fail", "uncertain"}:
-            problems.append(f"{key}: {check_id} verdict must be pass, fail or uncertain.")
+            problem(
+                "check", check_id, f"{key}: {check_id} verdict must be pass, fail or uncertain."
+            )
             continue
         verdicts[check_id] = Verdict(
             verdict=verdict,
@@ -925,6 +1152,11 @@ def _record_item(
             fingerprint=covered(item, covers, check.id),
             covers=covers,
             version=check.version,
+            finding_ids=tuple(
+                finding.id
+                for finding in reported
+                if verdict == "fail" and check_id in (finding.check, *finding.also)
+            ),
             closest=closest,
             evidence=given.get("evidence"),
         )
@@ -933,25 +1165,51 @@ def _record_item(
     for check in verify_answers(answer):
         target = next((f for f in findings if f.id == check["finding"]), None)
         if target is None or target.id not in verifying:
-            problems.append(f"{key}: {check['finding']} was not asked to be verified.")
+            problem(
+                "verify",
+                str(check["finding"]),
+                f"{key}: {check['finding']} was not asked to be verified.",
+            )
             continue
         index = findings.index(target)
         if check.get("resolved") is True:
             # Verifying reads the new passage: a fix that removes the finding but reads badly
             # is not resolved.
             if not quoted(str(check.get("quote", "")), passages):
-                problems.append(
-                    f"{key}: {target.id} is resolved only with the rewritten passage quoted."
+                problem(
+                    "verify",
+                    target.id,
+                    f"{key}: {target.id} is resolved only with the rewritten passage quoted.",
                 )
                 continue
-            findings[index] = target.model_copy(update={"status": "verified", "closed": number})
+            contradicted = [
+                check_id
+                for check_id in (target.check, *target.also)
+                if answer.get("checks", {}).get(check_id, {}).get("verdict") == "fail"
+                and not any(
+                    finding.id != target.id and check_id in (finding.check, *finding.also)
+                    for finding in reported
+                )
+            ]
+            if contradicted:
+                problem(
+                    "verify",
+                    target.id,
+                    f"{key}: {target.id} cannot be resolved while its checks fail: "
+                    f"{', '.join(contradicted)}.",
+                )
+                continue
+            findings[index] = target.model_copy(
+                update={"status": "verified", "closed": number, "verified_provenance": provenance}
+            )
             resolved += 1
         else:
             findings[index] = target.model_copy(
                 update={"status": "reopened", "reopens": target.reopens + 1}
             )
     asked_verify = verifying - {item["finding"] for item in verify_answers(answer)}
-    problems.extend(f"{key}: {finding} was not verified." for finding in sorted(asked_verify))
+    for finding in sorted(asked_verify):
+        problem("verify", finding, f"{key}: {finding} was not verified.")
     rulings = dict(record.rulings)
     given_rulings = {
         str(entry.get("key")): entry for entry in answer.get("flags", []) if isinstance(entry, dict)
@@ -959,16 +1217,22 @@ def _record_item(
     for flag_key in asked.get("rule", []):
         entry = given_rulings.get(flag_key)
         if entry is None:
-            problems.append(f"{key}: flag {flag_key} needs a ruling.")
+            problem("flag", flag_key, f"{key}: flag {flag_key} needs a ruling.")
             continue
         ruling, reason = entry.get("ruling"), str(entry.get("reason") or "").strip()
         if ruling not in {"finding", "not_applicable"} or len(reason) < 15:
-            problems.append(f"{key}: flag {flag_key} is ruled finding or not_applicable, with why.")
+            problem(
+                "flag",
+                flag_key,
+                f"{key}: flag {flag_key} is ruled finding or not_applicable, with why.",
+            )
             continue
         bears_on = next(flag["bears_on"] for flag in asked["report"] if flag.get("key") == flag_key)
-        if ruling == "finding" and not any(f.check == bears_on for f in reported):
-            problems.append(
-                f"{key}: flag {flag_key} is ruled a finding, but no finding names {bears_on}."
+        if ruling == "finding" and not any(bears_on in (f.check, *f.also) for f in reported):
+            problem(
+                "flag",
+                flag_key,
+                f"{key}: flag {flag_key} is ruled a finding, but no finding names {bears_on}.",
             )
             continue
         rulings[flag_key] = Ruling(
@@ -988,10 +1252,19 @@ def _record_item(
                 f"{'.'.join(map(str, e['loc']))}: {e['msg'].removeprefix('Value error, ')}"
                 for e in error.errors(include_input=False)[:3]
             )
-            problems.append(f"{key}: visual scores invalid ({named}).")
+            for visual in answer.get("visuals", []):
+                try:
+                    VisualReview.model_validate(visual)
+                except ValidationError:
+                    problem(
+                        "visual",
+                        str(visual.get("visual", "")),
+                        f"{key}: visual scores invalid ({named}).",
+                    )
         else:
             if missing := set(asked["visuals"]) - {visual.visual for visual in visuals}:
-                problems.append(f"{key}: visuals not scored: {sorted(missing)}.")
+                for visual in sorted(missing):
+                    problem("visual", visual, f"{key}: visual not scored: {visual}.")
             fingerprint = digest(item.blocks)
     context.records[key] = record.model_copy(
         update={
@@ -1029,22 +1302,13 @@ def change(
     block: str | None = None,
 ) -> Finding:
     """Mark a finding fixed (only after its passage changed), rejected or kept, with reasons."""
+    if action == "fixed":
+        return fix_many(root, key, (finding_id,), block)[0]
     context = load(root)
     record, index, finding = _finding(context, key, finding_id)
-    item = context.items[key]
     if finding.status not in LIVE:
         raise CampusError(Code.ACTION_REQUIRED, f"{finding_id} is {finding.status}, not open.")
-    if action == "fixed":
-        target = block or finding.block
-        if target not in item.blocks:
-            raise CampusError(Code.ACTION_REQUIRED, f"{key} has no block {target}.")
-        if item.blocks[target] == finding.blocks_at_open.get(target):
-            raise CampusError(
-                Code.ACTION_REQUIRED,
-                f"{target} is unchanged since {finding_id} was found; change it first, or name "
-                "the block you changed with --block.",
-            )
-    elif not reason:
+    if not reason:
         raise CampusError(Code.ACTION_REQUIRED, "Say why with --reason.")
     updated = finding.model_copy(
         update={"status": action, **({"reason": reason} if reason else {})}
@@ -1052,6 +1316,33 @@ def change(
     Finding.model_validate(updated.model_dump())
     findings = list(record.findings)
     findings[index] = updated
+    apply(
+        context.root,
+        (record_write(context.root, record.model_copy(update={"findings": tuple(findings)})),),
+    )
+    return updated
+
+
+def fix_many(root: Path, key: str, ids: tuple[str, ...], block: str | None = None) -> list[Finding]:
+    context = load(root)
+    selected = [_finding(context, key, finding_id) for finding_id in ids]
+    if len(set(ids)) != len(ids):
+        raise CampusError(Code.ACTION_REQUIRED, "Name each finding only once.")
+    for _, _, finding in selected:
+        if finding.status not in LIVE:
+            raise CampusError(Code.ACTION_REQUIRED, f"{finding.id} is {finding.status}, not open.")
+        target = block or finding.block
+        if target not in context.items[key].blocks:
+            raise CampusError(Code.ACTION_REQUIRED, f"{key} has no block {target}.")
+        if context.items[key].blocks[target] == finding.blocks_at_open.get(target):
+            raise CampusError(Code.ACTION_REQUIRED, f"{target} is unchanged since {finding.id}.")
+    record = context.record(key)
+    findings = list(record.findings)
+    updated = []
+    for _, index, finding in selected:
+        result = finding.model_copy(update={"status": "fixed"})
+        findings[index] = result
+        updated.append(result)
     apply(
         context.root,
         (record_write(context.root, record.model_copy(update={"findings": tuple(findings)})),),
@@ -1097,10 +1388,25 @@ def item_gate(context: Context, key: str) -> list[str]:
             problems.append(f"{check.id}: no current verdict")
         elif verdict.verdict == "uncertain":
             problems.append(f"{check.id}: uncertain, needs your decision")
-        elif check.teaching and verdict.verdict != "pass":
-            problems.append(f"{check.id}: teaching check not passed")
-        elif check.default_fail and verdict.provenance not in {"fresh", "user", "code"}:
-            problems.append(f"{check.id}: needs a fresh checker")
+        else:
+            if check.teaching and verdict.verdict != "pass":
+                related = {finding.id: finding for finding in record.findings}
+                if (
+                    verdict.provenance == "user"
+                    or not verdict.finding_ids
+                    or any(
+                        finding_id not in related
+                        or check.id not in (related[finding_id].check, *related[finding_id].also)
+                        or related[finding_id].status != "verified"
+                        or related[finding_id].closed is None
+                        or related[finding_id].closed < verdict.round
+                        or related[finding_id].verified_provenance != "fresh"
+                        for finding_id in verdict.finding_ids
+                    )
+                ):
+                    problems.append(f"{check.id}: teaching check not passed")
+            if check.default_fail and verdict.provenance not in {"fresh", "user", "code"}:
+                problems.append(f"{check.id}: needs a fresh checker")
     for finding in record.findings:
         if finding.status in LIVE:
             problems.append(f"{finding.id} {finding.check}: {finding.status}")
@@ -1390,11 +1696,12 @@ def status(root: Path) -> dict[str, JsonValue]:
                 "tum-mcp review extend PROJECT --rounds 1 verifies them."
             )
     elif open_round:
-        action = (
-            "Record the pending packets, fix findings, then close the round."
-            if pending
-            else "Fix the recorded findings, then close the round."
-        )
+        if pending:
+            action = "Record the pending packets, fix findings, then run review verify."
+        elif card["fixes_to_verify"] and not state.rounds[-1].verified:
+            action = "tum-mcp review verify PROJECT"
+        else:
+            action = "Fix the recorded findings, then close the round."
     else:
         action = "tum-mcp review next PROJECT"
     return {
