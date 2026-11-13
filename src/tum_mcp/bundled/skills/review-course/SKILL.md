@@ -61,6 +61,9 @@ scores.
       The checker uses the packet's
       `answer` format: a verdict (`pass`, `fail` or `uncertain`) for every check with the
       blocks it read, and for each fail the quoted passage, why it fails and the fix.
+      Uncertain needs a `missing` field naming the specific artifact or source page
+      that cannot be opened and why. Incomplete sampling is not unavailable evidence.
+      A sampled check whose likeliest failures pass is a pass.
       Checkers look at cited source pages for logic checks as well as the digest.
       Reuse matching page images under `.tum-mcp/cache/pages/<sha256>/` in read-only
       sessions. The author can render a missing cited page with
@@ -100,9 +103,10 @@ scores.
       Repair can also finish after the round has closed: it updates the current
       scorecard without opening another round. New corroborating sources are permitted
       while the original source revisions, request and required demands stay fixed.
-   6. After repairs, run `tum-mcp review verify PROJECT` once in the open round. Give its
-      packets to fresh checkers, record their answers and repair findings they open where
-      possible. Report those subsequent repairs as unverified; another check needs another
+   6. Finish every original finding and draft repair before running
+      `tum-mcp review verify PROJECT` once in the open round. Give its packets to fresh
+      checkers and record their answers. After this pass, repair only findings it opened
+      where possible. Report those subsequent repairs as unverified; another check needs another
       round requested by the student.
    7. `tum-mcp review close-round PROJECT` computes the gate and writes
       `.tum-mcp/loop/scorecard.md`. Use `review status` to check progress while a

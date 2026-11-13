@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -79,7 +81,6 @@ def test_gate_history_preserves_reasons_and_guards_advice_escalation(tmp_path) -
     import json
 
     from tum_mcp.course.checks.plans import plan_packet, record_gate
-    from tum_mcp.errors import CampusError
 
     stored = tmp_path / ".tum-mcp/plans/study/search.json"
     stored.parent.mkdir(parents=True)
@@ -99,8 +100,14 @@ def test_gate_history_preserves_reasons_and_guards_advice_escalation(tmp_path) -
         (1, "advice", "open"),
     ]
     assert packet["plans"][0]["concepts"][0]["changed"] is False
-    with pytest.raises(CampusError, match="evidence"):
-        record_gate(tmp_path, [answer | {"verdict": "fail", "reasons": [note.upper()]}], "fresh")
+    demoted = record_gate(
+        tmp_path, [answer | {"verdict": "fail", "reasons": [note.upper()]}], "fresh"
+    )
+    assert demoted["verdicts"][current.item] == {
+        "verdict": "pass",
+        "reasons": [],
+        "advice": [note.upper()],
+    }
     record_gate(
         tmp_path,
         [
@@ -118,9 +125,65 @@ def test_gate_history_preserves_reasons_and_guards_advice_escalation(tmp_path) -
     assert [(entry["check"], entry["kind"], entry["state"]) for entry in history] == [
         (1, "reason", "resolved"),
         (1, "advice", "escalated"),
-        (2, "reason", "open"),
+        (2, "advice", "escalated"),
+        (3, "reason", "open"),
     ]
     assert current.fingerprint() == Plan.model_validate_json(stored.read_bytes()).fingerprint()
+
+
+@pytest.mark.parametrize(
+    ("changed", "reason", "evidence", "expected"),
+    [
+        (False, "Uniform-cost search omits a cost.", {}, "pass"),
+        (
+            False,
+            "Uniform-cost search omits a cost.",
+            {"Uniform-cost search omits a cost.": "Slide 53 gives edge S-R as 80."},
+            "fail",
+        ),
+        (True, "Uniform-cost search omits a cost.", {}, "fail"),
+        (True, "A new unrelated blocker.", {}, "pass"),
+        (False, "Original blocker.", {}, "fail"),
+    ],
+)
+def test_later_blocker_needs_a_named_changed_concept_or_source_evidence(
+    tmp_path: Path, changed: bool, reason: str, evidence: dict[str, str], expected: str
+) -> None:
+    import json
+
+    from tum_mcp.course.checks.plans import read_plan, record_gate
+
+    stored = tmp_path / ".tum-mcp/plans/study/search.json"
+    stored.parent.mkdir(parents=True)
+    current = plan(example=UCS)
+    stored.write_text(current.model_dump_json())
+    first = {"item": current.item, "fingerprint": current.fingerprint()}
+    result = record_gate(
+        tmp_path, [first | {"verdict": "fail", "reasons": ["Original blocker."]}], "fresh"
+    )
+    assert result["verdicts"][current.item]["verdict"] == "fail"
+    if changed:
+        body = json.loads(stored.read_text())
+        body["concepts"][0]["instance"] = "A changed search input."
+        stored.write_text(json.dumps(body))
+    current = read_plan(tmp_path, current.item)
+    assert current is not None
+    result = record_gate(
+        tmp_path,
+        [
+            {
+                "item": current.item,
+                "fingerprint": current.fingerprint(),
+                "verdict": "fail",
+                "reasons": [reason],
+                "evidence": evidence,
+            }
+        ],
+        "fresh",
+    )
+    verdict = result["verdicts"][current.item]
+    assert verdict["verdict"] == expected
+    assert verdict.get("advice", []) == ([reason] if expected == "pass" else [])
 
 
 def test_unused_digest_examples_respect_source_and_page_overlap(tmp_path) -> None:

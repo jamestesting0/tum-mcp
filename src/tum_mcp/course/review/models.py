@@ -271,6 +271,8 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "static_trace": "representation",
     "static_walkthrough": "representation",
     "dropped_node_value": "representation",
+    "never_shown_nodes": "representation",
+    "repeated_step_reason": "intuition",
     "unworked_result": "representation",
     "text_only_question": "representation",
     "bare_workflow": "representation",
@@ -294,7 +296,6 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
 # here, or why the flag does not apply. A flag no one rules on is how a weak lesson passed.
 RULED_FLAGS: dict[str, str] = {
     "repeated_example": "redundancy.said_once",
-    "repeated_step_reason": "intuition.reasons",
     "duplicate_stage": "redundancy.said_once",
     "untitled_opening": "organization.outline",
     "trace_as_table": "representation.shape_fits",

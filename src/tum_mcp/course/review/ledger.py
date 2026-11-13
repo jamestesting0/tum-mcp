@@ -38,6 +38,7 @@ class Verdict(Frozen):
     finding_ids: tuple[FindingId, ...] = Field(default=(), exclude_if=not_)
     closest: ClosestCall | None = None
     evidence: Text | None = None
+    missing: Text | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Finding(Frozen):

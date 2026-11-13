@@ -52,7 +52,9 @@ PROMPT = (
     "likely to fail it. File each defect once under the owner check from the rubric's "
     "'One owner per problem' table; list other asked checks it fails in the finding's `also`. "
     "Pass when those passages pass. If the subject is absent, pass and say "
-    "so. Uncertain names exactly one missing piece of evidence that cannot be opened. For "
+    "so. Uncertain requires a non-empty missing field naming the specific artifact or source "
+    "page that cannot be opened and why. Incomplete sampling or 'not independently verified' "
+    "is not unavailable evidence: a sampled check whose likeliest failures pass is a pass. For "
     "correctness.recomputed and correctness.answer_key, inspect the key script's inputs against "
     "the slides and spot-check: a passing key proves agreement, not correctness. "
     "Quote word for word from the passage at its location. "
@@ -63,7 +65,10 @@ REPAIR_PROMPT = (
     "refused: {problems} Reply with only a partial answers JSON object containing the refused "
     "entries. To replace a finding, include `_index` with its zero-based index from the "
     "problem; omit it to append a new finding. Never substitute a blanket pass: use "
-    "uncertain with the evidence limit if it cannot be judged. "
+    "uncertain only with a missing field naming the specific artifact or source page that "
+    "cannot be opened and why. 'Not independently verified' or 'did not inspect every' is "
+    "not unavailable evidence: a sampled check whose likeliest failures pass is a pass. "
+    "Answer only the listed missing or invalid entries; preserve all other answers. "
     f"{VISUAL_GUIDANCE}"
 )
 PLAN_PROMPT = (
@@ -127,21 +132,23 @@ def _run_packet(root: Path, name: str, packet: str, host: str, command: str | No
     answers["packet"] = packet
     saved = private_name(Path("."), f"review/packets/{packet}.answer.json")
     path = confined(root, saved)
-    try:
-        result = _record(root, answers)
-    except loop.AnswerError as error:
+    for attempt in range(3):
         path.write_text(json.dumps(answers, indent=2, ensure_ascii=False), encoding="utf-8")
-        repaired = _ask(
-            root,
-            REPAIR_PROMPT.format(packet=name, answer=saved, problems=json.dumps(error.problems)),
-            host,
-            command,
-        )
-        merged = merge_answers(answers, repaired)
-        path.write_text(json.dumps(merged, indent=2, ensure_ascii=False), encoding="utf-8")
-        return _record(root, merged)
-    path.write_text(json.dumps(answers, indent=2, ensure_ascii=False), encoding="utf-8")
-    return result
+        try:
+            return _record(root, answers, partial=attempt == 2)
+        except loop.AnswerError as error:
+            if attempt == 2:
+                raise
+            repaired = _ask(
+                root,
+                REPAIR_PROMPT.format(
+                    packet=name, answer=saved, problems=json.dumps(error.problems)
+                ),
+                host,
+                command,
+            )
+            answers = merge_answers(answers, repaired)
+    raise AssertionError("unreachable")
 
 
 def merge_answers(original: dict, repair: dict) -> dict:
@@ -179,11 +186,11 @@ def merge_answers(original: dict, repair: dict) -> dict:
     return merged
 
 
-def _record(root: Path, answers: dict) -> dict[str, JsonValue]:
+def _record(root: Path, answers: dict, *, partial: bool = False) -> dict[str, JsonValue]:
     """Record, retrying when another checker of the round wrote the records first."""
     for attempt in range(3):
         try:
-            return loop.record(root, answers, "fresh")
+            return loop.record(root, answers, "fresh", partial=partial)
         except CampusError as error:
             if error.code != Code.WORKSPACE_CONFLICT or attempt == 2:
                 raise

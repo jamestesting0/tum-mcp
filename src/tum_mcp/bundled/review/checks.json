@@ -585,7 +585,7 @@
     {
       "id": "intuition.reasons",
       "dimension": "intuition",
-      "rule": "every step of a procedure says why it is allowed.",
+      "rule": "every step of a procedure says why it is allowed. A computed value shows its inputs and arithmetic in its why or a state row: a tile distance gives start and goal coordinates and the absolute row and column differences; a path cost adds the prior cost and edge cost. Stating only the differences or total is incomplete working.",
       "pass": "Each walkthrough step says why: 'C has the smallest f, so it goes next.'",
       "fail": "Steps say what happens but never why it is allowed.",
       "profiles": [
@@ -596,7 +596,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 1,
+      "version": 2,
       "default_fail": true,
       "teaching": true
     },

@@ -6,6 +6,7 @@ fixes to verify and the dependents a change reaches, so each round costs less th
 
 import datetime
 import json
+import re
 from collections import Counter
 from dataclasses import dataclass, field, replace
 from importlib.resources import files
@@ -790,6 +791,8 @@ ANSWER_FORMAT: dict[str, JsonValue] = {
                     "quote": "pass and uncertain: the passage nearest to failing, word for word",
                     "location": "the passage path from the packet",
                     "reason": "why it passes, or what is uncertain",
+                    "missing": "uncertain only: the specific unavailable artifact or source page "
+                    "and why it cannot be opened; incomplete sampling is not missing evidence",
                     "evidence": "default_fail checks: the script output, map or steps that pass it",
                     "covers": ["block scope only: the blocks you judged, else omit"],
                 }
@@ -876,6 +879,8 @@ def record(
     root: Path,
     answers: dict,
     provenance: Literal["fresh", "same", "provisional"],
+    *,
+    partial: bool = False,
 ) -> dict[str, JsonValue]:
     """Validate a checker's answers against its packet and the current content, then save."""
     context = load(root)
@@ -896,6 +901,24 @@ def record(
     asked = {entry["item"]: entry for entry in packet["items"]}
     problems: list[dict[str, str]] = []
     opened = resolved = 0
+    recorded_items = set()
+    if partial:
+        for key, entry in asked.items():
+            previous = context.record(key)
+            context.records[key] = previous.model_copy(
+                update={
+                    "checks": {
+                        check: verdict
+                        for check, verdict in previous.checks.items()
+                        if check not in entry["needs"]
+                    },
+                    "rulings": {
+                        flag: ruling
+                        for flag, ruling in previous.rulings.items()
+                        if flag not in entry.get("rule", [])
+                    },
+                }
+            )
     for answer in answers.get("items", []):
         key = answer.get("item")
         if key not in asked:
@@ -920,6 +943,7 @@ def record(
             )
             continue
         recorded = _record_item(context, item, asked[key], answer, number, provenance, problems)
+        recorded_items.add(key)
         opened += recorded[0]
         resolved += recorded[1]
     missing = sorted(set(asked) - {answer.get("item") for answer in answers.get("items", [])})
@@ -935,12 +959,15 @@ def record(
             context.root,
             (Write(name, previous, json.dumps([*history, problems], indent=2).encode()),),
         )
-        raise AnswerError(problems)
+        if not partial:
+            raise AnswerError(problems)
     log = state.rounds[-1].model_copy(
         update={
             "opened": state.rounds[-1].opened + opened,
             "resolved": state.rounds[-1].resolved + resolved,
-            "answered": tuple(dict.fromkeys((*(state.rounds[-1].answered or ()), packet_id))),
+            "answered": tuple(dict.fromkeys((*(state.rounds[-1].answered or ()), packet_id)))
+            if not problems
+            else tuple(key for key in (state.rounds[-1].answered or ()) if key != packet_id),
         }
     )
     apply(
@@ -953,7 +980,7 @@ def record(
                     read_bytes(confined(context.root, name)),
                     json.dumps(context.items[key].blocks, sort_keys=True).encode(),
                 )
-                for key in asked
+                for key in recorded_items
                 for name in (_snapshot_name(key),)
             ),
             _state_write(
@@ -961,6 +988,8 @@ def record(
             ),
         ),
     )
+    if problems:
+        raise AnswerError(problems)
     return {"recorded": sorted(asked), "opened": opened, "resolved": resolved}
 
 
@@ -1113,6 +1142,26 @@ def _record_item(
             problem("check", check_id, f"{key}: {check_id} fails but no finding names it.")
             continue
         if verdict in {"pass", "uncertain"}:
+            if verdict == "uncertain":
+                missing = given.get("missing")
+                if (
+                    not isinstance(missing, str)
+                    or not missing.strip()
+                    or re.search(
+                        r"not independently verified|did not inspect every|not every|"
+                        r"not exhaustively|incomplete sampling",
+                        missing,
+                        re.I,
+                    )
+                ):
+                    problem(
+                        "check",
+                        check_id,
+                        f"{key}: {check_id} uncertain needs a missing field naming the specific "
+                        "evidence that cannot be opened and why. A sampled check whose "
+                        "likeliest failures pass is a pass.",
+                    )
+                    continue
             location = str(given.get("location", ""))
             if not (
                 given.get("reason") and quoted(str(given.get("quote", "")), _at(passages, location))
@@ -1159,6 +1208,7 @@ def _record_item(
             ),
             closest=closest,
             evidence=given.get("evidence"),
+            missing=given.get("missing") if verdict == "uncertain" else None,
         )
     resolved = 0
     verifying = {finding["id"] for finding in asked["verify"]}
@@ -1245,27 +1295,25 @@ def _record_item(
     visuals = record.visuals
     fingerprint = record.visuals_fingerprint
     if asked["visuals"]:
-        try:
-            visuals = tuple(VisualReview.model_validate(v) for v in answer.get("visuals", []))
-        except ValidationError as error:
-            named = "; ".join(
-                f"{'.'.join(map(str, e['loc']))}: {e['msg'].removeprefix('Value error, ')}"
-                for e in error.errors(include_input=False)[:3]
-            )
-            for visual in answer.get("visuals", []):
-                try:
-                    VisualReview.model_validate(visual)
-                except ValidationError:
-                    problem(
-                        "visual",
-                        str(visual.get("visual", "")),
-                        f"{key}: visual scores invalid ({named}).",
-                    )
-        else:
-            if missing := set(asked["visuals"]) - {visual.visual for visual in visuals}:
-                for visual in sorted(missing):
+        valid_visuals = []
+        for visual in answer.get("visuals", []):
+            try:
+                valid_visuals.append(VisualReview.model_validate(visual))
+            except ValidationError as error:
+                problem(
+                    "visual",
+                    str(visual.get("visual", "")),
+                    f"{key}: visual scores invalid ({error.errors()[0]['msg']}).",
+                )
+        visuals = tuple(valid_visuals)
+        if missing := set(asked["visuals"]) - {visual.visual for visual in visuals}:
+            for visual in sorted(missing):
+                if not any(
+                    p["kind"] == "visual" and p["item"] == key and p["id"] == visual
+                    for p in problems
+                ):
                     problem("visual", visual, f"{key}: visual not scored: {visual}.")
-            fingerprint = digest(item.blocks)
+        fingerprint = digest(item.blocks)
     context.records[key] = record.model_copy(
         update={
             "checks": verdicts,
@@ -1514,6 +1562,8 @@ def scorecard(
     finding_status: Counter[str] = Counter()
     provenance: Counter[str] = Counter()
     eye = []
+    unverified = []
+    stale_items = []
     late = 0
     for key in in_scope:
         record = context.record(key)
@@ -1533,6 +1583,19 @@ def scorecard(
         fully_scored = all(
             (verdict := record.checks.get(check.id)) and is_current(verdict, check, item)
             for check in registry.judged(profile)
+        )
+        if not fully_scored:
+            stale_items.append(key)
+        unverified.extend(
+            {
+                "item": key,
+                "finding": finding.id,
+                "check": finding.check,
+                "location": finding.location,
+                "why": finding.why,
+            }
+            for finding in record.findings
+            if finding.status == "fixed"
         )
         scores = record.scores(registry.dimensions(profile)) if fully_scored else {}
         live = [f for f in record.findings if f.status in LIVE]
@@ -1607,6 +1670,14 @@ def scorecard(
         "fixes_to_verify": sum(
             f.status == "fixed" for key in in_scope for f in context.record(key).findings
         ),
+        "fixed_unverified": unverified,
+        "stale_items": stale_items,
+        "verification_next": (
+            "These fixes and stale items need another round; ask the student to authorize "
+            "review extend PROJECT --rounds 1."
+            if unverified or stale_items
+            else "All requested verdicts are current."
+        ),
         "structural_repairs": list(state.structural_repairs),
         "rounds": [
             {
@@ -1671,6 +1742,13 @@ def _markdown(card: dict[str, JsonValue]) -> str:
             f"| {row['item']} | {scores} | {row['last_round']} | "
             f"{row['open']} | {evidence or 'unreviewed'} | {'yes' if row['passed'] else 'no'} |"
         )
+    lines.extend(
+        f"Fixed but unverified: {entry['item']} {entry['finding']} "
+        f"({entry['check']}, {entry['location']}): {entry['why']}"
+        for entry in card["fixed_unverified"]
+    )
+    lines.extend(f"Stale or incomplete verdicts: {key}" for key in card["stale_items"])
+    lines.append(str(card["verification_next"]))
     return "\n".join(lines) + "\n"
 
 

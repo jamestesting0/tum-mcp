@@ -541,10 +541,45 @@ def test_uncertain_verdict_is_asked_again_in_verify_pass(project: Path) -> None:
         response = answer(packet)
         if packet is original[0]:
             response["items"][0]["checks"][check]["verdict"] = "uncertain"
+            response["items"][0]["checks"][check]["missing"] = (
+                "slides/search.pdf page 4: the cached image and PDF cannot be opened."
+            )
         loop.record(project, response, "fresh")
+    assert loop.load(project).record(key).checks[check].missing == (
+        "slides/search.pdf page 4: the cached image and PDF cannot be opened."
+    )
     verification = packets(project, loop.verify_round(project))
     entry = next(e for p in verification for e in p["items"] if e["item"] == key)
     assert check in entry["needs"]
+
+
+def test_close_names_late_fixed_findings_and_stale_items(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    for packet in packets(project, loop.next_round(project)):
+        loop.record(project, answer(packet), "fresh")
+    key = edit_first_block(project)
+    for packet in packets(project, loop.verify_round(project)):
+        loop.record(project, answer(packet, fail={key: "clarity.one_reading"}), "fresh")
+    finding = loop.load(project).record(key).findings[0]
+    edit_first_block(project)
+    loop.change(project, key, finding.id, "fixed")
+
+    card = loop.close_round(project)
+
+    assert card["fixed_unverified"] == [
+        {
+            "item": key,
+            "finding": finding.id,
+            "check": finding.check,
+            "location": finding.location,
+            "why": finding.why,
+        }
+    ]
+    assert key in card["stale_items"]
+    assert next(row for row in card["items"] if row["item"] == key)["scores"] == {}
+    markdown = (project / ".tum-mcp/loop/scorecard.md").read_text()
+    assert f"{key} {finding.id}" in markdown
+    assert f"Stale or incomplete verdicts: {key}" in markdown
 
 
 def test_verify_reports_added_and_removed_blocks(project: Path) -> None:
@@ -591,6 +626,77 @@ def test_partial_checker_repair_preserves_other_verdicts_and_logs_problems(
     assert {(p["item"], p["kind"], p["id"]) for p in history[0]} == {
         (first["item"], "check", missing)
     }
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        None,
+        "",
+        "not independently verified",
+        "did not inspect every cited page",
+    ],
+)
+def test_uncertain_requires_specific_unavailable_evidence(
+    project: Path, missing: str | None
+) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    response = answer(packet)
+    check = next(iter(response["items"][0]["checks"]))
+    response["items"][0]["checks"][check].update(verdict="uncertain", missing=missing)
+    with pytest.raises(loop.AnswerError, match="likeliest failures pass"):
+        loop.record(project, response, "fresh")
+
+
+@pytest.mark.parametrize("complete_second_repair", [True, False])
+def test_checker_uses_two_targeted_repairs_and_saves_valid_remainder(
+    project: Path, monkeypatch: pytest.MonkeyPatch, complete_second_repair: bool
+) -> None:
+    from copy import deepcopy
+
+    from tum_mcp.course.review import runner
+
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    complete = answer(packet)
+    first = complete["items"][0]
+    key = first["item"]
+    checks = list(first["checks"])[:2]
+    initial = deepcopy(complete)
+    for check in checks:
+        initial["items"][0]["checks"].pop(check)
+    repair = {"items": [{"item": key, "checks": {checks[0]: first["checks"][checks[0]]}}]}
+    last = (
+        {"items": [{"item": key, "checks": {checks[1]: first["checks"][checks[1]]}}]}
+        if complete_second_repair
+        else {"items": []}
+    )
+    replies = iter((initial, repair, last))
+    prompts = []
+
+    def checker(_root, prompt, _host, _command):
+        prompts.append(prompt)
+        return next(replies)
+
+    monkeypatch.setattr(runner, "_ask", checker)
+    if complete_second_repair:
+        result = runner.run(project, packet["id"], "codex")
+        assert not result.get("problems")
+    else:
+        with pytest.raises(loop.AnswerError) as refused:
+            runner.run(project, packet["id"], "codex")
+
+    stored = loop.load(project).record(key)
+    expected = set(first["checks"]) - (set() if complete_second_repair else {checks[1]})
+    assert set(stored.checks) == expected
+    assert len(prompts) == 3
+    if not complete_second_repair:
+        assert [(p["item"], p["kind"], p["id"]) for p in refused.value.problems] == [
+            (key, "check", checks[1])
+        ]
+        assert packet["id"] in loop.read_state(project).rounds[-1].pending_packets
+        assert f"{checks[1]}: no current verdict" in loop.item_gate(loop.load(project), key)
 
 
 def test_packet_renders_cited_pages_and_supplies_prior_definitions(tmp_path: Path) -> None:
@@ -1043,7 +1149,7 @@ def test_the_concept_check_is_answered_for_every_planned_concept(project: Path) 
 
 
 @pytest.mark.parametrize("repair_valid", [True, False])
-def test_a_refused_checker_answer_gets_one_repair_pass(
+def test_a_refused_checker_answer_repairs_or_reports_saved_partial_results(
     project: Path, tmp_path: Path, repair_valid: bool
 ) -> None:
     # A checker's whole review was lost twice to one malformed visual score.

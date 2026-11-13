@@ -346,9 +346,6 @@ def _updated_history(
     plan: Plan, updates: GateUpdates, reasons: tuple[str, ...], advice: tuple[str, ...]
 ) -> tuple[GateEntry, ...]:
     history = _history(plan.gate)
-    hashes = _concept_hashes(plan)
-    prior_hashes = plan.gate.concepts if plan.gate else {}
-    evidence = {_normalized(key): value for key, value in updates.evidence.items()}
     for reason in reasons:
         matching = [
             entry
@@ -362,15 +359,6 @@ def _updated_history(
             for entry in history
         ):
             continue
-        named = [name for name in prior_hashes if _normalized(name) in _normalized(reason)]
-        if not named and len(prior_hashes) == 1:
-            named = list(prior_hashes)
-        changed = bool(named) and any(prior_hashes[name] != hashes.get(name) for name in named)
-        if not changed and not evidence.get(_normalized(reason), "").strip():
-            raise CampusError(
-                Code.ACTION_REQUIRED,
-                f"Plan {plan.item}: give new evidence for escalating earlier advice: {reason}",
-            )
         history = [
             entry.model_copy(update={"state": "escalated"}) if entry in matching else entry
             for entry in history
@@ -430,8 +418,6 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
         advice = tuple(str(note) for note in answer.get("advice", []))
         if verdict not in {"pass", "fail"} or (verdict == "fail" and not reasons):
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item}: pass, or fail with the reasons.")
-        if verdict == "pass" and (problems := example_problems(plan)):
-            raise CampusError(Code.ACTION_REQUIRED, " ".join(problems[:5]))
         if (
             provenance == "same"
             and plan.gate
@@ -460,6 +446,32 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
             raise CampusError(
                 Code.ACTION_REQUIRED, f"Plan {item}: {error.errors()[0]['msg']}"
             ) from None
+        if plan.gate:
+            hashes = _concept_hashes(plan)
+            changed = {
+                name
+                for name in hashes.keys() | plan.gate.concepts.keys()
+                if hashes.get(name) != plan.gate.concepts.get(name)
+            }
+            prior = {
+                _normalized(entry.text)
+                for entry in _history(plan.gate)
+                if entry.kind == "reason" and entry.state == "open"
+            }
+            evidence = {_normalized(key): value.strip() for key, value in updates.evidence.items()}
+            demoted = tuple(
+                reason
+                for reason in reasons
+                if _normalized(reason) not in prior
+                and not any(_normalized(name) in _normalized(reason) for name in changed)
+                and not evidence.get(_normalized(reason))
+            )
+            reasons = tuple(reason for reason in reasons if reason not in demoted)
+            advice = tuple(dict.fromkeys((*advice, *demoted)))
+            if verdict == "fail" and not reasons:
+                verdict = "pass"
+        if verdict == "pass" and (problems := example_problems(plan)):
+            raise CampusError(Code.ACTION_REQUIRED, " ".join(problems[:5]))
         history = _updated_history(plan, updates, reasons, advice)
         gate = Approval(
             fingerprint=plan.fingerprint(),
@@ -631,8 +643,9 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "1. On the first check, list every blocking problem you can find in one pass. "
             "On later checks, verify each history reason first; put fixed entry texts or "
             "zero-based history indices in resolved. Raise a new blocker only for a changed "
-            "plan or something that change breaks. To escalate prior advice on an unchanged "
-            "concept, repeat its text as the reason and map it to new evidence in evidence.\n"
+            "concept named in full in the reason or something that change breaks. A new blocker on "
+            "an unchanged concept, including earlier advice, needs an evidence entry keyed "
+            "by its reason naming a new source page or fact; otherwise it becomes advice.\n"
             "2. Read coverage and the original request. Audit every demand, deferred outcome "
             "and subpart against the source. Broad requests include conditions, guarantees "
             "and costs; exercises retain requested parts. Check all learner actions, clauses "
