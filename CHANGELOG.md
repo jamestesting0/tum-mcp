@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Long walkthroughs stay compact: previous, the step position and next sit in one row
+  under the picture, with a progress track split by step group and a jump menu. Step dots
+  remain only for short walkthroughs, so long explanations no longer push the controls away.
+- A `grid` block and walkthrough stage show boards, mazes, matrices and seating plans as
+  grids: the cell being worked is marked, moves are drawn as arrows along the grid lines and
+  results are written into cells, never over a value. Answer keys can check each step's grid.
+- The authoring and review skills generalize their teaching rules: a critical example is one
+  the student must perform, one showing a decision or failure the main example cannot, one
+  later work builds on, or one showing why a method works or what it costs, in any subject.
+  A worked example keeps its whole teaching payload, and spatial content is drawn, not tabled.
 - A review round now checks its own repairs with up to two verify passes. The second
   checks only items changed since the first, asking everything stale for those items.
   `review verify` sends each fixed finding

@@ -235,7 +235,10 @@ Chrome, Edge or Chromium at desktop (1280 px) width; `--phone` adds phone (390 p
 narrow (600 px) widths. It reports lines through nodes, labels that overlap or sit on a
 line, text under 12 px, clipped text and drawings that differ from their block. Each
 walkthrough is measured and photographed at its first and its last step, so an overlap that
-appears only as a search tree grows is caught. A drawing wider than the reading column is
+appears only as a search tree grows is caught. Walkthrough controls (previous, the step
+position with a jump menu, next) sit in one row under the picture; only short walkthroughs
+show step dots. Boards, mazes and other spatial work use a `grid` stage whose arrows and
+labels never cover a cell's value. A drawing wider than the reading column is
 scaled down to its 12 px text floor, then widened into the free margin beside the column;
 one that still scrolls sideways at desktop width is listed under `notes`. It writes
 contact sheets to `.tum-mcp/visuals/` and records the result in
