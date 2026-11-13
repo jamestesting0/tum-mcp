@@ -229,7 +229,11 @@ published sites contain prepared learning content, not authoring queues.
 visual, including exercise Solution, Compare and transfer-answer blocks, in an installed
 Chrome, Edge or Chromium at desktop (1280 px) width; `--phone` adds phone (390 px) and
 narrow (600 px) widths. It reports lines through nodes, labels that overlap or sit on a
-line, text under 12 px, clipped text and drawings that differ from their block, writes
+line, text under 12 px, clipped text and drawings that differ from their block. Each
+walkthrough is measured and photographed at its first and its last step, so an overlap that
+appears only as a search tree grows is caught. A drawing wider than the reading column is
+scaled down to its 12 px text floor, then widened into the free margin beside the column;
+one that still scrolls sideways at desktop width is listed under `notes`. It writes
 contact sheets to `.tum-mcp/visuals/` and records the result in
 `.tum-mcp/visual-check.json`. Editing an item or updating the app makes its result stale,
 and `study report` lists items whose check is missing, stale or failing. A rerun redraws
@@ -256,8 +260,15 @@ question, lecture entry, course): the checks with a pass and a fail example each
 the answer keys' results and the cited sources' digests. Fresh checkers, sessions that did
 not write the content, answer with a verdict per check and quoted findings; `review
 record` refuses answers for changed content or unquoted passages. The maker fixes by
-check (`review fix` is refused while the quoted passage is unchanged), rejects a wrong
-finding with its reason or keeps a score-2 finding the content cannot fix. A verdict holds
+check (`review fix` is refused while the quoted passage is unchanged and takes several
+`--finding`), rejects a wrong finding with its reason or keeps a score-2 finding the content
+cannot fix. `review findings` lists the open findings, one line each, grouped by block. A
+defect is filed once, under the check that owns it, with the other checks it fails linked
+to it. After the repairs, `review verify` writes one verification pass in the same round:
+fresh checkers confirm or reopen each fix and judge again every check the repairs made
+stale, so the round can close with current verdicts. Repairs made after that pass are
+reported as unverified until the student asks for another round. Checkers get the cited
+slide pages as images, the lesson's heading outline and the terms earlier lessons define. A verdict holds
 until the blocks it covered change, so a later loop asks only about new and changed
 items. `review close-round` computes the gate and writes `.tum-mcp/loop/scorecard.md`;
 the gate passes an item when correctness and coverage score 3, every teaching check

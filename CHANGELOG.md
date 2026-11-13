@@ -1,5 +1,31 @@
 # Changes
 
+## Unreleased
+
+- A review round now checks its own repairs. `review verify` sends each fixed finding
+  and every check the repairs made stale to a fresh checker in the same round, so a
+  round can end with current verdicts instead of unchecked fixes. `review findings`
+  lists open findings compactly, `review fix` takes several findings, and a defect is
+  filed once under its owning check with the other checks it fails linked to it.
+- Reviewers see the cited slide pages, the lesson's outline, the terms earlier lessons
+  define and each walkthrough at its last step, and record why an answer was refused.
+  Only the refused entries are asked again.
+- The plan check lists every blocking problem in its first pass, keeps the history of
+  earlier reasons and advice, and only escalates earlier advice when the plan changed
+  or new evidence is given. It shows the lecture examples no plan uses as selection
+  context.
+- Wide search trees fit on desktop: drawings scale to their 12 px text floor and then
+  use the free margin beside the column. Graph walkthroughs show a one-line legend of
+  the node states they use.
+- New lesson signals: the same reason on several walkthrough steps, a node value a
+  step drops, a static copy of a walkthrough's drawing, a search run given as a table
+  and a lesson that opens with an untitled block. Two walkthroughs over one drawing
+  now need a ruling instead of a removal, so different lecture runs on one tree stay.
+- Authoring is faster: `study schema --example KIND` prints a valid block, the skills
+  show the answer-key contract and filled batch and preparation files, readiness prints
+  a summary by default (`--json` for everything), and reviewers no longer ask for phone
+  captures the student did not request.
+
 ## 0.24.0 — 2026-11-10
 
 - Course preparation checks the selected source bytes and topic scope before
