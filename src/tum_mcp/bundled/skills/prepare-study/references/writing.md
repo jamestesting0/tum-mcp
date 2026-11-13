@@ -25,7 +25,7 @@ content has; keep every idea and the sentences that link one shape to the next.
   "Approximation: …". The app shows each label in bold.
 - **Worked example**: its own section after the procedure. A case read whole is an
   `example` block: `given` (the setting), `steps` and the `result`; a story in paragraphs
-  ("Suppose ...", "For example ...") hides the working. One computed value per step,
+  ("Suppose ...", "For example ...") hides the working. One meaningful operation per step,
   labelled with the sub-result it reaches:
   "First backup: \(Q(\mathrm{continue}) = 1 + 0.5 \times 3 = 2.5\), below 3."
   End with the conclusion as the last step. Several states over several rounds are a
@@ -105,8 +105,8 @@ student has studied the idea.
 
 These rules follow ASD-STE100, adapted for teaching:
 
-- One idea per sentence. Keep a step or instruction under 20 words and a description
-  under 25.
+- One idea per sentence. Prefer short instructions and descriptions. Keep necessary
+  conditions and qualifications; do not count words or rewrite solely to meet a word limit.
 - One topic per paragraph, at most two sentences (see above).
 - Use the active voice and the present tense, with the actor first: "A* expands the
   node", not "The node is expanded".

@@ -18,12 +18,12 @@ exercise step of the course in the browser, where text revealed only on interact
    naming the option. Then expand the explanation of every other option.
 2. Traces: step through every frame. Each caption says why its step happens, and the
    state rows change exactly as the caption says.
-3. Exercise steps: try the step before opening hints, then open the hints in order: a
-   pointer to the idea, the first operation worked, then Compare. Enter a wrong value in
-   a table, graph or plot response and see how Compare shows the difference. Compare and
-   the solution answer everything the step asked.
-4. Code steps: the skeleton runs as given; the model answer does what its explanation
-   claims.
+3. Exercise steps: attempt the step before opening hints, then inspect the useful hint
+   levels. For a table, compare an incorrect paper answer with the revealed cells.
+   For an interactive graph or plot, try an incorrect selection or value. The revealed
+   answer and explanation must answer the step's demand.
+4. Code steps: inspect the supplied declarations and trace the model answer against
+   the task. Do not run course code; the app's code editor does not execute it.
 5. Flashcards: the front asks one thing and the back answers exactly that.
 6. Exam patterns: in every example (switch between them) and part, pick a wrong case first;
    its feedback must name what in this question rules it out. Read every case

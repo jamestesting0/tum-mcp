@@ -559,7 +559,8 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
                 "Author a provisional draft from these same-author checks."
                 if provenance == "same"
                 else "Author the requested items from these plans; reuse unchanged approvals. "
-                "Apply any advice that improves the lesson; it needs no further check."
+                "Apply useful wording advice directly in the lesson. "
+                "Recheck a plan only when a checked teaching decision changes."
             )
         ),
     }

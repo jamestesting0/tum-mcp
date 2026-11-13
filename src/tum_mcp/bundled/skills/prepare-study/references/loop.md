@@ -100,7 +100,6 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    Changing requirements later requires a new plan check, not silently smaller coverage.
    4. For Study application/reasoning, include solved `practice` cases contrasting the
    worked example with a meaningful new condition or decision (see planning.md).
-   The weakness is planning fragments without their shared coverage and dependencies.
    For every bounded batch, including Study lessons alone, prepare all requested plans
    before one fresh plan check. The checker holds when a declared batch still lacks
    plans; do not call it after each individual lesson or pattern. Fix rejected plans together;
@@ -120,11 +119,10 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    same-author verdict can complete draft readiness. It does not replace independent
    review or a current independent verdict. Check changed plans again and repair rejected
    plans before writing. A checker fails a plan only for a blocking problem; its `advice`
-   comes with a pass. Apply useful advice in the lesson itself, not in the approved plan:
-   any plan edit changes its fingerprint and needs a new check. Fix each failing reason
-   completely in one revision, including every part the reason names.
-   The weakness is partial repair: fixing one symptom leaves the same teaching gap open.
-   Keep unchanged approvals; an unrelated wording improvement does not require replanning.
+   comes with a pass. Apply advice that improves wording without changing a checked
+   teaching decision directly in the lesson. If advice changes a checked decision,
+   update that plan and check it again. Keep unchanged approvals and repair every part
+   named by a failing reason.
    Read the complete batch locally before this call and fix all detectable omissions
    together. Do not request independent checks of unchanged approved plans. Changing
    only an artifact key elsewhere in the batch does not change the source requirements.
@@ -134,10 +132,11 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    method changed.
 
    The weakness is a checked endpoint with unchecked intermediate reasoning.
-   Each walkthrough has a `primary` run and a `variant` when authored. Each run has one
-   object per step, with every state row exactly once and `@node_values` for computed node
-   values, and `@cutoff` for the cutoff node keys when checked. Each step is a full
-   snapshot. `values` maps content paths to expected values.
+   Each authored walkthrough run is keyed as `primary` or `variant`. Give one complete
+   snapshot per step, with every state row exactly once. Include `@node_values` for
+   computed node values and `@grid` for the grid cell values being checked, keyed as
+   `grid:row:column`. Include `@cutoff` and `@discarded` for those node-key sets when
+   checked. `values` maps content paths to expected values.
    Verify each authored run; this does not require inventing a variant.
    For example, adapt the paths, block key and computed inputs to the lesson:
 

@@ -85,12 +85,12 @@
       "dimension": "correctness",
       "rule": "a decision step's cases never overlap, and every listed past instance, example and part falls under exactly one of them.",
       "pass": "Case 'cycle in the graph' and case 'tree' cannot both hold at a step.",
-      "fail": "Cases 'cost ≥ 0' and 'cost > 0' both match a zero-cost edge.",
+      "fail": "Cases 'cost ≥ 0' and 'cost > 0' both match a positive-cost edge.",
       "profiles": [
         "exam-pattern"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "clarity.one_reading",
@@ -267,16 +267,16 @@
     {
       "id": "cognitive_load.one_new_idea",
       "dimension": "cognitive_load",
-      "rule": "one new idea per section or step.",
+      "rule": "Each section or step has one coherent teaching purpose. New terms, symbols and cases are introduced in an order the learner can follow without guessing missing steps.",
       "pass": "One section introduces admissibility only.",
-      "fail": "One section introduces admissibility, consistency and dominance together.",
+      "fail": "A section combines unrelated new concepts before defining the terms needed to distinguish them.",
       "profiles": [
         "study-unit",
         "exercise",
         "exam-pattern"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "cognitive_load.first_encounter",
@@ -309,7 +309,7 @@
     {
       "id": "cognitive_load.short_prose",
       "dimension": "cognitive_load",
-      "rule": "no paragraph longer than two sentences or 45 words; a procedure uses complete labelled steps, scoped pseudocode or a flowchart, and a worked example has one computed value per step. Compact formatting must preserve loop scope, conditions and exits.",
+      "rule": "no paragraph longer than two sentences or 45 words; a procedure uses complete labelled steps, scoped pseudocode or a flowchart, and a worked example has one meaningful operation per step, preserving its resulting state. Compact formatting must preserve loop scope, conditions and exits.",
       "pass": "Two short sentences per paragraph.",
       "fail": "A paragraph of four sentences and 80 words.",
       "profiles": [
@@ -318,7 +318,7 @@
         "exam-pattern"
       ],
       "scope": "item",
-      "version": 2,
+      "version": 3,
       "decided_by": "dense_paragraph"
     },
     {
@@ -915,14 +915,14 @@
     {
       "id": "redundancy.exam_compresses",
       "dimension": "redundancy",
-      "rule": "cheatsheet lines and concept details compress Study into one line and a link; they do not copy it.",
+      "rule": "Cheatsheet lines compress Study. Expanded details give the compact conditions, meanings, steps or reference objects needed for revision and link the full lesson. Do not copy a full Study explanation.",
       "pass": "A cheatsheet line compresses Study and links it.",
       "fail": "A cheatsheet entry copies the Study passage.",
       "profiles": [
         "course"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "redundancy.distinct_pool",
@@ -939,38 +939,38 @@
     {
       "id": "integration.prerequisite_links",
       "dimension": "integration",
-      "rule": "every exercise names the unit and block it needs, and that block teaches what the steps use.",
+      "rule": "Each exercise links the prepared unit and passage that teaches its prerequisite when one exists. Otherwise retain its explanation and recorded prerequisite gap.",
       "pass": "The exercise names the block that teaches what it uses.",
       "fail": "The exercise links a unit whose blocks do not teach the needed step.",
       "profiles": [
         "course"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "integration.exam_links",
       "dimension": "integration",
-      "rule": "Exam concepts cite the units that teach them.",
-      "pass": "Exam concepts cite the units that teach them.",
-      "fail": "An exam concept with no Study link.",
+      "rule": "Exam concepts link the prepared Study passages that teach them, when those passages exist. Otherwise record why no link fits; do not add unrequested Study content.",
+      "pass": "Each Exam concept links its matching prepared Study passage or records why no link fits.",
+      "fail": "A matching prepared Study passage exists but the Exam concept does not link it.",
       "profiles": [
         "course"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "integration.entries_apply",
       "dimension": "integration",
-      "rule": "cheatsheet entries link the Study units that teach them and the patterns that use them, and a pattern's workflow appears only in the entry that names it as its method.",
+      "rule": "Cheatsheet entries link matching prepared Study passages and the patterns that use them. Record a reason when no link fits. A pattern's workflow appears only in the entry that names it as its method.",
       "pass": "Cheatsheet entries link their units and patterns.",
       "fail": "A workflow appears in an entry that does not name it as its method.",
       "profiles": [
         "course"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "integration.lecture_links",
@@ -1221,13 +1221,13 @@
       "id": "coverage.objectives_grounded",
       "dimension": "coverage",
       "rule": "every objective names an outcome the source states, or a substantial idea the source develops and the item teaches and practises. An illustrative aside is not a separate learning goal: a reflex example supports rational action, not a separate objective about acting quickly. For each objective, cite the source's outcome or developed explanation with its locator, and name its teaching and practice. A vague claim that the slide develops it is not evidence.",
-      "pass": "Each objective matches a stated outcome and has a card or question.",
+      "pass": "Each objective matches a stated outcome and has a practice question.",
       "fail": "An objective rests on a one-line aside of the slides.",
       "profiles": [
         "study-unit"
       ],
       "scope": "item",
-      "version": 2,
+      "version": 3,
       "default_fail": true
     },
     {

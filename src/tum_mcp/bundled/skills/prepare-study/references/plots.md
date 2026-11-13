@@ -29,14 +29,14 @@ it and the plot shows it.
   jumps, and keeps only what lies inside the axes. Never hand-sample a formula.
 - **Bounds that read.** Pick axis bounds the reader can name (−6 to 6, 0 to 1). Give
   `x_ticks` for whole-number axes or special values; otherwise the app picks round ticks.
-- **Labels in Unicode.** Axis labels are short and use Unicode (`σ(z)`, `γᵗ`, `P(X = k)`);
-  LaTeX belongs in the text around the plot.
+- **Axis labels.** Name the quantity and units in short words. Put its mathematical
+  notation in typeset text beside the plot.
 - **Room for labels.** Leave headroom above the highest value (`y_max` about a tenth
   above it) so notes and value labels fit inside the frame. A note that finds no clear spot
   is drawn on a small knockout box: move its point or widen the range.
-- **Few series, labelled.** At most four, each with a label. With two or three that end
-  apart, `legend: direct` writes the labels at the line ends; otherwise the legend shows
-  them.
+- **Label the series.** Give each series a clear label. When line ends are separated,
+  `legend: direct` can label them there; otherwise use the legend. Choose the number of
+  series for readable comparison within the schema's limit.
 - **Values from the source.** Every point comes from the source or from a formula the
   source gives. Recompute values with code.
 

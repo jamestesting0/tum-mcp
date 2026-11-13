@@ -33,8 +33,9 @@ Clarity, Cohesion and Cognitive load; the rules come from prepare-study's
    A reader who needs more time is not a weaker student; do not describe them as one.
 3. After each paragraph, say its one idea in a sentence. A paragraph with two ideas, or
    none, is a finding.
-4. Count what the student must hold at once: new terms, symbols, cases and earlier
-   results. More than one new idea per section or step is a finding.
+4. Check what the student must hold at once: new terms, symbols, cases and earlier
+   results. Flag a missing definition, reminder or intermediate step that makes the
+   explanation hard to follow.
 5. For every notation-heavy statement, check that it is unpacked where it is used
    (`clarity.notation_unpacked`): the claim in words, a one-line reminder of what each
    symbol means here, the worked case, then the identity with its conditions. Open the
@@ -42,7 +43,7 @@ Clarity, Cohesion and Cognitive load; the rules come from prepare-study's
    rewrite correct content.
 6. Check that each term is defined where it first appears and linked as `{{term}}` later;
    that every symbol is set as mathematics; that a procedure is numbered steps and a
-   worked calculation shows one value per step.
+   worked calculation shows one meaningful operation per step.
 7. Check every object the text names: a matrix, vector, table, graph or state is shown,
    not described by its entries (`representation.shown_not_described`, scored in the
    visuals pass). Then check every caption and question: a caption states the point of

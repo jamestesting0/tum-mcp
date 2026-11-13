@@ -9,8 +9,10 @@ When disabled, leave retained graph files unused and follow the ordinary workflo
 
 Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. Content lives in
 one file per item under `app/` (`app/study/units/`, `app/exercises/<set>/`, `app/exam/`,
-`app/lectures/`). `tum-mcp review` keeps the loop's state, packets and verdicts in
-`.tum-mcp/`; you never write review files by hand.
+`app/lectures/`). `tum-mcp review` owns the loop state, packets and recorded verdicts
+under `.tum-mcp/`; do not edit those generated records by hand. Prepare checker answer
+files for `review record`. Save separate media reviews as described in
+[media](references/media.md).
 
 A judge favours its own work. Checkers are fresh sessions that did not write the content
 and do not share this conversation: host subagents that start empty, otherwise

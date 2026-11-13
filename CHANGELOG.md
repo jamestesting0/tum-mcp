@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Course review aligns teaching checks with prepared scope, complete process steps and expanded cheatsheet details.
 - Planned examples can retain source state counts and phases; report and lint require their
   states and subgoal groups in one complete walkthrough. Extra steps remain valid.
 - Graph and grid walkthroughs distinguish discarded items, with themed styles and legends.

@@ -57,7 +57,7 @@ Every step changes what the student sees. A result appears in the step that comp
 first step: a walkthrough that marks one row and then announces the total demonstrates
 nothing (`unstepped_table`). Work each item the lecture works, or give the finished
 table with its working beside it outside a walkthrough.
-The weakness is a process hidden by its results. Use a walkthrough when the changes
+Use a walkthrough when the changes
 teach the method. Use a grid in any subject when a value's row and column carry its meaning.
 Keep a table when rows are records and columns are attributes, such as methods compared
 by cost; there a cell's place means nothing. Keep a table for comparison, lookup or observations read together;

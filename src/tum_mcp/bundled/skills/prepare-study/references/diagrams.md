@@ -58,9 +58,9 @@ screen the drawing shrinks until its labels reach 12 px; beyond that it scrolls 
 - **Notation.** Members as UML writes them (`+ update(s: Subject): void`). A whole-part
   relation names the part's role. A state's entry action goes in `activity`
   (`entry / start audio`). Transition labels read `event [guard] / effect` and stay short.
-- **Sequence diagrams.** Participants in call order, at most about five; short message
-  signatures, with the types explained in the text; fragments (`alt`, `loop`) over the
-  messages they cover.
+- **Sequence diagrams.** Put participants in call order. Keep every participant the
+  explanation needs. Use short message signatures, explain their types in the text,
+  and place fragments over the messages they cover.
 
 ## Flowcharts
 

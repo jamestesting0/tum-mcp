@@ -66,7 +66,6 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    unit as its plan decided, with the moves that fit each idea and the block types the
    schema offers ([content](references/content.md)). Use `tum-mcp study schema --example list`
    to list block examples and `tum-mcp study schema --example KIND` to print one.
-   The weakness is an opening whose purpose the learner cannot identify.
    Draft the heading outline first: major topics,
    their cases/examples, and any necessary detail. Set levels by those relationships
    rather than making every passage a level-1 section. Place an unframed opening under

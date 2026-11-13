@@ -71,14 +71,15 @@ scoring.
 For a visual below 3:
 
 1. Write the finding: the criterion, what the student sees and where (key and width).
-2. Draft two or three alternatives that each change one thing: the cells on the lattice,
-   the form, the notation or a label. Follow [diagrams](../../prepare-study/references/diagrams.md),
+2. Choose a change that addresses the finding, using
+   [diagrams](../../prepare-study/references/diagrams.md),
    [plots](../../prepare-study/references/plots.md) or [figures](../../prepare-study/references/figures.md).
-3. Build each alternative and render it with `study visuals --unit KEY` (or
-   `--exercise`); compare the candidates in pairs against the rubric, judging each pair
-   in both orders so the first one seen gets no advantage; keep the winner.
-4. Re-run the render check. After three rounds, keep the best version and record why it
-   stays below 3 with `kept`.
+   Keep the full teaching object and source meaning.
+3. Build and render the changed visual. Compare it with the earlier evidence against
+   the rubric. Try an alternative only when the result leaves the choice unresolved.
+4. Stop when the criteria pass. Keep a remaining score-2 limitation only when it cannot
+   be fixed within scope, and record the reason through the review workflow.
+   Reuse passing evidence for unchanged inputs.
 
 ## Mistakes found in real courses
 

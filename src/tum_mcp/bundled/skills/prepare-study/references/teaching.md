@@ -28,7 +28,7 @@ like any filler.
 | One-line reminder of a prerequisite | Taught in an earlier course (profile) or a distant unit | Taught in the previous section |
 | Concrete case before the rule | The idea is abstract or notation-heavy | A simple fact, or the case would be artificial |
 | Name the parts first | The mechanism has several new parts to track (poles, angle, phase) | One new term |
-| Labelled steps, then a worked example | A procedure or calculation with interacting steps: the lecture's own example in full ([choosing examples](planning.md#choose-the-lectures-examples)), one computed value per step, a `derivation`, or a trace; a `walkthrough` when the state changes line by line | Definitions and single facts: practise them instead |
+| Labelled steps, then a worked example | A procedure or calculation with interacting steps: the lecture's own example in full ([choosing examples](planning.md#choose-the-lectures-examples)), one meaningful operation per step, preserving its resulting state, a `derivation`, or a trace; a `walkthrough` when the state changes line by line | Definitions and single facts: practise them instead |
 | Running example | Several concepts act on one setting; keep its givens unchanged | Independent concepts, or a contrast needs another case |
 | Contrast, non-example or misconception | The idea is easily confused with a neighbour, or students hold a known wrong belief; a wrong move made at one moment is a `pitfall` callout (at most one per section) | Nothing nearby to confuse |
 | General rule after the case | A reusable rule exists: a formula block with every symbol, its conditions and when to use it; another application only if it tests a new condition or misconception | Descriptive or one-off content; extra arithmetic that tests only an already-known operation |
@@ -47,7 +47,7 @@ Whatever the moves, every unit has:
 - A summary: the question it answers, in one or two sentences, never a copy of an objective.
 - Observable objectives (trace, explain, choose, compute) taken from the source's own
   outcomes in the coverage ledger, or from an idea the source develops at length. An aside
-  of the slides is not an objective, and every objective has a card or question.
+  of the slides is not an objective. Every objective needs a practice question.
 - A `definition` block right after the passage that introduces each term students must
   learn. It shows inside that passage as the term above its meaning, so the prose does not
   restate it; later mentions anywhere in the course are `{{term}}`. State the course's
@@ -88,9 +88,7 @@ They are teaching tools, not a fixed number of definition cards or examples.
 example) and `example_without_rule` (numbers worked without a general rule); read them in
 place, since some topics have no reusable rule.
 
-Flashcards test recall of those points; practice tests application. Review mode
-reuses Again ratings and wrong answers, so every objective needs at least one card
-or question that a student can genuinely get wrong.
+Flashcards support recall; practice questions test the objective.
 
 For each new or changed objective, cover the mechanism, its assumptions and a useful
 example, each in the shape it has ([representations](representations.md#choose-the-representation)):
@@ -169,24 +167,14 @@ that link is provenance, not required research. No certified dictionary claim.
 
 ## Retrieval and assessment
 
-Cards test one recall item or discriminating comparison before reveal; avoid
-essay backs and clues. A multiple-choice question has one defensible answer under
-stated assumptions and plausible distractors based on realistic misconceptions,
-four options by default. Give specific feedback for every option; revise the
-question if a useful distractor is missing instead of adding filler. Feedback
-explains; it does not restate the verdict, which the app already shows.
-Prefer application/transfer where the
-objective requires it; avoid tricks, double negatives, all/none shortcuts and
-length clues (the app shuffles positions). Check EVERY new/changed option independently. If two
-answers are defensible, repair the question/assumptions rather than forcing a key.
+Cards test one recall item or discriminating comparison. Keep backs short and
+avoid clues. Follow [practice](practice.md) for multiple-choice questions.
 
 Audit objective → explanation → card/question → source. Work the example, trace or
 counterexample independently of the written answer. A schema pass cannot verify
 subject matter. Use an open/worked task when coding or proof construction matters;
 MCQ results and self-ratings do not establish mastery or official exam coverage.
 Recheck only affected teaching and dependent claims after a change, not the whole bank.
-
-Use [practice.md](practice.md) for question families, portable givens and repair feedback.
 
 ## Supporting context
 

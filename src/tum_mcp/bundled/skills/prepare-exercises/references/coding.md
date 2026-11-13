@@ -68,7 +68,9 @@ and `distilled_from` with the original exercise keys; the app shows "Practice fo
 
 - Every essential kernel maps to at least one distilled item.
 - Same language version, standard library and APIs as the course.
-- Quote at most short, cited excerpts of course code; never copy template files.
+- Include only the short, cited course-code excerpts needed to show the task, under
+  their real paths. Omit unrelated template code. Distilled items use the fresh
+  minimal setting described above.
 - Code is never executed. Verify answers by careful reading and tracing, and accept
   every equivalent form a correct solution may take.
 

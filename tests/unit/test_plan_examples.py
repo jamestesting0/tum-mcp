@@ -376,10 +376,11 @@ def test_figures_only_digest_entries_reach_selection_even_on_a_selected_page(
     assert packet["answer"]["items"][0]["reasons"] == []
 
 
-def test_changed_concept_can_escalate_advice_without_new_evidence(tmp_path) -> None:
+def test_changed_concept_can_escalate_advice_without_new_evidence(tmp_path: Path) -> None:
     import json
 
-    from tum_mcp.course.checks.plans import plan_packet, record_gate
+    from tum_mcp.course.checks.plans import gate_status, plan_packet, read_plan, record_gate
+    from tum_mcp.errors import CampusError
 
     stored = tmp_path / ".tum-mcp/plans/study/search.json"
     stored.parent.mkdir(parents=True)
@@ -398,9 +399,22 @@ def test_changed_concept_can_escalate_advice_without_new_evidence(tmp_path) -> N
         ],
         "fresh",
     )
+    approved = read_plan(tmp_path, current.item)
+    assert approved is not None
+    assert gate_status(approved) == "approved"
+    assert plan_packet(tmp_path)["plans"] == []
     body = json.loads(stored.read_text())
     body["concepts"][0]["instance"] = "A different Romania graph."
     stored.write_text(json.dumps(body))
+    changed = read_plan(tmp_path, current.item)
+    assert changed is not None
+    assert gate_status(changed) == "changed"
+    with pytest.raises(CampusError, match="changed since it was read"):
+        record_gate(
+            tmp_path,
+            [{"item": current.item, "fingerprint": current.fingerprint(), "verdict": "pass"}],
+            "fresh",
+        )
     packet = plan_packet(tmp_path)
     assert packet["plans"][0]["concepts"][0]["changed"] is True
     answer = packet["answer"]["items"][0] | {"verdict": "fail", "reasons": [note]}

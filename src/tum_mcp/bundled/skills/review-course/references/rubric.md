@@ -51,7 +51,7 @@ Separate failures still get separate findings, even when they occur in one passa
 | A teaching move the content does not need (a forced bridge, a worked example of a definition, an essential condition hidden in an insight) | Cognitive load |
 | Study pitched above or below the teaching profile; Exam re-teaching what Study teaches | Cognitive load |
 | A running example whose givens change without notice | Correctness |
-| Two new ideas in one section | Cognitive load |
+| Unrelated new ideas combined before the learner has what they need to follow them | Cognitive load |
 | A prerequisite the student must recall from far back, with no reminder or link where it is used | Cognitive load |
 | Text that spells out a matrix, vector, table or graph instead of showing it | Representation |
 | A full re-explanation of an idea taught elsewhere | Redundancy |
@@ -148,7 +148,9 @@ ideas and linking sentences there are redundancy.
 
 What the student has to hold in mind at once.
 
-- `cognitive_load.one_new_idea`: one new idea per section or step.
+- `cognitive_load.one_new_idea`: each section or step has one coherent teaching purpose.
+  New terms, symbols and cases come in an order the learner can follow without guessing
+  missing steps.
 - `cognitive_load.first_encounter`: walked in reading order by someone who knows only
   what earlier sections and units taught, no section asks them to hold new symbols or
   terms they cannot yet picture, and no line asks them to guess a missing step.
@@ -156,16 +158,13 @@ What the student has to hold in mind at once.
   sections earlier) gets a one-line reminder or a `{{term}}` link where it is used, so the
   student need not navigate away. This is reinforcement, not redundancy.
 - `cognitive_load.short_prose`: no paragraph longer than two sentences or 45 words; a
-  procedure comes as labelled steps and a worked example as one computed value per step.
+  procedure comes as labelled steps and a worked example as one meaningful operation per step.
 - `cognitive_load.math_set`: every symbol and formula is set as mathematics, not typed
   characters; a displayed or structural quotient is a fraction (`\frac`), not a slash or
   `\div` chain, and no inline fraction is so tall or nested that it breaks the line
   ([notation](../../prepare-study/references/content.md#notation)). Units, `d/dx`, code
   and short incidental `n/2` are fine.
-- `cognitive_load.state_shown`: the state of a procedure is shown, not tracked mentally.
 - `cognitive_load.together`: text and the picture it refers to sit together.
-- `cognitive_load.fits_phone`: a large step has a middle
-  hint.
 - `cognitive_load.fits_student`: Study can be followed by a first-time reader who knows
   the teaching profile's prerequisites, without over-explaining what they already know;
   Exam stays concise and reaches depth through Recall instead of re-teaching.
@@ -173,7 +172,7 @@ What the student has to hold in mind at once.
   worked example of a one-line definition, a bridge between parallel cases, an analogy that
   adds nothing or an essential idea hidden in an insight is a finding.
 
-2: two new ideas in one step, a long question, or a trace the student has to follow
+2: unrelated ideas introduced before their prerequisites, a long question, or a trace followed
 without its state.
 1: the student must combine several unexplained pieces before anything makes sense.
 
@@ -188,14 +187,12 @@ Each idea is shown in the shape it has ([representations](../../prepare-study/re
   text names is shown itself ("\(P = \begin{pmatrix}1&0\\0&0\end{pmatrix}\)"), and the
   text says what to notice in it; prose never asks the student to picture an object from
   a description of its entries ("the diagonal matrix with entries 1, 0").
-- `representation.working_shown`: a calculation the student should be able to redo is a
-  derivation, one transformation per line with its reason, not results in a sentence.
+- `representation.process_shown`: apply the packet rule to the complete process and
+  its intermediate states.
 - `representation.picture_carries_data`: a question's picture carries the data the
   question needs.
 - `representation.prose_points`: the text beside a picture tells the student what to look
   at in it, in reading order.
-- `representation.visuals_pass`: every drawn visual scores 3 on the
-  [visual rubric](visuals.md#rubric).
 
 2: an idea that has a shape is given as prose, a picture needs prose to be read, or a
 visual scores 2.
@@ -217,7 +214,7 @@ Cards, questions and exercise steps make the student use the outcomes.
 - `practice.plausible_options`: options are plausible, and each wrong option's feedback
   names its mistake.
 - `practice.hint_ladder`: hints go from a pointer to the first operation to Compare and
-  never give the answer.
+  never give the answer. A large guided step has a middle hint.
 - `practice.complete_answer`: Compare and the solution answer everything that was asked.
 - `practice.case_feedback` (Exam pattern): which-case feedback names what in this question
   decides each case, never only right or wrong.
@@ -263,10 +260,11 @@ The student leaves knowing why the idea works and when to use it, not only its s
   is revealed: in an exercise step or a practice question; a lesson does not ask for
   predictions.
 - `intuition.limits`: the item says where the idea stops working.
-- `intuition.general_rule`: a worked calculation that instantiates a reusable rule also
-  states the rule (a formula block with every symbol, its conditions and when to use it)
-  and applies it once more to a different case. A rule left to be inferred from one
-  example is a finding.
+- `intuition.general_rule`: a worked calculation that instantiates a reusable rule
+  states that rule with its symbols, conditions and use. Add another application only
+  when it tests a new condition, decision or misconception. Do not add another calculation
+  of an already-known operation or formulas to descriptive material. A rule left to be
+  inferred from one example is a finding.
 
 2: correct and complete, but a rule arrives without its reason, the example comes only
 after the abstract definition, or a known misconception goes unaddressed.
@@ -338,8 +336,9 @@ Units, groups and workspaces follow one order in which each idea builds on earli
   teaches; the map's `builds_on` points only backwards.
 - `organization.links_back`: a unit that uses an earlier unit's idea links it, by
   `{{term}}` or by naming the unit, so the student can return to it.
-- `organization.map_first`: the introduction and the first unit say what the course
-  covers and where to start.
+- `organization.map_first`: the introduction or course entry point says what the prepared
+  material covers and where to start. Do not require the first lesson to repeat a map
+  already visible at entry.
 - `organization.categories`: groups follow the course's `organization` (lectures, weeks
   or topics); a topic group holds several units, while a lecture or week group holds what
   that lecture or week taught; labels are short, parallel and distinct; there is no
@@ -364,8 +363,9 @@ in a new form.
   that links to the home is reinforcement, not a second home.
 - `redundancy.exercises_link`: exercises link the Study passage they need instead of
   teaching it again.
-- `redundancy.exam_compresses`: cheatsheet lines and concept details compress Study
-  into one line and a link; they do not copy it.
+- `redundancy.exam_compresses`: cheatsheet lines compress Study. Expanded details give the
+  compact conditions, meanings, steps or reference objects needed for revision and link
+  the full lesson. Do not copy a full Study explanation.
 - `redundancy.distinct_pool`: Revision pools all units, so no two units hold
   near-duplicate cards or questions.
 
@@ -383,17 +383,22 @@ Scored only when the report's `course.dimensions` lists it: when two or more wor
 They aim at the same outcomes
 and send the student to each other.
 
-- `integration.prerequisite_links`: every exercise names the unit and block it needs,
-  and that block teaches what the steps use.
-- `integration.exam_links`: Exam concepts cite the units that teach them.
-- `integration.entries_apply`: cheatsheet entries link the Study units that teach them
-  and the patterns that use them, and a pattern's workflow appears only in the entry that
-  names it as its method.
+- `integration.prerequisite_links`: each exercise links the prepared unit and passage
+  that teaches its prerequisite when one exists. Otherwise retain its explanation and
+  recorded prerequisite gap.
+- `integration.exam_links`: Exam concepts link the prepared Study passages that teach
+  them, when those passages exist. Otherwise record why no link fits; do not add
+  unrequested Study content.
+- `integration.entries_apply`: cheatsheet entries link matching prepared Study passages
+  and the patterns that use them. Record a reason when no link fits. A pattern's workflow
+  appears only in the entry that names it as its method.
 - `integration.lecture_links`: units link the Lecture of the lectures they teach.
 - `integration.same_notation`: terms, symbols and conventions are the same in every
   workspace, and marked terms open the Study definition.
-- `integration.difficulty_climbs`: Study practice, exercises and exam patterns each
-  ask more transfer than the last; none repeats another's question unchanged.
+- `integration.difficulty_climbs`: the prepared sequence supports transfer without copying
+  authored questions unchanged. Preserve the level and wording of released exercises.
+  Individual items need not increase in difficulty. Do not weaken Study practice or add
+  unrequested material to force a difficulty ladder.
 - `integration.media_links`: media follows its exact Study/Exercise target and
   actual prerequisites, with consistent notation and disclosed modality limits.
   Alternative access is not a second competing home for the idea.
