@@ -122,7 +122,7 @@ Teach a chosen example in full:
    row 2 to 0, column 1 to 2, so \(\lvert 2-0\rvert + \lvert 1-2\rvert = 3\).
 4. **Every state to its endpoint.** Show every state the slides show and any step a student
    needs between them. When the slides stop early and the result matters, finish the run
-   with the lecture's own inputs and say where the lecture stops. Never add a goal, value or
+   with the lecture's own inputs. Never add a goal, value or
    input the lecture lacks to reach an ending: a run without a goal ends where its
    traversal ends (all nodes within the limit expanded, a cutoff).
 5. **One walkthrough per run.** Repeated rounds, such as iterative deepening's limits,

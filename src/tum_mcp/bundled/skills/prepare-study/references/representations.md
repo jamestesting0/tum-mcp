@@ -96,7 +96,7 @@ an independent hidden implementation does not check missing published instructio
 This is a small author dry run of the existing example, not another formal review.
 
 A staged walkthrough shows the state of its picture, not only a new caption. On
-graphs, set each step's `active`, `frontier`, `visited` and relevant `edges` from the
+graphs, set each step's `active`, `frontier`, `visited`, `cutoff` and relevant `edges` from the
 actual run; use the stage's node keys. Code marks its running `lines`, tables their
 `shown` rows or changed `cells`, derivations their `shown` lines, plots their `series`
 and SVG figures their `layers`. Clear marks that no longer apply when stepping back
@@ -114,8 +114,8 @@ changing highlight just to clear `static_walkthrough`. An intentionally fixed
 picture belongs beside ordinary explanation, outside a staged walkthrough.
 
 Run the lecture's own example in a `walkthrough`, with its inputs unchanged
-([choosing examples](planning.md#choose-the-lectures-examples)). If the run continues past
-the lecture's endpoint, say at that step that the lecture stops here. Each step does one
+([choosing examples](planning.md#choose-the-lectures-examples)). For a depth limit, put
+generated nodes not expanded because of the limit in `cutoff`, not `visited`. Each step does one
 operation as the lecturer shows it, usually one expansion. Compute the states in code first.
 Its `action` says what; its `why` uses that step's numbers and the rule that forces the
 operation. The first clause of each `why` is specific to that step; a shared tail clause

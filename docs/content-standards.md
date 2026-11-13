@@ -24,7 +24,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | S12 | Procedures and algorithms are taught on the lecture's critical worked examples, each in full (inputs, picture, steps, endpoint); repeats of a mechanism are left out | the plan check (each one names its example), `repeated_example`, `coverage.examples_selected`, `correctness.source_match`, `redundancy.said_once` |
 | S13 | Each walkthrough step teaches: its reason comes from that step's own inputs, arithmetic and rule; three identical reasons in a run (including identifier substitutions) are invariant defects, and every visible node keeps the value the slide shows | invariant `repeated_step_reason`, `dropped_node_value`, `intuition.reasons` |
 | S14 | Each drawing appears once, as the walkthrough that works on it; a lesson opens under its first heading | `duplicate_stage`, `untitled_opening` |
-| S15 | A growing graph walkthrough reveals every stage node when generated or cut off; nodes the lecture does not draw are removed from the stage | invariant `never_shown_nodes` |
+| S15 | A growing graph walkthrough reveals every stage node when generated or cut off; mark nodes not expanded at the depth limit as `cutoff`, not expanded; nodes the lecture does not draw are removed from the stage | invariant `never_shown_nodes`, skill |
 
 ## Practice (Study practice, Revision, guides, exam drills and mocks)
 

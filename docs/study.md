@@ -309,9 +309,11 @@ Teaching checks assess every concept, including additions made after planning, a
 objective checks require source evidence rather than promoting illustrative asides.
 Checkers read changed blocks against their cited pages and the reference selection.
 A demand for another worked example names the decision existing runs cannot show;
-otherwise it is not a defect. Walkthroughs mark the lecture's endpoint at that step,
-start each reason with a step-specific clause, and name a board's coordinate convention
+otherwise it is not a defect. Walkthroughs start each reason with a step-specific clause
+and name a board's coordinate convention
 once before using it in a calculation.
+Graph walkthroughs distinguish `cutoff` nodes generated at a depth limit from
+expanded nodes, and include them in the reached tree.
 The headless checker gets up to two targeted repairs of missing or invalid entries.
 If entries still fail, it saves the valid answers, keeps the packet pending and reports
 the remaining problems with a failing exit status. Uncertain verdicts require a

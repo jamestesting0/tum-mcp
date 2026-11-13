@@ -126,7 +126,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
 
    Each walkthrough has a `primary` run and a `variant` when authored. Each run has one
    object per step, with every state row exactly once and `@node_values` for computed node
-   values. Each step is a full snapshot. `values` maps content paths to expected values.
+   values, and `@cutoff` for the cutoff node keys when checked. Each step is a full
+   snapshot. `values` maps content paths to expected values.
    For example, adapt the paths, block key and computed inputs to the lesson:
 
    ```python

@@ -28,14 +28,13 @@
   context.
 - Wide search trees fit on desktop: drawings scale to their 12 px text floor and then
   use the free margin beside the column. Graph walkthroughs show a one-line legend of
-  the node states they use.
+  the node states they use, including nodes cut off at a depth limit.
 - New lesson signals: the same reason on several walkthrough steps, a node value a
   step drops, a static copy of a walkthrough's drawing, a search run given as a table
   and a lesson that opens with an untitled block. Two walkthroughs over one drawing
   now need a ruling instead of a removal, so different lecture runs on one tree stay.
   Repeated reasons and graph nodes no step reveals are invariant defects. Computed
-  steps show their inputs and arithmetic, rather than only their results. Runs that
-  continue past the lecture's endpoint mark it at that step, reasons start with a
+  steps show their inputs and arithmetic, rather than only their results. Reasons start with a
   step-specific clause, and board calculations state their coordinate convention once.
 - Transcript metrics count usage in the recorded turn and part order, including
   replies, so cumulative token deltas are chronological.
