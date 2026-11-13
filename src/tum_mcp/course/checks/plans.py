@@ -7,6 +7,7 @@ brings; the plan gate records a fresh checker's verdict against the plan's finge
 
 import hashlib
 import json
+import re
 from collections.abc import Callable
 from functools import cache
 from pathlib import Path
@@ -100,6 +101,18 @@ class PracticeCase(Frozen):
     answer: Text = Field(description="The new case's result and shortest valid reasoning.")
 
 
+class GateEntry(Frozen):
+    check: int
+    kind: Literal["reason", "advice"]
+    text: Text
+    state: Literal["open", "resolved", "escalated"] = "open"
+
+
+class GateUpdates(Frozen):
+    resolved: tuple[str | int, ...] = ()
+    evidence: dict[str, str] = Field(default_factory=dict)
+
+
 class Approval(Frozen):
     fingerprint: str
     verdict: Literal["pass", "fail"]
@@ -113,6 +126,9 @@ class Approval(Frozen):
     # The batches whose requests the approval read; a batch declared later, such as one that
     # groups earlier batches for a combined review, does not reopen it.
     batches: tuple[Key, ...] | None = Field(default=None, exclude_if=lambda value: value is None)
+    history: tuple[GateEntry, ...] = Field(default=(), exclude_if=lambda value: not value)
+    concepts: dict[str, str] = Field(default_factory=dict, exclude_if=lambda value: not value)
+    checks: int = Field(default=0, exclude_if=lambda value: not value)
 
 
 class WorkedDecision(Frozen):
@@ -302,6 +318,89 @@ def gate_status(
     return "approved" if plan.gate.provenance == "fresh" else "provisional"
 
 
+def _concept_hashes(plan: Plan) -> dict[str, str]:
+    return {
+        concept.name: hashlib.sha256(
+            json.dumps(concept.model_dump(mode="json"), sort_keys=True).encode()
+        ).hexdigest()[:16]
+        for concept in plan.concepts
+    }
+
+
+def _history(gate: Approval | None) -> list[GateEntry]:
+    if gate is None:
+        return []
+    if gate.history:
+        return list(gate.history)
+    return [
+        *(GateEntry(check=1, kind="reason", text=text) for text in gate.reasons),
+        *(GateEntry(check=1, kind="advice", text=text) for text in gate.advice),
+    ]
+
+
+def _normalized(text: str) -> str:
+    return " ".join(text.casefold().split())
+
+
+def _updated_history(
+    plan: Plan, updates: GateUpdates, reasons: tuple[str, ...], advice: tuple[str, ...]
+) -> tuple[GateEntry, ...]:
+    history = _history(plan.gate)
+    hashes = _concept_hashes(plan)
+    prior_hashes = plan.gate.concepts if plan.gate else {}
+    evidence = {_normalized(key): value for key, value in updates.evidence.items()}
+    for reason in reasons:
+        matching = [
+            entry
+            for entry in history
+            if entry.kind == "advice"
+            and entry.state != "escalated"
+            and _normalized(entry.text) == _normalized(reason)
+        ]
+        if not matching or any(
+            entry.kind == "reason" and _normalized(entry.text) == _normalized(reason)
+            for entry in history
+        ):
+            continue
+        named = [name for name in prior_hashes if _normalized(name) in _normalized(reason)]
+        if not named and len(prior_hashes) == 1:
+            named = list(prior_hashes)
+        changed = bool(named) and any(prior_hashes[name] != hashes.get(name) for name in named)
+        if not changed and not evidence.get(_normalized(reason), "").strip():
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                f"Plan {plan.item}: give new evidence for escalating earlier advice: {reason}",
+            )
+        history = [
+            entry.model_copy(update={"state": "escalated"}) if entry in matching else entry
+            for entry in history
+        ]
+    for resolved in updates.resolved:
+        matches = [
+            index
+            for index, entry in enumerate(history)
+            if (isinstance(resolved, int) and not isinstance(resolved, bool) and index == resolved)
+            or (isinstance(resolved, str) and _normalized(entry.text) == _normalized(resolved))
+        ]
+        if not matches:
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                f"Plan {plan.item}: unknown resolved history entry {resolved!r}.",
+            )
+        for index in matches:
+            if history[index].state == "open":
+                history[index] = history[index].model_copy(update={"state": "resolved"})
+    number = (
+        max(
+            plan.gate.checks if plan.gate else 0, max((entry.check for entry in history), default=0)
+        )
+        + 1
+    )
+    history.extend(GateEntry(check=number, kind="reason", text=text) for text in reasons)
+    history.extend(GateEntry(check=number, kind="advice", text=text) for text in advice)
+    return tuple(history)
+
+
 def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "same"]) -> dict:
     """Save a checker's plan verdicts; each applies to the plan as it was read."""
     read_coverage = coverage_reader(root)
@@ -346,6 +445,22 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
                 else "repair the rejected plan and check the changed inputs first."
             )
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item}: {reason}")
+        checks = (
+            max(
+                plan.gate.checks if plan.gate else 0,
+                max((entry.check for entry in _history(plan.gate)), default=0),
+            )
+            + 1
+        )
+        try:
+            updates = GateUpdates.model_validate(
+                {"resolved": answer.get("resolved", []), "evidence": answer.get("evidence", {})}
+            )
+        except ValidationError as error:
+            raise CampusError(
+                Code.ACTION_REQUIRED, f"Plan {item}: {error.errors()[0]['msg']}"
+            ) from None
+        history = _updated_history(plan, updates, reasons, advice)
         gate = Approval(
             fingerprint=plan.fingerprint(),
             verdict=verdict,
@@ -354,6 +469,9 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
             provenance=provenance,
             coverage_fingerprint=coverage["scope"]["fingerprint"] if coverage else None,
             batches=batches,
+            history=history,
+            concepts=_concept_hashes(plan),
+            checks=checks,
         )
         body = json.dumps(plan.model_copy(update={"gate": gate}).model_dump(mode="json"), indent=2)
         writes.append(Write(name, original, body.encode()))
@@ -394,6 +512,38 @@ def _coverage(
     return report, batches
 
 
+def _pages(value: str) -> set[int]:
+    if not re.fullmatch(r"\d+(?:-\d+)?(?:\s*,\s*\d+(?:-\d+)?)*", value):
+        return set()
+    pages: set[int] = set()
+    for part in value.split(","):
+        start, _, end = part.strip().partition("-")
+        pages.update(range(int(start), int(end or start) + 1))
+    return pages
+
+
+def _unused_examples(root: Path, waiting: list[Plan]) -> list[JsonValue]:
+    from tum_mcp.course.sources.digests import read_digest
+
+    used: dict[str, set[int]] = {}
+    for plan in waiting:
+        for concept in plan.concepts:
+            example = concept.example
+            if concept.kind in WORKED_KINDS and example and example.source and example.pages:
+                used.setdefault(example.source, set()).update(_pages(example.pages))
+    folder = confined(root, ".tum-mcp/digests")
+    unused: list[JsonValue] = []
+    for path in sorted(folder.glob("*.json")):
+        digest = read_digest(root, path.stem)
+        if digest:
+            unused.extend(
+                {"source": digest.source, "pages": entry.pages, "text": entry.text}
+                for entry in digest.examples
+                if not (_pages(entry.pages) & used.get(digest.source, set()))
+            )
+    return unused
+
+
 def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]:
     """Read the requested authoring batch or all plans waiting for a fresh checker."""
     read_coverage = coverage_reader(root)
@@ -416,9 +566,24 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             coverage[plan.preparation] = _coverage(plan.preparation, plan.item, read_coverage)[0]
     return {
         **({"coverage": coverage} if coverage else {}),
+        "unused_examples": _unused_examples(root, waiting),
         "plans": [
             {
                 **plan.model_dump(mode="json", exclude={"gate"}),
+                "concepts": [
+                    concept.model_dump(mode="json")
+                    | (
+                        {
+                            "changed": (
+                                _concept_hashes(plan)[concept.name]
+                                != plan.gate.concepts.get(concept.name)
+                            )
+                        }
+                        if plan.gate
+                        else {}
+                    )
+                    for concept in plan.concepts
+                ],
                 "fingerprint": plan.fingerprint(),
                 **(
                     {"coverage_fingerprint": coverage[plan.preparation]["scope"]["fingerprint"]}
@@ -433,6 +598,11 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                 **(
                     {"previous": list(plan.gate.reasons)}
                     if plan.gate and plan.gate.verdict == "fail"
+                    else {}
+                ),
+                **(
+                    {"history": [entry.model_dump(mode="json") for entry in _history(plan.gate)]}
+                    if plan.gate
                     else {}
                 ),
             }
@@ -451,64 +621,47 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                     "verdict": "pass|fail",
                     "reasons": [],
                     "advice": [],
+                    "resolved": [],
+                    "evidence": {},
                 }
                 for plan in waiting
             ]
         },
         "ask": (
-            "Fail a plan only for a blocking problem: a fact, value or convention that "
-            "contradicts the source; a critical lecture example left out (the run of a "
-            "procedure the student must perform, a decision or failure the main run cannot "
-            "show) or one changed, shrunk or replaced by an invented case; a stated outcome "
-            "left untaught; an idea used before it is taught; or a wrong solved practice "
-            "answer. List every other improvement under `advice`: the author sees it, and it "
-            "does not fail the plan. When a plan lists `previous` reasons, first check each "
-            "against the revised plan and never repeat one the revision fixed. "
-            "For each plan: does each concept come with a concrete case (a definition, rule "
-            "or comparison needs one short case, not a constructed worked run; in a Study "
-            "plan a procedure, algorithm or model needs the lecture's own worked example, "
-            "taught in full, and a lecture calculation whose result the lesson states, such "
-            "as a heuristic computed on the lecture's board, is a procedure with that "
-            "example), does each "
-            "kind get a fitting representation (or a real reason to skip it), does the order "
-            "build each idea before it is used, and does it cover its outcomes? "
-            "Compare each procedure, algorithm or model concept's `example` with the source "
-            "digest's examples and their pages: is a critical lecture demonstration missing (the "
-            "run of a method the student must perform, a decision, branch or failure the main "
-            "run cannot show, a case later material builds on)? Do two examples teach the same "
-            "mechanism? Is an example constructed where the lecture has one? Does any example "
-            "change or shrink the lecture's inputs, steps or endpoint? Finishing a run the slides "
-            "stop early keeps the lecture's inputs: a goal-free demonstration ends where its "
-            "traversal ends, and adding a goal or value to give it an ending changes the example. "
-            "Repeats of a mechanism on "
-            "another object, applications without workable inputs and empirical tables are "
-            "rightly left out. "
-            "Identify new core terms and properties used to compare methods or justify answers, "
-            "even when they appear only in headings or conditions. Plan their concise general "
-            "meaning as definitions, with their defining conditions and a useful case. A "
-            "method-specific guarantee or example does not define the underlying property. "
-            "For Study application or reasoning outcomes, inspect `practice`: each question "
-            "needs its solved result and an unworked input or decision. Routine application "
-            "with new inputs is valid; require substantive transfer when the objective calls "
-            "for it. A general rule taught in the lesson is not itself a solved assessment "
-            "case. Replaying an unchanged worked input and answer tests recall. Reusing a "
-            "graph can be valid when a changed "
-            "start, goal or ordering genuinely changes the reasoning. Recall-only objectives "
-            "and original released exercise statements do not need invented transfer cases. "
-            "Check that each stated contrast is actually true of the solved worked instances, "
-            "not merely a promise that the case is different. Reserve assessment cases for "
-            "practice rather than also using them as lesson examples. "
-            "First read coverage for the plan's preparation: check every source demand and "
-            "its original request. Audit every deferred outcome and subpart against that "
-            "request and the actual source sections. A broad topic request does not authorize "
-            "excluding its own conditions, guarantees or costs simply to shorten the lesson. "
-            "A selected exercise retains all requested subparts. Then check every "
-            "planned learner action, "
-            "including all clauses and the procedure's final result. Copy its scope fingerprint "
-            "as coverage_fingerprint in the answer when present. A first-step question does not "
-            "cover an "
-            "end-to-end procedure or recovering its result. Do not narrow the requirements "
-            "to fit the draft. Use the answer template, replacing pass|fail with your verdict "
-            "and giving reasons for a failure. Keep every copied fingerprint."
+            "1. On the first check, list every blocking problem you can find in one pass. "
+            "On later checks, verify each history reason first; put fixed entry texts or "
+            "zero-based history indices in resolved. Raise a new blocker only for a changed "
+            "plan or something that change breaks. To escalate prior advice on an unchanged "
+            "concept, repeat its text as the reason and map it to new evidence in evidence.\n"
+            "2. Read coverage and the original request. Audit every demand, deferred outcome "
+            "and subpart against the source. Broad requests include conditions, guarantees "
+            "and costs; exercises retain requested parts. Check all learner actions, clauses "
+            "and final results, not just a first step. Never narrow scope to fit the draft.\n"
+            "3. Check each concept has a concrete case, a fitting representation or a real "
+            "skip reason, and prerequisites before use. Definitions, rules and comparisons "
+            "need short cases, not invented worked runs. Define core terms and properties "
+            "used in comparisons, headings and conditions, with their defining conditions "
+            "and a useful case; a method-specific guarantee is not a general definition.\n"
+            "4. Compare Study procedures, algorithms, models and stated lecture calculations "
+            "with digest examples and source pages. On the first check judge unused_examples "
+            "as selection context: a required method run, a new decision, branch or failure, "
+            "or a case later material builds on can be critical. Write nothing for the rest. "
+            "Keep critical lecture examples complete: inputs, conventions, steps and endpoint. "
+            "Finish an incomplete slide run with its original inputs; a goal-free traversal "
+            "ends naturally, without inventing a goal or value. For each additional example "
+            "of one mechanism say what it shows that the first cannot; otherwise it is a repeat. "
+            "Leave out repeated mechanisms on another object, applications without workable "
+            "inputs and empirical tables. Construct a case only when the lecture has none.\n"
+            "5. For Study application or reasoning, check each practice case has its solved "
+            "result and an unworked input or decision. Routine new inputs are valid; require "
+            "substantive transfer when the objective does. A general rule is not a solved "
+            "assessment case; an unchanged worked input tests recall. A changed start, goal "
+            "or ordering on the same graph may change the reasoning. Recall-only objectives "
+            "and released exercise statements need no invented transfer case. Check contrasts "
+            "against solved examples and reserve assessment cases for practice.\n"
+            "6. Fail only for source contradictions, missing or altered critical examples, "
+            "untaught outcomes, ideas used before teaching, or wrong solved practice. Put "
+            "other improvements in advice. Use the answer template, provide reasons on fail, "
+            "and preserve both plan and coverage fingerprints when present."
         ),
     }
