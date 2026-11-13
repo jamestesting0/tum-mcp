@@ -674,7 +674,9 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "against solved examples and reserve assessment cases for practice.\n"
             "6. Fail only for source contradictions, missing or altered critical examples, "
             "untaught outcomes, ideas used before teaching, or wrong solved practice. Put "
-            "other improvements in advice. Use the answer template, provide reasons on fail, "
+            "other improvements in advice. Each reason names everything a complete fix "
+            "contains, so one revision can resolve it. Use the answer template, provide "
+            "reasons on fail, "
             "and preserve both plan and coverage fingerprints when present."
         ),
     }

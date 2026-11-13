@@ -114,11 +114,14 @@ changing highlight just to clear `static_walkthrough`. An intentionally fixed
 picture belongs beside ordinary explanation, outside a staged walkthrough.
 
 Run the lecture's own example in a `walkthrough`, with its inputs unchanged
-([choosing examples](planning.md#choose-the-lectures-examples)). Each step does one
+([choosing examples](planning.md#choose-the-lectures-examples)). If the run continues past
+the lecture's endpoint, say at that step that the lecture stops here. Each step does one
 operation as the lecturer shows it, usually one expansion. Compute the states in code first.
 Its `action` says what; its `why` uses that step's numbers and the rule that forces the
-operation, never a sentence repeated across steps. A computed value shows its inputs and
-arithmetic in `why` or a state row. For tile 3, show row 2 to 0 and column 1 to 2,
+operation. The first clause of each `why` is specific to that step; a shared tail clause
+is fine. A computed value shows its inputs and arithmetic in `why` or a state row.
+For board values, name the coordinate convention once, such as rows and columns counted
+from 0 at the top left. For tile 3, show row 2 to 0 and column 1 to 2,
 then \(\lvert 2-0\rvert + \lvert 1-2\rvert = 3\); a path cost shows the prior
 cost plus the edge cost. The differences or total alone are not the working.
 `note` names the mistake a student
