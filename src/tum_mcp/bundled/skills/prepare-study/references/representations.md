@@ -137,7 +137,8 @@ The weakness is a limit presented as completed work. Distinguish a completed ope
 from one prevented by a stopping condition. On a graph, nodes generated but not expanded
 at a depth limit use `cutoff`, not `visited`. Use this mark only for that meaning;
 an unfinished proof or an inconclusive test needs its own explanation.
-Each step does one operation as the lecturer shows it. Compute numerical states in code first.
+Follow the [step granularity rule](planning.md#choose-the-lectures-examples).
+Compute numerical states in code first.
 Its `action` says what; its `why` connects this step's facts to the rule that permits it.
 The weakness is template reasoning: changing names does not explain a decision.
 A shared rule can repeat when the step's own evidence is visible in its working or state.

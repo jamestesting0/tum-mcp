@@ -88,7 +88,7 @@ def test_walkthrough_variant_is_checked_as_a_separate_run() -> None:
         "steps": [
             {"action": "Start.", "why": "Same reason.", "node_values": {"a": "1"}},
             {"action": "Expand.", "why": "Same reason."},
-            {"action": "Finish.", "why": "Same reason."},
+            {"action": "Pop M, then L.", "why": "Same reason."},
         ],
     }
     unit["blocks"].append(walk)
@@ -96,6 +96,52 @@ def test_walkthrough_variant_is_checked_as_a_separate_run() -> None:
     found = [f["flag"] for f in flags if f["item"] == f"{unit['key']}/trace"]
     assert found.count("repeated_step_reason") == 1
     assert found.count("dropped_node_value") == 1
+    assert found.count("merged_step_operations") == 1
+
+
+@pytest.mark.parametrize(
+    "action, flagged",
+    [
+        ("Pop leaf O, then leaf N.", True),
+        ("Pop M; then L.", True),
+        ("Pop O. Then pop N.", True),
+        ("Subtract three, then divide by two.", True),
+        ("Advance one tick; then advance the next.", True),
+        ("Apply the row operation. Then swap the rows.", True),
+        ("Check the stack. If empty, then stop.", False),
+        ("If the limit is reached, then cut off.", False),
+        ("If the limit is reached; then cut off.", False),
+        ("If the time exceeds 0.5, then stop.", False),
+        ("If the limit is reached, or the queue is empty, then cut off.", False),
+        ("If the limit is reached, then cut off; then pop N.", True),
+        ("Check if the stack is empty, then pop N.", True),
+        ("Expand A and push B, C.", False),
+        ("Apply one row operation to all entries.", False),
+        ("Then pop O.", False),
+        ("Pop O.", False),
+    ],
+)
+def test_merged_operations_flag_preserves_atomic_and_conditional_actions(
+    action: str, flagged: bool
+) -> None:
+    value = study()
+    unit = value["units"][0]
+    unit["blocks"] = [
+        {
+            "kind": "walkthrough",
+            "key": "process",
+            "sources": [unit["sources"][0]["key"]],
+            "steps": [
+                {"action": "Start.", "why": "Use the given initial state."},
+                {"action": action, "why": "Apply the process rule."},
+            ],
+        }
+    ]
+
+    flags = quality_flags(StudyContent.model_validate(value), None)
+
+    merged = [flag for flag in flags if flag["flag"] == "merged_step_operations"]
+    assert [flag["item"] for flag in merged] == ([f"{unit['key']}/process"] if flagged else [])
 
 
 @pytest.mark.parametrize("show_all", ["hidden", "default", "variant"])
@@ -133,13 +179,22 @@ def test_graph_stage_nodes_must_be_shown_in_a_step(show_all: str) -> None:
         assert hidden[0]["item"] == f"{unit['key']}/trace"
 
 
-def test_repeated_step_reasons_require_judgment_without_lowering_the_teaching_bar() -> None:
+@pytest.mark.parametrize(
+    "flag, owner",
+    [
+        ("repeated_step_reason", "intuition.reasons"),
+        ("merged_step_operations", "representation.process_shown"),
+    ],
+)
+def test_walkthrough_signals_require_judgment_without_lowering_the_teaching_bar(
+    flag: str, owner: str
+) -> None:
     from tum_mcp.course.review import registry
     from tum_mcp.course.review.models import INVARIANT_FLAGS, RULED_FLAGS
 
-    assert RULED_FLAGS["repeated_step_reason"] == "intuition.reasons"
-    assert "repeated_step_reason" not in INVARIANT_FLAGS
-    check = registry.checks()["intuition.reasons"]
+    assert RULED_FLAGS[flag] == owner
+    assert flag not in INVARIANT_FLAGS
+    check = registry.checks()[owner]
     assert check.default_fail and check.teaching
 
 

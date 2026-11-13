@@ -295,6 +295,7 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
 # here, or why the flag does not apply. A flag no one rules on is how a weak lesson passed.
 RULED_FLAGS: dict[str, str] = {
     "repeated_step_reason": "intuition.reasons",
+    "merged_step_operations": "representation.process_shown",
     "repeated_example": "redundancy.said_once",
     "duplicate_stage": "redundancy.said_once",
     "untitled_opening": "organization.outline",

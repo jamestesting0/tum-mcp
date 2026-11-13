@@ -869,6 +869,25 @@ def quality_flags(
                         "not draw them.",
                     )
             for steps in runs:
+                for index, step in enumerate(steps, start=1):
+                    clauses = re.split(
+                        r"[,;]\s*then\b|(?<=[.!?])\s+then\b", step.action, flags=re.I
+                    )
+                    for clause in clauses[:-1]:
+                        preceding = re.split(r"[.!?;]\s+", clause)[-1]
+                        if preceding.strip() and not re.match(
+                            r"\s*(?:else\s+)?if\b", preceding, re.I
+                        ):
+                            flag(
+                                location,
+                                "merged_step_operations",
+                                f"Walkthrough '{_name(block)}' step {index} joins operations "
+                                f"in '{step.action}'. Compare with the source pages. Split "
+                                "separate operations into one step per operation and keep every "
+                                "state in this walkthrough; never merge to shorten it. One "
+                                "atomic action touching several items stays one step.",
+                            )
+                            break
                 reasons = Counter(
                     " ".join(
                         re.sub(

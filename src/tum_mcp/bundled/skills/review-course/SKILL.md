@@ -163,8 +163,13 @@ Repair gotchas:
   that repeat a stage need a ruling on the actual inputs and decisions. A confirmed split
   run, proof, derivation, simulation or case history is a must-fix, not kept polish.
   Use one walkthrough with phases as `subgoal`. Separate blocks can teach different inputs
-  or decisions; a deliberate before/after comparison is valid. Steps dropped or merged to
-  shorten a run are the same defect: a long walkthrough is fine, a missing step is not.
+  or decisions; a deliberate before/after comparison is valid. For
+  `representation.process_shown`, compare each step with the source pages. Each step
+  shows the state after one operation at source granularity or finer, never coarser.
+  Two pops, algebraic transformations, simulation ticks or proof inferences need their
+  intermediate states. One atomic action touching several items stays one step, such
+  as expanding a node and pushing its children or applying one matrix row operation.
+  Never drop or merge steps to shorten the run; the app handles its length.
 - The weakness is lost teaching during cleanup. Remove content only when it is wrong
   or said twice. Preserve each selected example's inputs, representation, decisive
   working, endpoint and the comparison or result that explains its point through repairs.

@@ -1122,9 +1122,9 @@
     {
       "id": "representation.process_shown",
       "dimension": "representation",
-      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, grid cells and moves, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it. Values the student compares across steps remain attached to their nodes, cells or marks while needed, rather than surviving only in changing prose. Do not retain obsolete values as current or add quantities the reasoning does not use. The legend or direct labels explain every state actually drawn, including neutral or not-yet-reached states when styled differently.",
-      "pass": "The A* run is a walkthrough: each step shows the frontier and why the next node is chosen.",
-      "fail": "A finished table of frontiers, or 'Manhattan distance is 18' with no counting shown.",
+      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. Each step shows the state after one operation, at the cited source's granularity or finer, never coarser. Compare the actions and intermediate states with the source pages: separate pops, algebraic transformations, simulation ticks, proof inferences and transaction postings each keep their own state. One atomic action affecting several items stays one step, such as expanding a node and pushing all its children or applying one matrix row operation. Keep the whole process in one walkthrough; never drop or merge steps to shorten it. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, grid cells and moves, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it. Values the student compares across steps remain attached to their nodes, cells or marks while needed, rather than surviving only in changing prose. Do not retain obsolete values as current or add quantities the reasoning does not use. The legend or direct labels explain every state actually drawn, including neutral or not-yet-reached states when styled differently.",
+      "pass": "Each pop in a search or transformation in a derivation shows its resulting state, including every state on the cited pages.",
+      "fail": "'Remove one item from the stack, then the next' or 'Subtract three, then divide by two' shows only the second result and hides an intermediate state. A finished table or number without its working also fails.",
       "profiles": [
         "exam-mock-question",
         "exam-pattern",
@@ -1132,7 +1132,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 3,
+      "version": 4,
       "default_fail": true,
       "teaching": true,
       "replaces": [
