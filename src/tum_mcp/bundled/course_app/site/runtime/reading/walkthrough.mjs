@@ -30,22 +30,21 @@ function stageView(stage, renderBody, steps) {
       const grows = stage.layout === 'tree' && !steps.some(step => step.visible_nodes);
       const reach = [];
       for (const [index, step] of steps.entries()) {
-        reach.push(new Set([...(reach[index - 1] || []), ...(step.active || []), ...(step.frontier || []), ...(step.visited || [])]));
+        reach.push(new Set([...(reach[index - 1] || []), ...(step.active || []), ...(step.frontier || []), ...(step.cutoff || []), ...(step.visited || [])]));
       }
       const used = new Set();
       steps.forEach((step, index) => {
         for (const item of stage.nodes) {
           if (step.visible_nodes && !step.visible_nodes.includes(item.key)) continue;
           if (step.active.includes(item.key)) used.add('active');
-          else {
-            if (step.visited.includes(item.key)) used.add('visited');
-            if (step.frontier.includes(item.key)) used.add('frontier');
-          }
+          else if (step.frontier.includes(item.key)) used.add('frontier');
+          else if (step.cutoff?.includes(item.key)) used.add('cutoff');
+          else if (step.visited.includes(item.key)) used.add('visited');
           if (grows && reach[index].size && !reach[index].has(item.key)) used.add('unreached');
         }
       });
       const legend = node('div', 'graph walk-legend');
-      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['visited', 'Expanded'], ['unreached', 'Not reached yet']]) {
+      for (const [state, label] of [['active', 'Current'], ['frontier', 'Frontier'], ['cutoff', 'Cut off'], ['visited', 'Expanded'], ['unreached', 'Not reached yet']]) {
         if (!used.has(state)) continue;
         const swatch = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         swatch.setAttribute('class', 'walk-legend-swatch'); swatch.setAttribute('viewBox', '0 0 18 18'); swatch.setAttribute('aria-hidden', 'true');
@@ -62,9 +61,12 @@ function stageView(stage, renderBody, steps) {
         const reached = grows && reach[steps.indexOf(step)]?.size ? reach[steps.indexOf(step)] : null;
         for (const [key, group] of groups) {
           const active = step.active.includes(key);
+          const frontier = !active && step.frontier.includes(key);
+          const cutoff = !active && !frontier && (step.cutoff?.includes(key) || false);
           group.classList.toggle('active', active);
-          group.classList.toggle('visited', !active && step.visited.includes(key));
-          group.classList.toggle('frontier', !active && step.frontier.includes(key));
+          group.classList.toggle('frontier', frontier);
+          group.classList.toggle('cutoff', cutoff);
+          group.classList.toggle('visited', !active && !frontier && !cutoff && step.visited.includes(key));
           group.setAttribute('visibility', shown(key) ? 'visible' : 'hidden');
           group.classList.toggle('unreached', Boolean(reached) && !reached.has(key));
           setNodeValue(group, step.node_values?.[key]);

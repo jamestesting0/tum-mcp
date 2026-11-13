@@ -889,6 +889,7 @@ class WalkStep(Step):
     active: tuple[Key, ...] = ()
     frontier: tuple[Key, ...] = ()
     visited: tuple[Key, ...] = ()
+    cutoff: tuple[Key, ...] = ()
     edges: tuple[EdgeRef, ...] = Field(default=(), max_length=20)
     node_values: dict[Key, Label] = Field(
         default_factory=dict,
@@ -978,7 +979,7 @@ Stage = Annotated[
     Field(discriminator="kind"),
 ]
 MARKS = {
-    "diagram": {"active", "frontier", "visited", "edges", "node_values", "visible_nodes"},
+    "diagram": {"active", "frontier", "visited", "cutoff", "edges", "node_values", "visible_nodes"},
     "table": {"shown", "cells"},
     "code": {"lines"},
     "derivation": {"shown"},
@@ -1004,7 +1005,7 @@ def check_marks(stage: Stage | None, step: WalkStep) -> None:
             keys = {item.key for item in stage.nodes}
             pairs = {(edge.start, edge.end) for edge in stage.edges}
             pairs |= {(edge.end, edge.start) for edge in stage.edges if not edge.directed}
-            marked = set(step.active + step.frontier + step.visited)
+            marked = set(step.active + step.frontier + step.visited + step.cutoff)
             if not marked | set(step.node_values) | set(step.visible_nodes or ()) <= keys:
                 raise ValueError(f"Step '{step.action}' marks a node the stage does not draw.")
             if any((edge.start, edge.end) not in pairs for edge in step.edges):

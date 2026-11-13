@@ -54,6 +54,18 @@ def test_answer_keys_check_the_values_written_under_nodes() -> None:
     assert "under each node" in check({"s": "f = 393", "t": "f = 447"})[0][0]
 
 
+def test_answer_keys_compare_cutoff_nodes_when_supplied() -> None:
+    from tum_mcp.course.checks.answers import compare
+
+    block = {"kind": "walkthrough", "key": "dls", "steps": [{"cutoff": ["b"]}]}
+
+    def key(nodes: list[str]) -> dict:
+        return {"walkthroughs": {"dls": {"primary": [{"@cutoff": nodes}]}}}
+
+    assert compare(block, key(["b"])) == ([], 1)
+    assert compare(block, key(["c"]))[0]
+
+
 def tree(**change) -> dict:
     nodes = [{"key": key, "label": key.upper()} for key in "abc"]
     edges = [{"start": "a", "end": end, "directed": True} for end in "bc"]
@@ -65,6 +77,18 @@ def tree(**change) -> dict:
         "stage": stage | {"edges": edges} | change,
         "steps": [step, step | {"visible_nodes": None, "node_values": {"b": "h = 1"}}],
     }
+
+
+def test_cutoff_nodes_must_be_drawn_and_visible() -> None:
+    value = tree()
+    value["steps"][1]["cutoff"] = ["b"]
+    assert WalkthroughBlock.model_validate(value).steps[1].cutoff == ("b",)
+    value["steps"][1]["cutoff"] = ["z"]
+    with pytest.raises(ValidationError, match="node the stage does not draw"):
+        WalkthroughBlock.model_validate(value)
+    value["steps"][1].update(cutoff=["b"], visible_nodes=["a"])
+    with pytest.raises(ValidationError, match="node it does not show yet"):
+        WalkthroughBlock.model_validate(value)
 
 
 def test_a_tree_stage_places_nodes_from_its_edges_and_reveals_them() -> None:

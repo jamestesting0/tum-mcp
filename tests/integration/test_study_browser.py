@@ -415,3 +415,59 @@ def test_a_tree_without_a_reveal_order_keeps_unreached_nodes_faint(
         finally:
             server.shutdown()
             worker.join(timeout=3)
+
+
+def test_cutoff_nodes_are_reached_and_legend_respects_state_precedence(
+    course_browser: Browser, project: Path
+) -> None:
+    from tum_mcp.course.app.preview import Handler, PreviewServer
+
+    with PreviewServer(
+        ("127.0.0.1", 0), partial(Handler, directory=str(project / "app"))
+    ) as server:
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            with course_browser.new_context(viewport={"width": 1440, "height": 900}) as context:
+                page = context.new_page()
+                page.goto(f"http://127.0.0.1:{server.server_port}/#bfs/content")
+                page.locator("[data-block-index]").first.wait_for()
+                page.evaluate("""async () => {
+                  const { renderWalkthrough } = await import('./runtime/reading/walkthrough.mjs');
+                  const nodes = 'abcde'.split('').map(key => ({key, label: key.toUpperCase()}));
+                  const edges = 'bcde'.split('').map(end => ({start:'a', end, directed:true}));
+                  const step = (active, frontier, cutoff, visited) =>
+                    ({action:'Search', why:'Follow the depth limit.', active, frontier,
+                      cutoff, visited, edges:[], state:[]});
+                  const block = {stage:{kind:'diagram', layout:'tree',
+                    description:'Tree', nodes, edges},
+                    steps:[step(['a'], ['a','b'], ['a','b','c'], ['a','b','c','d']),
+                           step(['a'], [], [], ['d'])]};
+                  document.querySelector('main').replaceChildren(
+                    renderWalkthrough(block, () => null));
+                }""")
+                legend = page.locator(".walk-legend")
+                expect(legend.get_by_text("Cut off", exact=True)).to_be_visible()
+                states = [("a", "active"), ("b", "frontier"), ("c", "cutoff"), ("d", "visited")]
+                for key, state in states:
+                    element = page.locator(f'[data-node-key="{key}"]')
+                    expect(element).to_have_class(re.compile(rf"\b{state}\b"))
+                    for other in {"active", "frontier", "cutoff", "visited"} - {state}:
+                        expect(element).not_to_have_class(re.compile(rf"\b{other}\b"))
+                expect(page.locator('[data-node-key="e"]')).to_have_class(
+                    re.compile(r"\bunreached\b")
+                )
+                expect(page.locator('[data-node-key="c"]')).not_to_have_class(
+                    re.compile(r"\bunreached\b")
+                )
+                page.get_by_role("button", name="Next step", exact=True).click()
+                expect(page.locator('[data-node-key="c"]')).not_to_have_class(
+                    re.compile(r"\bunreached\b")
+                )
+                page.evaluate(TREE_WALKTHROUGH)
+                expect(
+                    page.locator(".walk-legend").get_by_text("Cut off", exact=True)
+                ).to_have_count(0)
+        finally:
+            server.shutdown()
+            worker.join(timeout=3)

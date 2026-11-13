@@ -8,7 +8,8 @@ A script prints one JSON object:
 - `exact_values`: content path -> complete expected value, with whitespace normalized in text.
 - `walkthroughs`: walkthrough block key -> runs (`primary`, and `variant` when authored).
   Each run lists one object per step containing all state rows, matched exactly, and
-  `"@node_values"`: node key -> value when the stage writes values under its nodes.
+  `"@node_values"`: node key -> value when the stage writes values under its nodes;
+  `"@cutoff"`: node keys cut off at this step, when supplied by the key.
   A list of partial primary-run states is accepted for legacy keys.
 
 Scripts run isolated (`python -I`) in an empty folder with a time limit.
@@ -112,6 +113,16 @@ def _compare_runs(block: dict, runs: dict, key: str) -> tuple[list[str], int]:
             actual = {row["label"]: row["value"] for row in rows}
             place = f"walkthrough {key}/{run} step {number}"
             values = None
+            cutoff = isinstance(states, dict) and "@cutoff" in states
+            if cutoff:
+                expected_cutoff = states["@cutoff"]
+                states = {label: state for label, state in states.items() if label != "@cutoff"}
+                compared += 1
+                found_cutoff = step.get("cutoff", [])
+                if not _exact(found_cutoff, expected_cutoff):
+                    problems.append(
+                        f"{place}: cutoff is {found_cutoff!r}, the key computes {expected_cutoff!r}"
+                    )
             if isinstance(states, dict) and NODE_VALUES in states:
                 values = states[NODE_VALUES]
                 states = {label: state for label, state in states.items() if label != NODE_VALUES}
@@ -128,7 +139,7 @@ def _compare_runs(block: dict, runs: dict, key: str) -> tuple[list[str], int]:
                         )
             if (
                 not isinstance(states, dict)
-                or not (states or values is not None)
+                or not (states or values is not None or cutoff)
                 or (states.keys() != actual.keys() or len(actual) != len(rows))
             ):
                 problems.append(f"{place}: expected each authored state row exactly once.")

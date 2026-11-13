@@ -464,6 +464,7 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 .graph .node-box text { font-size: 16px; }
 .graph .edge-label { font-size: 14px; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
 .graph .visited circle, .graph .visited rect { fill: var(--wash); stroke: var(--accent); }
+.graph .cutoff circle, .graph .cutoff rect { fill: var(--warning); stroke: var(--warning-ink); stroke-width: 2.5; }
 .graph .active circle, .graph .active rect { fill: var(--accent); stroke: var(--accent); }
 .graph .active text { fill: var(--canvas); }
 .graph-math-text { display: inline-block; white-space: nowrap; font: 18px var(--font-ui); }
