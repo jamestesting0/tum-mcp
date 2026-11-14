@@ -174,6 +174,63 @@ def test_one_defect_can_fail_four_checks_without_multiple_scores(
     assert loop.load(project).record(item["item"]) == record
 
 
+@pytest.mark.parametrize("answer_check", ["clarity.one_reading", "intuition.reasons"])
+def test_record_item_adds_explicit_links_to_existing_owner(
+    tmp_path: Path, answer_check: str
+) -> None:
+    from tum_mcp.course.review.items import ReviewItem, blocks_of
+    from tum_mcp.course.review.ledger import ItemRecord
+
+    owner, linked = "clarity.one_reading", "intuition.reasons"
+    quote = "The next step follows."
+    value = {"blocks": [{"kind": "prose", "paragraphs": [quote]}]}
+    item = ReviewItem("study/steps", "study-unit", "Steps", value, blocks_of(value))
+    context = loop.Context(
+        tmp_path,
+        {item.key: item},
+        [],
+        {},
+        records={item.key: ItemRecord(item=item.key)},
+    )
+    finding = {
+        "check": owner,
+        "quote": quote,
+        "location": "blocks[0].paragraphs[0]",
+        "why": "The step omits the rule explaining the transition.",
+        "fix": "Explain the transition using the rule and its current inputs.",
+    }
+    asked = {"needs": [owner], "verify": [], "visuals": [], "rule": [], "report": []}
+    checks = {owner: {"verdict": "fail", "method": "read"}}
+    initial = {
+        "findings": [finding],
+        "checks": checks,
+    }
+    problems: list[dict[str, str]] = []
+    assert loop._record_item(context, item, asked, initial, 1, "fresh", problems) == (1, 0)
+    assert problems == []
+    original = context.record(item.key).findings[0]
+    asked["needs"] = [owner, linked]
+    checks[linked] = {"verdict": "fail", "method": "read"}
+    response = {
+        "checks": checks,
+        "findings": [
+            finding | {"check": answer_check, "also": [linked if answer_check == owner else owner]}
+        ],
+    }
+
+    result = loop._record_item(context, item, asked, response, 2, "fresh", problems)
+
+    assert result == (0, 0)
+    assert problems == []
+    record = context.record(item.key)
+    assert record.findings == (original.model_copy(update={"also": (linked,)}),)
+    assert all(record.checks[check].verdict == "fail" for check in (owner, linked))
+    assert all(record.checks[check].finding_ids == (original.id,) for check in (owner, linked))
+    assert loop._record_item(context, item, asked, response, 2, "fresh", problems) == (0, 0)
+    assert problems == []
+    assert context.record(item.key) == record
+
+
 @pytest.mark.parametrize(
     "linked", [["clarity.one_reading"], ["clarity.case_observable"], ["cohesion.linked"]]
 )

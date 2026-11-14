@@ -1218,6 +1218,16 @@ def _record_item(
             None,
         )
         if existing is not None:
+            index = findings.index(existing)
+            linked = tuple(
+                dict.fromkeys(
+                    check_id
+                    for check_id in (*existing.also, candidate.check, *candidate.also)
+                    if check_id != existing.check
+                )
+            )
+            existing = existing.model_copy(update={"also": linked})
+            findings[index] = existing
             reported.append(existing)
         else:
             new.append(candidate)
