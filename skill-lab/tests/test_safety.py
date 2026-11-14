@@ -53,6 +53,9 @@ def test_credential_scan(tmp_path):
     assert safety.credential_hits('{"password": "hunter22"}')
     assert safety.credential_hits("MoodleSession=abcdef1234567890")
     assert not safety.credential_hits("The lecture covers Bayesian networks.")
+    assert safety.credential_hits("key sk-" + "Ab3" * 10)
+    # A trial's review quoted 'the task-to-position-to-department structure'.
+    assert not safety.credential_hits("the task-to-position-to-department structure")
     (tmp_path / "notes.txt").write_text("cookie _shibsession_x=0123456789abcdef")
     (tmp_path / "slides.pdf").write_bytes(b"Bearer " + b"b" * 40)
     hits = safety.scan_tree(tmp_path)
