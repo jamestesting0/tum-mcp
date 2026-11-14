@@ -16,11 +16,22 @@ BT /F1 10 Tf 305 120 Td (goal) Tj ET
 0 0 1 rg 0 0 400 12 re f"""
 
 
-def slide_pdf() -> bytes:
+# A figure low on the slide, with the course name printed in the footer margin just below it.
+LOW_FIGURE = """0 0 0 RG 2 w 60 14 280 60 re S
+BT /F1 8 Tf 60 5 Td (Real-Time Systems) Tj ET"""
+
+
+# A slide whose background is tiled into three full-width strips, a title ornament, one chart.
+BACKDROP = """0.9 0.9 0.9 rg 10 0 380 100 re f 10 100 380 100 re f 10 200 380 100 re f
+0 0 1 rg 80 280 240 12 re f
+0 0 0 RG 2 w 240 60 120 80 re S"""
+
+
+def slide_pdf(content: str = SLIDE) -> bytes:
     objects = [
         "<< /Type /Catalog /Pages 2 0 R >>",
         "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
-        f"<< /Length {len(SLIDE)} >>\nstream\n{SLIDE}\nendstream",
+        f"<< /Length {len(content)} >>\nstream\n{content}\nendstream",
         "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 400 300] "
         "/Resources << /Font << /F1 5 0 R >> >> /Contents 3 0 R >>",
         "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
@@ -51,6 +62,19 @@ def test_a_page_lists_its_figures_without_the_title_bar_and_footer(project: Path
     for x0, y0, x1, y1 in boxes:
         assert 0.1 < y0 < y1 < 0.75 and x1 - x0 < 0.9
     assert any(x1 > 0.8 for _, _, x1, _ in boxes), "the label touching a board belongs to it"
+
+
+def test_a_figure_region_leaves_out_footer_text_beside_it(tmp_path: Path) -> None:
+    project = material_project(tmp_path, {"slides": ("content", slide_pdf(LOW_FIGURE))})
+    [region] = page_regions(project, "slides", 1)["regions"]
+    assert region["box"][3] < 0.97, "the footer's course name is not part of the figure"
+
+
+def test_a_tiled_slide_background_does_not_swallow_its_figure(tmp_path: Path) -> None:
+    project = material_project(tmp_path, {"slides": ("content", slide_pdf(BACKDROP))})
+    [region] = page_regions(project, "slides", 1)["regions"]
+    x0, y0, x1, y1 = region["box"]
+    assert x0 > 0.55 and y1 < 0.85, "only the chart, neither the background nor the ornament"
 
 
 def test_merged_regions_crop_into_the_app_with_their_page(project: Path) -> None:
