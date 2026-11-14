@@ -62,7 +62,10 @@ class Example(Frozen):
     states: Annotated[int, Field(strict=True, ge=1)] | None = Field(
         default=None,
         exclude_if=lambda value: value is None,
-        description="Number of distinct states the cited source pages show for this run.",
+        description="Number of operation-level states in this run: the initial state and the "
+        "state after each distinct operation the cited pages show or imply between frames. "
+        "Count operations, not slide frames. One atomic operation touching several items "
+        "counts once only when the source treats it that way; separate operations stay separate.",
     )
     phases: tuple[Label, ...] = Field(
         default=(),
@@ -733,7 +736,12 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "and costs; exercises retain requested parts. Check all learner actions, clauses "
             "and final results, not just a first step. Never narrow scope to fit the draft.\n"
             "3. Check each concept has a concrete case, a fitting representation or a real "
-            "skip reason, and prerequisites before use. Definitions, rules and comparisons can "
+            "skip reason, and prerequisites before use. When each item's working depends on "
+            "its position, plan one walkthrough on the drawing: mark the item, show its "
+            "displacement or neighbours, write its value there and keep the running result. "
+            "A list of results beside a static picture does not teach that working. "
+            "Non-spatial records, such as a price list, stay a table. "
+            "Definitions, rules and comparisons can "
             "use short cases when no source demonstration is needed; do not invent worked runs. "
             "Define core terms and properties "
             "used in comparisons, headings and conditions, with their defining conditions "
@@ -759,10 +767,16 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "and working, and endpoint or comparison. Page overlap or a concept mention does "
             "not establish that the selected demonstration is complete. Keep the source range "
             "that contains its decisive test and conclusion, not just its setup. "
-            "For every source example, count the distinct states on its cited pages. "
-            "If the pages show several states and `states` is missing, fail the plan "
-            "and name the count you see. Require `phases` when the source groups the run. "
-            "Verify recorded counts and phase names against the pages. A source showing "
+            "For every source process, verify `states` by counting its initial state and "
+            "the state after each distinct operation the pages show or imply between "
+            "consecutive frames. Count operations, not frames: a removal and two separate "
+            "insertions, two algebraic rewrites, simulation events or proof inferences "
+            "each need their intermediate states, even within one frame. One atomic "
+            "operation touching several items counts once only when the source treats it "
+            "that way; children pushed one at a time count separately. If `states` is "
+            "missing or too small, fail the plan and name the operation count and pages "
+            "that establish it. Require `phases` when the source groups the run. "
+            "Verify phase names against the pages. A source showing "
             "one finished state or a constructed example needs no source state count. "
             "Recorded states are a floor, not a cap. "
             "Finish incomplete source working with its original inputs when the result matters. "

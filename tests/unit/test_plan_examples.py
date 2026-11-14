@@ -40,25 +40,69 @@ def test_a_comparison_without_a_source_demonstration_needs_no_example() -> None:
 
 
 @pytest.mark.parametrize(
-    ("name", "phases"),
+    ("name", "source", "operations"),
     [
-        ("Depth-limited search", ["Limit 0", "Limit 1"]),
-        ("Gaussian elimination", ["Forward elimination", "Back substitution"]),
+        (
+            "Search with individual child insertions",
+            "search",
+            [
+                ("Select", ["Initial stack A", "Remove A"]),
+                ("Generate", ["Insert B", "Insert C"]),
+            ],
+        ),
+        (
+            "Solving a linear equation",
+            "algebra",
+            [
+                ("Given", [r"\(2x+4=10\)"]),
+                ("Solve", [r"Subtract four: \(2x=6\)", r"Divide by two: \(x=3\)"]),
+            ],
+        ),
+        (
+            "Search with source-atomic expansion",
+            "search",
+            [
+                ("Given", ["Initial node A"]),
+                ("Expand", ["Expand A, adding B and C together as one source operation"]),
+            ],
+        ),
+        (
+            "One matrix row operation changes several entries",
+            "linear-algebra",
+            [
+                ("Given", [r"\(\begin{pmatrix}1&2\\3&4\end{pmatrix}\)"]),
+                ("Transform", [r"\(R_2 \gets R_2 - 3R_1\)"]),
+            ],
+        ),
     ],
 )
-def test_source_states_are_a_floor_in_one_grouped_walkthrough(name: str, phases: list[str]) -> None:
+def test_source_states_are_a_floor_in_one_grouped_walkthrough(
+    name: str, source: str, operations: list[tuple[str, list[str]]]
+) -> None:
+    phases = [phase for phase, _ in operations]
+    steps = [
+        {"subgoal": phase, "action": action} for phase, actions in operations for action in actions
+    ]
     current = plan(
         name=name,
-        example=UCS | {"states": 4, "phases": phases},
+        example=UCS | {"source": source, "states": len(steps), "phases": phases},
         blocks=["ucs-romania"],
     )
-    steps = [{"subgoal": phase} for phase in phases for _ in range(2)]
     block = {"key": "ucs-romania", "kind": "walkthrough", "steps": steps}
     assert plan_problems(current, {"blocks": [block]}, None) == []
-    assert plan_problems(current, {"blocks": [block | {"steps": steps[:-1]}]}, None)
+    frames = [{"subgoal": phase, "action": "; ".join(actions)} for phase, actions in operations]
+    flags = example_state_flags(current, {"blocks": [block | {"steps": frames}]})
+    assert [flag["flag"] for flag in flags] == (
+        ["source_states_missing"] if len(steps) > len(frames) else []
+    )
+    assert [
+        flag["flag"]
+        for flag in example_state_flags(current, {"blocks": [block | {"steps": steps[:-1]}]})
+        if flag["flag"] == "source_states_missing"
+    ] == ["source_states_missing"]
     assert plan_problems(current, {"blocks": [block | {"steps": steps + [steps[-1]]}]}, None) == []
     assert plan_problems(
-        current, {"blocks": [block | {"steps": [{"subgoal": phases[0]}] * 4}]}, None
+        current, {"blocks": [block | {"steps": [{"subgoal": phases[0]}] * len(steps)}]}, None
     )
     assert plan_problems(current, {"blocks": [block | {"steps": [*steps, {}]}]}, None)
 

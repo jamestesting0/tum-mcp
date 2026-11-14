@@ -182,7 +182,12 @@ Each idea is shown in the shape it has ([representations](../../prepare-study/re
 
 - `representation.shape_fits`: procedures are traces with their state, parallel cases
   tables or lists, two-input rules matrices, physical or spatial ideas drawn figures,
-  symbols formulas with each symbol explained, structures diagrams or trees.
+  symbols formulas with each symbol explained, structures diagrams or trees. When each
+  item's working depends on its position, one walkthrough works each item on the drawing:
+  mark it, show its displacement or neighbours, write its value there and keep the running
+  result. Tile distances, pixel updates and junction currents need that working.
+  A list of item results beside a static picture does not teach it. Rows with no spatial
+  meaning, such as a price list, stay a table.
 - `representation.shown_not_described`: a matrix, vector, table, graph or state that the
   text names is shown itself ("\(P = \begin{pmatrix}1&0\\0&0\end{pmatrix}\)"), and the
   text says what to notice in it; prose never asks the student to picture an object from

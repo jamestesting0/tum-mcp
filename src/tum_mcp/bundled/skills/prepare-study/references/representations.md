@@ -49,18 +49,24 @@ Choose the component a student grasps fastest: the one they would sketch on pape
 | The data | Show it as | Never |
 | --- | --- | --- |
 | A graph or tree, even when the source lists its edges | A `diagram` with the costs on the edges (`layout: "tree"` for a tree); a search on it is a walkthrough over that drawing, the frontier a `state` row | A From/To/Cost table and a table of frontier rows (`graph_as_table`) |
-| A board, grid or array (a puzzle, a maze, a matrix, a seating plan) | A `grid`: the board itself, boards side by side when two are compared, the cell being worked marked, a move as an arrow, computed values written into the cells | A list or table of coordinates |
-| Values per item, a comparison, a lookup the steps consult | A table | A table of results the steps never reach |
+| A board, grid or array (a puzzle, a maze, a matrix, a seating plan) | A `grid`: the board itself, boards side by side when two are compared, the cell being worked marked, its displacement or neighbours shown, computed values written into the cells | A list or table of coordinates or item results beside a static board |
+| Records without spatial meaning, a comparison, a lookup the steps consult | A table | A table of results the steps never reach |
 
 Every step changes what the student sees. A result appears in the step that computes it
 (table rows through `shown`, node values through `node_values`), never all at once in the
 first step: a walkthrough that marks one row and then announces the total demonstrates
-nothing (`unstepped_table`). Work each item the lecture works, or give the finished
-table with its working beside it outside a walkthrough.
+nothing (`unstepped_table`). When each item's working depends on its position, work
+each item on the drawing in one walkthrough. Mark it, show the displacement or neighbours
+used in its calculation, write its value there, and keep the running result in `state`.
+This applies to tile distances on a board, per-pixel operations on an image grid and
+per-junction currents on a circuit. A list of item results beside a static picture does
+not show that working. Work each item the lecture works. For non-spatial records, a
+finished table with its working beside it can be read whole outside a walkthrough.
 Use a walkthrough when the changes
 teach the method. Use a grid in any subject when a value's row and column carry its meaning.
 Keep a table when rows are records and columns are attributes, such as methods compared
-by cost; there a cell's place means nothing. Keep a table for comparison, lookup or observations read together;
+by cost or rows of a price list; there a cell's place means nothing.
+Keep a table for comparison, lookup or observations read together;
 keep a fixed picture outside a walkthrough when nothing meaningful changes.
 The weakness is duplicated teaching objects without a new purpose. Let the walkthrough's
 first step introduce its object when a static copy adds nothing.

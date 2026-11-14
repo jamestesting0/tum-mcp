@@ -84,8 +84,14 @@ scores.
       regardless of the concept's kind. Compare the block's representation with the
       source picture, not just its text or result. Name the concept and planned block
       in evidence. Judge whether the actual inputs, picture and how to read it, decisive
-      tests and working, and endpoint or comparison survive. Require `states` for multi-state
-      sources and `phases` for source groups. Check both against the source and this one
+      tests and working, and endpoint or comparison survive. For a source process,
+      `states` counts its initial state and the state after each distinct operation the
+      pages show or imply between consecutive frames. Count operations, not slide frames.
+      A removal and separate insertions, two algebraic rewrites, simulation events or
+      proof inferences keep their intermediate states even within one frame.
+      One atomic operation touching several items counts once only when the source
+      treats it that way; children pushed one at a time stay separate.
+      Require `phases` for source groups. Check both against the pages and this one
       walkthrough's steps and `subgoal` groups.
       A concept mention, correct total or different example cannot replace that example.
       A theorem keeps its geometric construction; a law keeps its labelled circuit

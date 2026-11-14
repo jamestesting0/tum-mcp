@@ -379,7 +379,7 @@
     {
       "id": "representation.shape_fits",
       "dimension": "representation",
-      "rule": "a reusable procedure has explicit control flow in labelled steps, pseudocode or a flowchart; its concrete run is a separate trace with its state. Parallel cases use tables or lists, two-input rules matrices, physical or spatial ideas drawn figures, symbols formulas with each symbol explained, structures diagrams or trees, a logical argument its premises and conclusion on separate lines or as a formula, and the members of a list a list.",
+      "rule": "a reusable procedure has explicit control flow in labelled steps, pseudocode or a flowchart; its concrete run is a separate trace with its state. Parallel cases use tables or lists, two-input rules matrices, physical or spatial ideas drawn figures, symbols formulas with each symbol explained, structures diagrams or trees, a logical argument its premises and conclusion on separate lines or as a formula, and the members of a list a list. When each item's working depends on its position, one walkthrough works each item on the drawing: mark it, show its displacement or neighbours, write its value there and keep the running result. Tile distances, pixel updates and junction currents need that working. A list of item results beside a static picture does not teach it. Non-spatial records, such as rows of a price list, stay a table.",
       "pass": "A two-input rule is a decision matrix.",
       "fail": "Parallel cases, or four capabilities, are written as one long sentence.",
       "profiles": [
@@ -389,7 +389,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 3
+      "version": 4
     },
     {
       "id": "representation.shown_not_described",

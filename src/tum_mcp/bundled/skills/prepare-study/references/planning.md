@@ -100,15 +100,21 @@ For each concept taught through a selected source demonstration, the plan names 
 `origin` (`source` or `constructed`), `source` and `pages`, what it `shows`, its
 `endpoint` and the `block` that teaches it; a constructed example says `why`. Use `shows`
 to name the inputs, representation and decisive working or test, not only the concept.
-When the cited pages show more than one state, record `states`, counted while reading
-them. This includes a growing proof tree, a derivation, simulation ticks, a per-item
-calculation and a staged construction. Record `phases` when the source groups the run,
-such as depth limits, elimination passes or simulation rounds. The plan checker fails
-a missing count and names the count it sees. It verifies counts and phase names against
-the pages. A source example taught as a walkthrough needs `states` so code can check its
-steps. The walkthrough keeps at least those states and uses `subgoal` groups for those
-phases. A source showing only a finished picture or a constructed example needs no
-source state count. More steps are fine.
+For a source process, record `states` while reading its pages. Count its initial state
+and the state after each distinct operation the pages show or imply between consecutive
+frames. Count operations, not slide frames. A frame may contain a removal and separate
+insertions, two algebraic rewrites, two simulation events or two proof inferences.
+Keep their intermediate states. One atomic operation touching several items counts once
+only when the source treats it that way. Expanding a node can push all its children at
+once; if the source pushes them one at a time, count them separately.
+This also applies to per-item calculations and staged constructions. Record `phases`
+when the source groups the run, such as depth limits, elimination passes or simulation
+rounds. The plan checker verifies operations and phase names against the pages. It fails
+a missing or low count and names the operations that establish the count.
+A source example taught as a walkthrough needs `states` so code can check its steps.
+The walkthrough keeps at least those states and uses `subgoal` groups for those phases.
+A source showing only a finished picture or a constructed example needs no source state
+count. More steps are fine.
 A geometric proof keeps its construction; a physical law keeps its free-body diagram;
 a legal distinction keeps the contrasting cases and their decisive facts.
 Mentioning the idea in `instance` does not select its demonstration.
