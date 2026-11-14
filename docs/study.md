@@ -180,8 +180,10 @@ skill audits objective coverage, technical accuracy and distractors, and writes 
 short, direct sentences that keep necessary terms and conditions.
 
 Selected source examples may record a `script` (one line per state on the cited pages;
-older plans may give only a `states` count), `phases` (their names) and `input` (the graph
-or grid the source draws for the process). Report and lint flag a walkthrough with fewer
+older plans may give only a `states` count), `phases` (their names) and `input` (the source
+graph or grid behind a derived walkthrough picture, such as the map behind a search tree)
+and `marks` (outcome states the source shows, `cutoff` or `discarded`, each of which the
+walkthrough must mark at least once). Report and lint flag a walkthrough with fewer
 steps than script lines, one missing its `subgoal` groups, and a unit that never draws
 the planned input. Keep the whole process in one walkthrough; extra steps are allowed.
 Summary-only sources and constructed examples need no script. Graph nodes and grid

@@ -90,11 +90,18 @@ class Example(Frozen):
         "the initial state, then the state after each distinct operation the cited pages show "
         "or imply. Its length is the state count.",
     )
+    marks: tuple[Literal["cutoff", "discarded"], ...] = Field(
+        default=(),
+        exclude_if=lambda value: not value,
+        description="Outcome states the source shows in this run: `cutoff` for an item stopped "
+        "at a limit, `discarded` for one rejected or pruned. The walkthrough marks each one.",
+    )
     input: Annotated[GraphInput | GridInput, Field(discriminator="kind")] | None = Field(
         default=None,
         exclude_if=lambda value: value is None,
-        description="The graph or grid the source draws as the process's input, when it draws "
-        "one. The unit must draw it too, not only describe it or draw a structure derived from it.",
+        description="The graph or grid the source draws as the process's input when the "
+        "walkthrough draws something derived from it, such as the map behind a search tree. "
+        "The unit must draw it too. A structure the walkthrough draws in place needs no input.",
     )
     phases: tuple[Label, ...] = Field(
         default=(),
@@ -402,6 +409,23 @@ def example_state_flags(plan: Plan, value: dict) -> list[dict[str, JsonValue]]:
                     f"steps for {count} planned source states. Give each script line its own "
                     "step in this one walkthrough; never drop, merge or split steps "
                     "to shorten it.",
+                }
+            )
+        used = {mark for step in steps for mark in ("cutoff", "discarded") if step.get(mark)}
+        used |= {
+            mark.get("mark")
+            for step in steps
+            for mark in step.get("grid_marks") or ()
+            if isinstance(mark, dict)
+        }
+        if unmarked := [mark for mark in example.marks if mark not in used]:
+            flags.append(
+                {
+                    "item": item,
+                    "flag": "source_marks_missing",
+                    "detail": f"{concept.name}: the source shows {', '.join(unmarked)} items "
+                    f"in {example.block}, but no step marks one. Mark the outcome on the item "
+                    "in the step whose action gives it; it may stay current as well.",
                 }
             )
         groups = {_normalized(step["subgoal"]) for step in steps if step.get("subgoal")}
@@ -870,9 +894,12 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "plan when the script is missing, omits or merges a state the pages show, or "
             "invents one; name the pages and the missing state. A plan with only `states` "
             "is checked as a count. Require `phases` when the source groups the run. "
-            "Verify phase names against the pages. When the source draws the graph or grid "
-            "the process runs on, require `input` with its edge count and direction or its "
-            "grid count, checked against the drawing. A source showing "
+            "Verify phase names against the pages. When the walkthrough draws a structure "
+            "derived from a graph or grid the source draws, such as a search tree over a map, "
+            "require `input` for that source object, with its edge count and direction or its "
+            "grid count. Reject an `input` that repeats what the walkthrough already draws in "
+            "place. Require `marks` for outcome states the pages show, such as items cut off "
+            "at a limit or discarded as repeats. A source showing "
             "one finished state or a constructed example needs no script. "
             "The script is a floor, not a cap. "
             "Finish incomplete source working with its original inputs when the result matters. "

@@ -5,8 +5,9 @@
 - Planned source examples list their states as a `script`, one line per state with its page;
   the plan check compares it with the pages and the walkthrough keeps a step per line.
   A plain `states` count is still accepted.
-- Planned examples can record the graph or grid the source draws as their `input`; report and
-  lint flag a unit that never draws it.
+- Planned examples can record the source graph or grid behind a derived walkthrough picture as
+  their `input`, and the outcome states the source shows as `marks`; report and lint flag a unit
+  that never draws the input or never marks an outcome on the picture.
 - A walkthrough node or grid cell marked current and also cut off or discarded now shows its
   outcome and legend entry; the overlap is no longer rejected.
 - Audio notes send only reviewed narration text to an authorized cloud speech service; generated
