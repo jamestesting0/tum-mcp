@@ -173,6 +173,89 @@ def test_source_state_count_is_a_positive_whole_number(states: int | float) -> N
 
 
 @pytest.mark.parametrize(
+    ("name", "script"),
+    [
+        (
+            "Repeated states in tree and graph search",
+            [
+                "p.15: the root Arad",
+                "p.16: expanding Arad adds Sibiu, Timisoara and Zerind",
+                "p.17: tree search keeps the second Arad under Sibiu",
+                "p.18: graph search discards the second Arad as reached",
+            ],
+        ),
+        (
+            "Reducing a resistor network",
+            [
+                "p.30: the network with all six resistors",
+                "p.31: R2 and R3 in series become R23",
+                "p.31: R23 and R4 in parallel become R234",
+            ],
+        ),
+    ],
+)
+def test_a_script_sets_one_step_per_source_state(name: str, script: list[str]) -> None:
+    current = plan(name=name, example=UCS | {"script": script}, blocks=["ucs-romania"])
+    assert current.concepts[0].example is not None
+    assert current.concepts[0].example.state_count == len(script)
+    block = {"key": "ucs-romania", "kind": "walkthrough", "steps": [{}] * len(script)}
+    assert example_state_flags(current, {"blocks": [block]}) == []
+    short = block | {"steps": [{}] * (len(script) - 1)}
+    flags = example_state_flags(current, {"blocks": [short]})
+    assert [flag["flag"] for flag in flags] == ["source_states_missing"]
+    assert f"for {len(script)} planned source states" in str(flags[0]["detail"])
+
+
+def test_a_script_and_a_count_must_agree() -> None:
+    assert plan(example=UCS | {"script": ["p.52: start"], "states": 1})
+    with pytest.raises(ValidationError, match="give the script alone"):
+        plan(example=UCS | {"script": ["p.52: start", "p.53: pop S"], "states": 3})
+
+
+ROADS = {"kind": "graph", "edges": 3, "directed": False}
+
+
+def diagram(edges: int, *, directed: bool = False, layout: str = "lattice") -> dict:
+    pairs = [{"start": f"n{i}", "end": f"n{i + 1}", "directed": directed} for i in range(edges)]
+    return {"kind": "diagram", "layout": layout, "nodes": [], "edges": pairs}
+
+
+@pytest.mark.parametrize(
+    ("planned", "drawn", "missing"),
+    [
+        (ROADS, {"key": "map", **diagram(3)}, False),
+        (ROADS, {"key": "map", "kind": "example", "blocks": [diagram(4)]}, False),
+        (ROADS, {"key": "map", **diagram(2)}, True),
+        (ROADS, {"key": "map", **diagram(3, directed=True)}, True),
+        (ROADS, {"key": "map", **diagram(5, directed=True, layout="tree")}, True),
+        (ROADS, {"key": "map", "kind": "table", "rows": [["S", "R", "80"]] * 3}, True),
+        ({"kind": "grid", "grids": 2}, {"key": "map", "kind": "grid", "grids": [{}, {}]}, False),
+        ({"kind": "grid", "grids": 2}, {"key": "map", "kind": "grid", "grids": [{}]}, True),
+    ],
+)
+def test_a_planned_input_must_be_drawn_not_described_or_derived(
+    planned: dict, drawn: dict, missing: bool
+) -> None:
+    current = plan(example=UCS | {"input": planned}, blocks=["ucs-romania"])
+    walk = {
+        "key": "ucs-romania",
+        "kind": "walkthrough",
+        "steps": [{}],
+        "stage": diagram(1, directed=True, layout="tree"),
+    }
+    flags = example_state_flags(current, {"blocks": [walk, drawn]})
+    assert [flag["flag"] for flag in flags if flag["flag"] == "source_input_missing"] == (
+        ["source_input_missing"] if missing else []
+    )
+
+
+def test_a_walkthrough_stage_can_draw_its_own_input() -> None:
+    current = plan(example=UCS | {"input": ROADS, "states": 1}, blocks=["ucs-romania"])
+    walk = {"key": "ucs-romania", "kind": "walkthrough", "steps": [{}], "stage": diagram(3)}
+    assert example_state_flags(current, {"blocks": [walk]}) == []
+
+
+@pytest.mark.parametrize(
     ("change", "message"),
     [
         ({"pages": None}, "names its source and pages"),

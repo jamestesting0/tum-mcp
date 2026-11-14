@@ -878,13 +878,6 @@ def check_grid_refs(
         check_cells(named[point.grid], (point.cell,), "marks")
 
 
-def check_grid_marks(marks: tuple[GridMark, ...]) -> None:
-    active = {(mark.grid, mark.cell) for mark in marks if mark.mark == "active"}
-    discarded = {(mark.grid, mark.cell) for mark in marks if mark.mark == "discarded"}
-    if active & discarded:
-        raise ValueError("A grid cell cannot be active and discarded in the same step.")
-
-
 class GridBlock(Sourced):
     """Labelled grids side by side, where the position of a value carries its meaning."""
 
@@ -899,7 +892,6 @@ class GridBlock(Sourced):
         if len({grid.key for grid in self.grids}) != len(self.grids):
             raise ValueError("Each grid needs its own key.")
         check_grid_refs(self.grids, self.marks, self.arrows)
-        check_grid_marks(self.marks)
         return self
 
 
@@ -1136,8 +1128,6 @@ def check_marks(stage: Stage | None, step: WalkStep) -> None:
             keys = {item.key for item in stage.nodes}
             pairs = {(edge.start, edge.end) for edge in stage.edges}
             pairs |= {(edge.end, edge.start) for edge in stage.edges if not edge.directed}
-            if set(step.active) & set(step.discarded):
-                raise ValueError("A node cannot be active and discarded in the same step.")
             marked = set(step.active + step.frontier + step.visited + step.cutoff + step.discarded)
             if not marked | set(step.node_values) | set(step.visible_nodes or ()) <= keys:
                 raise ValueError(f"Step '{step.action}' marks a node the stage does not draw.")
@@ -1176,7 +1166,6 @@ def check_marks(stage: Stage | None, step: WalkStep) -> None:
                 raise ValueError(f"Step '{step.action}' shows a layer the figure does not draw.")
         case GridStage():
             check_grid_refs(stage.grids, (*step.grid_marks, *step.grid_values), step.grid_arrows)
-            check_grid_marks(step.grid_marks)
         case None:
             pass
         case unreachable:

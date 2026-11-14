@@ -457,8 +457,8 @@ def test_cutoff_and_discarded_nodes_are_reached_and_legend_respects_state_preced
                       active, frontier, cutoff, visited, discarded, edges:[], state:[]});
                   const block = {stage:{kind:'diagram', layout:'tree',
                     description:'Tree', nodes, edges},
-                    steps:[step(['a'], ['a','b','e'], ['a','b','c','e'],
-                                ['a','b','c','d','e'], ['e']),
+                    steps:[step(['a','c','e'], ['b','c','e'], ['c'],
+                                ['b','c','d','e'], ['e']),
                            step(['a'], [], [], ['d'], [])]};
                   document.querySelector('main').replaceChildren(
                     renderWalkthrough(block, () => null));
