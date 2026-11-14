@@ -508,8 +508,7 @@
         {
           "at": 0.461,
           "target": {
-            "css": "main .walk-dot",
-            "nth": 1
+            "css": "main .walk [aria-label=\"Next step\"]"
           },
           "click": true,
           "label": "Step by step",

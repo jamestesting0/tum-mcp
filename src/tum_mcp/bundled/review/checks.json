@@ -85,17 +85,17 @@
       "dimension": "correctness",
       "rule": "a decision step's cases never overlap, and every listed past instance, example and part falls under exactly one of them.",
       "pass": "Case 'cycle in the graph' and case 'tree' cannot both hold at a step.",
-      "fail": "Cases 'cost ≥ 0' and 'cost > 0' both match a zero-cost edge.",
+      "fail": "Cases 'cost ≥ 0' and 'cost > 0' both match a positive-cost edge.",
       "profiles": [
         "exam-pattern"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "clarity.one_reading",
       "dimension": "clarity",
-      "rule": "short, direct sentences; one idea per paragraph; every sentence reads once, without mapping 'these', 'respectively' or 'the former' back onto earlier clauses.",
+      "rule": "short, direct sentences; one idea per paragraph; every sentence reads once, without mapping 'these', 'respectively' or 'the former' back onto earlier clauses. State labels distinguish running or provisional values from returned results: a running balance or current hypothesis is not final while work remains. A callout's kind agrees with its content. Pitfall describes a wrong move and its correction, not a correct state or an ordinary limit.",
       "pass": "'A* adds g and h. The smallest sum goes first.'",
       "fail": "'These judge resemblance and outcome, respectively.' sends the reader back to sort two earlier clauses.",
       "profiles": [
@@ -105,7 +105,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 2
+      "version": 3
     },
     {
       "id": "clarity.terms_defined",
@@ -267,16 +267,16 @@
     {
       "id": "cognitive_load.one_new_idea",
       "dimension": "cognitive_load",
-      "rule": "one new idea per section or step.",
+      "rule": "Each section or step has one coherent teaching purpose. New terms, symbols and cases are introduced in an order the learner can follow without guessing missing steps.",
       "pass": "One section introduces admissibility only.",
-      "fail": "One section introduces admissibility, consistency and dominance together.",
+      "fail": "A section combines unrelated new concepts before defining the terms needed to distinguish them.",
       "profiles": [
         "study-unit",
         "exercise",
         "exam-pattern"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "cognitive_load.first_encounter",
@@ -309,7 +309,7 @@
     {
       "id": "cognitive_load.short_prose",
       "dimension": "cognitive_load",
-      "rule": "no paragraph longer than two sentences or 45 words; a procedure uses complete labelled steps, scoped pseudocode or a flowchart, and a worked example has one computed value per step. Compact formatting must preserve loop scope, conditions and exits.",
+      "rule": "no paragraph longer than two sentences or 45 words; a procedure uses complete labelled steps, scoped pseudocode or a flowchart, and a worked example has one meaningful operation per step, preserving its resulting state. Compact formatting must preserve loop scope, conditions and exits.",
       "pass": "Two short sentences per paragraph.",
       "fail": "A paragraph of four sentences and 80 words.",
       "profiles": [
@@ -318,7 +318,7 @@
         "exam-pattern"
       ],
       "scope": "item",
-      "version": 2,
+      "version": 3,
       "decided_by": "dense_paragraph"
     },
     {
@@ -379,7 +379,7 @@
     {
       "id": "representation.shape_fits",
       "dimension": "representation",
-      "rule": "a reusable procedure has explicit control flow in labelled steps, pseudocode or a flowchart; its concrete run is a separate trace with its state. Parallel cases use tables or lists, two-input rules matrices, physical or spatial ideas drawn figures, symbols formulas with each symbol explained, structures diagrams or trees, a logical argument its premises and conclusion on separate lines or as a formula, and the members of a list a list.",
+      "rule": "a reusable procedure has explicit control flow in labelled steps, pseudocode or a flowchart; its concrete run is a separate trace with its state. Parallel cases use tables or lists, two-input rules matrices, physical or spatial ideas drawn figures, symbols formulas with each symbol explained, structures diagrams or trees, a logical argument its premises and conclusion on separate lines or as a formula, and the members of a list a list. When each item's working depends on its position, one walkthrough works each item on the drawing: mark it, show its displacement or neighbours, write its value there and keep the running result. Tile distances, pixel updates and junction currents need that working. A list of item results beside a static picture does not teach it. Non-spatial records, such as rows of a price list, stay a table.",
       "pass": "A two-input rule is a decision matrix.",
       "fail": "Parallel cases, or four capabilities, are written as one long sentence.",
       "profiles": [
@@ -389,7 +389,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 3
+      "version": 4
     },
     {
       "id": "representation.shown_not_described",
@@ -585,8 +585,8 @@
     {
       "id": "intuition.reasons",
       "dimension": "intuition",
-      "rule": "every step of a procedure says why it is allowed.",
-      "pass": "Each walkthrough step says why: 'C has the smallest f, so it goes next.'",
+      "rule": "every step connects its own facts to the rule that permits it. A computed value shows the original inputs, conventions, substitutions and arithmetic in its why or visible working. A qualitative decision shows its premises and inference. A result or a restated rule alone is incomplete reasoning. Shared wording is valid when the step's own evidence is already shown; do not force arithmetic on a qualitative argument.",
+      "pass": "Each step's facts and working show why its rule applies and how the result follows.",
       "fail": "Steps say what happens but never why it is allowed.",
       "profiles": [
         "exam-mock-question",
@@ -596,7 +596,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 1,
+      "version": 3,
       "default_fail": true,
       "teaching": true
     },
@@ -749,7 +749,7 @@
     {
       "id": "redundancy.said_once",
       "dimension": "redundancy",
-      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A workflow expansion adds usable information beyond its visible step or case; copying or paraphrasing that line adds nothing, and a complete one-line verbal rule needs no expansion. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat. Working the same mechanism again on another object, or replaying a worked run as a practice answer, is a repeat.",
+      "rule": "no fact, rule or example is explained in full twice, and no passage repeats another in the same words. A workflow expansion adds usable information beyond its visible step or case; copying or paraphrasing that line adds nothing, and a complete one-line verbal rule needs no expansion. A variable meaning shown on demand is the one explanation for its context; repeating it in the text beside the formula is the repeat. For each worked example beyond the first on one mechanism, show what it adds that the first cannot; if nothing, it is a repeat. One continuous process stays in one walkthrough: group its phases with subgoal rather than repeat its picture and restart step numbering across consecutive widgets. A confirmed split run, proof, simulation, derivation or case history must be repaired, not kept as polish. Separate blocks are valid for genuinely different inputs or decisions, including before/after contrasts. Replaying a worked run as a practice answer is a repeat.",
       "pass": "The rule is explained once and linked elsewhere.",
       "fail": "The same derivation appears in full in two sections.",
       "profiles": [
@@ -759,7 +759,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 3
+      "version": 5
     },
     {
       "id": "redundancy.text_restates_picture",
@@ -915,14 +915,14 @@
     {
       "id": "redundancy.exam_compresses",
       "dimension": "redundancy",
-      "rule": "cheatsheet lines and concept details compress Study into one line and a link; they do not copy it.",
+      "rule": "Cheatsheet lines compress Study. Expanded details give the compact conditions, meanings, steps or reference objects needed for revision and link the full lesson. Do not copy a full Study explanation.",
       "pass": "A cheatsheet line compresses Study and links it.",
       "fail": "A cheatsheet entry copies the Study passage.",
       "profiles": [
         "course"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "redundancy.distinct_pool",
@@ -939,38 +939,38 @@
     {
       "id": "integration.prerequisite_links",
       "dimension": "integration",
-      "rule": "every exercise names the unit and block it needs, and that block teaches what the steps use.",
+      "rule": "Each exercise links the prepared unit and passage that teaches its prerequisite when one exists. Otherwise retain its explanation and recorded prerequisite gap.",
       "pass": "The exercise names the block that teaches what it uses.",
       "fail": "The exercise links a unit whose blocks do not teach the needed step.",
       "profiles": [
         "course"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "integration.exam_links",
       "dimension": "integration",
-      "rule": "Exam concepts cite the units that teach them.",
-      "pass": "Exam concepts cite the units that teach them.",
-      "fail": "An exam concept with no Study link.",
+      "rule": "Exam concepts link the prepared Study passages that teach them, when those passages exist. Otherwise record why no link fits; do not add unrequested Study content.",
+      "pass": "Each Exam concept links its matching prepared Study passage or records why no link fits.",
+      "fail": "A matching prepared Study passage exists but the Exam concept does not link it.",
       "profiles": [
         "course"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "integration.entries_apply",
       "dimension": "integration",
-      "rule": "cheatsheet entries link the Study units that teach them and the patterns that use them, and a pattern's workflow appears only in the entry that names it as its method.",
+      "rule": "Cheatsheet entries link matching prepared Study passages and the patterns that use them. Record a reason when no link fits. A pattern's workflow appears only in the entry that names it as its method.",
       "pass": "Cheatsheet entries link their units and patterns.",
       "fail": "A workflow appears in an entry that does not name it as its method.",
       "profiles": [
         "course"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "integration.lecture_links",
@@ -1122,9 +1122,9 @@
     {
       "id": "representation.process_shown",
       "dimension": "representation",
-      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it.",
-      "pass": "The A* run is a walkthrough: each step shows the frontier and why the next node is chosen.",
-      "fail": "A finished table of frontiers, or 'Manhattan distance is 18' with no counting shown.",
+      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. Each step shows the state after one operation, at the cited source's granularity or finer, never coarser. Compare the actions and intermediate states with the source pages: separate pops, algebraic transformations, simulation ticks, proof inferences and transaction postings each keep their own state. One atomic action affecting several items stays one step, such as applying one matrix row operation. Preserve source states between selection and individual child insertions. Keep the whole process in one walkthrough; never drop or merge steps to shorten it. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, grid cells and moves, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it. Values the student compares across steps remain attached to their nodes, cells or marks while needed, rather than surviving only in changing prose. Do not retain obsolete values as current or add quantities the reasoning does not use. The legend or direct labels explain every state actually drawn, including neutral or not-yet-reached states when styled differently.",
+      "pass": "Each pop in a search or transformation in a derivation shows its resulting state, including every state on the cited pages.",
+      "fail": "'Remove one item from the stack, then the next' or 'Subtract three, then divide by two' shows only the second result and hides an intermediate state. A finished table or number without its working also fails.",
       "profiles": [
         "exam-mock-question",
         "exam-pattern",
@@ -1132,7 +1132,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 2,
+      "version": 5,
       "default_fail": true,
       "teaching": true,
       "replaces": [
@@ -1221,26 +1221,26 @@
       "id": "coverage.objectives_grounded",
       "dimension": "coverage",
       "rule": "every objective names an outcome the source states, or a substantial idea the source develops and the item teaches and practises. An illustrative aside is not a separate learning goal: a reflex example supports rational action, not a separate objective about acting quickly. For each objective, cite the source's outcome or developed explanation with its locator, and name its teaching and practice. A vague claim that the slide develops it is not evidence.",
-      "pass": "Each objective matches a stated outcome and has a card or question.",
+      "pass": "Each objective matches a stated outcome and has a practice question.",
       "fail": "An objective rests on a one-line aside of the slides.",
       "profiles": [
         "study-unit"
       ],
       "scope": "item",
-      "version": 2,
+      "version": 3,
       "default_fail": true
     },
     {
       "id": "coverage.examples_selected",
       "dimension": "coverage",
-      "rule": "every critical worked example of the cited lecture pages is taught as the lecture's own example: the run of a procedure or calculation the student must perform, a decision, branch or failure the main run cannot show, or a case later material builds on. Compare the source digest's examples and the pages with the plan's chosen examples. Name a missing critical example with its pages, an invented case that replaces a lecture example, and a second example that shows nothing new.",
+      "rule": "every critical source demonstration is taught as the source's own example: a run the student must perform, a decision or failure the main run cannot show, or reasoning that explains validity, limits or costs. Compare the source digest and pages with every planned example and its actual example_block, regardless of concept kind. Compare the rendered block's representation with the source picture, not just its text or result. For each selected example, explain whether its inputs and conventions, natural representation and how to read the picture, decisive tests and working, and endpoint or comparison survive. Explain what regions, boundaries, directions or legend marks mean where the reasoning uses them. Name the concept and planned block in evidence. A concept mention, one correct total or a different worked case cannot satisfy the selected example. A theorem keeps its geometric construction; a law keeps its labelled circuit and working; a contrasting legal case keeps its decisive facts and disposition. Judge the teaching, not a template; a planned source state count is only a floor. Useful continuations beyond the lecture are allowed; covering less is not. Name any missing critical example with its pages, substituted example, or repeat that adds nothing.",
       "pass": "Uniform-cost search is taught on the lecture's Romania subgraph, where B is improved from 310 to 278.",
       "fail": "The lecture's A* Romania run is replaced by a four-node invented graph.",
       "profiles": [
         "study-unit"
       ],
       "scope": "item",
-      "version": 1,
+      "version": 4,
       "default_fail": true
     },
     {

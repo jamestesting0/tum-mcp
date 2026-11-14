@@ -55,17 +55,17 @@
     if (root.closest('#exercise-question')) return `statement:${index}`;
     return `block:${index}`;
   };
-  const roots = [...document.querySelectorAll('main svg.graph, main .uml-region, main .plot-drawing > svg, main figure.figure > svg, main figure.figure > img, main figure.figure > .figure-frame > img, main .table-region')]
+  const roots = [...document.querySelectorAll('main svg.graph, main svg.grid-figure, main .uml-region, main .plot-drawing > svg, main figure.figure > svg, main figure.figure > img, main figure.figure > .figure-frame > img, main .table-region')]
     .filter(root => root.getClientRects().length && !root.closest('details:not([open])'));
   for (const root of roots) {
-    const kind = root.matches('.uml-region') ? 'uml' : root.matches('svg.graph') ? 'diagram' : root.closest('.plot') ? 'plot' : root.matches('.table-region') ? 'table' : 'figure';
+    const kind = root.matches('.uml-region') ? 'uml' : root.matches('svg.graph') ? 'diagram' : root.matches('svg.grid-figure') ? 'grid' : root.closest('.plot') ? 'plot' : root.matches('.table-region') ? 'table' : 'figure';
     const id = idOf(root), container = root.closest('[data-visual-id], .reading-material, [data-block-index]') || root.parentElement;
     container.dataset.visualShot = id;
     const heading = container.querySelector('h2, h3, legend') || root.closest('.step-body')?.querySelector('h2');
     const entry = { id, kind, title: heading ? say(heading) : '', findings: [], facts: {} };
     const add = (code, detail) => { if (!entry.findings.some(item => item.code === code && item.detail === detail)) entry.findings.push({ code, detail }); };
     results.push(entry);
-    const region = kind === 'uml' ? root : root.closest('.graph-region, .table-region, .plot-drawing, figure') || root;
+    const region = kind === 'uml' ? root : root.closest('.graph-region, .grid-region, .table-region, .plot-drawing, figure') || root;
     const bounds = rect(root);
     Object.assign(entry.facts, { width: Math.round(bounds.width), height: Math.round(bounds.height), scrolls: region.scrollWidth > region.clientWidth + 2 });
     if (bounds.height > 1.5 * innerHeight) add('tall_visual', `${Math.round(bounds.height)} px tall, more than one and a half screens`);
@@ -108,7 +108,7 @@
       if (block && (block.notes || []).length !== svg.querySelectorAll('circle.plot-mark').length) add('fidelity', 'a marked point is missing');
       continue;
     }
-    if (kind === 'figure') continue;
+    if (kind === 'figure' || kind === 'grid') continue;
     const nodes = kind === 'diagram'
       ? [...svg.querySelectorAll('g[data-node-key]')].map(group => ({ key: group.dataset.nodeKey, rect: rect(group.firstElementChild) }))
       : [...svg.querySelectorAll('g[data-node]')].map(group => ({ key: group.dataset.node, rect: rect(group.firstElementChild) }));

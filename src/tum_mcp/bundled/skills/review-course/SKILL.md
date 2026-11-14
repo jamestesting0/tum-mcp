@@ -9,8 +9,10 @@ When disabled, leave retained graph files unused and follow the ordinary workflo
 
 Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. Content lives in
 one file per item under `app/` (`app/study/units/`, `app/exercises/<set>/`, `app/exam/`,
-`app/lectures/`). `tum-mcp review` keeps the loop's state, packets and verdicts in
-`.tum-mcp/`; you never write review files by hand.
+`app/lectures/`). `tum-mcp review` owns the loop state, packets and recorded verdicts
+under `.tum-mcp/`; do not edit those generated records by hand. Prepare checker answer
+files for `review record`. Save separate media reviews as described in
+[media](references/media.md).
 
 A judge favours its own work. Checkers are fresh sessions that did not write the content
 and do not share this conversation: host subagents that start empty, otherwise
@@ -42,13 +44,19 @@ scores.
    When review is newly approved after a draft-only handoff, register that batch with
    `study task start PROJECT --batch ID --review-rounds N` using the authorized budget.
 2. **Each round.**
-   1. `tum-mcp review next PROJECT` writes one packet per profile under
+   1. `tum-mcp review next PROJECT` writes bounded packets per profile under
       `.tum-mcp/review/packets/`. Each holds its checks with a pass and a fail example,
       the items with their passages and block ids, the report flags, the answer key's
       result, the digests of the cited sources, the findings to verify and the findings
-      already rejected with their reasons. For items that need visual scores,
-      `visual_sheets` links the available phone and desktop captures of the current
+      already rejected with their reasons. An oversized item is split into batches of
+      checks, visuals, fixes and rulings. Each retains the full passages, outline, sources
+      and captures; every batch must be recorded before its scores are current.
+      The weakness is partial review presented as complete. Splitting a packet changes
+      its workload, not its context or the checks required for a pass.
+      For items that need visual scores,
+      `visual_sheets` links the available captures of the current
       draft. Use those images when scoring the six visual criteria.
+      Desktop is the check; use `--phone` only when the student asks.
    2. Give each packet to a fresh checker as its whole brief. When the host supports
       concurrent checker sessions, start independent packets together and leave the draft
       unchanged until all answers are recorded. The checker answers in the packet's
@@ -60,13 +68,37 @@ scores.
       The checker uses the packet's
       `answer` format: a verdict (`pass`, `fail` or `uncertain`) for every check with the
       blocks it read, and for each fail the quoted passage, why it fails and the fix.
+      Uncertain needs a `missing` field naming the specific artifact or source page
+      that cannot be opened and why. Incomplete sampling is not unavailable evidence.
+      A sampled check whose likeliest failures pass is a pass.
+      The weakness is confusing a review limit with a content defect. Name unavailable
+      evidence precisely; do not infer failure from silence or pass an unread check.
       Checkers look at cited source pages for logic checks as well as the digest.
       Reuse matching page images under `.tum-mcp/cache/pages/<sha256>/` in read-only
       sessions. The author can render a missing cited page with
       `tum-mcp study text PROJECT --key K --pages N --images`. Every report flag marked
       `needs_ruling` gets a ruling in `flags`: a finding about it, or `not_applicable` with why; the gate
       holds until each has one. `intuition.concepts_instanced` is answered concept by
-      concept from the packet's `concepts`. A finding is resolved only with the rewritten
+      concept from the packet's `concepts`. For `coverage.examples_selected`, compare
+      each planned `example` with its `example_block`, source pages and rendering,
+      regardless of the concept's kind. Compare the block's representation with the
+      source picture, not just its text or result. Name the concept and planned block
+      in evidence. Judge whether the actual inputs, picture and how to read it, decisive
+      tests and working, and endpoint or comparison survive. For a source process,
+      `states` counts its initial state and the state after each distinct operation the
+      pages show or imply between consecutive frames. Count operations, not slide frames.
+      A removal and separate insertions, two algebraic rewrites, simulation events or
+      proof inferences keep their intermediate states even within one frame.
+      One atomic operation touching several items counts once only when the source
+      treats it that way; children pushed one at a time stay separate.
+      Require `phases` for source groups. Check both against the pages and this one
+      walkthrough's steps and `subgoal` groups.
+      A concept mention, correct total or different example cannot replace that example.
+      A theorem keeps its geometric construction; a law keeps its labelled circuit
+      and working; a contrasting legal case keeps its decisive facts and disposition.
+      Inspect intermediate states when those carry the reasoning.
+      A state count is a floor, not proof of complete teaching or a template.
+      A finding is resolved only with the rewritten
       passage quoted, and only when that passage reads well on its own.
       Also inspect concepts added after planning; adding a glossary paragraph to justify
       new flashcards does not teach those concepts. For objectives, cite the actual
@@ -79,7 +111,9 @@ scores.
       Edit the item files, then `tum-mcp review fix PROJECT --item ITEM --finding F`
       (refused while the quoted passage is unchanged; name `--block` when you fixed it
       elsewhere). A finding that is wrong: `review reject` with the reason the content is
-      right; the next checker sees it. A score-2 finding the content cannot fix (the
+      right; the next checker sees it. A retry with the same owner, location and quote
+      keeps the existing open or fixed finding even when its wording changes.
+      A score-2 finding the content cannot fix (the
       source gives no smaller example): `review keep` with the reason.
    5. Check changed claims and citations against the named source pages; matching source
       hashes do not establish that a page supports a new claim. Lint changed items with
@@ -99,7 +133,19 @@ scores.
       Repair can also finish after the round has closed: it updates the current
       scorecard without opening another round. New corroborating sources are permitted
       while the original source revisions, request and required demands stay fixed.
-   6. `tum-mcp review close-round PROJECT` computes the gate and writes
+   6. Finish every original finding and draft repair before running
+      `tum-mcp review verify PROJECT` in the open round. Give its packets to fresh
+      checkers and record every batch. Read every changed block against its cited source
+      pages and the reference selection. A finding demanding another worked example
+      must name the missing understanding or decision the existing examples cannot show;
+      otherwise it is not a defect. The weakness is repetition added without a teaching
+      purpose. A distinct source demonstration or needed boundary case can still be essential.
+      Repair only findings this pass opened, then run `review verify PROJECT` again.
+      This second pass asks all stale checks, visuals, fixes and rulings only for items
+      changed since the first pass. Record its fresh answers, then close. There are at
+      most two verify passes per round. Report repairs after the second as unverified;
+      another check needs another round requested by the student.
+   7. `tum-mcp review close-round PROJECT` computes the gate and writes
       `.tum-mcp/loop/scorecard.md`. Use `review status` to check progress while a
       round is open. If a packet cannot be recorded, finish the available repairs
       before deliberately closing with `--incomplete` and report the missing review.
@@ -120,6 +166,33 @@ pass while the course stays open, and publishing waits for both. A spent budget 
 made after their last check says so; `review extend PROJECT --rounds 1` verifies them.
 Missing question context holds the gate even if a checker waives its flag. Reframe the
 question around a useful object or case; a decorative picture does not fix it.
+
+Repair gotchas:
+- The weakness is a detached repair. Repair inside the section the finding sits in;
+  a course dependency may instead need a linked repair in its earlier home.
+- The weakness is a representation chosen by habit. Show the object and the changes
+  that explain the idea. Keep tables for comparisons and lookup, and a static picture
+  when its structure is the point; do not force every subject into a walkthrough.
+- The weakness is one continuous process split across widgets. Consecutive walkthroughs
+  that repeat a stage need a ruling on the actual inputs and decisions. A confirmed split
+  run, proof, derivation, simulation or case history is a must-fix, not kept polish.
+  Use one walkthrough with phases as `subgoal`. Separate blocks can teach different inputs
+  or decisions; a deliberate before/after comparison is valid. For
+  `representation.process_shown`, compare each step with the source pages. Each step
+  shows the state after one operation at source granularity or finer, never coarser.
+  Two pops, algebraic transformations, simulation ticks or proof inferences need their
+  intermediate states. One atomic action touching several items stays one step, such
+  as applying one matrix row operation. Preserve source states between selection and
+  individual child insertions.
+  Never drop or merge steps to shorten the run; the app handles its length.
+- The weakness is lost teaching during cleanup. Remove content only when it is wrong
+  or said twice. Preserve each selected example's inputs, representation, decisive
+  working, endpoint and the comparison or result that explains its point through repairs.
+  A useful continuation beyond the lecture is fine; covering less is not. Do not add a
+  comparison the example does not need. Keep distinct examples that teach different decisions.
+- The weakness is fitting the viewport by shrinking the lesson. Never cut teaching to
+  close an unrelated finding or fit an unrequested width. Judge scrolling by legibility
+  at the requested desktop width; preserve the full source example.
 
 ## What each profile reads
 

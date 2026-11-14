@@ -21,6 +21,19 @@ def table() -> dict:
     return copy.deepcopy(WALKS["walkthrough-table"])
 
 
+def test_a_long_process_fits_in_one_walkthrough() -> None:
+    block = graph()
+    steps = [copy.deepcopy(block["steps"][i % len(block["steps"])]) for i in range(120)]
+    for i, step in enumerate(steps):
+        step["subgoal"] = f"Phase {i // 30 + 1}"
+    block["steps"] = steps
+
+    walk = TypeAdapter(Block).validate_python(block)
+
+    assert isinstance(walk, WalkthroughBlock)
+    assert len(walk.steps) == 120
+
+
 def test_run_keyed_answers_check_exact_state_in_each_run() -> None:
     from tum_mcp.course.checks.answers import compare
 
@@ -54,6 +67,19 @@ def test_answer_keys_check_the_values_written_under_nodes() -> None:
     assert "under each node" in check({"s": "f = 393", "t": "f = 447"})[0][0]
 
 
+@pytest.mark.parametrize("mark", ["cutoff", "discarded"])
+def test_answer_keys_compare_node_roles_when_supplied(mark: str) -> None:
+    from tum_mcp.course.checks.answers import compare
+
+    block = {"kind": "walkthrough", "key": "dls", "steps": [{mark: ["b"]}]}
+
+    def key(nodes: list[str]) -> dict:
+        return {"walkthroughs": {"dls": {"primary": [{f"@{mark}": nodes}]}}}
+
+    assert compare(block, key(["b"])) == ([], 1)
+    assert compare(block, key(["c"]))[0]
+
+
 def tree(**change) -> dict:
     nodes = [{"key": key, "label": key.upper()} for key in "abc"]
     edges = [{"start": "a", "end": end, "directed": True} for end in "bc"]
@@ -65,6 +91,26 @@ def tree(**change) -> dict:
         "stage": stage | {"edges": edges} | change,
         "steps": [step, step | {"visible_nodes": None, "node_values": {"b": "h = 1"}}],
     }
+
+
+@pytest.mark.parametrize("mark", ["cutoff", "discarded"])
+def test_node_roles_must_be_drawn_and_visible(mark: str) -> None:
+    value = tree()
+    value["steps"][1][mark] = ["b"]
+    assert getattr(WalkthroughBlock.model_validate(value).steps[1], mark) == ("b",)
+    value["steps"][1][mark] = ["z"]
+    with pytest.raises(ValidationError, match="node the stage does not draw"):
+        WalkthroughBlock.model_validate(value)
+    value["steps"][1].update({mark: ["b"], "visible_nodes": ["a"]})
+    with pytest.raises(ValidationError, match="node it does not show yet"):
+        WalkthroughBlock.model_validate(value)
+
+
+def test_a_discarded_node_cannot_be_active_in_the_same_step() -> None:
+    value = tree()
+    value["steps"][0]["discarded"] = ["a"]
+    with pytest.raises(ValidationError, match="active and discarded"):
+        WalkthroughBlock.model_validate(value)
 
 
 def test_a_tree_stage_places_nodes_from_its_edges_and_reveals_them() -> None:
@@ -229,3 +275,77 @@ def test_a_drawn_figure_takes_layers_not_regions() -> None:
     }
     with pytest.raises(ValidationError, match="Regions and frames mark an image"):
         WalkthroughBlock.model_validate(walk)
+
+
+def grid_walk() -> dict:
+    return {
+        "kind": "walkthrough",
+        "key": "maze",
+        "sources": [WALKS["walkthrough-graph"]["sources"][0]],
+        "stage": {
+            "kind": "grid",
+            "description": "A two by two maze.",
+            "grids": [{"key": "maze", "cells": [["S", ""], ["", "G"]], "shaded": ["1:2"]}],
+        },
+        "steps": [
+            {
+                "action": "Start.",
+                "why": "S is distance 0.",
+                "grid_marks": [{"grid": "maze", "cell": "1:1"}],
+            },
+            {
+                "action": "Reach the cell below.",
+                "why": "One move from S.",
+                "grid_marks": [{"grid": "maze", "cell": "2:1", "mark": "frontier"}],
+                "grid_values": [{"grid": "maze", "cell": "2:1", "value": "1"}],
+                "grid_arrows": [
+                    {
+                        "start": {"grid": "maze", "cell": "1:1"},
+                        "end": {"grid": "maze", "cell": "2:1"},
+                    }
+                ],
+            },
+        ],
+    }
+
+
+def test_a_grid_stage_accepts_cells_inside_its_grids_only() -> None:
+    adapter = TypeAdapter(Block)
+    adapter.validate_python(grid_walk())
+    outside = grid_walk()
+    outside["steps"][1]["grid_marks"][0]["cell"] = "3:1"
+    unknown = grid_walk()
+    unknown["steps"][1]["grid_arrows"][0]["end"]["grid"] = "goal"
+    ragged = grid_walk()
+    ragged["stage"]["grids"][0]["cells"] = [["S", ""], ["G"]]
+    on_graph = graph()
+    on_graph["steps"][0]["grid_marks"] = [{"grid": "maze", "cell": "1:1"}]
+    for bad, message in (
+        (outside, "outside the grid"),
+        (unknown, "No grid 'goal'"),
+        (ragged, "rows of equal length"),
+        (on_graph, "grid_marks"),
+    ):
+        with pytest.raises(ValidationError, match=message):
+            adapter.validate_python(bad)
+
+
+def test_a_grid_cell_can_be_discarded_but_not_active_at_the_same_time() -> None:
+    value = grid_walk()
+    mark = {"grid": "maze", "cell": "1:1", "mark": "discarded"}
+    value["steps"][0]["grid_marks"] = [mark]
+    assert WalkthroughBlock.model_validate(value).steps[0].grid_marks[0].mark == "discarded"
+    value["steps"][0]["grid_marks"].append(mark | {"mark": "active"})
+    with pytest.raises(ValidationError, match="active and discarded"):
+        WalkthroughBlock.model_validate(value)
+
+
+def test_answer_keys_compare_grid_cells_after_each_step() -> None:
+    from tum_mcp.course.checks.answers import compare
+
+    def check(cells: dict) -> tuple[list[str], int]:
+        runs = {"primary": [{"@grid": {"maze:2:1": ""}}, {"@grid": cells}]}
+        return compare(grid_walk(), {"walkthroughs": {"maze": runs}})
+
+    assert check({"maze:2:1": "1", "maze:1:1": "S"}) == ([], 3)
+    assert "cell maze:2:1 shows '1', the key computes '2'" in check({"maze:2:1": "2"})[0][0]

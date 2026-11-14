@@ -8,9 +8,10 @@ Coverage.
 
 1. Open each cited page (`pages` on the block or step). Confirm every definition, theorem
    condition, claim and number against it; note the page when it differs.
-2. Recompute every number with code: worked examples, trace frames and their `state`
-   rows, table cells, plot points and marked values, answers, hints, distractor values
-   and the numbers inside option feedback.
+2. Check that the persisted answer-key code and results cover every computed number:
+   examples, trace states, table cells, plot points, answers, hints and feedback.
+   Inspect the inputs against the sources and independently spot-check the computations
+   most likely to be wrong. A passing key proves agreement, not correctness.
 3. Solve each question and exercise step yourself before reading its key. Each correct
    option must be the only correct one; each wrong option must be wrong for exactly the
    reason its feedback gives.

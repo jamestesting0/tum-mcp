@@ -4,6 +4,7 @@ Scores are never typed: each dimension scores the lowest open or kept finding it
 """
 
 import re
+from operator import not_
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -34,13 +35,16 @@ class Verdict(Frozen):
     fingerprint: Fingerprint
     covers: tuple[str, ...] = Field(default=("*",), min_length=1, max_length=200)
     version: int = Field(ge=1)
+    finding_ids: tuple[FindingId, ...] = Field(default=(), exclude_if=not_)
     closest: ClosestCall | None = None
     evidence: Text | None = None
+    missing: Text | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Finding(Frozen):
     id: FindingId
     check: Check
+    also: tuple[Check, ...] = ()
     quote: Text
     location: Annotated[str, Field(min_length=1, max_length=300)]
     why: Text
@@ -51,6 +55,9 @@ class Finding(Frozen):
     reason: Text | None = None
     opened: int = Field(ge=0)
     closed: int | None = None
+    verified_provenance: Literal["fresh", "same", "provisional"] | None = Field(
+        default=None, exclude_if=not_
+    )
     block: str
     blocks_at_open: dict[str, Fingerprint] = Field(default_factory=dict)
     reopens: int = Field(default=0, ge=0)

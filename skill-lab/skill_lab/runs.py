@@ -132,8 +132,17 @@ def render_broker(
     stop = threading.Event()
 
     def handle(request: Path, job: dict) -> None:
+        started = datetime.now(UTC).isoformat()
         try:
-            arguments, cwd = _render_request(job, folder.parent.resolve(), checker)
+            observed = checker
+            if checker and job["arguments"][:2] == ["review", "run-checker"]:
+                kind = "plan_check" if "--plans" in job["arguments"] else "review_packet"
+                log = request.with_name(request.name.replace(".request.json", ".sessions.jsonl"))
+                observed = [
+                    str(python), "-I", str(LAB_CODE / "shim.py"),
+                    "--lab-checker", str(log), kind, *checker,
+                ]  # fmt: skip
+            arguments, cwd = _render_request(job, folder.parent.resolve(), observed)
             done = subprocess.run(  # noqa: S603 - workspace-bound vetted command only
                 _broker_command(python, arguments),
                 cwd=cwd,
@@ -146,6 +155,11 @@ def render_broker(
             result = {"code": done.returncode, "stdout": done.stdout, "stderr": done.stderr}
         except (LabError, subprocess.TimeoutExpired) as error:
             result = {"code": 2, "stdout": "", "stderr": str(error)}
+        result.update(
+            started=started,
+            ended=datetime.now(UTC).isoformat(),
+            arguments=job["arguments"],
+        )
         response = request.with_name(request.name.replace(".request.", ".response."))
         staged = response.with_suffix(".tmp")
         staged.write_text(json.dumps(result), encoding="utf-8")
@@ -454,6 +468,7 @@ def _run(
         "variant": variant_name,
         "variant_spec": json.loads((variant_dir / "variant.json").read_text())["spec"],
         "author": str(spec),
+        "speed_tier": spec.tier or "standard",
         "scenario": scenario.id,
         "start_turn": start,
         "checkpoint": checkpoint,

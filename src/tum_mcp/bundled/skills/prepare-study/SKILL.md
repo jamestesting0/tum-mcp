@@ -57,15 +57,22 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    student who meets the topic for the first time: write or update the course's
    teaching profile, then a teaching plan for each new or restructured unit, and check
    it before writing ([planning](references/planning.md)): each unit's structured plan in
-   `.tum-mcp/plans/study/<key>.json` passes the plan gate before you write it
+   `.tum-mcp/plans/study/<key>.json` is ready with every other requested unit's plan
+   before one batch plan check. Repair pending plans together and submit them in one
+   check, rather than checking each lesson as you finish it. Each passes before authoring
    ([draft checks](references/loop.md)).
 3. **Author.** Read [teaching](references/teaching.md) and
    [writing](references/writing.md) before writing a new or restructured unit. Teach each
    unit as its plan decided, with the moves that fit each idea and the block types the
-   schema offers ([content](references/content.md)). Draft the heading outline first: major topics,
+   schema offers ([content](references/content.md)). Use `tum-mcp study schema --example list`
+   to list block examples and `tum-mcp study schema --example KIND` to print one.
+   Draft the heading outline first: major topics,
    their cases/examples, and any necessary detail. Set levels by those relationships
-   rather than making every passage a level-1 section. On a new site, prove one unit
-   with the hardest required formats, then author the rest in batches. Record changed
+   rather than making every passage a level-1 section. Place an unframed opening under
+   its topic heading; a self-contained opening needs no extra framing just to clear a flag.
+   On a new site, prove one unit
+   with the hardest required formats and `study visuals PROJECT --unit UNIT`, then author
+   the rest in batches. Record changed
    decisions in the plan. Before writing options, solve each [practice question](references/practice.md)
    and check that the shortest valid solution exercises every action in its objective.
    Use familiar words for incidental jargon or give it an [in-place gloss](references/writing.md#explain-difficult-words-in-place).
@@ -80,7 +87,7 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    scope, continue drafting it first. Code checks do not replace the loop's fresh
    checkers, and the session that wrote a unit never scores it. Rebind source hashes only
    after you read the changed content.
-5. **Build.** Run `tum-mcp study build PROJECT`. Do not author duplicate decks,
+5. **Build.** Use the Phase A build. Do not author duplicate decks,
    hand-copy the app, add a framework or edit generated `data.mjs`. Investigate stale
    sources and preserved custom templates.
 6. **Verify.** Select checks by what changed ([verification](references/verification.md))

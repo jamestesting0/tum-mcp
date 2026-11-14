@@ -1,4 +1,5 @@
 import re
+from importlib.resources import files
 from pathlib import Path
 
 from tum_mcp.course.review import registry
@@ -23,3 +24,11 @@ def test_the_standards_name_only_existing_checks_and_every_flag_has_a_standard()
     assert {name for name in named if "." in name} <= checks
     assert {name for name in named if "." not in name} <= flags
     assert flags <= named
+
+
+def test_the_rubric_names_only_checks_the_recorder_accepts() -> None:
+    rubric = (files("tum_mcp.bundled") / "skills/review-course/references/rubric.md").read_text(
+        encoding="utf-8"
+    )
+    named = set(re.findall(r"^- `([a-z_]+\.[a-z_]+)`", rubric, re.MULTILINE))
+    assert named <= registry.checks().keys()

@@ -56,9 +56,10 @@ course Organization, course Redundancy and, when the report lists it, Integratio
    concept's units or a marked term. Exam re-teaching what Study teaches is a
    `redundancy.exam_compresses` finding. A missing link, a link to a passage that does not
    teach what the step uses, or a different symbol or convention is a finding.
-5. **Climb.** For two outcomes, compare their Study question, exercise step and exam
-   pattern. Each should ask for more transfer than the last; the same question in two
-   workspaces is a finding.
+5. **Transfer.** Compare Study practice, released exercises and Exam patterns for the
+   same outcomes. Check that the sequence supports transfer without copying authored
+   questions unchanged. Preserve released questions; individual items need not increase
+   in difficulty.
 6. **Backbone.** Exercise sets and Exam topics should follow the order of the units
    they need; check every `order_mismatch` flag and say whether the course has a reason.
 7. **Media links.** Follow each actual target and used prerequisite. Check notation,

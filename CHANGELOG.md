@@ -1,5 +1,82 @@
 # Changes
 
+## Unreleased
+
+- Review findings sharing a quotation keep independent repairs unless the checker explicitly
+  links their ownership. Retries still reuse the original finding.
+- Internal harness metrics and round status show command phases, checker attempts and repairs,
+  UTF-8 output bytes separately from characters, and uncertainty by missing evidence.
+  Older runs retain only the timing evidence they recorded.
+- Example plans count operation states between source frames; spatial calculations work each item on the drawing and retain the running result.
+- Source examples with several states must plan their count and source phases; source walkthroughs without a count block readiness and review.
+- Course review aligns teaching checks with prepared scope, complete process steps and expanded cheatsheet details.
+- Planned examples can retain source state counts and phases; report and lint require their
+  states and subgoal groups in one complete walkthrough. Extra steps remain valid.
+- Graph and grid walkthroughs distinguish discarded items, with themed styles and legends.
+  Graph answer keys support `@discarded`; active and discarded roles cannot overlap.
+- Example planning and review preserve the rule for reading each selected picture.
+- Critical source demonstrations are planned and reviewed as examples for every concept kind.
+- Walkthrough review checks source step granularity and flags merged operations that hide intermediate states.
+- A walkthrough can hold up to 200 steps (was 40), so a complete process stays in one
+  walkthrough; the skills say length is never a reason to drop, merge or split steps.
+- Visual checks reach the last step of long walkthroughs through the jump menu, and
+  interaction smoke counts menu entries. Grid stages now receive contact sheets too.
+  The website tour advances long runs with Next step instead of targeting absent dots.
+- Review packets preserve selected examples beside their teaching blocks and require
+  an example-by-example comparison. Plan changes invalidate earlier reviews.
+  Consecutive copies of one process must be joined with subgoal groups; distinct inputs
+  or decisions remain valid. Graph and grid legends cover every drawn state.
+- Long walkthroughs stay compact: previous, the step position and next sit in one row
+  under the picture, with a progress track split by step group and a jump menu. Step dots
+  remain only for short walkthroughs, so long explanations no longer push the controls away.
+- A `grid` block and walkthrough stage show boards, mazes, matrices and seating plans as
+  grids: the cell being worked is marked, moves are drawn as arrows along the grid lines and
+  results are written into cells, never over a value. Answer keys can check each step's grid.
+- The authoring and review skills generalize their teaching rules: a critical example is one
+  the student must perform, one showing a decision or failure the main example cannot, one
+  later work builds on, or one showing why a method works or what it costs, in any subject.
+  A worked example keeps its whole teaching payload, and spatial content is drawn, not tabled.
+- A review round now checks its own repairs with up to two verify passes. The second
+  checks only items changed since the first, asking everything stale for those items.
+  `review verify` sends each fixed finding
+  and every check the repairs made stale to a fresh checker in the same round, so a
+  round can end with current verdicts instead of unchecked fixes. `review findings`
+  lists open findings compactly, `review fix` takes several findings, and a defect is
+  filed once under its owning check with the other checks it fails linked to it.
+  Reworded retries keep the existing open or fixed defect at the same location and quote.
+- Oversized review items split into batches of at most 60 requested checks, visuals,
+  fixes and rulings. Each keeps the full lesson, source and capture context; every
+  batch must be recorded before the item has current scores or passes its gate.
+- Reviewers see the cited slide pages, the lesson's outline, the terms earlier lessons
+  define and each walkthrough at its last step, and record why an answer was refused.
+  Only missing or invalid entries are asked again, for up to two repairs. If entries
+  still fail, valid answers are saved and the packet stays pending. Uncertain verdicts
+  name the specific unavailable evidence. Close-round lists fixed but unverified
+  findings and stale items; repairs after the second verify pass stay unverified.
+  Checkers compare repaired blocks with cited pages and the reference selection, and
+  justify added worked examples by the decision existing runs cannot show.
+- The plan check lists every blocking problem in its first pass, keeps the history of
+  earlier reasons and advice. Later new blockers, including earlier advice, must name
+  a changed concept or give new source evidence; otherwise they become advice. Plans
+  are checked as a batch. It shows the lecture examples no plan uses as selection
+  context.
+- Wide search trees fit on desktop: drawings scale to their 12 px text floor and then
+  use the free margin beside the column. Graph walkthroughs show a one-line legend of
+  the node states they use, including nodes cut off at a depth limit.
+- New lesson signals: the same reason on several walkthrough steps, a node value a
+  step drops, a static copy of a walkthrough's drawing, a search run given as a table
+  and a lesson that opens with an untitled block. Two walkthroughs over one drawing
+  now need a ruling instead of a removal, so different lecture runs on one tree stay.
+  Repeated reasons and graph nodes no step reveals are invariant defects. Computed
+  steps show their inputs and arithmetic, rather than only their results. Reasons start with a
+  step-specific clause, and board calculations state their coordinate convention once.
+- Transcript metrics count usage in the recorded turn and part order, including
+  replies, so cumulative token deltas are chronological.
+- Authoring is faster: `study schema --example KIND` prints a valid block, the skills
+  show the answer-key contract and filled batch and preparation files, readiness prints
+  a summary by default (`--json` for everything), and reviewers no longer ask for phone
+  captures the student did not request.
+
 ## 0.24.0 — 2026-11-10
 
 - Course preparation checks the selected source bytes and topic scope before

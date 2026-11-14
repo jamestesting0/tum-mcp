@@ -32,6 +32,21 @@ def test_codex_command_sandboxes_shell_and_resumes(tmp_path):
     assert "read-only" in judge and "mcp_servers={}" in judge
 
 
+def test_codex_fast_tier_is_applied_to_author_checker_and_explicit_judge(tmp_path):
+    for suffix, expected in (("", False), (":fast", True)):
+        spec = ModelSpec.parse(f"codex:gpt-6.1-terra:high{suffix}")
+        commands = [
+            hosts.codex_command(spec, "x", tmp_path, session=None),
+            hosts.codex_command(spec, "x", tmp_path, session=None, judge=True),
+            hosts.checker_command(spec),
+        ]
+        for command in commands:
+            setting = 'service_tier="priority"'
+            assert (setting in command) == expected
+            if expected:
+                assert command[command.index(setting) - 1] == "-c"
+
+
 def test_parse_claude_stream():
     events = [
         {"type": "system", "subtype": "init", "session_id": "s1", "model": "claude-opus-5-5"},

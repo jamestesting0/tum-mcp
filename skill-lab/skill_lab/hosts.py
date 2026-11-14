@@ -3,7 +3,10 @@
 import json
 import os
 import subprocess
+import tempfile
+import threading
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 
 from skill_lab.models import ModelSpec
@@ -111,11 +114,14 @@ def checker_command(spec: ModelSpec) -> list[str]:
             "--strict-mcp-config", "--allowedTools", ",".join(JUDGE_ALLOWED),
             "--disallowedTools", "Bash,Write,Edit,WebFetch,WebSearch",
         ]  # fmt: skip
-    return [
+    command = [
         "codex", "exec", "--skip-git-repo-check", "-m", spec.model,
         "-c", f'model_reasoning_effort="{spec.effort}"', "-s", "read-only",
-        "-c", "mcp_servers={}", "{prompt}",
+        "-c", "mcp_servers={}",
     ]  # fmt: skip
+    if spec.tier == "fast":
+        command += ["-c", 'service_tier="priority"']
+    return [*command, "{prompt}"]
 
 
 def codex_command(
@@ -139,6 +145,8 @@ def codex_command(
         "-c",
         f'model_reasoning_effort="{spec.effort}"',
     ]
+    if spec.tier == "fast":
+        command += ["-c", 'service_tier="priority"']
     if judge:
         command += ["-s", "read-only", "-c", "mcp_servers={}"]
     else:
@@ -290,16 +298,7 @@ def run_turn(
         )
     raw.parent.mkdir(parents=True, exist_ok=True)
     try:
-        completed = subprocess.run(
-            command,
-            cwd=workspace,
-            env=environment,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
+        completed = capture_turn(command, workspace, environment, timeout)
         output, failure = completed.stdout, ""
         if completed.returncode and not output.strip():
             failure = f"exit {completed.returncode}: {completed.stderr.strip()[-400:]}"
@@ -318,3 +317,46 @@ def run_turn(
         result.is_error = True
         result.error = failure
     return result
+
+
+def capture_turn(
+    command: list[str], workspace: Path, environment: dict, timeout: int
+) -> subprocess.CompletedProcess:
+    """Timestamp streamed events on receipt, before the host's private logs are cleared."""
+    lines = []
+    with (
+        tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as errors,
+        subprocess.Popen(
+            command,
+            cwd=workspace,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=errors,
+            text=True,
+            encoding="utf-8",
+        ) as process,
+    ):
+
+        def receive() -> None:
+            for line in process.stdout:
+                events = parse_lines(line)
+                if events:
+                    events[0]["_lab_timestamp"] = datetime.now(UTC).isoformat()
+                    line = json.dumps(events[0], ensure_ascii=False) + "\n"
+                lines.append(line)
+
+        reader = threading.Thread(target=receive)
+        reader.start()
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            reader.join()
+            raise subprocess.TimeoutExpired(command, timeout, output="".join(lines)) from None
+        reader.join()
+        errors.seek(0)
+        return subprocess.CompletedProcess(
+            command, process.returncode, stdout="".join(lines), stderr=errors.read()
+        )

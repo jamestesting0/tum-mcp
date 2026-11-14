@@ -270,6 +270,10 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "compressed_working": "representation",
     "static_trace": "representation",
     "static_walkthrough": "representation",
+    "dropped_node_value": "representation",
+    "never_shown_nodes": "representation",
+    "source_states_missing": "correctness",
+    "source_phases_missing": "organization",
     "unworked_result": "representation",
     "text_only_question": "representation",
     "bare_workflow": "representation",
@@ -292,6 +296,12 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
 # Advisory flags a checker must rule on before the gate passes: a finding on the check named
 # here, or why the flag does not apply. A flag no one rules on is how a weak lesson passed.
 RULED_FLAGS: dict[str, str] = {
+    "repeated_step_reason": "intuition.reasons",
+    "merged_step_operations": "representation.process_shown",
+    "repeated_example": "redundancy.said_once",
+    "duplicate_stage": "redundancy.said_once",
+    "untitled_opening": "organization.outline",
+    "trace_as_table": "representation.shape_fits",
     "text_only_question": "representation.picture_carries_data",
     "inline_list": "representation.shape_fits",
     "inline_steps": "representation.shape_fits",

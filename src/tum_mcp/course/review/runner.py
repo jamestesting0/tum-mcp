@@ -22,7 +22,7 @@ HOSTS = {
     "codex": ["codex", "exec", "--sandbox", "read-only", "--skip-git-repo-check", "{prompt}"],
 }
 VISUAL_GUIDANCE = (
-    "For requested visuals, open the item's current phone and desktop captures under "
+    "For requested visuals, open the item's current desktop captures (phone only when asked) under "
     "`visual_sheets` before scoring. Use all six criteria with integer scores of 1, 2 or 3 "
     "when supported by the evidence. Never guess a score for a capture you could not inspect."
 )
@@ -37,6 +37,7 @@ PROMPT = (
     "packet's scope_dispositions, reading .tum-mcp/coverage.json and the source pages when "
     "needed. Do not regenerate coverage reports or browser receipts in this read-only "
     "session; the packet already contains current deterministic results. "
+    f"{loop.REPAIR_GUIDANCE} "
     "For lecture-selection, read the full compact transcript in the item's "
     "`evidence`, check every selection and omission, and inspect the comparison materials. "
     "For every item, answer every check in its "
@@ -46,28 +47,53 @@ PROMPT = (
     "Rule on every `report` flag marked "
     "`needs_ruling` in `flags`. Every pass with `default_fail: true` needs its own `evidence` "
     "field. For intuition.concepts_instanced, put every planned concept name and its instance's "
-    "block in that field, not only in `reason`. Resolve a finding only by quoting the rewritten "
+    "block in that field, not only in `reason`. For coverage.examples_selected, compare each "
+    "planned `example`, regardless of concept kind, with its `example_block`, the source "
+    "pages and current rendered captures. Compare the block's representation with the source "
+    "picture, not just its text or result. Name the concept and planned block in evidence. "
+    "Explain whether that block "
+    "preserves the inputs, natural representation, decisive tests and working, and endpoint "
+    "or comparison. A concept mention, correct total or different example cannot stand in "
+    "for this teaching. Judge the meaning; do not count steps or require a template. A useful "
+    "continuation beyond the lecture is valid. For representation.process_shown, compare each "
+    "step's actions and resulting state with the cited pages. Require one operation per step "
+    "at source granularity or finer, preserving every intermediate state in one walkthrough. "
+    "One atomic action affecting several items stays one step. Judge operations and states, "
+    "not sentence or step counts. Resolve a finding only by quoting the rewritten "
     "passage, and only when "
-    "it reads well on its own. Hunt for failures: for each check find the "
-    "passage most likely to fail it. Quote word for word from the passage at its location. "
+    "it reads well on its own. Hunt for failures: for each check inspect the passages most "
+    "likely to fail it. File each defect once under the owner check from the rubric's "
+    "'One owner per problem' table; list other asked checks it fails in the finding's `also`. "
+    "Pass when those passages pass. Pass as not applicable only when the subject is legitimately "
+    "outside the item's profile and assigned demands. Missing required teaching, guidance or "
+    "practice is a gap, not an inapplicable subject. "
+    "Uncertain requires a non-empty missing field naming the specific artifact or source "
+    "page that cannot be opened and why. Incomplete sampling or 'not independently verified' "
+    "is not unavailable evidence: a sampled check whose likeliest failures pass is a pass. For "
+    "correctness.recomputed and correctness.answer_key, inspect the key script's inputs against "
+    "the sources and spot-check: a passing key proves agreement, not correctness. "
+    "Quote word for word from the passage at its location. "
     "Reply with only the answers JSON object."
 )
 REPAIR_PROMPT = (
     "You are the course reviewer whose answers at {answer} for the packet at {packet} were "
-    "refused: {problems} Preserve valid existing verdicts and correct supplied entries only "
-    "where the error identifies a defect. Complete every omitted check, finding verification, "
-    "flag ruling and visual requested by the packet, including omissions beyond the error "
-    "summary. Never substitute a blanket pass or omit a required check: use uncertain with "
-    "the evidence limit if it cannot be judged. Reply with only the full corrected answers "
-    "JSON object. "
+    "refused: {problems} Reply with only a partial answers JSON object containing the refused "
+    "entries. To replace a finding, include `_index` with its zero-based index from the "
+    "problem; omit it to append a new finding. Never substitute a blanket pass: use "
+    "uncertain only with a missing field naming the specific artifact or source page that "
+    "cannot be opened and why. 'Not independently verified' or 'did not inspect every' is "
+    "not unavailable evidence: a sampled check whose likeliest failures pass is a pass. "
+    "Answer only the listed missing or invalid entries; preserve all other answers. "
     f"{VISUAL_GUIDANCE}"
 )
 PLAN_PROMPT = (
     "You are a fresh plan checker. You did not write these plans. Read the plan packet at "
     "{packet}, the digests in .tum-mcp/digests/ and, where a digest does not settle it, the "
-    "source pages they cite. Answer the packet's `ask` for every plan. Hunt for the blocking "
-    "problems the `ask` names (an instance that only restates its concept is no case at all) "
-    "and give other improvements as `advice`. Reply with only the answers JSON object."
+    "source pages they cite. Answer the packet's `ask` for every plan. On the first check, "
+    "find every blocker in one pass. On later checks, verify every earlier reason first; "
+    "raise a new blocker only for a change or a break caused by it. An instance that only "
+    "restates its concept is no case at all. Give other improvements as `advice`. "
+    "Reply with only the answers JSON object."
 )
 
 
@@ -121,32 +147,65 @@ def _run_packet(root: Path, name: str, packet: str, host: str, command: str | No
     answers["packet"] = packet
     saved = private_name(Path("."), f"review/packets/{packet}.answer.json")
     path = confined(root, saved)
-    try:
-        result = _record(root, answers)
-    except CampusError as error:
-        if error.code != Code.INVALID_RESPONSE or "Answers need fixing" not in error.message:
-            raise
-        # A refused answer is the checker's whole review: let it correct only what was named
-        # instead of losing the round.
+    for attempt in range(3):
         path.write_text(json.dumps(answers, indent=2, ensure_ascii=False), encoding="utf-8")
-        repaired = _ask(
-            root,
-            REPAIR_PROMPT.format(packet=name, answer=saved, problems=error.message),
-            host,
-            command,
-        )
-        repaired["packet"] = packet
-        path.write_text(json.dumps(repaired, indent=2, ensure_ascii=False), encoding="utf-8")
-        return _record(root, repaired)
-    path.write_text(json.dumps(answers, indent=2, ensure_ascii=False), encoding="utf-8")
-    return result
+        try:
+            return _record(root, answers, partial=attempt == 2)
+        except loop.AnswerError as error:
+            if attempt == 2:
+                raise
+            repaired = _ask(
+                root,
+                REPAIR_PROMPT.format(
+                    packet=name, answer=saved, problems=json.dumps(error.problems)
+                ),
+                host,
+                command,
+            )
+            answers = merge_answers(answers, repaired)
+    raise AssertionError("unreachable")
 
 
-def _record(root: Path, answers: dict) -> dict[str, JsonValue]:
+def merge_answers(original: dict, repair: dict) -> dict:
+    merged = json.loads(json.dumps(original))
+    items = {item["item"]: item for item in merged.get("items", [])}
+    for correction in repair.get("items", []):
+        key = correction["item"]
+        if key not in items:
+            merged.setdefault("items", []).append(correction)
+            items[key] = correction
+            continue
+        item = items[key]
+        item.setdefault("checks", {}).update(correction.get("checks", {}))
+        for field, identity in (("verify", "finding"), ("flags", "key"), ("visuals", "visual")):
+            entries = item.setdefault(field, [])
+            for changed in correction.get(field, []):
+                existing = next(
+                    (i for i, entry in enumerate(entries) if entry[identity] == changed[identity]),
+                    None,
+                )
+                if existing is None:
+                    entries.append(changed)
+                else:
+                    entries[existing] = changed
+        findings = item.setdefault("findings", [])
+        for changed in correction.get("findings", []):
+            changed = dict(changed)
+            index = changed.pop("_index", None)
+            if index is None:
+                findings.append(changed)
+            elif isinstance(index, int) and 0 <= index < len(findings):
+                findings[index] = changed
+            else:
+                raise CampusError(Code.INVALID_RESPONSE, "The repaired finding index is invalid.")
+    return merged
+
+
+def _record(root: Path, answers: dict, *, partial: bool = False) -> dict[str, JsonValue]:
     """Record, retrying when another checker of the round wrote the records first."""
     for attempt in range(3):
         try:
-            return loop.record(root, answers, "fresh")
+            return loop.record(root, answers, "fresh", partial=partial)
         except CampusError as error:
             if error.code != Code.WORKSPACE_CONFLICT or attempt == 2:
                 raise

@@ -5,7 +5,8 @@ import { node, append, scrollReadingTo } from './dom.mjs';
 // and lecture notes. Results rank title hits above text hits and show where the words occur;
 // choosing one opens its page at that passage and marks the words there.
 
-const SKIP = new Set(['kind', 'key', 'keys', 'sources', 'pages', 'level', 'svg', 'mathml', 'pieces', 'image', 'asset', 'sha256', 'url', 'thumbnail', 'evidence', 'interval', 'revision', 'correct', 'objective', 'unit', 'block', 'at', 'shape', 'row', 'col', 'start', 'end', 'state_labels', 'language', 'line_numbers', 'width', 'height', 'nodes', 'edges', 'active', 'frontier', 'visited', 'cells', 'shown', 'series', 'layers', 'regions', 'frame', 'state', 'x', 'y', 'latex', 'topic', 'basis', 'status', 'role', 'relevance', 'category', 'path', 'week', 'workflow_from', 'plain', 'tier']);
+const SKIP = new Set(['kind', 'key', 'keys', 'sources', 'pages', 'level', 'svg', 'mathml', 'pieces', 'image', 'asset', 'sha256', 'url', 'thumbnail', 'evidence', 'interval', 'revision', 'correct', 'objective', 'unit', 'block', 'at', 'shape', 'row', 'col', 'start', 'end', 'state_labels', 'language', 'line_numbers', 'width', 'height', 'nodes', 'edges', 'active', 'frontier', 'visited', 'cutoff', 'cells', 'shown', 'series', 'layers', 'regions', 'frame', 'state', 'x', 'y', 'latex', 'topic', 'basis', 'status', 'role', 'relevance', 'category', 'path', 'week', 'workflow_from', 'plain', 'tier']);
+SKIP.add('discarded');
 const SYMBOLS = { to: '→', rightarrow: '→', leftarrow: '←', gets: '←', cdot: '·', times: '×', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠', approx: '≈', in: '∈', infty: '∞', sum: 'Σ', bmod: 'mod', pmod: 'mod', ldots: '…', dots: '…', quad: ' ', qquad: ' ' };
 // Inline math as a reader would say it in a snippet: commands become their symbol or name,
 // fractions read a/b and grouping braces go.

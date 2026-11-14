@@ -6,50 +6,82 @@ review-course) has fresh checkers read it. The session that wrote an item never 
 
 ## Phase A: draft and check
 
-1. **Fix the scope once.** From the request, the coverage ledger
-   (`tum-mcp study report PROJECT --section coverage`) and `tum-mcp study schedule PROJECT`
-   ("this week" and what has been taught). Bonus problems are out unless the student asks
-   for them; prepared ones stay and are reviewed. Material released while you work waits
-   for the next round of work. For Study or Exercises, write
-   `.tum-mcp/preparation/ID.json` using `tum-mcp study schema preparation`.
-   Account for all relevant inventory through the cutoff, including the first lecture,
-   or name a bounded selection and its exclusions. Keep teaching dates, release dates
-   and reports of a session distinct. Put future semester outcomes in the roadmap.
-   Record each required outcome clause or exercise demand and its source locator first.
-   A tracked campus source still marked `needs_fetch` keeps its key: download it with
-   read-content, then `study sync` a partial snapshot holding only that resource with its
-   `source_file` ([snapshot contract](../../sync-course/references/project.md)).
-   `study import` is for files only the student holds; importing a campus download
-   creates an untracked private duplicate.
-   For each preparation request, write `.tum-mcp/batches/ID.json`
-   (`study schema batch`) with the original request, every planned item key (including
-   each forecast question as `exam/mock/MOCK/QUESTION`) and
-   the Study/Exercise preparation IDs. A Lecture output names `lecture/LECTURE_KEY`;
-   its notes and highlights join the batch automatically. Use the batch as the
-   checklist and continue through local authoring and repair until every output is ready.
-   Register it immediately with `study task start PROJECT --batch ID`. Its default
-   ends at a complete draft and a review invitation. Only when review was already
-   requested, add `--review-rounds N` using its authorized total budget (default one).
-   The enabled host completion hook continues this registered task after a premature
-   stop. Use the hook context's `--owner HOST:ID` on task start, finish and pause. It never authorizes review. Honor a user pause or a concrete external blocker
-   with `study task pause PROJECT --reason REASON` and report the evidence.
-   A missing date, unavailable source or provisional sheet may leave the original
-   cutoff unresolved even while a selected subset is ready.
+1. **Fix the scope once.**
+
+   1. Read the request, coverage ledger and schedule. Include relevant inventory through
+      the cutoff, including the first lecture, or name a bounded selection and exclusions.
+      Bonus problems are out unless requested; prepared ones stay and are reviewed.
+      Material released during work waits for the next round. Keep teaching dates, release
+      dates and session reports distinct. Put future semester outcomes in the roadmap.
+   2. For Study or Exercises, write `.tum-mcp/preparation/ID.json`. Record every required
+      outcome clause or exercise demand and source locator. A missing date, unavailable source
+      or provisional sheet may leave the original cutoff unresolved even if a subset is ready.
+   3. A tracked campus source marked `needs_fetch` keeps its key. Download with read-content,
+      then sync a partial snapshot holding only that resource with its `source_file`
+      ([snapshot contract](../../sync-course/references/project.md)). Import is for files only
+      the student holds; importing a campus download creates an untracked private duplicate.
+   4. Write `.tum-mcp/batches/ID.json` with the original request, every item key and the
+      Study/Exercise preparation IDs. Each forecast question is `exam/mock/MOCK/QUESTION`.
+      A Lecture output names `lecture/LECTURE_KEY`; its notes and highlights join automatically.
+      Use the batch as the checklist until every output is ready.
+   5. Register it immediately. The default task ends at a complete draft and review invitation.
+      Only if review was already requested, add `--review-rounds N` for its authorized total
+      budget (default one). The completion hook continues a prematurely stopped task; it
+      never authorizes review. Use the hook context's `--owner HOST:ID` on start, finish and
+      pause. Honor a user pause or concrete external blocker with `study task pause PROJECT
+      --reason REASON` and report the evidence.
+
+   | Purpose | Command |
+   | --- | --- |
+   | Coverage and schedule | `tum-mcp study report PROJECT --section coverage`; `tum-mcp study schedule PROJECT` |
+   | File schemas | `tum-mcp study schema batch`; `tum-mcp study schema preparation` |
+   | Start a batch | `tum-mcp study task start PROJECT --batch ID` |
+   | Block example | `tum-mcp study schema --example KIND` (`--example list` lists names) |
+
+   Gotchas: The batch ID is the filename without `.json`, never free text. Write JSON files
+   with the edit tool, not shell heredocs. `study lint PROJECT` without `--item` checks all
+   items. Readiness prints a summary; add `--json` for the full result.
+
+   Example `.tum-mcp/batches/topic.json`:
+
+   ```json
+   {"course_key":"course","request":"Study the selected topic.","items":["study/topic"],"preparations":["topic"]}
+   ```
+
+   Example `.tum-mcp/preparation/topic.json`:
+
+   ```json
+   {
+     "course_key":"course", "semester":"winter", "workspaces":["study"],
+     "mode":"selected_sources",
+     "inventory":[{"source":"topic-slides","disposition":"required","basis":"source",
+       "reason":"The requested lecture.","locator":"pages 1-20"}],
+     "demands":[{"id":"apply","source":"topic-slides","kind":"study",
+       "text":"Apply the method and justify the result.","locator":"pages 10-12",
+       "outcome":"apply-method","level":"apply"}]
+   }
+   ```
 2. **Read each source once into a digest.** `.tum-mcp/digests/<source>.json` holds its
    stated outcomes, worked examples, definitions and figures with their pages, and the
-   source's `sha256` from `.tum-mcp/state.json`. Record each worked demonstration once:
-   its pages, what it shows and its inputs. Scan the text to find them and open the pages
-   of the ones you teach; plans choose from this list
+   source's `sha256` from `.tum-mcp/state.json`. Record every demonstration in `examples`
+   and every figure that carries an idea in `figures`, with pages, what it teaches and
+   any inputs. One source item may serve both purposes.
+   The weakness is a source inventory that misses explanatory demonstrations.
+   Include worked arguments and visuals that establish why an idea works, its limits or
+   its costs, even when they are not labelled as examples. A decorative illustration
+   without a teaching point is not a teaching figure or a worked demonstration.
+   Scan the text to find them and open the pages of the ones you
+   teach; plans choose only from this list, so a demonstration missing here is never taught
    ([planning](planning.md#choose-the-lectures-examples)). `tum-mcp study digests PROJECT`
    lists missing and stale ones. Plans, authors and checkers read the digest instead of the
    whole source; open the source pages for anything the digest does not settle.
-3. **Check coverage before drafting.** Run
-   `study report PROJECT --section coverage-plan --preparation ID`. This validates
-   source inventory, outcomes, original sheet parts and planned targets without reading
-   authored content. Resolve every gap first. Each target's reason names what the
-   student must do and the result they must produce, including every source clause.
-   Do not replace a complete procedure with its first step or omit a promised result.
-   **Plan every item.** `.tum-mcp/plans/<item>.json` (for example `plans/study/dfs.json`)
+3. **Check coverage before drafting.**
+
+   1. Run `study report PROJECT --section coverage-plan --preparation ID`. It validates
+      source inventory, outcomes, original sheet parts and targets without authored content.
+      Resolve gaps first. Each target's reason names the action and result, including every
+      source clause. Do not replace a complete procedure with its first step or omit a result.
+   2. **Plan every item.** `.tum-mcp/plans/<item>.json` (for example `plans/study/topic.json`)
    names the item's outcomes and each concept with its `kind` (definition, fact, rule,
    procedure, algorithm, model, comparison, cases), the worked `instance` that shows it
    (for a procedure, algorithm or model, the lecture `example` it is taught on) and the
@@ -63,14 +95,14 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    `tum-mcp review checklist --profile PROFILE` first: author and checker read the same
    checks, and the checklist points to a gate-passing exemplar of that kind of item (with
    its plan and answer key for a Study unit). Copy its shape, not its sentences.
-   Study/Exercise plans name their source scope as `preparation: "ID"`. The existing
+   3. Study/Exercise plans name their source scope as `preparation: "ID"`. The existing
    plan checker reads its requirements first; approval binds their fingerprint.
    Changing requirements later requires a new plan check, not silently smaller coverage.
-   For Study application/reasoning, include solved `practice` cases contrasting the
+   4. For Study application/reasoning, include solved `practice` cases contrasting the
    worked example with a meaningful new condition or decision (see planning.md).
-   For a bounded mixed batch, prepare all requested Study, Exercise and Exam plans
+   For every bounded batch, including Study lessons alone, prepare all requested plans
    before one fresh plan check. The checker holds when a declared batch still lacks
-   plans; do not call it after each individual pattern. Fix rejected plans together;
+   plans; do not call it after each individual lesson or pattern. Fix rejected plans together;
    do not launch a checker
    when `review plans PROJECT` lists no pending plans.
 4. **Pass the plan gate.** `tum-mcp review plans PROJECT` gives the plans waiting for a
@@ -87,20 +119,52 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    same-author verdict can complete draft readiness. It does not replace independent
    review or a current independent verdict. Check changed plans again and repair rejected
    plans before writing. A checker fails a plan only for a blocking problem; its `advice`
-   comes with a pass, so apply what improves the lesson without another check.
+   comes with a pass. Apply advice that improves wording without changing a checked
+   teaching decision directly in the lesson. If advice changes a checked decision,
+   update that plan and check it again. Keep unchanged approvals and repair every part
+   named by a failing reason.
    Read the complete batch locally before this call and fix all detectable omissions
    together. Do not request independent checks of unchanged approved plans. Changing
    only an artifact key elsewhere in the batch does not change the source requirements.
-5. **Solve first.** For anything computed (a trace, a result, a mock question), write the
-   answer key `.tum-mcp/checks/<item>.py` before the item: it prints
-   `{"values": {path: value}, "walkthroughs": {block: [state per step]}}` and
-   `tum-mcp study verify PROJECT` compares it with the content on every check.
-   Reuse the solved plan instances and preserve their calculations in this key;
-   solving the same case again is unnecessary unless the input or method changed.
+5. **Solve first.** For a computed trace, result or mock question, write
+   `.tum-mcp/checks/<item>.py` before the item. `study verify PROJECT` runs it and
+   compares its JSON with the content. Reuse solved plan instances unless the input or
+   method changed.
+
+   The weakness is a checked endpoint with unchecked intermediate reasoning.
+   Each authored walkthrough run is keyed as `primary` or `variant`. Give one complete
+   snapshot per step, with every state row exactly once. Include `@node_values` for
+   computed node values and `@grid` for the grid cell values being checked, keyed as
+   `grid:row:column`. Include `@cutoff` and `@discarded` for those node-key sets when
+   checked. `values` maps content paths to expected values.
+   Verify each authored run; this does not require inventing a variant.
+   For example, adapt the paths, block key and computed inputs to the lesson:
+
+   ```python
+   import json
+
+
+   def run(initial):
+       return [
+           {"Total": str(initial)},
+           {"Total": str(initial + 1)},
+       ]
+
+
+   print(
+       json.dumps(
+           {
+               "values": {"blocks[0].result": 1},
+               "walkthroughs": {"working": {"primary": run(0), "variant": run(2)}},
+           }
+       )
+   )
+   ```
 6. **Write each item, then lint it.** Edit the item's own file under `app/` with your edit
    tools (no scripts that rewrite whole workspaces). Write each question's context, options
-   and feedback for that question: a helper that fills one template across questions gives
-   every wrong option the same feedback and wraps sentences in one-row tables. While its
+   and feedback for that question. The weakness is feedback detached from the learner's error:
+   a template that merely repeats the rule cannot explain why this option fails.
+   Shared components are fine; each explanation still uses this question's facts. While its
    source and plan are fresh, follow the published procedure on the worked input and a
    relevant boundary case; check the actual loop scope, branches and exits, not an
    independent hidden implementation.
@@ -109,8 +173,14 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    `tum-mcp study lint PROJECT --item ITEM`: schema, report flags, the plan's links and the
    answer key in seconds. Fix every invariant flag; read every other flag and fix it or
    keep it for a stated reason. Text-only questions are invariant defects; even a
-   checker's waiver cannot clear them. The flags marked for a ruling (inline lists,
-   a shorter definition than the course's, a lesson without a visual) are ruled on
+   checker's waiver cannot clear them. Fix `dropped_node_value`
+   and `never_shown_nodes`. Flags for a ruling include
+   `duplicate_stage`, `untitled_opening`, `trace_as_table`, `repeated_step_reason`,
+   `repeated_example`, inline lists, a shorter definition than the course's, and a lesson
+   without a visual. Shared objects can support distinct methods or decisions.
+   A table can be a valid comparison or reference; a repeated reason can be valid when
+   its step's evidence is already shown. Judge what the learner needs, not the flag alone.
+   Flags for a ruling are ruled on
    again by the checkers, and the gate holds until each has a ruling.
 7. **Read the assembled draft once before browser checks.** Check prerequisites and
    Recall links against the content actually prepared, and consistency across items.
@@ -126,23 +196,23 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    continuations: keep assessment cases reserved, and replace any case the lesson consumed.
    Reuse the per-item dry runs unless an assembly change affects them. This is the
    author's polish pass, not another formal review round.
-   **Check the batch.** `tum-mcp study build PROJECT`, `tum-mcp study visuals PROJECT`
-   (desktop; fix every render defect in the content) and
-   `tum-mcp study visuals PROJECT --interact` (learner controls and formula layout).
-   A clipped equation or a scrollbar on the equation itself fails the interaction
-   receipt. Use the reported route, width and learning state to reproduce it.
-   Contact sheets cover drawings and tables. Open equations, derivations and code
-   in the built app to inspect readability and the quality of the working.
+   On a new site only, run `study visuals PROJECT --unit UNIT` for its first lesson.
 8. **Check the whole requested draft before asking.** Fill the scope's teaching,
    practice and answer mappings. Check that each learner action actually exercises
    the recorded demand, and that the outline and introductory copy agree. Persist
    executable answer keys for computed demands, including results first checked in scratch work.
-   Build and run `tum-mcp study visuals PROJECT` and
+   Run `tum-mcp study lint PROJECT` once for the whole batch, then build and run
+   `tum-mcp study visuals PROJECT` and
    `tum-mcp study visuals PROJECT --interact`, narrowed with the same `--unit` and
    `--exercise` selectors for a bounded scope. Desktop is the check; add `--phone` only
    when the student asks about phones. `study visuals` redraws only items changed since
-   their last passing check (`unchanged` lists the rest), so rerun it freely after a fix.
-   Read `tum-mcp study report PROJECT --section readiness --preparation ID`.
+   their last passing check (`unchanged` lists the rest), so rerun it after a fix.
+   Fix every render defect. A clipped equation or scrollbar on the equation fails the
+   interaction receipt; use its route, width and state to reproduce it. Contact sheets
+   cover drawings and tables. Open equations, derivations and code in the built app to
+   inspect readability and working. Read
+   `tum-mcp study report PROJECT --section readiness --preparation ID` (add `--json`
+   for the full result).
    Resolve required gaps before asking for formal review. Name the verified cutoff or
    selected subset, the workload and any excluded or unresolved sources, then ask:
    Ask whether to run one review round, using the student's terms; do not cite skill
@@ -170,6 +240,12 @@ At handoff, reconcile the handbook and final summary with the scope report, incl
 provisional sheets and unknown lecture dates. Give counts for checked computations,
 browser routes and reviewed items separately. For an already-running local preview,
 compare its served `data.mjs` with this project's build before linking the stable origin.
+
+The weakness is reporting repaired content with stale evidence.
+Finish original findings and draft repairs before `review verify`. Follow review-course's
+existing verify passes within the authorized round. Report any repairs after its last
+pass as unverified; stale verdicts do not carry forward. A new round needs the student's
+request. Reuse passing evidence when the content it covers has not changed.
 
 review-course drives `tum-mcp review`: fresh checkers read packets, the maker fixes by
 check, code re-runs the checks above, and the gate passes when correctness and coverage are

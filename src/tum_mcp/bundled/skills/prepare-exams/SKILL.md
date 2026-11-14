@@ -110,5 +110,7 @@ per sitting, acyclic prerequisites, truthful labels and consistent marking.
 Never call a forecast a prediction, a leak or official; frequencies are history.
 Student solutions are unverified; official labels need an official source. Solve every
 answer independently. Never start, submit or execute course code, read `.git/` or
-credentials, or copy campus or imported material anywhere public. Exam never
+credentials. Original campus and imported files stay local. Prepared Exam content may
+be published through publish-course only with explicit or saved full-app publication
+consent. Old selective settings need explicit adoption. Exam never
 replaces Study; link to its units when they exist.

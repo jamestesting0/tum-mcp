@@ -245,6 +245,45 @@ def test_the_shipped_exemplar_passes_its_plan_answer_key_and_flags() -> None:
     assert not {flag["flag"] for flag in quality_flags(content, None)} & set(INVARIANT_FLAGS)
 
 
+def test_two_run_answer_key_example_checks_each_state_and_node_value() -> None:
+    import subprocess
+    import sys
+    from importlib.resources import files
+
+    from tum_mcp.course.checks.answers import compare
+
+    script = files("tum_mcp") / "bundled/exemplars/checks/study/trace-runs.py"
+    output = subprocess.run(  # noqa: S603 - the packaged exemplar's answer key
+        [sys.executable, "-I", str(script)], capture_output=True, text=True, check=True
+    ).stdout
+
+    def steps(start: str) -> list[dict]:
+        return [
+            {"state": [{"label": "Frontier", "value": start}], "node_values": {start.lower(): "0"}},
+            {
+                "state": [{"label": "Frontier", "value": "G"}],
+                "node_values": {start.lower(): "0", "g": "1"},
+            },
+        ]
+
+    item = {
+        "blocks": [
+            {"result": 1},
+            {
+                "kind": "walkthrough",
+                "key": "trace",
+                "steps": steps("S"),
+                "variant": {"steps": steps("A")},
+            },
+        ]
+    }
+    problems, compared = compare(item, json.loads(output))
+    assert problems == [] and compared == 11
+    item["blocks"][1]["variant"]["steps"][1]["node_values"]["g"] = "2"
+    problems, _ = compare(item, json.loads(output))
+    assert problems
+
+
 def test_each_kind_of_item_ships_a_valid_exemplar_the_checklist_points_to() -> None:
     from importlib.resources import files
 

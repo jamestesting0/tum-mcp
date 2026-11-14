@@ -55,7 +55,7 @@ SHEET_WIDTHS = ("phone", "desktop")
 HIDDEN = {"code": "not_shown", "detail": "present but not shown at this width; not photographed"}
 # CSS pixels of screenshots per contact-sheet page, so a page stays legible when viewed whole.
 SHEET_HEIGHT = 1600
-VISUAL_KINDS = frozenset({"diagram", "uml", "plot", "figure", "table"})
+VISUAL_KINDS = frozenset({"diagram", "uml", "plot", "figure", "grid", "table"})
 DEFECTS = frozenset(
     {
         "render_error",
@@ -160,6 +160,7 @@ def _exam_visuals(exam: "ExamContent") -> dict[str, "Block"]:
     from tum_mcp.course.content.study import (
         DiagramBlock,
         FigureBlock,
+        GridBlock,
         PlotBlock,
         TableBlock,
         UmlBlock,
@@ -169,9 +170,9 @@ def _exam_visuals(exam: "ExamContent") -> dict[str, "Block"]:
     found: dict[str, Block] = {}
 
     def walk(value: object, path: str) -> None:
-        if isinstance(value, DiagramBlock | FigureBlock | PlotBlock | TableBlock | UmlBlock) or (
-            isinstance(value, WalkthroughBlock) and drawn(value)
-        ):
+        if isinstance(
+            value, DiagramBlock | FigureBlock | GridBlock | PlotBlock | TableBlock | UmlBlock
+        ) or (isinstance(value, WalkthroughBlock) and drawn(value)):
             found[f"exam:{path}"] = value
         elif isinstance(value, BaseModel):
             for name in type(value).model_fields:
@@ -359,6 +360,25 @@ def _shoot(page: "Page", selector: str, width: int, *, widen: bool = False) -> b
         page.set_viewport_size(size)
         page.evaluate(FRAMES)
     try:
+        target.scroll_into_view_if_needed()
+        bounds = target.evaluate("""element => {
+          const box = element.getBoundingClientRect();
+          const regions = [...element.querySelectorAll('.graph-region')]
+            .map(region => region.getBoundingClientRect());
+          return {left: Math.max(0, Math.min(box.left, ...regions.map(r => r.left))),
+            right: Math.min(innerWidth, Math.max(box.right, ...regions.map(r => r.right))),
+            top: box.top, bottom: box.bottom, originalLeft: box.left, originalRight: box.right};
+        }""")
+        if bounds["left"] < bounds["originalLeft"] or bounds["right"] > bounds["originalRight"]:
+            scroll = page.evaluate("() => ({x: scrollX, y: scrollY})")
+            return page.screenshot(
+                clip={
+                    "x": bounds["left"] + scroll["x"],
+                    "y": bounds["top"] + scroll["y"],
+                    "width": bounds["right"] - bounds["left"],
+                    "height": bounds["bottom"] - bounds["top"],
+                }
+            )
         return target.screenshot()
     finally:
         if size != {"width": width, "height": 900}:
@@ -460,6 +480,59 @@ def _measure(
                                     )
                                     if whole is not None:
                                         taken.append((f"{caption} · whole drawing", whole))
+                        for entry in found:
+                            selector = f'[data-visual-shot="{entry["id"]}"]'
+                            walk = page.locator(selector).locator(".walk").first
+                            if not walk.count():
+                                continue
+                            runs = walk.locator(':scope > [aria-label="Run"] > button')
+                            for run in range(max(1, runs.count())):
+                                if run:
+                                    runs.nth(run).click()
+                                jump = walk.locator(".walk-jump")
+                                if jump.count():
+                                    jump.click()
+                                    walk.locator(".walk-menu-step").last.click()
+                                else:
+                                    walk.locator(".walk-dot").last.click()
+                                page.evaluate(SETTLE)
+                                later = page.evaluate(
+                                    measure, {"step": visit.step, "expected": visit.expected}
+                                )
+                                current = next(
+                                    (item for item in later if item["id"] == entry["id"]), None
+                                )
+                                if current is None:
+                                    continue
+                                findings = visuals[entry["id"]].widths[name]["findings"]
+                                for finding in current["findings"]:
+                                    tagged = {
+                                        **finding,
+                                        "detail": finding["detail"] + " (last step)",
+                                    }
+                                    if finding not in entry["findings"] and tagged not in findings:
+                                        findings.append(tagged)
+                                if photograph:
+                                    shot = _shoot(page, selector, pixels)
+                                    if shot is not None:
+                                        suffix = f" · {runs.nth(run).inner_text()}" if run else ""
+                                        caption = (
+                                            f"{entry['title']} · {entry['id']}{suffix} · last step"
+                                        )
+                                        shots.setdefault(visit.item, []).append((caption, shot))
+                                        if current["facts"].get("scrolls") and page.evaluate(
+                                            UNROLL, entry["id"]
+                                        ):
+                                            whole = _shoot(
+                                                page, "#visual-unrolled", pixels, widen=True
+                                            )
+                                            page.evaluate(
+                                                "document.getElementById('visual-unrolled').remove()"
+                                            )
+                                            if whole is not None:
+                                                shots[visit.item].append(
+                                                    (f"{caption} · whole drawing", whole)
+                                                )
                         for key in visit.expected:
                             missing = visuals.setdefault(key, Visual(key, "missing", ""))
                             missing.widths.setdefault(name, {"findings": [NOT_DRAWN], "facts": {}})
@@ -576,7 +649,7 @@ def check_visuals(
         if fresh
         else ({}, {})
     )
-    items = {
+    items: dict[str, dict[str, Any]] = {
         item: {
             "revision": value,
             "checked_at": datetime.date.today().isoformat(),
@@ -587,6 +660,20 @@ def check_visuals(
         if item not in unchanged
     }
     defects = _defects(items)
+    previous = read_report(root)
+    note_items: dict[str, dict[str, Any]] = {
+        item: previous["items"][item]
+        for item in unchanged
+        if previous and item in previous["items"]
+    } | items
+    notes = [
+        {"item": item, "visual": visual["id"], "detail": finding["detail"]}
+        for item, record in note_items.items()
+        for visual in record["visuals"]
+        if visual["kind"] == "diagram"
+        for finding in visual["widths"].get("desktop", {}).get("findings", [])
+        if finding["code"] == "scrolls"
+    ]
     failed = {(defect["item"], defect["width"]) for defect in defects}
     states = {
         f"visual/{width}/{item}": item in unchanged or (item, width) not in failed
@@ -599,6 +686,7 @@ def check_visuals(
         "checked": sorted(revisions),
         **({"unchanged": sorted(unchanged)} if unchanged else {}),
         "defects": defects,
+        "notes": notes,
         "sheets": sorted(sheet for record in items.values() for sheet in record["sheets"]),
         **({"no_visuals": sorted(set(units) - selected)} if set(units) - selected else {}),
     }

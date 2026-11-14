@@ -8,7 +8,11 @@ A script prints one JSON object:
 - `exact_values`: content path -> complete expected value, with whitespace normalized in text.
 - `walkthroughs`: walkthrough block key -> runs (`primary`, and `variant` when authored).
   Each run lists one object per step containing all state rows, matched exactly, and
-  `"@node_values"`: node key -> value when the stage writes values under its nodes.
+  `"@node_values"`: node key -> value when the stage writes values under its nodes;
+  `"@cutoff"`: node keys cut off at this step, when supplied by the key;
+  `"@discarded"`: rejected or pruned node keys at this step, when supplied by the key;
+  `"@grid"`: "grid:row:column" -> the value a grid stage shows in that cell after this
+  step (authored cells plus every `grid_values` change so far in the run).
   A list of partial primary-run states is accepted for legacy keys.
 
 Scripts run isolated (`python -I`) in an empty folder with a time limit.
@@ -29,6 +33,7 @@ from tum_mcp.course.project.store import confined
 TIMEOUT_S = 30
 # In a walkthrough step's expected state, the values written under its nodes.
 NODE_VALUES = "@node_values"
+GRID = "@grid"
 STEP = re.compile(r"([^.\[\]]+)|\[(\d+)\]")
 
 
@@ -112,6 +117,34 @@ def _compare_runs(block: dict, runs: dict, key: str) -> tuple[list[str], int]:
             actual = {row["label"]: row["value"] for row in rows}
             place = f"walkthrough {key}/{run} step {number}"
             values = None
+            roles = False
+            for role in ("cutoff", "discarded"):
+                field = f"@{role}"
+                if isinstance(states, dict) and field in states:
+                    roles = True
+                    expected_role = states[field]
+                    states = {label: state for label, state in states.items() if label != field}
+                    compared += 1
+                    found_role = step.get(role, [])
+                    if not _exact(found_role, expected_role):
+                        problems.append(
+                            f"{place}: {role} is {found_role!r}, the key computes {expected_role!r}"
+                        )
+            grid = isinstance(states, dict) and GRID in states
+            if grid:
+                board = _board(block, steps[:number])
+                expected_cells = states[GRID]
+                states = {label: state for label, state in states.items() if label != GRID}
+                if not isinstance(expected_cells, dict):
+                    problems.append(f"{place}: expected grid cells as an object.")
+                    continue
+                for cell, value in expected_cells.items():
+                    compared += 1
+                    if not _exact(board.get(cell), value):
+                        problems.append(
+                            f"{place}: cell {cell} shows {board.get(cell)!r}, "
+                            f"the key computes {value!r}"
+                        )
             if isinstance(states, dict) and NODE_VALUES in states:
                 values = states[NODE_VALUES]
                 states = {label: state for label, state in states.items() if label != NODE_VALUES}
@@ -128,7 +161,7 @@ def _compare_runs(block: dict, runs: dict, key: str) -> tuple[list[str], int]:
                         )
             if (
                 not isinstance(states, dict)
-                or not (states or values is not None)
+                or not (states or values is not None or roles or grid)
                 or (states.keys() != actual.keys() or len(actual) != len(rows))
             ):
                 problems.append(f"{place}: expected each authored state row exactly once.")
@@ -140,6 +173,20 @@ def _compare_runs(block: dict, runs: dict, key: str) -> tuple[list[str], int]:
                         f"{place}: {label} is {actual[label]!r}, the key computes {state!r}"
                     )
     return problems, compared
+
+
+def _board(block: dict, steps: list[dict]) -> dict[str, str]:
+    """Every cell of a grid stage as shown after the given steps."""
+    board = {
+        f"{grid['key']}:{row}:{column}": value
+        for grid in (block.get("stage") or {}).get("grids", [])
+        for row, cells in enumerate(grid["cells"], 1)
+        for column, value in enumerate(cells, 1)
+    }
+    for step in steps:
+        for item in step.get("grid_values", []):
+            board[f"{item['grid']}:{item['cell']}"] = item["value"]
+    return board
 
 
 def compare(value: JsonValue, output: dict) -> tuple[list[str], int]:

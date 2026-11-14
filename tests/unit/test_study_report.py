@@ -1,8 +1,10 @@
 import json
+from copy import deepcopy
+from importlib.resources import files
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 
 from tum_mcp.course.checks.report import arithmetic_errors, quality_flags
 from tum_mcp.course.content.exercises import ExerciseContent
@@ -17,6 +19,496 @@ def study() -> dict:
 
 def exercises() -> dict:
     return json.loads((FIXTURES / "exercises.json").read_bytes())
+
+
+@pytest.mark.parametrize(
+    ("name", "stage", "marks"),
+    [
+        (
+            "Search",
+            {
+                "kind": "diagram",
+                "layout": "tree",
+                "description": "The search input.",
+                "nodes": [{"key": "a", "label": "A"}, {"key": "b", "label": "B"}],
+                "edges": [{"start": "a", "end": "b", "directed": True}],
+            },
+            [{"active": ["a"]}, {"active": ["b"]}],
+        ),
+        (
+            "Derivation",
+            {"kind": "derivation", "groups": [{"lines": [{"latex": "1+1"}, {"latex": "2"}]}]},
+            [{"shown": 1}, {"shown": 2}],
+        ),
+    ],
+)
+def test_report_and_lint_hold_source_states_and_phase_gaps(
+    tmp_path: Path, name: str, stage: dict, marks: list[dict]
+) -> None:
+    from types import SimpleNamespace
+
+    from tum_mcp.course.checks.plans import Plan
+    from tum_mcp.course.cli import _lint_item
+    from tum_mcp.course.review.models import INVARIANT_FLAGS
+
+    value = study()
+    unit = value["units"][0]
+    block = {
+        "key": "process",
+        "kind": "walkthrough",
+        "sources": [unit["sources"][0]["key"]],
+        "stage": stage,
+        "steps": [
+            {"action": "Prepare.", "why": "Use the input.", "subgoal": "Prepare"} | marks[0],
+            {"action": "Compute.", "why": "Apply the rule.", "subgoal": "Compute"} | marks[1],
+        ],
+    }
+    unit["blocks"] = [block]
+    current = Plan.model_validate(
+        {
+            "item": f"study/{unit['key']}",
+            "concepts": [
+                {
+                    "name": name,
+                    "kind": "algorithm",
+                    "instance": "Compute the stated input.",
+                    "blocks": ["process"],
+                    "example": {
+                        "origin": "source",
+                        "source": unit["sources"][0]["key"],
+                        "pages": "1-3",
+                        "shows": "The source run.",
+                        "endpoint": "Its computed result.",
+                        "block": "process",
+                        "states": 3,
+                        "phases": ["Prepare", "Compute"],
+                    },
+                }
+            ],
+        }
+    )
+    path = tmp_path / f".tum-mcp/plans/{current.item}.json"
+    path.parent.mkdir(parents=True)
+    for count, grouped, states, expected in [
+        (2, True, None, {"source_states_missing"}),
+        (2, True, 3, {"source_states_missing"}),
+        (3, False, 3, {"source_phases_missing"}),
+        (4, True, 3, set()),
+    ]:
+        planned = current.model_dump(mode="json")
+        if states is None:
+            planned["concepts"][0]["example"].pop("states")
+        else:
+            planned["concepts"][0]["example"]["states"] = states
+        path.write_text(json.dumps(planned))
+        block["steps"] = [block["steps"][0]] + [
+            {"action": "Compute.", "why": "Apply the rule.", "subgoal": "Compute"} | marks[1]
+            for _ in range(count - 1)
+        ]
+        if not grouped:
+            block["steps"][-1].pop("subgoal")
+        content = StudyContent.model_validate(value)
+        found = [
+            flag
+            for flag in quality_flags(content, None, root=tmp_path)
+            if flag["flag"] in {"source_states_missing", "source_phases_missing"}
+        ]
+        assert {flag["flag"] for flag in found} == expected
+        assert all(flag["item"] == f"{unit['key']}/process" for flag in found)
+        assert all(flag["flag"] in INVARIANT_FLAGS for flag in found)
+        context = SimpleNamespace(
+            flags_by_item={current.item: found},
+            items={current.item: SimpleNamespace(value=unit)},
+            answer_keys=[],
+        )
+        assert _lint_item(tmp_path, context, current.item, None)["passed"] is (not expected)
+
+
+def test_walkthrough_quality_signals_and_visibility_boundaries() -> None:
+    catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    value = study()
+    unit = value["units"][0]
+    source = unit["sources"][0]["key"]
+    walk = deepcopy(catalogue["walkthrough-tree"])
+    walk.update(key="trace", sources=[source])
+    walk["steps"] = [
+        {
+            "action": "Start.",
+            "why": r"Use \(A\).",
+            "visible_nodes": ["a"],
+            "node_values": {"a": "1"},
+        },
+        {"action": "Next.", "why": "use $A$.", "visible_nodes": ["a", "b"]},
+        {"action": "Finish.", "why": r"USE \[A\].", "visible_nodes": ["b"]},
+    ]
+    diagram = deepcopy(catalogue["diagram-tree"])
+    diagram.update(key="input", sources=[source])
+    trace = {
+        "kind": "table",
+        "key": "trace-table",
+        "sources": [source],
+        "caption": "Search trace",
+        "columns": ["Step number", "Frontier state"],
+        "rows": [["1", "A"], ["2", "B"], ["3", "C"]],
+    }
+    unit["blocks"] = [diagram, walk, trace]
+    flags = quality_flags(StudyContent.model_validate(value), None)
+    relevant = [
+        f
+        for f in flags
+        if f["flag"]
+        in {
+            "untitled_opening",
+            "duplicate_stage",
+            "trace_as_table",
+            "repeated_step_reason",
+            "dropped_node_value",
+        }
+    ]
+    assert [f["flag"] for f in relevant].count("dropped_node_value") == 1
+    assert {f["flag"] for f in relevant} == {
+        "untitled_opening",
+        "duplicate_stage",
+        "trace_as_table",
+        "repeated_step_reason",
+        "dropped_node_value",
+    }
+    assert next(f["item"] for f in relevant if f["flag"] == "dropped_node_value") == (
+        f"{unit['key']}/trace"
+    )
+
+
+def test_walkthrough_variant_is_checked_as_a_separate_run() -> None:
+    catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    value = study()
+    unit = value["units"][0]
+    walk = deepcopy(catalogue["walkthrough-tree"])
+    walk.update(key="trace", sources=[unit["sources"][0]["key"]])
+    walk["label"] = "Primary"
+    walk["contrast"] = "The variant starts with a different move."
+    walk["variant"] = {
+        "label": "Variant",
+        "steps": [
+            {"action": "Start.", "why": "Same reason.", "node_values": {"a": "1"}},
+            {"action": "Expand.", "why": "Same reason."},
+            {"action": "Pop M, then L.", "why": "Same reason."},
+        ],
+    }
+    unit["blocks"].append(walk)
+    flags = quality_flags(StudyContent.model_validate(value), None)
+    found = [f["flag"] for f in flags if f["item"] == f"{unit['key']}/trace"]
+    assert found.count("repeated_step_reason") == 1
+    assert found.count("dropped_node_value") == 1
+    assert found.count("merged_step_operations") == 1
+
+
+@pytest.mark.parametrize(
+    "action, flagged",
+    [
+        ("Pop leaf O, then leaf N.", True),
+        ("Pop M; then L.", True),
+        ("Pop O. Then pop N.", True),
+        ("Subtract three, then divide by two.", True),
+        ("Advance one tick; then advance the next.", True),
+        ("Apply the row operation. Then swap the rows.", True),
+        ("Check the stack. If empty, then stop.", False),
+        ("If the limit is reached, then cut off.", False),
+        ("If the limit is reached; then cut off.", False),
+        ("If the time exceeds 0.5, then stop.", False),
+        ("If the limit is reached, or the queue is empty, then cut off.", False),
+        ("If the limit is reached, then cut off; then pop N.", True),
+        ("Check if the stack is empty, then pop N.", True),
+        ("Expand A and push B, C.", False),
+        ("Apply one row operation to all entries.", False),
+        ("Then pop O.", False),
+        ("Pop O.", False),
+    ],
+)
+def test_merged_operations_flag_preserves_atomic_and_conditional_actions(
+    action: str, flagged: bool
+) -> None:
+    value = study()
+    unit = value["units"][0]
+    unit["blocks"] = [
+        {
+            "kind": "walkthrough",
+            "key": "process",
+            "sources": [unit["sources"][0]["key"]],
+            "steps": [
+                {"action": "Start.", "why": "Use the given initial state."},
+                {"action": action, "why": "Apply the process rule."},
+            ],
+        }
+    ]
+
+    flags = quality_flags(StudyContent.model_validate(value), None)
+
+    merged = [flag for flag in flags if flag["flag"] == "merged_step_operations"]
+    assert [flag["item"] for flag in merged] == ([f"{unit['key']}/process"] if flagged else [])
+
+
+@pytest.mark.parametrize("show_all", ["hidden", "default", "variant"])
+def test_graph_stage_nodes_must_be_shown_in_a_step(show_all: str) -> None:
+    catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    value = study()
+    unit = value["units"][0]
+    walk = deepcopy(catalogue["walkthrough-tree"])
+    walk.update(key="trace", sources=[unit["sources"][0]["key"]])
+    walk["stage"]["nodes"].append({"key": "c", "label": "C"})
+    walk["stage"]["edges"].append({"start": "b", "end": "c", "directed": True})
+    walk["steps"] = [
+        {"action": "Start.", "why": "Begin at A.", "visible_nodes": ["a"]},
+        {"action": "Cut off.", "why": "B reaches the limit.", "visible_nodes": ["a", "b"]},
+    ]
+    if show_all == "default":
+        walk["steps"][-1].pop("visible_nodes")
+    if show_all == "variant":
+        walk.update(label="Primary", contrast="The variant reveals the cut-off branch.")
+        walk["variant"] = {
+            "label": "Variant",
+            "steps": [
+                {"action": "Start at A.", "why": "A is initial.", "visible_nodes": ["a"]},
+                {"action": "Reveal C.", "why": "C is cut off.", "visible_nodes": ["a", "b", "c"]},
+            ],
+        }
+    unit["blocks"] = [walk]
+    flags = quality_flags(StudyContent.model_validate(value), None)
+    hidden = [flag for flag in flags if flag["flag"] == "never_shown_nodes"]
+    assert bool(hidden) is (show_all == "hidden")
+    if hidden:
+        from tum_mcp.course.review.models import INVARIANT_FLAGS
+
+        assert "never_shown_nodes" in INVARIANT_FLAGS
+        assert hidden[0]["item"] == f"{unit['key']}/trace"
+
+
+@pytest.mark.parametrize(
+    "flag, owner",
+    [
+        ("repeated_step_reason", "intuition.reasons"),
+        ("merged_step_operations", "representation.process_shown"),
+    ],
+)
+def test_walkthrough_signals_require_judgment_without_lowering_the_teaching_bar(
+    flag: str, owner: str
+) -> None:
+    from tum_mcp.course.review import registry
+    from tum_mcp.course.review.models import INVARIANT_FLAGS, RULED_FLAGS
+
+    assert RULED_FLAGS[flag] == owner
+    assert flag not in INVARIANT_FLAGS
+    check = registry.checks()[owner]
+    assert check.default_fail and check.teaching
+
+
+@pytest.mark.parametrize(
+    "reasons, flagged",
+    [
+        (["B is a leaf.", "C is a leaf.", "D is a leaf."], True),
+        (
+            ["Tile 1 moves to its goal.", "Tile 2 moves to its goal.", "Tile 3 moves to its goal."],
+            True,
+        ),
+        (
+            [
+                "Sample 1 follows the reaction rule.",
+                "Sample 2 follows the reaction rule.",
+                "Sample 3 follows the reaction rule.",
+            ],
+            True,
+        ),
+        (
+            [
+                "Article 4 satisfies the legal test.",
+                "Article 5 satisfies the legal test.",
+                "Article 6 satisfies the legal test.",
+            ],
+            True,
+        ),
+        (["B is a leaf.", "C is a leaf."], False),
+        (
+            [
+                "Tile 1: |2-0| + |1-2| = 3.",
+                "Tile 2: |1-0| + |0-0| = 1.",
+                "Tile 3: |1-2| + |0-2| = 3.",
+            ],
+            False,
+        ),
+        (
+            [
+                r"Sample 1: \(2 \cdot 3 = 6\) mol by the reaction ratio.",
+                r"Sample 2: \(4 \cdot 3 = 12\) mol by the reaction ratio.",
+                r"Sample 3: \(5 \cdot 3 = 15\) mol by the reaction ratio.",
+            ],
+            False,
+        ),
+        (
+            [
+                "Article 4 applies because the seller is a business.",
+                "Article 5 fails because the buyer is acting professionally.",
+                "Article 6 is excluded by the signed waiver.",
+            ],
+            False,
+        ),
+    ],
+)
+def test_repeated_reason_threshold_keeps_distinct_working(
+    reasons: list[str], flagged: bool
+) -> None:
+    catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    value = study()
+    unit = value["units"][0]
+    walk = deepcopy(catalogue["walkthrough-tree"])
+    walk.update(key="trace", sources=[unit["sources"][0]["key"]])
+    walk["steps"] = [{"action": "Expand.", "why": why} for why in reasons]
+    unit["blocks"] = [walk]
+    flags = quality_flags(StudyContent.model_validate(value), None)
+    assert any(flag["flag"] == "repeated_step_reason" for flag in flags) is flagged
+
+
+def test_trace_table_is_not_flagged_in_question_context() -> None:
+    value = study()
+    unit = value["units"][0]
+    source = unit["sources"][0]["key"]
+    unit["questions"][0]["blocks"] = [
+        {
+            "kind": "table",
+            "sources": [source],
+            "caption": "Trace",
+            "columns": ["Iteration", "Queue"],
+            "rows": [["1", "A"], ["2", "B"], ["3", "C"]],
+        }
+    ]
+    assert "trace_as_table" not in {
+        f["flag"] for f in quality_flags(StudyContent.model_validate(value), None)
+    }
+
+
+@pytest.mark.parametrize(
+    "columns,rows,flagged",
+    [
+        (
+            ["Iteration", "Estimate", "Residual"],
+            [["1", "2", "1"], ["2", "1.5", ".25"], ["3", "1.4", ".04"]],
+            True,
+        ),
+        (
+            ["Step", "Established facts", "Applicable provision"],
+            [
+                ["1", "Offer", "Formation"],
+                ["2", "Acceptance", "Formation"],
+                ["3", "Breach", "Remedy"],
+            ],
+            True,
+        ),
+        (
+            ["Phase", "Molecular state"],
+            [["Binding", "Bound"], ["Catalysis", "Intermediate"], ["Release", "Free"]],
+            True,
+        ),
+        (["Time", "Temperature"], [["0", "20"], ["1", "21"], ["2", "22"]], False),
+        (
+            ["Method", "State"],
+            [["Explicit", "Known"], ["Implicit", "Solved"], ["Mixed", "Both"]],
+            False,
+        ),
+        (
+            ["Step", "Instruction"],
+            [["1", "Read the claim"], ["2", "Identify the rule"], ["3", "State the conclusion"]],
+            False,
+        ),
+        (["Iteration", "Estimate"], [["1", "2"], ["2", "1.5"]], False),
+        (["Step", "State"], [["1", "Same"], ["2", "Same"], ["3", "Same"]], False),
+    ],
+)
+def test_process_table_signal_distinguishes_states_from_observations_and_instructions(
+    columns: list[str], rows: list[list[str]], flagged: bool
+) -> None:
+    value = study()
+    unit = value["units"][0]
+    unit["blocks"] = [
+        {
+            "kind": "table",
+            "key": "process",
+            "title": "Working",
+            "sources": [unit["sources"][0]["key"]],
+            "caption": "Successive records",
+            "columns": columns,
+            "rows": rows,
+        }
+    ]
+    found = quality_flags(StudyContent.model_validate(value), None)
+    assert any(flag["flag"] == "trace_as_table" for flag in found) is flagged
+
+
+@pytest.mark.parametrize(
+    "stage,steps",
+    [
+        (
+            {
+                "kind": "table",
+                "caption": "Mass balance",
+                "columns": ["Species", "Moles"],
+                "rows": [["Reactant", "2"], ["Product", "4"]],
+            },
+            [
+                {"action": "Record reactant.", "why": "The input is two moles.", "shown": 1},
+                {"action": "Record product.", "why": "The ratio doubles it.", "shown": 2},
+            ],
+        ),
+        (
+            {"kind": "code", "language": "python", "code": "state = 'ready'\nstate = 'done'"},
+            [
+                {"action": "Initialize.", "why": "No request has run.", "lines": "1"},
+                {"action": "Complete.", "why": "The request returned.", "lines": "2"},
+            ],
+        ),
+    ],
+)
+def test_reused_stages_are_ruled_on_across_representations(
+    stage: dict[str, JsonValue], steps: list[dict[str, JsonValue]]
+) -> None:
+    value = study()
+    unit = value["units"][0]
+    sources = [unit["sources"][0]["key"]]
+    static = stage | {"key": "reference", "title": "Input", "sources": sources}
+    if stage["kind"] == "code":
+        static["explanation"] = "The object's lifecycle."
+    walk = {
+        "kind": "walkthrough",
+        "key": "worked",
+        "sources": sources,
+        "stage": stage,
+        "steps": steps,
+    }
+    unit["blocks"] = [static, walk, walk | {"key": "replayed"}]
+    found = quality_flags(StudyContent.model_validate(value), None)
+    assert {str(flag["flag"]) for flag in found} >= {"duplicate_stage", "repeated_example"}
+    assert any(
+        flag["flag"] == "duplicate_stage" and flag["item"] == f"{unit['key']}/replayed"
+        for flag in found
+    )
+    # A different input on the same representation is a comparison, not a fragmented run.
+    other_stage = deepcopy(stage)
+    if stage["kind"] == "table":
+        other_stage["rows"] = [["Reactant", "3"], ["Product", "6"]]
+    else:
+        other_stage["code"] = "state = 'waiting'\nstate = 'cancelled'"
+    unit["blocks"] = [walk, walk | {"key": "other-input", "stage": other_stage}]
+    found = quality_flags(StudyContent.model_validate(value), None)
+    assert "duplicate_stage" not in {flag["flag"] for flag in found}
+    unit["blocks"] = [walk]
+    found = quality_flags(StudyContent.model_validate(value), None)
+    assert not {str(flag["flag"]) for flag in found} & {"duplicate_stage", "repeated_example"}
+
+
+@pytest.mark.parametrize("verb", ["points", "marks", "refers"])
+def test_meta_reference_includes_indirect_lecture_verbs(verb: str) -> None:
+    value = study()
+    value["units"][0]["blocks"][0]["paragraphs"] = [f"The lecture {verb} to this case."]
+    assert "meta_reference" in {
+        f["flag"] for f in quality_flags(StudyContent.model_validate(value), None)
+    }
 
 
 def test_a_graph_walkthrough_cannot_change_only_its_text() -> None:

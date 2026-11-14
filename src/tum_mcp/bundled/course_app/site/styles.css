@@ -464,6 +464,8 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 .graph .node-box text { font-size: 16px; }
 .graph .edge-label { font-size: 14px; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
 .graph .visited circle, .graph .visited rect { fill: var(--wash); stroke: var(--accent); }
+.graph .cutoff circle, .graph .cutoff rect { fill: var(--warning); stroke: var(--warning-ink); stroke-width: 2.5; }
+.graph .discarded circle, .graph .discarded rect { fill: color-mix(in srgb, var(--error) 12%, var(--panel)); stroke: var(--error); stroke-width: 2.5; stroke-dasharray: 2 3; }
 .graph .active circle, .graph .active rect { fill: var(--accent); stroke: var(--accent); }
 .graph .active text { fill: var(--canvas); }
 .graph-math-text { display: inline-block; white-space: nowrap; font: 18px var(--font-ui); }
@@ -1388,23 +1390,87 @@ svg.uml .uml-action rect, svg.uml .uml-io path, svg.uml .uml-decision path, svg.
 .walk { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); margin-top: var(--s4); }
 .walk > .segmented { justify-self: start; }
 .walk-stage > .block-body > :first-child, .walk-stage .table-region, .walk-stage .derivation { margin-top: 0; }
+.walk-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s1) var(--s4); margin-top: var(--s2); color: var(--muted); font-size: var(--text-small); }
+.walk-legend-item { display: inline-flex; align-items: center; gap: var(--s1); }
+.walk-legend-swatch { width: 18px; height: 18px; margin: 0; }
 .walk-card { display: grid; gap: var(--s2); min-height: 6.5em; padding-left: var(--s4); border-left: 3px solid var(--accent); }
 .walk .walk-card > p, .walk .walk-card > dl { margin: 0; }
 .walk-eyebrow { color: var(--muted); }
 .walk-action { font-weight: 600; }
 .walk-note { padding: var(--s2) var(--s3); border-radius: var(--r1); background: var(--warning); color: var(--warning-ink); }
 .walk-contrast { padding: var(--s2) var(--s3); border-radius: var(--r1); background: var(--wash); }
-.walk-dots { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--s2) var(--s3); min-width: 0; }
-.walk-controls { flex-wrap: wrap; }
-.walk-toggle { white-space: nowrap; }
-@media (max-width: 599px) { .walk-toggle { flex-basis: 100%; } }
+/* Walkthrough controls: one row right under the picture, Previous and Next side by side.
+   A long walkthrough swaps its dots for "Step 7 of 26 · Limit 2" and a jump list; a thin
+   track split by group replaces the rule above the row. */
+.walk-controls { position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-width: 0; padding-top: var(--s3); border-top: 1px solid var(--line); }
+.walk-controls.long { border-top-color: transparent; }
+.walk-track { position: absolute; inset: -1px 0 auto; display: flex; gap: var(--s1); height: 3px; }
+.walk-track[hidden] { display: none; }
+.walk-track-part { --filled: 0; flex: 1 1 0; overflow: hidden; border-radius: 2px; background: var(--line); }
+.walk-track-part::after { content: ""; display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(var(--filled)); transition: transform var(--fast) var(--ease); }
+.walk-pager { display: flex; align-items: center; gap: var(--s1); min-width: 0; }
+.walk-pager[hidden] { display: none; }
+.walk-position { display: flex; align-items: center; min-width: 0; }
+.walk-toggle { flex: none; white-space: nowrap; }
+.walk-dots { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
 .walk-group { display: inline-flex; gap: 2px; }
-.walk-group + .walk-group { padding-left: var(--s3); border-left: 1px solid var(--line); }
-.walk-dot { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.walk-group + .walk-group { padding-left: var(--s2); border-left: 1px solid var(--line); }
+.walk-dot { display: grid; place-items: center; width: 22px; height: 22px; min-height: 22px; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .walk-dot::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--accent); }
 .walk-dot.done::before { background: var(--wash); }
 .walk-dot[aria-current="step"]::before { background: var(--accent); }
 .walk-dot:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 50%; }
+button.walk-jump { display: inline-flex; align-items: baseline; gap: var(--s2); min-width: 0; max-width: 100%; padding-inline: var(--s3) var(--s2); border-color: transparent; background: transparent; font-variant-numeric: tabular-nums; }
+button.walk-jump:hover, button.walk-jump[aria-expanded="true"] { background: var(--wash); }
+.walk-jump-count { flex: none; font-weight: 600; }
+.walk-jump-group { min-width: 0; overflow: hidden; color: var(--muted); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.walk-jump-group:not(:empty)::before { content: "· "; content: "· " / ""; }
+.walk-jump svg { flex: none; align-self: center; width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.walk-menu { position: absolute; top: calc(100% + var(--s1)); left: 0; z-index: 6; width: min(380px, 100%); max-height: min(360px, 55dvh); overflow-y: auto; overscroll-behavior: contain; padding: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); background: var(--canvas); box-shadow: 0 6px 24px rgb(7 33 64 / .16); }
+.walk-menu[hidden] { display: none; }
+.walk-menu ol { margin: 0; padding: 0; list-style: none; }
+.walk-menu-list > li + li { margin-top: var(--s1); padding-top: var(--s1); border-top: 1px solid var(--line); }
+.walk-menu button { display: flex; align-items: baseline; gap: var(--s3); width: 100%; min-height: 36px; padding: var(--s1) var(--s3); border: 0; background: transparent; text-align: start; font-size: var(--text-small); line-height: 1.45; }
+.walk-menu button:hover { background: var(--surface); }
+.walk-menu-group { font-weight: 600; }
+.walk-menu-group > span:first-child { flex: 1; }
+.walk-menu-range, .walk-menu-number { flex: none; color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.walk-menu-number { min-width: 2ch; text-align: end; }
+.walk-menu-step { font-weight: 400; }
+.walk-menu-step[aria-current="step"] { color: var(--accent); background: var(--wash); }
+.walk-menu-step[aria-current="step"] .walk-menu-number { color: var(--accent); }
+@media (max-width: 599px) { .walk-controls { gap: var(--s2); } .walk-toggle { padding-inline: var(--s2); } }
+@media (prefers-reduced-motion: reduce) { .walk-track-part::after { transition: none; } }
+/* Grids: boards side by side, cells picked out with the graph's state colours. */
+.grid-region { overflow-x: auto; }
+.grid-figure { display: block; max-width: 100%; height: auto; margin-inline: auto; overflow: visible; }
+.grid-cell rect { fill: var(--panel); stroke: var(--muted); stroke-width: 1; }
+.grid-cell.shaded rect { fill: var(--line); }
+.grid-cell.visited rect { fill: var(--wash); }
+.grid-cell.path rect { fill: var(--wash); stroke: var(--accent); stroke-width: 2.5; }
+.grid-cell.frontier rect { fill: var(--panel); stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 5 4; }
+.grid-cell.discarded rect { fill: color-mix(in srgb, var(--error) 12%, var(--panel)); stroke: var(--error); stroke-width: 2.5; stroke-dasharray: 2 3; }
+.grid-cell.active rect { fill: var(--accent); stroke: var(--accent); }
+.grid-figure text { fill: var(--ink); font: 18px var(--font-ui); text-anchor: middle; dominant-baseline: central; }
+.grid-figure .grid-value { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+.grid-cell.visited .grid-value, .grid-cell.path .grid-value { stroke: var(--wash); }
+.grid-cell.discarded .grid-value { stroke: color-mix(in srgb, var(--error) 12%, var(--panel)); }
+.grid-cell.active .grid-value { stroke: var(--accent); }
+.grid-cell.shaded .grid-value { stroke: var(--line); }
+.grid-cell.active text { fill: var(--canvas); font-weight: 650; }
+.grid-figure .grid-title { font-size: 15px; font-weight: 600; }
+.grid-figure .grid-index { fill: var(--muted); font-size: 13px; }
+.grid-arrow { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.grid-arrow-head { fill: var(--accent); }
+.grid-arrow-casing { fill: none; stroke: var(--panel); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.grid-figure .grid-arrow-label { fill: var(--accent); font-size: 14px; font-weight: 650; paint-order: stroke; stroke: var(--panel); stroke-width: 5px; stroke-linejoin: round; }
+.grid-swatch { width: 14px; height: 14px; border: 1px solid var(--muted); border-radius: 2px; background: var(--panel); }
+.grid-swatch.shaded { background: var(--line); }
+.grid-swatch.active { background: var(--accent); border-color: var(--accent); }
+.grid-swatch.visited { background: var(--wash); }
+.grid-swatch.path { background: var(--wash); border: 2px solid var(--accent); }
+.grid-swatch.frontier { border: 2px dashed var(--accent); }
+.grid-swatch.discarded { background: color-mix(in srgb, var(--error) 12%, var(--panel)); border: 2px dotted var(--error); }
 .walk-trace td, .walk-trace th { vertical-align: top; }
 .walk-trace td:nth-child(3) { min-width: 16em; }
 .walk-trace .walk-subgoal th { text-align: left; color: var(--muted); font-weight: 600; }

@@ -105,9 +105,11 @@ button already carries the sources (`study report` flags both). Do not repeat a 
 in the steps. When a statement relies on a slide or figure,
 redraw what it needs beside the statement and cite it with `pages`. Choose the shape as
 in [representations](../../prepare-study/references/representations.md#choose-the-representation):
-code or signatures for code, UML for designs and interactions, a diagram or state table
-for structures, a figure for physical setups, a formula for symbols, a table for cases
-and traces, a matrix for two-input rules, a plot for growth. Write prompts, hints and
+code or signatures for code; UML for designs and interactions; a diagram or tree for
+a graph-shaped structure; a grid for a board or array; a figure for a physical setup;
+a formula for symbols; a table for comparisons or lookup; a matrix for a two-input
+rule; and a plot for growth. Show a process over the object it changes, following the
+shared representation guide. Write prompts, hints and
 feedback as in [writing](../../prepare-study/references/writing.md).
 
 In prompts, hints and feedback, put identifiers and short code in backticks

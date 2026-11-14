@@ -33,8 +33,9 @@ contract. Planning keeps existing video numbers and never renumbers.
 - **R2 Concrete before abstract.** Show the course's own worked example, diagram
   frames, plot data or practice givens before the general rule. If the unit has no
   concrete instance, report the gap to prepare-study instead of inventing one.
-- **R3 Pre-training.** Name prerequisite notation in a bridge beat before the
-  mechanism, following the unit's bridge section.
+- **R3 Pre-training.** Introduce prerequisite notation before the mechanism needs it.
+  Use a bridge beat when the prepared explanation needs that reminder; do not assume
+  a separately named bridge section exists.
 - **R4 Temporal contiguity.** A visual change happens in the beat whose narration
   names it. The beat timing enforces this; keep each beat to one idea.
 - **R5 Redundancy and modality.** Narration explains; the screen shows objects, short

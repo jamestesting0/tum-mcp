@@ -48,7 +48,8 @@ def default_pairs(round_id: str) -> list[list[str]]:
         latest = [
             run
             for run in rounds.runs_of(round_id)
-            if run["author"] == baseline["author"] and run["status"] == "completed"
+            if run["author"].split(":")[:3] == baseline["author"].split(":")[:3]
+            and run["status"] == "completed"
         ]
         if not latest:
             raise LabError(

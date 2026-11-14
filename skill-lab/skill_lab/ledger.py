@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from skill_lab import LabError, paths, rounds
+from skill_lab.models import ModelSpec
 
 REQUIRED_SECTIONS = ("## Weakness", "## Edits", "## Lesson", "## Decision")
 PROBLEMS = (
@@ -24,8 +25,8 @@ def problems(text: str) -> list[str]:
 
 def entry(round_id: str, decision: str) -> str:
     config = rounds.load(round_id)
-    author = ":".join(config["roles"]["author"].values())
-    judge = ":".join(config["roles"]["judge"].values())
+    author = str(ModelSpec.from_dict(config["roles"]["author"]))
+    judge = str(ModelSpec.from_dict(config["roles"]["judge"]))
     body = decision.strip().replace("\n## ", "\n### ")
     if body.startswith("## "):
         body = "#" + body

@@ -70,6 +70,10 @@ outputs in `.tum-mcp/batches/ID.json` (`study schema batch`) before drafting.
 Forecast questions use `exam/mock/MOCK/QUESTION` item keys. A pattern batch also
 checks its visible cheatsheet. Write every declared Study, Exercise and pattern plan
 before launching the fresh plan checker; it checks the pending plans together.
+Repair pending lesson plans together before another batch check. The first pass keeps
+all blockers. A later new reason must name a concept changed since the previous check
+or map to new source evidence; otherwise it is recorded as advice. Earlier unresolved
+reasons remain blockers when repeated.
 Study and Exercise source requirements first pass
 `study report PROJECT --section coverage-plan --preparation ID`, independently of
 authored content. Plans name that `preparation`; their approval records its fingerprint
@@ -175,6 +179,14 @@ within the same request. Unchanged units and reviewed material are retained. The
 skill audits objective coverage, technical accuracy and distractors, and writes in
 short, direct sentences that keep necessary terms and conditions.
 
+Selected source examples may record `states` (distinct states counted on the cited pages)
+and `phases` (their names). Report and lint flag a walkthrough below that floor or missing
+its `subgoal` groups. Keep the whole process in one walkthrough; extra steps are allowed.
+Summary-only sources and constructed examples need no state count. Graph nodes and grid
+cells use `discarded` for rejected or pruned items, distinct from cutoff and unreached
+states; answer keys can check graph roles with `@discarded`. A selected picture's teaching
+payload includes how to read its regions, boundaries, directions and legend.
+
 The course home introduces the course, resumes where you left off and lists topics
 with progress. Each view ends with a Next link through cards and practice to the
 next unit. Revision pools cards and questions from the topics you choose (all topics
@@ -229,7 +241,15 @@ published sites contain prepared learning content, not authoring queues.
 visual, including exercise Solution, Compare and transfer-answer blocks, in an installed
 Chrome, Edge or Chromium at desktop (1280 px) width; `--phone` adds phone (390 px) and
 narrow (600 px) widths. It reports lines through nodes, labels that overlap or sit on a
-line, text under 12 px, clipped text and drawings that differ from their block, writes
+line, text under 12 px, clipped text and drawings that differ from their block. Each
+walkthrough is measured and photographed at its first and its last step for every run,
+including grid stages and long walkthroughs reached through the jump menu. An overlap that
+appears only as a search tree grows is caught. Walkthrough controls (previous, the step
+position with a jump menu, next) sit in one row under the picture; only short walkthroughs
+show step dots. Boards, mazes and other spatial work use a `grid` stage whose arrows and
+labels never cover a cell's value. A drawing wider than the reading column is
+scaled down to its 12 px text floor, then widened into the free margin beside the column;
+one that still scrolls sideways at desktop width is listed under `notes`. It writes
 contact sheets to `.tum-mcp/visuals/` and records the result in
 `.tum-mcp/visual-check.json`. Editing an item or updating the app makes its result stale,
 and `study report` lists items whose check is missing, stale or failing. A rerun redraws
@@ -250,14 +270,31 @@ table may scroll as a unit when its formulas remain reachable. Use `--phone` to
 check phone and narrow layouts as well. It then asks before the review loop.
 
 Ask `review-course` to run the review loop (Phase B, `tum-mcp review`). Each round writes
-one packet per kind of item (study unit, exercise, exam pattern, cheatsheet, mock
+bounded packets per kind of item (study unit, exercise, exam pattern, cheatsheet, mock
 question, lecture entry, course): the checks with a pass and a fail example each
 (`review checklist --profile P`), the items' passages with block ids, the report flags,
-the answer keys' results and the cited sources' digests. Fresh checkers, sessions that did
+the answer keys' results and the cited sources' digests. An oversized item is split at
+60 requested checks, visual scores, fixes and rulings per batch. Every batch keeps the
+item's full passages, outline, sources and captures, with the same content fingerprint.
+All batches must be recorded before the item has current scores or passes the gate.
+Fresh checkers, sessions that did
 not write the content, answer with a verdict per check and quoted findings; `review
 record` refuses answers for changed content or unquoted passages. The maker fixes by
-check (`review fix` is refused while the quoted passage is unchanged), rejects a wrong
-finding with its reason or keeps a score-2 finding the content cannot fix. A verdict holds
+check (`review fix` is refused while the quoted passage is unchanged and takes several
+`--finding`), rejects a wrong finding with its reason or keeps a score-2 finding the content
+cannot fix. `review findings` lists the open findings, one line each, grouped by block. A
+defect is filed once, under the check that owns it, with the other checks it fails linked
+to it. Reworded retries with the same owner, location and quote keep the existing
+open or fixed finding. Finish all original findings and draft repairs before `review verify`:
+fresh checkers confirm or reopen each fix and judge again every check the repairs made
+stale, so the round can close with current verdicts. After that pass, repair only findings
+it opened, then run `review verify` again. This second pass asks everything stale only
+for items changed since the first pass, including checks, visuals, fixed findings and
+rulings. Each round permits at most two verify passes. Repairs after the second remain
+unverified until the student asks for another round.
+Close-round names every fixed but unverified finding and every stale or incomplete item;
+stale verdicts never count as current scores. Checkers get the cited
+slide pages as images, the lesson's heading outline and the terms earlier lessons define. A verdict holds
 until the blocks it covered change, so a later loop asks only about new and changed
 items. `review close-round` computes the gate and writes `.tum-mcp/loop/scorecard.md`;
 the gate passes an item when correctness and coverage score 3, every teaching check
@@ -282,7 +319,29 @@ Missing question context is not advisory: authored questions pair their text wit
 useful code, a diagram, formula, table or plot, and a checker cannot waive that gate.
 Teaching checks assess every concept, including additions made after planning, and
 objective checks require source evidence rather than promoting illustrative asides.
-The headless checker gets one targeted repair attempt if its answer format is refused.
+Checkers read changed blocks against their cited pages and the reference selection.
+A demand for another worked example names the decision existing runs cannot show;
+otherwise it is not a defect. Walkthroughs start each reason with a step-specific clause
+and name a board's coordinate convention
+once before using it in a calculation.
+Graph walkthroughs distinguish `cutoff` nodes generated at a depth limit from
+expanded nodes, and include them in the reached tree. Graph and grid legends explain
+every drawn state, including unmarked, shaded and not-yet-reached states when present.
+Keep one continuous process in one walkthrough with phases grouped by `subgoal`.
+Consecutive walkthroughs that repeat a stage need a ruling: a split process must be
+joined, while different inputs or decisions can justify separate blocks.
+Review packets retain each planned example beside its actual teaching block.
+The checker compares inputs, representation, decisive working and tests, and the endpoint
+or comparison against the source and rendering. A concept mention or different example
+does not satisfy that selection. Changing a teaching plan invalidates its earlier review.
+State labels distinguish running values from final results, and Pitfall is reserved for
+a wrong move. Values needed for comparisons across steps remain on the drawing.
+The headless checker gets up to two targeted repairs of missing or invalid entries.
+If entries still fail, it saves the valid answers, keeps the packet pending and reports
+the remaining problems with a failing exit status. Uncertain verdicts require a
+`missing` field naming the specific artifact or source page that cannot be opened and
+why. A sampled check whose likeliest failures pass is a pass; incomplete inspection is
+not unavailable evidence.
 
 Workspace profiles keep the shared dimensions but tailor their evidence: exercise
 reviews preserve released statements and assess each part's guide and answer rather

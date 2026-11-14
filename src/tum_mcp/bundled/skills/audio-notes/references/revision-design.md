@@ -76,9 +76,10 @@ and verify all referents. ASR can flag omitted words but cannot certify delivery
 
 ## Coverage and review
 
-Map source concepts to spoken sections/chapters with exact locators. Distinguish:
-`spoken`, `study_required` (exact section and reason), and `missing`. A precise
-modality limit may be kept and disclosed; omitted teachable meaning must be fixed.
+Map source concepts to chapters with exact locators. In category coverage, `mode` is
+`spoken` or `study_required`; the latter names the exact Study section and reason.
+Record missing or unpublished coverage in COVERAGE.md, not as a third mode.
+Fix omitted teachable meaning; disclose a genuine modality limit.
 Audio adaptation quality and audio-only completeness are different claims.
 
 Use the eight-dimension [audio profile](../../review-course/references/media.md).

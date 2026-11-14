@@ -6,7 +6,7 @@ import textwrap
 
 import pytest
 import yaml
-from skill_lab import LabError, paths, rounds, runs
+from skill_lab import LabError, collect, paths, rounds, runs
 
 FAKE_CLAUDE = textwrap.dedent(
     """
@@ -107,6 +107,7 @@ def execute(installs, **options):
 def test_fresh_run_answers_questions_snapshots_turns_and_redacts(lab):
     record = execute(lab)
     assert record["status"] == "completed", record.get("error")
+    assert record["speed_tier"] == "standard"
     assert len(lab) == 1 and lab[0][1] == "claude"
     first, second = record["turns"]
     assert first["replies"] == ["The AI course."]
@@ -127,9 +128,42 @@ def test_fresh_run_answers_questions_snapshots_turns_and_redacts(lab):
     transcript = "".join(p.read_text() for p in (run_dir / "transcript").glob("*.jsonl"))
     assert "Private programme" not in transcript and '"redacted": true' in transcript
     assert "listed files" in transcript
+    events = [
+        json.loads(line)
+        for path in (run_dir / "transcript").glob("*.jsonl")
+        for line in path.read_text().splitlines()
+    ]
+    assert all(event.get("_lab_timestamp") for event in events)
+    phases = collect.transcript_stats(run_dir, "claude")["phase_table"]
+    assert len(phases) == 6
+    assert all(phase["start"] <= phase["end"] and phase["minutes"] >= 0 for phase in phases)
     shim = (run_dir / "bin" / "tum-mcp").read_text()
     assert "shim.py" in shim
     assert (run_dir / "workspace").resolve() == paths.workspaces() / "r1" / record["id"]
+
+
+@pytest.mark.parametrize(
+    ("author", "tier"),
+    [("codex:gpt-6.1-terra:high", "standard"), ("codex:gpt-6.1-terra:high:fast", "fast")],
+)
+def test_collected_metrics_keep_speed_tier_from_run_author(lab_state, author, tier, monkeypatch):
+    run_dir = paths.round_dir("r1") / "runs" / "base-1"
+    run_dir.mkdir(parents=True)
+    (run_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "author": author,
+                "status": "completed",
+                "variant": "base",
+                "turns": [],
+                "minutes": 5,
+            }
+        )
+    )
+    monkeypatch.setattr(collect, "files_outside_project", lambda *_: [])
+    metrics = collect.collect_run("r1", "base-1", visuals=False)
+    assert metrics["speed_tier"] == tier
+    assert json.loads((run_dir / "metrics.json").read_text())["speed_tier"] == tier
 
 
 def test_default_workspaces_sit_outside_the_repository(monkeypatch):

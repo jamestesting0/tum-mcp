@@ -141,3 +141,41 @@ def test_a_round_judges_its_candidates_against_the_previous_rounds_runs(lab_stat
         assert sorted(p.name for p in app.iterdir()) == ["study"]
     with pytest.raises(LabError):
         rounds.checked_baselines(["base-2"])
+
+
+def test_baseline_timing_is_compared_only_with_the_same_speed_tier(lab_state):
+    standard = "codex:gpt-6.1-terra:high"
+    fast = f"{standard}:fast"
+    base = fake_run("t1", "base-1", standard, "1", [], [])
+    base["minutes"] = 12.0
+    runs_path = paths.round_dir("t1") / "runs" / "base-1" / "run.json"
+    runs_path.write_text(json.dumps(base))
+    rounds.save("r1", {"baselines": ["t1/base-1"]})
+    candidate = fake_run("r1", "candidate-1", fast, "2", [], [])
+    candidate["minutes"] = 8.0
+    candidate_path = paths.round_dir("r1") / "runs" / "candidate-1" / "run.json"
+    candidate_path.write_text(json.dumps(candidate))
+
+    row = rounds.status_rows("r1")[0]
+    assert row["baseline_timing"] == {
+        "baseline": "t1/base-1",
+        "timing": "not comparable (fast vs standard tier)",
+    }
+    assert "phase_table" not in row and "output_bytes" not in row
+    workflow = {
+        "phase_table": [{"turn": 1, "kind": "study.build", "minutes": 1.5}],
+        "output_chars": 1,
+        "output_bytes": 2,
+        "uncertain_causes": {"Slide image unavailable.": 2},
+    }
+    (candidate_path.parent / "metrics.json").write_text(json.dumps(workflow))
+    measured = rounds.status_rows("r1")[0]
+    assert {key: measured[key] for key in workflow} == workflow
+    assert judge.default_pairs("r1") == [["t1/base-1", "candidate-1"]]
+
+    base["author"] = fast
+    runs_path.write_text(json.dumps(base))
+    assert rounds.status_rows("r1")[0]["baseline_timing"] == {
+        "baseline": "t1/base-1",
+        "delta_minutes": -4.0,
+    }

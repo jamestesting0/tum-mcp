@@ -9,7 +9,7 @@ shape each idea has; prose says only what the picture cannot.
 | --- | --- |
 | A term students must learn | A `definition` block; mark later mentions `{{term}}` |
 | A reusable procedure or algorithm | Labelled steps with explicit repeat ranges, source-style pseudocode or a flowchart; preserve all branches and exits |
-| A concrete run of an algorithm or process | A `walkthrough` over the graph, table, code, working, plot or figure it changes: each step an action with its `why`, the `state` rows the student would otherwise track; its "All steps" view is the trace table |
+| A concrete run of an algorithm or process | A `walkthrough` over the graph, grid, table, code, working, plot or figure it changes: each step an action with its `why`, the `state` rows the student would otherwise track; its "All steps" view is the trace table |
 | Parallel cases (games, environments, designs) | A table with one row per case, or a list; when each case needs its own working, one `example` per case |
 | One worked case read whole (a classification, a calculation, applying a definition) | An `example`: what is `given`, the `steps` and the `result`; a state that changes step by step is a `walkthrough` instead |
 | The wrong move students make at one moment | A `callout` with `tone: pitfall`: the situation, the wrong and the right move, why |
@@ -49,14 +49,29 @@ Choose the component a student grasps fastest: the one they would sketch on pape
 | The data | Show it as | Never |
 | --- | --- | --- |
 | A graph or tree, even when the source lists its edges | A `diagram` with the costs on the edges (`layout: "tree"` for a tree); a search on it is a walkthrough over that drawing, the frontier a `state` row | A From/To/Cost table and a table of frontier rows (`graph_as_table`) |
-| A board, grid or array | The board itself, marking the square or cell being worked | A list of coordinates |
-| Values per item, a comparison, a lookup the steps consult | A table | A table of results the steps never reach |
+| A board, grid or array (a puzzle, a maze, a matrix, a seating plan) | A `grid`: the board itself, boards side by side when two are compared, the cell being worked marked, its displacement or neighbours shown, computed values written into the cells | A list or table of coordinates or item results beside a static board |
+| Records without spatial meaning, a comparison, a lookup the steps consult | A table | A table of results the steps never reach |
 
 Every step changes what the student sees. A result appears in the step that computes it
 (table rows through `shown`, node values through `node_values`), never all at once in the
 first step: a walkthrough that marks one row and then announces the total demonstrates
-nothing (`unstepped_table`). Work each item the lecture works, or give the finished
-table with its working beside it outside a walkthrough.
+nothing (`unstepped_table`). When each item's working depends on its position, work
+each item on the drawing in one walkthrough. Mark it, show the displacement or neighbours
+used in its calculation, write its value there, and keep the running result in `state`.
+This applies to tile distances on a board, per-pixel operations on an image grid and
+per-junction currents on a circuit. A list of item results beside a static picture does
+not show that working. Work each item the lecture works. For non-spatial records, a
+finished table with its working beside it can be read whole outside a walkthrough.
+Use a walkthrough when the changes
+teach the method. Use a grid in any subject when a value's row and column carry its meaning.
+Keep a table when rows are records and columns are attributes, such as methods compared
+by cost or rows of a price list; there a cell's place means nothing.
+Keep a table for comparison, lookup or observations read together;
+keep a fixed picture outside a walkthrough when nothing meaningful changes.
+The weakness is duplicated teaching objects without a new purpose. Let the walkthrough's
+first step introduce its object when a static copy adds nothing.
+For process boundaries, follow the [example plan](planning.md#choose-the-lectures-examples).
+Keep a separate reference or comparison when the learner needs it alongside the working.
 
 ### The lecture's own figures
 
@@ -96,28 +111,59 @@ an independent hidden implementation does not check missing published instructio
 This is a small author dry run of the existing example, not another formal review.
 
 A staged walkthrough shows the state of its picture, not only a new caption. On
-graphs, set each step's `active`, `frontier`, `visited` and relevant `edges` from the
+graphs, set each step's `active`, `frontier`, `visited`, `cutoff`, `discarded` (rejected or pruned, never merely unreached; grids use the same mark) and relevant `edges` from the
 actual run; use the stage's node keys. Code marks its running `lines`, tables their
 `shown` rows or changed `cells`, derivations their `shown` lines, plots their `series`
-and SVG figures their `layers`. Clear marks that no longer apply when stepping back
-or switching runs. Draw a search tree with `layout: "tree"`: the app places its levels and
-keeps the lecture's shape however wide it is. When the lecture grows the tree as nodes are
-generated (A* on a map), list `visible_nodes`; otherwise the whole tree is drawn, as on
-slides that show it whole, and nodes no step has reached yet stay faint. Put what the slide
-writes beside a node (its g, h and f, a
-domain, a depth) in `node_values`, with the arithmetic (\(140 + 253 = 393\)). Derive
+and SVG figures their `layers`. Grids mark cells with `grid_marks`, draw moves with
+`grid_arrows` and write results with `grid_values`; a written value stays for later steps. Clear marks that no longer apply when stepping back
+or switching runs. The weakness is unexplained discarded information. When a process
+supersedes an earlier record, explain what makes it obsolete and how the method treats it.
+Do not add a discard step to a method that has none.
+Draw a hierarchy with `layout: "tree"` and preserve the lecture's shape.
+The weakness is hidden source structure. Use `visible_nodes` when the source builds a
+graph gradually, and reveal every part the source uses. When the source shows the whole
+structure, leave `visible_nodes` out; unreached nodes stay faint. Remove a node only
+when it does not belong to the source example.
+Keep quantities the learner compares across steps on the drawing, such as branch costs,
+cell temperatures or probability weights. Changing prose alone loses that comparison.
+Put changing annotations in `node_values`, separate from stable node labels.
+Each step lists the value of every visible annotated node: values do not carry forward.
+Do not invent values for unannotated nodes. The graph walkthrough
+shows its node-state legend automatically. Replace obsolete values rather than presenting
+them as current. Check that every drawn state is explained,
+including an unmarked or not-yet-reached node or cell when its style differs. Derive
 graph marks and displayed state from the same computed trace, and include visual values
 in the answer key when computed. Do not invent a
 changing highlight just to clear `static_walkthrough`. An intentionally fixed
 picture belongs beside ordinary explanation, outside a staged walkthrough.
 
 Run the lecture's own example in a `walkthrough`, with its inputs unchanged
-([choosing examples](planning.md#choose-the-lectures-examples)). Each step does one
-operation as the lecturer shows it, usually one expansion: its `action` says what, its
-`why` says why it is allowed or chosen, and `note` names the mistake a student
-makes at that moment when there is a typical one. Group the steps by `subgoal` (start,
-loop, stop). `state` rows show the data the student would otherwise track mentally; the app
-marks what changed since the previous step. Include a real failure and its undo when the
+([choosing examples](planning.md#choose-the-lectures-examples)).
+The weakness is a limit presented as completed work. Distinguish a completed operation
+from one prevented by a stopping condition. On a graph, nodes generated but not expanded
+at a depth limit use `cutoff`, not `visited`. Use this mark only for that meaning;
+an unfinished proof or an inconclusive test needs its own explanation.
+Follow the [step granularity rule](planning.md#choose-the-lectures-examples).
+Compute numerical states in code first.
+Its `action` says what; its `why` connects this step's facts to the rule that permits it.
+The weakness is template reasoning: changing names does not explain a decision.
+A shared rule can repeat when the step's own evidence is visible in its working or state.
+Do not force different wording or a fixed sentence order for identical justified operations.
+The weakness is missing calculation inputs. State the conventions the result depends on,
+then show the original inputs, substitutions and arithmetic in `why` or a state row.
+A total or an intermediate difference alone is not complete working. For a qualitative
+step, show the relevant facts and inference instead of forcing arithmetic.
+`note` renders as Pitfall. Use it only for a mistake a student makes at that moment.
+A correct state or ordinary stopping limit belongs in `action`, `why` or `state`,
+or a `callout` with `tone: note` when it adds a separate condition.
+Use the [planned subgoals](planning.md#choose-the-lectures-examples).
+`state` rows show the data the student would otherwise track mentally; the app
+marks what changed since the previous step.
+The weakness is an interim value mistaken for a final conclusion. Label provisional
+values by their role, such as Running total for a partial sum or Current hypothesis
+for a provisional diagnosis. Announce a final result only when its stopping condition holds.
+A method that permits an inconclusive result should say so, not force a success or failure.
+Include a real failure and its undo when the
 procedure backtracks. A finished table of results without the steps is flagged
 `static_trace`; a computed result without its working, `unworked_result`. Write an answer
 key (`.tum-mcp/checks/<item>.py`) that runs the procedure and prints each step's state, so

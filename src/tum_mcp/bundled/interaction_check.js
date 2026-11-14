@@ -165,20 +165,22 @@ async ({ query, study, exercise }) => {
     const runs = [...walk.querySelectorAll('.segmented .segment')];
     for (const run of runs.length ? runs : [null]) {
       if (run) { run.click(); await frame(); }
-      walk.querySelector('.walk-dot')?.click(); await frame();
+      const jump = walk.querySelector('.walk-jump');
+      if (jump) { jump.click(); await frame(); }
+      const choices = [...walk.querySelectorAll(jump ? '.walk-menu-step' : '.walk-dot')];
+      choices[0].click(); await frame();
       await inspectMath(walk, name);
       const first = walk.querySelector('.walk-card').innerText, seen = new Set([first]);
-      let guard = 0;
-      while (!next.disabled && guard++ < 60) {
+      for (let place = 1; place < choices.length; place++) {
         next.click(); await frame();
         await inspectMath(walk, name);
         const text = walk.querySelector('.walk-card').innerText;
-        if (text === first && seen.size > 1) break;
         if (seen.has(text)) { say(name, 'Next did not change the step card'); break; }
         seen.add(text);
       }
-      const dots = walk.querySelectorAll('.walk-dot').length;
-      if (dots !== seen.size) say(name, `${seen.size} steps reached but ${dots} dots shown`);
+      if (choices.length !== seen.size) say(name, `${seen.size} steps reached but ${choices.length} steps offered`);
+      next.click(); await frame();
+      if (walk.querySelector('.walk-card').innerText !== first) say(name, 'Next did not cycle to the first step');
       const all = walk.querySelector('.walk-toggle');
       all.click(); await frame();
       if (!visible(walk.querySelector('.walk-trace'))) say(name, 'All steps did not show the trace');

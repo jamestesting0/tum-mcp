@@ -84,14 +84,14 @@ lab models --host codex
 
 # First round only: run the current skills once per author; these runs become the baseline.
 lab round new r0 --fresh --scenario course-workspaces --author claude \
-  --matrix codex:gpt-6.1-terra:high --judge codex:gpt-6.1-sol:xhigh --reason "first baseline"
+  --matrix codex:gpt-6.1-terra:high:fast --judge codex:gpt-6.1-sol:xhigh --reason "first baseline"
 lab variant r0 base
 lab run r0 --variant base --all-authors     # Claude and Codex at once
 
 # Every later round: --from takes the previous round's newest completed run per author as
 # the baseline (or name them with --baseline ROUND/RUN, or later with `lab baseline`).
 lab round new r1 --from r0 --scenario course-workspaces --author claude \
-  --matrix codex:gpt-6.1-terra:high --judge codex:gpt-6.1-sol:xhigh --reason "headings"
+  --matrix codex:gpt-6.1-terra:high:fast --judge codex:gpt-6.1-sol:xhigh --reason "headings"
 lab variant r1 candidate --patch .omo/skill-lab/rounds/r1/candidate.patch
 lab run r1 --variant candidate --all-authors
 lab collect r1
@@ -106,6 +106,11 @@ lab ledger add r1 --decision .omo/skill-lab/rounds/r1/decision.md
 lab round status r1
 lab clean --keep 3
 ```
+
+`lab collect` writes each run's `metrics.json`. Codex reports a thread's token usage
+cumulatively, so `tokens` is each thread's final total and `turn_tokens` lists what each
+turn added. It also counts command output characters, the plan and packet checker
+sessions the broker ran, and the review verdicts by kind (pass, fail, uncertain).
 
 Rounds run one after another. Within a round, `--all-authors` runs the round's author and
 its `--matrix` authors at once, one trial per host. The judge pairs runs by author model only:
@@ -130,14 +135,16 @@ independent. To look at a run's app:
   ~/.skill-lab/workspaces/r1/base-1 --port 8811
 ```
 
-Models are `host:model:effort`; a bare `claude` or `codex` means that host's default author,
-`claude:opus:medium` or `codex:gpt-6.1-terra:high`. Claude takes an alias (`opus`, `sonnet`, `haiku`, `fable`)
+Models are `host:model:effort[:fast]`; a bare `claude` or `codex` means that host's default author,
+`claude:opus:medium` or `codex:gpt-6.1-terra:high:fast`. The optional `fast` tier selects
+Codex priority service for supported models; omitting it means standard speed. Claude takes an alias (`opus`, `sonnet`, `haiku`, `fable`)
 or a `claude-*` name with `low|medium|high|xhigh|max`; Codex takes a model from its list with
 a supported effort. Judges default to `claude:claude-opus-5-5:xhigh` and
 `codex:gpt-6.1-sol:xhigh` for confirmation; `ultra` is refused for judging. A baseline and
 its candidates compare only within one host, model and effort; `--author` on `lab run` starts
 another comparison group. A run whose host reports a different model is marked
-`invalid-model`.
+`invalid-model`. Quality comparisons still work across speed tiers, but timing deltas and
+ratios between fast and standard runs are not comparable; two fast runs can be compared.
 
 Codex trials install the candidate's course-task guards alongside its skills and
 filtered MCP entry. The lab verifies their enabled state and trusts only those exact

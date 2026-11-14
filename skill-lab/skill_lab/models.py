@@ -11,7 +11,7 @@ CLAUDE_ALIASES = ("opus", "sonnet", "haiku", "fable")
 CLAUDE_EFFORTS = ("low", "medium", "high", "xhigh", "max")
 JUDGE_FORBIDDEN_EFFORTS = frozenset({"ultra"})
 DEFAULT_CONFIRM_JUDGES = ("claude:claude-opus-5-5:xhigh", "codex:gpt-6.1-sol:xhigh")
-DEFAULT_AUTHORS = {"claude": "claude:opus:medium", "codex": "codex:gpt-6.1-terra:high"}
+DEFAULT_AUTHORS = {"claude": "claude:opus:medium", "codex": "codex:gpt-6.1-terra:high:fast"}
 
 
 @dataclass(frozen=True)
@@ -19,27 +19,38 @@ class ModelSpec:
     host: str
     model: str
     effort: str
+    tier: str | None = None
 
     @classmethod
     def parse(cls, text: str) -> "ModelSpec":
         text = DEFAULT_AUTHORS.get(text, text)
         parts = text.split(":")
-        if len(parts) != 3 or not all(parts):
-            raise LabError(f"Model spec {text!r} must be host:model:effort.")
-        host, model, effort = parts
+        if len(parts) not in (3, 4) or not all(parts):
+            raise LabError(f"Model spec {text!r} must be host:model:effort[:fast].")
+        host, model, effort = parts[:3]
         if host not in HOSTS:
             raise LabError(f"Unknown host {host!r}; use one of {', '.join(HOSTS)}.")
-        return cls(host, model, effort)
+        tier = parts[3] if len(parts) == 4 else None
+        if tier is not None and tier != "fast":
+            raise LabError(f"Unknown speed tier {tier!r}; use fast or omit the tier.")
+        if tier and host != "codex":
+            raise LabError("The fast tier is supported only for Codex.")
+        return cls(host, model, effort, tier)
 
     def __str__(self) -> str:
-        return f"{self.host}:{self.model}:{self.effort}"
+        base = f"{self.host}:{self.model}:{self.effort}"
+        return f"{base}:{self.tier}" if self.tier else base
 
     def as_dict(self) -> dict[str, str]:
-        return {"host": self.host, "model": self.model, "effort": self.effort}
+        result = {"host": self.host, "model": self.model, "effort": self.effort}
+        if self.tier:
+            result["tier"] = self.tier
+        return result
 
     @classmethod
     def from_dict(cls, value: dict[str, str]) -> "ModelSpec":
-        return cls.parse(f"{value['host']}:{value['model']}:{value['effort']}")
+        base = f"{value['host']}:{value['model']}:{value['effort']}"
+        return cls.parse(f"{base}:{value['tier']}" if "tier" in value else base)
 
 
 def codex_models(cache: Path) -> dict[str, tuple[str, ...]]:
@@ -82,6 +93,11 @@ def validate(spec: ModelSpec, *, role: str, profile_home: Path) -> None:
         raise LabError(f"Codex model {spec.model!r} is not in the model list: {sorted(models)}.")
     if spec.effort not in models[spec.model]:
         raise LabError(f"{spec.model} supports efforts {models[spec.model]}, not {spec.effort!r}.")
+    if spec.tier == "fast":
+        data = json.loads(codex_cache(profile_home).read_text(encoding="utf-8"))
+        model = next(item for item in data["models"] if item.get("slug") == spec.model)
+        if not any(tier.get("id") == "priority" for tier in model.get("service_tiers", [])):
+            raise LabError(f"Codex model {spec.model!r} does not support the fast priority tier.")
 
 
 def reported_matches(spec: ModelSpec, reported: str | None) -> bool | None:

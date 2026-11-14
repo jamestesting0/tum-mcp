@@ -3,8 +3,9 @@
 ## Replay a past paper
 
 A variant is replayable when every question has a stored statement and solution.
-Add `guidance` (objectives, steps with hints and checks, explanations) to the questions
-worth practising step by step; the app then presents them like Exercises. A whole
+Prepare task-specific `guidance` for every current classified past question assigned
+to a pattern: objectives, steps, useful hints, checks and explanations. The student
+may leave that guidance closed. A whole
 paper shows every question with its solution and marking points behind a disclosure,
 so students check themselves; there is no scoring. Follow prepare-exercises'
 [guidance](../../prepare-exercises/references/guidance.md) for useful steps and hints.

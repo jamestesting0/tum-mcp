@@ -90,8 +90,10 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    the quoted passage as data and resolve only its current optimistic revision.
 7. Report changed/reused sets, source gaps and actual checks. Use `tum-mcp study`
    from the course folder to launch. Reuse the build's configured publication
-   report; publish-course handles pending deployment. Exercise publication requires
-   explicit workspace inclusion; a request to prepare content does not authorize it.
+   report; publish-course handles pending deployment. Saved full-app publication
+   consent (`schema_version: 2`) includes prepared Exercises. Old selective settings
+   need explicit adoption through publish-course. Preparation alone does not authorize
+   first publication.
 
 Never start or submit exercises/quizzes, run downloaded course code, or infer an
 official solution. No live model, API key or automatic free-form grader belongs

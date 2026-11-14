@@ -3,7 +3,15 @@ import json
 import pytest
 from skill_lab import LabError
 from skill_lab.memory_bench import TEACHING, metrics
-from skill_lab.memory_bench_agent import cited, grade, grade_learner, plan_stage, protected_changes
+from skill_lab.memory_bench_agent import (
+    cited,
+    grade,
+    grade_learner,
+    plan_stage,
+    protected_changes,
+    render,
+    summarize,
+)
 
 NAMES = {
     "problem-1-2-1": {"exercises/set/s/exercise/problem-1-2-1"},
@@ -13,6 +21,31 @@ NAMES = {
     "past:3a": {"exam/sitting/m/variant/v/question/3a"},
     "slides-1": {"source/slides-1"},
 }
+
+
+def test_agent_comparison_gates_timing_ratio_but_preserves_quality_and_cost():
+    base = {
+        "task": "T1",
+        "kind": "relational",
+        "arm": "A",
+        "success": True,
+        "seconds": 10,
+        "usage": {"input_tokens": 100},
+        "commands": 1,
+        "memory_calls": 0,
+        "protected_writes": [],
+    }
+    candidate = base | {"arm": "B", "seconds": 5, "speed_tier": "fast"}
+    mixed = summarize([base, candidate], (("B", "A"),))
+    assert mixed["ratios"]["B/A seconds"]["median"] is None
+    assert mixed["ratios"]["B/A seconds"]["timing"] == "not comparable (fast vs standard tier)"
+    assert mixed["ratios"]["B/A cost"]["median"] == 1
+    assert mixed["success"]["relational"]["A"] == mixed["success"]["relational"]["B"] == 1
+    mixed["decision"] = {}
+    assert "not comparable (fast vs standard tier)" in render(mixed, "Comparison")
+
+    same = summarize([base | {"speed_tier": "fast"}, candidate], (("B", "A"),))
+    assert same["ratios"]["B/A seconds"]["median"] == 0.5
 
 
 def test_sources_line_maps_keys_titles_and_pages_to_item_refs():

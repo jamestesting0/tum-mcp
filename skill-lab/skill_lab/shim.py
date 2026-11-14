@@ -6,9 +6,11 @@ Standard library only, because it runs on the variant's interpreter without the 
 
 import json
 import os
+import subprocess
 import sys
 import time
 import uuid
+from datetime import UTC, datetime
 
 BLOCKED = frozenset(
     {"login", "logout", "setup", "uninstall", "update", "install", "manage", "serve"}
@@ -65,8 +67,44 @@ def brokered(arguments: list[str], folder: str) -> int:
     return int(result["code"])
 
 
+def checker(log: str, kind: str, command: list[str]) -> int:
+    """Observe each fresh or repair invocation without retaining its prompt or output."""
+    attempt = 0
+    if os.path.exists(log):
+        with open(log, encoding="utf-8") as handle:
+            attempt = sum(json.loads(line)["event"] == "started" for line in handle)
+    with open(log, "a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                {
+                    "event": "started",
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "attempt": attempt,
+                    "kind": kind,
+                }
+            )
+            + "\n"
+        )
+        handle.flush()
+        done = subprocess.run(command, check=False)
+        handle.write(
+            json.dumps(
+                {
+                    "event": "completed",
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "attempt": attempt,
+                    "status": "completed" if done.returncode == 0 else "failed",
+                }
+            )
+            + "\n"
+        )
+    return done.returncode
+
+
 def main() -> None:
     arguments = sys.argv[1:]
+    if arguments[:1] == ["--lab-checker"]:
+        raise SystemExit(checker(arguments[1], arguments[2], arguments[3:]))
     message = refusal(arguments)
     if message:
         print(message, file=sys.stderr)

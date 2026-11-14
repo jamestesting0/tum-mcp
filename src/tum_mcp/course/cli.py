@@ -4,16 +4,17 @@ import json
 from dataclasses import asdict
 from importlib.resources import files
 from pathlib import Path
-from typing import Annotated, Literal, assert_never
+from typing import Annotated, Literal
 
 import typer
+from pydantic import JsonValue
 
 from tum_mcp.course.app.comment_cli import app as comments_app
 from tum_mcp.course.app.publish_cli import app as publish_app
 from tum_mcp.course.content.store import document_writes, index_name, present, read_document
 from tum_mcp.course.learner.cli import app as learner_app
 from tum_mcp.course.memory.cli import register as register_knowledge
-from tum_mcp.course.output import emit
+from tum_mcp.course.output import emit, summarize
 from tum_mcp.course.workflow.cli import app as task_app
 from tum_mcp.errors import CampusError, Code
 
@@ -286,7 +287,21 @@ def report(
             reading = assess(root, preparation)
         else:
             raise CampusError(Code.ACTION_REQUIRED, "Name --batch ID or --preparation ID.")
-        emit(root, "readiness", {"readiness": reading.report()}, full=True)
+        items: dict[str, JsonValue] = {}
+        for item in reading.items:
+            count = sum(
+                problem.startswith(f"{item}:") or problem.startswith(f"{item}/")
+                for problem in reading.problems
+            )
+            items[item] = {"status": "blocked" if count else "ready", "problems": count}
+        result = reading.report()
+        summary: dict[str, JsonValue] = {
+            "ready": reading.ready,
+            "problems": list(reading.problems),
+            "next_action": result["next_action"],
+            "items": items,
+        }
+        emit(root, "readiness", {"readiness": result}, full=full, summary=summary)
         return
     if preparation is not None or batch is not None:
         raise CampusError(Code.ACTION_REQUIRED, "Use scope selectors with --section readiness.")
@@ -305,7 +320,7 @@ def report(
 
     semantics = cache(lambda: knowledge_revision(root))
     media = cache(lambda: discover(root, state, content))
-    quality = cache(lambda: quality_flags(content, exercises))
+    quality = cache(lambda: quality_flags(content, exercises, root=root))
     parts = {
         "quality": quality,
         "structure": lambda: course_map(
@@ -486,33 +501,29 @@ def build(
 
 @app.command(rich_help_panel="Author")
 def schema(
-    kind: Literal[
-        "snapshot",
-        "content",
-        "exercises",
-        "lectures",
-        "exam",
-        "coverage",
-        "preparation",
-        "batch",
-        "lecture-selection",
-        "review",
-        "knowledge",
-        "audio-manifest",
-        "audio-plan",
-        "media-review",
-        "plan",
-        "digest",
-        "schedule",
-    ],
+    kind: Annotated[str | None, typer.Argument()] = None,
     definition: Annotated[
         str | None, typer.Option(help="Only this definition, such as Unit or DiagramBlock.")
     ] = None,
+    example: Annotated[bool, typer.Option("--example", help="Show a block example.")] = False,
 ) -> None:
     """Print the machine-readable input schema for the calling agent."""
     from tum_mcp.course.content.study import StudyContent
     from tum_mcp.course.project.models import Snapshot
 
+    if example:
+        if definition is not None:
+            raise CampusError(Code.ACTION_REQUIRED, "Choose an example or a schema, not both.")
+        catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+        if kind is None or kind == "list":
+            typer.echo(json.dumps(sorted(catalogue), indent=2))
+        elif kind in catalogue:
+            typer.echo(json.dumps(catalogue[kind], indent=2, ensure_ascii=False))
+        else:
+            raise CampusError(Code.ACTION_REQUIRED, f"Unknown example {kind}; use --example list.")
+        return
+    if kind is None:
+        raise CampusError(Code.ACTION_REQUIRED, "Choose a schema kind or use --example.")
     match kind:
         case "batch":
             from tum_mcp.course.checks.batch import Batch
@@ -582,8 +593,8 @@ def schema(
 
             require_lecture()
             result = LectureContent.model_json_schema()
-        case unreachable:
-            assert_never(unreachable)
+        case _:
+            raise CampusError(Code.ACTION_REQUIRED, f"Unknown schema kind {kind}.")
     if definition is not None:
         definitions = result.get("$defs", {})
         if definition not in definitions:
@@ -652,7 +663,12 @@ def visuals(
     result = check_visuals(
         project, tuple(unit or ()), tuple(exercise or ()), exam=exam, gallery=gallery, phone=phone
     )
-    emit(project.expanduser().resolve(), "visuals", result, full=full)
+    summary = summarize(result)
+    # Every drawing that still scrolls at desktop width is shown: a note cut off after three
+    # entries is a wide tree the author never sees.
+    if isinstance(summary, dict) and result.get("notes"):
+        summary["notes"] = result["notes"]
+    emit(project.expanduser().resolve(), "visuals", result, full=full, summary={"summary": summary})
 
 
 @app.command(rich_help_panel="Check")

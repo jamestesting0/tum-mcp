@@ -1,4 +1,5 @@
 import data from '../../data.mjs';
+import { drawGrids } from '../visuals/grid.mjs';
 import { node, studyText, append, sourcesNote, plainText, toggletip, answerMark } from '../shell/dom.mjs';
 import { iconButton, iconGlyph, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 import { renderPlot } from '../visuals/plot.mjs';
@@ -306,6 +307,7 @@ export function renderBlockBody(block, { term = true } = {}) {
       case 'files': root.append(renderFiles(block)); break;
       case 'tree': root.append(treeBlock(block)); break;
       case 'figure': root.append(figureBlock(block)); break;
+      case 'grid': root.append(append(node('div', 'grid-region'), drawGrids(block).svg)); break;
       case 'walkthrough': root.append(renderWalkthrough(block, stage => renderBlockBody(stage))); break;
       default: throw new Error('Unsupported study block. Rebuild the site with a compatible renderer.');
     }

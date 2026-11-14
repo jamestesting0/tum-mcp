@@ -7,6 +7,7 @@ brings; the plan gate records a fresh checker's verdict against the plan's finge
 
 import hashlib
 import json
+import re
 from collections.abc import Callable
 from functools import cache
 from pathlib import Path
@@ -36,7 +37,7 @@ STEPPED = "a walkthrough, a stepped diagram, a derivation walkthrough or a code 
 PICTURES = {"figure", "diagram", "uml", "tree"}
 
 
-# Concepts a student performs or reads off a picture: the lecture's own worked run teaches them.
+# Only these kinds require an example or skip; a selected example can teach any kind.
 WORKED_KINDS = {"procedure", "algorithm", "model"}
 
 
@@ -49,11 +50,28 @@ class Example(Frozen):
         default=None, exclude_if=lambda value: value is None
     )
     shows: Text = Field(
-        description="The decision, branch or result this example lets the student see, which "
-        "no other chosen example shows."
+        description="The example's inputs and conventions, the object to show, and the decisive "
+        "working or test that makes its teaching point. Include what other chosen examples "
+        "cannot show."
     )
-    endpoint: Text = Field(description="Where the run ends, as the lecture shows or finishes it.")
+    endpoint: Text = Field(
+        description="The full endpoint and the result or comparison it teaches. A justified "
+        "inconclusive endpoint is valid; a useful continuation beyond the lecture is allowed."
+    )
     block: Key
+    states: Annotated[int, Field(strict=True, ge=1)] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Number of operation-level states in this run: the initial state and the "
+        "state after each distinct operation the cited pages show or imply between frames. "
+        "Count operations, not slide frames. One atomic operation touching several items "
+        "counts once only when the source treats it that way; separate operations stay separate.",
+    )
+    phases: tuple[Label, ...] = Field(
+        default=(),
+        exclude_if=lambda value: not value,
+        description="The source's phase names, used as walkthrough subgoal groups.",
+    )
     why: Text | None = Field(
         default=None,
         exclude_if=lambda value: value is None,
@@ -100,6 +118,18 @@ class PracticeCase(Frozen):
     answer: Text = Field(description="The new case's result and shortest valid reasoning.")
 
 
+class GateEntry(Frozen):
+    check: int
+    kind: Literal["reason", "advice"]
+    text: Text
+    state: Literal["open", "resolved", "escalated"] = "open"
+
+
+class GateUpdates(Frozen):
+    resolved: tuple[str | int, ...] = ()
+    evidence: dict[str, str] = Field(default_factory=dict)
+
+
 class Approval(Frozen):
     fingerprint: str
     verdict: Literal["pass", "fail"]
@@ -113,6 +143,9 @@ class Approval(Frozen):
     # The batches whose requests the approval read; a batch declared later, such as one that
     # groups earlier batches for a combined review, does not reopen it.
     batches: tuple[Key, ...] | None = Field(default=None, exclude_if=lambda value: value is None)
+    history: tuple[GateEntry, ...] = Field(default=(), exclude_if=lambda value: not value)
+    concepts: dict[str, str] = Field(default_factory=dict, exclude_if=lambda value: not value)
+    checks: int = Field(default=0, exclude_if=lambda value: not value)
 
 
 class WorkedDecision(Frozen):
@@ -196,6 +229,7 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
         problems.append(f"outcomes not in the ledger: {', '.join(unknown)}")
     if value is None:
         return problems
+    problems.extend(str(flag["detail"]) for flag in example_state_flags(plan, value))
     questions = {question["key"]: question for question in value.get("questions", [])}
     for case in plan.practice:
         if case.question not in questions:
@@ -243,6 +277,54 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
         if planned != list(declared):
             problems.append(f"parts {planned} do not match the exercise's parts {declared}")
     return problems
+
+
+def example_state_flags(plan: Plan, value: dict) -> list[dict[str, JsonValue]]:
+    """Compare a selected walkthrough with the source states and phases its planner counted."""
+    blocks = {block.get("key"): block for block in value.get("blocks", [])}
+    flags: list[dict[str, JsonValue]] = []
+    for concept in plan.concepts:
+        example = concept.example
+        if example is None or (block := blocks.get(example.block)) is None:
+            continue
+        if block.get("kind") != "walkthrough":
+            continue
+        steps = block["steps"]
+        item = f"{plan.item.removeprefix('study/')}/{example.block}"
+        if example.origin == "source" and example.states is None:
+            flags.append(
+                {
+                    "item": item,
+                    "flag": "source_states_missing",
+                    "detail": f"{concept.name}: source walkthrough {example.block} needs "
+                    "`states` counted from its cited pages before its steps can be checked.",
+                }
+            )
+        elif example.states is not None and len(steps) < example.states:
+            flags.append(
+                {
+                    "item": item,
+                    "flag": "source_states_missing",
+                    "detail": f"{concept.name}: walkthrough {example.block} has {len(steps)} "
+                    f"steps for {example.states} planned source states. Restore the source's "
+                    "states in this one walkthrough; never drop, merge or split steps "
+                    "to shorten it.",
+                }
+            )
+        groups = {_normalized(step["subgoal"]) for step in steps if step.get("subgoal")}
+        missing = [phase for phase in example.phases if _normalized(phase) not in groups]
+        if example.phases and (missing or any(not step.get("subgoal") for step in steps)):
+            flags.append(
+                {
+                    "item": item,
+                    "flag": "source_phases_missing",
+                    "detail": f"{concept.name}: group walkthrough {example.block}'s steps with "
+                    f"`subgoal` covering the planned source phases: {', '.join(example.phases)}."
+                    + (f" Missing: {', '.join(missing)}." if missing else "")
+                    + " Keep all steps in this one walkthrough, including any continuation.",
+                }
+            )
+    return flags
 
 
 def coverage_reader(root: Path) -> CoverageReader:
@@ -302,6 +384,77 @@ def gate_status(
     return "approved" if plan.gate.provenance == "fresh" else "provisional"
 
 
+def _concept_hashes(plan: Plan) -> dict[str, str]:
+    return {
+        concept.name: hashlib.sha256(
+            json.dumps(concept.model_dump(mode="json"), sort_keys=True).encode()
+        ).hexdigest()[:16]
+        for concept in plan.concepts
+    }
+
+
+def _history(gate: Approval | None) -> list[GateEntry]:
+    if gate is None:
+        return []
+    if gate.history:
+        return list(gate.history)
+    return [
+        *(GateEntry(check=1, kind="reason", text=text) for text in gate.reasons),
+        *(GateEntry(check=1, kind="advice", text=text) for text in gate.advice),
+    ]
+
+
+def _normalized(text: str) -> str:
+    return " ".join(text.casefold().split())
+
+
+def _updated_history(
+    plan: Plan, updates: GateUpdates, reasons: tuple[str, ...], advice: tuple[str, ...]
+) -> tuple[GateEntry, ...]:
+    history = _history(plan.gate)
+    for reason in reasons:
+        matching = [
+            entry
+            for entry in history
+            if entry.kind == "advice"
+            and entry.state != "escalated"
+            and _normalized(entry.text) == _normalized(reason)
+        ]
+        if not matching or any(
+            entry.kind == "reason" and _normalized(entry.text) == _normalized(reason)
+            for entry in history
+        ):
+            continue
+        history = [
+            entry.model_copy(update={"state": "escalated"}) if entry in matching else entry
+            for entry in history
+        ]
+    for resolved in updates.resolved:
+        matches = [
+            index
+            for index, entry in enumerate(history)
+            if (isinstance(resolved, int) and not isinstance(resolved, bool) and index == resolved)
+            or (isinstance(resolved, str) and _normalized(entry.text) == _normalized(resolved))
+        ]
+        if not matches:
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                f"Plan {plan.item}: unknown resolved history entry {resolved!r}.",
+            )
+        for index in matches:
+            if history[index].state == "open":
+                history[index] = history[index].model_copy(update={"state": "resolved"})
+    number = (
+        max(
+            plan.gate.checks if plan.gate else 0, max((entry.check for entry in history), default=0)
+        )
+        + 1
+    )
+    history.extend(GateEntry(check=number, kind="reason", text=text) for text in reasons)
+    history.extend(GateEntry(check=number, kind="advice", text=text) for text in advice)
+    return tuple(history)
+
+
 def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "same"]) -> dict:
     """Save a checker's plan verdicts; each applies to the plan as it was read."""
     read_coverage = coverage_reader(root)
@@ -331,8 +484,6 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
         advice = tuple(str(note) for note in answer.get("advice", []))
         if verdict not in {"pass", "fail"} or (verdict == "fail" and not reasons):
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item}: pass, or fail with the reasons.")
-        if verdict == "pass" and (problems := example_problems(plan)):
-            raise CampusError(Code.ACTION_REQUIRED, " ".join(problems[:5]))
         if (
             provenance == "same"
             and plan.gate
@@ -346,6 +497,48 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
                 else "repair the rejected plan and check the changed inputs first."
             )
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item}: {reason}")
+        checks = (
+            max(
+                plan.gate.checks if plan.gate else 0,
+                max((entry.check for entry in _history(plan.gate)), default=0),
+            )
+            + 1
+        )
+        try:
+            updates = GateUpdates.model_validate(
+                {"resolved": answer.get("resolved", []), "evidence": answer.get("evidence", {})}
+            )
+        except ValidationError as error:
+            raise CampusError(
+                Code.ACTION_REQUIRED, f"Plan {item}: {error.errors()[0]['msg']}"
+            ) from None
+        if plan.gate:
+            hashes = _concept_hashes(plan)
+            changed = {
+                name
+                for name in hashes.keys() | plan.gate.concepts.keys()
+                if hashes.get(name) != plan.gate.concepts.get(name)
+            }
+            prior = {
+                _normalized(entry.text)
+                for entry in _history(plan.gate)
+                if entry.kind == "reason" and entry.state == "open"
+            }
+            evidence = {_normalized(key): value.strip() for key, value in updates.evidence.items()}
+            demoted = tuple(
+                reason
+                for reason in reasons
+                if _normalized(reason) not in prior
+                and not any(_normalized(name) in _normalized(reason) for name in changed)
+                and not evidence.get(_normalized(reason))
+            )
+            reasons = tuple(reason for reason in reasons if reason not in demoted)
+            advice = tuple(dict.fromkeys((*advice, *demoted)))
+            if verdict == "fail" and not reasons:
+                verdict = "pass"
+        if verdict == "pass" and (problems := example_problems(plan)):
+            raise CampusError(Code.ACTION_REQUIRED, " ".join(problems[:5]))
+        history = _updated_history(plan, updates, reasons, advice)
         gate = Approval(
             fingerprint=plan.fingerprint(),
             verdict=verdict,
@@ -354,6 +547,9 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
             provenance=provenance,
             coverage_fingerprint=coverage["scope"]["fingerprint"] if coverage else None,
             batches=batches,
+            history=history,
+            concepts=_concept_hashes(plan),
+            checks=checks,
         )
         body = json.dumps(plan.model_copy(update={"gate": gate}).model_dump(mode="json"), indent=2)
         writes.append(Write(name, original, body.encode()))
@@ -375,7 +571,8 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
                 "Author a provisional draft from these same-author checks."
                 if provenance == "same"
                 else "Author the requested items from these plans; reuse unchanged approvals. "
-                "Apply any advice that improves the lesson; it needs no further check."
+                "Apply useful wording advice directly in the lesson. "
+                "Recheck a plan only when a checked teaching decision changes."
             )
         ),
     }
@@ -392,6 +589,56 @@ def _coverage(
             f"Plan {item}: determine coverage before drafting. " + " ".join(coverage.problems[:5]),
         )
     return report, batches
+
+
+def _pages(value: str) -> set[int]:
+    if not re.fullmatch(r"\d+(?:-\d+)?(?:\s*,\s*\d+(?:-\d+)?)*", value):
+        return set()
+    pages: set[int] = set()
+    for part in value.split(","):
+        start, _, end = part.strip().partition("-")
+        pages.update(range(int(start), int(end or start) + 1))
+    return pages
+
+
+def _unused_examples(root: Path, waiting: list[Plan]) -> list[JsonValue]:
+    from tum_mcp.course.sources.digests import read_digest
+
+    planned: dict[str, list[tuple[str, set[int]]]] = {}
+    for plan in waiting:
+        for concept in plan.concepts:
+            example = concept.example
+            if example and example.source and example.pages:
+                planned.setdefault(example.source, []).append(
+                    (example.pages, _pages(example.pages))
+                )
+    folder = confined(root, ".tum-mcp/digests")
+    unused: list[JsonValue] = []
+    for path in sorted(folder.glob("*.json")):
+        digest = read_digest(root, path.stem)
+        if not digest:
+            continue
+        ranges = planned.get(digest.source, [])
+        for kind, entries in (("example", digest.examples), ("figure", digest.figures)):
+            for entry in entries:
+                pages = _pages(entry.pages)
+                # A planned example inside this entry's pages selects the same demonstration.
+                # A figure can teach a separate idea on the same page as a selected example.
+                if kind == "example" and any(within <= pages for _, within in ranges):
+                    continue
+                item: dict[str, JsonValue] = {
+                    "source": digest.source,
+                    "kind": kind,
+                    "pages": entry.pages,
+                    "text": entry.text,
+                }
+                # A wider planned range can contain a separate demonstration; let the
+                # checker judge it instead of hiding it.
+                wider = [label for label, within in ranges if kind == "example" and pages & within]
+                if wider:
+                    item["overlaps_planned"] = wider[0]
+                unused.append(item)
+    return unused
 
 
 def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]:
@@ -416,9 +663,24 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             coverage[plan.preparation] = _coverage(plan.preparation, plan.item, read_coverage)[0]
     return {
         **({"coverage": coverage} if coverage else {}),
+        "unused_examples": _unused_examples(root, waiting),
         "plans": [
             {
                 **plan.model_dump(mode="json", exclude={"gate"}),
+                "concepts": [
+                    concept.model_dump(mode="json")
+                    | (
+                        {
+                            "changed": (
+                                _concept_hashes(plan)[concept.name]
+                                != plan.gate.concepts.get(concept.name)
+                            )
+                        }
+                        if plan.gate
+                        else {}
+                    )
+                    for concept in plan.concepts
+                ],
                 "fingerprint": plan.fingerprint(),
                 **(
                     {"coverage_fingerprint": coverage[plan.preparation]["scope"]["fingerprint"]}
@@ -433,6 +695,11 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                 **(
                     {"previous": list(plan.gate.reasons)}
                     if plan.gate and plan.gate.verdict == "fail"
+                    else {}
+                ),
+                **(
+                    {"history": [entry.model_dump(mode="json") for entry in _history(plan.gate)]}
+                    if plan.gate
                     else {}
                 ),
             }
@@ -451,64 +718,86 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                     "verdict": "pass|fail",
                     "reasons": [],
                     "advice": [],
+                    "resolved": [],
+                    "evidence": {},
                 }
                 for plan in waiting
             ]
         },
         "ask": (
-            "Fail a plan only for a blocking problem: a fact, value or convention that "
-            "contradicts the source; a critical lecture example left out (the run of a "
-            "procedure the student must perform, a decision or failure the main run cannot "
-            "show) or one changed, shrunk or replaced by an invented case; a stated outcome "
-            "left untaught; an idea used before it is taught; or a wrong solved practice "
-            "answer. List every other improvement under `advice`: the author sees it, and it "
-            "does not fail the plan. When a plan lists `previous` reasons, first check each "
-            "against the revised plan and never repeat one the revision fixed. "
-            "For each plan: does each concept come with a concrete case (a definition, rule "
-            "or comparison needs one short case, not a constructed worked run; in a Study "
-            "plan a procedure, algorithm or model needs the lecture's own worked example, "
-            "taught in full, and a lecture calculation whose result the lesson states, such "
-            "as a heuristic computed on the lecture's board, is a procedure with that "
-            "example), does each "
-            "kind get a fitting representation (or a real reason to skip it), does the order "
-            "build each idea before it is used, and does it cover its outcomes? "
-            "Compare each procedure, algorithm or model concept's `example` with the source "
-            "digest's examples and their pages: is a critical lecture demonstration missing (the "
-            "run of a method the student must perform, a decision, branch or failure the main "
-            "run cannot show, a case later material builds on)? Do two examples teach the same "
-            "mechanism? Is an example constructed where the lecture has one? Does any example "
-            "change or shrink the lecture's inputs, steps or endpoint? Finishing a run the slides "
-            "stop early keeps the lecture's inputs: a goal-free demonstration ends where its "
-            "traversal ends, and adding a goal or value to give it an ending changes the example. "
-            "Repeats of a mechanism on "
-            "another object, applications without workable inputs and empirical tables are "
-            "rightly left out. "
-            "Identify new core terms and properties used to compare methods or justify answers, "
-            "even when they appear only in headings or conditions. Plan their concise general "
-            "meaning as definitions, with their defining conditions and a useful case. A "
-            "method-specific guarantee or example does not define the underlying property. "
-            "For Study application or reasoning outcomes, inspect `practice`: each question "
-            "needs its solved result and an unworked input or decision. Routine application "
-            "with new inputs is valid; require substantive transfer when the objective calls "
-            "for it. A general rule taught in the lesson is not itself a solved assessment "
-            "case. Replaying an unchanged worked input and answer tests recall. Reusing a "
-            "graph can be valid when a changed "
-            "start, goal or ordering genuinely changes the reasoning. Recall-only objectives "
-            "and original released exercise statements do not need invented transfer cases. "
-            "Check that each stated contrast is actually true of the solved worked instances, "
-            "not merely a promise that the case is different. Reserve assessment cases for "
-            "practice rather than also using them as lesson examples. "
-            "First read coverage for the plan's preparation: check every source demand and "
-            "its original request. Audit every deferred outcome and subpart against that "
-            "request and the actual source sections. A broad topic request does not authorize "
-            "excluding its own conditions, guarantees or costs simply to shorten the lesson. "
-            "A selected exercise retains all requested subparts. Then check every "
-            "planned learner action, "
-            "including all clauses and the procedure's final result. Copy its scope fingerprint "
-            "as coverage_fingerprint in the answer when present. A first-step question does not "
-            "cover an "
-            "end-to-end procedure or recovering its result. Do not narrow the requirements "
-            "to fit the draft. Use the answer template, replacing pass|fail with your verdict "
-            "and giving reasons for a failure. Keep every copied fingerprint."
+            "1. On the first check, list every blocking problem you can find in one pass. "
+            "On later checks, verify each history reason first; put fixed entry texts or "
+            "zero-based history indices in resolved. Raise a new blocker only for a changed "
+            "concept named in full in the reason or something that change breaks. A new blocker on "
+            "an unchanged concept, including earlier advice, needs an evidence entry keyed "
+            "by its reason naming a new source page or fact; otherwise it becomes advice.\n"
+            "2. Read coverage and the original request. Audit every demand, deferred outcome "
+            "and subpart against the source. Broad requests include conditions, guarantees "
+            "and costs; exercises retain requested parts. Check all learner actions, clauses "
+            "and final results, not just a first step. Never narrow scope to fit the draft.\n"
+            "3. Check each concept has a concrete case, a fitting representation or a real "
+            "skip reason, and prerequisites before use. When each item's working depends on "
+            "its position, plan one walkthrough on the drawing: mark the item, show its "
+            "displacement or neighbours, write its value there and keep the running result. "
+            "A list of results beside a static picture does not teach that working. "
+            "Non-spatial records, such as a price list, stay a table. "
+            "Definitions, rules and comparisons can "
+            "use short cases when no source demonstration is needed; do not invent worked runs. "
+            "Define core terms and properties "
+            "used in comparisons, headings and conditions, with their defining conditions "
+            "and a useful case; a method-specific guarantee is not a general definition.\n"
+            "4. Compare critical Study demonstrations of any concept kind with digest "
+            "examples, figures and source pages. A critical source example or figure that "
+            "teaches a rule, comparison, property, theorem or definition is planned as that "
+            "concept's `example`, naming its representation. Mentioning its idea in `instance` "
+            "text does not select it. A concept without a source demonstration needs no "
+            "example unless its kind requires one. On the first check judge "
+            "unused_examples "
+            "as selection context; an entry marked overlaps_planned lies inside a wider "
+            "planned page range, so judge whether it is a separate demonstration. "
+            "A required method run, a new decision, branch or failure, "
+            "a case later material builds on, or a worked argument, calculation or visual "
+            "that explains a method's validity, limits or costs can be critical. Judge the "
+            "learning need; decorative illustrations without reasoning or usable inputs are "
+            "not worked demonstrations. The kind marker distinguishes examples and figures; "
+            "figures remain context even on selected pages because page overlap does not "
+            "prove their idea is taught. This is selection context, not a quota. Write nothing "
+            "for the rest. "
+            "Keep critical lecture examples complete: inputs, representation, decisive tests "
+            "and working, and endpoint or comparison. Page overlap or a concept mention does "
+            "not establish that the selected demonstration is complete. Keep the source range "
+            "that contains its decisive test and conclusion, not just its setup. "
+            "For every source process, verify `states` by counting its initial state and "
+            "the state after each distinct operation the pages show or imply between "
+            "consecutive frames. Count operations, not frames: a removal and two separate "
+            "insertions, two algebraic rewrites, simulation events or proof inferences "
+            "each need their intermediate states, even within one frame. One atomic "
+            "operation touching several items counts once only when the source treats it "
+            "that way; children pushed one at a time count separately. If `states` is "
+            "missing or too small, fail the plan and name the operation count and pages "
+            "that establish it. Require `phases` when the source groups the run. "
+            "Verify phase names against the pages. A source showing "
+            "one finished state or a constructed example needs no source state count. "
+            "Recorded states are a floor, not a cap. "
+            "Finish incomplete source working with its original inputs when the result matters. "
+            "Going beyond the source is fine; covering less is not. Do not invent missing "
+            "givens or a desired result to force an ending. For each additional example "
+            "of one mechanism say what it shows that the first cannot; otherwise it is a repeat. "
+            "Leave out repeated mechanisms on another object, applications without workable "
+            "inputs and empirical tables. Construct a case only when the lecture has none.\n"
+            "5. For Study application or reasoning, check each practice case has its solved "
+            "result and an unworked input or decision. Routine new inputs are valid; require "
+            "substantive transfer when the objective does. A general rule is not a solved "
+            "assessment case; an unchanged worked input tests recall. Reusing a setting can "
+            "be valid when a changed condition or input changes the required reasoning. "
+            "Do not demand a new setting for routine application. Recall-only objectives "
+            "and released exercise statements need no invented transfer case. Check contrasts "
+            "against solved examples and reserve assessment cases for practice.\n"
+            "6. Fail only for source contradictions, missing or altered critical examples, "
+            "untaught outcomes, ideas used before teaching, or wrong solved practice. Put "
+            "other improvements in advice. Each reason names everything a complete fix "
+            "contains, so one revision can resolve it. Use the answer template, provide "
+            "reasons on fail, "
+            "and preserve both plan and coverage fingerprints when present."
         ),
     }
