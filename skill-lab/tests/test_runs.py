@@ -128,6 +128,15 @@ def test_fresh_run_answers_questions_snapshots_turns_and_redacts(lab):
     transcript = "".join(p.read_text() for p in (run_dir / "transcript").glob("*.jsonl"))
     assert "Private programme" not in transcript and '"redacted": true' in transcript
     assert "listed files" in transcript
+    events = [
+        json.loads(line)
+        for path in (run_dir / "transcript").glob("*.jsonl")
+        for line in path.read_text().splitlines()
+    ]
+    assert all(event.get("_lab_timestamp") for event in events)
+    phases = collect.transcript_stats(run_dir, "claude")["phase_table"]
+    assert len(phases) == 6
+    assert all(phase["start"] <= phase["end"] and phase["minutes"] >= 0 for phase in phases)
     shim = (run_dir / "bin" / "tum-mcp").read_text()
     assert "shim.py" in shim
     assert (run_dir / "workspace").resolve() == paths.workspaces() / "r1" / record["id"]

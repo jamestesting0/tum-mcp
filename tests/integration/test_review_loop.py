@@ -118,9 +118,9 @@ def edit_first_block(project: Path) -> str:
     return f"study/{unit['key']}"
 
 
-@pytest.mark.parametrize("separate_findings", [False, True])
+@pytest.mark.parametrize("layout", ["single", "owner_first", "owner_last"])
 def test_one_defect_can_fail_four_checks_without_multiple_scores(
-    project: Path, separate_findings: bool
+    project: Path, layout: str
 ) -> None:
     loop.start(project, workspaces=("study",))
     packet = packets(project, loop.next_round(project))[0]
@@ -143,14 +143,16 @@ def test_one_defect_can_fail_four_checks_without_multiple_scores(
         "fix": "Explain the step.",
         "score": 2,
     }
-    if separate_findings:
+    if layout != "single":
         item["findings"] = [
-            finding,
+            finding | {"also": list(checks[1:])},
             *[
                 finding | {"check": check, "why": f"Another description {index}.", "score": 1}
                 for index, check in enumerate(checks[1:], 1)
             ],
         ]
+        if layout == "owner_last":
+            item["findings"].append(item["findings"].pop(0))
     else:
         item["findings"] = [finding | {"also": list(checks[1:])}]
 
@@ -162,7 +164,7 @@ def test_one_defect_can_fail_four_checks_without_multiple_scores(
     stored = record.findings[0]
     assert stored.check == checks[0] and stored.also == checks[1:]
     assert stored.why == finding["why"] and stored.fix == finding["fix"]
-    assert stored.score == (1 if separate_findings else 2)
+    assert stored.score == (2 if layout == "single" else 1)
     scores = record.scores(registry.dimensions("study-unit"))
     assert scores["clarity"] == stored.score
     assert {scores[name] for name in ("cohesion", "intuition", "representation")} == {3}
@@ -264,6 +266,48 @@ def test_findings_with_different_quotes_are_not_merged(project: Path) -> None:
 
     assert loop.record(project, response, "fresh")["opened"] == 2
     assert len(loop.load(project).record(key).findings) == 2
+
+
+@pytest.mark.parametrize("separate_answers", [False, True])
+def test_independent_defects_with_same_quote_keep_both_repairs(
+    project: Path, separate_answers: bool
+) -> None:
+    path = content_file(project, "study")
+    document = json.loads(path.read_bytes())
+    document["units"][0]["blocks"][0]["paragraphs"] = ["The probability of Q is 1.4."]
+    path.write_text(json.dumps(document))
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    key = packet["items"][0]["item"]
+    owner, other = "correctness.source_match", "clarity.terms_defined"
+    response = answer(packet, fail={key: owner})
+    item = response["items"][0]
+    first = item["findings"][0]
+    first.update(
+        why="A probability above one is mathematically wrong.",
+        fix="Correct 1.4 to the source probability 0.4.",
+    )
+    if separate_answers:
+        loop.record(project, response, "fresh")
+    item["checks"][other] = {"verdict": "fail", "method": "read"}
+    second = first | {
+        "check": other,
+        "why": "The symbol Q has no definition.",
+        "fix": "Define Q before giving its probability.",
+    }
+    item["findings"].append(second)
+
+    result = loop.record(project, response, "fresh")
+
+    record = loop.load(project).record(key)
+    assert result["opened"] == (1 if separate_answers else 2)
+    assert [(f.check, f.why, f.fix, f.also) for f in record.findings] == [
+        (f["check"], f["why"], f["fix"], ()) for f in (first, second)
+    ]
+    assert record.checks[owner].finding_ids == ("F1",)
+    assert record.checks[other].finding_ids == (record.findings[1].id,)
+    assert loop.record(project, response, "fresh")["opened"] == 0
+    assert loop.load(project).record(key) == record
 
 
 def test_verifying_owner_clears_linked_teaching_failures(project: Path) -> None:

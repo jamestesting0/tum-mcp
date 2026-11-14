@@ -210,6 +210,18 @@ def status_rows(round_id: str) -> list[dict]:
                 "speed_tier": tier,
                 "baseline_timing": comparison,
                 "delivered": metrics.get("delivered"),
+                **{
+                    key: metrics[key]
+                    for key in (
+                        "turn_tokens",
+                        "phase_table",
+                        "checker_sessions",
+                        "output_chars",
+                        "output_bytes",
+                        "uncertain_causes",
+                    )
+                    if key in metrics
+                },
                 "inventory": (run.get("inventory_hash") or "")[:10],
                 "human_review": (paths.round_dir(round_id) / "human" / f"{run['id']}.md").is_file(),
             }

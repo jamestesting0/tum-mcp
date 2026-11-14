@@ -161,6 +161,16 @@ def test_baseline_timing_is_compared_only_with_the_same_speed_tier(lab_state):
         "baseline": "t1/base-1",
         "timing": "not comparable (fast vs standard tier)",
     }
+    assert "phase_table" not in row and "output_bytes" not in row
+    workflow = {
+        "phase_table": [{"turn": 1, "kind": "study.build", "minutes": 1.5}],
+        "output_chars": 1,
+        "output_bytes": 2,
+        "uncertain_causes": {"Slide image unavailable.": 2},
+    }
+    (candidate_path.parent / "metrics.json").write_text(json.dumps(workflow))
+    measured = rounds.status_rows("r1")[0]
+    assert {key: measured[key] for key in workflow} == workflow
     assert judge.default_pairs("r1") == [["t1/base-1", "candidate-1"]]
 
     base["author"] = fast

@@ -1098,6 +1098,12 @@ def record(
     return {"recorded": sorted(asked), "opened": opened, "resolved": resolved}
 
 
+def _same_defect(left: Finding, right: Finding) -> bool:
+    return (left.location, left.quote) == (right.location, right.quote) and (
+        left.check == right.check or left.check in right.also or right.check in left.also
+    )
+
+
 def _record_item(
     context: Context,
     item: ReviewItem,
@@ -1160,54 +1166,46 @@ def _record_item(
             problem("finding", str(index), f"{key}: finding for {check.id} needs why and fix.")
             continue
         score = 1 if str(raw.get("score")) == "1" else 2
-        duplicate = next(
-            (
-                finding
-                for finding in candidates
-                if (finding.location, finding.quote) == (location, quote)
-            ),
-            None,
-        )
-        if duplicate is not None:
-            if check.id != duplicate.check and (
-                check.id not in asked["needs"]
-                or answer.get("checks", {}).get(check.id, {}).get("verdict") != "fail"
-            ):
-                problem(
-                    "finding",
-                    str(index),
-                    f"{key}: merged check {check.id} must be asked and fail.",
-                )
-                continue
-            linked = tuple(
-                dict.fromkeys(
-                    link for link in (*duplicate.also, check.id, *also) if link != duplicate.check
-                )
-            )
-            candidates[candidates.index(duplicate)] = duplicate.model_copy(
-                update={"also": linked, "score": min(duplicate.score, score)}
-            )
-            continue
         block = _block(item, location)
         previous = verdicts.get(check.id)
-        candidates.append(
-            Finding(
-                id=f"F{next_id + len(candidates)}",
-                check=check.id,
-                also=tuple(dict.fromkeys(also)),
-                quote=quote,
-                location=location,
-                why=raw["why"],
-                fix=raw["fix"],
-                score=score,
-                opened=number,
-                block=block,
-                blocks_at_open=dict(item.blocks),
-                late=previous is not None
-                and previous.verdict == "pass"
-                and is_current(previous, check, item),
+        candidate = Finding(
+            id=f"F{next_id + index}",
+            check=check.id,
+            also=tuple(dict.fromkeys(also)),
+            quote=quote,
+            location=location,
+            why=raw["why"],
+            fix=raw["fix"],
+            score=score,
+            opened=number,
+            block=block,
+            blocks_at_open=dict(item.blocks),
+            late=previous is not None
+            and previous.verdict == "pass"
+            and is_current(previous, check, item),
+        )
+        duplicates = [f for f in candidates if _same_defect(f, candidate)]
+        if not duplicates:
+            candidates.append(candidate)
+            continue
+        duplicate = duplicates[0]
+        owner = candidate if duplicate.check in candidate.also else duplicate
+        linked = tuple(
+            dict.fromkeys(
+                link
+                for finding in (*duplicates, candidate)
+                for link in (finding.check, *finding.also)
+                if link != owner.check
             )
         )
+        candidates[candidates.index(duplicate)] = owner.model_copy(
+            update={
+                "id": duplicate.id,
+                "also": linked,
+                "score": min(f.score for f in (*duplicates, candidate)),
+            }
+        )
+        candidates = [f for f in candidates if f not in duplicates[1:]]
     new: list[Finding] = []
     reported: list[Finding] = []
     for candidate in candidates:
@@ -1215,13 +1213,7 @@ def _record_item(
             (
                 finding
                 for finding in findings
-                if finding.status in LIVE
-                and (
-                    finding.check == candidate.check
-                    or finding.check in candidate.also
-                    or candidate.check in finding.also
-                )
-                and (finding.location, finding.quote) == (candidate.location, candidate.quote)
+                if finding.status in LIVE and _same_defect(finding, candidate)
             ),
             None,
         )
