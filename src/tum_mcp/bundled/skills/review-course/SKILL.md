@@ -87,7 +87,8 @@ scores.
       tests and working, and endpoint or comparison survive. For a source process,
       its `script` lists its initial state and the state after each distinct operation the
       pages show or imply between consecutive frames, one line each. Compare each line
-      with the pages and with its own step. Count operations, not slide frames.
+      with the pages and with its own step. A step whose action names an outcome, such
+      as cut off or discarded, marks it on its picture. Count operations, not slide frames.
       A removal and separate insertions, two algebraic rewrites, simulation events or
       proof inferences keep their intermediate states even within one frame.
       One atomic operation touching several items counts once only when the source
