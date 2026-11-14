@@ -254,6 +254,22 @@ def test_a_planned_input_must_be_drawn_not_described_or_derived(
     )
 
 
+@pytest.mark.parametrize(
+    ("mark", "marked_step"),
+    [
+        ("cutoff", {"active": ["c"], "cutoff": ["c"]}),
+        ("discarded", {"grid_marks": [{"grid": "maze", "cell": "2:3", "mark": "discarded"}]}),
+    ],
+)
+def test_planned_outcome_marks_must_appear_on_the_picture(mark: str, marked_step: dict) -> None:
+    current = plan(example=UCS | {"states": 2, "marks": [mark]}, blocks=["ucs-romania"])
+    words_only = {"key": "ucs-romania", "kind": "walkthrough", "steps": [{}, {"active": ["c"]}]}
+    flags = example_state_flags(current, {"blocks": [words_only]})
+    assert [flag["flag"] for flag in flags] == ["source_marks_missing"]
+    marked = words_only | {"steps": [{}, marked_step]}
+    assert example_state_flags(current, {"blocks": [marked]}) == []
+
+
 def test_a_walkthrough_stage_can_draw_its_own_input() -> None:
     current = plan(example=UCS | {"input": ROADS, "states": 1}, blocks=["ucs-romania"])
     walk = {"key": "ucs-romania", "kind": "walkthrough", "steps": [{}], "stage": diagram(3)}

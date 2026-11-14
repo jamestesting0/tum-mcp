@@ -117,10 +117,15 @@ A source example taught as a walkthrough needs a `script` so code can check its 
 The walkthrough gives each script line its own step and uses `subgoal` groups for those
 phases. A source showing only a finished picture or a constructed example needs no
 script. More steps are fine.
-When the source draws the object the process runs on, such as a road map, a circuit or
-a start board, record it as `input`: `{"kind": "graph", "edges": 5, "directed": false}`
-or `{"kind": "grid", "grids": 2}`. Code checks that the unit draws it. A caption, a
-table or a structure derived from it, such as a search tree, does not show the input.
+Some walkthroughs draw a structure derived from a source object, such as a search tree
+over a road map or a reduced circuit from the original network. Record that source
+object as `input`: `{"kind": "graph", "edges": 5, "directed": false}` or
+`{"kind": "grid", "grids": 2}`. Code checks that the unit draws it. A caption or a
+table does not show it. A structure the walkthrough draws in place, such as a tree
+searched node by node, is already drawn: record no `input` and never draw it twice.
+When the source shows outcome states in the run, list them in `marks`: `cutoff` for an
+item stopped at a limit, `discarded` for one rejected or pruned. Code checks that the
+walkthrough marks each one on its picture, not only in a caption.
 An input that is genuinely a table records no `input`.
 A geometric proof keeps its construction; a physical law keeps its free-body diagram;
 a legal distinction keeps the contrasting cases and their decisive facts.

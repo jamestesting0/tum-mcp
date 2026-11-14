@@ -94,9 +94,10 @@ scores.
       One atomic operation touching several items counts once only when the source
       treats it that way; children pushed one at a time stay separate.
       Require `phases` for source groups. Check both against the pages and this one
-      walkthrough's steps and `subgoal` groups. When the pages draw the process's input,
-      such as a graph or a board, check that the unit draws it, not only a caption or
-      a structure derived from it.
+      walkthrough's steps and `subgoal` groups. When the walkthrough draws a structure
+      derived from a source object, such as a search tree over a map, check that the
+      unit draws that object too. A second drawing of what the walkthrough already
+      shows is redundancy.
       A concept mention, correct total or different example cannot replace that example.
       A theorem keeps its geometric construction; a law keeps its labelled circuit
       and working; a contrasting legal case keeps its decisive facts and disposition.
