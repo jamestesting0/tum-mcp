@@ -438,7 +438,7 @@
     {
       "id": "practice.new_case",
       "dimension": "practice",
-      "rule": "authored application questions require solving an unworked input or making an unworked decision. Replaying an unchanged worked input and answer tests recall. Routine application with new values is valid; require substantive transfer when the objective calls for it. Teaching a general rule does not work every later instance of it. Shared numbers or graph structure alone do not establish replay: compare the actual inputs, requested result and reasoning. Retrieval cards and released exercise statements are not subject to this check.",
+      "rule": "authored application questions require solving an unworked input or making an unworked decision. Replaying an unchanged worked input and answer tests recall. Routine application with new values is valid; require substantive transfer when the objective calls for it. Teaching a general rule does not work every later instance of it. Shared numbers or graph structure alone do not establish replay: compare the actual inputs, requested result and reasoning. Retrieval cards and released exercise statements are not subject to this check. In Study, questions check understanding of the lecture; never ask Study for a proof, derivation or program to write. A dispute about whether a changed case differs enough becomes advice after one repair, unless the question can still be answered by copying a worked result.",
       "pass": "After a worked two-node priority choice, a three-node frontier requires calculating priorities and identifying two eligible minima; the general tie rule has been taught but that case has not been solved.",
       "fail": "The question reproduces the worked graph, start, goal and ordering and asks for its already stated path. Renaming the nodes does not create a new application.",
       "profiles": [
@@ -446,7 +446,7 @@
         "exercise"
       ],
       "scope": "item",
-      "version": 2
+      "version": 3
     },
     {
       "id": "practice.plausible_options",
@@ -518,14 +518,14 @@
     {
       "id": "coverage.ledger_outcomes",
       "dimension": "coverage",
-      "rule": "every outcome the coverage ledger assigns to the unit is taught and practised.",
+      "rule": "every outcome the coverage ledger assigns to the unit is taught and practised. For an outcome that asks the student to prove, derive or implement, Study teaches the construction in full as a worked example and checks a decisive step. Writing a whole proof, derivation or program is Exercises work, made only when the student asks for it; its absence from Study is not a finding.",
       "pass": "Every outcome the ledger links to the unit is taught and practised.",
-      "fail": "An assigned outcome is taught but never practised.",
+      "fail": "An assigned outcome is taught but never practised, or a construction outcome's method is named but never worked.",
       "profiles": [
         "study-unit"
       ],
       "scope": "item",
-      "version": 1,
+      "version": 2,
       "default_fail": true
     },
     {
@@ -1122,7 +1122,7 @@
     {
       "id": "representation.process_shown",
       "dimension": "representation",
-      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. Each step shows the state after one operation, at the cited source's granularity or finer, never coarser. Compare the actions and intermediate states with the source pages: separate pops, algebraic transformations, simulation ticks, proof inferences and transaction postings each keep their own state. One atomic action affecting several items stays one step, such as applying one matrix row operation. Preserve source states between selection and individual child insertions. Keep the whole process in one walkthrough; never drop or merge steps to shorten it. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, grid cells and moves, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it. Values the student compares across steps remain attached to their nodes, cells or marks while needed, rather than surviving only in changing prose. Do not retain obsolete values as current or add quantities the reasoning does not use. The legend or direct labels explain every state actually drawn, including neutral or not-yet-reached states when styled differently.",
+      "rule": "every procedure, trace, calculation or stated result is shown step by step with its state, never only as a finished table or number. Each step shows the state after one operation, at the cited source's granularity or finer, never coarser. Compare the actions and intermediate states with the source pages: separate pops, algebraic transformations, simulation ticks, proof inferences and transaction postings each keep their own state. One atomic action affecting several items stays one step, such as applying one matrix row operation. Preserve source states between selection and individual child insertions. Keep the whole process in one walkthrough; never drop or merge steps to shorten it. A staged walkthrough changes the relevant visual state in sync with its explanation: graph focus/frontier/visited nodes and traversed edges, grid cells and moves, code lines, table rows/cells, derivation lines, plot series or figure layers. Marks must reflect the actual computed run; arbitrary changing highlights do not teach it. Values the student compares across steps remain attached to their nodes, cells or marks while needed, rather than surviving only in changing prose. Do not retain obsolete values as current or add quantities the reasoning does not use. The legend or direct labels explain every state actually drawn, including neutral or not-yet-reached states when styled differently. A finished diagram the source shows whole is not a process: reading it part by part with regions needs no run, and a walkthrough over crops of it shows no states.",
       "pass": "Each pop in a search or transformation in a derivation shows its resulting state, including every state on the cited pages.",
       "fail": "'Remove one item from the stack, then the next' or 'Subtract three, then divide by two' shows only the second result and hides an intermediate state. A finished table or number without its working also fails.",
       "profiles": [
@@ -1132,7 +1132,7 @@
         "study-unit"
       ],
       "scope": "item",
-      "version": 5,
+      "version": 6,
       "default_fail": true,
       "teaching": true,
       "replaces": [
@@ -1241,6 +1241,19 @@
       ],
       "scope": "item",
       "version": 4,
+      "default_fail": true
+    },
+    {
+      "id": "coverage.cited_pages",
+      "dimension": "coverage",
+      "rule": "every teaching point on the source pages this unit answers for is taught in this unit or in a linked unit: definitions, conditions, one-way implications and bounds, figures and worked cases. These pages are the ones its blocks cite and the pages of the source outcomes the ledger assigns to it, within the preparation's locator. Read them in order and compare them with the lesson. A cited page range or a broad outcome such as a deck title is not evidence that its points are taught. A remark the source states in passing and never uses again, such as an application area, a goal or a historical note, is not a teaching point. Name each missing point with its page.",
+      "pass": "Every point on the cited pages 12-15, including the closing remark that the theorem's converse fails, is taught here or in a linked unit. A slide's passing mention of where a method is used is left out without loss.",
+      "fail": "A block cites pages 8-9 but teaches only the page 9 reaction; the page 8 condition for when the reaction is reversible is missing. Or the ledger assigns a whole deck to the unit and its opening section is never taught.",
+      "profiles": [
+        "study-unit"
+      ],
+      "scope": "item",
+      "version": 3,
       "default_fail": true
     },
     {

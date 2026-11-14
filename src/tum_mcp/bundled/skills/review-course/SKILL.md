@@ -18,7 +18,8 @@ A judge favours its own work. Checkers are fresh sessions that did not write the
 and do not share this conversation: host subagents that start empty, otherwise
 `tum-mcp review run-checker PROJECT --packet ID` (or `--plans` for the plan gate; a
 headless installed host, read-only). A subagent that inherits this session's context (a
-forked Codex agent) is not fresh: use run-checker there. With neither, record with `--provenance same`: the
+forked Codex agent) is not fresh: use run-checker there; in a Codex session the record
+commands refuse `--provenance fresh`. With neither, record with `--provenance same`: the
 result stays provisional and cannot pass the gate. The authoring session fixes; it never
 scores.
 
@@ -92,7 +93,7 @@ scores.
       A removal and separate insertions, two algebraic rewrites, simulation events or
       proof inferences keep their intermediate states even within one frame.
       One atomic operation touching several items counts once only when the source
-      treats it that way; children pushed one at a time stay separate.
+      treats it that way; items the source handles one at a time stay separate.
       Require `phases` for source groups. Check both against the pages and this one
       walkthrough's steps and `subgoal` groups. When the walkthrough draws a structure
       derived from a source object, such as a search tree over a map, check that the
@@ -102,7 +103,12 @@ scores.
       A theorem keeps its geometric construction; a law keeps its labelled circuit
       and working; a contrasting legal case keeps its decisive facts and disposition.
       Inspect intermediate states when those carry the reasoning.
-      A script is a floor, not proof of complete teaching or a template.
+      A script is a floor, not proof of complete teaching or a template. A diagram the
+      source shows whole is not a run; reading it part by part needs no script.
+      For `coverage.cited_pages`, read every cited page and every page of the outcomes
+      the ledger assigns to the unit: a page range or a deck-wide outcome does not show
+      that its points are taught. In Study, never ask for a proof, derivation or
+      program to write; that is Exercises work, made only on request.
       A finding is resolved only with the rewritten
       passage quoted, and only when that passage reads well on its own.
       Also inspect concepts added after planning; adding a glossary paragraph to justify
@@ -113,6 +119,8 @@ scores.
    4. Group findings that share a cause and make one coherent repair. Rewrite the whole
       passage a finding sits in, never splice a sentence
       ([writing](../prepare-study/references/writing.md#fix-the-passage-not-the-sentence)).
+      The rewrite keeps everything the passage already taught correctly, such as a
+      condition, a worked case or a key term's source form.
       Edit the item files, then `tum-mcp review fix PROJECT --item ITEM --finding F`
       (refused while the quoted passage is unchanged; name `--block` when you fixed it
       elsewhere). A finding that is wrong: `review reject` with the reason the content is
@@ -187,8 +195,8 @@ Repair gotchas:
   shows the state after one operation at source granularity or finer, never coarser.
   Two pops, algebraic transformations, simulation ticks or proof inferences need their
   intermediate states. One atomic action touching several items stays one step, such
-  as applying one matrix row operation. Preserve source states between selection and
-  individual child insertions.
+  as applying one matrix row operation. Preserve source states between a selection and
+  items the source then handles one at a time.
   Never drop or merge steps to shorten the run; the app handles its length.
 - The weakness is lost teaching during cleanup. Remove content only when it is wrong
   or said twice. Preserve each selected example's inputs, representation, decisive

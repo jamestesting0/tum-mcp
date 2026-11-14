@@ -84,6 +84,7 @@ Do not infer a diagnosis from one click or treat an immediate corrected retry as
 independent success. A later fresh item can give better evidence; no retention
 scheduler or mastery score is required.
 
-Use prepared Exercises for proofs, coding/design reasoning or open construction
-that deserves a rubric. Compare valid alternative reasoning fairly. Never label
-ungraded prose correct or claim that Reviewed proves understanding.
+Study sets no construction task: no proof, derivation or program for the student to write
+and no editable starter code. That practice belongs in Exercises, made only when the
+student asks. Compare valid alternative reasoning fairly. Never label ungraded prose
+correct or claim that Reviewed proves understanding.

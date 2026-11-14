@@ -22,6 +22,9 @@ def isolated_profile(
         return
     root = tmp_path_factory.mktemp("profile")
     monkeypatch.delenv("TUM_MCP_CONFIG_DIR", raising=False)
+    # A Codex session's ids change what `review record` accepts; tests start outside one.
+    monkeypatch.delenv("CODEX_THREAD_ID", raising=False)
+    monkeypatch.delenv("CODEX_SESSION_ID", raising=False)
     for name, folder in (
         ("TUM_MCP_DATA_DIR", "data"),
         ("TUM_MOODLE_DATA_DIR", "moodle"),

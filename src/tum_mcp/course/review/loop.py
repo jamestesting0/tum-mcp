@@ -1900,6 +1900,7 @@ def status(root: Path) -> dict[str, JsonValue]:
     card = scorecard(context, state)
     open_round = bool(state.rounds) and state.rounds[-1].closed is None
     pending = list(state.rounds[-1].pending_packets) if open_round else []
+    stale = _stale_packets(context, pending)
     if state.status == "passed":
         action = (
             "The gate passed. Report the scorecard."
@@ -1914,7 +1915,12 @@ def status(root: Path) -> dict[str, JsonValue]:
                 "tum-mcp review extend PROJECT --rounds 1 verifies them."
             )
     elif open_round:
-        if pending:
+        if stale:
+            action = (
+                f"Items in {', '.join(stale)} changed after the packet was written, so its "
+                "answer will be refused. Leave items unchanged while their packets are pending."
+            )
+        elif pending:
             action = "Record the pending packets, fix findings, then run review verify."
         elif (card["fixes_to_verify"] or card["stale_items"]) and max(
             state.rounds[-1].verify_passes, int(state.rounds[-1].verified)
@@ -1935,8 +1941,26 @@ def status(root: Path) -> dict[str, JsonValue]:
         "fixes_to_verify": card["fixes_to_verify"],
         "open_round": open_round,
         "pending_packets": pending,
+        **({"stale_packets": stale} if stale else {}),
         "next": action,
     }
+
+
+def _stale_packets(context: Context, pending: list[str]) -> list[str]:
+    """Pending packets that ask about an item changed since they were written."""
+    stale = []
+    for packet_id in pending:
+        path = confined(context.root, private_name(Path("."), f"review/packets/{packet_id}.json"))
+        if not path.is_file():
+            continue
+        entries = json.loads(path.read_bytes())["items"]
+        if any(
+            entry["item"] in context.items
+            and packet_fingerprint(context.items[entry["item"]]) != entry["fingerprint"]
+            for entry in entries
+        ):
+            stale.append(packet_id)
+    return stale
 
 
 def extend(root: Path, rounds: int) -> LoopState:

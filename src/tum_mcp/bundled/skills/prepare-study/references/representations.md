@@ -85,9 +85,9 @@ write the teaching yourself beside it.
 | A simple shape the lesson must change or label heavily | Redraw it as SVG ([figures](figures.md)) |
 
 1. **Find the visual.** `tum-mcp study figure PROJECT --key KEY --page N` lists the page's
-   figure regions and writes a preview with each one numbered; look at it.
+   figure regions and writes a preview with each one numbered over a tenths grid; look at it.
 2. **Crop it.** `--region 2` (or `2+3` to keep two boards side by side) or
-   `--box x0,y0,x1,y1` in page fractions, with `--name romania-map`, saves
+   `--box x0,y0,x1,y1` in page fractions read off that grid, with `--name romania-map`, saves
    `figures/romania-map.png` sharply rendered and records its page. Crop the visual and its
    own labels, never the slide title, bullets or footer (`slide_image`): the lesson says
    those in its own words.
@@ -96,7 +96,8 @@ write the teaching yourself beside it.
    `label`) and dim the rest, such as a tile and its goal square with its distance. Read
    the fractions off the grid preview each crop writes (`.tum-mcp/out/figure-grid.png`).
    When the lecture builds a picture over several slides, crop each state and set the
-   step's `frame`.
+   step's `frame`. Pointing at parts of one finished picture guides its reading; it is not
+   a run and needs no script.
 
 ## Algorithm traces
 

@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- Study generalizes beyond search lectures: lessons use the language the student writes in and
+  give a key term's source-language form once; the coverage ledger records each lecture section
+  as its own outcome; a new review check reads the cited pages and the pages of each assigned
+  outcome for teaching points no lesson covers; a diagram the
+  source shows whole is read with regions instead of being run as a process; Study teaches
+  proofs, derivations and code in full and checks a step, while writing them is Exercises work
+  made only on request.
+- `review status` names pending packets whose items changed after they were written.
+- New lint flags: `compressed_code` holds readiness when code is squeezed into summary lines
+  or typed as plain text, and `long_list` asks a checker to rule on a long, dense list that
+  should be grouped into labelled parts or a table. `compressed_code` also catches several
+  statements on one line and unindented blocks.
+- Code listings and code walkthrough stages have a Wrap lines toggle in their header; the choice
+  is remembered across listings.
+- In a Codex session, `review record` and `review plan-record` refuse `--provenance fresh`:
+  Codex spawned agents replay the author's conversation, so fresh verdicts come from
+  `review run-checker`. Review repairs keep what a rewritten passage already taught.
+- The answer-cue check ignores German function words; figure regions leave out slide backgrounds,
+  title ornaments and footer text, and labels no longer pull in the bullet text beside a figure;
+  the page preview carries a tenths grid for reading `--box` coordinates; the plan checker no
+  longer repeats advice already in its history and names every missing part of a partly fixed
+  reason at once.
 - Planned source examples list their states as a `script`, one line per state with its page;
   the plan check compares it with the pages and the walkthrough keeps a step per line.
   A plain `states` count is still accepted.

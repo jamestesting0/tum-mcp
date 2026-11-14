@@ -12,7 +12,7 @@ from importlib.resources import files
 from itertools import pairwise
 from pathlib import Path
 
-from pydantic import JsonValue
+from pydantic import BaseModel, JsonValue
 
 from tum_mcp.course.checks.plans import example_state_flags, read_plan
 from tum_mcp.course.content.exercises import ExerciseContent
@@ -54,6 +54,66 @@ QUESTION_WORDS = 80
 QUESTION_TABLE_ROWS = 6
 # A one-row table whose cell is a sentence holds the case's prose, not data.
 SENTENCE_CELL_WORDS = 8
+# Code the student reads line by line: a longer line, or code typed as plain text, is a
+# summary of several classes squeezed into one line (a pilot's State walkthrough).
+CODE_LINE_CHARS = 100
+PLAIN_LANGUAGES = frozenset({"text", "plain", "plaintext", "txt", "none"})
+CODE_SYNTAX = re.compile(r"[{};]|\w\(")
+PARENTHESISED = re.compile(r"\([^()]*\)")
+
+
+def _crowded(line: str) -> bool:
+    """Two statements on one line, such as `f.open(); f.setState(OPEN);`; a for header's
+    semicolons sit inside parentheses and do not count."""
+    bare = line.split("//", 1)[0]
+    while PARENTHESISED.search(bare):
+        bare = PARENTHESISED.sub("", bare)
+    return bare.count(";") > 1
+
+
+TOP_LEVEL = re.compile(
+    r"(?:public |private |protected |abstract |final |static |export |async )*"
+    r"(?:class|interface|enum|record|struct|def|function|fn)\b"
+)
+
+
+def _unspaced(lines: list[str]) -> bool:
+    """Classes or functions written back to back, with no blank line between them."""
+    return any(
+        TOP_LEVEL.match(line)
+        and index
+        and lines[index - 1].strip()
+        and not lines[index - 1].lstrip().startswith(("@", "//", "#", "/*", "*"))
+        for index, line in enumerate(lines)
+    )
+
+
+def _unindented(lines: list[str]) -> bool:
+    """A braced listing of several lines where nothing inside a block is indented."""
+    return (
+        len(lines) > 3
+        and "{" in "".join(lines)
+        and not any(line[:1] in " \t" and line.strip() for line in lines)
+    )
+
+
+# A list this long and dense mixes several kinds of point; grouped parts or a table teach it.
+LIST_POINTS = 6
+LIST_CHARS = 500
+
+
+def _code_blocks(value: object) -> Iterator[CodeBlock]:
+    """Every code listing in a lesson, including the code stages of walkthroughs."""
+    if isinstance(value, CodeBlock):
+        yield value
+    if isinstance(value, BaseModel):
+        for name in type(value).model_fields:
+            yield from _code_blocks(getattr(value, name))
+    elif isinstance(value, tuple | list):
+        for entry in value:
+            yield from _code_blocks(entry)
+
+
 # Sentences about the material instead of the subject, such as "the lecture groups ...".
 # An action hidden in a noun: "perform the computation of", "carry out an evaluation of".
 NOMINALISATION = re.compile(
@@ -525,11 +585,16 @@ GENERIC_HEADERS = frozenset(
 GENERIC_CAPTIONS = frozenset({"case", "table", "example", "information", "details"})
 OPTION_POINTER = re.compile(r"\b(?:all|none|both|neither) of (?:the )?(?:above|these|them)\b", re.I)
 NEGATIVE_STEM = re.compile(r"\b(?:not|except|never|least)\b")
-STEM_WORDS = re.compile(r"[a-z]{4,}")
+STEM_WORDS = re.compile(r"[^\W\d_]{4,}")
+# Function words in the languages lessons are written in (English, German) say nothing about
+# the answer.
 COMMON_WORDS = frozenset(
     "that this with from which what when where there their they them then than these those "
     "does into each have most more only also because would could should about after before "
-    "agent value".split()
+    "agent value "
+    "eine einen einem einer eines nicht oder aber wenn dann dass auch noch sind wird werden "
+    "kann muss nach über unter durch beim diese dieser dieses diesen jede jeder jedes welche "
+    "welcher welches zwei drei sich ihre seine wie".split()
 )
 
 
@@ -1021,7 +1086,41 @@ def quality_flags(
                 f"{definitions} definitions in one lesson; check whether it holds more than one "
                 "topic.",
             )
+        for code in _code_blocks(unit.blocks):
+            lines = code.code.splitlines()
+            longest = max((len(line) for line in lines), default=0)
+            plain = code.language.lower() in PLAIN_LANGUAGES and bool(CODE_SYNTAX.search(code.code))
+            crowded = (
+                any(_crowded(line) for line in lines) or _unindented(lines) or _unspaced(lines)
+            )
+            if longest > CODE_LINE_CHARS or plain or crowded:
+                flag(
+                    unit.key,
+                    "compressed_code",
+                    "Code is squeezed into summary lines"
+                    + (f" up to {longest} characters" if longest > CODE_LINE_CHARS else "")
+                    + (" typed as plain text" if plain else "")
+                    + (
+                        " crowded together (several statements on a line, no indentation, "
+                        "or no blank line between declarations)"
+                        if crowded
+                        else ""
+                    )
+                    + ". Write the code as a programmer would in its language: one statement "
+                    "per line, indented blocks, a blank line between methods, meaningful "
+                    "names, and let each walkthrough step point at the lines it explains.",
+                )
         for index, block in enumerate(unit.blocks):
+            if isinstance(block, TextBlock) and (
+                len(block.points) >= LIST_POINTS and sum(map(len, block.points)) > LIST_CHARS
+            ):
+                flag(
+                    f"{unit.key}#{index}",
+                    "long_list",
+                    f"{len(block.points)} points in one list mix several kinds of idea. Group them "
+                    "under short labelled parts (such as idea, structure, strengths, limits, "
+                    "example), or put parallel facts in a table, so each point has its place.",
+                )
             listed = [
                 found.group(0)
                 for paragraph in getattr(block, "paragraphs", ())
