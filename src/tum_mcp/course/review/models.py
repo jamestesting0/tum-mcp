@@ -268,6 +268,8 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "described_object": "representation",
     "prose_calculation": "representation",
     "compressed_working": "representation",
+    # Code summarised into long one-line stand-ins, unreadable in the app (user decision).
+    "compressed_code": "representation",
     "static_trace": "representation",
     "static_walkthrough": "representation",
     "dropped_node_value": "representation",
@@ -307,6 +309,7 @@ RULED_FLAGS: dict[str, str] = {
     "text_only_question": "representation.picture_carries_data",
     "inline_list": "representation.shape_fits",
     "inline_steps": "representation.shape_fits",
+    "long_list": "representation.shape_fits",
     "definition_refined": "correctness.source_match",
     "no_visual": "representation.shape_fits",
     "unstepped_table": "representation.shape_fits",

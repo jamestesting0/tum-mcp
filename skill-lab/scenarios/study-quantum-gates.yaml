@@ -1,0 +1,13 @@
+id: study-quantum-gates
+turns:
+  - say: "Prepare my study lessons for the 21 October lecture of Introduction to Quantum Computing."
+    skills: [sync-course, prepare-study]
+  - say: "Review them and fix any issues."
+    skills: [review-course, prepare-study]
+replies:
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  course: "Einführung in Quantum Computing (IN2381), this semester."
+  semester: "This semester, W26/27."
+  default: "Your choice, go ahead."

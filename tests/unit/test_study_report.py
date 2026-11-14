@@ -1312,6 +1312,69 @@ def test_item_writing_cues_and_placeholder_tables_are_raised() -> None:
     assert {"all_of_above", "key_longest"} <= raised()
 
 
+def test_summarised_code_and_long_dense_lists_are_flagged() -> None:
+    # A State walkthrough typed each class on one line as plain text; a Taylor section ran
+    # eight dense points in one list.
+    content = study()
+    unit = content["units"][0]
+    source = unit["blocks"][0]["sources"]
+    code = {
+        "kind": "code",
+        "sources": source,
+        "language": "java",
+        "code": (
+            "class Closed implements FileState {\n    void open(File f) {\n"
+            "        f.openResource();\n    }\n}"
+        ),
+        "explanation": "Opening a closed file opens its resource.",
+    }
+    unit["blocks"].append(code)
+    points = [
+        f"Point {n} states one more consequence of the approach in a full sentence."
+        for n in range(8)
+    ]
+    unit["blocks"].append({"kind": "text", "sources": source, "points": points[:4]})
+
+    def raised() -> set[str]:
+        return {f["flag"] for f in quality_flags(StudyContent.model_validate(content), None)}
+
+    assert not {"compressed_code", "long_list"} & raised()
+    code["code"] = (
+        "interface A {\n    void a();\n}\nclass B implements A {\n    public void a() {}\n}"
+    )
+    assert "compressed_code" in raised(), "two classes back to back"
+    code["code"] = "void open(File f) { f.openResource(); f.setState(OPEN); }"
+    assert "compressed_code" in raised(), "two statements on one line"
+    code["language"] = "text"
+    code["code"] = (
+        "Initial: File { state; open(){switch(state)}; close(){switch(state)} }\n"
+        "Interface: FileState { open(File); close(File); }"
+    )
+    unit["blocks"][-1]["points"] = points
+    assert {"compressed_code", "long_list"} <= raised()
+
+
+def test_a_shared_function_word_is_no_answer_cue_in_german_or_english() -> None:
+    from types import SimpleNamespace as Option
+
+    from tum_mcp.course.checks.report import option_flags
+
+    prompt = "Welche Begründung widerlegt eine zulässige Zerlegung?"
+    options = [
+        Option(key="a", text="Abpumpen entfernt eine Klammer."),
+        Option(key="b", text="Aufpumpen ändert nichts."),
+        Option(key="c", text="Das Wort bleibt gleich lang."),
+    ]
+
+    def cues() -> list[object]:
+        found = option_flags("u/q", prompt, options, "a")
+        return [flag["detail"] for flag in found if flag["flag"] == "stem_key_overlap"]
+
+    assert cues() == []
+    options[0].text = "Jede Zerlegung entfernt eine Klammer."
+    assert cues() and "zerlegung" in str(cues()[0]), "a shared content word is still a cue"
+
+
 def test_a_sentence_copied_from_an_exemplar_is_ruled_on() -> None:
     from importlib.resources import files
 

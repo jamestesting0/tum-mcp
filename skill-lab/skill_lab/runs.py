@@ -382,15 +382,16 @@ def execute(
             raise LabError(f"Checkpoint refused: {refusal}")
     campus_check()
     timeout = int(config["budget"]["turn_timeout_min"]) * 60
-    # A trial installs into, and clears the logs of, its host's profile, so one host runs one
-    # trial at a time; Claude and Codex trials run side by side.
-    lock = FileLock(str(paths.state() / f"live-{spec.host}.lock"))
+    # A trial installs into, and clears the logs of, its host's profile, so one profile runs one
+    # trial at a time; other hosts and profile slots run side by side.
+    profile = paths.profile_name(spec.host)
+    lock = FileLock(str(paths.state() / f"live-{profile}.lock"))
     paths.state().mkdir(parents=True, exist_ok=True)
     try:
         lock.acquire(timeout=0)
     except Timeout as error:
         raise LabError(
-            f"Another live {spec.host} trial is running; each host runs one at a time."
+            f"Another live {profile} trial is running; each profile runs one at a time."
         ) from error
     try:
         # Both hosts may start together; the round lock keeps the budget count and ids exact.

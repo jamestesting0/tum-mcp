@@ -17,6 +17,8 @@ AGENTS.md. Record, with sources:
 - What understanding means in this subject: compute, trace, prove, design, write code, argue.
 - The subject's natural representations and the difficulties the materials or exams show.
 - The student's stated background, when they give it.
+- The lesson language: the language the student writes in. When the sources use another
+  language, give the source's term once beside each defined term.
 
 Keep it to a few lines. An unknown stays "not yet established".
 
@@ -107,8 +109,8 @@ operations, not slide frames. The weakness is a count that is right while a stat
 missing: a bare number cannot show which state a run leaves out. A frame may contain a removal and separate
 insertions, two algebraic rewrites, two simulation events or two proof inferences.
 Keep their intermediate states. One atomic operation touching several items counts once
-only when the source treats it that way. Expanding a node can push all its children at
-once; if the source pushes them one at a time, count them separately.
+only when the source treats it that way; items the source handles one at a time count
+separately.
 This also applies to per-item calculations and staged constructions. Record `phases`
 when the source groups the run, such as depth limits, elimination passes or simulation
 rounds. The plan checker compares the script with the pages line by line. It fails a
@@ -116,7 +118,8 @@ missing, merged or invented state and names the page that shows it.
 A source example taught as a walkthrough needs a `script` so code can check its steps.
 The walkthrough gives each script line its own step and uses `subgoal` groups for those
 phases. A source showing only a finished picture or a constructed example needs no
-script. More steps are fine.
+script. A diagram the source shows whole is not a run, even when its parts name stages:
+read it part by part with regions, with no script. More steps are fine.
 Some walkthroughs draw a structure derived from a source object, such as a search tree
 over a road map or a reduced circuit from the original network. Record that source
 object as `input`: `{"kind": "graph", "edges": 5, "directed": false}` or

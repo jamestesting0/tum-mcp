@@ -47,7 +47,10 @@ Whatever the moves, every unit has:
 - A summary: the question it answers, in one or two sentences, never a copy of an objective.
 - Observable objectives (trace, explain, choose, compute) taken from the source's own
   outcomes in the coverage ledger, or from an idea the source develops at length. An aside
-  of the slides is not an objective. Every objective needs a practice question.
+  of the slides is not an objective. Every objective needs a practice question. When an
+  outcome asks the student to prove, derive or implement, teach the construction as a full
+  worked example and check a decisive step. Writing it whole is Exercises work, made only
+  when the student asks.
 - A `definition` block right after the passage that introduces each term students must
   learn. It shows inside that passage as the term above its meaning, so the prose does not
   restate it; later mentions anywhere in the course are `{{term}}`. State the course's
@@ -161,7 +164,10 @@ Every sentence must teach. Cut lines that only restate a title, describe the pag
 tell the student to read, work or compare; the app already shows how to use itself.
 Follow [writing](writing.md): short active sentences, one idea at a time, consistent
 technical terms and the lecturer's notation, and no sentences about the material itself. Aim around 20–25 words; do not spend iterations counting words
-or sacrifice qualifications to meet a limit. Respect the user's language. These
+or sacrifice qualifications to meet a limit. Write in the language the profile records.
+When the sources use another language, give a key term's source form once where the lesson
+introduces it, such as "chain rule (Kettenregel)", so the student can match the slides
+and the exam. These
 local rules adapt [STE structural guidance](https://github.com/danyuchn/asd-ste100-skill/tree/c7b11cd9258708909d8574c8176d4c70969c8b29);
 that link is provenance, not required research. No certified dictionary claim.
 
@@ -172,8 +178,9 @@ avoid clues. Follow [practice](practice.md) for multiple-choice questions.
 
 Audit objective → explanation → card/question → source. Work the example, trace or
 counterexample independently of the written answer. A schema pass cannot verify
-subject matter. Use an open/worked task when coding or proof construction matters;
-MCQ results and self-ratings do not establish mastery or official exam coverage.
+subject matter. Study questions check understanding; proof and code construction practice
+belongs in Exercises, made only on request. MCQ results and self-ratings do not establish
+mastery or official exam coverage.
 Recheck only affected teaching and dependent claims after a change, not the whole bank.
 
 ## Supporting context

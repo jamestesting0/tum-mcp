@@ -156,7 +156,10 @@ Ask `prepare-study` to create or extend the Study workspace in `app/`. The agent
 writes one file per unit under `app/study/` from your stored course material, and `tum-mcp study build`
 installs the shared course app and checks every cited source. Units follow the
 course's lecture or week sequence when useful, or consistent topics, with at most
-one category level. Every unit has:
+one category level. Lessons use the language you write in and give a key term's
+source-language form once. Study teaches proofs, derivations and code in full and checks a
+decisive step; writing them yourself is Exercises work, prepared when you ask. Code listings
+have a Wrap lines toggle. Every unit has:
 
 - Content: a short lesson with objectives, source links, assumptions and worked
   examples, using formulas, tables, code, graphs, UML diagrams, flowcharts, drawn figures
@@ -284,7 +287,10 @@ item's full passages, outline, sources and captures, with the same content finge
 All batches must be recorded before the item has current scores or passes the gate.
 Fresh checkers, sessions that did
 not write the content, answer with a verdict per check and quoted findings; `review
-record` refuses answers for changed content or unquoted passages. The maker fixes by
+record` refuses answers for changed content or unquoted passages. In a Codex session,
+`review record` and `review plan-record` refuse `--provenance fresh`: Codex spawned agents
+replay the author's conversation, so fresh verdicts there come from `review run-checker`.
+The maker fixes by
 check (`review fix` is refused while the quoted passage is unchanged and takes several
 `--finding`), rejects a wrong finding with its reason or keeps a score-2 finding the content
 cannot fix. `review findings` lists the open findings, one line each, grouped by block. A

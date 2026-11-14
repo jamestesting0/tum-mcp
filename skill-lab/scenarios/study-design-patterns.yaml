@@ -1,0 +1,13 @@
+id: study-design-patterns
+turns:
+  - say: "Prepare my study lessons for the W02 Design Patterns I lecture of Patterns in Software Engineering."
+    skills: [sync-course, prepare-study]
+  - say: "Review them and fix any issues."
+    skills: [review-course, prepare-study]
+replies:
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  course: "Patterns in Software Engineering, this semester (WS26/27)."
+  semester: "This semester, WS26/27."
+  default: "Your choice, go ahead."

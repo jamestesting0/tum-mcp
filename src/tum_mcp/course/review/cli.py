@@ -1,6 +1,7 @@
 """`tum-mcp review`: the review loop for every workspace, driven by the review-course skill."""
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -14,6 +15,20 @@ app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 
 def _echo(value: object) -> None:
     typer.echo(json.dumps(value, indent=2, ensure_ascii=False, default=str))
+
+
+def _refuse_codex_fresh(provenance: str) -> None:
+    """A Codex session cannot start an empty agent: its spawned agents replay the author's
+    conversation, so only run-checker gives a fresh verdict there."""
+    if provenance == "fresh" and (
+        os.environ.get("CODEX_THREAD_ID") or os.environ.get("CODEX_SESSION_ID")
+    ):
+        raise CampusError(
+            Code.INVALID_RESPONSE,
+            "In a Codex session an answer recorded by hand is not fresh: Codex spawned agents "
+            "replay this conversation. Use `tum-mcp review run-checker PROJECT --host codex`, "
+            "or record with --provenance same.",
+        )
 
 
 @app.command()
@@ -68,6 +83,7 @@ def record(
     ] = "same",
 ) -> None:
     """Validate and save a checker's answers."""
+    _refuse_codex_fresh(provenance)
     try:
         answers = json.loads(file.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -263,6 +279,7 @@ def plan_record(
     """Record the plan gate's verdicts against each plan as it was read."""
     from tum_mcp.course.checks.plans import record_gate
 
+    _refuse_codex_fresh(provenance)
     answers = json.loads(file.read_bytes()).get("items", [])
     _echo(record_gate(project.expanduser().resolve(), answers, provenance))
 

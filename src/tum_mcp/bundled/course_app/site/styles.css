@@ -1288,6 +1288,11 @@ svg.uml .uml-tag { fill: var(--surface); stroke: var(--muted); stroke-width: 1.2
 .tok-meta { color: var(--tok-meta); }
 .tok-variable { color: var(--tok-variable); }
 .code-language { display: block; }
+.code-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); position: sticky; left: 0; }
+.code-head .icon-button { margin-block: calc(-1 * var(--s1)); }
+.code-region.wrapped .code-view { min-width: 0; }
+.code-region.wrapped .code-view .code-line { width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.code-region.wrapped .code-view.numbered .code-line { padding-inline-start: 5ch; text-indent: -5ch; }
 .code-walkthrough { margin: var(--s2) 0; }
 .code-walkthrough .code-region { max-height: 60vh; overflow: auto; border-radius: var(--r2) var(--r2) 0 0; }
 .code-walk { display: grid; gap: var(--s1); padding: var(--s3) var(--s4); border-radius: 0 0 var(--r2) var(--r2); background: var(--wash); }

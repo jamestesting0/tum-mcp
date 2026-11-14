@@ -1,0 +1,13 @@
+id: study-pumping-lemma
+turns:
+  - say: "Prepare my study lessons for the pumping lemma section of Einführung in die Theoretische Informatik from the summer semester 2025."
+    skills: [sync-course, prepare-study]
+  - say: "Review them and fix any issues."
+    skills: [review-course, prepare-study]
+replies:
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  course: "Einführung in die Theoretische Informatik (IN0011), summer semester 2025."
+  semester: "Summer semester 2025."
+  default: "Your choice, go ahead."

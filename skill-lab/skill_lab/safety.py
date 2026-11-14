@@ -73,7 +73,7 @@ CREDENTIAL_PATTERNS = tuple(
         r"JSESSIONID=\w{16,}",
         r"Bearer\s+[A-Za-z0-9._\-]{24,}",
         r"\"(?:password|passwd|api_key|apikey|client_secret)\"\s*:\s*\"[^\"]{4,}\"",
-        r"sk-(?:ant-)?[A-Za-z0-9_\-]{24,}",
+        r"(?<![A-Za-z0-9])sk-(?:ant-)?[A-Za-z0-9_\-]{24,}",
     )
 )
 

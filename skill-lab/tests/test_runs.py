@@ -339,3 +339,27 @@ def test_one_trial_per_host_with_hosts_side_by_side_within_the_budget(lab, lab_s
     rounds.save("r1", config)
     with pytest.raises(LabError, match="budget"):
         execute(lab)
+
+
+def test_a_profile_slot_runs_beside_a_live_trial_of_the_same_host(lab, lab_state, monkeypatch):
+    from filelock import FileLock
+
+    held = FileLock(str(lab_state / "live-claude.lock"))
+    held.acquire()
+    try:
+        monkeypatch.setenv("SKILL_LAB_SLOT", "s2")
+        record = execute(lab)
+        slot = FileLock(str(lab_state / "live-claude-s2.lock"))
+        slot.acquire()
+        try:
+            with pytest.raises(LabError, match="one at a time"):
+                execute(lab)
+        finally:
+            slot.release()
+    finally:
+        held.release()
+    assert record["status"] == "completed", record.get("error")
+    assert lab[0][2] == lab_state / "profiles" / "claude-s2" / "config"
+    monkeypatch.setenv("SKILL_LAB_SLOT", "../x")
+    with pytest.raises(ValueError, match="SKILL_LAB_SLOT"):
+        paths.profile_home("codex")

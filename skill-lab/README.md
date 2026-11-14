@@ -164,8 +164,10 @@ entries are preserved.
   Codex trials run in the workspace-write sandbox without shell network; the TUM server runs
   outside the shell sandbox.
 - Variants may change skills and study-side code, never campus, session, install or lab code.
-- One live trial per host: a trial installs its variant into, and clears the logs of, its host's
-  profile. A Claude and a Codex trial run side by side. Downloads go to a folder per run.
+- One live trial per host profile: a trial installs its variant into, and clears the logs of,
+  its host's profile. A Claude and a Codex trial run side by side. `SKILL_LAB_SLOT=s2` selects
+  a separate profile (`profiles/<host>-s2`), logged in on its own, so several trials of one
+  host can run side by side. Downloads go to a folder per run.
 - Each run's workspace lives outside this repository, in `~/.skill-lab/workspaces/`
   (linked from the run folder), so the trial agent never reads this repo's `AGENTS.md`.
 - After the last turn the lab keeps only redacted transcripts: TUMonline, Zulip, personal

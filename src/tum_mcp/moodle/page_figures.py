@@ -64,9 +64,28 @@ def _merge(boxes: list[Box], gap: float) -> list[Box]:
     return merged
 
 
+def _union(first: Box, second: Box) -> Box:
+    return [
+        min(first[0], second[0]),
+        min(first[1], second[1]),
+        max(first[2], second[2]),
+        max(first[3], second[3]),
+    ]
+
+
 def _band(box: Box) -> bool:
     """A slide's title bar or footer: a full-width strip at the top or bottom."""
     return box[2] - box[0] > 0.9 and (box[3] < 0.2 or box[1] > 0.9)
+
+
+def _backdrop(box: Box) -> bool:
+    """A slide background, often tiled into full-width strips, which would swallow every figure."""
+    return box[2] - box[0] > 0.9 and box[3] - box[1] > 0.2
+
+
+def _in_margin(box: Box) -> bool:
+    """Inside a slide's title or footer margin: a course name, a page number, a title ornament."""
+    return box[3] < 0.12 or box[1] > 0.92
 
 
 def regions(body: bytes, number: int) -> tuple[list[Box], bytes]:
@@ -84,22 +103,32 @@ def regions(body: bytes, number: int) -> tuple[list[Box], bytes]:
             if _area(box) <= 0 or _area(box) > 0.85:
                 continue
             if item.type in GRAPHICS:
-                graphics.append(box)
+                if not _backdrop(box) and not _in_margin(box):
+                    graphics.append(box)
             elif item.type == pdfium.FPDF_PAGEOBJ_TEXT:
                 labels.append(box)
-        clusters = [box for box in _merge(graphics, 0.015) if not _band(box)]
+        # A lone bullet glyph is no figure; left in, it would pull its bullet text along.
+        clusters = [
+            box for box in _merge(graphics, 0.015) if not _band(box) and _area(box) >= 0.002
+        ]
+        labels = [label for label in labels if not _in_margin(label) and label[2] - label[0] < 0.5]
         found: list[Box] = []
-        for box in clusters:
-            # City names, axis labels and tile numbers belong to the figure they touch.
+        for cluster in clusters:
+            # City names, axis labels and tile numbers belong to the figure they touch. Only
+            # the drawing itself attracts labels, so a label never pulls in the text beside it.
+            box = cluster
             for label in labels:
-                if _near(box, label, 0.02) and not _band(label) and label[2] - label[0] < 0.5:
-                    box = [
-                        min(box[0], label[0]),
-                        min(box[1], label[1]),
-                        max(box[2], label[2]),
-                        max(box[3], label[3]),
-                    ]
-            found.append(box)
+                if _near(cluster, label, 0.02):
+                    box = _union(box, label)
+            # Text bounds are tight; a little room keeps glyph tops whole. The crop trims it.
+            found.append(
+                [
+                    max(box[0] - 0.005, 0),
+                    max(box[1] - 0.005, 0),
+                    min(box[2] + 0.005, 1),
+                    min(box[3] + 0.005, 1),
+                ]
+            )
         found = [box for box in _merge(found, 0.0) if _area(box) >= 0.02]
         found.sort(key=_area, reverse=True)
         found = [[round(value, 4) for value in box] for box in found[:MAX_REGIONS]]
@@ -118,6 +147,13 @@ def _preview(page: pypdfium2.PdfPage, found: list[Box]) -> bytes:
         bitmap.close()
     draw = ImageDraw.Draw(image)
     width, height = image.size
+    # A tenths grid, so a --box can be read off the preview instead of guessed.
+    for tenth in range(1, 10):
+        x, y = width * tenth / 10, height * tenth / 10
+        draw.line([(x, 0), (x, height)], fill=(70, 120, 230), width=1)
+        draw.line([(0, y), (width, y)], fill=(70, 120, 230), width=1)
+        draw.text((x + 3, 3), f".{tenth}", fill=(40, 90, 210), font_size=16)
+        draw.text((3, y + 3), f".{tenth}", fill=(40, 90, 210), font_size=16)
     for index, box in enumerate(found, start=1):
         corners = (box[0] * width, box[1] * height, box[2] * width, box[3] * height)
         draw.rectangle(corners, outline=(214, 40, 40), width=4)

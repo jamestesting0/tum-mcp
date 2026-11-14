@@ -8,8 +8,12 @@ missing. Edit it programmatically by source key and keep entries you did not rev
 ## Before authoring
 
 For each lecture in scope, record its stated learning outcomes verbatim with a locator
-(the outcomes slide, or its section headings when none are stated). Plan units from these
-outcomes, not from outcomes you invent for a unit. For each exercise sheet or exam, record
+(the outcomes slide, or its section headings when none are stated). Record each
+section as its own outcome; a deck title alone hides a section no unit teaches.
+When a running script marks session dates on its pages, a lecture ends at the next date
+mark, not at a section heading. A new section started before that mark is an outcome of
+this lecture too. Plan units from these outcomes, not from outcomes you invent for a unit.
+For each exercise sheet or exam, record
 every problem as an item: `prepared` with its exercise key, `pending`, `not_inspected`,
 `unavailable` or `out_of_scope`. For the cheatsheet, record what each source makes
 exam-relevant as `exam` requirements with the entries that hold them
@@ -39,7 +43,10 @@ Check `cutoff_verified` separately from readiness and leave unresolved sources v
 ## While authoring
 
 Link each outcome to the units that teach and practise it (`units`); a linked outcome is
-prepared. Record `gap` or `out_of_scope` with a reason only for an outcome no unit
+prepared. An outcome that asks the student to prove, derive or implement is prepared in
+Study when the lesson works its method in full and a question checks a decisive step.
+Note that construction practice is available in Exercises on request; it is not a gap.
+Record `gap` or `out_of_scope` with a reason only for an outcome no unit
 covers. When an exercise or exam question needs knowledge Study does
 not teach well enough, either improve that Study block in the same run (when Study is in
 scope) and link it as the prerequisite's `block`, or record the gap with its note.

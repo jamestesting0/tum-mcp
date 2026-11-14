@@ -2,7 +2,7 @@ import { node, studyText, append, plainText, segmented } from '../shell/dom.mjs'
 import { iconButton, iconGlyph, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 import { drawGrids } from '../visuals/grid.mjs';
 import { drawGraph, setNodeValue } from '../visuals/graph.mjs';
-import { renderCode, languageName, lineSet, markLines } from './code.mjs';
+import { renderCode, codeHead, languageName, lineSet, markLines } from './code.mjs';
 import { renderDerivation } from './derivation.mjs';
 import { renderPlot } from '../visuals/plot.mjs';
 
@@ -111,7 +111,7 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
       const region = node('div', 'code-region'); region.tabIndex = 0;
       region.setAttribute('role', 'region'); region.setAttribute('aria-label', `${languageName(stage.language) || 'Code'} listing`);
       const pre = renderCode(stage.code, stage.language, { numbers: true });
-      region.append(node('span', 'small code-language', /\s/.test(stage.language) ? stage.language : languageName(stage.language)), pre);
+      region.append(codeHead(region, /\s/.test(stage.language) ? stage.language : languageName(stage.language)), pre);
       return { element: region, show(step) {
         markLines(pre, step.lines ? lineSet(step.lines) : new Set());
         const marked = pre.querySelector('.code-line.marked');

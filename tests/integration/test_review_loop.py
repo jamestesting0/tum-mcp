@@ -1251,6 +1251,47 @@ def test_closing_with_unanswered_packets_requires_an_explicit_choice(project: Pa
     assert "all 3" not in markdown and "unreviewed" in markdown
 
 
+def test_a_codex_session_cannot_record_its_own_agents_as_fresh(
+    project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    loop.start(project, workspaces=("study",))
+    packet = packets(project, loop.next_round(project))[0]
+    answers = tmp_path / "answers.json"
+    answers.write_text(json.dumps(answer(packet)), encoding="utf-8")
+    runner = CliRunner()
+    monkeypatch.setenv("CODEX_THREAD_ID", "thread")
+
+    for args in (["review", "record"], ["review", "plan-record"]):
+        refused = runner.invoke(
+            app, [*args, str(project), "--file", str(answers), "--provenance", "fresh"]
+        )
+        assert refused.exit_code != 0 and "run-checker" in str(refused.exception)
+    assert loop.read_state(project).rounds[-1].pending_packets
+    monkeypatch.delenv("CODEX_THREAD_ID")
+    accepted = runner.invoke(
+        app, ["review", "record", str(project), "--file", str(answers), "--provenance", "fresh"]
+    )
+    assert accepted.exit_code == 0, accepted.output
+
+
+def test_status_names_a_pending_packet_whose_item_changed(project: Path) -> None:
+    loop.start(project, workspaces=("study",))
+    sent = packets(project, loop.next_round(project))
+    assert "stale_packets" not in loop.status(project)
+    entry = next(e for p in sent for e in p["items"] if e["item"].startswith("study/"))
+    unit = project / "app/study/units" / f"{entry['item'].removeprefix('study/')}.json"
+    value = json.loads(unit.read_text(encoding="utf-8"))
+    block = next(b for b in value["blocks"] if b.get("paragraphs"))
+    block["paragraphs"][0] += " One more sentence."
+    unit.write_text(json.dumps(value), encoding="utf-8")
+
+    status = loop.status(project)
+
+    changed = [p["id"] for p in sent if any(e["item"] == entry["item"] for e in p["items"])]
+    assert status["stale_packets"] == changed
+    assert "changed after the packet was written" in status["next"]
+
+
 def test_incomplete_checker_answers_report_the_entire_missing_verdict_set(project: Path) -> None:
     loop.start(project, workspaces=("study",))
     packet = packets(project, loop.next_round(project))[0]
