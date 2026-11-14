@@ -335,8 +335,10 @@ def _input_drawn(planned: GraphInput | GridInput, value: dict) -> bool:
     for drawn in _drawn_objects(value):
         match planned:
             case GraphInput():
+                # Direction decides: a derived search tree has directed edges, so it never
+                # stands in for an undirected map, while a source tree is matched as drawn.
                 edges = drawn.get("edges")
-                if drawn.get("layout") == "tree" or not isinstance(edges, list):
+                if not isinstance(edges, list):
                     continue
                 matching = [
                     edge

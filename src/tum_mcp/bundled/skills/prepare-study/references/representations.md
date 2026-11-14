@@ -115,7 +115,12 @@ graphs, set each step's `active`, `frontier`, `visited`, `cutoff`, `discarded` (
 actual run; use the stage's node keys. Code marks its running `lines`, tables their
 `shown` rows or changed `cells`, derivations their `shown` lines, plots their `series`
 and SVG figures their `layers`. Grids mark cells with `grid_marks`, draw moves with
-`grid_arrows` and write results with `grid_values`; a written value stays for later steps. Clear marks that no longer apply when stepping back
+`grid_arrows` and write results with `grid_values`; a written value stays for later steps.
+When a step's `action` gives an item an outcome, such as cut off, discarded, pruned or
+rejected, mark that role on the item in the same step. The item may stay `active` as
+well; the picture shows the outcome. The weakness is an outcome taught in words only:
+the caption says "cut off C" while the drawing shows C as merely current.
+Clear marks that no longer apply when stepping back
 or switching runs. The weakness is unexplained discarded information. When a process
 supersedes an earlier record, explain what makes it obsolete and how the method treats it.
 Do not add a discard step to a method that has none.

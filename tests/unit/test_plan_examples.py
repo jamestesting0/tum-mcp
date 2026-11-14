@@ -229,6 +229,11 @@ def diagram(edges: int, *, directed: bool = False, layout: str = "lattice") -> d
         (ROADS, {"key": "map", **diagram(3, directed=True)}, True),
         (ROADS, {"key": "map", **diagram(5, directed=True, layout="tree")}, True),
         (ROADS, {"key": "map", "kind": "table", "rows": [["S", "R", "80"]] * 3}, True),
+        (
+            {"kind": "graph", "edges": 4, "directed": True},
+            {"key": "map", **diagram(4, directed=True, layout="tree")},
+            False,
+        ),
         ({"kind": "grid", "grids": 2}, {"key": "map", "kind": "grid", "grids": [{}, {}]}, False),
         ({"kind": "grid", "grids": 2}, {"key": "map", "kind": "grid", "grids": [{}]}, True),
     ],
