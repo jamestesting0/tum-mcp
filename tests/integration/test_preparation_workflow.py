@@ -263,10 +263,16 @@ def test_prepared_review_uses_current_build_and_scope(project: Path) -> None:
     state = loop.read_state(project)
     assert state and state.scope == ("study/graphs",) and state.budget == 1
     assert loop.start(project, preparation="bounded") == state
+    expected_tasks = loop.item_tasks(loop.load(project), "study/graphs")
     opened = loop.next_round(project)
     sent = packets(project, opened)
-    assert [item["item"] for packet in sent for item in packet["items"]] == ["study/graphs"]
-    assert sent[0]["scope_dispositions"][1]["disposition"] == "unresolved"
+    assert sent
+    assert all([item["item"] for item in packet["items"]] == ["study/graphs"] for packet in sent)
+    assert all(packet["scope_dispositions"][1]["disposition"] == "unresolved" for packet in sent)
+    for task in ("needs", "verify", "visuals", "rule"):
+        assigned = [value for packet in sent for value in packet["items"][0][task]]
+        assert assigned == expected_tasks[task]
+        assert len(assigned) == len(set(assigned))
 
     target = scope["demands"][0]["target"]
     old_reason = target["reason"]
@@ -276,11 +282,12 @@ def test_prepared_review_uses_current_build_and_scope(project: Path) -> None:
         loop.record(project, answer(sent[0]), "fresh")
     target["reason"] = old_reason
     write(path, scope)
-    loop.record(project, answer(sent[0], fail={"study/graphs": "clarity.one_reading"}), "same")
+    for packet in sent:
+        loop.record(project, answer(packet, fail={"study/graphs": "clarity.one_reading"}), "same")
     card = loop.close_round(project)
     assert card["status"] == "budget_spent" and card["scope_type"] == "prepared"
     assert card["items_by_provenance"]["provisional"] == 1
-    assert card["rounds"][0]["answered_packets"] == 1
+    assert card["rounds"][0]["answered_packets"] == len(sent)
 
     record = loop.load(project).record("study/graphs")
     finding = record.findings[0]
