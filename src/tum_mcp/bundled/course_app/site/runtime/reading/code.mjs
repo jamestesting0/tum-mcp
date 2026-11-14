@@ -1,4 +1,5 @@
 import { node, append } from '../shell/dom.mjs';
+import { iconButton } from '../shell/navigation.mjs';
 
 // Syntax highlighting without a library: a small scanner per language family builds DOM
 // spans (never HTML strings), so code from course material cannot inject markup.
@@ -103,6 +104,18 @@ export function renderCode(code, language, { numbers = false, start = 1, marked 
     listing.append(lineNode(parts, numbers ? start + index : 0, marked.has(start + index)));
   });
   return append(node('pre', 'code-pre'), listing);
+}
+// A listing's header: its language and a Wrap lines toggle, remembered across listings.
+const wrapKey = 'study-space:code-wrap';
+export function codeHead(region, label) {
+  const toggle = iconButton('Wrap lines', 'wrap', () => wrap(!region.classList.contains('wrapped'), true));
+  function wrap(on, remember) {
+    region.classList.toggle('wrapped', on); toggle.setAttribute('aria-pressed', String(on));
+    if (remember) try { localStorage.setItem(wrapKey, on ? '1' : '0'); } catch { /* lasts for this page */ }
+  }
+  let stored = false; try { stored = localStorage.getItem(wrapKey) === '1'; } catch { /* default off */ }
+  wrap(stored, false);
+  return append(node('div', 'code-head'), node('span', 'small code-language', label), toggle);
 }
 // "12" or "12-18" as a set of line numbers.
 export function lineSet(lines) {

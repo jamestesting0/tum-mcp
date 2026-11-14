@@ -3,7 +3,7 @@ import { drawGrids } from '../visuals/grid.mjs';
 import { node, studyText, append, sourcesNote, plainText, toggletip, answerMark } from '../shell/dom.mjs';
 import { iconButton, iconGlyph, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 import { renderPlot } from '../visuals/plot.mjs';
-import { renderCode, languageName, lineSet, markLines } from './code.mjs';
+import { renderCode, codeHead, languageName, lineSet, markLines } from './code.mjs';
 import { renderFiles, fileIcon } from '../shell/files.mjs';
 import { renderFormula } from './formulas.mjs';
 import { typesetLabels } from './mathml.mjs';
@@ -93,7 +93,7 @@ function codeBlock(block) {
   region.setAttribute('role', 'region'); region.setAttribute('aria-label', `${languageName(block.language) || 'Code'} listing`);
   const pre = renderCode(block.code, block.language, { numbers: block.line_numbers || steps.length > 0 });
   // A one-word label is a language name such as "java"; a longer one is kept as written.
-  region.append(node('span', 'small code-language', /\s/.test(block.language) ? block.language : languageName(block.language)), pre);
+  region.append(codeHead(region, /\s/.test(block.language) ? block.language : languageName(block.language)), pre);
   if (!steps.length) return region;
   let at = 0;
   const counter = node('span', 'small code-walk-count'), note = node('p', 'code-walk-note'); note.setAttribute('aria-live', 'polite');

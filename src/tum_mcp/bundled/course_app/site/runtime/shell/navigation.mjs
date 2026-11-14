@@ -13,6 +13,7 @@ const paths = {
   left: 'm15 18-6-6 6-6', right: 'm9 6 6 6-6 6',
   forward: 'M5 12h14m-6-6 6 6-6 6',
   menu: 'M4 7h16M4 12h16M4 17h16',
+  wrap: 'M3 6h18M3 12h15a3 3 0 0 1 0 6h-4m2-2-2 2 2 2M3 18h7',
   undo: 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
   reset: 'M3 12a9 9 0 1 0 2.64-6.36L3 8.3M3 3v5.3h5.3',
   contents: 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01',
