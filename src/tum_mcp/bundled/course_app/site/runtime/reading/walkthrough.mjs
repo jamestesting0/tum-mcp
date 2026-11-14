@@ -42,10 +42,12 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
         for (const item of stage.nodes) {
           if (step.visible_nodes && !step.visible_nodes.includes(item.key)) continue;
           if (grows && reach.get(step).size && !reach.get(step).has(item.key)) used.add('unreached');
-          else if (step.active.includes(item.key)) used.add('active');
+          // An outcome (discarded, cut off) outranks being the current node, so a node that is
+          // examined and dropped in one step still shows what happened to it.
           else if (step.discarded?.includes(item.key)) used.add('discarded');
-          else if (step.frontier.includes(item.key)) used.add('frontier');
           else if (step.cutoff?.includes(item.key)) used.add('cutoff');
+          else if (step.active.includes(item.key)) used.add('active');
+          else if (step.frontier.includes(item.key)) used.add('frontier');
           else if (step.visited.includes(item.key)) used.add('visited');
           else used.add('unmarked');
         }
@@ -67,10 +69,10 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
         const shown = key => !step.visible_nodes || step.visible_nodes.includes(key);
         const reached = grows && reach.get(step).size ? reach.get(step) : null;
         for (const [key, group] of groups) {
-          const active = step.active.includes(key);
-          const discarded = !active && (step.discarded?.includes(key) || false);
-          const frontier = !active && !discarded && step.frontier.includes(key);
-          const cutoff = !active && !discarded && !frontier && (step.cutoff?.includes(key) || false);
+          const discarded = step.discarded?.includes(key) || false;
+          const cutoff = !discarded && (step.cutoff?.includes(key) || false);
+          const active = !discarded && !cutoff && step.active.includes(key);
+          const frontier = !active && !discarded && !cutoff && step.frontier.includes(key);
           group.classList.toggle('active', active);
           group.classList.toggle('discarded', discarded);
           group.classList.toggle('frontier', frontier);
@@ -165,7 +167,7 @@ function stageView(stage, renderBody, steps, runs = [steps]) {
           grid.cells.forEach((row, r) => row.forEach((_, c) => {
             const cell = `${r + 1}:${c + 1}`;
             const marks = (step.grid_marks || []).filter(mark => mark.grid === grid.key && mark.cell === cell).map(mark => mark.mark || 'active');
-            const state = ['active', 'discarded', 'frontier', 'path', 'visited'].find(mark => marks.includes(mark));
+            const state = ['discarded', 'active', 'frontier', 'path', 'visited'].find(mark => marks.includes(mark));
             used.add(state || (grid.shaded?.includes(cell) ? 'shaded' : 'unmarked'));
           }));
         }

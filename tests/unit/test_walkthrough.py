@@ -106,11 +106,12 @@ def test_node_roles_must_be_drawn_and_visible(mark: str) -> None:
         WalkthroughBlock.model_validate(value)
 
 
-def test_a_discarded_node_cannot_be_active_in_the_same_step() -> None:
+@pytest.mark.parametrize("mark", ["cutoff", "discarded"])
+def test_the_current_node_may_also_carry_its_outcome(mark: str) -> None:
     value = tree()
-    value["steps"][0]["discarded"] = ["a"]
-    with pytest.raises(ValidationError, match="active and discarded"):
-        WalkthroughBlock.model_validate(value)
+    value["steps"][0][mark] = ["a"]
+    step = WalkthroughBlock.model_validate(value).steps[0]
+    assert step.active == ("a",) and getattr(step, mark) == ("a",)
 
 
 def test_a_tree_stage_places_nodes_from_its_edges_and_reveals_them() -> None:
@@ -330,14 +331,12 @@ def test_a_grid_stage_accepts_cells_inside_its_grids_only() -> None:
             adapter.validate_python(bad)
 
 
-def test_a_grid_cell_can_be_discarded_but_not_active_at_the_same_time() -> None:
+def test_a_grid_cell_may_be_current_and_discarded_in_one_step() -> None:
     value = grid_walk()
     mark = {"grid": "maze", "cell": "1:1", "mark": "discarded"}
-    value["steps"][0]["grid_marks"] = [mark]
-    assert WalkthroughBlock.model_validate(value).steps[0].grid_marks[0].mark == "discarded"
-    value["steps"][0]["grid_marks"].append(mark | {"mark": "active"})
-    with pytest.raises(ValidationError, match="active and discarded"):
-        WalkthroughBlock.model_validate(value)
+    value["steps"][0]["grid_marks"] = [mark, mark | {"mark": "active"}]
+    marks = WalkthroughBlock.model_validate(value).steps[0].grid_marks
+    assert {item.mark for item in marks} == {"active", "discarded"}
 
 
 def test_answer_keys_compare_grid_cells_after_each_step() -> None:

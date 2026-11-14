@@ -273,6 +273,7 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "dropped_node_value": "representation",
     "never_shown_nodes": "representation",
     "source_states_missing": "correctness",
+    "source_input_missing": "representation",
     "source_phases_missing": "organization",
     "unworked_result": "representation",
     "text_only_question": "representation",

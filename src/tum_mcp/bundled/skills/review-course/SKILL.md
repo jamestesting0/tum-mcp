@@ -85,19 +85,22 @@ scores.
       source picture, not just its text or result. Name the concept and planned block
       in evidence. Judge whether the actual inputs, picture and how to read it, decisive
       tests and working, and endpoint or comparison survive. For a source process,
-      `states` counts its initial state and the state after each distinct operation the
-      pages show or imply between consecutive frames. Count operations, not slide frames.
+      its `script` lists its initial state and the state after each distinct operation the
+      pages show or imply between consecutive frames, one line each. Compare each line
+      with the pages and with its own step. Count operations, not slide frames.
       A removal and separate insertions, two algebraic rewrites, simulation events or
       proof inferences keep their intermediate states even within one frame.
       One atomic operation touching several items counts once only when the source
       treats it that way; children pushed one at a time stay separate.
       Require `phases` for source groups. Check both against the pages and this one
-      walkthrough's steps and `subgoal` groups.
+      walkthrough's steps and `subgoal` groups. When the pages draw the process's input,
+      such as a graph or a board, check that the unit draws it, not only a caption or
+      a structure derived from it.
       A concept mention, correct total or different example cannot replace that example.
       A theorem keeps its geometric construction; a law keeps its labelled circuit
       and working; a contrasting legal case keeps its decisive facts and disposition.
       Inspect intermediate states when those carry the reasoning.
-      A state count is a floor, not proof of complete teaching or a template.
+      A script is a floor, not proof of complete teaching or a template.
       A finding is resolved only with the rewritten
       passage quoted, and only when that passage reads well on its own.
       Also inspect concepts added after planning; adding a glossary paragraph to justify

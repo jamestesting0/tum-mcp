@@ -83,9 +83,9 @@ Use local Kokoro automatically when ElevenLabs is unavailable or its free usage
 is exhausted, unless the user explicitly restricts the provider. Keep each category
 internally consistent and keep a category's established voice on later runs.
 Never silently spend money, evade quotas or describe another engine as ElevenLabs.
-Send only reviewed narration to a cloud speech service. If no voice can run on the
+Send only reviewed narration text to an authorized cloud speech service. If no voice can run on the
 host or speak the course language, keep the scripts and report the precise limit.
 
 Keep all course outputs inside `audio/`; reusable models and runtimes stay in the
-host's shared user storage. Preserve existing files and edits. Audio stays local:
-do not upload narration, candidates or the course project.
+host's shared user storage. Preserve existing files and edits. Generated audio stays
+local: do not upload tracks, candidates or the course project.

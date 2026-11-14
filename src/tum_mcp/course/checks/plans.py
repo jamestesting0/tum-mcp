@@ -41,6 +41,21 @@ PICTURES = {"figure", "diagram", "uml", "tree"}
 WORKED_KINDS = {"procedure", "algorithm", "model"}
 
 
+class GraphInput(Frozen):
+    """A graph the source draws as the input a process runs on."""
+
+    kind: Literal["graph"]
+    edges: Annotated[int, Field(strict=True, ge=1)]
+    directed: bool
+
+
+class GridInput(Frozen):
+    """Boards or grids the source draws as the input a process runs on."""
+
+    kind: Literal["grid"]
+    grids: Annotated[int, Field(strict=True, ge=1, le=3)]
+
+
 class Example(Frozen):
     """The worked example a concept is taught on, chosen from the lecture's demonstrations."""
 
@@ -65,7 +80,21 @@ class Example(Frozen):
         description="Number of operation-level states in this run: the initial state and the "
         "state after each distinct operation the cited pages show or imply between frames. "
         "Count operations, not slide frames. One atomic operation touching several items "
-        "counts once only when the source treats it that way; separate operations stay separate.",
+        "counts once only when the source treats it that way; separate operations stay separate. "
+        "Prefer `script`; give `states` alone only when a script is impractical.",
+    )
+    script: tuple[Annotated[str, Field(min_length=1, max_length=200)], ...] = Field(
+        default=(),
+        exclude_if=lambda value: not value,
+        description="One short line per operation-level state, in order, each citing its page: "
+        "the initial state, then the state after each distinct operation the cited pages show "
+        "or imply. Its length is the state count.",
+    )
+    input: Annotated[GraphInput | GridInput, Field(discriminator="kind")] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="The graph or grid the source draws as the process's input, when it draws "
+        "one. The unit must draw it too, not only describe it or draw a structure derived from it.",
     )
     phases: tuple[Label, ...] = Field(
         default=(),
@@ -84,7 +113,16 @@ class Example(Frozen):
             raise ValueError("A lecture example names its source and pages.")
         if self.origin == "constructed" and not self.why:
             raise ValueError("A constructed example says why the lecture has none.")
+        if self.script and self.states is not None and self.states != len(self.script):
+            raise ValueError(
+                f"`states` is {self.states} but `script` has {len(self.script)} lines; "
+                "give the script alone."
+            )
         return self
+
+    @property
+    def state_count(self) -> int | None:
+        return len(self.script) if self.script else self.states
 
 
 class Concept(Frozen):
@@ -279,35 +317,88 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
     return problems
 
 
+def _drawn_objects(value: JsonValue) -> list[dict[str, JsonValue]]:
+    """Every graph or grid object drawn anywhere in an item, nested blocks and stages included."""
+    found: list[dict[str, JsonValue]] = []
+    if isinstance(value, dict):
+        if value.get("kind") in {"diagram", "grid"}:
+            found.append(value)
+        for child in value.values():
+            found.extend(_drawn_objects(child))
+    elif isinstance(value, list):
+        for child in value:
+            found.extend(_drawn_objects(child))
+    return found
+
+
+def _input_drawn(planned: GraphInput | GridInput, value: dict) -> bool:
+    for drawn in _drawn_objects(value):
+        match planned:
+            case GraphInput():
+                edges = drawn.get("edges")
+                if drawn.get("layout") == "tree" or not isinstance(edges, list):
+                    continue
+                matching = [
+                    edge
+                    for edge in edges
+                    if isinstance(edge, dict)
+                    and bool(edge.get("directed", False)) == planned.directed
+                ]
+                if len(matching) >= planned.edges:
+                    return True
+            case GridInput():
+                grids = drawn.get("grids")
+                if isinstance(grids, list) and len(grids) >= planned.grids:
+                    return True
+    return False
+
+
 def example_state_flags(plan: Plan, value: dict) -> list[dict[str, JsonValue]]:
-    """Compare a selected walkthrough with the source states and phases its planner counted."""
+    """Compare a selected example with the source states, phases and input its planner recorded."""
     blocks = {block.get("key"): block for block in value.get("blocks", [])}
     flags: list[dict[str, JsonValue]] = []
     for concept in plan.concepts:
         example = concept.example
         if example is None or (block := blocks.get(example.block)) is None:
             continue
+        item = f"{plan.item.removeprefix('study/')}/{example.block}"
+        if example.input is not None and not _input_drawn(example.input, value):
+            shape = (
+                f"a graph with {example.input.edges} "
+                f"{'directed' if example.input.directed else 'undirected'} edges"
+                if isinstance(example.input, GraphInput)
+                else f"{example.input.grids} grid(s)"
+            )
+            flags.append(
+                {
+                    "item": item,
+                    "flag": "source_input_missing",
+                    "detail": f"{concept.name}: the source draws the input of {example.block} "
+                    f"as {shape}, but this unit does not draw it. Draw the input itself; a "
+                    "caption, table or derived tree does not show it.",
+                }
+            )
         if block.get("kind") != "walkthrough":
             continue
         steps = block["steps"]
-        item = f"{plan.item.removeprefix('study/')}/{example.block}"
-        if example.origin == "source" and example.states is None:
+        count = example.state_count
+        if example.origin == "source" and count is None:
             flags.append(
                 {
                     "item": item,
                     "flag": "source_states_missing",
-                    "detail": f"{concept.name}: source walkthrough {example.block} needs "
-                    "`states` counted from its cited pages before its steps can be checked.",
+                    "detail": f"{concept.name}: source walkthrough {example.block} needs a "
+                    "`script` of the states on its cited pages before its steps can be checked.",
                 }
             )
-        elif example.states is not None and len(steps) < example.states:
+        elif count is not None and len(steps) < count:
             flags.append(
                 {
                     "item": item,
                     "flag": "source_states_missing",
                     "detail": f"{concept.name}: walkthrough {example.block} has {len(steps)} "
-                    f"steps for {example.states} planned source states. Restore the source's "
-                    "states in this one walkthrough; never drop, merge or split steps "
+                    f"steps for {count} planned source states. Give each script line its own "
+                    "step in this one walkthrough; never drop, merge or split steps "
                     "to shorten it.",
                 }
             )
@@ -767,18 +858,21 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "and working, and endpoint or comparison. Page overlap or a concept mention does "
             "not establish that the selected demonstration is complete. Keep the source range "
             "that contains its decisive test and conclusion, not just its setup. "
-            "For every source process, verify `states` by counting its initial state and "
-            "the state after each distinct operation the pages show or imply between "
-            "consecutive frames. Count operations, not frames: a removal and two separate "
-            "insertions, two algebraic rewrites, simulation events or proof inferences "
-            "each need their intermediate states, even within one frame. One atomic "
-            "operation touching several items counts once only when the source treats it "
-            "that way; children pushed one at a time count separately. If `states` is "
-            "missing or too small, fail the plan and name the operation count and pages "
-            "that establish it. Require `phases` when the source groups the run. "
-            "Verify phase names against the pages. A source showing "
-            "one finished state or a constructed example needs no source state count. "
-            "Recorded states are a floor, not a cap. "
+            "For every source process, compare its `script` with the cited pages line by "
+            "line: the initial state, then the state after each distinct operation the pages "
+            "show or imply between consecutive frames. Count operations, not frames: a "
+            "removal and two separate insertions, two algebraic rewrites, simulation events "
+            "or proof inferences each need their intermediate states, even within one frame. "
+            "One atomic operation touching several items counts once only when the source "
+            "treats it that way; children pushed one at a time count separately. Fail the "
+            "plan when the script is missing, omits or merges a state the pages show, or "
+            "invents one; name the pages and the missing state. A plan with only `states` "
+            "is checked as a count. Require `phases` when the source groups the run. "
+            "Verify phase names against the pages. When the source draws the graph or grid "
+            "the process runs on, require `input` with its edge count and direction or its "
+            "grid count, checked against the drawing. A source showing "
+            "one finished state or a constructed example needs no script. "
+            "The script is a floor, not a cap. "
             "Finish incomplete source working with its original inputs when the result matters. "
             "Going beyond the source is fine; covering less is not. Do not invent missing "
             "givens or a desired result to force an ending. For each additional example "

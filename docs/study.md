@@ -179,12 +179,15 @@ within the same request. Unchanged units and reviewed material are retained. The
 skill audits objective coverage, technical accuracy and distractors, and writes in
 short, direct sentences that keep necessary terms and conditions.
 
-Selected source examples may record `states` (distinct states counted on the cited pages)
-and `phases` (their names). Report and lint flag a walkthrough below that floor or missing
-its `subgoal` groups. Keep the whole process in one walkthrough; extra steps are allowed.
-Summary-only sources and constructed examples need no state count. Graph nodes and grid
+Selected source examples may record a `script` (one line per state on the cited pages;
+older plans may give only a `states` count), `phases` (their names) and `input` (the graph
+or grid the source draws for the process). Report and lint flag a walkthrough with fewer
+steps than script lines, one missing its `subgoal` groups, and a unit that never draws
+the planned input. Keep the whole process in one walkthrough; extra steps are allowed.
+Summary-only sources and constructed examples need no script. Graph nodes and grid
 cells use `discarded` for rejected or pruned items, distinct from cutoff and unreached
-states; answer keys can check graph roles with `@discarded`. A selected picture's teaching
+states; answer keys can check graph roles with `@discarded`. A node or cell marked
+current and discarded or cut off in one step shows its outcome. A selected picture's teaching
 payload includes how to read its regions, boundaries, directions and legend.
 
 The course home introduces the course, resumes where you left off and lists topics

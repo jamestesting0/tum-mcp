@@ -100,21 +100,28 @@ For each concept taught through a selected source demonstration, the plan names 
 `origin` (`source` or `constructed`), `source` and `pages`, what it `shows`, its
 `endpoint` and the `block` that teaches it; a constructed example says `why`. Use `shows`
 to name the inputs, representation and decisive working or test, not only the concept.
-For a source process, record `states` while reading its pages. Count its initial state
-and the state after each distinct operation the pages show or imply between consecutive
-frames. Count operations, not slide frames. A frame may contain a removal and separate
+For a source process, write its `script` while reading its pages: one short line per
+state, in order, each citing its page. List its initial state and the state after each
+distinct operation the pages show or imply between consecutive frames. Count
+operations, not slide frames. The weakness is a count that is right while a state is
+missing: a bare number cannot show which state a run leaves out. A frame may contain a removal and separate
 insertions, two algebraic rewrites, two simulation events or two proof inferences.
 Keep their intermediate states. One atomic operation touching several items counts once
 only when the source treats it that way. Expanding a node can push all its children at
 once; if the source pushes them one at a time, count them separately.
 This also applies to per-item calculations and staged constructions. Record `phases`
 when the source groups the run, such as depth limits, elimination passes or simulation
-rounds. The plan checker verifies operations and phase names against the pages. It fails
-a missing or low count and names the operations that establish the count.
-A source example taught as a walkthrough needs `states` so code can check its steps.
-The walkthrough keeps at least those states and uses `subgoal` groups for those phases.
-A source showing only a finished picture or a constructed example needs no source state
-count. More steps are fine.
+rounds. The plan checker compares the script with the pages line by line. It fails a
+missing, merged or invented state and names the page that shows it.
+A source example taught as a walkthrough needs a `script` so code can check its steps.
+The walkthrough gives each script line its own step and uses `subgoal` groups for those
+phases. A source showing only a finished picture or a constructed example needs no
+script. More steps are fine.
+When the source draws the object the process runs on, such as a road map, a circuit or
+a start board, record it as `input`: `{"kind": "graph", "edges": 5, "directed": false}`
+or `{"kind": "grid", "grids": 2}`. Code checks that the unit draws it. A caption, a
+table or a structure derived from it, such as a search tree, does not show the input.
+An input that is genuinely a table records no `input`.
 A geometric proof keeps its construction; a physical law keeps its free-body diagram;
 a legal distinction keeps the contrasting cases and their decisive facts.
 Mentioning the idea in `instance` does not select its demonstration.
@@ -127,6 +134,19 @@ one just to fill the field.
 "example": {"origin": "source", "source": "lecture", "pages": "12-14",
   "shows": "At the given temperature and pressure, draw the phase boundary and use its position to choose the conservation rule",
   "endpoint": "The final phase and energy balance agree at the boundary", "block": "boundary-case"}
+```
+
+A source process adds its script and, when drawn, its input:
+
+```json
+"example": {"origin": "source", "source": "lecture", "pages": "30-32",
+  "shows": "Reduce the drawn resistor network step by step to one equivalent resistance",
+  "endpoint": "The equivalent resistance gives the source current", "block": "reduce-network",
+  "input": {"kind": "graph", "edges": 6, "directed": false},
+  "script": ["p.30: the network with all six resistors",
+    "p.31: R2 and R3 in series become R23",
+    "p.31: R23 and R4 in parallel become R234",
+    "p.32: R1 and R234 in series give the total"]}
 ```
 
 Teach a chosen example in full.

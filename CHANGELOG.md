@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Planned source examples list their states as a `script`, one line per state with its page;
+  the plan check compares it with the pages and the walkthrough keeps a step per line.
+  A plain `states` count is still accepted.
+- Planned examples can record the graph or grid the source draws as their `input`; report and
+  lint flag a unit that never draws it.
+- A walkthrough node or grid cell marked current and also cut off or discarded now shows its
+  outcome and legend entry; the overlap is no longer rejected.
+- Audio notes send only reviewed narration text to an authorized cloud speech service; generated
+  audio stays local.
 - Review findings sharing a quotation keep independent repairs unless the checker explicitly
   links their ownership. Retries still reuse the original finding.
 - Internal harness metrics and round status show command phases, checker attempts and repairs,
@@ -13,7 +22,7 @@
 - Planned examples can retain source state counts and phases; report and lint require their
   states and subgoal groups in one complete walkthrough. Extra steps remain valid.
 - Graph and grid walkthroughs distinguish discarded items, with themed styles and legends.
-  Graph answer keys support `@discarded`; active and discarded roles cannot overlap.
+  Graph answer keys support `@discarded`.
 - Example planning and review preserve the rule for reading each selected picture.
 - Critical source demonstrations are planned and reviewed as examples for every concept kind.
 - Walkthrough review checks source step granularity and flags merged operations that hide intermediate states.
