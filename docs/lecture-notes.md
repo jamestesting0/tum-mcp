@@ -47,7 +47,9 @@ Lecture has no quizzes or flashcards; broader teaching/practice stays in Study.
    original recording clock.
 2. Prefer existing captions or supplied original-time WebVTT. Otherwise the optional
    pinned local recognizer scans retained audio in resumable chunks. It checks all
-   channels, preserves coverage gaps and flags uncertain/repetitive recognition.
+   channels, preserves coverage gaps and flags uncertain/repetitive recognition. Only a
+   flagged segment's time (with two seconds either side) becomes unclear; an issue with
+   the whole chunk, such as poor audio or a language change, marks all of it.
    Three quiet samples alone cannot invalidate a recording.
 3. Read compact transcript passages, map the full retained lecture and compare with
    verified slides/materials. Classify contributions as Note, Highlight or Omit.

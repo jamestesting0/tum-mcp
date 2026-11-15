@@ -190,7 +190,7 @@ def prepare_audio(
             result.extend(owned_passages(chunk.passages, owned))
             processed.append(span)
             if chunk.issues:
-                uncertain.append(span)
+                uncertain.extend(chunk.uncertain or (span,))
                 issues.extend(chunk.issues)
         except RecognizerUnavailable as error:
             issues.append(f"recognizer_{error.code.value.lower()}")

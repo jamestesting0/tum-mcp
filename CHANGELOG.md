@@ -18,6 +18,9 @@
   `selection-decision`, each printed with its authoring rule.
 - When a lecture corrects the materials, the linked Study passage is rewritten too, and
   review treats a passage that still teaches the corrected claim as a finding.
+- Recognition marks only a flagged segment's time as unclear, with two seconds either
+  side, instead of its whole ten-minute chunk; poor audio, missing speech or a language
+  change still mark the chunk. Checkpoints from earlier versions keep the chunk.
 
 ## 0.25.0 — 2026-11-15
 
