@@ -65,6 +65,7 @@ def test_exercises_alone_are_reviewable_and_study_added_later_asks_for_links(
 def test_an_exercise_part_map_needs_no_gate_and_its_needs_link_study(
     exercise_project: Path,
 ) -> None:
+    from tum_mcp.course.app.build import read_content as read_document_model
     from tum_mcp.course.checks.plans import Plan, gated, need_problems, plan_packet, plan_path
     from tum_mcp.course.content.store import read_document
     from tum_mcp.errors import CampusError
@@ -96,6 +97,12 @@ def test_an_exercise_part_map_needs_no_gate_and_its_needs_link_study(
     # An unlinked need gives its reason; without one it is reported.
     assert need_problems(exercise_project, plan({"idea": "sets"}), None)
     assert not need_problems(exercise_project, plan({"idea": "sets", "reason": "Given."}), None)
+    # `study links` lists the need that still lacks a link, with candidate passages.
+    from tum_mcp.course.checks.links import open_needs
+
+    path.write_text(plan({"idea": "the minimum"}).model_dump_json())
+    [listed] = open_needs(exercise_project, read_document_model(exercise_project))
+    assert (listed["item"], listed["need"]) == (item, "the minimum")
     # Without Study, needs stay inline reminders.
     content_file(exercise_project, "study").unlink()
     assert need_problems(exercise_project, plan({"idea": "sets"}), {"prerequisites": []}) == []

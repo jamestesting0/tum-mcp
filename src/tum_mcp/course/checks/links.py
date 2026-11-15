@@ -150,9 +150,28 @@ def hints(title: str, candidates: list[tuple[str, str]]) -> list[str]:
     return list(dict.fromkeys(key for score, key in scored if score))[:3]
 
 
+def open_needs(root: Path, study) -> list[dict[str, JsonValue]]:
+    """Each exercise part-map need without a Study link or a reason, with candidate passages."""
+    from tum_mcp.course.checks.plans import gated, plans
+
+    if not study:
+        return []
+    titles = _titles(study, None, None, None, "study")
+    return [
+        {"item": plan.item, "part": part.part, "need": need.idea, "hints": hints(need.idea, titles)}
+        for plan in plans(root)
+        if not gated(plan.item)
+        for part in plan.parts
+        for need in part.needs
+        if need.unit is None and not need.reason
+    ]
+
+
 def report(root: Path, study, exercises, exam, lectures) -> dict[str, JsonValue]:
     open_pairs = undecided(root, study, exercises, exam, lectures)
+    needs = open_needs(root, study)
     return {
+        **({"needs": needs} if needs else {}),
         "undecided": [
             {
                 "item": pair.item,
