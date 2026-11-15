@@ -40,9 +40,30 @@ and `intuition.method_choice` for these specific checks. A finding still belongs
 dimension. If no guide or solution exists to judge, record the gap; never award an
 automatic 3 because the Study check does not apply.
 
-Judge repetition in the rendered view: a Guide answer and a full Solution must each
-work when opened separately. An independent Exam drill shows its model answer and
-optional worked solution in one panel, so repeating the same working there is a defect.
+Six checks judge new teaching: `clarity.notation_unpacked`, `intuition.motivated`,
+`intuition.concrete_first`, `intuition.general_rule`, `organization.outline` and
+`intuition.concepts_instanced`. Apply them only to teaching the guide adds. An idea taught
+earlier passes when the step links the passage that teaches it.
+
+Where two checks meet, one owns the finding:
+- A missing original demand is `coverage.all_parts`; a Compare that misses its step's
+  demand is `practice.complete_answer`.
+- A value that does not match recomputation is `correctness.recomputed`; a non-numeric
+  answer that disagrees with your solution is `correctness.answer_key`.
+- A statement that drops or changes a given is `correctness.statement_fidelity`;
+  `correctness.source_match` covers the guide and Solution.
+- Why a method fits is `intuition.method_choice`; a missing rule for one operation is
+  `intuition.reasons`.
+
+`organization.outline` accepts the source's part labels and neutral headings such as
+"Part (b)". When the preparation records that the student asked for some parts only,
+`coverage.all_parts` judges those parts.
+
+Judge repetition in the rendered view. Each guide step's Compare holds the full working
+for that step; the Solution gives each part's answer only. Working repeated in the
+Solution is a `redundancy.said_once` finding. An independent Exam drill shows its model
+answer and optional worked solution in one panel, so repeating the same working there is
+a defect.
 
 ## Exam
 

@@ -269,9 +269,19 @@ def artemis_get_attachment(
 
 
 @server.tool(annotations=READ)
-def artemis_get_exercise(account_id: str, course_id: Id, exercise_id: Id) -> ExerciseView:
-    """Read a released statement without personal submission history; never starts it."""
-    view = Artemis(API(find_account(account_id, Provider.ARTEMIS))).exercise(course_id, exercise_id)
+def artemis_get_exercise(
+    account_id: str, course_id: Id, exercise_id: Id, save_images: bool = False
+) -> ExerciseView:
+    """Read a released statement without personal submission history; never starts it.
+
+    `tasks` lists the graded `[task]` lines with their test ids. With save_images=true, each
+    image the statement embeds is saved locally and its path returned; an image that could
+    not be fetched names its problem.
+    """
+    provider = Artemis(API(find_account(account_id, Provider.ARTEMIS)))
+    view = provider.exercise(course_id, exercise_id)
+    if save_images:
+        view = provider.save_images(view)
     return view.model_copy(
         update={"exercise": view.exercise.model_copy(update={"student_participations": None})}
     )

@@ -14,13 +14,16 @@ gap; leave that exercise pending instead of inventing a statement or a solution.
 Prepare independent complete exercises while a different item is blocked.
 
 Distinguish official solutions from your own derivation. An official label needs
-the actual declared solution source. If no official solution is available, solve
-and review an authored one, including alternative valid methods and edge cases.
+the actual declared solution source, and only what that source states is official. If
+no official solution is available, solve and review an authored one, including
+alternative valid methods and edge cases. A slide that builds up over several overlay
+pages is read on its last page.
 Do not infer deadline/timezone or release status from a title. Dates are optional
 and, when present, require an explicit timezone and current source evidence.
 
 When the student asks for the latest sheet and no release date is shown, read each
-sheet's semester stamp, take the newest sheet stamped for the current semester, say
+sheet's semester stamp, take the newest sheet stamped for the bound or requested
+semester, say
 which one you chose and why, and continue; ask only when two sheets qualify equally.
 Prepare every in-scope core problem and part of the chosen sheet. Include bonus work
 only when requested, and retain already prepared bonus work. A required part you cannot

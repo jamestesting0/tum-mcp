@@ -33,8 +33,9 @@ class GuidanceStep(Frozen):
     an intermediate result or a decision. Routine arithmetic stays inside its working, never
     a step of its own. Compare shows the working: it starts from the givens or an earlier
     step's result, shows every operation with the rule that permits it, and ends at the
-    answer the check compares. Later steps give fewer prompts and hints; the working stays
-    complete."""
+    answer the check compares. A self-check's model answer is that working (the proof lines
+    or the code); the explanation then adds only what it leaves out. Later steps give fewer
+    prompts and hints; the working stays complete."""
 
     key: Key
     # The original part this step guides, so each part of a multi-part problem gets its own guide.

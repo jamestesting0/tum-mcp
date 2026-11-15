@@ -58,10 +58,34 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    A named exercise or requested week takes priority. If none matches, record the
    missing prerequisite before planning rather than silently choosing a later topic
    or inventing a Study link.
-3. Plan each problem (parts, answers, methods) and solve it first: an answer key in
-   `.tum-mcp/checks/` for anything computed. Then prepare only useful conceptual steps, requested hints,
-   specific feedback and a direct worked solution. Read [guidance](references/guidance.md).
-   For large programming tasks, add distilled practice per [coding](references/coding.md).
+3. Solve each problem before writing it. The statement and any official solution are
+   given, so the work is solving, guidance and representation:
+   1. For graded or bonus work, follow the collaboration rules in course.md first: coach
+      rather than write the submission. A student who asks only for hints gets them in
+      chat, as a tutor, not as a prepared exercise.
+   2. Write the answer key in `.tum-mcp/checks/` for anything computed. It prints every
+      intermediate value the working will show, so the working copies values, never hand
+      arithmetic.
+   3. With an official solution, transcribe it, re-solve it and keep the correct answer.
+      Its steps are the skeleton of your working; fill in the operations it skips. A slip
+      in it gets one note line that names the difference, and that line is authored.
+   4. Write the part map as the plan, `.tum-mcp/plans/exercises/<set>/<problem>.json`:
+      each `part` with its `answer`, `method`, `official` locator and `needs` (the ideas the
+      method uses, each linked to its Study `unit` and `block`, or with the reason none
+      teaches it). Lint checks it against the exercise; it needs no plan check.
+   5. Write the guide by the part's demand ([guidance](references/guidance.md)): one step per
+      subgoal, and Compare shows the step's full working. Copy the shape of the matching
+      example from `tum-mcp study schema --example NAME`:
+
+      | Demand | Working on Compare | Example |
+      | --- | --- | --- |
+      | Computation | A derivation, one transformation per line with its reason | `step-derivation` |
+      | Proof | Each inference on its own line with what permits it | `step-proof` |
+      | Trace | A walkthrough over the drawn object, one stage per operation | `step-trace` |
+      | Code | A walkthrough over the model code, then one test traced | `step-code` |
+
+   For large programming tasks, add distilled practice per [coding](references/coding.md)
+   only when the student asks for it.
    Questions you write show their figure, code, diagram, UML diagram, formula, table or plot
    beside the text. Keep a released statement's wording but structure it by part, with
    its numeric givens as a table and its setting drawn ([content](references/content.md)). Every
@@ -77,12 +101,21 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
     the next question. Each Solution reveals only its part's answer, independently of the guide.
    Preserve unrelated Study/Exercise objects and template assets. Use the existing
    builder; do not create another site, tutor service or framework.
-   Link each problem: `prerequisites` name the Study passages it uses; when a cheatsheet
-   exists, add the problem to the `exercises` of the entries it practises.
+   Link each problem: `prerequisites` list the part map's linked needs; without Study,
+   each is an inline reminder. When Study exists, `study links` lists candidate passages;
+   link each need to the passage that teaches it. Edit Study only for a gap, with one of
+   four edits, each rewriting the whole passage in the unit file:
+   1. teach a missing idea the exercise needs where it belongs;
+   2. give the teaching passage a block `key`;
+   3. align a term, notation or convention with the sheet;
+   4. replace a Study example or question that replays the exercise's case.
+   Never copy the exercise's case or answer into Study. The changed units join the batch.
+   When a cheatsheet exists, add the problem to the `exercises` of the entries it practises.
    `tum-mcp study links PROJECT` lists what is still undecided and records a reason when no
    link fits.
-5. Finish Phase A of the [draft checks](../prepare-study/references/loop.md): build the
-   batch, run `tum-mcp study visuals PROJECT --exercise SET/KEY` and `--interact`, and
+5. Finish Phase A of the [draft checks](../prepare-study/references/loop.md) without its
+   digest and plan gate: build the batch, run `tum-mcp study verify PROJECT`, run
+   `tum-mcp study visuals PROJECT --exercise SET/KEY` and `--interact`, and
    link every problem of each sheet in the
    [coverage ledger](../prepare-study/references/coverage.md) (its set declares the
    sheet it covers). Keep provisional sheets separate from assigned coursework. Check

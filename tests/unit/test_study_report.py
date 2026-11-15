@@ -837,6 +837,19 @@ def test_step_working_can_be_blocks_that_are_cited_and_checked() -> None:
     model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
     flags = item_block_flags(exercise["key"], model)
     assert any(f["flag"] == "prose_run" and "/explanation" in str(f["item"]) for f in flags)
+    # A worked answer whose Compare gives one sentence asks for a ruling; blocks clear it.
+    numeric = {"kind": "numeric", "answer": 9, "feedback": "Add all three costs."}
+    step["check"] = numeric
+    model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+    assert not [
+        f for f in item_block_flags("exercises/s/e", model) if f["flag"] == "step_without_working"
+    ]
+    step["explanation"] = "Add the three costs."
+    model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+    assert [
+        f for f in item_block_flags("exercises/s/e", model) if f["flag"] == "step_without_working"
+    ]
+    step["explanation"] = [block | {"paragraphs": paragraphs}]
     # Its sources must be declared, as for any step content.
     step["explanation"][0]["sources"] = ["undeclared"]
     with pytest.raises(ValidationError, match="Step working cites an undeclared source"):

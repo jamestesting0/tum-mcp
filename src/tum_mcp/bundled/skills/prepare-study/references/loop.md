@@ -61,7 +61,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
        "outcome":"apply-method","level":"apply"}]
    }
    ```
-2. **Read each source once into a digest.** `.tum-mcp/digests/<source>.json` holds its
+2. **Read each source once into a digest.** Study, Exam and Lecture only: an exercise's
+   statement and solution are its sources. `.tum-mcp/digests/<source>.json` holds its
    stated outcomes, worked examples, definitions and figures with their pages, and the
    source's `sha256` from `.tum-mcp/state.json`. Record every demonstration in `examples`
    and every figure that carries an idea in `figures`, with pages, what it teaches and
@@ -85,8 +86,9 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    names the item's outcomes and each concept with its `kind` (definition, fact, rule,
    procedure, algorithm, model, comparison, cases), the worked `instance` that shows it
    (for a procedure, algorithm or model, the lecture `example` it is taught on) and the
-   block keys that will teach it; an exercise plan names each `part` with its `answer`
-   and `method`. A kind brings a default shape (an algorithm is stepped through, a
+   block keys that will teach it. An exercise plan is its part map: each `part` with its
+   `answer`, `method`, `official` locator and `needs`; lint checks it and it skips the
+   plan gate. A kind brings a default shape (an algorithm is stepped through, a
    comparison is a table, a model is drawn, parallel `cases` are a table or one `example`
    each); give `skip` with the reason when it does not fit. Choose the kind from the idea:
    a comparison sets several things side by side on shared attributes, so an argument or
@@ -105,7 +107,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    plans; do not call it after each individual lesson or pattern. Fix rejected plans together;
    do not launch a checker
    when `review plans PROJECT` lists no pending plans.
-4. **Pass the plan gate.** `tum-mcp review plans PROJECT` gives the plans waiting for a
+4. **Pass the plan gate** (Study, Exam and Lecture plans). `tum-mcp review plans PROJECT`
+   gives the plans waiting for a
    check, and one fresh session reads them: `tum-mcp review run-checker PROJECT --plans`
    (a headless host session, recorded as fresh), or a subagent that starts empty, whose answer
    you record with `tum-mcp review plan-record PROJECT --file ANSWER --provenance fresh`.
@@ -168,8 +171,8 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    source and plan are fresh, follow the published procedure on the worked input and a
    relevant boundary case; check the actual loop scope, branches and exits, not an
    independent hidden implementation.
-   Read an exercise's Solution alone and keep its working self-contained. Repair these
-   gaps in this item before moving to the next. After each item run
+   Read an exercise's Solution alone: it gives each part's answer, and the working lives
+   in each guide step's Compare. Repair these gaps in this item before moving to the next. After each item run
    `tum-mcp study lint PROJECT --item ITEM`: schema, report flags, the plan's links and the
    answer key in seconds. Fix every invariant flag; read every other flag and fix it or
    keep it for a stated reason. Text-only questions are invariant defects; even a

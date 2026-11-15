@@ -69,7 +69,10 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    `.tum-mcp/plans/study/<key>.json` is ready with every other requested unit's plan
    before one batch plan check. Repair pending plans together and submit them in one
    check, rather than checking each lesson as you finish it. Each passes before authoring
-   ([draft checks](references/loop.md)).
+   ([draft checks](references/loop.md)). When Exercises are requested too, write their part
+   maps first (prepare-exercises). Each need they link to a unit is a concept with a block
+   key in that unit's plan. Study examples and practice use other cases than the
+   exercises, so each exercise stays a fresh application (`exercise_case_in_study`).
 3. **Author.** Read [teaching](references/teaching.md) and
    [writing](references/writing.md) before writing a new or restructured unit. Teach each
    unit as its plan decided, with the moves that fit each idea and the block types the

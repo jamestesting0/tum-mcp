@@ -114,7 +114,8 @@ The student can read each passage once and know what it says.
 - `clarity.case_observable` (Exam pattern): a case's `when` names something the student
   can see in their working at that step, and its `then` names one move.
 - `clarity.no_meta`: no line about the material itself ("the lecture groups…",
-  "Authored example:") or that tells the student to work
+  "Authored example:") or that only tells the student to work or compare, such as "Work
+  through the steps". A task prompt that names what to produce is not meta
   ([writing](../../prepare-study/references/writing.md)).
 
 2: a dense paragraph, an undefined term or an ambiguous instruction.

@@ -1240,6 +1240,10 @@ def _check_owners(value: object, path: str = "") -> Iterator[tuple[str, BaseMode
             yield from _check_owners(entry, f"{path}/{key if isinstance(key, str) else index}")
 
 
+# Checks whose answer is worked out, so a guide step's Compare shows that working.
+WORKED_CHECKS = frozenset({"numeric", "table", "graph", "plot"})
+
+
 def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
     """The shared block, option and code checks on every part of one exercise or Exam item."""
     flags: list[dict[str, JsonValue]] = []
@@ -1258,6 +1262,18 @@ def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
             for code in (check.model_answer, check.starter_code):
                 if isinstance(code, str) and (problem := _code_problem(code, check.language or "")):
                     flag(location, "compressed_code", problem)
+        if (
+            item.startswith("exercises/")
+            and check.kind in WORKED_CHECKS
+            and isinstance(getattr(owner, "explanation", None), str)
+        ):
+            flag(
+                location,
+                "step_without_working",
+                f"A {check.kind} answer whose Compare gives one sentence of reasoning. Show the "
+                "working that reaches it as blocks: a derivation, a walkthrough or proof lines, "
+                "each operation with its rule.",
+            )
     return flags
 
 

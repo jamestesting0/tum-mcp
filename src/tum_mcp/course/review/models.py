@@ -324,6 +324,7 @@ RULED_FLAGS: dict[str, str] = {
     "negative_stem": "clarity.one_reading",
     "exemplar_copy": "correctness.source_match",
     "exercise_case_in_study": "practice.new_case",
+    "step_without_working": "practice.complete_answer",
 }
 # Invariant flags about the whole course rather than the item they are filed under: a scoped
 # draft cannot clear them, so an item lint reports them and the review gate holds on them.

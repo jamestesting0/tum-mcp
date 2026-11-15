@@ -48,10 +48,25 @@ and inline reminder can repair a gap without a separate prerequisite wizard.
 
 Students work on paper and compare. Give a short answer where one exists: a number
 with its unit, a filled table, a node/edge/path selection, plotted sample points, or
-four options when choosing is the learning goal. When the answer is a calculation, the
-Compare answer is a `derivation`: each meaningful transformation on its own line with a
-short reason, so the student can find where their working diverged, and one labelled
-group per requested quantity. Check the labels against the task (seven results asked,
+four options when choosing is the learning goal. The step's working on Compare follows
+its demand, so the student can find where their working diverged:
+- A calculation is a `derivation`: each meaningful transformation on its own line with a
+  short reason, and one labelled group per requested quantity.
+- A proof names what to show and the definition to unfold in the prompt; a later hint
+  names the key step. The working gives each inference on its own line with what permits
+  it. A part that reuses an earlier part names the substitution, as in (e) using (d) with
+  \(A = U\).
+- A trace states its tie rules before the first step. The working is a walkthrough over
+  the drawn object, such as a constraint graph with each variable's domain and the pruned
+  values marked, one stage per operation. When ties are broken at random, say that
+  several runs are valid and show one. The sheet's table appears only where the sheet
+  asks for it, as that part's `table` check; the flag `trace_as_table` is then ruled "the
+  sheet asks for this table".
+- Code gives each task's contract from the statement and its tests. The model answer is
+  the code. The working maps each part of it to the contract in a short list, then traces
+  one test case step by step with its state. Draw a state chart as a state diagram.
+- A proof checked by `self_check` keeps its lines in the model answer; the working adds
+  only what the model answer leaves out. Check the labels against the task (seven results asked,
 seven shown). Several results in one sentence are flagged as `compressed_working`. A
 derivation in a step or the Solution may give `symbols` for the variables a student would
 stop to recall ([variable meanings](../../prepare-study/references/variables.md)). Use a rubric and model derivation for
@@ -77,7 +92,8 @@ next inference. Check an altered case where a condition fails; merely renaming
 the original task is not a transfer check. Assistance and retries are not mastery
 estimates. Finishing an exercise only marks it completed in the outline.
 
-Prerequisites must resolve to core Study blocks. If solving a released task needs
-something currently in Explore, record the dependency and repair core teaching when
-Study is in scope; do not silently make optional reading mandatory. See
-[Explore](../../prepare-study/references/explore.md).
+Without Study, each prerequisite is an inline reminder; `study links` asks for the link
+once Study exists. A linked prerequisite resolves to a core Study block. If solving a
+released task needs something currently in Explore, record the dependency and repair
+core teaching when Study is in scope; do not silently make optional reading mandatory.
+See [Explore](../../prepare-study/references/explore.md).
