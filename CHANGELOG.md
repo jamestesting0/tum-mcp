@@ -23,6 +23,7 @@
   change still mark the chunk. Checkpoints from earlier versions keep the chunk.
 - `review repair-scope` lets a repair drop a Lecture entry while its lecture stays in
   review, and lists the removal and any finding it left open in the scorecard.
+- `study task finish` accepts a review that a later task extended by its authorized rounds.
 
 ## 0.25.0 — 2026-11-15
 

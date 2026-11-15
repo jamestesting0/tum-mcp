@@ -105,6 +105,32 @@ def test_guard_requires_requested_round_and_keeps_its_budget(task_project: Path)
         tasks.finish(project)
 
 
+def test_a_later_task_finishes_the_round_it_added_to_an_earlier_review(task_project: Path) -> None:
+    # A student asked for one more review; the new task's round extended a review that already
+    # had one, and finish compared the task's 1 with the review's 2.
+    project = task_project
+    tasks.begin(project, "selected", 1)
+    loop.start(project, batch="selected")
+    for packet in packets(project, loop.next_round(project)):
+        loop.record(project, answer(packet), "fresh")
+    # A repair after the last check leaves the spent round waiting for verification.
+    edit_first_block(project)
+    build(project, publish=False)
+    assert loop.close_round(project)["status"] == "budget_spent"
+    tasks.finish(project)
+    assert tasks.stop(event(project)) == {}
+
+    tasks.begin(project, "selected", 1)
+    loop.extend(project, 1)
+    for packet in packets(project, loop.next_round(project)):
+        loop.record(project, answer(packet), "fresh")
+    loop.close_round(project)
+
+    assert tasks.finish(project)["ready"]
+    state = loop.read_state(project)
+    assert state and state.budget == state.round == 2
+
+
 def test_guard_respects_other_threads_and_user_interruptions(task_project: Path) -> None:
     project = task_project
     tasks.begin(project, "selected", 1)

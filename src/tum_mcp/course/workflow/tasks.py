@@ -34,6 +34,8 @@ class Task(Frozen):
     phase: Literal["pending", "ready", "complete", "paused", "stalled"] = "pending"
     inputs: Digest | None = None
     review_before: Digest | None = None
+    # The review's round budget when this task began; an extension adds this task's rounds.
+    review_budget_before: int = Field(default=0, ge=0, le=40)
     last_inputs: Digest | None = None
     stagnant: int = Field(default=0, ge=0, le=3)
     reason: str = Field(default="", max_length=2000)
@@ -92,7 +94,10 @@ def begin(root: Path, batch: str, review_rounds: int = 0, *, owner: str | None =
     return _save(
         root,
         task.model_copy(
-            update={"review_before": digest(review.model_dump_json().encode()) if review else None}
+            update={
+                "review_before": digest(review.model_dump_json().encode()) if review else None,
+                "review_budget_before": review.budget if review else 0,
+            }
         ),
     )
 
@@ -158,7 +163,8 @@ def finish(root: Path, *, owner: str | None = None) -> dict:
                 review.batch_contract is not None
                 and review.batch_contract != contract(root, task.batch, review.batch_sources)
             )
-            or review.budget != task.review_rounds
+            or review.budget
+            not in {task.review_rounds, task.review_budget_before + task.review_rounds}
             or review.status == "running"
             or not review.rounds
             or review.rounds[-1].closed is None
