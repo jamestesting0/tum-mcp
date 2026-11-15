@@ -170,8 +170,15 @@ def course(tmp_path: Path, scene: str) -> Path:
             },
         ],
     }
+    from test_video_pipeline import leave_rest_to_page
+
+    from tum_mcp.course.app.build import read_content
+
+    unit = next(item for item in read_content(root).units if item.key == "bfs")
     (root / "videos/storyboards").mkdir()
-    (root / f"videos/storyboards/{STEM}.json").write_text(json.dumps(board), encoding="utf-8")
+    (root / f"videos/storyboards/{STEM}.json").write_text(
+        json.dumps(leave_rest_to_page(board, unit)), encoding="utf-8"
+    )
     (root / f"videos/scenes/{STEM}").mkdir(parents=True)
     (root / f"videos/scenes/{STEM}/chapters.py").write_text(scene, encoding="utf-8")
     voice = json.loads((root / "videos/voice.json").read_text(encoding="utf-8"))
