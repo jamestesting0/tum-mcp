@@ -25,7 +25,9 @@ FILES = {
 }
 
 
-def provider(participations: list[dict]) -> tuple[Artemis, list[str]]:
+def provider(
+    participations: list[dict], history: list[dict] | None = None, initialized: bool = True
+) -> tuple[Artemis, list[str]]:
     seen: list[str] = []
     exercise = {
         "id": 11,
@@ -39,7 +41,8 @@ def provider(participations: list[dict]) -> tuple[Artemis, list[str]]:
         "/api/core/public/account": {"id": 7, "login": "student"},
         "/api/course/courses/77/exercises-for-overview": {"exercises": [exercise]},
         "/api/exercise/exercises/11/details": {"exercise": exercise},
-        "/api/programming/programming-exercise-participations/9/commit-history": [
+        "/api/programming/programming-exercise-participations/9/commit-history": history
+        or [
             {"hash": WORK, "timestamp": "2026-11-02T10:00:00Z", "author": "me"},
             {"hash": TEMPLATE, "timestamp": "2026-10-01T10:00:00Z", "author": "staff"},
         ],
@@ -48,7 +51,7 @@ def provider(participations: list[dict]) -> tuple[Artemis, list[str]]:
         routes[
             f"/api/programming/programming-exercise-participations/{item['id']}/"
             "student-participation-with-all-results"
-        ] = item | {"initializationDate": "2026-11-01T09:00:00Z"}
+        ] = item | ({"initializationDate": "2026-11-01T09:00:00Z"} if initialized else {})
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.method == "GET"
@@ -97,3 +100,12 @@ def test_a_repository_beyond_the_editor_is_narrowed_with_include() -> None:
         select(big)
     kept, _ = select(big, ("src/F1*.java",))
     assert len(kept) == 11
+
+
+def test_a_practice_repository_without_a_setup_time_uses_its_only_commit() -> None:
+    only = [{"hash": TEMPLATE, "timestamp": "2026-10-01T10:00:00Z", "author": "staff"}]
+    artemis, _ = provider([{"id": 9, "testRun": True}], history=only, initialized=False)
+    assert artemis.template_files(artemis.exercise(77, 11).exercise)[0] == TEMPLATE
+    artemis, _ = provider([{"id": 9, "testRun": True}], initialized=False)
+    with pytest.raises(CampusError, match="unclear"):
+        artemis.template_files(artemis.exercise(77, 11).exercise)

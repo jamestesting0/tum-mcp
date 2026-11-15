@@ -198,10 +198,20 @@ class Artemis:
         current = decode(
             Participation, self.api.get(f"{base}student-participation-with-all-results")
         )
-        if current.id != participation.id or current.initialization_date is None:
-            raise CampusError(Code.STALE_RESULT, "The repository's setup time is unknown.")
+        if current.id != participation.id:
+            raise CampusError(Code.STALE_RESULT, "The participation changed while reading it.")
         history = decode(CommitHistory, self.api.get(f"{base}commit-history")).root
-        template = [item for item in history if item.timestamp <= current.initialization_date]
+        if current.initialization_date is not None:
+            template = [item for item in history if item.timestamp <= current.initialization_date]
+        elif len(history) == 1 and not current.submissions:
+            # Some practice repositories carry no setup time; one commit and no submission
+            # can only be the copied template.
+            template = list(history)
+        else:
+            raise CampusError(
+                Code.STALE_RESULT,
+                "The template commit is unclear: no setup time and later commits exist.",
+            )
         if not template:
             raise CampusError(Code.STALE_RESULT, "No commit predates the repository's setup.")
         commit = max(template, key=lambda item: item.timestamp).hash

@@ -14,9 +14,10 @@ direction; when several paths or sets are correct, say so in the explanation.
 For line graphs, verify scales/units and independently compute every target point;
 try tap placement, coordinate editing, keyboard adjustment, clear and reload. A
 matched finite point set does not prove the entire curve or a derivation is correct.
-For code and long work, inspect indentation, notation, starter code and rubric; check
-that the starter declares what the model answer uses, and compare one alternative
-valid response and a flawed one against the rubric.
+For code and long work, inspect indentation, notation, the project's files and rubric;
+check that the files declare what the solved lines use, that the solved files change
+only what the tasks ask for, and compare one alternative valid response and a flawed one
+against the rubric. A project from Artemis passes `study lint` without `project_drift`.
 
 Build the actual app. Exercise one representative changed response branch only
 when it changes: work on paper → compare → continue (a choice: wrong → repair → change → check), and

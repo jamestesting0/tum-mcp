@@ -51,6 +51,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | X3 | The exercise links the Study passages, cheatsheet entries and patterns it uses (Recall) | `undecided_link` |
 | X4 | Every guide step's Compare shows the working from the step's inputs to its answer, each operation with its rule; a part's guide follows its solution's subgoals; the Solution gives each part's answer only, as code for a programming task | ruled `step_without_working`, ruled `single_step_part`, ruled `answer_without_code`, `unworked_result`, `prose_calculation`, `practice.complete_answer` |
 | X5 | Study teaches what an exercise needs on other cases; it never teaches or practises a released exercise's own case | ruled `exercise_case_in_study`, `practice.new_case` |
+| X6 | A programming exercise works in one project faithful to its source: each code step writes into an editable file, each editable file has a solved version that its steps point into, and a project from Artemis matches the template byte for byte | `code_step_without_project`, `editable_without_solution`, `solution_unchanged`, `unwritten_editable`, `solved_lines_unchanged`, `project_drift`, `rebuilt_without_reason` |
 
 ## Exam
 

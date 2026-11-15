@@ -1,26 +1,71 @@
-# Distil programming exercises
+# Programming exercises
 
-Large Artemis programming tasks train a few ideas inside a lot of scaffolding. Keep the
-original exercise as it is, and add **distilled** practice that trains each idea in a
-small, self-contained setting.
+A programming exercise works in one project: the files of the real task, some to read and
+some to edit. The app opens it as an editor beside the task, as Artemis does. Each writing
+step writes into a project file, and Compare and the Solution show lines of the solved
+files.
 
-## Read what is available
+## Get the files
 
-- The problem statement from `artemis_get_exercise`: class diagrams, code excerpts and
-  constraints. Its `tasks` list the graded tasks with their test ids; the `<testid>`
-  markup is metadata, never statement text. With `save_images=true` it saves each
-  embedded image, such as a state chart, and returns its local path. An image it could
-  not fetch names its problem; a required one keeps the exercise pending.
-- The student's own visible feedback with `artemis_get_feedback`, when they ask for it:
-  failing test names show where students struggle.
-- A local clone of the student's own repository, when the user points to it. Read
-  source files only. Never open `.git/`, build scripts, IDE settings or anything that
-  may hold credentials or remote URLs; never build, run, commit or push.
+Use the first source that exists:
 
-Without a clone, work from the statement and say so in the report. Rebuild class
-diagrams from the statement (often PlantUML) as `uml` class diagrams with the members
-the task needs, never as an image or a generic box diagram. Build `starter_code` from
-that diagram; do not show a `files` block as if it were the template.
+1. **Artemis.** Call `artemis_get_repository` for the exercise. It saves the source files
+   as Artemis copied them from the template, never the student's later work, and returns
+   a listing without file text. Copy the saved folder into the course project with
+   `tum-mcp study repository PROJECT --from FOLDER`.
+   - If it reports `not_started`, ask the student to start the exercise in Artemis, or to
+     accept a project rebuilt from the statement. Never start it yourself.
+   - If the repository is larger than the editor holds, narrow it with `include` globs to
+     the source folders the tasks touch.
+2. **A local clone** the user points to. Read source files only. Never open `.git/`, build
+   scripts, IDE settings or anything that may hold credentials or remote URLs; never
+   build, run, commit or push. Use the files as the template had them.
+3. **The statement**, only when neither exists, for example a programming question in a
+   PDF exam. Rebuild the files:
+   - each class or interface in the statement's UML gets a file with exactly its members;
+   - code the statement prints goes into its file, unchanged;
+   - a run or test the statement describes gets a read-only `Main` or test file;
+   - a `TODO` comment marks each place where the statement assigns work.
+   For an Artemis exercise, say why in `rebuilt_because`.
+
+The problem statement comes from `artemis_get_exercise`: class diagrams, code excerpts and
+constraints. Its `tasks` list the graded tasks with their test ids; the `<testid>` markup
+is metadata, never statement text. With `save_images=true` it saves each embedded image,
+such as a state chart. The student's visible feedback (`artemis_get_feedback`, when they
+ask for it) shows through failing test names where students struggle.
+
+## Build the project
+
+1. Decide which files the tasks change. Those are `editable`; every other file is
+   read-only. A class the task asks the student to create is an editable file that starts
+   empty.
+2. Write each editable file solved, as a correct answer leaves it, under
+   `.tum-mcp/work/projects/EXERCISE/solved/` at the same path. Change only what the
+   tasks ask for; keep the template's names, imports and layout.
+3. Pack the project into the exercise:
+   `tum-mcp study files PROJECT EXERCISE --from artemis-ID --editable PATH ... --solutions
+   DIR --description TEXT`. A rebuilt project passes `--from STARTER_DIR --origin rebuilt`;
+   distilled practice passes `--origin authored`.
+4. Pack again after any change to the solved files. `study lint` flags a project that no
+   longer matches its Artemis snapshot.
+
+Rebuild the statement's class diagrams as `uml` class diagrams with the members the tasks
+need, beside the files. Code is never run: check the solved files by careful reading and
+tracing.
+
+## Write the guide
+
+- A writing step names its file in the prompt and sets the self-check's `file`. Its
+  `code` reference points at the starter lines where the work goes, so the app opens the
+  file there.
+- `solution_code` points at the solved lines the step produces, with a `walkthrough` that
+  explains them. Compare shows those lines; the step has no `model_answer`.
+- A reading step points at the lines to read with `code`.
+- A Solution answer for a coding part points at its solved lines with `code`.
+- A part that asks to run code becomes a trace step: the student predicts the output or
+  state for the entry file or test, and Compare shows the trace.
+
+Copy the shape from `tum-mcp study schema --example step-code` and `--example files`.
 
 ## Find the concept kernels
 
@@ -34,49 +79,32 @@ For each task, note in `.tum-mcp/work/` a short table:
 Essential kernels are language features, APIs, design ideas, algorithms, invariants and
 contracts the tests check. Domain names, boilerplate, I/O and build setup are scaffolding.
 
-## Show the real files
+## Distilled practice per essential kernel
 
-When the exercise comes with template files (Artemis repositories, provided classes),
-show them in a `files` block so students work in the same structure as the real task:
-editable files keep their `TODO` markers, read-only files are the ones to read.
-Steps point at the relevant lines with `code` references and write into a file with
-the self-check's `file`, so a step reads "In `Supervisor.java`, replace ..." beside
-the exact lines it means. A distilled exercise uses a small new workspace of two or
-three files in a fresh domain.
-
-## Build practice per essential kernel
-
-Use a fresh, minimal domain so students recognise the idea rather than the task.
-The core step is writing code. Give the method signature or a small class skeleton as
-`starter_code` that declares every field and type the model answer uses, show the types
-it works with as a code or UML block, and ask for the
-body. The app opens the skeleton in a code editor; the student then compares their
-code with the model answer and rubric.
+Add distilled practice only when the student asks for it. Use a fresh, minimal domain so
+students recognise the idea rather than the task. Distilled exercises set
+`kind: distilled` and `distilled_from` with the original exercise keys; the app shows
+"Practice for" links back to the originals. Each one has a small `authored` project of two
+or three files.
 
 | Step | Check | Purpose |
 | --- | --- | --- |
-| Write | `self_check` with `format: code`, `starter_code` (the signature or skeleton with a comment where the code goes), a complete model answer and a rubric of the essential points; add example inputs and outputs as a table | Implement the method or class that uses the kernel. One per essential kernel. |
+| Write | `self_check` with `format: code` and `file`, with `solution_code` and a rubric of the essential points; add example inputs and outputs as a table | Implement the method or class that uses the kernel. One per essential kernel. |
 | Trace | `numeric`, `table` or `choice` | Predict output or state after given code, when a misconception about behaviour is likely. |
-| Fix | `numeric` line number on a code block with `line_numbers: true`, then the corrected line as `text` with `format: code` | Find and repair a typical bug. |
+| Fix | `numeric` line number on a code reference, then the corrected line as `text` with `format: code` | Find and repair a typical bug. |
 | Map back | text step | Name the class or method in the original task where the idea applies. |
 
-Do not replace writing with recognition. Arranging given lines or choosing where a
-field belongs lets a student pass without producing code. Use `choice` only for a
-genuine design decision with plausible alternatives, and make every step a real piece
-of the work rather than a question about the statement.
-
-Use only the steps the kernel needs. Distilled exercises set `kind: distilled`
-and `distilled_from` with the original exercise keys; the app shows "Practice for" links back to the originals.
+Do not replace writing with recognition. Arranging given lines or choosing where a field
+belongs lets a student pass without producing code. Use `choice` only for a genuine design
+decision with plausible alternatives. Use only the steps the kernel needs.
 
 ## Keep it faithful
 
 - Every essential kernel maps to at least one distilled item.
 - Same language version, standard library and APIs as the course.
-- Include only the short, cited course-code excerpts needed to show the task, under
-  their real paths. Omit unrelated template code. Distilled items use the fresh
-  minimal setting described above.
-- Code is never executed. Verify answers by careful reading and tracing, and accept
-  every equivalent form a correct solution may take.
+- A project from Artemis shows the template's files as they are; never reformat, rename
+  or trim them.
+- Accept every equivalent form a correct solution may take.
 
 ## Programming exams
 

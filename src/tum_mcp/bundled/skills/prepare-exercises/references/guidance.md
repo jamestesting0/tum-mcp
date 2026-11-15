@@ -64,10 +64,11 @@ its demand, so the student can find where their working diverged:
   ties are broken at random, say that several runs are valid and show one. The sheet's
   table appears only where the sheet asks for it, as that part's `table` check; the flag
   `trace_as_table` is then ruled "the sheet asks for this table".
-- Code gives each task's contract from the statement and its tests. The model answer is
-  the code, and so is the part's Solution; a programming part answered only in words is
-  flagged `answer_without_code`. The working maps each part of the code to the contract
-  in a short list, then traces one test case step by step with its state. Draw a state
+- Code gives each task's contract from the statement and its tests. The answer is the
+  solved lines in the project (`solution_code`), and so is the part's Solution; a
+  programming part answered only in words is flagged `answer_without_code`. The
+  walkthrough of the solved lines maps each part of the code to the contract, and the
+  working traces one test case step by step with its state. Draw a state
   chart as a state diagram.
 - A proof checked by `self_check` keeps its lines in the model answer; the working adds
   only what the model answer leaves out.
@@ -76,7 +77,7 @@ Check the labels against the task (seven results asked, seven shown). Several re
 derivation in a step or the Solution may give `symbols` for the variables a student would
 stop to recall ([variable meanings](../../prepare-study/references/variables.md)). Use a rubric and model derivation for
 proofs, code, design and other open work. For programming, a step asks the student to
-write the method or class from a starter skeleton and compare with a model answer,
+write the method or class in its project file and compare with the solved lines,
 not to arrange or recognise given code. Every step does a real piece of the work; do
 not add questions that only restate the statement. A rubric compares assumptions, essential reasoning
 and conclusion, and admits equivalent approaches. Never use keyword matching or

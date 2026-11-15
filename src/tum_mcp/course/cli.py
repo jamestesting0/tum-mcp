@@ -445,7 +445,7 @@ def project_files(
         source,
         origin=origin,
         editable=tuple(editable or ()),
-        solutions=solutions.expanduser() if solutions else None,
+        solutions=(root / solutions.expanduser()) if solutions else None,
         open_path=open_path,
         description=description,
         rebuilt_because=rebuilt_because,

@@ -425,8 +425,21 @@ the same step and scroll position. The agent links every exercise, cheatsheet en
 lecture note and Study unit to each workspace that exists, or records why none fits
 (`study links`); a new lecture reopens those decisions, and readiness waits for them.
 A link added to an older item does not reopen its review. A sheet whose problems are not all prepared
-says which ones are still missing. Code steps open the function skeleton in a small editor and
-show the model answer as code; code is never run, and nothing is graded by keywords.
+says which ones are still missing. A programming exercise opens as an editor workspace, as
+in the Artemis online editor: its files, the code and the task side by side. Files and Task
+fold to thin rails and resize by their dividers, and the app remembers the layout per
+course; on a phone a Files | Code | Task switch shows one at a time. A writing step opens
+its file at the lines to change, and Compare shows the solved lines with notes that
+explain them. Each editable file switches between Yours and Solution, where the lines the
+task changed are marked. Code is never run, and nothing is graded by keywords.
+
+The files come from Artemis when you have started the exercise there: the agent reads them
+as Artemis copied them from the template, never your later work, and never starts, pushes
+or builds anything (`artemis_get_repository`, then `tum-mcp study repository`). Build
+scripts, IDE settings and hidden files stay out, and `study lint` flags any file that no
+longer matches the template. Without a repository, for example for a question in a PDF
+exam, the agent rebuilds the files from the statement and the workspace says "Built from
+the problem statement".
 Finishing the last step marks the exercise completed in the outline; you can also
 right-click any entry to mark it. A Next link leads to the following exercise. Large
 programming exercises can come with small distilled practice exercises that train one

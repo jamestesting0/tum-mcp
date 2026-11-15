@@ -40,7 +40,7 @@ not supporting material.
 | graph | A safe diagram, a mode (`nodes`, `edges` or `path`), the answer and feedback. The student can select on the diagram; Compare shows the first answer by node label. Use a neutral frame that does not reveal the solution. |
 | plot | A line graph with labelled axes and optional given series, increasing `x_values`, one target `y` each, a snap step and feedback. The student can place points; Compare shows the targets as a table. |
 | text | One short `answer`, such as a name, a value with words or one line of code (`format: code` with a language), and feedback. Not for prose with many valid phrasings; use `self_check` for those. |
-| self_check | A `model_answer` and a rubric of the essential points, with format `text` or `code`. A text model answer is a list of blocks in the shape of the answer: a filled table for cases, points for parallel items, a formula for a derivation. For code, the model answer is code, and either `file` names an editable file of the question's `files` block, which the student edits there, or `starter_code` is a skeleton that opens in the step's own editor. Code is never run, and nothing is graded by keywords. |
+| self_check | A `model_answer` and a rubric of the essential points, with format `text` or `code`. A text model answer is a list of blocks in the shape of the answer: a filled table for cases, points for parallel items, a formula for a derivation. For code, the step writes into an editable file of the exercise's project (`file`) and points at the solved lines it produces with `solution_code` instead of a model answer. Code is never run, and nothing is graded by keywords. |
 
 For every check except `choice`, and for a step without a check, the student presses
 Compare and sees the answer, the step's `explanation` and, for checks that have one, the
@@ -48,7 +48,7 @@ Compare and sees the answer, the step's `explanation` and, for checks that have 
 step's full working as blocks: it starts from the givens or an earlier step's result,
 shows every operation with its rule, and ends at the answer. A one-sentence reason is
 enough only when the answer needs no working. For a `self_check`, the model answer is the
-working itself: the proof lines or the code. The explanation then adds only what the model
+working itself: the proof lines, or for code the solved lines with their walkthrough. The explanation then adds only what the model
 answer does not show, such as one test traced through the code. The working may end at the answer, but it
 does not copy a text model answer (the build rejects a copy). Give exactly one answer: the
 clearest form, not a list of variants. Write the feedback as the repair for the likeliest
@@ -67,28 +67,27 @@ with the solution": the app already offers those controls.
 
 ## Point at the code
 
-For programming exercises, put the files in a `files` block: the files the student
-changes (`editable: true`, with the template's `TODO` markers) and the read-only files
-they need to read, under their real package paths. Keep it to the files that matter.
-A step that needs code points at it with `code: [{"path": ..., "lines": "8-9"}]`
-instead of quoting it; the app shows those lines with an "Open in files" jump. A
-writing step names the file in its prompt, sets the self-check's `file` to it and points
-at the lines to change, so the student opens the file from that excerpt; the model answer shows only the part that changes. Line ranges are checked against the
-files, so re-check them whenever a file changes.
+A programming exercise has one project, its `files` block, built and packed as in
+[coding](coding.md). A step that needs code points at it with
+`code: [{"path": ..., "lines": "8-9"}]` instead of quoting it; the app opens the file
+at those lines beside the step. A writing step names the file in its prompt, sets the
+self-check's `file` and points at the starter lines to change; its `solution_code`
+points at the solved lines. Line ranges are checked against the files, so pack and
+lint again whenever a file changes.
 
 ## Give the student everything the answer uses
 
-A student sees only the statement, its blocks, the step prompts up to the current one
-and any starter code. Every class, method, field, value and constraint that an answer,
+A student sees only the statement, its blocks, the project's files, and the step
+prompts up to the current one. Every class, method, field, value and constraint that an answer,
 hint, explanation, rubric or later step relies on must appear there first, or the step
 must ask the student to introduce it and name it ("call it `Unit`"). Introduce a name
 once and use it consistently afterwards. When an answer needs the current design,
 show it: a UML class diagram with the members, the code being changed, or the data in
-a table. Starter code declares the fields and types the model answer uses.
+a table. The project's files declare the fields and types the solved code uses.
 
 Check every step by reading its answer next to only what the student has seen so far.
 If the answer mentions something that is not there, add it to the question, the
-prompt or the starter, never only to the answer.
+prompt or a project file, never only to the answer.
 
 ## Show the question, not only tell it
 
