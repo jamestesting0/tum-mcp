@@ -112,9 +112,12 @@ missing workspaces need not be invented. When setup and authoring were both requ
 continue after the binding is ready. For Study and Exercises, record the requested
 preparation scope before drafting. Check `tum-mcp study report . --section readiness
 --preparation ID` before asking about one review round. Load each skill as its step starts.
-For prepared content, record the whole request and expected outputs with
-`study schema batch` before drafting. Continue through all requested workspaces and
-local repairs until `study report . --section readiness --batch ID` passes.
+For Study, Exercises, Exam or Lecture content, record the whole request and expected
+outputs with `study schema batch` before drafting. Audio and video requests read the
+prepared content as it is and leave the website alone. They record no batch; once the stem
+is named, register `study task start . --media video/STEM` (or `audio/STEM`).
+Continue through all requested workspaces and local repairs until
+`study report . --section readiness --batch ID` passes.
 Immediately register `study task start . --batch ID`; add `--review-rounds N` only
 when review is already authorized. The default stops at a complete draft and asks
 about review. Run `study task finish .` before the final report. A trusted Codex

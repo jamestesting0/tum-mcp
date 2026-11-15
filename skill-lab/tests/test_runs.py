@@ -293,6 +293,31 @@ def test_checkpoint_restore_releases_only_copied_task_ownership(lab, tmp_path):
     assert json.loads(task.read_text()) == original
 
 
+def test_drift_refresh_writes_current_instructions_and_stops_on_edited_ones(tmp_path):
+    from typer.testing import CliRunner
+
+    from tum_mcp.cli import app
+    from tum_mcp.course.project.store import END, PRIVATE, START, agent_pointer, digest
+
+    project = tmp_path / "workspace/course"
+    assert CliRunner().invoke(app, ["study", "demo", str(project)]).exit_code == 0
+    agents, state_path = project / "AGENTS.md", project / ".tum-mcp/state.json"
+    current = agent_pointer(PRIVATE)
+    old = f"{START}\nAn older version's instructions.\n{END}"
+    agents.write_text(agents.read_text().replace(current, old))
+    state = json.loads(state_path.read_text())
+    state_path.write_text(json.dumps(state | {"agents_block_sha256": digest(old.encode())}))
+
+    python = __import__("pathlib").Path(sys.executable)
+    assert runs.refresh_instructions(python, tmp_path / "workspace") == ["course"]
+    assert current in agents.read_text() and old not in agents.read_text()
+    assert json.loads(state_path.read_text())["agents_block_sha256"] == digest(current.encode())
+
+    agents.write_text(agents.read_text().replace(current, old))
+    with pytest.raises(LabError, match="refresh"):
+        runs.refresh_instructions(python, tmp_path / "workspace")
+
+
 def test_credential_text_quarantines_the_run(lab, monkeypatch, lab_state):
     monkeypatch.setenv("FAKE_LEAK", "1")
     record = execute(lab)

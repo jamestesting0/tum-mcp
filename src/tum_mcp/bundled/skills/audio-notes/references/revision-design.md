@@ -42,13 +42,28 @@ For an entry, in a few sentences:
 4. Name the trap or condition that reverses the result, if the entry has one.
 
 For a pattern: how to recognise the question from its cues, the steps in order with
-the formula or rule each step applies, and the usual pitfall. Keep it to what a
-student needs to run the procedure; the worked examples stay in the app.
+the formula or rule each step applies, each case of a decision step, and the
+pitfalls. Keep it to what a student needs to run the procedure. A worked example that
+only repeats the steps goes to `left_to_page` with that reason.
 
 No questions, recall pauses or "try it yourself" prompts: the summary continues on
 its own. A cheatsheet track is compact, but do not drop an entry, a condition or a
 pattern to make it shorter. Mention a source's age or uncertainty once, at the
 start of the track, not in every chapter.
+
+## Exercise tracks: a spoken walkthrough
+
+An exercise track talks the student through one prepared solution. Per part:
+
+1. Say what the part asks and the givens it uses.
+2. Name the method and why it fits these givens.
+3. Walk through the steps with each reason. Restate the current state before a step
+   that depends on it.
+4. Say the answer with its unit and condition.
+
+End a multi-part exercise with every answer in order. Long algebra, a full table or a
+diagram goes to `left_to_page` with the reason; say the result it gives, so the next
+step still follows.
 
 ## Re-entry and reinforcement
 
@@ -76,10 +91,10 @@ and verify all referents. ASR can flag omitted words but cannot certify delivery
 
 ## Coverage and review
 
-Map source concepts to chapters with exact locators. In category coverage, `mode` is
-`spoken` or `study_required`; the latter names the exact Study section and reason.
-Record missing or unpublished coverage in COVERAGE.md, not as a third mode.
-Fix omitted teachable meaning; disclose a genuine modality limit.
+Map source concepts to chapters with exact locators. A part the track does not say
+goes to `left_to_page` with the reason the page serves it better; older scripts may
+still mark it `study_required`. Record missing or unpublished coverage in
+COVERAGE.md. Fix omitted teachable meaning; disclose a genuine modality limit.
 Audio adaptation quality and audio-only completeness are different claims.
 
 Use the eight-dimension [audio profile](../../review-course/references/media.md).

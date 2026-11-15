@@ -1,4 +1,4 @@
-"""Machine records for audio adaptations of prepared Study units and Exam cheatsheet items."""
+"""Machine records for audio adaptations of prepared Study units, exercises and Exam items."""
 
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
@@ -38,26 +38,49 @@ class TeachingReviewFile(MediaFile):
     guidance_sha256: Digest
 
 
-SourceKind = Literal["unit", "concept", "pattern"]
+SourceKind = Literal["unit", "concept", "pattern", "exercise"]
+# The parts each kind of source addresses; a pattern may still be covered whole (older tracks).
+PART_KINDS = {
+    "unit": {"block", "flashcard", "question", "objective", "summary"},
+    "concept": {"concept"},
+    "pattern": {"pattern", "cue", "workflow", "case", "marking", "pitfall", "variation", "example"},
+    "exercise": {"statement", "step", "answer"},
+}
 
 
-def target(kind: str, key: str) -> str:
-    """The course item an audio source maps to: a Study unit or an Exam concept/pattern."""
+def target(kind: str, key: str, group: str | None = None) -> str:
+    """The course item an audio source maps to: a Study unit, an exercise of a set, or an
+    Exam concept/pattern."""
+    if kind == "exercise":
+        return f"exercises/{group}/{key}"
     return f"study/{key}" if kind == "unit" else f"exam/{kind}s/{key}"
+
+
+def _grouped(kind: str, group: str | None) -> None:
+    if (kind == "exercise") != (group is not None):
+        raise ValueError("An exercise source names its set, and only an exercise does.")
 
 
 class AudioUnit(Frozen):
     kind: SourceKind = "unit"
+    # The exercise's set; `unit` then holds the exercise key.
+    set: Key | None = None
     unit: Key
     semantic_sha256: Digest
 
+    @model_validator(mode="after")
+    def grouped(self) -> "AudioUnit":
+        _grouped(self.kind, self.set)
+        return self
+
     @property
     def target(self) -> str:
-        return target(self.kind, self.unit)
+        return target(self.kind, self.unit, self.set)
 
 
 class AudioCoverage(Frozen):
     kind: SourceKind = "unit"
+    set: Key | None = None
     unit: Key
     locator: Locator
     section: Key
@@ -69,16 +92,16 @@ class AudioCoverage(Frozen):
     def disclosed(self) -> "AudioCoverage":
         if self.mode != "spoken" and not self.reason:
             raise ValueError("Non-spoken coverage names the specific dependency or gap.")
-        if (self.kind == "unit") != (self.locator.kind not in {"concept", "pattern"}) or (
-            self.kind != "unit"
-            and (self.locator.kind != self.kind or self.locator.ref != self.unit)
+        _grouped(self.kind, self.set)
+        if self.locator.kind not in PART_KINDS[self.kind] or (
+            self.locator.kind in {"concept", "pattern"} and self.locator.ref != self.unit
         ):
-            raise ValueError("Exam coverage addresses its whole concept or pattern.")
+            raise ValueError(f"A {self.kind} source is not addressed by a {self.locator.kind}.")
         return self
 
     @property
     def target(self) -> str:
-        return target(self.kind, self.unit)
+        return target(self.kind, self.unit, self.set)
 
 
 def exam_item(exam: "ExamContent | None", kind: str, key: str) -> "Concept | Pattern | None":
@@ -92,7 +115,12 @@ def exam_hash(item: "Concept | Pattern") -> str:
 
 
 def category_hash(title: str, units: tuple[AudioUnit, ...]) -> str:
-    return sha256(canonical({"title": title, "units": [u.model_dump(mode="json") for u in units]}))
+    # exclude_none keeps the hash of tracks published before exercise sources had a set.
+    return sha256(
+        canonical(
+            {"title": title, "units": [u.model_dump(mode="json", exclude_none=True) for u in units]}
+        )
+    )
 
 
 class AudioCategory(Frozen):

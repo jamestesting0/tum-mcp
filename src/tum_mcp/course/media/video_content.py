@@ -19,8 +19,10 @@ from pydantic import (
     model_validator,
 )
 
+from tum_mcp.course.content.exam import ExamContent
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.study import SourceVersion, StudyContent, Unit
+from tum_mcp.course.media.speech import spoken, unwritten
 from tum_mcp.course.project.models import Digest, Key
 from tum_mcp.settings import Frozen
 
@@ -88,22 +90,54 @@ def unit_revision(unit: Unit) -> str:
     return app_revision(unit)
 
 
+# How each kind of part is addressed: a Study unit's block or item, an exercise's statement,
+# guide step or answer, an Exam pattern's parts, or a whole cheatsheet concept.
+LOCATOR_REFS = {
+    "block": r"blocks\[(\d|[1-3]\d)\]",
+    "summary": r"summary",
+    "statement": r"statement\[\d{1,2}\]",
+    "answer": r"answers\[\d{1,2}\]",
+    "cue": r"cues\[\d{1,2}\]",
+    "workflow": r"workflow\[\d{1,2}\]",
+    "case": r"workflow\[\d{1,2}\]\.cases\[\d\]",
+    "marking": r"marking",
+    "pitfall": r"pitfalls\[\d{1,2}\]",
+    "variation": r"variations\[\d{1,2}\]",
+    "example": r"examples\[\d\]",
+}
+
+
 class Locator(Frozen):
-    # concept and pattern address a whole Exam cheatsheet entry or pattern (audio only).
-    kind: Literal["block", "flashcard", "question", "objective", "summary", "concept", "pattern"]
+    """One part of the source item a beat or chapter presents, with the fingerprint of the
+    part as `sources` printed it. A changed part makes the locator stale."""
+
+    kind: Literal[
+        "block",
+        "flashcard",
+        "question",
+        "objective",
+        "summary",
+        "concept",
+        "pattern",
+        "statement",
+        "step",
+        "answer",
+        "cue",
+        "workflow",
+        "case",
+        "marking",
+        "pitfall",
+        "variation",
+        "example",
+    ]
     ref: Annotated[str, Field(min_length=1, max_length=120)]
     fingerprint: Digest
 
     @model_validator(mode="after")
     def reference(self) -> "Locator":
-        if self.kind == "block" and re.fullmatch(r"blocks\[(\d|[1-3]\d)\]", self.ref) is None:
-            raise ValueError("Block locators use blocks[N].")
-        if self.kind == "summary" and self.ref != "summary":
-            raise ValueError("Summary locators use ref 'summary'.")
-        if self.kind in {"flashcard", "question", "objective", "concept", "pattern"} and (
-            re.fullmatch(r"[a-z0-9][a-z0-9_.-]{0,99}", self.ref) is None
-        ):
-            raise ValueError("Item locators use the item's key.")
+        pattern = LOCATOR_REFS.get(self.kind, r"[a-z0-9][a-z0-9_.-]{0,99}")
+        if re.fullmatch(pattern, self.ref) is None:
+            raise ValueError(f"A {self.kind} locator does not use ref '{self.ref}'.")
         return self
 
 
@@ -118,6 +152,10 @@ TypstMath = Annotated[str, Field(min_length=1, max_length=600)]
 
 
 class OnScreen(Frozen):
+    """One thing on screen, with its own kind: a short `label`, `math` written in Typst (keep
+    the Study block's LaTeX in `source_latex`), a `number` that can count, or `code`.
+    Mathematics is never a label."""
+
     key: Key
     kind: Literal["label", "math", "number", "code"]
     text: Short | None = None
@@ -154,6 +192,12 @@ class OnScreen(Frozen):
 
 
 class Beat(Frozen):
+    """One moment of a lesson video: what is said, what is shown and which unit parts it
+    presents. Open with an `overview`, close with a `recap`; every teaching beat names its
+    knowledge `point`. A `question` beat pauses on one of the unit's practice questions.
+    Each `narration` sentence becomes one audio file and one caption: one idea, under about
+    25 words, symbols written as they are spoken."""
+
     key: BeatKey
     kind: Literal[
         "overview",
@@ -188,12 +232,26 @@ class Beat(Frozen):
 
 
 class Chapter(Frozen):
+    """One section of a lesson video. Its title labels the seek bar, so it names what the
+    section does in a few words (\"Bayes' rule on the test result\", not \"Part 2\")."""
+
     key: ChapterKey
     title: Short
     beats: tuple[Beat, ...] = Field(min_length=1, max_length=40)
 
 
+class PageLeft(Frozen):
+    """A required part the video does not present, with why the page serves it better: a long
+    table, a proof to read at one's own pace, a list to look up. Length alone is no reason."""
+
+    locator: Locator
+    reason: Annotated[str, Field(min_length=10, max_length=300)]
+
+
 class Storyboard(Frozen):
+    """A video of one Study unit. Every block and objective is presented by a beat or listed in
+    `left_to_page`; `video-notes outline` writes a draft that holds this by construction."""
+
     schema_version: Literal[1] = 1
     video: Stem
     unit: Key
@@ -202,6 +260,7 @@ class Storyboard(Frozen):
     language: Language
     objectives: tuple[Key, ...] = Field(min_length=1, max_length=12)
     chapters: tuple[Chapter, ...] = Field(min_length=1, max_length=12)
+    left_to_page: tuple[PageLeft, ...] = Field(default=(), max_length=60)
 
     @model_validator(mode="after")
     def unique(self) -> "Storyboard":
@@ -231,6 +290,7 @@ class StoryboardReport(Frozen):
     video: Stem
     unit: Key | None = None
     exercise: "ExerciseRef | None" = None
+    pattern: Key | None = None
     errors: tuple[str, ...]
     warnings: tuple[str, ...]
     estimated_seconds: float
@@ -250,6 +310,8 @@ def _resolve(unit: Unit, locator: Locator) -> Frozen | str | None:
             return next((item for item in unit.objectives if item.key == locator.ref), None)
         case "summary":
             return unit.summary
+        case _:
+            return None
 
 
 def locator_fingerprint(unit: Unit, locator: Locator) -> str | None:
@@ -275,7 +337,7 @@ def estimate_seconds(storyboard: "Storyboard | ExerciseStoryboard") -> tuple[flo
 def check_storyboard(storyboard: Storyboard, content: StudyContent) -> StoryboardReport:
     from tum_mcp.course.media.video_teaching import lesson_errors
 
-    errors = lesson_errors(storyboard)
+    errors = lesson_errors(storyboard) + unwritten(storyboard.model_dump(mode="json"))
     warnings: list[str] = []
     unit = next((item for item in content.units if item.key == storyboard.unit), None)
     if unit is None:
@@ -310,9 +372,12 @@ def check_storyboard(storyboard: Storyboard, content: StudyContent) -> Storyboar
                 errors.append(f"objective.missing: {key}")
             elif key not in mapped:
                 errors.append(f"objective.unmapped: {key} has no beat locator")
-        uncovered = sorted(objectives - set(storyboard.objectives))
-        if uncovered:
-            warnings.append("objective.not_in_video: " + ", ".join(uncovered))
+        errors.extend(_coverage(unit, storyboard, mapped))
+    for chapter in storyboard.chapters:
+        for index, beat in enumerate(chapter.beats):
+            found, notes = spoken(beat.key, beat.narration, opens=index == 0)
+            errors.extend(found)
+            warnings.extend(notes)
     seconds, words = estimate_seconds(storyboard)
     return StoryboardReport(
         video=storyboard.video,
@@ -322,6 +387,26 @@ def check_storyboard(storyboard: Storyboard, content: StudyContent) -> Storyboar
         estimated_seconds=seconds,
         words=words,
     )
+
+
+def _coverage(unit: Unit, storyboard: Storyboard, objectives: set[str]) -> list[str]:
+    from tum_mcp.course.media.sources import missing
+
+    shown = {(loc.kind, loc.ref) for beat in storyboard.beats() for loc in beat.locators}
+    shown |= {("objective", key) for key in objectives}
+    left = {(item.locator.kind, item.locator.ref) for item in storyboard.left_to_page}
+    errors = [
+        f"locator.changed left_to_page: {item.locator.kind} {item.locator.ref}"
+        for item in storyboard.left_to_page
+        if locator_fingerprint(unit, item.locator) != item.locator.fingerprint
+    ]
+    if gaps := missing(unit, shown, left):
+        errors.append(
+            "coverage.missing: "
+            + ", ".join(gaps)
+            + "; present them or leave them to the page with a reason"
+        )
+    return errors
 
 
 def transcript(storyboard: "Storyboard | ExerciseStoryboard") -> str:
@@ -363,6 +448,9 @@ class ExerciseRef(Frozen):
 
 
 class ExerciseSelection(Frozen):
+    """An exercise with `video` or `text-first` and why. An exercise the student asked for is
+    never text-first for being text-heavy."""
+
     exercise: ExerciseRef
     decision: Literal["video", "text-first"]
     reason: Prose
@@ -378,7 +466,30 @@ class PlannedExerciseVideo(ExerciseSelection):
         return self
 
 
+class PatternSelection(Frozen):
+    """An Exam pattern with `video` or `text-first` and why. A method with steps and cases
+    earns a video; a single lookup rule stays text-first."""
+
+    pattern: Key
+    decision: Literal["video", "text-first"]
+    reason: Prose
+
+
+class PlannedPatternVideo(PatternSelection):
+    stem: Stem | None = None
+
+    @model_validator(mode="after")
+    def stem_for_video(self) -> "PlannedPatternVideo":
+        if (self.decision == "video") != (self.stem is not None):
+            raise ValueError("Only planned videos carry a stem.")
+        return self
+
+
 class ExerciseLocator(Frozen):
+    """A part of the exercise, copied with its fingerprint from `video-notes exercise`:
+    `statement[N]`, a guide step key, `answers[N]`, `notes[N]` or a `unit[/block]`
+    prerequisite the solution uses."""
+
     kind: Literal["statement", "step", "answer", "solution_note", "prerequisite"]
     ref: Annotated[str, Field(min_length=1, max_length=120)]
     fingerprint: Digest
@@ -398,6 +509,12 @@ class ExerciseLocator(Frozen):
 
 
 class ExerciseBeat(Frozen):
+    """One moment of a worked solution. Each part runs `setup`, `strategy` (the method and
+    why it fits), `work` (one operation per beat, with the rule that permits it), `verify` and
+    `answer`, which emphasizes the result. Each `narration`
+    sentence becomes one audio file and one caption: one idea, under about 25 words, symbols
+    written as they are spoken."""
+
     key: BeatKey
     kind: Literal["setup", "strategy", "work", "verify", "answer"]
     narration: tuple[Sentence, ...] = Field(default=(), max_length=12)
@@ -415,13 +532,28 @@ class ExerciseBeat(Frozen):
 
 
 class ExerciseChapter(Frozen):
+    """One section of a worked solution. `answer` names the part it solves (none for a shared
+    setup); several chapters may solve one part, and parts keep their original order."""
+
     key: ChapterKey
     title: Short
     answer: ExerciseLocator | None = None
     beats: tuple[ExerciseBeat, ...] = Field(min_length=1, max_length=40)
 
 
+class ExercisePageLeft(Frozen):
+    """A statement part, guide step or answer the video does not present, with why the page
+    serves it better. Length alone is no reason."""
+
+    locator: ExerciseLocator
+    reason: Annotated[str, Field(min_length=10, max_length=300)]
+
+
 class ExerciseStoryboard(Frozen):
+    """A worked-solution video of one exercise: each part's setup, method, working and answer.
+    Every statement part, guide step and answer is presented by a beat or listed in
+    `left_to_page`."""
+
     schema_version: Literal[1] = 1
     video: Stem
     exercise: ExerciseRef
@@ -430,6 +562,7 @@ class ExerciseStoryboard(Frozen):
     language: Language
     answers: tuple[ExerciseLocator, ...] = Field(min_length=1, max_length=50)
     chapters: tuple[ExerciseChapter, ...] = Field(min_length=1, max_length=99)
+    left_to_page: tuple[ExercisePageLeft, ...] = Field(default=(), max_length=60)
 
     def beats(self) -> tuple[ExerciseBeat, ...]:
         return tuple(beat for chapter in self.chapters for beat in chapter.beats)
@@ -474,17 +607,96 @@ class ExerciseStoryboard(Frozen):
         return self
 
 
+class PatternBeat(Frozen):
+    """One moment of a pattern video. A `cue` says when the pattern applies; a `step` shows
+    what that workflow step applies (its formula, rule or code) on screen; a `case` names what
+    the student sees and the move it calls for; an `example` beat works one workflow step of a
+    worked example; a `pitfall` shows the wrong working, then the right one, and why; the
+    `recap` lists the steps. Each `narration`
+    sentence becomes one audio file and one caption: one idea, under about 25 words, symbols
+    written as they are spoken."""
+
+    key: BeatKey
+    kind: Literal["cue", "step", "case", "example", "pitfall", "recap"]
+    narration: tuple[Sentence, ...] = Field(default=(), max_length=12)
+    pause_s: float = Field(default=0, ge=0, le=10, allow_inf_nan=False)
+    on_screen: tuple[OnScreen, ...] = Field(default=(), max_length=40)
+    locators: tuple[Locator, ...] = Field(min_length=1, max_length=20)
+    intent: Prose
+    layout_waiver: Annotated[str, Field(min_length=10, max_length=300)] | None = None
+
+    @model_validator(mode="after")
+    def timing(self) -> "PatternBeat":
+        if not self.narration and self.pause_s < 0.5:
+            raise ValueError("A beat without narration needs an intentional pause of 0.5 s+.")
+        return self
+
+
+class PatternChapter(Frozen):
+    """One stage of a pattern video: when it applies, the method, a worked example, the
+    pitfalls or the recap. A worked example that shows a new case gets its own chapter."""
+
+    key: ChapterKey
+    title: Short
+    beats: tuple[PatternBeat, ...] = Field(min_length=1, max_length=40)
+
+
+class PatternStoryboard(Frozen):
+    """A video of one Exam pattern: when it applies, each workflow step with what it applies,
+    each case of a decision step, a worked example through every step, each pitfall and a recap.
+    Every required part is presented by a beat or listed in `left_to_page`; a second worked
+    example that shows no new case goes to the page as "repeats case N"."""
+
+    schema_version: Literal[1] = 1
+    video: Stem
+    pattern: Key
+    pattern_hash: Digest
+    title: Short
+    language: Language
+    chapters: tuple[PatternChapter, ...] = Field(min_length=1, max_length=40)
+    left_to_page: tuple[PageLeft, ...] = Field(default=(), max_length=60)
+
+    def beats(self) -> tuple[PatternBeat, ...]:
+        return tuple(beat for chapter in self.chapters for beat in chapter.beats)
+
+    def screen(self) -> dict[str, OnScreen]:
+        return {item.key: item for beat in self.beats() for item in beat.on_screen}
+
+    @model_validator(mode="after")
+    def unique(self) -> "PatternStoryboard":
+        chapters = [chapter.key for chapter in self.chapters]
+        beats = [beat.key for beat in self.beats()]
+        screens = [item.key for beat in self.beats() for item in beat.on_screen]
+        if len(set(chapters)) != len(chapters) or chapters != sorted(chapters):
+            raise ValueError("Chapter keys must be unique and in ascending order.")
+        if len(set(beats)) != len(beats) or beats != sorted(beats, key=lambda k: int(k[1:])):
+            raise ValueError("Beat keys must be unique and ascend across the video.")
+        if len(set(screens)) != len(screens) or len(screens) > 300:
+            raise ValueError("On-screen keys must be unique across the video (max 300).")
+        if len(beats) > 480:
+            raise ValueError("A video supports at most 480 beats.")
+        return self
+
+
 def _storyboard_source(value: object) -> str:
     # Errors then name only the fields of the storyboard kind the file actually is.
     if isinstance(value, dict):
-        return "exercise" if "exercise" in value else "unit"
-    return "exercise" if isinstance(value, ExerciseStoryboard) else "unit"
+        return next((kind for kind in ("exercise", "pattern") if kind in value), "unit")
+    match value:
+        case ExerciseStoryboard():
+            return "exercise"
+        case PatternStoryboard():
+            return "pattern"
+        case _:
+            return "unit"
 
 
 class StoryboardFile(
     RootModel[
         Annotated[
-            Annotated[Storyboard, Tag("unit")] | Annotated[ExerciseStoryboard, Tag("exercise")],
+            Annotated[Storyboard, Tag("unit")]
+            | Annotated[ExerciseStoryboard, Tag("exercise")]
+            | Annotated[PatternStoryboard, Tag("pattern")],
             Discriminator(_storyboard_source),
         ]
     ]
@@ -497,7 +709,10 @@ class VideoPlan(Frozen):
     course_key: Key
     content_sha256: Digest | None = None
     exercises_sha256: Digest | None = None
-    videos: tuple[PlannedVideo | PlannedExerciseVideo, ...] = Field(default=(), max_length=300)
+    exam_sha256: Digest | None = None
+    videos: tuple[PlannedVideo | PlannedExerciseVideo | PlannedPatternVideo, ...] = Field(
+        default=(), max_length=300
+    )
 
     @model_validator(mode="after")
     def unique(self) -> "VideoPlan":
@@ -518,24 +733,37 @@ class VideoPlan(Frozen):
             and self.exercises_sha256 is None
         ):
             raise ValueError("Exercise selections need exercises_sha256.")
+        if (
+            any(isinstance(item, PlannedPatternVideo) for item in self.videos)
+            and self.exam_sha256 is None
+        ):
+            raise ValueError("Pattern selections need exam_sha256.")
         return self
 
 
 class Selection(Frozen):
+    """A Study unit with `video` or `text-first` and why: a diagram with frames, a plot, a
+    derivation or a code trace earns a video; a definition list stays text-first."""
+
     unit: Key
     decision: Literal["video", "text-first"]
     reason: Prose
 
 
 class SelectionFile(Frozen):
+    """The Study units, exercises and Exam patterns to make videos of, each with `video` or
+    `text-first` and why. A moving process or a worked method earns a video; a table to look
+    up stays text-first."""
+
     units: tuple[Selection, ...] = Field(default=(), max_length=300)
     exercises: tuple[ExerciseSelection, ...] = Field(default=(), max_length=300)
+    patterns: tuple[PatternSelection, ...] = Field(default=(), max_length=300)
 
     @model_validator(mode="after")
     def selected(self) -> "SelectionFile":
-        if not self.units and not self.exercises:
-            raise ValueError("Select at least one Study unit or exercise.")
-        keys = [source_key(item) for item in (*self.units, *self.exercises)]
+        if not self.units and not self.exercises and not self.patterns:
+            raise ValueError("Select at least one Study unit, exercise or Exam pattern.")
+        keys = [source_key(item) for item in (*self.units, *self.exercises, *self.patterns)]
         if len(keys) != len(set(keys)):
             raise ValueError("Select each source once.")
         return self
@@ -543,12 +771,13 @@ class SelectionFile(Frozen):
 
 def allocate(
     previous: VideoPlan | None,
-    selections: tuple[Selection | ExerciseSelection, ...],
+    selections: tuple[Selection | ExerciseSelection | PatternSelection, ...],
     content: StudyContent | None,
     occupied: frozenset[str] = frozenset(),
     published: dict[str, str] | None = None,
     exercises: ExerciseContent | None = None,
-) -> tuple[PlannedVideo | PlannedExerciseVideo, ...]:
+    exam: ExamContent | None = None,
+) -> tuple[PlannedVideo | PlannedExerciseVideo | PlannedPatternVideo, ...]:
     """Keep planned or published stems; new videos get the next unused number and a slug."""
     targets = (
         {
@@ -563,6 +792,8 @@ def allocate(
             for group in exercises.sets
             for exercise in group.exercises
         )
+    if exam:
+        targets.update((f"exam/patterns/{pattern.key}", pattern) for pattern in exam.patterns)
     old = {source_key(item): item for item in previous.videos} if previous else {}
     chosen = {source_key(item): item for item in selections}
     if len(chosen) != len(selections):
@@ -572,7 +803,7 @@ def allocate(
         raise ValueError("Unknown video sources: " + ", ".join(missing))
     used = {item.stem for item in old.values() if item.stem} | set(occupied)
     numbers = {int(stem.split("_", 1)[0]) for stem in used}
-    result: dict[str, PlannedVideo | PlannedExerciseVideo] = dict(old)
+    result: dict[str, PlannedVideo | PlannedExerciseVideo | PlannedPatternVideo] = dict(old)
     for identity, target in targets.items():
         selection = chosen.get(identity)
         if selection is None:
@@ -598,11 +829,16 @@ def allocate(
                 result[identity] = PlannedVideo(unit=selection.unit, **fields)
             case ExerciseSelection():
                 result[identity] = PlannedExerciseVideo(exercise=selection.exercise, **fields)
+            case PatternSelection():
+                result[identity] = PlannedPatternVideo(pattern=selection.pattern, **fields)
     order = {identity: index for index, identity in enumerate(targets)}
     return tuple(sorted(result.values(), key=lambda item: order.get(source_key(item), math.inf)))
 
 
 class StyleProfile(Frozen):
+    """The look of every video of the course. A symbol keeps its `symbol_colors` colour in
+    every video; a change re-renders each video the next time it renders."""
+
     schema_version: Literal[1] = 1
     theme: Literal["dark", "light"] = "light"
     math: Literal["typst", "latex"] = "typst"
@@ -612,6 +848,9 @@ class StyleProfile(Frozen):
 
 
 class VoiceProfile(Frozen):
+    """The voice that actually spoke: provider, route (such as \"local\"), voice, language,
+    model and settings. One profile per video; changed settings regenerate its audio."""
+
     provider: Annotated[str, Field(min_length=1, max_length=60)]
     route: Annotated[str, Field(min_length=1, max_length=120)]
     voice: Annotated[str, Field(min_length=1, max_length=120)]
@@ -621,6 +860,9 @@ class VoiceProfile(Frozen):
 
 
 class VoiceFile(Frozen):
+    """The course's voice profiles and its pronunciation map: write a symbol or acronym the way
+    the voice should say it, and apply the map when writing sentences."""
+
     schema_version: Literal[1] = 1
     preferred: Annotated[str, Field(max_length=300)] = (
         "ElevenLabs free website when it works; otherwise local Kokoro"
@@ -834,20 +1076,37 @@ class ExerciseReceipt(VideoReceipt):
         return self
 
 
+class PatternReceipt(VideoReceipt):
+    pattern: Key
+    pattern_hash: Digest
+    source_references: tuple[SourceVersion, ...] = Field(min_length=1, max_length=30)
+    chapters: tuple[ChapterBound, ...] = Field(min_length=1, max_length=40)
+
+    @model_validator(mode="after")
+    def ordered(self) -> "PatternReceipt":
+        _ordered_bounds(self.chapters, self.duration)
+        return self
+
+
 def source_key(
     item: Storyboard
     | ExerciseStoryboard
+    | PatternStoryboard
     | Selection
     | ExerciseSelection
+    | PatternSelection
     | PlannedVideo
     | Receipt
-    | ExerciseReceipt,
+    | ExerciseReceipt
+    | PatternReceipt,
 ) -> str:
     match item:
         case Storyboard() | Selection() | PlannedVideo() | Receipt():
             return f"study/{item.unit}"
         case ExerciseStoryboard() | ExerciseSelection() | ExerciseReceipt():
             return f"exercises/{item.exercise.key}"
+        case PatternStoryboard() | PatternSelection() | PatternReceipt():
+            return f"exam/patterns/{item.pattern}"
         case _:
             raise TypeError("Unknown video source variant.")
 
@@ -855,7 +1114,9 @@ def source_key(
 class Manifest(Frozen):
     schema_version: Literal[1] = 1
     course_key: Key
-    videos: dict[Stem, Receipt | ExerciseReceipt] = Field(default_factory=dict, max_length=300)
+    videos: dict[Stem, Receipt | ExerciseReceipt | PatternReceipt] = Field(
+        default_factory=dict, max_length=300
+    )
 
     @model_validator(mode="after")
     def consistent(self) -> "Manifest":

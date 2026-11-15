@@ -5,6 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from tum_mcp.course.content.study import StudyContent
+from tum_mcp.course.media.sources import required_parts
 from tum_mcp.course.media.video_content import (
     Locator,
     Selection,
@@ -79,6 +80,13 @@ def storyboard(content: StudyContent, **changes: object) -> dict:
             }
         ],
     }
+    # The beats show the summary and one question; the unit's blocks and other objectives
+    # stay on the page.
+    value["left_to_page"] = [
+        {"locator": locate(content, "bfs", kind, ref), "reason": "Read this part on the page."}
+        for kind, ref in required_parts(unit)
+        if (kind, ref) != ("objective", question.objective)
+    ]
     value.update(changes)
     return value
 
@@ -105,7 +113,20 @@ def test_valid_storyboard_maps_objectives_and_estimates_length(content: StudyCon
     report = check_storyboard(Storyboard.model_validate(storyboard(content)), content)
     assert report.errors == ()
     assert report.estimated_seconds > 3 and report.words == 17
-    assert any(item.startswith("objective.not_in_video") for item in report.warnings)
+
+
+def test_every_block_and_objective_is_shown_or_left_to_the_page(content: StudyContent) -> None:
+    # A lesson video covered three ideas of a unit in two minutes and said nothing of the rest.
+    board = storyboard(content)
+    dropped = board["left_to_page"].pop(0)["locator"]
+    stale = board["left_to_page"][0]["locator"]
+    stale["fingerprint"] = "1" * 64
+    errors = check_storyboard(Storyboard.model_validate(board), content).errors
+    assert any(
+        e.startswith("coverage.missing") and f"{dropped['kind']} {dropped['ref']}" in e
+        for e in errors
+    )
+    assert f"locator.changed left_to_page: {stale['kind']} {stale['ref']}" in errors
 
 
 def test_storyboard_reports_stale_units_changed_locators_and_unknown_items(

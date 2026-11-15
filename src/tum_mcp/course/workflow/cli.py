@@ -21,12 +21,30 @@ app = typer.Typer(pretty_exceptions_show_locals=False)
 @app.command()
 def start(
     project: Path,
-    batch: Annotated[str, typer.Option(help="Batch ID for .tum-mcp/batches/<ID>.json.")],
+    batch: Annotated[
+        str | None, typer.Option(help="Batch ID for .tum-mcp/batches/<ID>.json.")
+    ] = None,
+    media: Annotated[
+        list[str] | None,
+        typer.Option(help="video/STEM or audio/STEM to publish; repeatable, instead of --batch."),
+    ] = None,
     review_rounds: Annotated[int, typer.Option(min=0, max=20)] = 0,
     owner: Annotated[str | None, typer.Option(help="Identity supplied by the host hook.")] = None,
 ) -> None:
-    """Track the requested batch; add review rounds only when already authorized."""
+    """Track the requested batch or media; add review rounds only when already authorized."""
     root = project.resolve()
+    if (batch is None) == (not media):
+        raise CampusError(Code.ACTION_REQUIRED, "Pass either --batch or --media.")
+    if media:
+        try:
+            task = tasks.begin(root, None, review_rounds, owner=owner, media=tuple(media))
+        except ValidationError as exc:
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                "Name media as video/STEM or audio/STEM, without review rounds.",
+            ) from exc
+        typer.echo(task.model_dump_json())
+        return
     path = f".tum-mcp/batches/{batch}.json"
     try:
         batch_id = TypeAdapter(Key).validate_python(batch)

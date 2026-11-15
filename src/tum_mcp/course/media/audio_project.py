@@ -1,6 +1,5 @@
 """Course-local Audio Notes: sources, category scripts, narration chunks and publication."""
 
-import re
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,6 +9,7 @@ from filelock import FileLock, Timeout
 from pydantic import Field, model_validator
 
 from tum_mcp.course.content.exam import ExamContent
+from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.study import StudyContent
 from tum_mcp.course.media.audio import (
     AudioChapter,
@@ -29,8 +29,16 @@ from tum_mcp.course.media.audio import (
     TeachingReviewFile,
     category_hash,
     exam_hash,
-    exam_item,
 )
+from tum_mcp.course.media.sources import (
+    Item,
+    find,
+    missing,
+    part_fingerprint,
+    parts,
+    teaching_hash,
+)
+from tum_mcp.course.media.speech import spoken, unwritten
 from tum_mcp.course.media.video_content import (
     Locator,
     Sentence,
@@ -40,7 +48,6 @@ from tum_mcp.course.media.video_content import (
     VoiceProfile,
     canonical,
     chunk_name,
-    locator_fingerprint,
     semantic_hash,
     sha256,
     voice_tag,
@@ -59,12 +66,6 @@ TAIL = 0.8
 WORDS_PER_SECOND = 2.5
 TARGET_LUFS = -16.0
 CEILING_DBTP = -1.5
-# LaTeX, markup and symbols a voice reads as characters (or skips): say them in words.
-UNSPEAKABLE = re.compile(r"\\[(\[a-zA-Z]|[_^{}$|]|[∑∏∫√≤≥≠≈→←↔⇒⇔∀∃¬∧∨⊨⊢∈∉⊂⊆∪∩×÷·∞]")
-META = re.compile(
-    r"\bprepared\b|\b(?:this|the) (?:track|audio(?: note)?s?|recording|episode)\b", re.I
-)
-PRONOUN_START = re.compile(r"^(?:this|that|these|those|it|they|he|she)\b", re.I)
 
 
 def audio(root: Path, relative: str = "") -> Path:
@@ -72,23 +73,53 @@ def audio(root: Path, relative: str = "") -> Path:
 
 
 class SourceRef(Frozen):
+    """One item the track presents: a Study unit, an exercise (with its `set`), an Exam
+    pattern or a cheatsheet concept."""
+
     kind: SourceKind = "unit"
+    set: Key | None = None
     unit: Key
 
     @property
     def target(self) -> str:
-        return AudioUnit(kind=self.kind, unit=self.unit, semantic_sha256="0" * 64).target
+        return AudioUnit(
+            kind=self.kind, set=self.set, unit=self.unit, semantic_sha256="0" * 64
+        ).target
 
 
 class Cover(Frozen):
+    """A part of a source item that this chapter says aloud, addressed and fingerprinted as
+    `audio-notes sources` prints it."""
+
     kind: SourceKind = "unit"
+    set: Key | None = None
     unit: Key
     locator: Locator
+    # study_required is the older way to leave a part to the page; use left_to_page.
     mode: Literal["spoken", "study_required"] = "spoken"
     reason: Annotated[str, Field(min_length=1, max_length=600)] | None = None
 
 
+class LeftToPage(Frozen):
+    """A required part the track does not say aloud, with why the page serves it better: a
+    long table, dense algebra or a diagram that needs the eye. Length alone is no reason."""
+
+    kind: SourceKind = "unit"
+    set: Key | None = None
+    unit: Key
+    locator: Locator
+    reason: Annotated[str, Field(min_length=10, max_length=300)]
+
+    @property
+    def target(self) -> str:
+        return SourceRef(kind=self.kind, set=self.set, unit=self.unit).target
+
+
 class ScriptChapter(Frozen):
+    """One chapter of a track: it opens by naming its subject, so a listener who skips to it
+    knows what 'it' is, says each covered part in words a voice can read, and leaves dense
+    working (long algebra, a table, a diagram) to the page."""
+
     key: Key
     title: Short
     covers: tuple[Cover, ...] = Field(min_length=1, max_length=200)
@@ -96,7 +127,9 @@ class ScriptChapter(Frozen):
 
 
 class CategoryScript(Frozen):
-    """One published track: its sources, voice profile and chapters of spoken sentences."""
+    """One published track: its sources, voice profile and chapters of spoken sentences.
+    Every required part of each source is said in a chapter's `covers` or listed in
+    `left_to_page`; `audio-notes outline` writes a draft that holds this by construction."""
 
     schema_version: Literal[1] = 1
     key: Key
@@ -105,6 +138,7 @@ class CategoryScript(Frozen):
     voice: Key
     units: tuple[SourceRef, ...] = Field(min_length=1, max_length=300)
     chapters: tuple[ScriptChapter, ...] = Field(min_length=1, max_length=120)
+    left_to_page: tuple[LeftToPage, ...] = Field(default=(), max_length=500)
 
     @model_validator(mode="after")
     def consistent(self) -> "CategoryScript":
@@ -117,30 +151,40 @@ class CategoryScript(Frozen):
         for chapter in self.chapters:
             for cover in chapter.covers:
                 AudioCoverage(**cover.model_dump(), section=chapter.key, chapter=chapter.key)
-                if (
-                    AudioUnit(kind=cover.kind, unit=cover.unit, semantic_sha256="0" * 64).target
-                    not in targets
-                ):
+                if SourceRef(kind=cover.kind, set=cover.set, unit=cover.unit).target not in targets:
                     raise ValueError(
                         f"Chapter {chapter.key} covers a unit the category does not list."
                     )
+        for left in self.left_to_page:
+            AudioCoverage(
+                **left.model_dump(exclude={"reason"}),
+                section="page",
+                chapter="page",
+                mode="study_required",
+                reason=left.reason,
+            )
+            if left.target not in targets:
+                raise ValueError("left_to_page names a unit the category does not list.")
         return self
 
 
-def _documents(root: Path) -> tuple[StudyContent | None, ExamContent | None]:
+def _documents(
+    root: Path,
+) -> tuple[StudyContent | None, ExamContent | None, ExerciseContent | None]:
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.content.exam_data import read_exam
+    from tum_mcp.course.content.exercise_data import read_exercises
     from tum_mcp.course.content.store import present
 
     study = read_content(root) if present(root, "study") else None
-    return study, read_exam(root)
+    return study, read_exam(root), read_exercises(root)
 
 
 def sources(root: Path) -> dict:
     from tum_mcp.course.media.video_project import unit_locators
 
-    study, exam = _documents(root)
-    result: dict = {"study": [], "exam": {"concepts": [], "patterns": []}}
+    study, exam, exercises = _documents(root)
+    result: dict = {"study": [], "exercises": [], "exam": {"concepts": [], "patterns": []}}
     for unit in study.units if study else ():
         info = unit_locators(root, unit.key)
         result["study"].append(
@@ -155,6 +199,16 @@ def sources(root: Path) -> dict:
                 "locators": info["locators"],
             }
         )
+    for group in exercises.sets if exercises else ():
+        for exercise in group.exercises:
+            result["exercises"].append(
+                {
+                    "set": group.key,
+                    "unit": exercise.key,
+                    "title": exercise.title,
+                    "required": parts(exercise),
+                }
+            )
     for concept in exam.concepts if exam else ():
         result["exam"]["concepts"].append(
             {
@@ -175,11 +229,7 @@ def sources(root: Path) -> dict:
                 "title": pattern.title,
                 "topic": pattern.topic,
                 "steps": len(pattern.workflow),
-                "locator": {
-                    "kind": "pattern",
-                    "ref": pattern.key,
-                    "fingerprint": exam_hash(pattern),
-                },
+                "required": parts(pattern),
             }
         )
     return result
@@ -194,69 +244,46 @@ def load_script(root: Path, stem: str) -> CategoryScript:
     return script
 
 
-def _current(study: StudyContent | None, exam: ExamContent | None, kind: str, key: str):
-    if kind == "unit":
-        return next((unit for unit in study.units if unit.key == key), None) if study else None
-    return exam_item(exam, kind, key)
+def _items(root: Path, script: CategoryScript) -> dict[str, Item | None]:
+    study, exam, exercises = _documents(root)
+    return {
+        unit.target: find(study, exercises, exam, unit.kind, unit.unit, unit.set)
+        for unit in script.units
+    }
 
 
 def check(root: Path, stem: str) -> dict:
     script = load_script(root, stem)
-    study, exam = _documents(root)
-    errors: list[str] = []
+    items = _items(root, script)
+    errors: list[str] = [f"source.missing: {key}" for key, item in items.items() if item is None]
+    errors += unwritten(script.model_dump(mode="json"))
     warnings: list[str] = []
-    covered: dict[str, set[str]] = {unit.target: set() for unit in script.units}
-    for unit in script.units:
-        if _current(study, exam, unit.kind, unit.unit) is None:
-            errors.append(f"source.missing: {unit.target}")
+    said: dict[str, set[tuple[str, str]]] = {key: set() for key in items}
+    left: dict[str, set[tuple[str, str]]] = {key: set() for key in items}
+
+    def mark(where: str, entry: Cover | LeftToPage, into: dict[str, set[tuple[str, str]]]):
+        key = SourceRef(kind=entry.kind, set=entry.set, unit=entry.unit).target
+        if (item := items.get(key)) is None:
+            return
+        locator = entry.locator
+        if part_fingerprint(item, locator.kind, locator.ref) != locator.fingerprint:
+            errors.append(
+                f"cover.changed {where}: {entry.unit}/{locator.ref}; copy the current "
+                "fingerprint from sources after re-reading it"
+            )
+        into[key].add((locator.kind, locator.ref))
+
     for chapter in script.chapters:
         for cover in chapter.covers:
-            item = _current(study, exam, cover.kind, cover.unit)
-            if item is None:
-                continue
-            actual = (
-                locator_fingerprint(item, cover.locator)
-                if cover.kind == "unit"
-                else exam_hash(item)
-            )
-            if actual != cover.locator.fingerprint:
-                errors.append(
-                    f"cover.changed {chapter.key}: {cover.unit}/{cover.locator.ref}; copy the "
-                    "current fingerprint from sources after re-reading it"
-                )
-            covered[
-                AudioUnit(kind=cover.kind, unit=cover.unit, semantic_sha256="0" * 64).target
-            ].add(cover.locator.ref)
-        for index, sentence in enumerate(chapter.sentences, 1):
-            if found := UNSPEAKABLE.search(sentence):
-                errors.append(
-                    f"speech.symbols {chapter.key}/{index}: '{found[0]}' in '{sentence[:80]}'; "
-                    "say the mathematics in words"
-                )
-            if found := META.search(sentence):
-                warnings.append(
-                    f"speech.meta {chapter.key}/{index}: '{found[0]}' talks about the material, "
-                    "not the subject"
-                )
-            if len(sentence.split()) > 40:
-                warnings.append(f"speech.long {chapter.key}/{index}: split sentences over 40 words")
-        if PRONOUN_START.search(chapter.sentences[0]):
-            warnings.append(
-                f"reentry.pronoun {chapter.key}: a chapter opens by naming its subject, "
-                "so a listener who skips to it knows what 'it' is"
-            )
-    for unit in script.units:
-        item = _current(study, exam, unit.kind, unit.unit)
-        if item is None:
-            continue
-        required = (
-            [f"blocks[{i}]" for i in range(len(item.blocks))] + [o.key for o in item.objectives]
-            if unit.kind == "unit"
-            else [unit.unit]
-        )
-        missing = [ref for ref in required if ref not in covered[unit.target]]
-        if missing:
-            errors.append(f"coverage.missing {unit.target}: " + ", ".join(missing))
+            mark(chapter.key, cover, left if cover.mode == "study_required" else said)
+        found, notes = spoken(chapter.key, chapter.sentences, opens=True)
+        errors += found
+        warnings += notes
+    for entry in script.left_to_page:
+        mark("left_to_page", entry, left)
+    for key, item in items.items():
+        if item is not None and (gaps := missing(item, said[key], left[key])):
+            errors.append(f"coverage.missing {key}: " + ", ".join(gaps))
     words = sum(len(s.split()) for chapter in script.chapters for s in chapter.sentences)
     return {
         "category": script.key,
@@ -373,7 +400,7 @@ def _publish(
     from tum_mcp.course.project.store import load_state
     from tum_mcp.course.review.media_projection import guidance_hash
 
-    study, exam = _documents(root)
+    items = _items(root, script)
     build = audio(root, f".build/{script.stem}")
     measured = call_worker({"action": "measure", "files": [str(item["path"]) for item in chunks]})[
         "durations"
@@ -511,23 +538,24 @@ def _publish(
     if teaching_review.resolve() != review_path.resolve():
         shutil.copyfile(teaching_review, review_path)
     units = tuple(
-        AudioUnit(
-            kind=unit.kind,
-            unit=unit.unit,
-            semantic_sha256=semantic_hash(item) if unit.kind == "unit" else exam_hash(item),
-        )
+        AudioUnit(kind=unit.kind, set=unit.set, unit=unit.unit, semantic_sha256=teaching_hash(item))
         for unit in script.units
-        if (item := _current(study, exam, unit.kind, unit.unit)) is not None
+        if (item := items[unit.target]) is not None
     )
     references = {
         (version.key, version.sha256): version
-        for unit in script.units
-        for version in _current(study, exam, unit.kind, unit.unit).sources
+        for item in items.values()
+        if item is not None
+        for version in item.sources
     }
+    # A part left to the page belongs to no chapter of the track.
     coverage = tuple(
         AudioCoverage(**cover.model_dump(), section=chapter.key, chapter=chapter.key)
         for chapter in script.chapters
         for cover in chapter.covers
+    ) + tuple(
+        AudioCoverage(**left.model_dump(), section="page", chapter="page", mode="study_required")
+        for left in script.left_to_page
     )
     base = {
         "key": script.key,
@@ -564,6 +592,7 @@ def _publish(
         update={"categories": {**manifest.categories, script.key: receipt}}
     )
     plan_record = _read(audio(root, "plan.json"), AudioPlan)
+    study = _documents(root)[0]
     content_sha = sha256(canonical([semantic_hash(u) for u in study.units] if study else []))
     planned = PlannedAudio(**base, pending="none", voice=profile)
     order = plan_record.category_order if plan_record else ()

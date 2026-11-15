@@ -548,7 +548,7 @@ and offline support are not included.
 ## Create and maintain audio notes
 
 Install the optional workflow with `tum-mcp install audio-notes`.
-Use `prepare-study` or `prepare-exams` to author the course, then ask `audio-notes` to
+Use `prepare-study`, `prepare-exercises` or `prepare-exams` to author the course, then ask `audio-notes` to
 convert that prepared content into spoken tracks. For example:
 
 ```text
@@ -556,10 +556,12 @@ Create audio notes from this prepared study website, one file per category.
 Keep course outputs under audio/; prefer free ElevenLabs with local Kokoro fallback.
 ```
 
-Audio Notes makes two kinds of track. Study tracks re-explain the lessons under
+Audio Notes makes three kinds of track. Study tracks re-explain the lessons under
 `app/study/`. Cheatsheet tracks are a spoken summary of the Exam workspace: each
 cheatsheet entry's condition, rule or formula (read with audible grouping), one short
-example and its trap, and each exam pattern's cues, steps and formulas. Both keep the
+example and its trap, and each exam pattern's cues, steps, cases and pitfalls. Exercise
+tracks talk through one prepared solution: what each part asks, the method and why it
+fits, each step's reason and every answer. All keep the
 course's language, examples, assumptions and limitations. It turns tables, formulas, code and diagram sequences
 into explanations that work without a screen. It does not independently research
 the course or create new subject matter. An audio-only request reuses the prepared
@@ -575,9 +577,13 @@ no screen, spoken response or mandatory interaction. Exact Study dependencies ar
 disclosed where a construction cannot be taught through sound alone.
 These checks do not establish learning outcomes.
 
-Behind the skill, `tum-mcp audio-notes` does the checkable work: `sources` lists
-Study units and Exam entries and patterns with their locators, `check` validates a
-category script (coverage, stale sources, unspeakable symbols), `narration` lists one
+Behind the skill, `tum-mcp audio-notes` does the checkable work: `sources` lists the
+required parts of each Study unit, exercise, cheatsheet entry and pattern; `outline`
+writes a draft script whose chapters already cover every part (the agent registers each track
+with `study task start PROJECT --media audio/STEM`, finished once it is published); `check` validates a
+category script (coverage, stale sources, unspeakable symbols, text still marked
+`Write:`). A part the track does not say is listed in `left_to_page` with the reason the
+page serves it better. `narration` lists one
 file per sentence to synthesize, and `publish` assembles one AAC M4A with chapters at
 -16 LUFS in the shared media runtime, checks it and writes the manifest receipt.
 `listen` then transcribes the published track with the local speech recognizer
@@ -607,8 +613,8 @@ audio/
 ```
 
 Published tracks appear in the local app (`tum-mcp study`) in an **Audio** workspace:
-Lectures and Exam shelves with Play all, a track page with chapters (each with a
-Recall link to its Study passage, cheatsheet entry or pattern), a read-along
+Lectures, Exercises and Exam shelves with Play all, a track page with chapters (each
+with a Recall link to its Study passage, exercise, cheatsheet entry or pattern), a read-along
 transcript that follows the voice and plays from any sentence you tap, playback
 speed, and a mini player that keeps playing while you move to Study, Exercises or
 Exam. Each track resumes where you stopped. **Download playlist** saves a ZIP of
@@ -675,8 +681,22 @@ for each part, with a distinct final-answer emphasis and a complete summary for
 multi-part problems. Concise removes detours,
 not instruction: a longer clear solution beats a short opaque one.
 
-Behind the skill, `tum-mcp video-notes` does the checkable work. It prints the
-fingerprints a storyboard cites and rejects storyboards whose sources changed. It
+An Exam pattern video teaches the method a student reuses on every question of its
+kind; `video-notes pattern PROJECT KEY` binds the pattern. It says when the pattern
+applies, shows each workflow step with the formula, rule or code it applies and each
+case of a decision step, works an example through every step, shows each pitfall as
+wrong then right working, and ends with the steps in order. Drill items are never
+shown. The video plays on the pattern's Exam page.
+
+A video request registers each planned video with `tum-mcp study task start PROJECT
+--media video/STEM`; the task finishes once the video is published and current, and each
+stage command names the next one, so the agent carries the video through to publication.
+
+Behind the skill, `tum-mcp video-notes` does the checkable work. `outline` writes a
+draft storyboard with one chapter per source section and every required part already
+located; the checks refuse text still marked `Write:`, and a part the video does not
+present is listed in `left_to_page` with its reason. `schema --example` prints each
+beat kind with its rule. The tool rejects storyboards whose sources changed. It
 measures one narration file per sentence and renders the scenes with a pinned Manim
 and Typst runtime (no LaTeX needed). It enforces that animations fit their narration
 frame by frame; sentence cues align reveals to measured speech. It reports

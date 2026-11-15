@@ -69,13 +69,14 @@ def script(project: Path, **changes: object) -> dict:
             {
                 "key": key,
                 "title": f"Chapter {key}",
-                "covers": [{"kind": kind, "unit": key, "locator": locator}],
+                "covers": [{"kind": kind, "unit": key, "locator": item} for item in locators],
                 "sentences": [f"The first idea of {key} names its condition.", "Then it applies."],
             }
-            for key, kind, locator in (
-                (first, "concept", concepts[first]["locator"]),
-                (second, "concept", concepts[second]["locator"]),
-                (pattern["unit"], "pattern", pattern["locator"]),
+            for key, kind, locators in (
+                (first, "concept", [concepts[first]["locator"]]),
+                (second, "concept", [concepts[second]["locator"]]),
+                # A pattern track says each cue, step, case, pitfall and worked example.
+                (pattern["unit"], "pattern", pattern["required"]),
             )
         ],
     }
@@ -134,6 +135,119 @@ def test_check_reports_stale_missing_and_unspeakable_script(demo: Path) -> None:
     assert {"cover.changed", "speech.symbols", "coverage.missing"} <= rules
     assert any(w.startswith("speech.meta") for w in report["warnings"])
     assert any(w.startswith("reentry.pronoun") for w in report["warnings"])
+
+
+def test_an_exercise_track_says_each_part_or_leaves_it_to_the_page(demo: Path) -> None:
+    found = audio_project.sources(demo)
+    exercise = found["exercises"][0]
+    source = {"kind": "exercise", "set": exercise["set"], "unit": exercise["unit"]}
+    *said, dense = exercise["required"]
+    assert {part["kind"] for part in exercise["required"]} <= {"statement", "step", "answer"}
+    value = {
+        "key": "practice",
+        "stem": "02_practice",
+        "title": "Practice",
+        "voice": "narrator",
+        "units": [source],
+        "chapters": [
+            {
+                "key": "working",
+                "title": "Working the exercise",
+                "covers": [source | {"locator": part} for part in said],
+                "sentences": ["The exercise asks for the order of a traversal."],
+            }
+        ],
+        "left_to_page": [
+            source | {"locator": dense, "reason": "The full working is a table to read."}
+        ],
+    }
+    path = demo / "audio/categories/02_practice.json"
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(json.dumps(value), encoding="utf-8")
+    assert audio_project.check(demo, "02_practice")["errors"] == []
+
+    value["left_to_page"] = []
+    path.write_text(json.dumps(value), encoding="utf-8")
+    (error,) = audio_project.check(demo, "02_practice")["errors"]
+    assert error.startswith("coverage.missing") and f"{dense['kind']} {dense['ref']}" in error
+
+
+def test_an_exercise_track_has_its_own_shelf_and_recalls_the_exercise(
+    demo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.course.media import video_runtime
+    from tum_mcp.course.media.audio_app import preview_index
+
+    monkeypatch.setattr(video_runtime, "call_worker", FakeWorker(output=TRACK, seconds=1.0))
+    exercise = audio_project.sources(demo)["exercises"][0]
+    source = {"kind": "exercise", "set": exercise["set"], "unit": exercise["unit"]}
+    value = {
+        "key": "practice",
+        "stem": "02_practice",
+        "title": "Practice",
+        "voice": "narrator",
+        "units": [source],
+        "chapters": [
+            {
+                "key": "working",
+                "title": "Working the exercise",
+                "covers": [source | {"locator": part} for part in exercise["required"]],
+                "sentences": ["The exercise asks for the order of a traversal."],
+            }
+        ],
+    }
+    (demo / "audio/categories").mkdir()
+    (demo / "audio/categories/02_practice.json").write_text(json.dumps(value), encoding="utf-8")
+    for item in audio_project.narration(demo, "02_practice"):
+        (demo / item["file"]).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(SPEECH, demo / item["file"])
+    review = demo / "audio/.build/review.md"
+    review.write_text("Checked.\n", encoding="utf-8")
+    audio_project.publish(demo, "02_practice", review)
+
+    [track] = preview_index(demo)["tracks"]
+    assert track["kind"] == "exercises"
+    target = {"kind": "exercise", "set": exercise["set"], "key": exercise["unit"]}
+    assert track["chapters"][0]["recall"] == [target]
+
+
+def test_a_media_task_holds_the_session_until_its_track_is_published(
+    demo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Agents stopped after an outline; a media task keeps them going until publication.
+    from tum_mcp.course.media import video_runtime
+    from tum_mcp.course.workflow import tasks
+
+    monkeypatch.setattr(video_runtime, "call_worker", FakeWorker(output=TRACK, seconds=1.0))
+    owner = "codex:thread-a"
+    tasks.begin(demo, None, owner=owner, media=("audio/01_structures",))
+    with pytest.raises(CampusError, match="not published"):
+        tasks.finish(demo, owner=owner)
+    stop = {"session_id": owner, "cwd": str(demo)}
+    blocked = tasks.stop(stop)
+    assert blocked["decision"] == "block" and "audio/01_structures" in blocked["reason"]
+
+    script(demo)
+    synthesize(demo)
+    review = demo / "audio/.build/review.md"
+    review.write_text("Checked.\n", encoding="utf-8")
+    audio_project.publish(demo, "01_structures", review)
+    assert tasks.finish(demo, owner=owner)["ready"]
+    assert tasks.stop(stop) == {}
+
+
+def test_a_pattern_track_must_say_each_part_not_the_pattern_as_a_whole(demo: Path) -> None:
+    # One whole-pattern locator let a track drop a workflow step or case unseen.
+    pattern = audio_project.sources(demo)["exam"]["patterns"][0]
+    kinds = {part["kind"] for part in pattern["required"]}
+    assert {"cue", "workflow", "example"} <= kinds and "drill" not in kinds
+    value = script(demo)
+    value["chapters"][-1]["covers"] = value["chapters"][-1]["covers"][1:]
+    script(demo, chapters=value["chapters"])
+    (error,) = audio_project.check(demo, "01_structures")["errors"]
+    first = pattern["required"][0]
+    assert error.startswith("coverage.missing exam/patterns/")
+    assert f"{first['kind']} {first['ref']}" in error
 
 
 def test_publish_installs_a_track_the_course_report_reviews(

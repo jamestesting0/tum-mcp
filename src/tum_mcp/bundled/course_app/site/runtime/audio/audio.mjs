@@ -15,8 +15,8 @@ export async function loadAudio() {
 }
 export const hasAudio = () => tracks.length > 0;
 
-const shelves = [['study', 'Lectures'], ['exam', 'Exam']];
-const shelfName = track => (track.kind === 'study' ? 'Lecture' : 'Exam');
+const shelves = [['study', 'Lectures'], ['exercises', 'Exercises'], ['exam', 'Exam']];
+const shelfName = track => ({ study: 'Lecture', exercises: 'Exercise' })[track.kind] || 'Exam';
 const trackLink = track => `#audio/${encodeURIComponent(track.stem)}`;
 const shelfOf = track => tracks.filter(item => item.kind === track.kind);
 function clock(seconds) {
@@ -179,12 +179,17 @@ function seekBar(track, onSeek) {
   return bar;
 }
 
-// Where a chapter's teaching lives: its cheatsheet entry or pattern, or the Study passage.
+// Where a chapter's teaching lives: its cheatsheet entry, pattern or exercise, or the Study passage.
 function recallTarget(chapter) {
   for (const item of chapter.recall) {
     if (item.kind === 'concept' || item.kind === 'pattern') {
       const entry = (item.kind === 'concept' ? data.exam?.concepts : data.exam?.patterns)?.find(value => value.key === item.key);
       if (entry) return { href: `#exam/${item.kind === 'concept' ? 'sheet' : 'patterns'}/${entry.key}`, title: entry.title };
+      continue;
+    }
+    if (item.kind === 'exercise') {
+      const group = data.exercises?.sets.find(value => value.key === item.set), exercise = group?.exercises.find(value => value.key === item.key);
+      if (exercise) return { href: `#exercises/${group.key}/${exercise.key}`, title: `${exercise.label} · ${exercise.title}` };
       continue;
     }
     const unit = data.units.find(value => value.key === item.unit), block = unit?.blocks[item.index];

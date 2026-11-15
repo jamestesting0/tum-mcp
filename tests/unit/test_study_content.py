@@ -19,6 +19,7 @@ from tum_mcp.transport import API
 
 
 def test_example_catalogue_validates_and_covers_block_and_stage_kinds() -> None:
+    from tum_mcp.course.content import exam
     from tum_mcp.course.content.exercises import GuidanceStep
     from tum_mcp.course.content.responses import Check
     from tum_mcp.course.lecture.content import Chapter, Highlight, Note
@@ -33,6 +34,12 @@ def test_example_catalogue_validates_and_covers_block_and_stage_kinds() -> None:
         "lecture-highlight": TypeAdapter(Highlight),
         "lecture-chapter": TypeAdapter(Chapter),
         "selection": TypeAdapter(Decision),
+        "exam-concept": TypeAdapter(exam.Concept),
+        "exam-formula": TypeAdapter(exam.CompactFormula),
+        "exam-step": TypeAdapter(exam.PatternStep),
+        "exam-pitfall": TypeAdapter(exam.Pitfall),
+        "exam-drill": TypeAdapter(exam.DrillItem),
+        "exam-guided-step": TypeAdapter(exam.GuidedStep),
     }
     blocks = TypeAdapter(Block)
     for name, value in catalogue.items():

@@ -45,6 +45,8 @@ def _chapters(root: Path, receipt: AudioReceipt) -> list[dict]:
                 continue
             if item.kind in {"concept", "pattern"}:
                 target = {"kind": item.kind, "key": item.unit}
+            elif item.kind == "exercise":
+                target = {"kind": "exercise", "set": item.set, "key": item.unit}
             elif item.locator.kind == "block" and (match := BLOCK.fullmatch(item.locator.ref)):
                 target = {"kind": "block", "unit": item.unit, "index": int(match[1])}
             else:
@@ -80,6 +82,13 @@ def _sentences(root: Path, receipt: AudioReceipt) -> list[dict]:
         return []
 
 
+def _shelf(receipt: AudioReceipt) -> str:
+    kinds = {unit.kind for unit in receipt.units}
+    if kinds & {"concept", "pattern"}:
+        return "exam"
+    return "exercises" if "exercise" in kinds else "study"
+
+
 def preview_index(root: Path) -> dict:
     """Published tracks whose files are present, in playlist order. Never raises."""
     return {
@@ -88,7 +97,7 @@ def preview_index(root: Path) -> dict:
                 "key": receipt.key,
                 "stem": receipt.stem,
                 "title": receipt.title,
-                "kind": "study" if all(unit.kind == "unit" for unit in receipt.units) else "exam",
+                "kind": _shelf(receipt),
                 "duration": receipt.duration,
                 "track": f"audio/{receipt.track.path}",
                 "script": f"audio/{receipt.script.path}",

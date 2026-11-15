@@ -25,7 +25,9 @@ source term appears once.
 
 You author the files under `app/exam/` (`exam.json`, and one file per concept, pattern
 and mock; `study schema exam`); `tum-mcp study build PROJECT`
-renders it as the Exam workspace beside Study and Exercises. Code derives every
+renders it as the Exam workspace beside Study and Exercises. `study schema --example
+exam-step` prints a decision step with its rule; `exam-concept`, `exam-formula`,
+`exam-pitfall`, `exam-drill` and `exam-guided-step` work the same way. Code derives every
 count, rate, order, map position and blueprint; the schema has no count fields.
 Publishing the course app includes prepared Exam content; original documents and
 source citations stay local. Use publish-course for a publication request.

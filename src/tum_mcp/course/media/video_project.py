@@ -26,6 +26,8 @@ from tum_mcp.course.media.video_content import (
     FileReceipt,
     Locator,
     Manifest,
+    PatternReceipt,
+    PatternStoryboard,
     Receipt,
     SelectionFile,
     Storyboard,
@@ -64,6 +66,7 @@ from tum_mcp.course.media.video_sources import (
     VideoSource,
     VideoSources,
     check_exercise,
+    check_pattern,
     read_sources,
 )
 from tum_mcp.course.media.video_style import staged_bytes
@@ -143,7 +146,9 @@ def load_voice(root: Path) -> VoiceFile:
     return _read(videos(root, "voice.json"), VoiceFile) or VoiceFile()
 
 
-def stored_storyboard(root: Path, stem: str) -> tuple[Storyboard | ExerciseStoryboard, bytes]:
+def stored_storyboard(
+    root: Path, stem: str
+) -> tuple[Storyboard | ExerciseStoryboard | PatternStoryboard, bytes]:
     path = videos(root, f"storyboards/{stem}.json")
     record = _read(path, StoryboardFile, limit=2 * 1024**2)
     if record is None:
@@ -252,7 +257,8 @@ def plan(root: Path, selection_file: Path) -> VideoPlan:
     if selection is None:
         raise CampusError(Code.ACTION_REQUIRED, "The selection file does not exist.")
     sources = read_sources(root)
-    for item in (*selection.units, *selection.exercises):
+    chosen = (*selection.units, *selection.exercises, *selection.patterns)
+    for item in chosen:
         sources.get(source_key(item))
     with locked(root):
         _scaffold(root)
@@ -267,11 +273,12 @@ def plan(root: Path, selection_file: Path) -> VideoPlan:
         try:
             entries = allocate(
                 previous,
-                (*selection.units, *selection.exercises),
+                chosen,
                 sources.study,
                 frozenset(receipts),
                 published,
                 sources.exercises,
+                sources.exam,
             )
         except ValueError as error:
             raise CampusError(Code.INVALID_RESPONSE, str(error)) from None
@@ -279,6 +286,7 @@ def plan(root: Path, selection_file: Path) -> VideoPlan:
             course_key=sources.course_key,
             content_sha256=sources.content_sha256,
             exercises_sha256=sources.exercises_sha256,
+            exam_sha256=sources.exam_sha256,
             videos=entries,
         )
         _write_json(videos(root, "plan.json"), result)
@@ -301,6 +309,8 @@ def check(root: Path, stem: str) -> StoryboardReport:
             report = check_storyboard(storyboard, sources.study)
         case ExerciseStoryboard():
             report = check_exercise(storyboard, source)
+        case PatternStoryboard():
+            report = check_pattern(storyboard, source)
     errors = list(report.errors)
     if source_key(storyboard) != identity:
         errors.insert(0, f"plan.source: the plan assigns '{stem}' to '{identity}'")
@@ -378,6 +388,25 @@ def exercise_locators(root: Path, key: str) -> dict:
             }
         case Unit():
             raise CampusError(Code.INVALID_RESPONSE, "Expected an Exercise source.")
+
+
+def pattern_locators(root: Path, key: str) -> dict:
+    from tum_mcp.course.content.exam import Pattern
+    from tum_mcp.course.media.sources import parts
+
+    source = read_sources(root).get(f"exam/patterns/{key}")
+    match source.data:
+        case Pattern() as pattern:
+            return {
+                "pattern": pattern.key,
+                "title": pattern.title,
+                "pattern_hash": source.teaching_hash,
+                "steps": [step.do for step in pattern.workflow],
+                "required": parts(pattern),
+                "source_references": [s.model_dump(mode="json") for s in pattern.sources],
+            }
+        case _:
+            raise CampusError(Code.INVALID_RESPONSE, "Expected an Exam pattern source.")
 
 
 def _ready_storyboard(
@@ -1045,7 +1074,7 @@ def _recover(root: Path) -> None:
 
 def publish(
     root: Path, stem: str, run: str, *, teaching_review: Path, visual_review: str
-) -> Receipt | ExerciseReceipt:
+) -> Receipt | ExerciseReceipt | PatternReceipt:
     from tum_mcp.course.review.media_projection import guidance_hash
 
     identity = _planned(root, stem)
@@ -1187,6 +1216,13 @@ def publish(
                         for bound, chapter in zip(bounds, storyboard.chapters, strict=True)
                     ),
                 )
+            case PatternStoryboard():
+                receipt = PatternReceipt(
+                    **fields,
+                    pattern=storyboard.pattern,
+                    pattern_hash=source_.teaching_hash,
+                    chapters=bounds,
+                )
         videos_map = {
             key: value for key, value in manifest.videos.items() if source_key(value) != identity
         }
@@ -1200,7 +1236,9 @@ def publish(
         return receipt
 
 
-def acknowledge(root: Path, stem: str, review_file: Path) -> Receipt | ExerciseReceipt:
+def acknowledge(
+    root: Path, stem: str, review_file: Path
+) -> Receipt | ExerciseReceipt | PatternReceipt:
     sources = read_sources(root)
     review = review_file.read_bytes() if review_file.is_file() else b""
     if not review.strip() or len(review) > 256 * 1024:
@@ -1240,6 +1278,17 @@ def acknowledge(root: Path, stem: str, review_file: Path) -> Receipt | ExerciseR
                     **identity_update,
                     "source_references": source.source_references,
                     "solution_origin": source.data.solution.origin,
+                }
+            case PatternStoryboard():
+                changed = [
+                    error
+                    for error in check_pattern(storyboard, source).errors
+                    if not error.startswith("pattern.stale")
+                ]
+                identity_update = {"pattern_hash": source.teaching_hash}
+                receipt_update = {
+                    **identity_update,
+                    "source_references": source.source_references,
                 }
         if changed:
             raise CampusError(
@@ -1354,7 +1403,7 @@ def _video_state(
     root: Path,
     stem: str,
     source: VideoSource,
-    receipt: Receipt | ExerciseReceipt | None,
+    receipt: Receipt | ExerciseReceipt | PatternReceipt | None,
     verify: bool,
 ) -> dict:
     state: dict = {}
@@ -1370,6 +1419,8 @@ def _video_state(
                     content_hash = storyboard.unit_hash
                 case ExerciseStoryboard():
                     content_hash = storyboard.exercise_hash
+                case PatternStoryboard():
+                    content_hash = storyboard.pattern_hash
             state["storyboard"] = (
                 "current"
                 if (
@@ -1436,6 +1487,9 @@ def _video_state(
                 receipt.source_references != source.source_references
                 or receipt.solution_origin != source.data.solution.origin
             )
+        case PatternReceipt():
+            teaching_changed = receipt.pattern_hash != source.teaching_hash
+            provenance_changed = receipt.source_references != source.source_references
     if not files_ok:
         state["published"] = "missing_or_changed_files"
     elif teaching_changed:
@@ -1558,6 +1612,8 @@ def _write_documents(root: Path) -> None:
                     covered = f"objectives in video: {', '.join(receipt.objectives)}"
                 case ExerciseReceipt():
                     covered = f"answers in video: {', '.join(a.ref for a in receipt.answers)}"
+                case PatternReceipt():
+                    covered = f"chapters: {', '.join(c.title for c in receipt.chapters)}"
             coverage.append(
                 f"- {title}: `{receipt.stem}` ({state['published']}); {covered}"
                 + ("; visual review not performed" if receipt.visual_review != "performed" else "")
@@ -1599,9 +1655,10 @@ def preview_index(root: Path) -> dict:
         if manifest is not None and manifest.course_key != inventory.course_key:
             raise CampusError(Code.SCOPE_DENIED, "Video manifest belongs to another course.")
     except (CampusError, OSError):
-        return {"videos": {}, "exercises": {}}
+        return {"videos": {}, "exercises": {}, "patterns": {}}
     entries: dict[str, dict] = {}
     exercise_entries: dict[str, dict] = {}
+    pattern_entries: dict[str, dict] = {}
     for receipt in manifest.videos.values() if manifest else ():
         try:
             present = all(
@@ -1642,7 +1699,15 @@ def preview_index(root: Path) -> dict:
                     or source.data.solution.origin != receipt.solution_origin
                 )
                 exercise_entries[receipt.exercise.key] = entry
-    return {"videos": entries, "exercises": exercise_entries}
+            case PatternReceipt():
+                source = inventory.items.get(source_key(receipt))
+                entry["sourceStale"] = (
+                    source is None
+                    or source.teaching_hash != receipt.pattern_hash
+                    or source.source_references != receipt.source_references
+                )
+                pattern_entries[receipt.pattern] = entry
+    return {"videos": entries, "exercises": exercise_entries, "patterns": pattern_entries}
 
 
 def install_demo(root: Path, example: Path) -> Receipt:

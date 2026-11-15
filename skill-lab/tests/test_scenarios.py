@@ -94,6 +94,23 @@ def test_checkpoint_reuse_is_refused_when_earlier_turns_used_the_change():
     assert "does not list" in scenarios.checkpoint_refusal(scenarios.load("smoke"), 2, study)
 
 
+def test_code_drift_is_accepted_only_when_later_turns_never_rebuild_restored_content():
+    media = scenarios.parse(
+        {
+            "id": "m",
+            "turns": [
+                {"say": "Prepare study.", "skills": ["prepare-study"]},
+                {"say": "Make a video.", "skills": ["video-notes", "read-content"]},
+                {"say": "Review it.", "skills": ["review-course", "video-notes"]},
+            ],
+        },
+        "m",
+    )
+    assert scenarios.drift_refusal(media, 1) is None
+    assert "prepare-study" in scenarios.drift_refusal(media, 0)
+    assert "does not list" in scenarios.drift_refusal(scenarios.load("smoke"), 0)
+
+
 def test_bad_scenarios_are_rejected():
     with pytest.raises(LabError):
         scenarios.parse({"id": "x", "turns": [{"skills": []}]}, "x")

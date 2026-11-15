@@ -7,7 +7,7 @@ videos/
   plan.json, manifest.json, style.json, voice.json   records (manifest = verified)
   README.md, COVERAGE.md, SOURCES.md, playlist.m3u    generated; your text outside
                                                       the managed markers is kept
-  storyboards/STEM.json    you write; storyboard check validates
+  storyboards/STEM.json    outline drafts, you write; storyboard check validates
   scenes/STEM/chapters.py  you write
   assets/                  optional SVG files you provide
   narration/STEM.txt       published transcript (check writes a working copy in .build)
@@ -28,8 +28,9 @@ All take the course project folder and print JSON.
 | Step | Command |
 | --- | --- |
 | State | `inspect PROJECT [--video STEM] [--verify]` |
-| Locators | `unit PROJECT UNIT` |
+| Locators | `unit PROJECT UNIT`, `exercise PROJECT SET/KEY`, `pattern PROJECT KEY` |
 | Select | `plan PROJECT --selection FILE` |
+| Draft | `outline PROJECT STEM [--language CODE]` (a new storyboard only) |
 | Validate | `storyboard check PROJECT STEM` |
 | Audio list | `narration PROJECT STEM --profile KEY` |
 | Timing | `timing PROJECT STEM --profile KEY` or `--silent` |
@@ -43,7 +44,8 @@ All take the course project folder and print JSON.
 | Runtime | `runtime status`, `runtime install` |
 
 Prefix each with `tum-mcp video-notes`. `schema NAME` prints the storyboard,
-selection, style, voice, manifest and timing contracts.
+selection, style, voice, manifest and timing contracts. `schema --example NAME`
+prints a copyable example and its rule; `--example list` names them.
 
 ## Rendering
 
@@ -66,7 +68,7 @@ abandoned runs and caches of older runtimes, and never touches a run still rende
 | State | Action |
 | --- | --- |
 | `storyboard: missing` | Write the storyboard. |
-| `storyboard: stale` | The unit's teaching changed: revise affected beats, copy the new hash and fingerprints from `unit`, re-time and render. |
+| `storyboard: stale` | The source's teaching changed: revise affected beats, copy the new hash and fingerprints from `unit`, `exercise` or `pattern`, re-time and render. |
 | `published: teaching_changed` | Same as stale, then publish the new run. |
 | `published: revision_changed_acknowledge_or_render` | The unit changed outside the video's teaching (for example a new card). Review coverage; if the video still holds, `acknowledge` with the review, otherwise revise. |
 | `published: missing_or_changed_files` | Re-publish the last checked final run or render again. |
@@ -83,6 +85,7 @@ nothing re-renders on its own, and one video never mixes profiles.
 scene, style, timing, voice, assets) are unchanged since rendering, plus a non-empty
 teaching review. It archives the previous files, installs the new ones, writes the
 manifest last and regenerates README, COVERAGE, SOURCES and the playlist. The app
-shows the video in the unit's Content view on the next page load; no study build is
+shows the video in the unit's Content view, the Exercise solution or the Exam pattern
+on the next page load; no study build is
 needed unless the installed app predates Video Notes. Hosted sites never include
 videos.

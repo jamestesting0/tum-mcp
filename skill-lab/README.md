@@ -36,6 +36,11 @@ runtime-management commands.
 Checkpoint reuse compares the materialized installed source and project metadata with
 the source run's variant, including differences between base commits. Identical patched
 variants can resume; changes to earlier-used skills or code still require a fresh run.
+One exception: `--accept-code-drift REASON` resumes despite changed code when no later turn
+uses a skill that binds or builds course workspaces (sync-course or a prepare skill), so the
+restored content stays fixed input, as for media runs. Each restored project then gets the
+variant's generated AGENTS.md instructions, as a sync under that version would write them.
+The run records the reason, the changed files and the refreshed projects under `code_drift`.
 Restoration pauses only the copied task's old session ownership, retaining its source
 requirements and audit history. The source snapshot stays unchanged.
 

@@ -1,6 +1,6 @@
 ---
 name: video-notes
-description: Create or update depth-first visual concept explanations from prepared Study, or thoroughly explained solution walkthroughs for selected prepared Exercises, with checked fidelity, timing and captions. Use prepare-study or prepare-exercises for source authoring and prepare-lecture for recordings.
+description: Create or update depth-first visual concept explanations from prepared Study, thoroughly explained solution walkthroughs for selected prepared Exercises, or method walkthroughs for Exam patterns, with checked coverage, fidelity, timing and captions. Use prepare-study, prepare-exercises or prepare-exams for source authoring and prepare-lecture for recordings.
 ---
 
 This optional workflow is enabled with `tum-mcp install video-notes`. The render
@@ -12,8 +12,8 @@ discovery pointer and user's rules. The handbook's receipt describes local revie
 freshness; verify affected facts against sources. Reuse context already read in this
 request. Do not re-read the whole inventory for each authoring step.
 
-Videos adapt prepared Study (`app/study/`) or Exercises (`app/exercises/`);
-they are not a second authoring workflow. Never research or invent course facts,
+Videos adapt prepared Study (`app/study/`), Exercises (`app/exercises/`) or Exam
+patterns (`app/exam/`); they are not a second authoring workflow. Never research or invent course facts,
 examples, numbers, analogies presented as course content, exam predictions or
 questions. A missing concrete example is a gap for the source authoring skill.
 Keep the course's content language, notation, assumptions and qualifications.
@@ -30,23 +30,35 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
 ## Workflow
 
 1. **Scope.** Run `tum-mcp video-notes inspect PROJECT` once; it lists planned,
-   stale, pending and published videos. Read only the units you will work on.
+   stale, pending and published videos. Read only the units you will work on. A video
+   request records no study batch, even where the course AGENTS.md asks for one: batch
+   readiness belongs to authoring Study, Exercises, Exam or Lecture.
 2. **Select.** Use [teaching](references/teaching.md) for concepts and
-   [exercise walkthroughs](references/exercise-walkthroughs.md) for solutions.
-   Run `tum-mcp video-notes plan PROJECT --selection FILE`. Explicit Exercise
-   requests are not filtered out for being text-heavy. For a course, finish one
-   demanding target end to end before batching.
-3. **Storyboard.** `tum-mcp video-notes unit PROJECT UNIT` or
-   `tum-mcp video-notes exercise PROJECT SET/KEY` prints hashes and exact locators.
-   Write `videos/storyboards/STEM.json` (`schema storyboard`), then
-   `storyboard check PROJECT STEM`. For lessons, outline sections and their
+   [exercise walkthroughs](references/exercise-walkthroughs.md) for solutions and
+   Exam patterns. The selection file lists `units`, `exercises` and `patterns`
+   (`schema --example selection`). Run `tum-mcp video-notes plan PROJECT --selection
+   FILE`. Explicit Exercise requests are not filtered out for being text-heavy. For a
+   course, finish one demanding target end to end before batching. Register each planned
+   video with `tum-mcp study task start PROJECT --media video/STEM --owner OWNER` (the
+   owner comes from the hook context). `study task finish` passes once the video is
+   published and current.
+3. **Storyboard.** For the stem `plan` printed, `tum-mcp video-notes outline PROJECT
+   STEM` writes `videos/storyboards/STEM.json` as a draft: one chapter per source section (unit
+   sections, exercise parts, pattern stages), with every required part already located
+   and fingerprinted. Replace every text that starts with `Write:`; the checks refuse
+   it. Regroup beats freely. Every required part stays in a beat, or moves to
+   `left_to_page` with the reason the page serves it better. `unit`, `exercise` or
+   `pattern` prints the source itself. `schema --example unit-beat` prints a beat with its
+   rule; `exercise-beat`, `pattern-beat`, `on-screen` and `left-to-page` work the same way. Then
+   run `storyboard check PROJECT STEM`. For lessons, name sections and their
    knowledge points, then an overview, sustained explanation and closing synthesis.
    For Exercises, establish the problem and work through every part to an emphasized
-   checked answer. Use [explanation design](references/explanation-design.md);
-   no duration target.
+   checked answer. For an Exam pattern, teach the method a student reuses: its cues,
+   each step and case, a worked example, its pitfalls and a recap. Use
+   [explanation design](references/explanation-design.md); no duration target.
 4. **Teaching gate.** Review the storyboard against its locators before any audio:
-   coverage, fidelity, reasoning, referents, orientation/ending and visual
-   correspondences. Passing role checks does not establish good teaching. Questions
+   coverage (including each `left_to_page` reason), fidelity, reasoning, referents,
+   orientation/ending and visual correspondences. Passing role checks does not establish good teaching. Questions
    are optional, source-backed and never a quota. Record the review. A gap it finds is
    yours to fix now: revise the storyboard, review again and continue; the gate never
    ends the request with a storyboard or outline.
@@ -72,7 +84,8 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
    that show the wrong object for their sentence, render and publish again. Never
    leave a requested video as a draft in `.build`. Details, records and recovery:
    [workflow](references/workflow.md).
-9. **Report.** Name created, updated, reused and text-first units, gaps, narrator,
+9. **Report.** Name created, updated, reused and text-first units, exercises and
+   patterns, parts left to the page, gaps, narrator,
    durations, checks actually run and paths under `videos/`. Run
    [verification](references/verification.md) before claiming anything is complete.
 
@@ -83,7 +96,7 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
 | Records, change handling, resume, publish, prune | [Workflow](references/workflow.md) |
 | Choosing targets, story shape, fidelity | [Teaching](references/teaching.md) |
 | Sustained visual reasoning | [Explanation design](references/explanation-design.md) |
-| Solving one prepared problem | [Exercise walkthroughs](references/exercise-walkthroughs.md) |
+| Solving one prepared problem, teaching an Exam pattern | [Exercise walkthroughs](references/exercise-walkthroughs.md) |
 | Look, layout, motion, per-block treatment | [Visuals](references/visuals.md) |
 | Scene code, helpers, pinned Manim API, pitfalls | [Manim and helpers](references/manim.md) |
 | Spoken script, voice provider, timing | [Narration and voice](references/narration.md) |
@@ -92,7 +105,7 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
 ## Boundaries
 
 All course outputs stay inside `videos/`; shared runtimes and voice models live in
-host user storage. Videos are local: they play in Study and inside Exercise solutions
-through `tum-mcp study` and are never uploaded, including by publish-course. Silent
+host user storage. Videos are local: they play in Study, inside Exercise solutions and
+on Exam pattern pages through `tum-mcp study` and are never uploaded, including by publish-course. Silent
 drafts are for visual review only and are never published. Lecture recordings,
 transcription and voice cloning are out of scope.

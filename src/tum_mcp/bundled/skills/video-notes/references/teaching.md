@@ -13,8 +13,9 @@ Recommend a video for units with a diagram that has frames, a plot, a formula
 derivation, a code trace or a comparison of mechanisms. Mark definitional,
 administrative or prose-only units `text-first` with a short reason; the user may
 override. A selection file is `{"units": [{"unit": KEY, "decision": "video" |
-"text-first", "reason": TEXT}]}`; `tum-mcp video-notes schema selection` has the
-contract. Planning keeps existing video numbers and never renumbers.
+"text-first", "reason": TEXT}]}`, with `exercises` and `patterns` beside `units`;
+`tum-mcp video-notes schema --example selection` prints one. Planning keeps existing
+video numbers and never renumbers.
 
 ## Rules
 
@@ -76,11 +77,13 @@ a final synthesis are teaching; branding intros and stock goodbyes add nothing.
 
 ## Storyboards
 
-`tum-mcp video-notes unit PROJECT UNIT` prints every locator with its fingerprint and
-the unit hash; copy them, never compute them. Each beat lists the locators it
-teaches from. `storyboard check` fails on stale units, changed or missing locators,
-unknown questions, objectives without a beat, missing overview/recap and unnamed
-knowledge points; it warns about objectives left to practice.
+`tum-mcp video-notes outline PROJECT STEM` writes a draft with every locator, its
+fingerprint and the unit hash; never compute them. Each beat lists the locators it
+teaches from. A block or objective the video does not present goes to `left_to_page`
+with the reason the page serves it better (a long table, a proof to read at one's own
+pace); length alone is no reason. `storyboard check` fails on stale units, changed
+locators, parts neither presented nor left to the page, unknown questions, missing
+overview/recap and unnamed knowledge points.
 A beat with no narration needs a pause of at
 least 0.5 seconds. On-screen text, math, numbers and code live in the beat's
 `on_screen` items; scene code shows them by key. Math items carry `typst` (no `#`)

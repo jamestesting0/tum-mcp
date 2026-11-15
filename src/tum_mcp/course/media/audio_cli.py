@@ -30,26 +30,62 @@ def _ready(project: Path) -> Path:
     return root
 
 
-def _emit(value: object) -> None:
+def _emit(value: object, next_action: str | None = None) -> None:
+    if next_action is not None and isinstance(value, dict):
+        value = {**value, "next_action": next_action}
     typer.echo(json.dumps(value, indent=2, default=str))
 
 
 @app.command()
-def schema(name: SchemaName) -> None:
-    """Print the category script or voice contract."""
+def schema(
+    name: Annotated[str | None, typer.Argument()] = None,
+    example: Annotated[bool, typer.Option("--example", help="Show an example to copy.")] = False,
+) -> None:
+    """Print the category script or voice contract, or with --example an example and its rule."""
     from tum_mcp.course.media.audio_project import CategoryScript
+    from tum_mcp.course.media.examples import catalogue
+    from tum_mcp.course.media.examples import example as show
     from tum_mcp.course.media.video_content import VoiceFile
 
-    model = CategoryScript if name == SchemaName.CATEGORY else VoiceFile
-    _emit(model.model_json_schema())
+    if example:
+        if name is None or name == "list":
+            _emit(sorted(catalogue("audio")))
+            return
+        rule, value = show("audio", name)
+        typer.echo(f"Rule: {rule}", err=True)
+        _emit(value)
+        return
+    if name not in {item.value for item in SchemaName}:
+        raise CampusError(Code.ACTION_REQUIRED, "Choose a schema name or use --example list.")
+    _emit((CategoryScript if name == SchemaName.CATEGORY else VoiceFile).model_json_schema())
 
 
 @app.command()
 def sources(project: Path) -> None:
-    """List Study units and Exam cheatsheet entries and patterns with their locators."""
+    """List Study units, exercises, Exam entries and patterns with their required parts."""
     from tum_mcp.course.media.audio_project import sources as run
 
     _emit(run(_ready(project)))
+
+
+@app.command()
+def outline(
+    project: Path,
+    stem: str,
+    source: Annotated[
+        list[str],
+        typer.Option(help="unit:KEY, exercise:SET/KEY, pattern:KEY or concept:KEY; repeatable."),
+    ],
+    title: Annotated[str | None, typer.Option(help="Track title.")] = None,
+) -> None:
+    """Write a draft script whose chapters already cover every required part."""
+    from tum_mcp.course.media.outline import audio as run
+
+    _emit(
+        run(_ready(project), stem, source, title),
+        "Replace every Write: sentence, then run check. The request ends with a published "
+        "track, not a script.",
+    )
 
 
 @app.command()
@@ -58,7 +94,13 @@ def check(project: Path, stem: str) -> None:
     from tum_mcp.course.media.audio_project import check as run
 
     report = run(_ready(project), stem)
-    _emit(report)
+    _emit(
+        report,
+        None
+        if report["errors"]
+        else "Review the script as continuous speech, then run narration, synthesize every "
+        "listed file and publish.",
+    )
     if report["errors"]:
         raise typer.Exit(1)
 
@@ -88,4 +130,7 @@ def publish(
     """Assemble, check and install one category track with its manifest receipt."""
     from tum_mcp.course.media.audio_project import publish as run
 
-    _emit(run(_ready(project), stem, teaching_review.expanduser().resolve()))
+    _emit(
+        run(_ready(project), stem, teaching_review.expanduser().resolve()),
+        f"Run listen on {stem}; reword what it flags, then publish again.",
+    )
