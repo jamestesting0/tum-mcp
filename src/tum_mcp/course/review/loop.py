@@ -155,7 +155,12 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.app.visuals import visual_ids
     from tum_mcp.course.checks.answers import verify
-    from tum_mcp.course.checks.report import citation_flags, quality_flags
+    from tum_mcp.course.checks.report import (
+        citation_flags,
+        exam_block_flags,
+        language_flags,
+        quality_flags,
+    )
     from tum_mcp.course.checks.structure import course_map, forward_terms
     from tum_mcp.course.content.exam_data import (
         exam_item_flags,
@@ -171,6 +176,7 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
     from tum_mcp.course.ledger.coverage import read_ledger
     from tum_mcp.course.ledger.coverage import sheet_flags as coverage_flags
     from tum_mcp.course.media.inventory import discover
+    from tum_mcp.course.project.context import content_language
     from tum_mcp.course.project.store import load_state
     from tum_mcp.course.review.media import media_report, read_media_reviews
 
@@ -215,6 +221,8 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
         ]
     flags = [
         *quality_flags(content, exercises, root=root),
+        *exam_block_flags(exam),
+        *language_flags(content_language(root), content, exercises, exam),
         *links,
         *(forward_terms(content) if content else ()),
         *sheet_flags(exam),
@@ -278,11 +286,16 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
             )
             for entry in packet["items"]:
                 context.pending_packets.setdefault(entry["item"], []).append(packet_id)
+    # A flag on a nested location (a step, a drill item) belongs to the item its key prefixes.
+    nested = sorted(items, key=len, reverse=True)
     for flag in flags:
         source = str(flag["item"])
+        owner = next((key for key in nested if source.startswith((f"{key}/", f"{key}#"))), None)
         targets = (
             [source]
             if source == "course" or source in items
+            else [owner]
+            if owner
             else _flagged_items(source, content, exercises)
         )
         for target in targets:
@@ -545,10 +558,12 @@ def _cited(value: object, found: set[str]) -> set[str]:
 
 def _digests(root: Path, value: dict) -> list[dict[str, JsonValue]]:
     """The digests of the sources an item cites: what the checker compares it against."""
-    from tum_mcp.course.sources.digests import read_digest
+    from tum_mcp.course.project.store import load_state
+    from tum_mcp.course.sources.digests import digest_status, read_digest
 
+    status = {row["source"]: row["status"] for row in digest_status(root, load_state(root))}
     return [
-        found.model_dump(mode="json", exclude={"sha256", "figures"})
+        found.model_dump(mode="json", exclude={"sha256"}) | {"status": status.get(key, "current")}
         for key in sorted(_cited(value, set()))
         if (found := read_digest(root, key)) is not None
     ]

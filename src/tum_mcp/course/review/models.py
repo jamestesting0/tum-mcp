@@ -300,6 +300,7 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
 # Advisory flags a checker must rule on before the gate passes: a finding on the check named
 # here, or why the flag does not apply. A flag no one rules on is how a weak lesson passed.
 RULED_FLAGS: dict[str, str] = {
+    "content_language": "clarity.one_reading",
     "repeated_step_reason": "intuition.reasons",
     "merged_step_operations": "representation.process_shown",
     "repeated_example": "redundancy.said_once",

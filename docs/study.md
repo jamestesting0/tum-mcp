@@ -60,7 +60,8 @@ keeps the rest of the file; an edited guide is kept and reported for review.
 The guide sends the agent to `.tum-mcp/course.md` first. That short handbook explains
 the course's goals, lectures/tutorials, weekly work and platforms, assessment/bonus
 conditions, conventions (textbook, notation, answer format), communication and
-preparation map. Claims carry source
+preparation map. Its `content_language` names the language every workspace is written in: the
+course's own, unless the student asked for another. Claims carry source
 links/locators and checked dates; unknowns and conflicting announcements stay visible.
 Detailed source content remains in materials/. All TUM MCP course state, plans and
 agent notes live under .tum-mcp/.

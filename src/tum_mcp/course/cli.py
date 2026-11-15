@@ -249,7 +249,20 @@ def report(
 
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.app.visuals import render_report
-    from tum_mcp.course.checks.report import quality_flags
+    from tum_mcp.course.checks.report import exam_block_flags, language_flags, quality_flags
+    from tum_mcp.course.content.exam import ExamContent
+    from tum_mcp.course.content.exam_data import exam_item_flags, meta_flags, sheet_flags
+    from tum_mcp.course.project.context import content_language
+
+    def exam_quality(exam_content: ExamContent | None) -> list[dict[str, JsonValue]]:
+        # The quality section covers Exam as it covers Study and Exercises.
+        return [
+            *exam_block_flags(exam_content),
+            *exam_item_flags(exam_content),
+            *sheet_flags(exam_content),
+            *meta_flags(exam_content),
+        ]
+
     from tum_mcp.course.checks.structure import course_map
     from tum_mcp.course.content.exam_data import read_exam
     from tum_mcp.course.content.exercise_data import read_exercises
@@ -320,7 +333,13 @@ def report(
 
     semantics = cache(lambda: knowledge_revision(root))
     media = cache(lambda: discover(root, state, content))
-    quality = cache(lambda: quality_flags(content, exercises, root=root))
+    quality = cache(
+        lambda: (
+            quality_flags(content, exercises, root=root)
+            + exam_quality(exam())
+            + language_flags(content_language(root), content, exercises, exam())
+        )
+    )
     parts = {
         "quality": quality,
         "structure": lambda: course_map(

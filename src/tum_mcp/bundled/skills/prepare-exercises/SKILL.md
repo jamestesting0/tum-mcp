@@ -17,6 +17,10 @@ or sheet page you rely on: `tum-mcp study text` finds and quotes it but drops fi
 scrambles tables and formulas. Open the PDF page if your tools display PDFs; otherwise
 add `--images` and open the image.
 
+Write in the course's content language, recorded in `.tum-mcp/course.md`: the language the
+course is taught in, unless the student asked for another. Translate a released statement in
+another language faithfully: its givens, symbols, labels and code stay as printed, and each
+source term appears once.
 
 Use the course binding in AGENTS.md and `.tum-mcp/state.json`. Work in the same app
 as Study; either workspace may be prepared first. No campus login is needed when

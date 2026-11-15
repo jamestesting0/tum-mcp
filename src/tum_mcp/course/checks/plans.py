@@ -212,7 +212,7 @@ class Plan(Frozen):
     )
     outcomes: tuple[Key, ...] = ()
     concepts: tuple[Concept, ...] = Field(default=(), max_length=30)
-    parts: tuple[Part, ...] = Field(default=(), max_length=30)
+    parts: tuple[Part, ...] = Field(default=(), max_length=50)
     # The cases of an exam pattern, or the notes and highlights of a lecture.
     cases: tuple[Text, ...] = Field(default=(), max_length=20)
     practice: tuple[PracticeCase, ...] = Field(

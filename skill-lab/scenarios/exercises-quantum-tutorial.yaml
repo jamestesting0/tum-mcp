@@ -1,0 +1,14 @@
+id: exercises-quantum-tutorial
+turns:
+  - say: "Prepare a guided exercise for Tutorial 2 on sheet 2 of my quantum computing course."
+    skills: [sync-course, read-content, prepare-exercises]
+  - say: "Review it and fix any issues."
+    skills: [review-course, prepare-exercises]
+replies:
+  course: "Introduction to Quantum Computing, this semester (W26/27)."
+  semester: "This semester, W26/27."
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  publish: "No, keep it local."
+  default: "Your choice, go ahead."

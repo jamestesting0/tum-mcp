@@ -27,7 +27,8 @@ check by what the student should compare with:
 
 Every authored question pairs its text with useful code, a diagram, formula, table
 or plot. Shared statement context can support several guide steps; do not copy it
-into each one. Preserve a released statement verbatim, but show its relevant object
+into each one. Preserve a released statement's wording (translated faithfully when it is not in the content
+language), but show its relevant object
 or a concrete application in the guide. A table that only repeats the prompt is
 not supporting material.
 

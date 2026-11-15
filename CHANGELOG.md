@@ -2,12 +2,20 @@
 
 ## Unreleased
 
+- The content checks run on every workspace from one pass over each item: Exercises and Exam
+  patterns and forecast questions now get the code, list, prose, derivation, walkthrough, table
+  and option checks Study had, and `study report --section quality` includes Exam. A released
+  exercise statement keeps its wording; only its representation is checked. Flags inside guide
+  steps and practice questions now reach lint and review, code-format answers are read as code,
+  each anchored exercise part needs its own visual, and solution labels must follow the parts.
+- `course.md` records the course's `content_language`; an advisory `content_language` flag asks
+  for a ruling on an item written mostly in another language.
 - Every Study block type, practice question, option and variable meaning carries its authoring
   rule in the content schema, and `study schema KIND --example` prints that rule on stderr
   above the unchanged example, where authors look while writing.
-- Study generalizes beyond search lectures: lessons use the language the student writes in and
-  give a key term's source-language form once; the coverage ledger records each lecture section
-  as its own outcome; a new review check reads the cited pages and the pages of each assigned
+- Study generalizes beyond search lectures: content uses the course's language unless the
+  student asks for another, in every workspace, and gives a key term's source-language form
+  once; the coverage ledger records each lecture section as its own outcome; a new review check reads the cited pages and the pages of each assigned
   outcome for teaching points no lesson covers; a diagram the
   source shows whole is read with regions instead of being run as a process; Study teaches
   proofs, derivations and code in full and checks a step, while writing them is Exercises work

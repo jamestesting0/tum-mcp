@@ -370,10 +370,17 @@ def test_situation_questions_and_guides_without_a_picture_are_flagged(demo: Path
     exercise["statement"] = [block for block in exercise["statement"] if block["kind"] == "text"]
     for step in exercise["steps"]:
         step["blocks"] = []
-    assert flagged() == [f"{study['units'][0]['key']}/{question['key']}", exercise["key"]]
+        step.pop("check", None)
+    assert flagged() == [
+        f"{study['units'][0]['key']}/{question['key']}",
+        *(f"{exercise['key']}/{part}" for part in exercise["parts"]),
+    ]
     # A recall label cannot waive missing context.
     question["level"] = "recall"
-    assert flagged() == [f"{study['units'][0]['key']}/{question['key']}", exercise["key"]]
+    assert flagged() == [
+        f"{study['units'][0]['key']}/{question['key']}",
+        *(f"{exercise['key']}/{part}" for part in exercise["parts"]),
+    ]
 
 
 def test_invalid_content_names_the_item_file(demo: Path) -> None:
