@@ -62,6 +62,9 @@ Approve review for one round of checking and repair, or request more rounds.
 Study plans connect source decisions to worked steps and transfer practice.
 Browser checks follow revealed Study and Exercise content and flag formulas that
 clip, scroll individually or become too small to read.
+Exercise guides follow the solution's subgoals and show the full working on Compare, while
+the Solution gives the answer; each workspace can be prepared on its own and links the
+others when they exist.
 [Study guide and demo](docs/study.md).
 
 TUMonline provides study names/degrees, public course catalog metadata and partial
