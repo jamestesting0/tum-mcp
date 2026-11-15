@@ -8,6 +8,7 @@ import { markCompleted, isCompleted } from '../shell/completion.mjs';
 import { recallRow, exerciseExamLinks } from '../study/recall.mjs';
 import { codeReferences, filesIn } from '../shell/files.mjs';
 import { renderCommentedView } from '../comments/comments.mjs';
+import { editorWorkspace } from '../shell/workspace.mjs';
 import { exerciseVideo } from '../lecture/video.mjs';
 
 const sets = data.exercises?.sets || [];
@@ -26,7 +27,7 @@ function working(step) {
 // Compare as one piece: the working, with the answer marked where it is reached, so no line
 // appears twice. A self-check's model answer is its working; a walkthrough or other drawing
 // ends with the expected answer, marked.
-function answerWithWorking(step, check) {
+function answerWithWorking(step, check, files) {
   const mark = element => {
     if (!element) return;
     element.classList.add('final-answer');
@@ -34,7 +35,7 @@ function answerWithWorking(step, check) {
   };
   const lastLine = root => [...root.querySelectorAll('.derivation-line')].pop();
   if (check?.kind === 'self_check') {
-    const box = expectedAnswer(check);
+    const box = expectedAnswer(check, files);
     mark(lastLine(box));
     return [box, working(step)];
   }
@@ -250,6 +251,16 @@ export function exercisePage(exercise, options) {
     if (first) first.prepend(marker);
     else section.querySelector('.reading-material').prepend(append(node('p'), marker));
   }
+  // A coding exercise's project leaves the statement for the editor workspace; comment anchors
+  // were set above, so the other blocks keep their places.
+  const projectBlock = exercise.statement.find(block => block.kind === 'files');
+  const shownProject = projectBlock && statement.querySelector('.project');
+  if (shownProject) (shownProject.closest('[data-block-index]') || shownProject.closest('.block-body') || shownProject).remove();
+  let workspace = null;
+  const openStepFile = step => {
+    const file = step.check?.kind === 'self_check' && step.check.file;
+    if (workspace && file) workspace.ide.open(file, (step.code || []).find(ref => ref.path === file)?.lines);
+  };
   root.append(statement);
   // The lesson first, then the cheatsheet entry, then the exam patterns that use it.
   const examLinks = options.set ? exerciseExamLinks(options.set, exercise.key) : { patterns: [], ideas: [] };
@@ -314,7 +325,7 @@ export function exercisePage(exercise, options) {
         [...rich.querySelectorAll('.reading-material')].forEach((element, i) => target(element, `block:${i}`, step.key));
         body.append(rich);
       }
-      if (step.code?.length) body.append(codeReferences(step.code, workspaceFiles));
+      if (step.code?.length) body.append(codeReferences(step.code, workspaceFiles, { compact: Boolean(projectBlock) }));
       const feedback = node('div', 'exercise-feedback');
       feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
       let checked = saved.checked === saved.draft && saved.checked !== null;
@@ -357,7 +368,7 @@ export function exercisePage(exercise, options) {
           if (typeof step.explanation === 'string' && check?.kind !== 'self_check') {
             if (check) section.append(expectedAnswer(check));
             section.append(working(step));
-          } else section.append(...answerWithWorking(step, check));
+          } else section.append(...answerWithWorking(step, check, workspaceFiles));
           if (check?.feedback) section.append(append(node('p', 'small'), node('strong', '', 'If yours differs: '), studyText('span', '', check.feedback)));
           feedback.append(section);
         } else if (checked && result.valid) {
@@ -420,7 +431,7 @@ export function exercisePage(exercise, options) {
     exercise.parts.forEach((part, index) => {
       const saved = value.partSolutions[part], own = guides.filter(guide => guide.part === part);
       own.forEach(guide => placed.add(guide));
-      const answer = renderAnswers(exercise.solution, (element, field) => target(element, field), index);
+      const answer = renderAnswers(exercise.solution, (element, field) => target(element, field), index, workspaceFiles);
       partSections.get(part).append(append(node('div', 'exercise-part-help'), helpPill(own, answer, saved.open, opened => {
         saved.open = opened; saved.viewed ||= opened;
       })));
@@ -435,7 +446,7 @@ export function exercisePage(exercise, options) {
     }
     if (options.video) help.append(exerciseVideo(exercise, options.video));
   } else {
-    const solution = renderAnswers(exercise.solution, (element, field) => target(element, field));
+    const solution = renderAnswers(exercise.solution, (element, field) => target(element, field), null, workspaceFiles);
     if (options.afterSolution) solution.append(options.afterSolution);
     help.append(helpPill(guides.filter(guide => guide.steps.length), solution, value.solutionOpen, opened => {
       value.solutionOpen = opened; value.solutionViewed ||= opened;
@@ -454,7 +465,18 @@ export function exercisePage(exercise, options) {
   }
   if (onward) root.append(onward);
   shareCitations(root, eyebrow);
-  return { root: options.comment(root),
+  const task = options.comment(root);
+  if (projectBlock) {
+    const stepLabel = () => {
+      // The same count the step's own guide shows: within its part.
+      const step = exercise.steps.find(item => item.key === value.lastStep);
+      const own = exercise.steps.filter(item => (item.part || null) === (step?.part || null));
+      return step ? `${own.indexOf(step) + 1}/${own.length}` : '';
+    };
+    workspace = editorWorkspace({ block: projectBlock, task, exerciseKey: exercise.key, stepLabel });
+    openStepFile(active.steps[active.index]);
+  }
+  return { root: workspace || task, workspace: Boolean(workspace),
     heading: stepKey ? active.panel.querySelector('[data-step-prompt]') : heading,
     // A guided past question is labelled and titled "Question N"; the header names it once.
     title: [...new Set([exercise.label, exercise.title])].join(' · '), current: exercise.key,
@@ -464,10 +486,11 @@ export function exercisePage(exercise, options) {
       const nextIndex = guide.steps.findIndex(item => item.key === key), navigation = guide.navigation;
       const usingArrows = navigation.contains(document.activeElement);
       const previousTop = navigation.getBoundingClientRect().top;
-      const scroller = matchMedia('(max-width: 799px)').matches ? document.scrollingElement : root.closest('main');
+      const scroller = root.closest('.ide-task') || (matchMedia('(max-width: 799px)').matches ? document.scrollingElement : root.closest('main'));
       trim?.(); root.style.paddingBottom = '0px';
       guide.index = nextIndex; guide.reveal();
       const prompt = guide.paint();
+      openStepFile(guide.steps[nextIndex]);
       if (usingArrows) { if (document.activeElement.disabled) navigation.querySelector('button:not(:disabled)')?.focus({ preventScroll: true }); }
       else focusHeading(prompt);
       if (previousTop >= 0 && previousTop <= innerHeight - 44) {

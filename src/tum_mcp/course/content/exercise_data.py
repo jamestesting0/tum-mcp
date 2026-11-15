@@ -7,7 +7,12 @@ from pydantic import JsonValue, ValidationError
 
 from tum_mcp.course.content.exercises import ExerciseContent, exercise_revision
 from tum_mcp.course.content.store import locate, read_json
-from tum_mcp.course.content.study import StudyContent, compile_formulas, term_markers
+from tum_mcp.course.content.study import (
+    StudyContent,
+    changed_lines,
+    compile_formulas,
+    term_markers,
+)
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.store import confined, digest
 from tum_mcp.errors import CampusError, Code
@@ -113,4 +118,11 @@ def render_exercises(content: ExerciseContent) -> dict[str, JsonValue]:
         for exercise, rendered in zip(group.exercises, rendered_group["exercises"], strict=True):
             rendered["revision"] = exercise_revision(exercise)
             rendered["videoRevision"] = exercise_hash(exercise)
+            # The Solution view marks what the task changed, computed once here.
+            for block in rendered["statement"]:
+                for file in block.get("files", ()) if block["kind"] == "files" else ():
+                    if "solution" in file:
+                        file["changed"] = [
+                            list(span) for span in changed_lines(file["code"], file["solution"])
+                        ]
     return value

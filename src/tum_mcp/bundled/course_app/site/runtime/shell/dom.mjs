@@ -195,6 +195,9 @@ export function confirmAction({ title, message, action, onConfirm, trigger }) {
 export const SECTION_HEADING = '.section-heading > :is(h2, h3, h4, h5, h6)';
 export function focusHeading(heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
 export function scrollReadingTo(element) {
+  // In the editor workspace the task panel scrolls on its own.
+  const panel = element.closest('.ide-task');
+  if (panel) { panel.scrollTo({ top: panel.scrollTop + element.getBoundingClientRect().top - panel.getBoundingClientRect().top - (parseFloat(getComputedStyle(element).scrollMarginTop) || 0), behavior: 'instant' }); return; }
   const main = element.closest('main');
   if (!main || matchMedia('(max-width: 799px)').matches) element.scrollIntoView({ block: 'start' });
   else main.scrollTo({ top: main.scrollTop + element.getBoundingClientRect().top - main.getBoundingClientRect().top - (parseFloat(getComputedStyle(element).scrollMarginTop) || 0), behavior: 'instant' });

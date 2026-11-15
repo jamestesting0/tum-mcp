@@ -1,7 +1,7 @@
 import { node, svgNode, studyText, button, append, shuffled, answerMark } from '../shell/dom.mjs';
 import { graphResponse, plotResponse } from './graph-response.mjs';
 import { renderCode, codeEditor, languageName } from '../reading/code.mjs';
-import { openInWorkspace } from '../shell/files.mjs';
+import { openInWorkspace, solvedCode } from '../shell/files.mjs';
 import { renderBlockBody, diagram } from '../reading/reading.mjs';
 import { iconButton } from '../shell/navigation.mjs';
 
@@ -19,13 +19,14 @@ function modelAnswer(check) {
 }
 
 // What a learner compares their own work with, for every check except a choice.
-export function expectedAnswer(check) {
+export function expectedAnswer(check, files = new Map()) {
   const box = node('div', 'expected-answer');
   const value = text => studyText('p', 'expected-value', text);
   const number = item => `${item.answer}${item.unit ? ` ${item.unit}` : ''}`;
   switch (check.kind) {
     case 'self_check':
-      box.append(modelAnswer(check), append(node('ul'), ...check.rubric.map(text => studyText('li', '', text))));
+      // A step that writes into a project file shows the solved lines it produces.
+      box.append(check.solution_code?.length ? solvedCode(check.solution_code, files) : modelAnswer(check), append(node('ul'), ...check.rubric.map(text => studyText('li', '', text))));
       break;
     case 'text': box.append(check.format === 'code' ? modelAnswer({ format: 'code', language: check.language, model_answer: check.answer }) : value(check.answer)); break;
     case 'numeric': box.append(value(number(check))); break;
