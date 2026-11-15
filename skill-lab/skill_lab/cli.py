@@ -110,6 +110,7 @@ def cmd_run(args: argparse.Namespace) -> None:
                 checkpoint=args.from_checkpoint,
                 confirm=args.confirm,
                 plant=args.plant,
+                accept_drift=args.accept_code_drift,
             )
             records.append({key: record.get(key) for key in ("id", "status", "minutes", "error")})
         return records
@@ -279,6 +280,11 @@ def parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--scenario")
     p.add_argument("--from", dest="from_checkpoint", help="RUN@TURN or ROUND/RUN@TURN")
+    p.add_argument(
+        "--accept-code-drift",
+        metavar="REASON",
+        help="resume a checkpoint whose code changed, when later turns never rebuild its content",
+    )
     p.add_argument("--confirm", action="store_true")
     p.add_argument(
         "--plant",

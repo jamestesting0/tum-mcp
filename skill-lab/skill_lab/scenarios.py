@@ -88,6 +88,24 @@ def available() -> list[str]:
     return sorted(path.stem for path in Path(paths.SCENARIOS).glob("*.yaml"))
 
 
+# Skills that bind or build the course workspaces a checkpoint restores.
+AUTHORING = frozenset(
+    {"sync-course", "prepare-study", "prepare-exercises", "prepare-exams", "prepare-lecture"}
+)
+
+
+def drift_refusal(scenario: Scenario, start_turn: int) -> str | None:
+    """Changed code is acceptable only when the later turns read the restored workspaces and
+    never rebuild them, so the restored content stays the same input for every variant."""
+    later = scenario.turns[start_turn:]
+    if any(not turn.skills for turn in later):
+        return "A later turn does not list its skills, so it may rebuild restored content."
+    rebuilt = sorted({skill for turn in later for skill in turn.skills} & AUTHORING)
+    if rebuilt:
+        return f"Later turns use {', '.join(rebuilt)}, which rebuild restored content."
+    return None
+
+
 def checkpoint_refusal(scenario: Scenario, start_turn: int, touched: list[str]) -> str | None:
     if start_turn <= 0:
         return None
