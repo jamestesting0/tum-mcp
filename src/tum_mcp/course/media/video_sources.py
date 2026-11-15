@@ -7,35 +7,21 @@ from tum_mcp.course.content.exercise_data import read_exercises, stale_exercises
 from tum_mcp.course.content.exercises import Exercise, ExerciseContent
 from tum_mcp.course.content.store import document_digest, present
 from tum_mcp.course.content.study import SourceVersion, StudyContent, Unit
+from tum_mcp.course.media.sources import exercise_hash, missing, part_fingerprint
+from tum_mcp.course.media.speech import spoken
 from tum_mcp.course.media.video_content import (
     ExerciseLocator,
     ExerciseRef,
     ExerciseStoryboard,
     StoryboardReport,
-    _teaching,
-    canonical,
     estimate_seconds,
     fingerprint,
     semantic_hash,
-    sha256,
     unit_revision,
 )
 from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
-
-
-def exercise_hash(exercise: Exercise) -> str:
-    value = exercise.model_dump(
-        mode="json",
-        exclude_none=True,
-        exclude={"label", "title", "sources", "kind", "distilled_from", "objectives", "transfer"},
-    )
-    for step in value["steps"]:
-        step.pop("hints", None)
-    for name in ("origin", "official_source"):
-        value["solution"].pop(name, None)
-    return sha256(canonical(_teaching(value)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,9 +89,12 @@ class VideoSource:
             case Unit():
                 return semantic_hash(value)
             case _:
-                if locator.kind == "step":
-                    data = value.model_dump(mode="json", exclude_none=True, exclude={"hints"})
-                    return sha256(canonical(_teaching(data)))
+                if isinstance(self.data, Exercise) and locator.kind in {
+                    "statement",
+                    "step",
+                    "answer",
+                }:
+                    return part_fingerprint(self.data, locator.kind, locator.ref)
                 return fingerprint(value)
 
     def locators(self) -> tuple[ExerciseLocator, ...]:
@@ -200,19 +189,35 @@ def check_exercise(board: ExerciseStoryboard, source: VideoSource) -> Storyboard
     required = tuple(locator for locator in source.locators() if locator.kind == "answer")
     if board.answers != required:
         errors.append("answer.coverage: required answers must match the complete prepared solution")
-    for beat in board.beats():
-        for locator in beat.locators:
-            actual = source.locator_hash(locator)
-            if actual is None:
-                errors.append(f"locator.missing {beat.key}: {locator.kind} {locator.ref}")
-            elif actual != locator.fingerprint:
-                errors.append(f"locator.changed {beat.key}: {locator.kind} {locator.ref}")
+    warnings: list[str] = []
+    placed = [(beat.key, locator) for beat in board.beats() for locator in beat.locators]
+    placed += [("left_to_page", item.locator) for item in board.left_to_page]
+    for where, locator in placed:
+        actual = source.locator_hash(locator)
+        if actual is None:
+            errors.append(f"locator.missing {where}: {locator.kind} {locator.ref}")
+        elif actual != locator.fingerprint:
+            errors.append(f"locator.changed {where}: {locator.kind} {locator.ref}")
+    if isinstance(source.data, Exercise):
+        shown = {(loc.kind, loc.ref) for beat in board.beats() for loc in beat.locators}
+        left = {(item.locator.kind, item.locator.ref) for item in board.left_to_page}
+        if gaps := missing(source.data, shown, left):
+            errors.append(
+                "coverage.missing: "
+                + ", ".join(gaps)
+                + "; present them or leave them to the page with a reason"
+            )
+    for chapter in board.chapters:
+        for index, beat in enumerate(chapter.beats):
+            found, notes = spoken(beat.key, beat.narration, opens=index == 0)
+            errors.extend(found)
+            warnings.extend(notes)
     seconds, words = estimate_seconds(board)
     return StoryboardReport(
         video=board.video,
         exercise=board.exercise,
         errors=tuple(errors),
-        warnings=(),
+        warnings=tuple(warnings),
         estimated_seconds=seconds,
         words=words,
     )

@@ -69,13 +69,14 @@ def script(project: Path, **changes: object) -> dict:
             {
                 "key": key,
                 "title": f"Chapter {key}",
-                "covers": [{"kind": kind, "unit": key, "locator": locator}],
+                "covers": [{"kind": kind, "unit": key, "locator": item} for item in locators],
                 "sentences": [f"The first idea of {key} names its condition.", "Then it applies."],
             }
-            for key, kind, locator in (
-                (first, "concept", concepts[first]["locator"]),
-                (second, "concept", concepts[second]["locator"]),
-                (pattern["unit"], "pattern", pattern["locator"]),
+            for key, kind, locators in (
+                (first, "concept", [concepts[first]["locator"]]),
+                (second, "concept", [concepts[second]["locator"]]),
+                # A pattern track says each cue, step, case, pitfall and worked example.
+                (pattern["unit"], "pattern", pattern["required"]),
             )
         ],
     }
@@ -134,6 +135,55 @@ def test_check_reports_stale_missing_and_unspeakable_script(demo: Path) -> None:
     assert {"cover.changed", "speech.symbols", "coverage.missing"} <= rules
     assert any(w.startswith("speech.meta") for w in report["warnings"])
     assert any(w.startswith("reentry.pronoun") for w in report["warnings"])
+
+
+def test_an_exercise_track_says_each_part_or_leaves_it_to_the_page(demo: Path) -> None:
+    found = audio_project.sources(demo)
+    exercise = found["exercises"][0]
+    source = {"kind": "exercise", "set": exercise["set"], "unit": exercise["unit"]}
+    *said, dense = exercise["required"]
+    assert {part["kind"] for part in exercise["required"]} <= {"statement", "step", "answer"}
+    value = {
+        "key": "practice",
+        "stem": "02_practice",
+        "title": "Practice",
+        "voice": "narrator",
+        "units": [source],
+        "chapters": [
+            {
+                "key": "working",
+                "title": "Working the exercise",
+                "covers": [source | {"locator": part} for part in said],
+                "sentences": ["The exercise asks for the order of a traversal."],
+            }
+        ],
+        "left_to_page": [
+            source | {"locator": dense, "reason": "The full working is a table to read."}
+        ],
+    }
+    path = demo / "audio/categories/02_practice.json"
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(json.dumps(value), encoding="utf-8")
+    assert audio_project.check(demo, "02_practice")["errors"] == []
+
+    value["left_to_page"] = []
+    path.write_text(json.dumps(value), encoding="utf-8")
+    (error,) = audio_project.check(demo, "02_practice")["errors"]
+    assert error.startswith("coverage.missing") and f"{dense['kind']} {dense['ref']}" in error
+
+
+def test_a_pattern_track_must_say_each_part_not_the_pattern_as_a_whole(demo: Path) -> None:
+    # One whole-pattern locator let a track drop a workflow step or case unseen.
+    pattern = audio_project.sources(demo)["exam"]["patterns"][0]
+    kinds = {part["kind"] for part in pattern["required"]}
+    assert {"cue", "workflow", "example"} <= kinds and "drill" not in kinds
+    value = script(demo)
+    value["chapters"][-1]["covers"] = value["chapters"][-1]["covers"][1:]
+    script(demo, chapters=value["chapters"])
+    (error,) = audio_project.check(demo, "01_structures")["errors"]
+    first = pattern["required"][0]
+    assert error.startswith("coverage.missing exam/patterns/")
+    assert f"{first['kind']} {first['ref']}" in error
 
 
 def test_publish_installs_a_track_the_course_report_reviews(

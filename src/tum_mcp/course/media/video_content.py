@@ -21,6 +21,7 @@ from pydantic import (
 
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.study import SourceVersion, StudyContent, Unit
+from tum_mcp.course.media.speech import spoken
 from tum_mcp.course.project.models import Digest, Key
 from tum_mcp.settings import Frozen
 
@@ -88,22 +89,54 @@ def unit_revision(unit: Unit) -> str:
     return app_revision(unit)
 
 
+# How each kind of part is addressed: a Study unit's block or item, an exercise's statement,
+# guide step or answer, an Exam pattern's parts, or a whole cheatsheet concept.
+LOCATOR_REFS = {
+    "block": r"blocks\[(\d|[1-3]\d)\]",
+    "summary": r"summary",
+    "statement": r"statement\[\d{1,2}\]",
+    "answer": r"answers\[\d{1,2}\]",
+    "cue": r"cues\[\d{1,2}\]",
+    "workflow": r"workflow\[\d{1,2}\]",
+    "case": r"workflow\[\d{1,2}\]\.cases\[\d\]",
+    "marking": r"marking",
+    "pitfall": r"pitfalls\[\d{1,2}\]",
+    "variation": r"variations\[\d{1,2}\]",
+    "example": r"examples\[\d\]",
+}
+
+
 class Locator(Frozen):
-    # concept and pattern address a whole Exam cheatsheet entry or pattern (audio only).
-    kind: Literal["block", "flashcard", "question", "objective", "summary", "concept", "pattern"]
+    """One part of the source item a beat or chapter presents, with the fingerprint of the
+    part as `sources` printed it. A changed part makes the locator stale."""
+
+    kind: Literal[
+        "block",
+        "flashcard",
+        "question",
+        "objective",
+        "summary",
+        "concept",
+        "pattern",
+        "statement",
+        "step",
+        "answer",
+        "cue",
+        "workflow",
+        "case",
+        "marking",
+        "pitfall",
+        "variation",
+        "example",
+    ]
     ref: Annotated[str, Field(min_length=1, max_length=120)]
     fingerprint: Digest
 
     @model_validator(mode="after")
     def reference(self) -> "Locator":
-        if self.kind == "block" and re.fullmatch(r"blocks\[(\d|[1-3]\d)\]", self.ref) is None:
-            raise ValueError("Block locators use blocks[N].")
-        if self.kind == "summary" and self.ref != "summary":
-            raise ValueError("Summary locators use ref 'summary'.")
-        if self.kind in {"flashcard", "question", "objective", "concept", "pattern"} and (
-            re.fullmatch(r"[a-z0-9][a-z0-9_.-]{0,99}", self.ref) is None
-        ):
-            raise ValueError("Item locators use the item's key.")
+        pattern = LOCATOR_REFS.get(self.kind, r"[a-z0-9][a-z0-9_.-]{0,99}")
+        if re.fullmatch(pattern, self.ref) is None:
+            raise ValueError(f"A {self.kind} locator does not use ref '{self.ref}'.")
         return self
 
 
@@ -193,7 +226,18 @@ class Chapter(Frozen):
     beats: tuple[Beat, ...] = Field(min_length=1, max_length=40)
 
 
+class PageLeft(Frozen):
+    """A required part the video does not present, with why the page serves it better: a long
+    table, a proof to read at one's own pace, a list to look up. Length alone is no reason."""
+
+    locator: Locator
+    reason: Annotated[str, Field(min_length=10, max_length=300)]
+
+
 class Storyboard(Frozen):
+    """A video of one Study unit. Every block and objective is presented by a beat or listed in
+    `left_to_page`; `video-notes outline` writes a draft that holds this by construction."""
+
     schema_version: Literal[1] = 1
     video: Stem
     unit: Key
@@ -202,6 +246,7 @@ class Storyboard(Frozen):
     language: Language
     objectives: tuple[Key, ...] = Field(min_length=1, max_length=12)
     chapters: tuple[Chapter, ...] = Field(min_length=1, max_length=12)
+    left_to_page: tuple[PageLeft, ...] = Field(default=(), max_length=60)
 
     @model_validator(mode="after")
     def unique(self) -> "Storyboard":
@@ -250,6 +295,8 @@ def _resolve(unit: Unit, locator: Locator) -> Frozen | str | None:
             return next((item for item in unit.objectives if item.key == locator.ref), None)
         case "summary":
             return unit.summary
+        case _:
+            return None
 
 
 def locator_fingerprint(unit: Unit, locator: Locator) -> str | None:
@@ -310,9 +357,12 @@ def check_storyboard(storyboard: Storyboard, content: StudyContent) -> Storyboar
                 errors.append(f"objective.missing: {key}")
             elif key not in mapped:
                 errors.append(f"objective.unmapped: {key} has no beat locator")
-        uncovered = sorted(objectives - set(storyboard.objectives))
-        if uncovered:
-            warnings.append("objective.not_in_video: " + ", ".join(uncovered))
+        errors.extend(_coverage(unit, storyboard, mapped))
+    for chapter in storyboard.chapters:
+        for index, beat in enumerate(chapter.beats):
+            found, notes = spoken(beat.key, beat.narration, opens=index == 0)
+            errors.extend(found)
+            warnings.extend(notes)
     seconds, words = estimate_seconds(storyboard)
     return StoryboardReport(
         video=storyboard.video,
@@ -322,6 +372,26 @@ def check_storyboard(storyboard: Storyboard, content: StudyContent) -> Storyboar
         estimated_seconds=seconds,
         words=words,
     )
+
+
+def _coverage(unit: Unit, storyboard: Storyboard, objectives: set[str]) -> list[str]:
+    from tum_mcp.course.media.sources import missing
+
+    shown = {(loc.kind, loc.ref) for beat in storyboard.beats() for loc in beat.locators}
+    shown |= {("objective", key) for key in objectives}
+    left = {(item.locator.kind, item.locator.ref) for item in storyboard.left_to_page}
+    errors = [
+        f"locator.changed left_to_page: {item.locator.kind} {item.locator.ref}"
+        for item in storyboard.left_to_page
+        if locator_fingerprint(unit, item.locator) != item.locator.fingerprint
+    ]
+    if gaps := missing(unit, shown, left):
+        errors.append(
+            "coverage.missing: "
+            + ", ".join(gaps)
+            + "; present them or leave them to the page with a reason"
+        )
+    return errors
 
 
 def transcript(storyboard: "Storyboard | ExerciseStoryboard") -> str:
@@ -421,7 +491,19 @@ class ExerciseChapter(Frozen):
     beats: tuple[ExerciseBeat, ...] = Field(min_length=1, max_length=40)
 
 
+class ExercisePageLeft(Frozen):
+    """A statement part, guide step or answer the video does not present, with why the page
+    serves it better. Length alone is no reason."""
+
+    locator: ExerciseLocator
+    reason: Annotated[str, Field(min_length=10, max_length=300)]
+
+
 class ExerciseStoryboard(Frozen):
+    """A worked-solution video of one exercise: each part's setup, method, working and answer.
+    Every statement part, guide step and answer is presented by a beat or listed in
+    `left_to_page`."""
+
     schema_version: Literal[1] = 1
     video: Stem
     exercise: ExerciseRef
@@ -430,6 +512,7 @@ class ExerciseStoryboard(Frozen):
     language: Language
     answers: tuple[ExerciseLocator, ...] = Field(min_length=1, max_length=50)
     chapters: tuple[ExerciseChapter, ...] = Field(min_length=1, max_length=99)
+    left_to_page: tuple[ExercisePageLeft, ...] = Field(default=(), max_length=60)
 
     def beats(self) -> tuple[ExerciseBeat, ...]:
         return tuple(beat for chapter in self.chapters for beat in chapter.beats)

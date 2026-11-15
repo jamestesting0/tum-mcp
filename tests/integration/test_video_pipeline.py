@@ -8,9 +8,11 @@ import pytest
 from documents import content_file
 from filelock import FileLock
 
+from tum_mcp.course.app.build import read_content
 from tum_mcp.course.media import video_project as project
 from tum_mcp.course.media.video_content import Storyboard
 from tum_mcp.course.media.video_runtime import RuntimeStatus
+from tum_mcp.course.media.video_sources import read_sources
 from tum_mcp.errors import CampusError
 
 FIXTURES = Path(__file__).parents[1] / "fixtures"
@@ -137,6 +139,24 @@ def write_content(root: Path, value: dict) -> None:
     (content_file(root, "study")).write_text(json.dumps(value), encoding="utf-8")
 
 
+def leave_rest_to_page(board: dict, item: object) -> dict:
+    """The fixture's beats show a few parts; the rest of the source item goes to the page."""
+    from tum_mcp.course.media.sources import parts
+
+    shown = {
+        (loc["kind"], loc["ref"])
+        for c in board["chapters"]
+        for b in c["beats"]
+        for loc in b["locators"]
+    }
+    board["left_to_page"] = [
+        {"locator": part, "reason": "The fixture keeps this part on the page."}
+        for part in parts(item)
+        if (part["kind"], part["ref"]) not in shown
+    ]
+    return board
+
+
 def prepare(root: Path, tmp_path: Path) -> None:
     selection = tmp_path / "selection.json"
     selection.write_text(
@@ -209,8 +229,11 @@ def prepare(root: Path, tmp_path: Path) -> None:
             }
         ],
     }
+    unit = next(u for u in read_content(root).units if u.key == "bfs")
     (root / "videos/storyboards").mkdir(parents=True)
-    (root / f"videos/storyboards/{STEM}.json").write_text(json.dumps(board), encoding="utf-8")
+    (root / f"videos/storyboards/{STEM}.json").write_text(
+        json.dumps(leave_rest_to_page(board, unit)), encoding="utf-8"
+    )
     (root / f"videos/scenes/{STEM}").mkdir(parents=True)
     (root / f"videos/scenes/{STEM}/chapters.py").write_text(SCENE, encoding="utf-8")
     voice = json.loads((root / "videos/voice.json").read_text(encoding="utf-8"))
@@ -623,8 +646,11 @@ def prepare_walkthrough(root: Path, tmp_path: Path, parts: int = 1, *, timed: bo
         "answers": info["answers"],
         "chapters": chapters,
     }
+    item = read_sources(root).get(f"exercises/{ref['set']}/{ref['exercise']}").data
     (root / "videos/storyboards").mkdir(exist_ok=True)
-    (root / f"videos/storyboards/{stem}.json").write_text(json.dumps(board), encoding="utf-8")
+    (root / f"videos/storyboards/{stem}.json").write_text(
+        json.dumps(leave_rest_to_page(board, item)), encoding="utf-8"
+    )
     folder = root / f"videos/scenes/{stem}"
     folder.mkdir(parents=True)
     (folder / "chapters.py").write_text("\n".join(scenes), encoding="utf-8")

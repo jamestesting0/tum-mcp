@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import JsonValue
 
 from tum_mcp.course.content.exam import ExamContent
+from tum_mcp.course.content.exercise_data import read_exercises
 from tum_mcp.course.content.study import StudyContent
 from tum_mcp.course.media.audio import (
     AudioChapters,
@@ -17,17 +18,14 @@ from tum_mcp.course.media.audio import (
     AudioUnit,
     AudioValidation,
     category_hash,
-    exam_hash,
-    exam_item,
 )
+from tum_mcp.course.media.sources import find, part_fingerprint, teaching_hash
 from tum_mcp.course.media.video_content import (
     ExerciseReceipt,
     Manifest,
     Receipt,
     VideoPlan,
     canonical,
-    locator_fingerprint,
-    semantic_hash,
     sha256,
     source_key,
 )
@@ -126,33 +124,35 @@ def _audio_item(
     if chapters.root[-1].end > receipt.duration + 0.05:
         technical.append("chapters.bounds")
     chapter_keys = {chapter.key for chapter in chapters.root}
-    if any(entry.chapter not in chapter_keys for entry in receipt.coverage):
+    # A part left to the page belongs to no chapter of the track.
+    if any(
+        entry.chapter not in chapter_keys
+        and (entry.chapter, entry.mode) != ("page", "study_required")
+        for entry in receipt.coverage
+    ):
         technical.append("coverage.chapter")
-    units = {unit.key: unit for unit in content.units} if content else {}
+    exercises = read_exercises(root)
 
-    def source(kind: str, key: str):
-        return units.get(key) if kind == "unit" else exam_item(exam, kind, key)
+    def source(kind: str, key: str, group: str | None = None):
+        return find(content, exercises, exam, kind, key, group)
 
     current_units = tuple(
         AudioUnit(
             kind=entry.kind,
+            set=entry.set,
             unit=entry.unit,
-            semantic_sha256=semantic_hash(item) if entry.kind == "unit" else exam_hash(item),
+            semantic_sha256=teaching_hash(item),
         )
         for entry in receipt.units
-        if (item := source(entry.kind, entry.unit)) is not None
+        if (item := source(entry.kind, entry.unit, entry.set)) is not None
     )
     stale = list(source_problems(root, state, receipt.source_references))
     if category_hash(receipt.title, current_units) != receipt.category_sha256:
         stale.append("teaching_changed")
     for entry in receipt.coverage:
-        item = source(entry.kind, entry.unit)
+        item = source(entry.kind, entry.unit, entry.set)
         actual = (
-            None
-            if item is None
-            else locator_fingerprint(item, entry.locator)
-            if entry.kind == "unit"
-            else exam_hash(item)
+            None if item is None else part_fingerprint(item, entry.locator.kind, entry.locator.ref)
         )
         if actual != entry.locator.fingerprint:
             stale.append(f"coverage_changed:{entry.unit}/{entry.locator.ref}")
@@ -161,7 +161,7 @@ def _audio_item(
     references = {
         (version.key, version.sha256)
         for entry in receipt.units
-        if (item := source(entry.kind, entry.unit)) is not None
+        if (item := source(entry.kind, entry.unit, entry.set)) is not None
         for version in item.sources
     }
     if references != {(source.key, source.sha256) for source in receipt.source_references}:
@@ -476,6 +476,12 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                 if exam is not None:
                     known_units.update(f"exam/concepts/{c.key}" for c in exam.concepts)
                     known_units.update(f"exam/patterns/{p.key}" for p in exam.patterns)
+                if (exercises := read_exercises(root)) is not None:
+                    known_units.update(
+                        f"exercises/{group.key}/{exercise.key}"
+                        for group in exercises.sets
+                        for exercise in group.exercises
+                    )
                 for key in (
                     *plan.category_order,
                     *(k for k in plan.categories if k not in plan.category_order),
