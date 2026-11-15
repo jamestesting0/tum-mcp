@@ -30,7 +30,9 @@ def _ready(project: Path) -> Path:
     return root
 
 
-def _emit(value: object) -> None:
+def _emit(value: object, next_action: str | None = None) -> None:
+    if next_action is not None and isinstance(value, dict):
+        value = {**value, "next_action": next_action}
     typer.echo(json.dumps(value, indent=2, default=str))
 
 
@@ -79,7 +81,11 @@ def outline(
     """Write a draft script whose chapters already cover every required part."""
     from tum_mcp.course.media.outline import audio as run
 
-    _emit(run(_ready(project), stem, source, title))
+    _emit(
+        run(_ready(project), stem, source, title),
+        "Replace every Write: sentence, then run check. The request ends with a published "
+        "track, not a script.",
+    )
 
 
 @app.command()
@@ -88,7 +94,13 @@ def check(project: Path, stem: str) -> None:
     from tum_mcp.course.media.audio_project import check as run
 
     report = run(_ready(project), stem)
-    _emit(report)
+    _emit(
+        report,
+        None
+        if report["errors"]
+        else "Review the script as continuous speech, then run narration, synthesize every "
+        "listed file and publish.",
+    )
     if report["errors"]:
         raise typer.Exit(1)
 
@@ -118,4 +130,7 @@ def publish(
     """Assemble, check and install one category track with its manifest receipt."""
     from tum_mcp.course.media.audio_project import publish as run
 
-    _emit(run(_ready(project), stem, teaching_review.expanduser().resolve()))
+    _emit(
+        run(_ready(project), stem, teaching_review.expanduser().resolve()),
+        f"Run listen on {stem}; reword what it flags, then publish again.",
+    )

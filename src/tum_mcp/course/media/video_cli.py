@@ -40,8 +40,11 @@ def _project(project: Path) -> Path:
     return root
 
 
-def _emit(value: object) -> None:
-    if isinstance(value, BaseModel):
+def _emit(value: object, next_action: str | None = None) -> None:
+    if next_action is not None:
+        data = json.loads(value.model_dump_json()) if isinstance(value, BaseModel) else value
+        typer.echo(json.dumps({**data, "next_action": next_action}, indent=2, default=str))
+    elif isinstance(value, BaseModel):
         typer.echo(value.model_dump_json(indent=2))
     else:
         typer.echo(json.dumps(value, indent=2, default=str))
@@ -162,7 +165,11 @@ def outline(
     """Write a draft storyboard whose beats already address every required part."""
     from tum_mcp.course.media.outline import video as run
 
-    _emit(run(_project(project), video, language))
+    _emit(
+        run(_project(project), video, language),
+        "Replace every Write: text, then run storyboard check. The request ends with a "
+        "published video, not a storyboard.",
+    )
 
 
 @app.command()
@@ -181,7 +188,13 @@ def storyboard_check(project: Path, video: str) -> None:
     from tum_mcp.course.media.video_project import check
 
     report = check(_project(project), video)
-    _emit(report)
+    _emit(
+        report,
+        None
+        if report.errors
+        else "Review the storyboard's teaching, then run narration --profile KEY and synthesize "
+        "every listed file. Keep going: timing, scenes, render, publish and listen.",
+    )
     if report.errors:
         raise typer.Exit(1)
 
@@ -212,7 +225,10 @@ def timing(
 
     if silent == (profile is not None):
         raise CampusError(Code.ACTION_REQUIRED, "Pass exactly one of --profile or --silent.")
-    _emit(run(_project(project), video, profile=profile, silent=silent))
+    _emit(
+        run(_project(project), video, profile=profile, silent=silent),
+        f"Write videos/scenes/{video}/chapters.py, then run render --draft.",
+    )
 
 
 @app.command()
@@ -238,7 +254,14 @@ def render(
         max_minutes=max_minutes,
         run=run,
     )
-    _emit(summary)
+    _emit(
+        summary,
+        None
+        if not summary.get("ok")
+        else "Run publish with this run's id, then listen."
+        if final
+        else "Look at every contact sheet and fix what it shows, then run render --final.",
+    )
     if not summary.get("ok"):
         raise typer.Exit(1)
 
@@ -292,7 +315,7 @@ def publish(
         teaching_review=teaching_review.expanduser().resolve(),
         visual_review="performed" if visual_review == Review.PERFORMED else "not_performed",
     )
-    _emit(receipt)
+    _emit(receipt, f"Run listen on {video}; reword what it flags, then render and publish again.")
 
 
 @app.command()

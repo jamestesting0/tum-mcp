@@ -18,6 +18,37 @@ def demo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return root
 
 
+def test_outline_commands_name_the_next_stage(
+    demo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Agents stopped after an outline; each stage command names the one that follows.
+    from tum_mcp.course.media import audio_cli
+
+    monkeypatch.setattr(audio_cli, "audio_notes_enabled", lambda: True)
+    unit = next(key for key in read_sources(demo).items if key.startswith("study/"))
+    selection = tmp_path / "selection.json"
+    selection.write_text(
+        json.dumps({"units": [{"unit": unit.split("/")[1], "decision": "video", "reason": "P."}]}),
+        encoding="utf-8",
+    )
+    stem = project.plan(demo, selection).videos[0].stem
+    runner = CliRunner()
+    video = runner.invoke(app, ["video-notes", "outline", str(demo), str(stem)])
+    assert video.exit_code == 0, video.output
+    assert json.loads(video.stdout)["next_action"]
+    track = [
+        "audio-notes",
+        "outline",
+        str(demo),
+        "01_unit",
+        "--source",
+        f"unit:{unit.split('/')[1]}",
+    ]
+    audio = runner.invoke(app, track)
+    assert audio.exit_code == 0, audio.output
+    assert json.loads(audio.stdout)["next_action"]
+
+
 def test_every_outline_covers_its_source_and_only_waits_for_writing(
     demo: Path, tmp_path: Path
 ) -> None:
