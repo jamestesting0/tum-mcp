@@ -167,6 +167,34 @@ def test_a_lecture_title_names_its_topic_not_its_date(
     assert any("repeats a date" in problem for problem in report.problems) is not ready
 
 
+def test_a_lecture_needs_chapters_and_each_decision_stays_inside_one(prepared: Prepared) -> None:
+    # Omissions of 12-27 minutes with one-line reasons hid what they skipped; a decision now
+    # speaks for one topic.
+    value = selection(prepared)
+    write_selection(prepared, value)
+    write_batch(prepared)
+    lecture = prepared.notes["lectures"][0]
+    chapters = lecture.pop("chapters")
+    prepared.write_notes()
+    build(prepared.root, publish=False)
+
+    assert any("add chapters" in p for p in assess_batch(prepared.root, "complete").problems)
+
+    omitted = next(d["interval"] for d in value["decisions"] if d["disposition"] == "omit")
+    middle = (omitted["start_s"] + omitted["end_s"]) / 2
+    lecture["chapters"] = [
+        chapters[0] | {"interval": {"start_s": 0, "end_s": middle}},
+        {"key": "second", "title": "Second topic", "interval": {"start_s": middle, "end_s": 600}},
+    ]
+    prepared.write_notes()
+    build(prepared.root, publish=False)
+    report = assess_batch(prepared.root, "complete")
+
+    assert not report.ready
+    assert any("crosses the chapter boundary" in p for p in report.problems)
+    assert not any("add chapters" in p for p in report.problems)
+
+
 @pytest.mark.parametrize(
     "summary, ready",
     [

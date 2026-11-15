@@ -1,6 +1,5 @@
 {
   "key": "open-loop-plan",
-  "kind": "clarification",
   "title": "Executing a found path",
   "context": "After search reaches the goal, the slides recover the route from parent links.",
   "text": "The recovered plan reaches the goal only if every action behaves as the model predicts.",

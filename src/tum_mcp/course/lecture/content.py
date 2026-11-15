@@ -2,12 +2,28 @@
 
 import hashlib
 import json
-from typing import Annotated, Literal, assert_never
+from itertools import pairwise
+from typing import Annotated, Literal, assert_never, cast
 
 from pydantic import AfterValidator, Field, model_validator
 
 from tum_mcp.course.content.latex import validate_inline
-from tum_mcp.course.content.study import FigureBlock, SourceVersion, Step, Text, check_subgoals
+from tum_mcp.course.content.study import (
+    CodeBlock,
+    DerivationBlock,
+    DiagramBlock,
+    FigureBlock,
+    FormulaBlock,
+    GridBlock,
+    PlotBlock,
+    SourceVersion,
+    Step,
+    TableBlock,
+    Text,
+    TreeBlock,
+    UmlBlock,
+    check_subgoals,
+)
 from tum_mcp.course.lecture.evidence import (
     Evidence,
     Interval,
@@ -27,13 +43,50 @@ Summary = Annotated[str, Field(min_length=1, max_length=600), AfterValidator(val
 
 
 class NoteImage(Thumbnail):
-    """A recording frame that carries meaning, rather than a decorative preview."""
+    """A recording frame that carries the note's point: the slide or board work it explains,
+    cropped to that object and legible on a phone. Never the speaker or a title slide."""
 
     alt: Line
 
 
 NoteTitle = Annotated[str, Field(min_length=1, max_length=100), AfterValidator(validate_inline)]
 Context = Annotated[str, Field(min_length=1, max_length=300), AfterValidator(validate_inline)]
+# What a note shows instead of describing it. The note's own fields carry its prose, and a
+# stepped run is a highlight or a Study lesson, so text-like blocks and walkthroughs stay out.
+NoteBlock = Annotated[
+    FormulaBlock
+    | DerivationBlock
+    | TableBlock
+    | DiagramBlock
+    | CodeBlock
+    | PlotBlock
+    | UmlBlock
+    | TreeBlock
+    | FigureBlock
+    | GridBlock,
+    Field(discriminator="kind"),
+]
+# Older files labelled every note; only these two change what a student does.
+RETIRED_KINDS = frozenset({"clarification", "example", "intuition"})
+
+
+class Chapter(Frozen):
+    """One topic of the lecture, in recording order: its title in the course's terms, the time
+    it was taught and the pages it was taught from. Each highlight lies inside one chapter;
+    administration and breaks between chapters belong to none, and a note made there (an exam
+    instruction, say) stands at its own time."""
+
+    key: Key
+    title: NoteTitle
+    interval: Interval
+    sources: tuple[Key, ...] = Field(default=(), max_length=5)
+    pages: PageRange | None = None
+
+    @model_validator(mode="after")
+    def located(self) -> "Chapter":
+        if self.pages is not None and not self.sources:
+            raise ValueError("Chapter pages need the source they belong to.")
+        return self
 
 
 class NotePassage(Frozen):
@@ -48,6 +101,11 @@ def _plain(text: str) -> str:
 
 
 class Note(Frozen):
+    """One addition from the lecture that a student who skipped it can use alone: a condition,
+    correction, instruction or the lecturer's own working. The context sets up the situation,
+    the text gives the takeaway with its condition, steps hold the working and blocks show the
+    object (a formula, graph or code) instead of describing it. Never narrate the recording."""
+
     key: Key
     # What the note concerns, in the course's terms.
     title: NoteTitle
@@ -56,8 +114,9 @@ class Note(Frozen):
     context: Context
     # The message itself: the caveat, rule, correction or instruction, with its conditions.
     text: Line
-    # What kind of remark it is, shown as a small label so a skimming student can sort notes.
-    kind: Literal["clarification", "example", "exam tip", "intuition", "correction"] | None = None
+    # A label only where it changes what the student does: a correction of the materials or an
+    # explicit exam instruction.
+    kind: Literal["correction", "exam tip"] | None = None
     # The working, conditions or example the lecturer gave, one claim per point or step.
     points: tuple[Line, ...] = Field(default=(), max_length=4)
     steps: tuple[Line, ...] = Field(default=(), max_length=6)
@@ -66,17 +125,28 @@ class Note(Frozen):
     pages: PageRange | None = None
     evidence: tuple[Key, ...] = Field(min_length=1, max_length=20)
     image: NoteImage | None = None
-    figure: FigureBlock | None = None
+    blocks: tuple[NoteBlock, ...] = Field(default=(), max_length=3)
+
+    @model_validator(mode="before")
+    @classmethod
+    def legacy(cls, value: object) -> object:
+        # Older notes carry one `figure` and five kinds of label; they load with the same meaning.
+        if not isinstance(value, dict):
+            return value
+        fields = dict(cast(dict[str, object], value))
+        if (figure := fields.pop("figure", None)) is not None:
+            blocks = cast("list[object] | tuple[object, ...]", fields.get("blocks", ()))
+            fields["blocks"] = [figure, *blocks]
+        if fields.get("kind") in RETIRED_KINDS:
+            fields["kind"] = None
+        return fields
 
     @model_validator(mode="after")
     def located(self) -> "Note":
         if self.pages is not None and not self.sources:
             raise ValueError("Note pages need the source they belong to.")
-        if self.figure:
-            if not self.figure.svg:
-                raise ValueError("An authored note figure requires inline SVG, not a frame asset.")
-            if not set(self.figure.sources) <= set(self.sources):
-                raise ValueError("A note figure must cite the note's declared sources.")
+        if any(not set(block.sources) <= set(self.sources) for block in self.blocks):
+            raise ValueError("A note block must cite the note's declared sources.")
         context, text = _plain(self.context), _plain(self.text)
         if context in text or text in context:
             raise ValueError("A note's context sets up its message; it does not repeat it.")
@@ -84,6 +154,11 @@ class Note(Frozen):
 
 
 class Highlight(Frozen):
+    """A stretch worth watching, from the question or setup that opens it to its conclusion
+    and any later correction. The title names the particular question or example, `teaches`
+    says what the student learns with its condition, points never repeat it, and each step
+    names its own moment in the recording."""
+
     key: Key
     title: Title
     interval: Interval
@@ -113,7 +188,20 @@ class Highlight(Frozen):
         return self
 
 
+def _note_visuals(note: Note) -> dict[str, object]:
+    """A note's blocks for its semantic revision; a migrated lone figure hashes as before."""
+    if len(note.blocks) == 1 and isinstance(note.blocks[0], FigureBlock):
+        return {"figure": note.blocks[0].model_dump(mode="json")}
+    if not note.blocks:
+        return {"figure": None}
+    return {"figure": None, "blocks": [block.model_dump(mode="json") for block in note.blocks]}
+
+
 class Lecture(Frozen):
+    """One recorded lecture. The title names its topic, never the date; the summary says what
+    the lecture teaches, never the recording or the notes. Chapters follow its topics in
+    recording order."""
+
     key: Key
     title: Text
     recording: Recording
@@ -121,6 +209,7 @@ class Lecture(Frozen):
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=100)
     checked_at: Annotated[str, Field(min_length=1, max_length=100)]
     coverage: LectureCoverage
+    chapters: tuple[Chapter, ...] = Field(default=(), max_length=60)
     notes: tuple[Note, ...] = Field(default=(), max_length=100)
     highlights: tuple[Highlight, ...] = Field(default=(), max_length=40)
 
@@ -147,9 +236,7 @@ class Lecture(Frozen):
                     "title": note.title,
                     "context": note.context,
                     "text": note.text,
-                    "figure": (
-                        note.figure.model_dump(mode="json") if note.figure is not None else None
-                    ),
+                    **_note_visuals(note),
                     "image": (
                         {"sha256": note.image.sha256, "alt": note.image.alt}
                         if note.image is not None
@@ -172,6 +259,17 @@ class Lecture(Frozen):
                 }
                 for highlight in self.highlights
             ],
+            # Added only when present, so a lecture without chapters keeps its revision.
+            **(
+                {
+                    "chapters": [
+                        chapter.model_dump(mode="json", exclude={"sources", "pages"})
+                        for chapter in self.chapters
+                    ]
+                }
+                if self.chapters
+                else {}
+            ),
         }
         return hashlib.sha256(
             json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
@@ -179,12 +277,22 @@ class Lecture(Frozen):
 
     @model_validator(mode="after")
     def integrity(self) -> "Lecture":
-        for collection in (self.entries, self.sources):
+        for collection in ((*self.entries, *self.chapters), self.sources):
             if len({item.key for item in collection}) != len(collection):
-                raise ValueError("Lecture highlight and source keys must be unique.")
+                raise ValueError("Lecture chapter, note, highlight and source keys must be unique.")
         source_ids = {item.key for item in self.sources}
-        if any(not set(entry.sources) <= source_ids for entry in self.entries):
-            raise ValueError("Lecture entry cites an undeclared source.")
+        if any(not set(item.sources) <= source_ids for item in (*self.entries, *self.chapters)):
+            raise ValueError("Lecture entry or chapter cites an undeclared source.")
+        for first, second in pairwise(self.chapters):
+            if first.interval.end_s > second.interval.start_s:
+                raise ValueError("Chapters must be in recording order and must not overlap.")
+        if self.chapters and self.chapters[-1].interval.end_s > self.recording.duration_s:
+            raise ValueError("Each chapter must lie inside the recording.")
+        if self.chapters and any(
+            not any(_within(highlight.interval, chapter.interval) for chapter in self.chapters)
+            for highlight in self.highlights
+        ):
+            raise ValueError("Each highlight must lie inside one chapter.")
         for first, second in zip(self.highlights, self.highlights[1:], strict=False):
             if first.interval.end_s > second.interval.start_s:
                 raise ValueError("Highlights must be in recording order and must not overlap.")

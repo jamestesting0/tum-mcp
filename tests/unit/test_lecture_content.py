@@ -52,9 +52,16 @@ def test_incomplete_processing_cannot_be_declared_complete() -> None:
     assert LectureContent.model_validate(value).lectures[0].coverage.missing[0].start_s == 400
 
 
-def test_authored_note_figure_is_preserved_and_validated() -> None:
+def test_legacy_note_figure_and_label_load_with_their_old_revision() -> None:
     value = fixture()
+    del value["lectures"][0]["chapters"]
+    # Revisions computed by the code before note blocks existed: comments keep their anchors.
+    assert (
+        LectureContent.model_validate(value).lectures[0].semantic_revision
+        == "374679900b615c6b7087386f958db1f237feea4c9dfc4e066d88f51f3ff34b22"
+    )
     note = value["lectures"][0]["notes"][0]
+    note["kind"] = "clarification"
     note["figure"] = {
         "kind": "figure",
         "alt": "A circle representing one search region.",
@@ -62,29 +69,113 @@ def test_authored_note_figure_is_preserved_and_validated() -> None:
         "sources": note["sources"],
     }
     parsed = LectureContent.model_validate(value)
+    migrated = parsed.lectures[0].notes[0]
+    assert migrated.kind is None
+    assert [block.kind for block in migrated.blocks] == ["figure"]
     assert (
-        parsed.model_dump(mode="json")["lectures"][0]["notes"][0]["figure"]["svg"]
-        == note["figure"]["svg"]
+        parsed.lectures[0].semantic_revision
+        == "f1ae52404f5892e4b48fc8e5456a5d22e1e66fbbcf5a0ce3ca589fd07c34bfce"
     )
-    before = parsed.lectures[0].semantic_revision
     note["figure"]["svg"] = note["figure"]["svg"].replace('r="80"', 'r="60"')
-    assert LectureContent.model_validate(value).lectures[0].semantic_revision != before
-    note["figure"]["sources"] = ["undeclared"]
-    with pytest.raises(ValidationError):
-        LectureContent.model_validate(value)
-    note["figure"]["sources"] = note["sources"]
-    svg = note["figure"].pop("svg")
-    note["figure"]["image"] = "figures/diagram.png"
-    with pytest.raises(ValidationError, match="requires inline SVG"):
-        LectureContent.model_validate(value)
-    del note["figure"]["image"]
-    note["figure"]["svg"] = svg
+    assert LectureContent.model_validate(value).lectures[0].semantic_revision != (
+        "f1ae52404f5892e4b48fc8e5456a5d22e1e66fbbcf5a0ce3ca589fd07c34bfce"
+    )
     note["figure"]["svg"] = (
         '<svg viewBox="0 0 200 200"><script>alert(1)</script>'
         '<circle cx="100" cy="100" r="80"/></svg>'
     )
     with pytest.raises(ValidationError):
         LectureContent.model_validate(value)
+
+
+def test_note_blocks_show_objects_from_the_note_sources() -> None:
+    value = fixture()
+    before = LectureContent.model_validate(value).lectures[0].semantic_revision
+    note = value["lectures"][0]["notes"][0]
+    note["blocks"] = [
+        {
+            "kind": "figure",
+            "alt": "The slide's adjacency lists of the three vertices.",
+            "image": "figures/adjacency.png",
+            "sources": note["sources"],
+        },
+        {
+            "kind": "formula",
+            "sources": note["sources"],
+            "latex": r"\sum_{v} \deg(v) = 2|E|",
+            "plain": "The degrees add up to twice the number of edges.",
+            "symbols": [{"symbol": "|E|", "meaning": "Number of edges in the graph"}],
+        },
+    ]
+    parsed = LectureContent.model_validate(value)
+    assert [block.kind for block in parsed.lectures[0].notes[0].blocks] == ["figure", "formula"]
+    assert parsed.lectures[0].semantic_revision != before
+    note["blocks"][1]["sources"] = ["undeclared"]
+    with pytest.raises(ValidationError, match="declared sources"):
+        LectureContent.model_validate(value)
+    # Prose belongs to the note's own fields, a stepped run to a highlight.
+    note["blocks"][1] = {"kind": "text", "sources": note["sources"], "paragraphs": ["Prose."]}
+    with pytest.raises(ValidationError):
+        LectureContent.model_validate(value)
+
+
+def test_lecture_text_gets_the_shared_content_flags() -> None:
+    from tum_mcp.course.checks.report import lecture_flags
+
+    value = fixture()
+    assert lecture_flags(LectureContent.model_validate(value)) == []
+    lecture = value["lectures"][0]
+    note = lecture["notes"][0]
+    note["text"] = (
+        "The lecturer notes that the parent links G ← C ← A are followed back from the goal, "
+        "so the actions are replayed in reverse order. Replaying them fails under a "
+        "disturbance. The agent must then observe the state it actually reached and search "
+        "again from there."
+    )
+    found = {
+        (flag["item"], flag["flag"]) for flag in lecture_flags(LectureContent.model_validate(value))
+    }
+    item = f"lecture/{lecture['key']}/{note['key']}"
+    assert {
+        (item, "plain_math"),
+        (item, "recording_narration"),
+        (item, "dense_paragraph"),
+    } <= found
+
+
+def test_chapters_hold_their_entries_in_recording_order() -> None:
+    value = fixture()
+    lecture = value["lectures"][0]
+    before = LectureContent.model_validate(value).lectures[0].semantic_revision
+    lecture["chapters"] = [
+        {"key": "layers", "title": "Layers of a search", "interval": {"start_s": 0, "end_s": 300}},
+        {
+            "key": "cost",
+            "title": "Running time",
+            "interval": {"start_s": 300, "end_s": 600},
+            "sources": ["graphs"],
+            "pages": "2",
+        },
+    ]
+    parsed = LectureContent.model_validate(value).lectures[0]
+    assert [chapter.key for chapter in parsed.chapters] == ["layers", "cost"]
+    assert parsed.semantic_revision != before
+    for corrupt, message in (
+        ({"interval": {"start_s": 250, "end_s": 600}}, "recording order"),
+        ({"interval": {"start_s": 300, "end_s": 700}}, "inside the recording"),
+        ({"sources": ["undeclared"]}, "undeclared source"),
+        ({"key": "layers"}, "unique"),
+    ):
+        broken = copy.deepcopy(value)
+        broken["lectures"][0]["chapters"][1].update(corrupt)
+        with pytest.raises(ValidationError, match=message):
+            LectureContent.model_validate(broken)
+    # A highlight that spans two topics belongs to neither.
+    broken = copy.deepcopy(value)
+    broken["lectures"][0]["chapters"][0]["interval"]["end_s"] = 40
+    broken["lectures"][0]["chapters"][1]["interval"]["start_s"] = 40
+    with pytest.raises(ValidationError, match="inside one chapter"):
+        LectureContent.model_validate(broken)
 
 
 def test_undeclared_or_other_recording_evidence_is_rejected() -> None:

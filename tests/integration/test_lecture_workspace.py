@@ -206,9 +206,11 @@ def test_notes_only_highlights_only_and_empty_selection(
             page.evaluate("location.hash = '#lectures/bfs-lecture/n-adjacency'")
             expect(page.locator(".lecture-note")).to_be_focused()
         elif kind == "empty":
-            expect(
-                page.get_by_text("No notes or highlights for this lecture.", exact=True)
-            ).to_be_visible()
+            # A lecture without additions still shows where each topic was taught.
+            expect(page.get_by_role("heading", name="Shortest paths by layers")).to_be_visible()
+            expect(page.locator(".lecture-chapter-time a")).to_have_attribute(
+                "href", "https://example.invalid/lectures/synthetic?t=0"
+            )
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         folder = Path(os.environ.get("TUM_MCP_LECTURE_QA_PATH", str(tmp_path)))
         folder.mkdir(parents=True, exist_ok=True)
@@ -263,7 +265,9 @@ def test_missing_routes_images_and_untrusted_copy_are_readable(
     path = content_file(lecture_project, "lectures")
     content = json.loads(path.read_text())
     content["lectures"][0]["highlights"][0]["teaches"] = '<script>alert("unsafe")</script>'
-    content["lectures"][0]["coverage"]["status"] = "partial"
+    coverage = content["lectures"][0]["coverage"]
+    coverage.update(status="partial", processed=[{"start_s": 0, "end_s": 540}])
+    coverage["missing"] = [{"start_s": 540, "end_s": 600}]
     path.write_text(json.dumps(content))
     build(lecture_project, publish=False)
     with PreviewServer(
@@ -283,7 +287,11 @@ def test_missing_routes_images_and_untrusted_copy_are_readable(
             # A frame that cannot load disappears; the highlight's text stays.
             expect(page.locator(".lecture-thumb").first).to_be_hidden()
             expect(page.locator(".lecture-thumb").nth(1)).to_be_hidden()
-            expect(page.locator(".lecture-meta")).to_contain_text("Partial coverage")
+            # A lost stretch shows where it happened, not as provenance in the header.
+            expect(page.locator(".lecture-chapter .lecture-gap")).to_have_text(
+                "Not recorded 9:00–10:00"
+            )
+            assert page.get_by_text("Sources checked").count() == 0
             expect(page.locator(".lecture-teaches").first).to_have_text(
                 '<script>alert("unsafe")</script>'
             )

@@ -43,6 +43,53 @@
         "missing": [],
         "reviewed": true
       },
+      "chapters": [
+        {
+          "key": "fifo-layers",
+          "title": "Why a FIFO queue finds shortest paths",
+          "interval": {
+            "start_s": 600,
+            "end_s": 1200
+          },
+          "sources": [
+            "lecture-demo"
+          ]
+        },
+        {
+          "key": "marking",
+          "title": "Marking vertices when they are enqueued",
+          "interval": {
+            "start_s": 1200,
+            "end_s": 1800
+          },
+          "sources": [
+            "lecture-demo"
+          ]
+        },
+        {
+          "key": "components-cost",
+          "title": "Disconnected graphs and running time",
+          "interval": {
+            "start_s": 1800,
+            "end_s": 2400
+          },
+          "sources": [
+            "lecture-demo",
+            "components"
+          ]
+        },
+        {
+          "key": "weights",
+          "title": "Where BFS fails: weighted edges",
+          "interval": {
+            "start_s": 2400,
+            "end_s": 3000
+          },
+          "sources": [
+            "lecture-demo"
+          ]
+        }
+      ],
       "notes": [
         {
           "key": "disconnected-graphs",
@@ -64,10 +111,34 @@
         {
           "key": "count-adjacencies",
           "title": "Counting adjacency entries",
-          "context": "Tracing the neighbour loop of BFS scans every adjacency list once.",
+          "context": "The slide's running time counts one adjacency entry for each edge.",
           "text": "An undirected edge is stored in both endpoints' lists, so \\(m\\) undirected edges give \\(2m\\) entries to scan.",
           "evidence": [
             "speech-adjacencies"
+          ],
+          "kind": "correction",
+          "sources": [
+            "lecture-demo"
+          ],
+          "blocks": [
+            {
+              "kind": "formula",
+              "sources": [
+                "lecture-demo"
+              ],
+              "latex": "\\sum_{v \\in V} \\deg(v) = 2m",
+              "plain": "The degrees of all vertices add up to twice the number of edges.",
+              "symbols": [
+                {
+                  "symbol": "\\deg(v)",
+                  "meaning": "Number of edges at vertex v"
+                },
+                {
+                  "symbol": "m",
+                  "meaning": "Number of undirected edges"
+                }
+              ]
+            }
           ]
         }
       ],

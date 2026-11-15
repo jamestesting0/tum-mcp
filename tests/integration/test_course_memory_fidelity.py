@@ -153,6 +153,7 @@ SOURCE_OWNERS = {
     "ExamProfile",
     "Variant",
     "Lecture",
+    "Chapter",
     "Note",
     "Highlight",
     "Question",
