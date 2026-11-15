@@ -690,6 +690,8 @@ legend { padding: 0; margin-bottom: var(--space-related); font-size: var(--text-
 .feedback > h3 { display: flex; align-items: center; gap: var(--s2); margin: 0; font-size: var(--text-ui); font-weight: 650; }
 .feedback > h3::before { content: '\2713'; content: '\2713' / ''; display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--canvas); font-size: 12px; font-weight: 800; }
 .feedback.compare > h3::before { content: none; }
+.feedback.compare .final-answer { outline: 1.5px solid var(--accent); outline-offset: var(--s1); border-radius: var(--r1); }
+.feedback.compare .derivation-line.final-answer { outline-offset: 2px; }
 .feedback.incorrect > h3 { color: var(--error); }
 .feedback.incorrect > h3::before { content: '!'; content: '!' / ''; background: var(--error); }
 .feedback p, .feedback ul { margin: var(--s2) 0 0; }
