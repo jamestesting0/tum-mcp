@@ -333,7 +333,8 @@ export function exercisePage(exercise, options) {
       const response = renderResponse(check, saved.draft, text => {
         saved.draft = text.slice(0, 64000); saved.checked = null; checked = false; saved.compared = false;
         state.save(exercise); update(); activityChanged();
-      }, `exercise-${exercise.key}-${step.key}`, (step.code || []).map(ref => ref.path));
+      // In the workspace the step's own file is already open beside it.
+      }, `exercise-${exercise.key}-${step.key}`, [...(step.code || []).map(ref => ref.path), ...(projectBlock && check?.file ? [check.file] : [])]);
       if (response.root.matches('.reading-material')) target(response.root, 'graph', step.key);
       for (const element of response.root.querySelectorAll('.reading-material')) target(element, 'graph', step.key);
       // Only a choice is checked; every other step, including one without a check, is compared.

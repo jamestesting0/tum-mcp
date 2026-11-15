@@ -56,9 +56,10 @@ tracing.
 
 ## Write the guide
 
-- A writing step names its file in the prompt and sets the self-check's `file`. Its
-  `code` reference points at the starter lines where the work goes, so the app opens the
-  file there.
+- A writing step's prompt names the file and the subgoal it reaches, such as "In
+  `IdleState.java`, store the request and start boarding", never only "the required
+  behavior". It sets the self-check's `file`, and its `code` reference points at the
+  starter lines where the work goes, so the app opens the file there.
 - `solution_code` points at the solved lines the step produces, with a `walkthrough` that
   explains them. Compare shows those lines; the step has no `model_answer`.
 - A reading step points at the lines to read with `code`.
