@@ -21,6 +21,8 @@
 - Recognition marks only a flagged segment's time as unclear, with two seconds either
   side, instead of its whole ten-minute chunk; poor audio, missing speech or a language
   change still mark the chunk. Checkpoints from earlier versions keep the chunk.
+- `review repair-scope` lets a repair drop a Lecture entry while its lecture stays in
+  review, and lists the removal and any finding it left open in the scorecard.
 
 ## 0.25.0 — 2026-11-15
 

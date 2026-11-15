@@ -328,8 +328,9 @@ After a batch round starts, `review repair-scope PROJECT --reason REASON` can ad
 complete split-out items after all original packets are recorded. Retain the original
 keys, update plans, mappings and links, and pass readiness first. The command preserves
 the original source/request contract and the round budget. New items receive no copied
-verdicts; the scorecard exposes their remaining review. It cannot drop reviewed items,
-change the original request or remove original past-paper questions. Completion requires
+verdicts; the scorecard exposes their remaining review. It cannot drop reviewed items
+(except a Lecture entry whose lecture stays in scope, listed in the scorecard with any
+finding it left open), change the original request or remove original past-paper questions. Completion requires
 the current batch to match the repaired review scope.
 Original source keys are captured at review start so adding a corroborating reference
 does not look like changing an original source. Original source removal/revision and
