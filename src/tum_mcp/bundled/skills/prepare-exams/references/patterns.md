@@ -32,7 +32,8 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   Write it so a student who studied the topic can follow it under exam time without
   recalling anything elsewhere: each step acts on the question's givens, and every step
   that writes an equation, computes a value or applies a rule shows it under `apply`.
-  A workflow with no `apply` anywhere is refused.
+  A step that computes without its formula is refused (`bare_workflow`); a wholly verbal
+  workflow, such as choosing a design, needs no `apply`.
   It must solve every listed instance; check it against each one. When the method only
   holds under conditions, the first step checks them; when the answer can be verified,
   the last step says how.
@@ -106,7 +107,8 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   practice. Every case is practised again here in a new setting; name it in `cases`
   (never shown). Prepare an optional `guide` using the same step fields as worked
   practice: a specific `prompt`, an optional useful `hint`, a check where appropriate
-  and explained `answer` blocks, linked to the relevant workflow `step`. Guide stays
+  and `answer` blocks with the full working from the step's inputs to its result, as in
+  a guided exercise, linked to the relevant workflow `step`. Guide stays
   closed for the initial attempt; it opens one move at a time in a Guide | Solution
   panel. Hints give a next move without giving the result. Keep each prompt aligned
   with the actual question, and retain a complete standalone Solution.

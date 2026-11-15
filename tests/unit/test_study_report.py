@@ -1688,6 +1688,28 @@ def test_a_workflow_step_that_computes_shows_its_formula() -> None:
     assert not flagged()
 
 
+def test_exam_answers_cite_declared_sources_and_mock_parts_have_answers() -> None:
+    from importlib.resources import files
+
+    from tum_mcp.course.content.exam import ExamContent
+
+    exam = json.loads((files("tum_mcp") / "bundled/course_app/example/exam.json").read_bytes())
+    ExamContent.model_validate(exam)
+    # A self-check's model answer inside a drill cites only the pattern's sources.
+    broken = deepcopy(exam)
+    item = broken["patterns"][0]["drill"][0]
+    answer = {"kind": "text", "sources": ["undeclared"], "paragraphs": ["An answer."]}
+    item["check"] = {"kind": "self_check", "rubric": ["States it."], "model_answer": [answer]}
+    with pytest.raises(ValidationError, match="cites only the pattern's sources"):
+        ExamContent.model_validate(broken)
+    # A forecast question with parts answers each of them.
+    broken = deepcopy(exam)
+    question = broken["mocks"][0]["questions"][0]
+    question["parts"] = ["(a)", "(b)", "(c)", "(d)"][: len(question["solution"]["answers"]) + 1]
+    with pytest.raises(ValidationError, match="one answer per part"):
+        ExamContent.model_validate(broken)
+
+
 def test_the_cheatsheet_needs_a_semester_map_with_every_idea_linked() -> None:
     # Three pilot exams drew no links, so the app showed no semester map at all.
     from importlib.resources import files

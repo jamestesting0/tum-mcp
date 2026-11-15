@@ -1219,7 +1219,8 @@ class Variant(Frozen):
 class WalkthroughBlock(Sourced):
     """A worked process step by step: each step's action and reason, over an optional stage
     (a graph, table, code, working, plot or figure) that shows the state it reaches. Every step
-    changes what the student sees."""
+    changes what the student sees. One process stays in one walkthrough; a run longer than
+    200 steps is a capacity limit to report, never a reason to split it."""
 
     kind: Literal["walkthrough"]
     stage: Stage | None = None
