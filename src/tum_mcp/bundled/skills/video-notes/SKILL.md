@@ -43,8 +43,8 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
    and fingerprinted. Replace every text that starts with `Write:`; the checks refuse
    it. Regroup beats freely. Every required part stays in a beat, or moves to
    `left_to_page` with the reason the page serves it better. `unit`, `exercise` or
-   `pattern` prints the source itself. `schema --example NAME` prints a beat, an
-   on-screen item or a `left_to_page` entry with its rule (`--example list`). Then
+   `pattern` prints the source itself. `schema --example unit-beat` prints a beat with its
+   rule; `exercise-beat`, `pattern-beat`, `on-screen` and `left-to-page` work the same way. Then
    run `storyboard check PROJECT STEM`. For lessons, name sections and their
    knowledge points, then an overview, sustained explanation and closing synthesis.
    For Exercises, establish the problem and work through every part to an emphasized
