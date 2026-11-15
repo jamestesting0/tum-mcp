@@ -485,6 +485,8 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 /* A drawn figure: strokes and text follow the theme; classes pick theme colours, never fixed ones. */
 .figure { margin: var(--s4) 0 0; }
 .figure svg, .figure img { display: block; width: 100%; max-width: 640px; height: auto; max-height: 460px; margin-inline: auto; }
+/* An image shrinks to its height cap without stretching: width follows its own ratio. */
+.figure img { width: auto; max-width: min(100%, 640px); }
 .figure svg { color: var(--ink); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; font-family: inherit; font-size: 16px; }
 /* An opaque halo in the page colour keeps every label off the strokes behind it. */
 .figure svg text, .figure svg tspan { fill: currentColor; stroke: var(--panel) !important; stroke-width: 6px; paint-order: stroke; font-weight: 500; }
