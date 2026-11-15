@@ -87,7 +87,7 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    [content](references/content.md). Record `.tum-mcp/lecture-review/RECORDING_KEY.json`
    using `study schema lecture-selection`. Its decisions partition every eligible
    recording interval and identify each selected entry or a specific omission reason.
-   A decision stays inside one chapter, so each omission speaks for one topic.
+   A decision never crosses a chapter boundary, so each omission speaks for one topic.
    Name the compared material revisions and pages, and record unresolved comparisons.
    Omit missing or uncertain speech with that reason; a note or highlight may not include
    it. These recorded limits go to the reviewer and do not hold readiness.

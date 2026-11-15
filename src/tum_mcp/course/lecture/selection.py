@@ -19,8 +19,8 @@ from tum_mcp.settings import Frozen
 class Decision(Frozen):
     """One stretch of eligible recording time and what became of it: a note, a highlight or an
     omission. The reason names what the cited pages already explain, what the recording adds
-    and what the student gains; a topic name alone is not a reason. A decision stays inside
-    one chapter."""
+    and what the student gains; a topic name alone is not a reason. A decision never
+    crosses a chapter boundary."""
 
     interval: Interval
     disposition: Literal["note", "highlight", "omit"]
