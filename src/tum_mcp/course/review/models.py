@@ -266,6 +266,7 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "graph_as_table": "representation",
     "all_of_above": "practice",
     "described_object": "representation",
+    "markdown_markup": "clarity",
     "prose_calculation": "representation",
     "compressed_working": "representation",
     # Code summarised into long one-line stand-ins, unreadable in the app (user decision).

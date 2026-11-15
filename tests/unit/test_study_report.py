@@ -975,6 +975,19 @@ def test_spelled_out_objects_and_large_inline_matrices_are_flagged() -> None:
     assert not {"described_object", "tall_inline_math"} & found
 
 
+def test_markdown_bold_is_flagged_outside_code_and_math() -> None:
+    content = study()
+    key = content["units"][0]["key"]
+    content["units"][0]["blocks"][0]["paragraphs"] = [
+        "The car does **not** serve requests in order."
+    ]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key in {f["item"] for f in flags if f["flag"] == "markdown_markup"}
+    content["units"][0]["blocks"][0]["paragraphs"] = [r"Compute `a ** b` or \(x^{**}\) here."]
+    flags = quality_flags(StudyContent.model_validate(content), None)
+    assert key not in {f["item"] for f in flags if f["flag"] == "markdown_markup"}
+
+
 def test_flags_a_flat_outline_a_shared_guide_and_assumption_asides() -> None:
     # Given a five-unit course without groups and a two-part exercise with one guide.
     content = study()

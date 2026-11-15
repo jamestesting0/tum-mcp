@@ -21,6 +21,8 @@
   a rebuilt project on an Artemis exercise without `rebuilt_because`. Existing starter-code
   exercises still render.
 - A tall figure image keeps its proportions at the height limit instead of stretching.
+- `study lint` flags Markdown bold (`**word**`) left in course text, such as a statement
+  copied from Artemis, since the app shows it as asterisks (`markdown_markup`).
 
 - Lecture content gets the shared content checks: `study lint` flags plain mathematics,
   long note messages and other text problems in the summary, notes and highlights, and a

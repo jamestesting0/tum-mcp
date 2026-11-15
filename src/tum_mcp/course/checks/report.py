@@ -186,6 +186,9 @@ SPOKEN_MATH = re.compile(
 # Text that spells out an object the student should see: "the diagonal matrix with entries 1, 0",
 # "a vector whose components are ...", "the graph has edges ...".
 # Only a listing of the object's own values counts; "a graph with n vertices" states a size.
+# Markdown bold left in text, outside code spans and LaTeX, which may use `**`.
+MARKDOWN_BOLD = re.compile(r"(?<![*\w])\*\*(?=\S)[^*\n]+?(?<=\S)\*\*(?![*\w])")
+CODE_OR_MATH = re.compile(r"`[^`]*`|\\\(.*?\\\)|\\\[.*?\\\]", re.DOTALL)
 DESCRIBED_OBJECT = re.compile(
     r"\b(?:matrix|matrices|vectors?|tuple|table|graph|tree|grid|array)\b[^.;:]{0,30}?"
     r"\b(?:with|whose|has|have|having|contains?)\b[^.;:]{0,25}?"
@@ -1120,7 +1123,10 @@ def _prose_text_flags(value: JsonValue, item: str, flag: Flag, *, plain: bool = 
     described: dict[str, list[str]] = {}
     tall: dict[str, list[str]] = {}
     copied: dict[str, list[str]] = {}
+    marked: dict[str, list[str]] = {}
     for owner, text in _prose(value, item):
+        if bold := MARKDOWN_BOLD.search(CODE_OR_MATH.sub("", text)):
+            marked.setdefault(owner, []).append(bold[0])
         if reused := _long_sentences(text) & _exemplar_sentences():
             copied.setdefault(owner, []).extend(sorted(reused))
         if found := _typed_math(text):
@@ -1161,6 +1167,13 @@ def _prose_text_flags(value: JsonValue, item: str, flag: Flag, *, plain: bool = 
             f"{len(samples)} inline matrix or vector(s) of size {samples[0]} inside a "
             "sentence; set anything larger than a 2x2 matrix or a three-entry column as a "
             "formula block.",
+        )
+    for owner, samples in marked.items():
+        flag(
+            owner,
+            "markdown_markup",
+            f"{len(samples)} text(s) keep Markdown bold such as '{samples[0]}', which the "
+            "app shows as asterisks. Drop the markers and keep the words.",
         )
     for owner, samples in copied.items():
         flag(
