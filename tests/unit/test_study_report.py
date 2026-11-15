@@ -837,6 +837,33 @@ def test_study_that_copies_a_released_exercise_case_is_flagged_for_a_ruling() ->
     assert replays() == {f"study/{unit['key']}"}
 
 
+def test_a_long_part_guided_by_one_step_asks_for_a_ruling() -> None:
+    from tum_mcp.course.checks.report import item_block_flags
+
+    payload = exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    sources = [exercise["sources"][0]["key"]]
+    lines = [{"latex": f"x_{n} = {n}", "reason": "Rule."} for n in range(5)]
+    working = [{"kind": "derivation", "sources": sources, "groups": [{"lines": lines}]}]
+    exercise.update(parts=[], part_blocks={})
+    exercise["solution"]["answers"] = exercise["solution"]["answers"][:1]
+    exercise["steps"] = [exercise["steps"][0] | {"part": None, "explanation": working}]
+    exercise["steps"][0].pop("check", None)
+
+    def flagged() -> bool:
+        model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+        return any(
+            f["flag"] == "single_step_part" for f in item_block_flags("exercises/s/e", model)
+        )
+
+    # Five operations in the only step of a part ask whether to split it at its subgoals.
+    assert flagged()
+    # Two steps, each reaching an intermediate result, do not.
+    second = exercise["steps"][0] | {"key": "second", "explanation": "The sum follows."}
+    exercise["steps"].append(second)
+    assert not flagged()
+
+
 def test_step_working_can_be_blocks_that_are_cited_and_checked() -> None:
     from tum_mcp.course.checks.report import item_block_flags
 

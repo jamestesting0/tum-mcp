@@ -1242,6 +1242,20 @@ def _check_owners(value: object, path: str = "") -> Iterator[tuple[str, BaseMode
 
 # Checks whose answer is worked out, so a guide step's Compare shows that working.
 WORKED_CHECKS = frozenset({"numeric", "table", "graph", "plot"})
+# A part guided by one step whose working runs this many operations asks for a ruling.
+SINGLE_STEP_OPERATIONS = 5
+
+
+def _operations(blocks: tuple[Block, ...]) -> int:
+    """How many operations a working shows: derivation lines and walkthrough steps."""
+    return sum(
+        sum(len(group.lines) for group in block.groups)
+        if isinstance(block, DerivationBlock)
+        else len(block.steps)
+        if isinstance(block, WalkthroughBlock)
+        else 0
+        for block in blocks
+    )
 
 
 def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
@@ -1273,6 +1287,18 @@ def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
                 f"A {check.kind} answer whose Compare gives one sentence of reasoning. Show the "
                 "working that reaches it as blocks: a derivation, a walkthrough or proof lines, "
                 "each operation with its rule.",
+            )
+    steps = getattr(value, "steps", ()) if item.startswith("exercises/") else ()
+    for part in dict.fromkeys(step.part for step in steps):
+        guide = [step for step in steps if step.part == part]
+        working = guide[0].explanation if len(guide) == 1 else ""
+        if not isinstance(working, str) and _operations(working) >= SINGLE_STEP_OPERATIONS:
+            flag(
+                f"{item}/steps/{guide[0].key}",
+                "single_step_part",
+                f"Part {part or ''} is guided by one step whose working runs "
+                f"{_operations(working)} operations. Split it at the solution's subgoals, so "
+                "each step reaches one intermediate result the student can check.",
             )
     return flags
 
