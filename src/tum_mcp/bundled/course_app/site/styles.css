@@ -983,6 +983,8 @@ button.lecture-recall { margin-top: var(--s2); }
   .card-face { min-height: 240px; padding: var(--s6); }
   th, td { padding: var(--s2); }
   .step-navigation { top: calc(var(--target) + 2 * var(--s1) + 1px); }
+  /* The workspace's task panel scrolls on its own, below the outline bar. */
+  .ide-task .step-navigation { top: 0; }
 }
 /* Phones fit the whole drawing; larger glyphs keep labels legible after scaling. */
 @media (max-width: 599px) {
