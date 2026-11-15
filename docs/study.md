@@ -579,7 +579,8 @@ These checks do not establish learning outcomes.
 
 Behind the skill, `tum-mcp audio-notes` does the checkable work: `sources` lists the
 required parts of each Study unit, exercise, cheatsheet entry and pattern; `outline`
-writes a draft script whose chapters already cover every part; `check` validates a
+writes a draft script whose chapters already cover every part (the agent registers each track
+with `study task start PROJECT --media audio/STEM`, finished once it is published); `check` validates a
 category script (coverage, stale sources, unspeakable symbols, text still marked
 `Write:`). A part the track does not say is listed in `left_to_page` with the reason the
 page serves it better. `narration` lists one
