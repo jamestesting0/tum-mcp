@@ -58,7 +58,9 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
 3. Read the entire retained transcript through bounded pages, then make a topic/time map
    aligned with the verified slides or script. Its topics become the lecture's `chapters`:
    a title in the course's terms, the interval and the pages taught
-   (`study schema --example lecture-chapter`). Do not call something absent from
+   (`study schema --example lecture-chapter`). Only taught topics are chapters. A guest
+   talk, administration, a break, the recording's end or a topic outside the request gets
+   no chapter; its time still gets a selection decision. Do not call something absent from
    materials you could not inspect.
    Match the actual explanations, diagrams and examples across editions. Different
    page numbers or slide totals alone are not an evidence blocker. Use exact source

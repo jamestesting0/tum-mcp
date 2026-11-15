@@ -9,7 +9,8 @@
 - A lecture has `chapters`: its topics in recording order with time ranges and pages. The
   Lecture page shows each chapter with its notes and highlights, marks a missing or unclear
   stretch where it happened, and drops the provenance line from its header. A selection
-  decision must stay inside one chapter, and readiness asks for chapters.
+  decision must stay inside one chapter, and readiness asks for chapters. Only taught topics
+  are chapters; an `empty_chapter` flag marks one with no pages, notes or highlights.
 - A note shows its object with up to three Study `blocks` (formula, derivation, table,
   graph, tree, plot, UML, grid, code or a `study figure` slide crop); older notes' `figure`
   loads as a block with an unchanged revision. Note labels are only `correction` and

@@ -1392,8 +1392,24 @@ def lecture_flags(lectures: "LectureContent | None") -> list[dict[str, JsonValue
     def flag(location: str, kind: str, detail: str) -> None:
         flags.append({"item": location, "flag": kind, "detail": detail})
 
+    starts = {item.key: item.interval.start_s for item in lectures.evidence} if lectures else {}
     for lecture in lectures.lectures if lectures else ():
         base = f"lecture/{lecture.key}"
+        moments = [highlight.interval.start_s for highlight in lecture.highlights] + [
+            min(starts[key] for key in note.evidence if key in starts)
+            for note in lecture.notes
+            if any(key in starts for key in note.evidence)
+        ]
+        for index, chapter in enumerate(lecture.chapters):
+            span = chapter.interval
+            if not chapter.pages and not any(span.start_s <= at < span.end_s for at in moments):
+                flag(
+                    f"{base}#chapters[{index}]",
+                    "empty_chapter",
+                    f"Chapter '{chapter.title}' has no pages, notes or highlights. A chapter is a "
+                    "topic the lecture teaches; a guest talk, administration, a break, the "
+                    "recording's end or a topic outside the request belongs to no chapter.",
+                )
         items: list[tuple[str, BaseModel | None, JsonValue]] = [
             (base, None, {"title": lecture.title, "summary": lecture.summary}),
             *(

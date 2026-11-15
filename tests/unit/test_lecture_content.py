@@ -143,6 +143,24 @@ def test_lecture_text_gets_the_shared_content_flags() -> None:
     } <= found
 
 
+def test_a_chapter_without_pages_or_entries_is_flagged() -> None:
+    # A trial made chapters of a guest talk and the recording's last 40 seconds.
+    from tum_mcp.course.checks.report import lecture_flags
+
+    value = fixture()
+    lecture = value["lectures"][0]
+    lecture["chapters"] = [
+        {"key": "layers", "title": "Layers", "interval": {"start_s": 0, "end_s": 400}},
+        {"key": "tail", "title": "Recording tail", "interval": {"start_s": 400, "end_s": 600}},
+    ]
+    flags = lecture_flags(LectureContent.model_validate(value))
+    assert [(f["item"], f["flag"]) for f in flags] == [
+        (f"lecture/{lecture['key']}#chapters[1]", "empty_chapter")
+    ]
+    lecture["chapters"][1] |= {"title": "Running time", "sources": ["graphs"], "pages": "2"}
+    assert lecture_flags(LectureContent.model_validate(value)) == []
+
+
 def test_chapters_hold_their_entries_in_recording_order() -> None:
     value = fixture()
     lecture = value["lectures"][0]

@@ -72,7 +72,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | L4 | A note links the Study passage that teaches it | `undecided_link` |
 | L5 | Mathematics in the summary, notes and highlights is LaTeX; a note's message is one takeaway with its condition | `plain_math`, `math_word`, `dense_paragraph` |
 | L6 | A note shows the object it is about (a formula, graph, code or slide crop) instead of describing it | `described_object`, `representation.shown_not_described` |
-| L7 | The lecture is organised as chapters in recording order, and each selection decision stays inside one chapter | lecture readiness |
+| L7 | The lecture is organised as chapters of its taught topics in recording order, and each selection decision stays inside one chapter; a guest talk, administration or the recording's end gets no chapter | lecture readiness, `empty_chapter` |
 | L8 | A linked Study passage never keeps teaching a claim the lecture corrected | `integration.lecture_links` |
 
 ## App text
