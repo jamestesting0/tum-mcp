@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from functools import partial
 from pathlib import Path
 from threading import Thread
@@ -89,7 +90,8 @@ def test_semester_graph_is_visible_readable_and_keeps_one_surface(
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(map_site + "#exam/sheet")
         expect(page.locator(".exam-map-svg")).to_be_visible()
-        page.wait_for_function("document.querySelector('.exam-map-scroll').dataset.scale")
+        # A polled string predicate runs through eval, which the app's CSP refuses.
+        expect(page.locator(".exam-map-scroll")).to_have_attribute("data-scale", re.compile("."))
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         usable = page.locator('.exam-node[tabindex="0"]')
         assert usable.count() > 0
@@ -176,7 +178,7 @@ def test_real_chromium_touch_preserves_inline_scroll_and_expanded_pan_pinch(
         page.goto(map_site + "#exam/sheet")
         canvas = page.locator(".exam-map-scroll")
         expect(canvas).to_be_visible()
-        page.wait_for_function("document.querySelector('.exam-map-scroll').dataset.scale")
+        expect(canvas).to_have_attribute("data-scale", re.compile("."))
         box = canvas.bounding_box()
         session = context.new_cdp_session(page)
         x, y = box["x"] + box["width"] / 2, box["y"] + 170
