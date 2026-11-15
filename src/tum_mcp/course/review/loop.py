@@ -61,6 +61,10 @@ PACKET_CHARS = 60_000
 PACKET_VERDICTS = 30
 GATED = ("correctness", "coverage")
 REPAIR_GUIDANCE = (
+    "This is a verify packet. The earlier pass already judged the unchanged blocks, and "
+    "each item's `changed` lists the blocks edited since. Judge each listed check on the "
+    "changed blocks and on how they fit the passages around them; read the rest as context, "
+    "not for a second review. "
     "Read every changed block against its cited source pages and the reference selection. "
     "A finding demanding an added worked example must name the decision the existing runs "
     "cannot show; otherwise it is not a defect."
@@ -728,6 +732,25 @@ def verify_round(root: Path) -> dict[str, JsonValue]:
     return _packet_result(state.round, state.budget, packets)
 
 
+# The section of profiles.md each profile reads, beside the shared header and Study section.
+PROFILE_SECTIONS = {"study": "Study", "exercise": "Exercises", "exam": "Exam", "lecture": "Lecture"}
+
+
+def profile_guidance(profile: str) -> str:
+    """The review guidance a packet carries: course.md for the course pass; otherwise the
+    header of profiles.md, its Study section and the profile's own section."""
+    folder = files("tum_mcp.bundled").joinpath("skills/review-course/references")
+    if profile == "course":
+        return folder.joinpath("course.md").read_text(encoding="utf-8")
+    text = folder.joinpath("profiles.md").read_text(encoding="utf-8")
+    own = PROFILE_SECTIONS.get(profile.split("-")[0])
+    if own is None:
+        return text
+    head, *sections = re.split(r"(?m)^(?=## )", text)
+    kept = [s for s in sections if s.splitlines()[0].removeprefix("## ").strip() in {"Study", own}]
+    return head + "".join(kept)
+
+
 def _packets(
     context: Context, state: LoopState, number: int, *, verify: int
 ) -> tuple[list[str], list[Write]]:
@@ -825,6 +848,7 @@ def _packets(
         if batch:
             batches.append(batch)
         packet_items = {}
+        split: set[str] = set()
         for index, items in enumerate(batches, 1):
             phase = "v2" if verify == 2 else "v" if verify else ""
             packet_id = f"r{number}{phase}-{profile}-{index}"
@@ -849,19 +873,42 @@ def _packets(
                     for flag in entry["report"]
                 ]
                 packet_items[f"{packet_id}b{offset // PACKET_VERDICTS + 1}"] = [entry]
+                split.add(f"{packet_id}b{offset // PACKET_VERDICTS + 1}")
         for packet_id, items in packet_items.items():
+            judged = registry.judged(profile)
+            # A split packet briefs only the checks it asks about; the index of the item's
+            # other checks keeps each finding with the one check that owns it.
+            assigned = (
+                {
+                    *items[0]["needs"],
+                    *(str(finding["check"]) for finding in items[0]["verify"]),
+                    *(
+                        str(flag["bears_on"])
+                        for flag in items[0]["report"]
+                        if flag.get("needs_ruling")
+                    ),
+                }
+                if packet_id in split
+                else {check.id for check in judged}
+            )
             packet = {
                 "id": packet_id,
                 "round": number,
                 "profile": profile,
-                "guidance": files("tum_mcp.bundled")
-                .joinpath(
-                    "skills/review-course/references/"
-                    + ("course.md" if profile == "course" else "profiles.md")
-                )
-                .read_text(encoding="utf-8")
+                "guidance": profile_guidance(profile)
                 + ("\n\n" + REPAIR_GUIDANCE if verify else ""),
-                "checks": [check.brief() for check in registry.judged(profile)],
+                "checks": [check.brief() for check in judged if check.id in assigned],
+                **(
+                    {
+                        "other_checks": [
+                            {"check": check.id, "dimension": check.dimension}
+                            for check in judged
+                            if check.id not in assigned
+                        ]
+                    }
+                    if packet_id in split
+                    else {}
+                ),
                 "items": items,
                 **(
                     {"scope_dispositions": list(context.preparation.dispositions)}

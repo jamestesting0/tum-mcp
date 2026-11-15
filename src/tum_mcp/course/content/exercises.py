@@ -29,17 +29,30 @@ from tum_mcp.settings import Frozen
 
 
 class GuidanceStep(Frozen):
+    """One guided step: it reaches one subgoal of the solution, named in its prompt, such as
+    an intermediate result or a decision. Routine arithmetic stays inside its working, never
+    a step of its own. Compare shows the working: it starts from the givens or an earlier
+    step's result, shows every operation with the rule that permits it, and ends at the
+    answer the check compares. A self-check's model answer is that working (the proof lines
+    or the code); the explanation then adds only what it leaves out. Later steps give fewer
+    prompts and hints; the working stays complete."""
+
     key: Key
     # The original part this step guides, so each part of a multi-part problem gets its own guide.
     part: Text | None = None
-    purpose: Text
+    purpose: Text = Field(
+        description="Why the step exists, for authors and reviewers; never shown."
+    )
     prompt: Text
     sources: tuple[Key, ...] = Field(default=(), max_length=30)
     blocks: tuple[Block, ...] = Field(default=(), max_length=20)
     code: tuple[CodeRef, ...] = Field(default=(), max_length=3)
     check: Check | None = None
     hints: tuple[Text, ...] = Field(default=(), max_length=6)
-    explanation: Text
+    # The working that reaches this step's answer, shown on Compare: each operation with the
+    # rule that permits it (a derivation, proof lines or a walkthrough), or one sentence of
+    # reasoning when the answer needs no working.
+    explanation: Text | tuple[Block, ...]
 
 
 class Prerequisite(Frozen):
@@ -58,10 +71,19 @@ class SolutionAnswer(Frozen):
     """The direct answer to one original part, in the form the part asks for."""
 
     label: Label | None = None
-    blocks: tuple[Block, ...] = Field(min_length=1, max_length=10)
+    blocks: tuple[Block, ...] = Field(
+        min_length=1,
+        max_length=10,
+        description="Only the answer, in the form the part asks for: a value, a table, a proof "
+        "or code. The guide's Compare already shows how it is reached; do not repeat that "
+        "working here.",
+    )
 
 
 class WorkedSolution(Frozen):
+    """One answer per original part, then notes. It is official only when an official source
+    states these answers; a corrected slip is authored and named in a note."""
+
     origin: Literal["authored", "official"] = "authored"
     official_source: Key | None = None
     answers: tuple[SolutionAnswer, ...] = Field(min_length=1, max_length=50)
@@ -82,11 +104,15 @@ class WorkedSolution(Frozen):
 
 
 class TransferTask(Frozen):
+    """An optional new case after the exercise, with its answer."""
+
     prompt: Text
     answer: tuple[Block, ...] = Field(min_length=1, max_length=8)
 
 
 class Exercise(Frozen):
+    """A released problem with its statement as given, a guide for each part and a Solution."""
+
     key: Key
     label: Text
     title: Text
@@ -170,9 +196,19 @@ class Exercise(Frozen):
             for block in (*step.blocks, *(answer if isinstance(answer, tuple) else ())):
                 if not set(block.sources) <= source_keys:
                     raise ValueError("Step content cites an undeclared source.")
-            if step.check and step.check.kind == "self_check" and isinstance(answer, tuple):
-                if same_text(step.explanation, answer):
-                    raise ValueError("A step's explanation repeats its model answer; say it once.")
+            if isinstance(step.explanation, tuple):
+                for block in step.explanation:
+                    if not set(block.sources) <= source_keys:
+                        raise ValueError("Step working cites an undeclared source.")
+            if step.check and step.check.kind == "self_check":
+                model = step.check.model_answer
+                if (isinstance(answer, tuple) and same_text(step.explanation, answer)) or (
+                    repeats(step.explanation, model)
+                ):
+                    raise ValueError(
+                        "A step's working repeats its model answer, which already shows it; "
+                        "keep the working in the model answer and explain only what it leaves out."
+                    )
             if step.check and step.check.kind == "plot":
                 if not set(step.check.plot.sources) <= source_keys:
                     raise ValueError("Plot check cites an undeclared source.")
@@ -185,15 +221,41 @@ class Exercise(Frozen):
         return self
 
 
-def same_text(explanation: str, blocks: tuple[Block, ...]) -> bool:
-    """Whether an explanation only restates text blocks (whitespace and case aside)."""
-    words = " ".join(
+def _block_words(blocks: tuple[Block, ...]) -> str:
+    return " ".join(
         part
         for block in blocks
         if block.kind == "text"
         for part in (*block.paragraphs, *block.steps, *block.points)
     )
-    return " ".join(explanation.split()).casefold() == " ".join(words.split()).casefold()
+
+
+def _lines(value: str | tuple[Block, ...]) -> set[str]:
+    """The derivation lines and code lines a working or model answer shows, spacing aside."""
+    if isinstance(value, str):
+        return {"".join(line.split()) for line in value.splitlines() if line.strip()}
+    found: set[str] = set()
+    for block in value:
+        if block.kind == "derivation":
+            found |= {"".join(line.latex.split()) for g in block.groups for line in g.lines}
+        elif block.kind == "code":
+            found |= _lines(block.code)
+    return found
+
+
+def repeats(explanation: str | tuple[Block, ...], model: str | tuple[Block, ...]) -> bool:
+    """Whether a step's working shows again at least half of its model answer's lines."""
+    if isinstance(explanation, str):
+        return False
+    shown = _lines(model)
+    return len(shown) >= 2 and len(_lines(explanation) & shown) * 2 >= len(shown)
+
+
+def same_text(explanation: str | tuple[Block, ...], blocks: tuple[Block, ...]) -> bool:
+    """Whether an explanation only restates text blocks (whitespace and case aside)."""
+    said = explanation if isinstance(explanation, str) else _block_words(explanation)
+    words = _block_words(blocks)
+    return bool(words) and " ".join(said.split()).casefold() == " ".join(words.split()).casefold()
 
 
 def check_steps_against_files(

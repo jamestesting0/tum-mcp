@@ -1,5 +1,6 @@
 """Released course exercises and revision-matched, visible student feedback."""
 
+import hashlib
 import re
 import time
 from datetime import UTC, datetime
@@ -15,10 +16,43 @@ from tum_mcp.artemis.models import (
     Identity,
     Overview,
     Participation,
+    StatementImage,
+    Task,
 )
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.parsing import decode
 from tum_mcp.transport import API
+
+IMAGE_MAGIC = {
+    "png": b"\x89PNG\r\n\x1a\n",
+    "jpg": b"\xff\xd8\xff",
+    "gif": b"GIF8",
+    "webp": b"RIFF",
+}
+# At most this many statement images are fetched for one exercise.
+MAX_IMAGES = 20
+
+
+def tasks(statement: str) -> tuple[Task, ...]:
+    """The `[task][name](tests)` lines of a programming statement; test markup is metadata."""
+    found = []
+    for name, tests in re.findall(r"\[task\]\[([^\]\n]{1,300})\]\(([^)\n]{0,2000})\)", statement):
+        ids = [re.sub(r"</?testid>", "", test).strip() for test in tests.split(",") if test.strip()]
+        found.append(Task(name=name.strip(), tests=tuple(ids)))
+    return tuple(found)
+
+
+def images(statement: str) -> list[tuple[str, str]]:
+    """Same-origin images the statement embeds, in order and without repeats."""
+    pattern = (
+        r"!\[([^\]\n]{0,300})\]\("
+        r"(/api/core/files/markdown/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,199}\.(?:png|jpe?g|gif|webp))"
+        r"(?:\s+\"[^\"]*\")?\)"
+    )
+    seen: dict[str, str] = {}
+    for alt, path in re.findall(pattern, statement):
+        seen.setdefault(path, alt)
+    return [(alt, path) for path, alt in list(seen.items())[:MAX_IMAGES]]
 
 
 class Artemis:
@@ -78,6 +112,7 @@ class Artemis:
             or (exercise.release_date is not None and exercise.release_date > datetime.now(UTC))
         ):
             raise CampusError(Code.SCOPE_DENIED, "Exercise identity, course, or release changed.")
+        statement = exercise.problem_statement or ""
         return ExerciseView(
             account_id=self.api.account.id,
             instance_id=self.api.account.origin,
@@ -85,7 +120,41 @@ class Artemis:
             exercise=exercise,
             fetched_at=time.time(),
             source_link=f"{self.api.account.origin}/courses/{course_id}/exercises/{exercise_id}",
+            tasks=tasks(statement),
+            images=tuple(StatementImage(path=path, alt=alt) for alt, path in images(statement)),
         )
+
+    def save_images(self, view: ExerciseView) -> ExerciseView:
+        """Fetch each image the statement embeds and keep a local copy; a failed image is
+        reported, never silently dropped."""
+        from tum_mcp.course.project.store import confined, read_bytes
+        from tum_mcp.moodle.config import private_write
+        from tum_mcp.settings import data_dir
+
+        saved = []
+        for image in view.images:
+            try:
+                body = self.api.get_markdown_image(image.path)
+            except CampusError as error:
+                saved.append(image.model_copy(update={"problem": error.message}))
+                continue
+            extension = image.path.rsplit(".", 1)[1].lower().replace("jpeg", "jpg")
+            if not body.startswith(IMAGE_MAGIC[extension]) or (
+                extension == "webp" and body[8:12] != b"WEBP"
+            ):
+                saved.append(image.model_copy(update={"problem": "Not the image it names."}))
+                continue
+            digest = hashlib.sha256(body).hexdigest()
+            relative = (
+                f"downloads/artemis/{self.api.account.id}/course-{view.course_id}/"
+                f"exercise-{view.exercise.id}/{digest}.{extension}"
+            )
+            target = confined(data_dir(), relative)
+            if read_bytes(target) is None:
+                target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                private_write(target, body)
+            saved.append(image.model_copy(update={"sha256": digest, "saved_path": str(target)}))
+        return view.model_copy(update={"images": tuple(saved)})
 
     def participation(
         self, exercise: Exercise, mode: Literal["graded", "practice"]

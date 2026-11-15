@@ -44,6 +44,7 @@ from tum_mcp.course.content.study import (
 )
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.paths import app_path
+from tum_mcp.course.project.store import load_state, private_path
 
 if TYPE_CHECKING:
     from tum_mcp.course.content.exam import ExamContent
@@ -1208,13 +1209,13 @@ def _block_flags(
         _prose_block_flags(f"{item}#{index}", block, flag)
 
 
-def _block_lists(value: object, path: str = "") -> Iterator[tuple[str, tuple[Block, ...]]]:
+def block_lists(value: object, path: str = "") -> Iterator[tuple[str, tuple[Block, ...]]]:
     """Every list of content blocks inside an item, with its path; blocks are not entered."""
     if isinstance(value, Sourced):
         return
     if isinstance(value, BaseModel):
         for name in type(value).model_fields:
-            yield from _block_lists(getattr(value, name), f"{path}/{name}" if path else name)
+            yield from block_lists(getattr(value, name), f"{path}/{name}" if path else name)
     elif isinstance(value, tuple):
         entries = cast(tuple[object, ...], value)
         if entries and all(isinstance(entry, Sourced) for entry in entries):
@@ -1222,7 +1223,7 @@ def _block_lists(value: object, path: str = "") -> Iterator[tuple[str, tuple[Blo
             return
         for index, entry in enumerate(entries):
             key = getattr(entry, "key", None)
-            yield from _block_lists(entry, f"{path}/{key if isinstance(key, str) else index}")
+            yield from block_lists(entry, f"{path}/{key if isinstance(key, str) else index}")
 
 
 def _check_owners(value: object, path: str = "") -> Iterator[tuple[str, BaseModel]]:
@@ -1240,6 +1241,65 @@ def _check_owners(value: object, path: str = "") -> Iterator[tuple[str, BaseMode
             yield from _check_owners(entry, f"{path}/{key if isinstance(key, str) else index}")
 
 
+# Checks whose answer is worked out, so a guide step's Compare shows that working.
+WORKED_CHECKS = frozenset({"numeric", "table", "graph", "plot"})
+# A part guided by one step whose working runs this many operations asks for a ruling.
+SINGLE_STEP_OPERATIONS = 5
+
+
+def _operations(blocks: tuple[Block, ...]) -> int:
+    """How many operations a working shows: derivation lines and walkthrough steps."""
+    return sum(
+        sum(len(group.lines) for group in block.groups)
+        if isinstance(block, DerivationBlock)
+        else len(block.steps)
+        if isinstance(block, WalkthroughBlock)
+        else 0
+        for block in blocks
+    )
+
+
+# A rendered block or check that shows code, in a dumped item.
+CODE_MARKERS = ('"kind": "code"', '"kind": "files"', '"format": "code"')
+
+
+def programming_sources(root: Path | None) -> frozenset[str]:
+    """Source keys of programming exercises, whose parts are answered in code."""
+    if root is None or not private_path(root, "state.json").is_file():
+        return frozenset()
+    state = load_state(root)
+    artemis = {binding.key for binding in state.course.bindings if binding.provider == "artemis"}
+    return frozenset(
+        item.resource.key
+        for item in state.resources
+        if item.resource.binding in artemis and item.resource.kind == "exercise"
+    )
+
+
+def code_answer_flags(
+    exercise: Exercise, programming: frozenset[str]
+) -> list[dict[str, JsonValue]]:
+    """A part of a programming exercise whose Solution and guide show no code at all."""
+    if not programming & {source.key for source in exercise.sources}:
+        return []
+    flags: list[dict[str, JsonValue]] = []
+    labels = exercise.parts or (None,)
+    for label, answer in zip(labels, exercise.solution.answers, strict=False):
+        shown = [answer, *(step for step in exercise.steps if step.part == label)]
+        dumped = json.dumps([value.model_dump(mode="json") for value in shown])
+        if not any(marker in dumped for marker in CODE_MARKERS):
+            flags.append(
+                {
+                    "item": f"{exercise.key}/{label}" if label else exercise.key,
+                    "flag": "answer_without_code",
+                    "detail": f"Part {label or ''} of a programming exercise is answered in "
+                    "words only. Its Solution is the code, and its guide writes that code from a "
+                    "starter skeleton (`step-code`).",
+                }
+            )
+    return flags
+
+
 def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
     """The shared block, option and code checks on every part of one exercise or Exam item."""
     flags: list[dict[str, JsonValue]] = []
@@ -1247,7 +1307,7 @@ def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
     def flag(location: str, kind: str, detail: str) -> None:
         flags.append({"item": location, "flag": kind, "detail": detail})
 
-    for path, blocks in _block_lists(value):
+    for path, blocks in block_lists(value):
         _block_flags(f"{item}/{path}", blocks, flag, released=path.split("/")[0] == "statement")
     for path, owner in _check_owners(value):
         check = owner.check
@@ -1258,6 +1318,31 @@ def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
             for code in (check.model_answer, check.starter_code):
                 if isinstance(code, str) and (problem := _code_problem(code, check.language or "")):
                     flag(location, "compressed_code", problem)
+        if (
+            isinstance(value, Exercise)
+            and check.kind in WORKED_CHECKS
+            and isinstance(getattr(owner, "explanation", None), str)
+        ):
+            flag(
+                location,
+                "step_without_working",
+                f"A {check.kind} answer whose Compare gives one sentence of reasoning. Show the "
+                "working that reaches it as blocks: a derivation, a walkthrough or proof lines, "
+                "each operation with its rule.",
+            )
+    steps = value.steps if isinstance(value, Exercise) else ()
+    for part in dict.fromkeys(step.part for step in steps):
+        guide = [step for step in steps if step.part == part]
+        working = guide[0].explanation if len(guide) == 1 else ""
+        if not isinstance(working, str) and _operations(working) >= SINGLE_STEP_OPERATIONS:
+            flag(
+                f"{item}/steps/{guide[0].key}",
+                "single_step_part",
+                f"Part {part or ''} is guided by one step whose working runs "
+                f"{_operations(working)} operations. Add a step at each of the solution's "
+                "subgoals, so the student checks an intermediate result; a walkthrough stays "
+                "whole in the part's last step.",
+            )
     return flags
 
 
@@ -1392,6 +1477,7 @@ def quality_flags(
         flags.append({"item": item, "flag": kind, "detail": detail})
 
     units = content.units if content else ()
+    programming = programming_sources(root) if exercises and exercises.sets else frozenset()
     sizes = [len(unit.blocks) for unit in units]
     median = statistics.median(sizes) if sizes else 0
     if len(units) >= FLAT_OUTLINE_UNITS and not any(unit.path for unit in units):
@@ -1714,6 +1800,7 @@ def quality_flags(
             )
         for exercise in group.exercises:
             flags.extend(item_block_flags(exercise.key, exercise))
+            flags.extend(code_answer_flags(exercise, programming))
             flags.extend(variable_flags(exercise.key, exercise.model_dump(mode="json"), task=True))
             flags.extend(visual_state_flags(exercise.key, exercise.model_dump(mode="json")))
             for part, pictured in _part_context(exercise):
@@ -1739,11 +1826,12 @@ def quality_flags(
                     for text in (
                         step.prompt,
                         *step.hints,
-                        step.explanation,
+                        *((step.explanation,) if isinstance(step.explanation, str) else ()),
                         *(
                             part
                             for block in (
                                 *step.blocks,
+                                *(() if isinstance(step.explanation, str) else step.explanation),
                                 *(
                                     step.check.model_answer
                                     if step.check

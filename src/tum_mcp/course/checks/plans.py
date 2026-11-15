@@ -147,10 +147,42 @@ class Concept(Frozen):
     example: Example | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
+class Need(Frozen):
+    """An idea a part's method uses, and the Study passage that teaches it."""
+
+    idea: Text
+    unit: Key | None = Field(default=None, exclude_if=lambda value: value is None)
+    block: Key | None = Field(default=None, exclude_if=lambda value: value is None)
+    reason: Text | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Why no Study passage teaches it: an earlier course, or the statement "
+        "itself gives it.",
+    )
+
+
 class Part(Frozen):
+    """One original part of an exercise: its checked answer and the method that reaches it."""
+
     part: Annotated[str, Field(min_length=1, max_length=20)]
     answer: Text
     method: Text
+    official: Text | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Where the official solution (a solution sheet, tutorial slides or a "
+        "worked answer) gives this part's answer, such as 'tutorial slides p. 26'. Write "
+        "'none' when it does not answer this part; omit it when the course has no official "
+        "solution.",
+    )
+    needs: tuple[Need, ...] = Field(
+        default=(),
+        max_length=12,
+        exclude_if=lambda value: not value,
+        description="The ideas the method uses. Each links the unit and block that teach it "
+        "once Study exists, or gives the reason none does. The exercise's prerequisites list "
+        "the same links.",
+    )
 
 
 class PracticeCase(Frozen):
@@ -226,6 +258,70 @@ class Plan(Frozen):
     def fingerprint(self) -> str:
         body = json.dumps(self.model_dump(mode="json", exclude={"gate"}), sort_keys=True)
         return hashlib.sha256(body.encode()).hexdigest()[:16]
+
+
+def gated(item: str) -> bool:
+    """Whether an item's plan needs a fresh checker before writing.
+
+    An exercise's statement and solution are given, so its plan is a part map that code
+    checks; review covers the rest.
+    """
+    return not item.startswith("exercises/")
+
+
+def need_problems(root: Path, plan: Plan, value: dict | None) -> list[str]:
+    """Needs that link to no written or planned Study passage, or that the exercise's
+    prerequisites leave out. Without Study, needs stay inline reminders."""
+    from tum_mcp.course.content.store import read_document
+
+    study = read_document(root, "study")
+    written = {
+        unit["key"]: {block["key"] for block in unit.get("blocks", []) if block.get("key")}
+        for unit in (study or {}).get("units", [])
+    }
+    planned: dict[str, set[str]] = {}
+    for other in plans(root):
+        if other.item.startswith("study/"):
+            planned[other.item.removeprefix("study/")] = {
+                key
+                for concept in other.concepts
+                for key in (*concept.blocks, *((concept.example.block,) if concept.example else ()))
+            }
+    if not (written or planned):
+        return []
+    linked = {
+        (entry.get("unit"), entry.get("block")) for entry in (value or {}).get("prerequisites", [])
+    }
+    problems: list[str] = []
+    for part in plan.parts:
+        for need in part.needs:
+            name = f"{part.part}: need '{need.idea}'"
+            if need.unit is None:
+                if not need.reason:
+                    problems.append(
+                        f"{name} links no Study passage; link the unit and block that teach "
+                        "it, or give the reason none does."
+                    )
+                continue
+            blocks = written.get(need.unit, planned.get(need.unit))
+            if blocks is None:
+                problems.append(
+                    f"{name} links unit {need.unit}, which is neither written nor planned."
+                )
+            elif need.block is None:
+                problems.append(
+                    f"{name} links unit {need.unit}; name the keyed block that teaches it."
+                )
+            elif need.block not in blocks:
+                problems.append(
+                    f"{name}: unit {need.unit} has no block {need.block}; teach it there with "
+                    "that key, or link the block that does."
+                )
+            if value is not None and (need.unit, need.block) not in linked:
+                problems.append(
+                    f"{name}: add {need.unit}#{need.block} to the exercise's prerequisites."
+                )
+    return problems
 
 
 def plan_path(root: Path, item: str) -> Path:
@@ -317,6 +413,12 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
                     f"{concept.name}: a definition is shown with an example or case; name the "
                     "block that shows it in the concept's `blocks`"
                 )
+    located = [part.part for part in plan.parts if part.official]
+    if located and (missing := [part.part for part in plan.parts if not part.official]):
+        problems.append(
+            f"parts {', '.join(missing)} name no official locator while {located[0]} does: find "
+            "each part's answer in the official solution, or write 'none' when it gives none"
+        )
     if plan.parts and (declared := value.get("parts")) is not None:
         planned = [part.part for part in plan.parts]
         if planned != list(declared):
@@ -772,14 +874,30 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
         waiting = [
             plan
             for plan in plans(root)
-            if gate_status(plan, coverage_reader_for_command=read_coverage) != "approved"
+            if gated(plan.item)
+            and gate_status(plan, coverage_reader_for_command=read_coverage) != "approved"
         ]
+    if ungated := [plan.item for plan in waiting if not gated(plan.item)]:
+        raise CampusError(
+            Code.ACTION_REQUIRED,
+            f"{', '.join(ungated)}: an exercise's part map needs no plan check; lint checks it.",
+        )
+    part_maps = [
+        {"item": plan.item, "parts": [part.model_dump(mode="json") for part in plan.parts]}
+        for plan in plans(root)
+        if not gated(plan.item) and any(part.needs for part in plan.parts)
+    ]
     coverage = {}
     for plan in waiting:
         if plan.preparation and plan.preparation not in coverage:
             coverage[plan.preparation] = _coverage(plan.preparation, plan.item, read_coverage)[0]
     return {
         **({"coverage": coverage} if coverage else {}),
+        **(
+            {"part_maps": part_maps}
+            if part_maps and any(plan.item.startswith("study/") for plan in waiting)
+            else {}
+        ),
         "unused_examples": _unused_examples(root, waiting),
         "plans": [
             {

@@ -794,6 +794,130 @@ def test_solutions_answer_each_part_once_and_say_each_thing_once() -> None:
     step["explanation"] = " ".join(step["check"]["model_answer"][0]["paragraphs"])
     with pytest.raises(ValidationError, match="repeats its model answer"):
         ExerciseContent.model_validate(payload)
+    # A proof's lines live in the model answer; working that shows them again is rejected.
+    sources = step["check"]["model_answer"][0]["sources"]
+    lines = [{"latex": "a = b", "reason": "Given."}, {"latex": "= c", "reason": "Rule."}]
+    proof = {"kind": "derivation", "sources": sources, "groups": [{"lines": lines}]}
+    step["check"]["model_answer"] = [proof]
+    step["explanation"] = [proof | {"groups": [{"lines": [lines[0] | {"latex": "a  =  b"}]}]}]
+    with pytest.raises(ValidationError, match="repeats its model answer"):
+        ExerciseContent.model_validate(payload)
+    note = {
+        "kind": "text",
+        "sources": sources,
+        "paragraphs": ["The case \\(b = 0\\) needs no rule."],
+    }
+    step["explanation"] = [note]
+    ExerciseContent.model_validate(payload)
+
+
+def test_study_that_copies_a_released_exercise_case_is_flagged_for_a_ruling() -> None:
+    from tum_mcp.course.checks.structure import structure_flags
+
+    content, payload = study(), exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    case = "A courier visits the depot, then the bakery, then the station and returns by noon."
+    statement = next(b for b in exercise["statement"] if b["kind"] == "text")
+    statement["paragraphs"] = [case]
+    unit = content["units"][0]
+
+    def replays() -> set[str]:
+        flags = structure_flags(
+            StudyContent.model_validate(content),
+            ExerciseContent.model_validate(payload),
+            None,
+            None,
+        )
+        return {str(f["item"]) for f in flags if f["flag"] == "exercise_case_in_study"}
+
+    # Study on its own cases passes; a passage that copies the statement is flagged.
+    assert not replays()
+    block = next(b for b in unit["blocks"] if b["kind"] == "text" and b.get("paragraphs"))
+    block["paragraphs"] = [case]
+    assert replays() == {f"study/{unit['key']}"}
+
+
+def test_a_long_part_guided_by_one_step_asks_for_a_ruling() -> None:
+    from tum_mcp.course.checks.report import item_block_flags
+
+    payload = exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    sources = [exercise["sources"][0]["key"]]
+    lines = [{"latex": f"x_{n} = {n}", "reason": "Rule."} for n in range(5)]
+    working = [{"kind": "derivation", "sources": sources, "groups": [{"lines": lines}]}]
+    exercise.update(parts=[], part_blocks={})
+    exercise["solution"]["answers"] = exercise["solution"]["answers"][:1]
+    exercise["steps"] = [exercise["steps"][0] | {"part": None, "explanation": working}]
+    exercise["steps"][0].pop("check", None)
+
+    def flagged() -> bool:
+        model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+        return any(
+            f["flag"] == "single_step_part" for f in item_block_flags(exercise["key"], model)
+        )
+
+    # Five operations in the only step of a part ask whether to split it at its subgoals.
+    assert flagged()
+    # Two steps, each reaching an intermediate result, do not.
+    second = exercise["steps"][0] | {"key": "second", "explanation": "The sum follows."}
+    exercise["steps"].append(second)
+    assert not flagged()
+
+
+def test_a_programming_part_answered_in_words_asks_for_a_ruling() -> None:
+    from tum_mcp.course.checks.report import code_answer_flags
+
+    payload = exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    source = exercise["sources"][0]["key"]
+
+    def flagged(programming: frozenset[str]) -> list[str]:
+        model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+        return [str(f["item"]) for f in code_answer_flags(model, programming)]
+
+    # A non-programming source asks for nothing; a programming one wants each part in code.
+    assert not flagged(frozenset())
+    words = flagged(frozenset({source}))
+    assert words
+    code = {"kind": "code", "sources": [source], "language": "java", "code": "int x = 1;\n"}
+    code["explanation"] = "Sets the counter."
+    for answer in exercise["solution"]["answers"]:
+        answer["blocks"] = [code]
+    assert not flagged(frozenset({source}))
+
+
+def test_step_working_can_be_blocks_that_are_cited_and_checked() -> None:
+    from tum_mcp.course.checks.report import item_block_flags
+
+    payload = exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    step = exercise["steps"][0]
+    block = deepcopy(
+        next(b for b in exercise["solution"]["answers"][0]["blocks"] if b["kind"] == "text")
+    )
+    # A working written as blocks loads; a prose wall in it is flagged like any other block.
+    paragraphs = [f"Sentence {n} of the working says one more thing." for n in range(8)]
+    step["explanation"] = [block | {"paragraphs": paragraphs}]
+    model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+    flags = item_block_flags(exercise["key"], model)
+    assert any(f["flag"] == "prose_run" and "/explanation" in str(f["item"]) for f in flags)
+    # A worked answer whose Compare gives one sentence asks for a ruling; blocks clear it.
+    numeric = {"kind": "numeric", "answer": 9, "feedback": "Add all three costs."}
+    step["check"] = numeric
+    model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+    assert not [
+        f for f in item_block_flags(exercise["key"], model) if f["flag"] == "step_without_working"
+    ]
+    step["explanation"] = "Add the three costs."
+    model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+    assert [
+        f for f in item_block_flags(exercise["key"], model) if f["flag"] == "step_without_working"
+    ]
+    step["explanation"] = [block | {"paragraphs": paragraphs}]
+    # Its sources must be declared, as for any step content.
+    step["explanation"][0]["sources"] = ["undeclared"]
+    with pytest.raises(ValidationError, match="Step working cites an undeclared source"):
+        ExerciseContent.model_validate(payload)
 
 
 def test_mathematics_typed_as_plain_text_is_flagged_and_latex_passes() -> None:

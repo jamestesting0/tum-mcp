@@ -996,10 +996,16 @@ def test_round_one_asks_everything_and_later_rounds_only_what_changed(project: P
     first = loop.next_round(project)
     sent = packets(project, first)
     for packet in sent:
-        guide = "course.md" if packet["profile"] == "course" else "profiles.md"
-        assert packet["guidance"] == files("tum_mcp.bundled").joinpath(
-            f"skills/review-course/references/{guide}"
-        ).read_text(encoding="utf-8")
+        # A packet carries its own profile's guidance, not every workspace's.
+        guidance = packet["guidance"]
+        if packet["profile"] == "course":
+            assert guidance == files("tum_mcp.bundled").joinpath(
+                "skills/review-course/references/course.md"
+            ).read_text(encoding="utf-8")
+        else:
+            own = loop.PROFILE_SECTIONS[packet["profile"].split("-")[0]]
+            sections = set(re.findall(r"(?m)^## (.+)$", guidance))
+            assert sections == {"Study", own} and guidance.startswith("# Workspace profiles")
     example = sent[0]["answer"]["items"][0]["visuals"][0]
     weak_visual = {**example, "scores": {**example["scores"], "legibility": 2}}
     assert loop.VisualReview.model_validate(weak_visual).note
@@ -1193,6 +1199,13 @@ def test_a_packet_asks_no_more_verdicts_than_one_checker_reply_can_hold(
             assert {flag["key"] for flag in entry["report"] if flag.get("needs_ruling")} == set(
                 entry["rule"]
             )
+    for packet in opened:
+        # Every asked check has its brief; the rest of the profile's checks stay indexed.
+        briefed = {brief["check"] for brief in packet["checks"]}
+        indexed = {entry["check"] for entry in packet.get("other_checks", [])}
+        assert {c for e in packet["items"] for c in e["needs"]} <= briefed
+        assert briefed | indexed == {c.id for c in registry.judged(packet["profile"])}
+        assert not briefed & indexed
 
 
 @pytest.mark.parametrize("bound", [1, len(registry.judged("study-unit"))])

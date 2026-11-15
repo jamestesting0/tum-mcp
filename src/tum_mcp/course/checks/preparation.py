@@ -12,6 +12,8 @@ from tum_mcp.course.app.visuals import DEFAULT_WIDTHS, interaction_routes, shell
 from tum_mcp.course.checks.plans import (
     coverage_reader,
     gate_status,
+    gated,
+    need_problems,
     plan_problems,
     read_plan,
 )
@@ -268,7 +270,19 @@ def assess(root: Path, identifier: str, context: "Context | None" = None) -> Rea
         status = (
             gate_status(plan, coverage_reader_for_command=read_coverage) if plan else "unchecked"
         )
-        if plan is None or plan.item != key or status == "unchecked":
+        if not gated(key):
+            # An exercise's part map is checked by code alone.
+            if plan is None or plan.item != key:
+                problems.append(f"{key}: write the exercise's part map as its plan.")
+            else:
+                problems.extend(
+                    f"{key}: {problem}"
+                    for problem in (
+                        *plan_problems(plan, context.items[key].value, outcomes),
+                        *need_problems(root, plan, context.items[key].value),
+                    )
+                )
+        elif plan is None or plan.item != key or status == "unchecked":
             problems.append(f"{key}: check the teaching plan with review plans --item {key}.")
         elif status == "changed":
             problems.append(f"{key}: source coverage changed or plan edited. Check it again.")

@@ -744,15 +744,25 @@ def lint(
 
 
 def _lint_item(root: Path, context, item: str, outcomes: set[str] | None) -> dict:
-    from tum_mcp.course.checks.plans import gate_status, plan_problems, read_plan
+    from tum_mcp.course.checks.plans import (
+        gate_status,
+        gated,
+        need_problems,
+        plan_problems,
+        read_plan,
+    )
     from tum_mcp.course.review.models import COURSE_WIDE_FLAGS, INVARIANT_FLAGS
 
     flags = context.flags_by_item.get(item, [])
     plan = read_plan(root, item)
     plan_state = (
         {
-            "status": gate_status(plan, root),
-            "problems": plan_problems(plan, context.items[item].value, outcomes),
+            # An exercise's part map is checked by code alone.
+            "status": gate_status(plan, root) if gated(item) else "part map",
+            "problems": [
+                *plan_problems(plan, context.items[item].value, outcomes),
+                *(() if gated(item) else need_problems(root, plan, context.items[item].value)),
+            ],
         }
         if plan
         else {"status": "missing", "problems": []}

@@ -125,6 +125,23 @@ class Details(Wire):
     exercise: Exercise
 
 
+class Task(Frozen):
+    """A graded task the statement marks with `[task]`, and the tests that grade it."""
+
+    name: str
+    tests: tuple[str, ...] = ()
+
+
+class StatementImage(Frozen):
+    """An image the statement embeds, saved locally when it was fetched."""
+
+    path: str
+    alt: str = ""
+    sha256: str | None = None
+    saved_path: str | None = None
+    problem: str | None = None
+
+
 class ExerciseView(Frozen):
     account_id: str
     instance_id: str
@@ -132,6 +149,8 @@ class ExerciseView(Frozen):
     exercise: Exercise
     fetched_at: float
     source_link: str
+    tasks: tuple[Task, ...] = ()
+    images: tuple[StatementImage, ...] = ()
     untrusted_content: bool = True
 
 

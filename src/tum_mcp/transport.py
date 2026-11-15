@@ -32,6 +32,7 @@ READ_PATHS: Final = {
         r"/api/lecture/lectures/\d+/details|"
         r"/api/core/files/attachments/attachment-video-units/\d+/student/[a-zA-Z0-9_.%-]+|"
         r"/api/exercise/exercises/\d+/details|"
+        r"/api/core/files/markdown/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,199}|"
         r"/api/programming/programming-exercise-participations/\d+/"
         r"student-participation-with-all-results|"
         r"/api/assessment/participations/\d+/results/\d+/details"
@@ -64,6 +65,15 @@ class API:
         ):
             raise CampusError(Code.SCOPE_DENIED, "Only student lecture files can be retrieved.")
         return self._request("GET", path, None, response_limit=50 * 1024 * 1024)
+
+    def get_markdown_image(self, path: str) -> bytes:
+        """An image a released exercise statement embeds, under a size cap."""
+        if self.account.provider != Provider.ARTEMIS or not re.fullmatch(
+            r"/api/core/files/markdown/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,199}\.(?:png|jpe?g|gif|webp)",
+            path,
+        ):
+            raise CampusError(Code.SCOPE_DENIED, "Only statement images can be retrieved.")
+        return self._request("GET", path, None, response_limit=10 * 1024 * 1024)
 
     def get_tum_live_file(self, stream_id: int, file_id: int) -> bytes:
         """Keep the binary budget separate from the metadata-response limit."""

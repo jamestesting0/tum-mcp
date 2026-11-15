@@ -19,13 +19,23 @@ from tum_mcp.transport import API
 
 
 def test_example_catalogue_validates_and_covers_block_and_stage_kinds() -> None:
+    from tum_mcp.course.content.exercises import GuidanceStep
+    from tum_mcp.course.content.responses import Check
+
     catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+    adapters = {
+        "stage": TypeAdapter(Stage),
+        "check": TypeAdapter(Check),
+        "step": TypeAdapter(GuidanceStep),
+    }
     blocks = TypeAdapter(Block)
-    stages = TypeAdapter(Stage)
     for name, value in catalogue.items():
-        (stages if name.startswith("stage-") else blocks).validate_python(value)
+        adapters.get(name.split("-")[0], blocks).validate_python(value)
+    assert {name.removeprefix("check-") for name in catalogue if name.startswith("check-")} == {
+        cls.model_fields["kind"].annotation.__args__[0] for cls in get_args(get_args(Check)[0])
+    }
     block_kinds = {
-        value["kind"] for name, value in catalogue.items() if not name.startswith("stage-")
+        value["kind"] for name, value in catalogue.items() if name.split("-")[0] not in adapters
     }
     assert block_kinds == {
         cls.model_fields["kind"].annotation.__args__[0] for cls in get_args(get_args(Block)[0])

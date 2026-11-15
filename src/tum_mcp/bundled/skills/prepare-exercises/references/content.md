@@ -43,9 +43,14 @@ not supporting material.
 | self_check | A `model_answer` and a rubric of the essential points, with format `text` or `code`. A text model answer is a list of blocks in the shape of the answer: a filled table for cases, points for parallel items, a formula for a derivation. For code, the model answer is code, and either `file` names an editable file of the question's `files` block, which the student edits there, or `starter_code` is a skeleton that opens in the step's own editor. Code is never run, and nothing is graded by keywords. |
 
 For every check except `choice`, and for a step without a check, the student presses
-Compare and sees the answer, the step's explanation and the check's `feedback` under
-"If yours differs". Compare is the only reveal: the explanation adds the reasoning and
-never repeats the model answer (the build rejects a copy). Give exactly one answer: the
+Compare and sees the answer, the step's `explanation` and, for checks that have one, the
+`feedback` under "If yours differs". Compare is the only reveal. The `explanation` is the
+step's full working as blocks: it starts from the givens or an earlier step's result,
+shows every operation with its rule, and ends at the answer. A one-sentence reason is
+enough only when the answer needs no working. For a `self_check`, the model answer is the
+working itself: the proof lines or the code. The explanation then adds only what the model
+answer does not show, such as one test traced through the code. The working may end at the answer, but it
+does not copy a text model answer (the build rejects a copy). Give exactly one answer: the
 clearest form, not a list of variants. Write the feedback as the repair for the likeliest
 mistake.
 
@@ -102,8 +107,9 @@ with its number only ("(a)", "2."); its words follow once (`repeated_title`). A 
 sits under the part's heading ([headings](../../prepare-study/references/content.md#blocks)).
 State each assumption the answer depends on inside the part it constrains, as a point
 of its statement; do not add an assumptions or sources passage, because the citation
-button already carries the sources (`study report` flags both). Do not repeat a given
-in the steps. When a statement relies on a slide or figure,
+button already carries the sources (`study report` flags both). A step may restate the
+one given it uses; do not repeat the list of givens. When a statement relies on a slide
+or figure,
 redraw what it needs beside the statement and cite it with `pages`. Choose the shape as
 in [representations](../../prepare-study/references/representations.md#choose-the-representation):
 code or signatures for code; UML for designs and interactions; a diagram or tree for
@@ -125,8 +131,8 @@ blocks accept `line_numbers: true` when a step refers to lines. Distilled practi
 `kind: distilled` and `distilled_from` (original exercise keys). All
 block/graph sources must be declared. The solution's `answers` give one short, direct
 answer per original part, in order and labelled ("(a)"), in the form the part asks for: a
-filled table, the graph, a formula, code. The working belongs in the guided steps. Keep a
-part-specific alternative with that answer; reserve shared `notes` for material that
+filled table, the graph, a formula, code. The working belongs in the guided steps; the
+Solution repeats none of it. Keep a part-specific alternative with that answer; reserve shared `notes` for material that
 applies across the answers. Assumptions belong in the statement.
 
 `parts` lists the original parts' labels ("1.1.1", "(a)"); answers follow it in order.

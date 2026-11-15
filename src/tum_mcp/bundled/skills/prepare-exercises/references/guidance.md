@@ -5,12 +5,23 @@ Use the course's teaching profile, the moves in
 demands in [practice](../../prepare-study/references/practice.md). A step may assume the
 profile's prerequisites and what earlier units teach; it reminds the rest in one line.
 
-Keep the original problem first and useful on its own. Each step's purpose names
-the reasoning difficulty it addresses: choosing a premise, interpreting a symbol,
-constructing an invariant or combining two results. Omit ceremonial instructions
-such as “read the problem”; do not turn each algebraic manipulation into a screen.
-The app shows one step at a time with the statement still reachable, and the full
-solution is always available without passing steps.
+Keep the original problem first and useful on its own. Plan the steps from your own
+solution, not from the statement:
+1. Solve the part and list its subgoals: the intermediate results or decisions the
+   method passes through, such as "find the evidence \(P(+)\)" or "prune the
+   neighbours of A".
+2. Make one step per subgoal a student could get stuck on. Name the subgoal in the
+   prompt. A part usually needs two to five steps; a one-line part needs one.
+3. Keep routine operations, such as an addition or a substitution, inside the step's
+   working. A step never asks for one arithmetic operation.
+4. Ask for the next piece of work. Do not add "explain why" questions; Compare
+   explains.
+
+Each step's purpose names the reasoning difficulty it addresses: choosing a premise,
+interpreting a symbol, constructing an invariant or combining two results. Omit
+ceremonial instructions such as "read the problem". The app shows one step at a time
+with the statement still reachable, and the Solution is always available without
+passing steps.
 
 Review the reading order with every guide closed: shared context, part (a) with its
 supporting material, its Guide and Solution, then part (b) with its own controls. Use the explicit
@@ -24,9 +35,9 @@ Walk the exercise once as a student meeting it for the first time: which earlier
 definition each step needs, which new symbol appears, and where a step jumps. Put a
 one-line reminder of that definition in the step that needs it (with its `{{term}}` or
 prerequisite link); this is reinforcement, not redundancy. Sequence the steps so
-responsibility passes to the student: early steps may be worked more fully, later ones
-leave more to them. Keep every reminder and hint optional and never reveal the answer by
-default.
+responsibility passes to the student: later steps get shorter prompts and fewer
+hints. The Compare working stays complete in every step. Keep every reminder and hint
+optional and never reveal the answer by default.
 
 An early hint points to a relevant relation or asks a smaller question. A later
 hint works the first operation; Compare completes it ([hint ladder](../../prepare-study/references/representations.md#help-before-the-answer)).
@@ -37,10 +48,29 @@ and inline reminder can repair a gap without a separate prerequisite wizard.
 
 Students work on paper and compare. Give a short answer where one exists: a number
 with its unit, a filled table, a node/edge/path selection, plotted sample points, or
-four options when choosing is the learning goal. When the answer is a calculation, the
-Compare answer is a `derivation`: each meaningful transformation on its own line with a
-short reason, so the student can find where their working diverged, and one labelled
-group per requested quantity. Check the labels against the task (seven results asked,
+four options when choosing is the learning goal. The step's working on Compare follows
+its demand, so the student can find where their working diverged:
+- A calculation is a `derivation`: each meaningful transformation on its own line with a
+  short reason, and one labelled group per requested quantity.
+- A proof names what to show and the definition to unfold in the prompt; a later hint
+  names the key step. The working gives each inference on its own line with what permits
+  it. A part that reuses an earlier part names the substitution, as in (e) using (d) with
+  \(A = U\).
+- A trace states its tie rules before the first step. The working is a walkthrough over
+  the drawn object, such as a constraint graph with each variable's domain and the pruned
+  values marked, one stage per operation. A long trace gets a checkpoint step at each
+  turning point, such as the first dead end, that asks for the state there. The run itself
+  stays one walkthrough with all its stages, in the part's last step. When
+  ties are broken at random, say that several runs are valid and show one. The sheet's
+  table appears only where the sheet asks for it, as that part's `table` check; the flag
+  `trace_as_table` is then ruled "the sheet asks for this table".
+- Code gives each task's contract from the statement and its tests. The model answer is
+  the code, and so is the part's Solution; a programming part answered only in words is
+  flagged `answer_without_code`. The working maps each part of the code to the contract
+  in a short list, then traces one test case step by step with its state. Draw a state
+  chart as a state diagram.
+- A proof checked by `self_check` keeps its lines in the model answer; the working adds
+  only what the model answer leaves out. Check the labels against the task (seven results asked,
 seven shown). Several results in one sentence are flagged as `compressed_working`. A
 derivation in a step or the Solution may give `symbols` for the variables a student would
 stop to recall ([variable meanings](../../prepare-study/references/variables.md)). Use a rubric and model derivation for
@@ -66,7 +96,8 @@ next inference. Check an altered case where a condition fails; merely renaming
 the original task is not a transfer check. Assistance and retries are not mastery
 estimates. Finishing an exercise only marks it completed in the outline.
 
-Prerequisites must resolve to core Study blocks. If solving a released task needs
-something currently in Explore, record the dependency and repair core teaching when
-Study is in scope; do not silently make optional reading mandatory. See
-[Explore](../../prepare-study/references/explore.md).
+Without Study, each prerequisite is an inline reminder; `study links` asks for the link
+once Study exists. A linked prerequisite resolves to a core Study block. If solving a
+released task needs something currently in Explore, record the dependency and repair
+core teaching when Study is in scope; do not silently make optional reading mandatory.
+See [Explore](../../prepare-study/references/explore.md).

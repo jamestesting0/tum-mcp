@@ -6,8 +6,11 @@ small, self-contained setting.
 
 ## Read what is available
 
-- The problem statement from `artemis_get_exercise`: task list with test names, class
-  diagrams, code excerpts and constraints. Test names often state the contract.
+- The problem statement from `artemis_get_exercise`: class diagrams, code excerpts and
+  constraints. Its `tasks` list the graded tasks with their test ids; the `<testid>`
+  markup is metadata, never statement text. With `save_images=true` it saves each
+  embedded image, such as a state chart, and returns its local path. An image it could
+  not fetch names its problem; a required one keeps the exercise pending.
 - The student's own visible feedback with `artemis_get_feedback`, when they ask for it:
   failing test names show where students struggle.
 - A local clone of the student's own repository, when the user points to it. Read
@@ -16,7 +19,8 @@ small, self-contained setting.
 
 Without a clone, work from the statement and say so in the report. Rebuild class
 diagrams from the statement (often PlantUML) as `uml` class diagrams with the members
-the task needs, never as an image or a generic box diagram.
+the task needs, never as an image or a generic box diagram. Build `starter_code` from
+that diagram; do not show a `files` block as if it were the template.
 
 ## Find the concept kernels
 

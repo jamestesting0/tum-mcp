@@ -19,6 +19,8 @@ def provider(
     wrong_course: bool = False,
     workspace_enabled: bool = True,
     overview: dict | None = None,
+    statement: str = "Do the exercise.",
+    files: dict[str, bytes] | None = None,
 ) -> Artemis:
     account = Account(
         provider=Provider.ARTEMIS,
@@ -55,7 +57,7 @@ def provider(
         "course": {"id": 88 if wrong_course else 77},
         "releaseDate": "2020-01-01T00:00:00Z",
         "allowOfflineIde": True,
-        "problemStatement": "Do the exercise.",
+        "problemStatement": statement,
         "studentParticipations": [participation],
     }
 
@@ -81,6 +83,8 @@ def provider(
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.method == "GET"
+        if request.url.path in (files or {}):
+            return httpx2.Response(200, content=(files or {})[request.url.path])
         assert request.url.path in routes
         return httpx2.Response(200, json=routes[request.url.path])
 
@@ -101,6 +105,34 @@ def test_feedback_matches_exact_revision_and_mode() -> None:
     assert result.results[0].feedbacks[0].positive is False
     assert result.state == "completed"
     assert "never-show-this" not in exercise.model_dump_json()
+
+
+def test_statement_tasks_and_embedded_images_are_read_within_bounds() -> None:
+    # Given a statement with graded tasks, one same-origin image, a mislabelled image and
+    # images on other hosts or in other formats.
+    png = b"\x89PNG\r\n\x1a\n" + b"0" * 20
+    statement = (
+        "[task][Implement the Controller](<testid>410558</testid>,<testid>410567</testid>)\n"
+        "![State chart](/api/core/files/markdown/Markdown_chart.png)\n"
+        "![Again](/api/core/files/markdown/Markdown_chart.png)\n"
+        "![Fake](/api/core/files/markdown/Markdown_fake.png)\n"
+        "![Elsewhere](https://example.com/chart.png) ![Vector](/api/core/files/markdown/a.svg)"
+    )
+    files = {
+        "/api/core/files/markdown/Markdown_chart.png": png,
+        "/api/core/files/markdown/Markdown_fake.png": b"<html>",
+    }
+    artemis = provider(statement=statement, files=files)
+    view = artemis.exercise(77, 11)
+    # Then the tasks carry their test ids, and only same-origin raster images are listed once.
+    assert [(task.name, task.tests) for task in view.tasks] == [
+        ("Implement the Controller", ("410558", "410567"))
+    ]
+    assert [image.path for image in view.images] == list(files)
+    # When the images are saved, the real one is kept and the mislabelled one is reported.
+    saved = artemis.save_images(view).images
+    assert saved[0].saved_path and Path(saved[0].saved_path).read_bytes() == png
+    assert saved[1].saved_path is None and saved[1].problem
 
 
 def test_feedback_rejects_a_different_commit() -> None:

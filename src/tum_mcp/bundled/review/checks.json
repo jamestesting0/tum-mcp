@@ -479,9 +479,9 @@
     {
       "id": "practice.complete_answer",
       "dimension": "practice",
-      "rule": "Compare and the solution answer everything that was asked.",
-      "pass": "Compare gives the frontier and the reached set the prompt asked for.",
-      "fail": "Compare gives only the frontier.",
+      "rule": "Compare and the solution answer everything that was asked. In an exercise guide step, Compare also shows the full working from the step's inputs to its answer.",
+      "pass": "Compare gives the frontier and the reached set the prompt asked for, and the walkthrough that reaches them.",
+      "fail": "Compare gives only the frontier, or only the final value.",
       "profiles": [
         "exam-mock-question",
         "exam-pattern",
@@ -489,7 +489,7 @@
         "study-unit"
       ],
       "scope": "block",
-      "version": 1
+      "version": 2
     },
     {
       "id": "practice.case_feedback",
@@ -1168,14 +1168,14 @@
     {
       "id": "practice.student_control",
       "dimension": "practice",
-      "rule": "steps give the student increasing responsibility where the task permits it.",
-      "pass": "Later steps give the student more of the work.",
-      "fail": "Every step is fully worked, the student only clicks Compare.",
+      "rule": "steps give the student increasing responsibility where the task permits it: later prompts say less and later hints come later. The Compare working stays complete in every step.",
+      "pass": "Later steps give shorter prompts and fewer hints.",
+      "fail": "Every prompt spells out the move, so the student only checks.",
       "profiles": [
         "exercise"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "intuition.method_choice",

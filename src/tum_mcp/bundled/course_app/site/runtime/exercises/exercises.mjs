@@ -18,6 +18,32 @@ function due(group) {
   return time && Number.isFinite(time.getTime())
     ? `Due ${new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)}` : '';
 }
+// How a step's answer is reached: one sentence, or blocks such as a derivation or a walkthrough.
+function working(step) {
+  return typeof step.explanation === 'string' ? studyText('p', '', step.explanation)
+    : append(node('div', 'reading-material'), ...step.explanation.map(block => renderBlockBody(block)));
+}
+// Compare as one piece: the working, with the answer marked where it is reached, so no line
+// appears twice. A self-check's model answer is its working; a walkthrough or other drawing
+// ends with the expected answer, marked.
+function answerWithWorking(step, check) {
+  const mark = element => {
+    if (!element) return;
+    element.classList.add('final-answer');
+    element.prepend(node('span', 'visually-hidden', 'Answer: '));
+  };
+  const lastLine = root => [...root.querySelectorAll('.derivation-line')].pop();
+  if (check?.kind === 'self_check') {
+    const box = expectedAnswer(check);
+    mark(lastLine(box));
+    return [box, working(step)];
+  }
+  const root = working(step), last = root.lastElementChild;
+  if (last?.querySelector('.derivation-line')) mark(lastLine(last));
+  else if (last?.matches('.block-body') && last.querySelector(':scope > p, :scope > ul, :scope > ol') && !check) mark(last);
+  else if (check) { const answer = expectedAnswer(check); mark(answer); return [root, answer]; }
+  return [root];
+}
 
 // "a", "(b)", "2.", "b(ii)" or "Part c" label a question: the last token prints as "ii." and
 // each token is one level of nesting. Words such as "Hint" are titles, not labels.
@@ -328,14 +354,16 @@ export function exercisePage(exercise, options) {
         if (compares && saved.compared) {
           const section = node('section', 'feedback compare');
           section.append(node('h3', '', 'Answer'));
-          if (check) section.append(expectedAnswer(check));
-          section.append(studyText('p', '', step.explanation));
+          if (typeof step.explanation === 'string' && check?.kind !== 'self_check') {
+            if (check) section.append(expectedAnswer(check));
+            section.append(working(step));
+          } else section.append(...answerWithWorking(step, check));
           if (check?.feedback) section.append(append(node('p', 'small'), node('strong', '', 'If yours differs: '), studyText('span', '', check.feedback)));
           feedback.append(section);
         } else if (checked && result.valid) {
           // A choice opens with the chosen option's feedback, as in Practice; Explain covers the rest.
           const choice = check.kind === 'choice', said = (choice || !result.correct ? result.repairs : []).map(repair => studyText('p', '', repair));
-          const section = verdict(result.correct, ...said, ...(result.correct ? [studyText('p', '', step.explanation)] : []));
+          const section = verdict(result.correct, ...said, ...(result.correct ? [working(step)] : []));
           if (choice) section.append(optionExplanations(shuffled(check.options, `exercise-${exercise.key}-${step.key}`), check.correct, result.chosen));
           feedback.append(section);
         }
