@@ -8,7 +8,9 @@ to a pattern: objectives, steps, useful hints, checks and explanations. The stud
 may leave that guidance closed. A whole
 paper shows every question with its solution and marking points behind a disclosure,
 so students check themselves; there is no scoring. Follow prepare-exercises'
-[guidance](../../prepare-exercises/references/guidance.md) for useful steps and hints.
+[guidance](../../prepare-exercises/references/guidance.md) for useful steps and hints:
+one step per subgoal, and each step's explanation shows the full working that reaches
+its answer.
 
 ## Write a forecast practice exam
 

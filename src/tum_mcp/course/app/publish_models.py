@@ -70,7 +70,7 @@ class Publication(PublicationSetup):
 
 @dataclass(frozen=True, slots=True)
 class PublishReport:
-    status: Literal["deployed", "unchanged", "pending", "failed", "paused"]
+    status: Literal["deployed", "unchanged", "pending", "failed", "paused", "held"]
     repository: str
     hosted_url: str | None = None
     commit: str | None = None

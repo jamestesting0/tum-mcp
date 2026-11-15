@@ -7,7 +7,8 @@ teaching review is not proof that students learn.
 
 - `storyboard check` has no errors; its warnings are deliberate.
 - Teaching review, written to a file you will pass to `publish`: every beat traced to
-  its locators; R1 to R12 from [teaching](teaching.md) applied; every formula's
+  its locators; R1 to R12 from [teaching](teaching.md) applied to a concept video, or
+  the checks in [exercise walkthroughs](exercise-walkthroughs.md) to a solution video; every formula's
   `typst` compared with its `source_latex`; numbers, directions, units and conditions
   matched; objectives left to practice named. Fix problems first.
 

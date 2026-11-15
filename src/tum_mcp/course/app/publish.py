@@ -227,8 +227,23 @@ def build_for_publication(root: Path) -> dict[str, bytes]:
         return export_site(root)
 
 
+def unreviewed(root: Path) -> list[str]:
+    """Items no passing review gate covers yet: never reviewed, or reviewed and still held."""
+    from tum_mcp.course.review.loop import gate, load, read_state
+
+    state = read_state(root)
+    scope = state.scope if state else ()
+    context = load(root)
+    blocked = {key for key, problems in gate(context, scope).items() if problems}
+    return sorted({key for key in context.items if key not in scope} | blocked)
+
+
 def after_build(root: Path) -> PublishReport | None:
-    """Keep a valid local build usable if configured publishing is pending or unavailable."""
+    """Keep a valid local build usable if configured publishing is pending or unavailable.
+
+    A draft stays local: the site updates after a build only once the review gate covers
+    every item; `study publish sync` publishes anyway on the student's request.
+    """
     try:
         publication = load_publication(root)
         if publication is None:
@@ -236,6 +251,15 @@ def after_build(root: Path) -> PublishReport | None:
         if not publication.auto_sync:
             return PublishReport(
                 "paused", publication.repository, publication.hosted_url, publication.commit
+            )
+        if drafts := unreviewed(root):
+            return PublishReport(
+                "held",
+                publication.repository,
+                publication.hosted_url,
+                publication.commit,
+                message=f"{len(drafts)} item(s) await the review gate, such as {drafts[0]}. "
+                "The site updates after the gate passes, or now with study publish sync.",
             )
         return publish(root, rebuild=False)
     except CampusError as error:

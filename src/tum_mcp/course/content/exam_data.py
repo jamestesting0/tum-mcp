@@ -332,7 +332,7 @@ PROSE_LEGEND = re.compile(r"(?:\\\([^()]{1,30}?\\\)|\b[A-Za-z]\b)\s*:\s+[a-z]")
 # sum"); a check, choice or report of a result is not a computation.
 COMPUTING = re.compile(
     r"\b(?:comput|calculat|multipl|sums?\b|add up|averag|normali[sz]|weight|estimat|"
-    r"marginali[sz]|divid)",
+    r"marginali[sz]|divid|solv|evaluat)",
     re.IGNORECASE,
 )
 NOT_COMPUTING = re.compile(
@@ -414,20 +414,8 @@ def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
             worded[f"exam/mock/{mock.key}/{question.key}"] = math_words(
                 question.model_dump(mode="json")
             )
-    bare = [
-        {
-            "item": f"exam/pattern/{pattern.key}",
-            "flag": "bare_workflow",
-            "detail": "No workflow step or case shows what it applies; give the formula, rule "
-            "or code each computing step uses under `apply`.",
-        }
-        for pattern in content.patterns
-        if pattern.workflow
-        and not any(
-            step.get("apply") or any(case.get("apply") for case in step.get("cases") or ())
-            for step in pattern.model_dump(mode="json")["workflow"]
-        )
-    ]
+    # A wholly verbal workflow is fine: only a step that computes needs its formula.
+    bare: list[dict[str, JsonValue]] = []
     bare += [
         {
             "item": f"exam/pattern/{pattern.key}",
@@ -439,7 +427,6 @@ def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
         }
         for pattern in content.patterns
         if pattern.workflow
-        and f"exam/pattern/{pattern.key}" not in {flag["item"] for flag in bare}
         and (lines := _unformulated(pattern.model_dump(mode="json")["workflow"]))
     ]
     bare += [math_word_flag(item, words) for item, words in worded.items() if words]

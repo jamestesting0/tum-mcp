@@ -49,7 +49,8 @@ Separate failures still get separate findings, even when they occur in one passa
 | One concept under two names; a "this" that could mean two things; stacked "Moreover" | Cohesion |
 | An action hidden in a noun ("perform the computation of") | Clarity |
 | A teaching move the content does not need (a forced bridge, a worked example of a definition, an essential condition hidden in an insight) | Cognitive load |
-| Study pitched above or below the teaching profile; Exam re-teaching what Study teaches | Cognitive load |
+| Study pitched above or below the teaching profile | Cognitive load |
+| Exam re-teaching what Study teaches | Redundancy (`redundancy.exam_compresses`) |
 | A running example whose givens change without notice | Correctness |
 | Unrelated new ideas combined before the learner has what they need to follow them | Cognitive load |
 | A prerequisite the student must recall from far back, with no reminder or link where it is used | Cognitive load |
@@ -138,9 +139,10 @@ its start ([writing](../../prepare-study/references/writing.md)).
 - `cohesion.one_term`: one term per concept and one notation per quantity across the item;
   every "this" and "it" has one possible referent.
 
-All checks for Study units and Exercise guides and solutions, which first-time readers meet;
-Exam keeps `cohesion.one_term` and no unexplained jump, because its reader has studied the
-ideas and linking sentences there are redundancy.
+All checks for Study units and Exercise guides and solutions, which first-time readers meet.
+An Exam pattern is judged on `cohesion.one_term` and `cohesion.linked` for an unexplained
+jump only, because its reader has studied the ideas and linking sentences there are
+redundancy.
 
 2: one abrupt jump, a term switch, or a paragraph whose point comes last.
 1: the reader cannot follow how the ideas connect without rereading.
@@ -167,8 +169,7 @@ What the student has to hold in mind at once.
   and short incidental `n/2` are fine.
 - `cognitive_load.together`: text and the picture it refers to sit together.
 - `cognitive_load.fits_student`: Study can be followed by a first-time reader who knows
-  the teaching profile's prerequisites, without over-explaining what they already know;
-  Exam stays concise and reaches depth through Recall instead of re-teaching.
+  the teaching profile's prerequisites, without over-explaining what they already know.
 - `cognitive_load.moves_fit`: every teaching move earns its place for this content; a
   worked example of a one-line definition, a bridge between parallel cases, an analogy that
   adds nothing or an essential idea hidden in an insight is a finding.
@@ -181,8 +182,9 @@ without its state.
 
 Each idea is shown in the shape it has ([representations](../../prepare-study/references/representations.md#choose-the-representation)).
 
-- `representation.shape_fits`: procedures are traces with their state, parallel cases
-  tables or lists, two-input rules matrices, physical or spatial ideas drawn figures,
+- `representation.shape_fits`: a reusable procedure has explicit control flow in labelled
+  steps, pseudocode or a flowchart, and its concrete run is a separate trace with its
+  state; parallel cases are tables or lists, two-input rules matrices, physical or spatial ideas drawn figures,
   symbols formulas with each symbol explained, structures diagrams or trees. When each
   item's working depends on its position, one walkthrough works each item on the drawing:
   mark it, show its displacement or neighbours, write its value there and keep the running

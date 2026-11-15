@@ -144,7 +144,9 @@ verifies a fix by quoting the rewritten passage.
 
 Read each passage once as the student would. Remove every sentence the student does not
 need, and split every sentence they would read twice. Then run `tum-mcp study report
-PROJECT` and restructure, never justify, what it flags: `dense_paragraph` (a paragraph
+PROJECT`. Fix every invariant flag. Fix a flag that asks for a ruling, or keep the passage
+with a stated reason for the checker to rule on ([draft checks](loop.md)). The writing
+flags are `dense_paragraph` (a paragraph
 over 45 words, or three sentences over 30), `prose_calculation` and `compressed_working`
 (calculations chained in a sentence), `plain_math` (mathematics typed as characters or read aloud in words, "theta over two"),
 `described_object` (an object spelled out instead of shown), `listed_derivation_line`

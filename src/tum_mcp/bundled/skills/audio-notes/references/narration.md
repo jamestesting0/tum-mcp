@@ -115,5 +115,6 @@ Recheck repaired sections and their dependencies before handing text to synthesi
 Record a brief review with the script and guidance fingerprints as described in
 [workflow and coverage](workflow.md). Check audio delivery separately after
 generation. A passed script review, transcript match or signal check does not
-prove learning effectiveness or an auditioned voice. Report content gaps back to
-prepare-study; do not expand the syllabus during conversion.
+prove learning effectiveness or an auditioned voice. Report content gaps back to the
+source workspace's skill (prepare-study for Study, prepare-exams for Exam); do not
+expand the syllabus during conversion.

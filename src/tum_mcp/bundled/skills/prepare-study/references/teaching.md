@@ -7,8 +7,9 @@ how each idea is taught in the unit's [teaching plan](planning.md) before writin
 Explain why the next operation helps and what makes it valid. A procedure without
 its reason leaves students unable to choose it in a new problem.
 
-Study explains; it does not ask for predictions (those belong in Exercises).
-A teaching check asks for one newly explained inference on a fresh case. Later
+Explanation blocks and walkthroughs explain; they do not ask the reader to predict the
+next step. Practice questions may ask for a prediction, such as the next state of a trace
+([practice](practice.md)). A teaching check asks for one newly explained inference on a fresh case. Later
 practice asks students to select and use the idea without its method in the title.
 Use these when they help; do not insert a question after every paragraph. Keep
 independent reading possible without obligatory forms or prerequisite quizzes.

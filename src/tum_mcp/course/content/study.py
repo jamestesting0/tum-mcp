@@ -80,8 +80,7 @@ class TextBlock(Sourced):
 
 
 class Symbol(Frozen):
-    """A variable and what it is here, in about twelve words, never just its name; give it
-    where a reader would stop to recall it, once per context."""
+    """A variable and what it is here, in about twelve words, never just its name."""
 
     symbol: Text
     meaning: Text
@@ -958,8 +957,13 @@ class DerivationBlock(Sourced):
     # A walkthrough reveals one line at a time with Previous and Next, and the reader can
     # show every step at once; without it the whole working is shown.
     walkthrough: bool = False
-    # Variables a reader may need to recall here; each opens its meaning in the formula.
-    symbols: tuple[Symbol, ...] = Field(default=(), max_length=12)
+    symbols: tuple[Symbol, ...] = Field(
+        default=(),
+        max_length=12,
+        description="Meanings where a reader would stop to recall a variable: defined "
+        "elsewhere, compound, easily confused or shifting meaning. Obvious indices, constants "
+        "and just-defined variables get none. Each opens its meaning in the formula.",
+    )
 
     @model_validator(mode="after")
     def stepped(self) -> "DerivationBlock":
@@ -1215,7 +1219,8 @@ class Variant(Frozen):
 class WalkthroughBlock(Sourced):
     """A worked process step by step: each step's action and reason, over an optional stage
     (a graph, table, code, working, plot or figure) that shows the state it reaches. Every step
-    changes what the student sees."""
+    changes what the student sees. One process stays in one walkthrough; a run longer than
+    200 steps is a capacity limit to report, never a reason to split it."""
 
     kind: Literal["walkthrough"]
     stage: Stage | None = None
@@ -1443,7 +1448,7 @@ class Question(Frozen):
     prompt: Text
     level: Literal["recall", "apply", "reason"]
     # The situation the question is about, shown beside it in Practice and Revision.
-    # Optional: a question about a concept stands alone; a picture must carry information.
+    # Every question needs one that carries information; a text-only question holds readiness.
     blocks: tuple[Block, ...] = Field(default=(), max_length=3)
     options: tuple[Option, ...] = Field(min_length=3, max_length=5)
     correct: Key

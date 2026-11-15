@@ -1673,6 +1673,41 @@ def test_a_workflow_step_that_computes_shows_its_formula() -> None:
     assert flagged()
     step["apply"] = {"text": r"Use \(EU(a) = \sum_s P(s \mid a)\,U(s)\)."}
     assert not flagged()
+    # An inline formula in the text carries its variables' meanings too.
+    from tum_mcp.course.content.exam import Apply
+
+    meaning = {"symbol": "EU(a)", "meaning": "the expected utility of action a"}
+    _ = Apply.model_validate({"text": r"Use \(EU(a) = \sum_s P(s)\,U(s)\).", "symbols": [meaning]})
+    with pytest.raises(ValidationError, match="Only an applied formula"):
+        _ = Apply.model_validate({"text": "Weigh each outcome.", "symbols": [meaning]})
+    # A wholly verbal workflow, such as choosing a design pattern, needs no `apply`.
+    for each in pattern["workflow"]:
+        each.pop("apply", None)
+        each.pop("cases", None)
+        each["do"] = "Name the force that changes between the two designs."
+    assert not flagged()
+
+
+def test_exam_answers_cite_declared_sources_and_mock_parts_have_answers() -> None:
+    from importlib.resources import files
+
+    from tum_mcp.course.content.exam import ExamContent
+
+    exam = json.loads((files("tum_mcp") / "bundled/course_app/example/exam.json").read_bytes())
+    ExamContent.model_validate(exam)
+    # A self-check's model answer inside a drill cites only the pattern's sources.
+    broken = deepcopy(exam)
+    item = broken["patterns"][0]["drill"][0]
+    answer = {"kind": "text", "sources": ["undeclared"], "paragraphs": ["An answer."]}
+    item["check"] = {"kind": "self_check", "rubric": ["States it."], "model_answer": [answer]}
+    with pytest.raises(ValidationError, match="cites only the pattern's sources"):
+        ExamContent.model_validate(broken)
+    # A forecast question with parts answers each of them.
+    broken = deepcopy(exam)
+    question = broken["mocks"][0]["questions"][0]
+    question["parts"] = ["(a)", "(b)", "(c)", "(d)"][: len(question["solution"]["answers"]) + 1]
+    with pytest.raises(ValidationError, match="one answer per part"):
+        ExamContent.model_validate(broken)
 
 
 def test_the_cheatsheet_needs_a_semester_map_with_every_idea_linked() -> None:

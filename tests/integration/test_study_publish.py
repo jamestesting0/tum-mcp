@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 from tum_mcp.cli import app
 from tum_mcp.course.app import github as study_github
 from tum_mcp.course.app import preview as study_preview
+from tum_mcp.course.app import publish as study_publish
 from tum_mcp.course.app.build import RETIRED_TEMPLATE_FILES, build
 from tum_mcp.course.app.publish_models import load_publication
 from tum_mcp.course.app.publish_site import MARKER, SITE_FILES, blob_sha
@@ -27,6 +28,45 @@ def github(monkeypatch: pytest.MonkeyPatch) -> GitHubFixture:
     monkeypatch.setattr(study_github.subprocess, "run", fixture.run)
     monkeypatch.setenv("GH_DEBUG", "api")
     return fixture
+
+
+@pytest.fixture(autouse=True)
+def reviewed(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
+    """Upload tests treat the review gate as passed; the draft tests keep the real gate."""
+    if "draft" not in request.node.name:
+        monkeypatch.setattr(study_publish, "unreviewed", lambda root: [])
+
+
+def test_a_draft_build_stays_local_until_the_review_gate_passes(
+    project: Path, github: GitHubFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.course.review import loop
+
+    # Given a published site and an edited lesson no review has passed.
+    assert first_publish(project).exit_code == 0
+    commits = len(github.commits)
+    change_lesson(project)
+    # Then the build keeps the draft local and says why.
+    held = build(project).publication
+    assert held is not None and held.status == "held" and "review gate" in held.message
+    assert len(github.commits) == commits
+    # When every item is in a review whose gate passes, the next build publishes.
+    loop.start(project, budget=1)
+    monkeypatch.setattr(loop, "gate", lambda context, scope: {})
+    published = build(project).publication
+    assert published is not None and published.status == "deployed"
+    assert len(github.commits) == commits + 1
+
+
+def test_a_draft_is_published_anyway_on_explicit_sync(project: Path, github: GitHubFixture) -> None:
+    assert first_publish(project).exit_code == 0
+    change_lesson(project)
+    commits = len(github.commits)
+    held = build(project).publication
+    assert held is not None and held.status == "held"
+    result = CliRunner().invoke(app, ["study", "publish", "sync", str(project)])
+    assert result.exit_code == 0, result.output
+    assert len(github.commits) == commits + 1
 
 
 def first_publish(project: Path):

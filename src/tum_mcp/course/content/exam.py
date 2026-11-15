@@ -57,6 +57,9 @@ NEAR_VERBATIM = 0.9
 
 
 class ExamProfile(Frozen):
+    """How the real exam runs, from the latest paper's cover and instructions: duration,
+    points, allowed aids and formats."""
+
     format: Literal["written", "online", "programming", "oral", "mixed"]
     duration_minutes: Minutes | None = None
     total_points: Points | None = None
@@ -100,6 +103,9 @@ class Criterion(Frozen):
 
 
 class PastGuidance(Frozen):
+    """An optional guide for a past question: one step per subgoal, each with the full
+    working that reaches its answer."""
+
     objectives: tuple[Text, ...] = Field(min_length=1, max_length=12)
     prerequisites: tuple[Prerequisite, ...] = Field(default=(), max_length=10)
     steps: tuple[GuidanceStep, ...] = Field(min_length=1, max_length=40)
@@ -114,6 +120,9 @@ def _check_marking(marking: tuple[Criterion, ...], points: float | None) -> None
 
 
 class PastQuestion(Frozen):
+    """One subquestion of a past paper, with its printed points and the patterns that solve
+    it; nothing is dropped."""
+
     key: Key
     number: Annotated[str, Field(min_length=1, max_length=20)]
     points: Points | None = None
@@ -152,6 +161,8 @@ class PastQuestion(Frozen):
 
 
 class Variant(Frozen):
+    """One copy of a sitting's paper; every copy of the same exam is a role of one variant."""
+
     key: Key
     label: Text
     sources: tuple[SourceRole, ...] = Field(min_length=1, max_length=10)
@@ -195,6 +206,8 @@ class Variant(Frozen):
 
 
 class Sitting(Frozen):
+    """One real exam, held once, with the variants that record it."""
+
     key: Key
     label: Text
     held: Held
@@ -211,6 +224,9 @@ class Sitting(Frozen):
 
 
 class CompactFormula(Frozen):
+    """A cheatsheet formula with every variable's general meaning and the conditions that
+    make it hold."""
+
     latex: Annotated[str, Field(min_length=1, max_length=5000)]
     plain: Text
     # Every variable with its general meaning, listed when the entry is opened.
@@ -238,6 +254,9 @@ class ExerciseLink(Frozen):
 
 
 class Concept(Frozen):
+    """A cheatsheet entry: one line first, the rest behind Expand, in the form its retrieval
+    task needs. It compresses Study and links the lesson."""
+
     key: Key
     topic: Key
     title: Text
@@ -269,9 +288,12 @@ class Concept(Frozen):
     details: tuple[Block, ...] = Field(default=(), max_length=20)
     # The pattern whose workflow is this entry's method; the entry shows that workflow.
     workflow_from: Key | None = None
-    # Meanings of the variables in a non-formula entry's maths (line, tables, text), listed
-    # when the entry opens; a formula entry lists them with its formula.
-    symbols: tuple[Symbol, ...] = Field(default=(), max_length=20)
+    symbols: tuple[Symbol, ...] = Field(
+        default=(),
+        max_length=20,
+        description="Every variable in a non-formula entry's maths (line, tables, text), listed "
+        "when the entry opens; a formula entry lists them with its formula.",
+    )
 
     @model_validator(mode="after")
     def cited(self) -> "Concept":
@@ -332,8 +354,12 @@ class Apply(Frozen):
     )
     code: Annotated[str, Field(min_length=1, max_length=4000)] | None = None
     language: Annotated[str, Field(min_length=1, max_length=30)] | None = None
-    # What each variable in `math` means in this pattern; the student opens it in the formula.
-    symbols: tuple[Symbol, ...] = Field(default=(), max_length=12)
+    symbols: tuple[Symbol, ...] = Field(
+        default=(),
+        max_length=12,
+        description="What every variable of the applied formula means in this pattern, for a "
+        "formula in `math` or inline in `text`; the student opens it in the formula.",
+    )
 
     @model_validator(mode="after")
     def shown(self) -> "Apply":
@@ -343,9 +369,10 @@ class Apply(Frozen):
             raise ValueError("Applied code names its language, and only code does.")
         for line in self.math:
             compile_latex(line)
-        if self.symbols and not self.math:
+        inline = re.findall(r"\\\((.+?)\\\)", self.text or "", re.S)
+        if self.symbols and not (self.math or inline):
             raise ValueError("Only an applied formula lists variables.")
-        check_meanings(self.symbols, list(self.math), "An applied formula")
+        check_meanings(self.symbols, [*self.math, *inline], "An applied formula")
         return self
 
 
@@ -358,6 +385,9 @@ class Case(Frozen):
 
 
 class PatternStep(Frozen):
+    """One action of the workflow; a step that computes shows its formula under `apply`, a
+    decision step lists its cases."""
+
     do: Text
     why: Text | None = None
     apply: Apply | None = None
@@ -392,6 +422,9 @@ class Pitfall(Frozen):
 
 
 class DrillItem(Frozen):
+    """A practice item attempted without help, in a new setting; its optional guide opens
+    one move at a time."""
+
     key: Key
     prompt: Text
     blocks: tuple[Block, ...] = Field(default=(), max_length=20)
@@ -436,7 +469,16 @@ class GuidedStep(Frozen):
         return self
 
 
+def answer_blocks(check: Check | None) -> tuple[Block, ...]:
+    """The blocks a self-check's model answer shows, which cite sources like any content."""
+    answer = check.model_answer if check and check.kind == "self_check" else ()
+    return answer if isinstance(answer, tuple) else ()
+
+
 class PatternExample(Frozen):
+    """Worked practice: a question solved through every workflow step in order, each step
+    with its worked answer."""
+
     question: Key | None = None
     blocks: tuple[Block, ...] = Field(default=(), max_length=20)
     solution: WorkedSolution | None = None
@@ -459,11 +501,14 @@ class PatternExample(Frozen):
         return (
             *self.blocks,
             *(self.solution.blocks if self.solution else ()),
-            *(block for step in self.steps for block in step.answer),
+            *(block for step in self.steps for block in (*step.answer, *answer_blocks(step.check))),
         )
 
 
 class Pattern(Frozen):
+    """A transferable way to solve a family of exam questions: cues from the question text,
+    a workflow, pitfalls, worked practice and a drill. It never re-teaches a concept."""
+
     key: Key
     topic: Key
     title: Text
@@ -490,12 +535,18 @@ class Pattern(Frozen):
                 for block in (
                     *item.blocks,
                     *item.solution,
-                    *(b for s in item.guide for b in s.answer),
+                    *answer_blocks(item.check),
+                    *(b for s in item.guide for b in (*s.answer, *answer_blocks(s.check))),
                 )
             ),
         )
         if any(not set(block.sources) <= keys for block in blocks):
             raise ValueError("Pattern content cites only the pattern's sources.")
+        official = {e.solution.official_source for e in self.examples if e.solution}
+        if not official - {None} <= keys:
+            raise ValueError(
+                "A worked example's official solution is one of the pattern's sources."
+            )
         if bool(self.marking) != (self.marking_basis is not None):
             raise ValueError("Marking points declare whether they are official or inferred.")
         if len({item.key for item in self.drill}) != len(self.drill):
@@ -597,6 +648,9 @@ class Pattern(Frozen):
 
 
 class MockQuestion(Frozen):
+    """A forecast question: a named variant of past questions or an untested core idea, with
+    its marking criteria."""
+
     key: Key
     number: Annotated[str, Field(min_length=1, max_length=20)]
     points: Points
@@ -629,11 +683,16 @@ class MockQuestion(Frozen):
             raise ValueError("A variant shares a pattern with the past questions it varies.")
         if not has_visual(self.statement):
             raise ValueError(f"Practice question {self.key} needs {VISUAL_RULE}.")
+        if self.parts and len(self.solution.answers) != len(self.parts):
+            raise ValueError(f"Practice question {self.key}: give one answer per part, in order.")
         _check_marking(self.marking, self.points)
         return self
 
 
 class Mock(Frozen):
+    """A forecast practice exam written to the real exam's blueprint, labelled as practice,
+    never a prediction."""
+
     key: Key
     title: Text
     duration_minutes: Minutes
@@ -711,6 +770,9 @@ def similarity(own: frozenset[str], past: frozenset[str]) -> float:
 
 
 class ExamContent(Frozen):
+    """The Exam workspace: profile, sittings, cheatsheet concepts and map links, patterns
+    and forecast exams."""
+
     schema_version: Literal[1] = 1
     course_key: Key
     profile: ExamProfile | None = None

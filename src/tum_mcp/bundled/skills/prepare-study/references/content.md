@@ -142,7 +142,9 @@ on; citations open there, and later pages can differ from the printed slide numb
 Flashcards use one objective plus front, back and sources. Questions use an
 objective, prompt, level, up to three context `blocks` (a figure, code, diagram, formula,
 table, tree, UML or plot block), options with individual feedback, one correct key, an
-explanation, an optional `hint` and sources. A question about a concept may stand alone.
+explanation, an optional `hint` and sources. Every question shows its situation in a
+block, a concept question too: a contrasting case, a small diagram or a formula. A
+text-only question holds readiness (`text_only_question`).
 A question that needs data shows it in its picture and keeps the prompt to the question;
 a one-row table that repeats the prompt is filler. Write options as in
 [practice](practice.md). Every objective needs a question; counts

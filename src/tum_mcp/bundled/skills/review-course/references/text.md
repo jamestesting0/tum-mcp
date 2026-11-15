@@ -38,7 +38,9 @@ Clarity, Cohesion and Cognitive load; the rules come from prepare-study's
    explanation hard to follow.
 5. For every notation-heavy statement, check that it is unpacked where it is used
    (`clarity.notation_unpacked`): the claim in words, a one-line reminder of what each
-   symbol means here, the worked case, then the identity with its conditions. Open the
+   symbol means here, the worked case, then the identity with its conditions. An Exam
+   revision workflow may state an already-learned formula first; its applied formula
+   still gives the symbols and conditions needed to use it. Open the
    rendered page too: odd spacing or a broken symbol is a render finding, not a reason to
    rewrite correct content.
 6. Check that each term is defined where it first appears and linked as `{{term}}` later;

@@ -70,8 +70,9 @@ its demand, so the student can find where their working diverged:
   in a short list, then traces one test case step by step with its state. Draw a state
   chart as a state diagram.
 - A proof checked by `self_check` keeps its lines in the model answer; the working adds
-  only what the model answer leaves out. Check the labels against the task (seven results asked,
-seven shown). Several results in one sentence are flagged as `compressed_working`. A
+  only what the model answer leaves out.
+
+Check the labels against the task (seven results asked, seven shown). Several results in one sentence are flagged as `compressed_working`. A
 derivation in a step or the Solution may give `symbols` for the variables a student would
 stop to recall ([variable meanings](../../prepare-study/references/variables.md)). Use a rubric and model derivation for
 proofs, code, design and other open work. For programming, a step asks the student to
