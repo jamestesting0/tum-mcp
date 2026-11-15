@@ -1,6 +1,6 @@
 ---
 name: audio-notes
-description: Create or update hands-free revision audio from the prepared course - explanation tracks from Study and spoken-summary tracks from the Exam cheatsheet and patterns - one track per category, with chapter re-entry, conditions and checked coverage. Use prepare-study or prepare-exams for source authoring. Excludes Exercises, recording transcription and voice cloning.
+description: Create or update hands-free revision audio from the prepared course - explanation tracks from Study, spoken-summary tracks from the Exam cheatsheet and patterns, and spoken walkthroughs of prepared Exercises - one track per category, with chapter re-entry, conditions and checked coverage. Use prepare-study, prepare-exercises or prepare-exams for source authoring. Excludes recording transcription and voice cloning.
 ---
 
 This optional workflow is enabled with `tum-mcp install audio-notes`. Voice
@@ -21,14 +21,15 @@ or downloaded course code. When website and audio are both requested, finish the
 workspace first and carry its changed items forward. An audio-only request does not
 refresh campus sources or rebuild the website.
 
-## Two kinds of track
+## Kinds of track
 
 | Request | Source | Job of the track |
 | --- | --- | --- |
 | "audio notes for the lecture content / Study" | `app/study/` units | Re-explain how the ideas work: mechanisms, worked examples, conditions, contrasts. |
 | "audio notes of the cheatsheet / for exam revision" | `app/exam/` cheatsheet entries and patterns | A spoken summary to revise on the go: each entry's rule or formula said aloud with its condition, one short example and the trap; each pattern's cue, steps and the formula each step applies. |
+| "audio notes for problem 1.2.2" | `app/exercises/` exercises | Talk through the solution: what each part asks, the method and why it fits, each step's reason and every part's answer. |
 
-Exercises never become audio. Design each kind with
+A track may combine kinds, such as a pattern and an exercise it solves. Design each kind with
 [revision design](references/revision-design.md) and write speech with
 [narration](references/narration.md).
 
@@ -36,15 +37,18 @@ Exercises never become audio. Design each kind with
 
 All commands print JSON; prefix them with `tum-mcp audio-notes`.
 
-1. **Sources.** `sources PROJECT` lists Study units with their required locators
-   and every cheatsheet entry and pattern with its locator. Read only what the
-   requested categories use. Inventory existing `audio/` records first.
-2. **Category script.** For each track write `audio/categories/STEM.json`
-   (`schema category`): key, stem such as `01_search-and-agents`, title, voice
-   profile key, the units it adapts, and chapters of plain spoken sentences with the
-   locators each chapter covers (copied from `sources`). One category per Study unit
-   group or per Exam topic. Every Study block and objective of a listed unit is
-   covered as `spoken` or `study_required` with the exact reason.
+1. **Sources.** `sources PROJECT` lists each Study unit, exercise, cheatsheet entry
+   and pattern with its required parts. Read only what the requested categories use.
+   Inventory existing `audio/` records first.
+2. **Category script.** For each track, `outline PROJECT STEM --source unit:KEY`
+   writes `audio/categories/STEM.json` as a draft with every required part already in
+   a chapter. Repeat `--source`; it also takes `exercise:SET/KEY`, `pattern:KEY` and
+   `concept:KEY`. The stem looks like `01_search-and-agents`. Replace every sentence
+   that starts with `Write:`; `check` refuses it. Split, merge and reorder chapters
+   freely. A part the track does not say moves to `left_to_page` with the reason the
+   page serves it better (`schema --example left-to-page`). One category per Study
+   unit group or per Exam topic. The draft's `voice` is the first profile in
+   `audio/voice.json`, else `narrator`; set it to the profile you use in step 4.
 3. **Check.** `check PROJECT STEM` rejects stale or missing coverage and sentences
    with symbols a voice cannot say; it warns about production wording and chapters
    that open with a pronoun. Then review the script as continuous speech
@@ -67,7 +71,7 @@ All commands print JSON; prefix them with `tum-mcp audio-notes`.
    publish and listen again until nothing is flagged or the flag is a recognizer
    quirk you can name.
 7. **Report.** Name created, updated and reused tracks, durations, the actual voice,
-   the checks that ran (including `listen` results), any `study_required` limits, and
+   the checks that ran (including `listen` results), the parts left to the page, and
    absolute paths under `audio/tracks/`; the tracks play in the local app's Audio
    workspace (`tum-mcp study`). A requested track ends published; machine
    listening does not judge how natural the voice sounds, so say a person has not

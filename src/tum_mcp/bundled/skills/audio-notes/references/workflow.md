@@ -2,13 +2,14 @@
 
 ## Inputs and scope
 
-Read AGENTS.md, the Study files under app/study/ or the Exam files under app/exam/,
+Read AGENTS.md, the Study files under app/study/, the Exercise files under
+app/exercises/ or the Exam files under app/exam/,
 relevant .tum-mcp/state.json entries and existing audio records. Use the content schema already used by prepare-study;
 `tum-mcp study schema content` describes unfamiliar fields. Reuse an existing source
 check; otherwise `tum-mcp study inspect PROJECT` identifies stale units without
 refreshing campus websites. A hash mismatch requires content review by the skill that
-owns the source workspace (prepare-study for Study, prepare-exams for Exam), not an
-automatic rebind by audio-notes.
+owns the source workspace (prepare-study for Study, prepare-exercises for Exercises,
+prepare-exams for Exam), not an automatic rebind by audio-notes.
 
 The prepared website is the only course-content input. Read its structured content
 rather than scraping rendered HTML or reopening raw PDFs/Notion pages. Include
@@ -16,8 +17,8 @@ distinct concepts and qualifications found in its flashcards and correct practic
 feedback; do not read every duplicate card or distractor aloud. Keep erroneous
 answer options clearly identified as misconceptions if they are discussed.
 
-If a requested workspace has not been prepared, complete prepare-study or
-prepare-exams first when the user's request includes that work. An audio-only request does not authorize
+If a requested workspace has not been prepared, complete its skill first when the
+user's request includes that work. An audio-only request does not authorize
 new course authoring, source refreshes, publication or campus actions. Continue
 unblocked categories and report any unavailable or stale inputs.
 
@@ -68,18 +69,21 @@ Study tracks, and the Exam topics in sheet order for cheatsheet tracks. Where th
 are no groups, use existing topics. Do not create new subject categories or group
 unrelated units merely to shorten the playlist. Every current unit, entry and pattern
 has exactly one primary category; brief spoken prerequisite reminders may repeat a
-concept without duplicating whole units.
+concept without duplicating whole units. An exercise gets a track only when asked.
 
-`sources` prints each Study unit's block, objective, flashcard and question
-locators with fingerprints, and each cheatsheet entry and pattern as one locator.
-Copy them into the chapter that teaches them. Blocks have no stable IDs, so an
+`sources` prints the required parts of each source with fingerprints: a Study unit's
+blocks and objectives; an exercise's statement parts, guide steps and answers; a
+pattern's cues, workflow steps and their cases, marking, pitfalls, variations and
+examples; a cheatsheet entry as one part. Drill items are never required, since
+solving them aloud would spoil the practice. `outline` copies the parts into a draft;
+keep each in the chapter that teaches it. Blocks have no stable IDs, so an
 index alone cannot prove identity after insertions; `check` compares the copied
 fingerprint with the current content. Map each substantive concept, definition,
 nonredundant example, mechanism, condition, comparison and limitation to a named
 chapter. Duplicate source explanations may share one spoken treatment; say in the
 teaching review which locators were consolidated and why no distinct teaching was
 lost. A concept being named is not evidence that it has been explained. COVERAGE.md
-lists `study_required` limits and anything still unpublished.
+lists the parts left to the page and anything still unpublished.
 
 ## Change detection and receipts
 
@@ -124,7 +128,7 @@ Write the category script first and run `check`; it is the only place sentences,
 chapters and coverage live. Complete the [teaching check](narration.md#teaching-check-before-synthesis)
 on the whole script before synthesis, then keep a concise
 `.build/STEM/teaching-review.md`: units, chapter-to-locator mapping, consolidation
-decisions, `study_required` limits, word count, and the failed checks you repaired.
+decisions, parts left to the page, word count, and the failed checks you repaired.
 Write "not applicable" for checks with no relevant source material; never invent
 recall prompts or a numerical learning score. Fix clear in-scope problems yourself.
 

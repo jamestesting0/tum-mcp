@@ -1655,7 +1655,7 @@ def preview_index(root: Path) -> dict:
         if manifest is not None and manifest.course_key != inventory.course_key:
             raise CampusError(Code.SCOPE_DENIED, "Video manifest belongs to another course.")
     except (CampusError, OSError):
-        return {"videos": {}, "exercises": {}}
+        return {"videos": {}, "exercises": {}, "patterns": {}}
     entries: dict[str, dict] = {}
     exercise_entries: dict[str, dict] = {}
     pattern_entries: dict[str, dict] = {}

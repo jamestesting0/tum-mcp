@@ -9,7 +9,7 @@
 - A lecture has `chapters`: its topics in recording order with time ranges and pages. The
   Lecture page shows each chapter with its notes and highlights, marks a missing or unclear
   stretch where it happened, and drops the provenance line from its header. A selection
-  decision must stay inside one chapter, and readiness asks for chapters. Only taught topics
+  decision may not cross a chapter boundary, and readiness asks for chapters. Only taught topics
   are chapters; an `empty_chapter` flag marks one with no pages, notes or highlights.
 - A note shows its object with up to three Study `blocks` (formula, derivation, table,
   graph, tree, plot, UML, grid, code or a `study figure` slide crop); older notes' `figure`
@@ -25,6 +25,24 @@
 - `review repair-scope` lets a repair drop a Lecture entry while its lecture stays in
   review, and lists the removal and any finding it left open in the scorecard.
 - `study task finish` accepts a review that a later task extended by its authorized rounds.
+- Video Notes makes Exam pattern videos: `video-notes pattern PROJECT KEY` prints a
+  pattern's parts, and the video says when the pattern applies, shows each workflow step
+  with what it applies and each case, works an example through every step, shows each
+  pitfall wrong then right, and recaps. It plays on the pattern's Exam page.
+- Audio Notes makes exercise tracks that talk through one prepared solution, and a pattern
+  track now says each cue, step, case and pitfall instead of the pattern as a whole.
+  Exercise tracks get their own shelf in the Audio workspace, with Recall to the exercise.
+- Both media read one source layer. Every required part of a unit, exercise or pattern is
+  presented or listed in `left_to_page` with the reason the page serves it better; the
+  older `study_required` audio mode still loads. Video narration gets the audio spoken
+  checks (symbols, production wording, long sentences).
+- `video-notes outline` and `audio-notes outline` write a draft storyboard or script with
+  one chapter per source section and every required part already located; checks refuse
+  text still marked `Write:`.
+- `video-notes schema --example` and `audio-notes schema --example` print a copyable beat,
+  chapter, `left_to_page` entry or selection with its rule. `study schema --example` adds
+  Exam objects: a concept, a compact formula, a decision step, a pitfall, a drill item and
+  a guided step.
 
 ## 0.25.0 — 2026-11-15
 

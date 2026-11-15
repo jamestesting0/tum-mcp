@@ -194,7 +194,9 @@ class OnScreen(Frozen):
 class Beat(Frozen):
     """One moment of a lesson video: what is said, what is shown and which unit parts it
     presents. Open with an `overview`, close with a `recap`; every teaching beat names its
-    knowledge `point`. A `question` beat pauses on one of the unit's practice questions."""
+    knowledge `point`. A `question` beat pauses on one of the unit's practice questions.
+    Each `narration` sentence becomes one audio file and one caption: one idea, under about
+    25 words, symbols written as they are spoken."""
 
     key: BeatKey
     kind: Literal[
@@ -230,6 +232,9 @@ class Beat(Frozen):
 
 
 class Chapter(Frozen):
+    """One section of a lesson video. Its title labels the seek bar, so it names what the
+    section does in a few words (\"Bayes' rule on the test result\", not \"Part 2\")."""
+
     key: ChapterKey
     title: Short
     beats: tuple[Beat, ...] = Field(min_length=1, max_length=40)
@@ -443,6 +448,9 @@ class ExerciseRef(Frozen):
 
 
 class ExerciseSelection(Frozen):
+    """An exercise with `video` or `text-first` and why. An exercise the student asked for is
+    never text-first for being text-heavy."""
+
     exercise: ExerciseRef
     decision: Literal["video", "text-first"]
     reason: Prose
@@ -459,6 +467,9 @@ class PlannedExerciseVideo(ExerciseSelection):
 
 
 class PatternSelection(Frozen):
+    """An Exam pattern with `video` or `text-first` and why. A method with steps and cases
+    earns a video; a single lookup rule stays text-first."""
+
     pattern: Key
     decision: Literal["video", "text-first"]
     reason: Prose
@@ -475,6 +486,10 @@ class PlannedPatternVideo(PatternSelection):
 
 
 class ExerciseLocator(Frozen):
+    """A part of the exercise, copied with its fingerprint from `video-notes exercise`:
+    `statement[N]`, a guide step key, `answers[N]`, `notes[N]` or a `unit[/block]`
+    prerequisite the solution uses."""
+
     kind: Literal["statement", "step", "answer", "solution_note", "prerequisite"]
     ref: Annotated[str, Field(min_length=1, max_length=120)]
     fingerprint: Digest
@@ -496,7 +511,9 @@ class ExerciseLocator(Frozen):
 class ExerciseBeat(Frozen):
     """One moment of a worked solution. Each part runs `setup`, `strategy` (the method and
     why it fits), `work` (one operation per beat, with the rule that permits it), `verify` and
-    `answer`, which emphasizes the result."""
+    `answer`, which emphasizes the result. Each `narration`
+    sentence becomes one audio file and one caption: one idea, under about 25 words, symbols
+    written as they are spoken."""
 
     key: BeatKey
     kind: Literal["setup", "strategy", "work", "verify", "answer"]
@@ -515,6 +532,9 @@ class ExerciseBeat(Frozen):
 
 
 class ExerciseChapter(Frozen):
+    """One section of a worked solution. `answer` names the part it solves (none for a shared
+    setup); several chapters may solve one part, and parts keep their original order."""
+
     key: ChapterKey
     title: Short
     answer: ExerciseLocator | None = None
@@ -592,7 +612,9 @@ class PatternBeat(Frozen):
     what that workflow step applies (its formula, rule or code) on screen; a `case` names what
     the student sees and the move it calls for; an `example` beat works one workflow step of a
     worked example; a `pitfall` shows the wrong working, then the right one, and why; the
-    `recap` lists the steps."""
+    `recap` lists the steps. Each `narration`
+    sentence becomes one audio file and one caption: one idea, under about 25 words, symbols
+    written as they are spoken."""
 
     key: BeatKey
     kind: Literal["cue", "step", "case", "example", "pitfall", "recap"]
@@ -611,6 +633,9 @@ class PatternBeat(Frozen):
 
 
 class PatternChapter(Frozen):
+    """One stage of a pattern video: when it applies, the method, a worked example, the
+    pitfalls or the recap. A worked example that shows a new case gets its own chapter."""
+
     key: ChapterKey
     title: Short
     beats: tuple[PatternBeat, ...] = Field(min_length=1, max_length=40)
@@ -717,6 +742,9 @@ class VideoPlan(Frozen):
 
 
 class Selection(Frozen):
+    """A Study unit with `video` or `text-first` and why: a diagram with frames, a plot, a
+    derivation or a code trace earns a video; a definition list stays text-first."""
+
     unit: Key
     decision: Literal["video", "text-first"]
     reason: Prose
@@ -808,6 +836,9 @@ def allocate(
 
 
 class StyleProfile(Frozen):
+    """The look of every video of the course. A symbol keeps its `symbol_colors` colour in
+    every video; a change re-renders each video the next time it renders."""
+
     schema_version: Literal[1] = 1
     theme: Literal["dark", "light"] = "light"
     math: Literal["typst", "latex"] = "typst"
@@ -817,6 +848,9 @@ class StyleProfile(Frozen):
 
 
 class VoiceProfile(Frozen):
+    """The voice that actually spoke: provider, route (such as \"local\"), voice, language,
+    model and settings. One profile per video; changed settings regenerate its audio."""
+
     provider: Annotated[str, Field(min_length=1, max_length=60)]
     route: Annotated[str, Field(min_length=1, max_length=120)]
     voice: Annotated[str, Field(min_length=1, max_length=120)]
@@ -826,6 +860,9 @@ class VoiceProfile(Frozen):
 
 
 class VoiceFile(Frozen):
+    """The course's voice profiles and its pronunciation map: write a symbol or acronym the way
+    the voice should say it, and apply the map when writing sentences."""
+
     schema_version: Literal[1] = 1
     preferred: Annotated[str, Field(max_length=300)] = (
         "ElevenLabs free website when it works; otherwise local Kokoro"

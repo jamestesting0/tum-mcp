@@ -172,6 +172,45 @@ def test_an_exercise_track_says_each_part_or_leaves_it_to_the_page(demo: Path) -
     assert error.startswith("coverage.missing") and f"{dense['kind']} {dense['ref']}" in error
 
 
+def test_an_exercise_track_has_its_own_shelf_and_recalls_the_exercise(
+    demo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.course.media import video_runtime
+    from tum_mcp.course.media.audio_app import preview_index
+
+    monkeypatch.setattr(video_runtime, "call_worker", FakeWorker(output=TRACK, seconds=1.0))
+    exercise = audio_project.sources(demo)["exercises"][0]
+    source = {"kind": "exercise", "set": exercise["set"], "unit": exercise["unit"]}
+    value = {
+        "key": "practice",
+        "stem": "02_practice",
+        "title": "Practice",
+        "voice": "narrator",
+        "units": [source],
+        "chapters": [
+            {
+                "key": "working",
+                "title": "Working the exercise",
+                "covers": [source | {"locator": part} for part in exercise["required"]],
+                "sentences": ["The exercise asks for the order of a traversal."],
+            }
+        ],
+    }
+    (demo / "audio/categories").mkdir()
+    (demo / "audio/categories/02_practice.json").write_text(json.dumps(value), encoding="utf-8")
+    for item in audio_project.narration(demo, "02_practice"):
+        (demo / item["file"]).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(SPEECH, demo / item["file"])
+    review = demo / "audio/.build/review.md"
+    review.write_text("Checked.\n", encoding="utf-8")
+    audio_project.publish(demo, "02_practice", review)
+
+    [track] = preview_index(demo)["tracks"]
+    assert track["kind"] == "exercises"
+    target = {"kind": "exercise", "set": exercise["set"], "key": exercise["unit"]}
+    assert track["chapters"][0]["recall"] == [target]
+
+
 def test_a_pattern_track_must_say_each_part_not_the_pattern_as_a_whole(demo: Path) -> None:
     # One whole-pattern locator let a track drop a workflow step or case unseen.
     pattern = audio_project.sources(demo)["exam"]["patterns"][0]

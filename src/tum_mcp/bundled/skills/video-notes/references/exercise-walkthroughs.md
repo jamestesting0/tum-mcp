@@ -13,12 +13,12 @@ givens, conventions, solution origin and prerequisites. Run:
 tum-mcp video-notes exercise PROJECT SET/KEY
 tum-mcp video-notes schema selection
 tum-mcp video-notes plan PROJECT --selection FILE
-tum-mcp video-notes schema storyboard
+tum-mcp video-notes outline PROJECT STEM
 ```
 
 Selection entries use `exercises: [{exercise: {set: SET, exercise: KEY},
-decision: "video", reason: "..."}]`. Copy the printed hash and locator
-fingerprints. Exercise storyboards have `exercise`, `exercise_hash`, `answers`;
+decision: "video", reason: "..."}]`. `outline` writes the storyboard with the hash
+and every locator fingerprint filled in. Exercise storyboards have `exercise`, `exercise_hash`, `answers`;
 not a fabricated Study unit or objectives. Locators address `statement[N]`, exact
 step keys, `answers[N]`, `notes[N]`, or a declared `unit[/block]` prerequisite.
 Only actually used prerequisite meaning belongs in this video.
@@ -26,7 +26,9 @@ Only actually used prerequisite meaning belongs in this video.
 Chapters carry an `answer` locator (or none for an initial shared setup).
 Cover every required answer in original order, including all secondary demands.
 Several consecutive chapters may explain one part. Do not infer coverage from
-chapter titles or truncate a problem with more than twelve parts.
+chapter titles or truncate a problem with more than twelve parts. Every statement
+part, guide step and answer is presented by a beat or listed in `left_to_page` with
+the reason the page serves it better.
 
 ## Build the solution
 
@@ -73,11 +75,31 @@ multi-part problem ends on one summary grid of every requested result.
 No stock branding intro, unrelated recap, added example, quiz or mandatory pause-and-solve.
 Source defects return to prepare-exercises; missing exposition/timing returns here.
 
+## Exam patterns
+
+A pattern video teaches a method the student reuses on every exam question of its
+kind. `tum-mcp video-notes pattern PROJECT KEY` prints its parts. Selection entries
+use `patterns: [{pattern: KEY, decision: "video", reason: "..."}]`. The outline has
+these stages:
+
+1. **When it applies:** the cues in a question that call for this pattern.
+2. **The method:** each workflow step in its own `step` beat, with the formula, rule
+   or code it applies on screen. Each case of a decision step gets a `case` beat:
+   what the student sees, then the move.
+3. **Worked example:** the first example, one `example` beat per workflow step, so the
+   student sees each step used.
+4. **Pitfalls:** each one as the wrong working, then the right one, and why.
+5. **Recap:** the steps in order, with the marking notes and variations.
+
+A further example that shows a new case gets its own chapter; one that repeats a case
+goes to `left_to_page` as "repeats case N". Drill items are never shown, since
+solving them would spoil the practice. The clip plays on the pattern's Exam page.
+
 ## Encounter and review
 
 Single-part clips appear inside the existing Solution; multi-part clips get one
 closed “Video solution (all parts)” disclosure. Opening does not autoplay or mark
-written parts complete; closing pauses. No clip is exposed in Exam.
+written parts complete; closing pauses. Exercise clips never appear in Exam.
 
 Test closed/open, sound, captions, chapter seeks and transcript at phone/desktop
 widths. Review using the source-derived Exercise profile in

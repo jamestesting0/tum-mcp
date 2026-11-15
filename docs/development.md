@@ -380,9 +380,13 @@ the synthetic media in `tests/fixtures/video/` (`generate.py` recreates them). S
 data directory and render, mix, check and publish a synthetic video; the browser
 playback tests also run WebKit when Playwright's WebKit is installed.
 
-Media source contracts live in `video_content.py`, `video_sources.py` and
-`audio_content.py`. Study and Exercise video are explicit variants, not fake units.
-`video-notes exercise PROJECT SET/KEY` prints exact permitted source locators.
+Media source contracts live in `video_content.py` and `audio_project.py`. Both media
+read one source layer, `sources.py`: each Study unit, exercise, Exam pattern and
+cheatsheet entry with its required parts, fingerprints and teaching hash. `speech.py`
+holds the spoken checks both run, `outline.py` writes drafts that cover every required
+part and `examples.py` serves `schema --example`. Study, Exercise and Exam pattern
+videos are explicit variants, not fake units. `video-notes exercise PROJECT SET/KEY`
+and `video-notes pattern PROJECT KEY` print exact permitted source locators.
 The worker shares narration timing and rendering; `self.cue(index)` uses measured
 sentence bounds. `video_style.py` stages effective app CSS colors; no worker palette
 is maintained separately. Contact sheets sample entry/middle/exit frames.
@@ -393,8 +397,9 @@ averages are separate. Course structure includes source/chapter/coverage links,
 not codec bytes. Pruned render caches do not erase published source identities.
 Malformed optional media leaves ordinary Study diagnostics available.
 
-Focused checks are `tests/unit/test_study_media.py`,
-`tests/integration/test_study_review.py`, `test_video_pipeline.py` and
+Focused checks are `tests/unit/test_study_media.py`, `test_video_pattern.py`,
+`test_media_examples.py`, `tests/integration/test_study_review.py`,
+`test_video_pipeline.py`, `test_audio_notes.py`, `test_media_outline.py` and
 `test_study_video_browser.py`; the latter uses
 `TUM_MCP_BROWSER_INTEGRATION=1`. Native render checks retain
 `TUM_MCP_VIDEO_RENDER_INTEGRATION=1`. Recreate the AAC codec fixture with

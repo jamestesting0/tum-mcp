@@ -94,12 +94,24 @@ def test_index_omits_missing_or_changed_files_and_survives_bad_manifests(
     with httpx2.Client(trust_env=False, timeout=5) as client:
         poster = demo / f"videos/posters/{STEM}.jpg"
         poster.write_bytes(poster.read_bytes() + b"x")
-        assert client.get(server + "/videos/index.json").json() == {"videos": {}, "exercises": {}}
+        assert client.get(server + "/videos/index.json").json() == {
+            "videos": {},
+            "exercises": {},
+            "patterns": {},
+        }
         (demo / "videos/manifest.json").write_text("{not json", encoding="utf-8")
         response = client.get(server + "/videos/index.json")
-        assert response.status_code == 200 and response.json() == {"videos": {}, "exercises": {}}
+        assert response.status_code == 200 and response.json() == {
+            "videos": {},
+            "exercises": {},
+            "patterns": {},
+        }
         (demo / "videos/manifest.json").unlink()
-        assert client.get(server + "/videos/index.json").json() == {"videos": {}, "exercises": {}}
+        assert client.get(server + "/videos/index.json").json() == {
+            "videos": {},
+            "exercises": {},
+            "patterns": {},
+        }
 
 
 @pytest.fixture(scope="module")

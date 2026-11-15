@@ -70,7 +70,8 @@ symbols/acronyms for synthesis and maintain their pronunciation map in voice.jso
 | Code | Name the inputs and state, follow the relevant operations/branches and explain the result using the prepared example. Avoid long punctuation readings. |
 | Diagram | Establish the starting state and edge meanings; introduce components as needed while walking through frames in order. Replace "here/above/this arrow" with explicit names. |
 | Cheatsheet entry | Trigger, the rule or formula with audible grouping and symbol meanings, one short sheet example, the trap. See [cheatsheet tracks](revision-design.md#cheatsheet-tracks-a-spoken-summary). |
-| Exam pattern | Cues that identify the question, the ordered steps with the formula each applies, the usual pitfall. |
+| Exam pattern | Cues that identify the question, the ordered steps with the formula each applies, each case of a decision step, the pitfalls. |
+| Exercise | What each part asks and its givens, the method and why it fits, each step with its reason, every part's answer. See [exercise tracks](revision-design.md#exercise-tracks-a-spoken-walkthrough). |
 | Flashcard/practice | Reuse distinct teaching from correct feedback. A source-backed recall prompt is optional, continues to its answer automatically, and requires no response. Consolidate duplicate feedback and label misconceptions. |
 
 Retain the source's exact relationships, qualifications, numeric results and
@@ -116,5 +117,5 @@ Record a brief review with the script and guidance fingerprints as described in
 [workflow and coverage](workflow.md). Check audio delivery separately after
 generation. A passed script review, transcript match or signal check does not
 prove learning effectiveness or an auditioned voice. Report content gaps back to the
-source workspace's skill (prepare-study for Study, prepare-exams for Exam); do not
-expand the syllabus during conversion.
+source workspace's skill (prepare-study for Study, prepare-exercises for Exercises,
+prepare-exams for Exam); do not expand the syllabus during conversion.
