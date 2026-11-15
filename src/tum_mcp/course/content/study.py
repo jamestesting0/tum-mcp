@@ -1328,6 +1328,18 @@ def block_guide(example: str) -> str:
             example.removeprefix("lecture-")
         )
         return " ".join((model.__doc__ or "").split()) if model else ""
+    if example.startswith("exam-"):
+        from tum_mcp.course.content import exam
+
+        model = {
+            "concept": exam.Concept,
+            "formula": exam.CompactFormula,
+            "step": exam.PatternStep,
+            "pitfall": exam.Pitfall,
+            "drill": exam.DrillItem,
+            "guided-step": exam.GuidedStep,
+        }.get(example.removeprefix("exam-"))
+        return " ".join((model.__doc__ or "").split()) if model else ""
     if example.startswith("selection-"):
         from tum_mcp.course.lecture.selection import Decision
 

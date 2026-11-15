@@ -35,13 +35,27 @@ def _emit(value: object) -> None:
 
 
 @app.command()
-def schema(name: SchemaName) -> None:
-    """Print the category script or voice contract."""
+def schema(
+    name: Annotated[str | None, typer.Argument()] = None,
+    example: Annotated[bool, typer.Option("--example", help="Show an example to copy.")] = False,
+) -> None:
+    """Print the category script or voice contract, or with --example an example and its rule."""
     from tum_mcp.course.media.audio_project import CategoryScript
+    from tum_mcp.course.media.examples import catalogue
+    from tum_mcp.course.media.examples import example as show
     from tum_mcp.course.media.video_content import VoiceFile
 
-    model = CategoryScript if name == SchemaName.CATEGORY else VoiceFile
-    _emit(model.model_json_schema())
+    if example:
+        if name is None or name == "list":
+            _emit(sorted(catalogue("audio")))
+            return
+        rule, value = show("audio", name)
+        typer.echo(f"Rule: {rule}", err=True)
+        _emit(value)
+        return
+    if name not in {item.value for item in SchemaName}:
+        raise CampusError(Code.ACTION_REQUIRED, "Choose a schema name or use --example list.")
+    _emit((CategoryScript if name == SchemaName.CATEGORY else VoiceFile).model_json_schema())
 
 
 @app.command()

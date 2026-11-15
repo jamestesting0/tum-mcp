@@ -152,6 +152,10 @@ TypstMath = Annotated[str, Field(min_length=1, max_length=600)]
 
 
 class OnScreen(Frozen):
+    """One thing on screen, with its own kind: a short `label`, `math` written in Typst (keep
+    the Study block's LaTeX in `source_latex`), a `number` that can count, or `code`.
+    Mathematics is never a label."""
+
     key: Key
     kind: Literal["label", "math", "number", "code"]
     text: Short | None = None
@@ -188,6 +192,10 @@ class OnScreen(Frozen):
 
 
 class Beat(Frozen):
+    """One moment of a lesson video: what is said, what is shown and which unit parts it
+    presents. Open with an `overview`, close with a `recap`; every teaching beat names its
+    knowledge `point`. A `question` beat pauses on one of the unit's practice questions."""
+
     key: BeatKey
     kind: Literal[
         "overview",
@@ -486,6 +494,10 @@ class ExerciseLocator(Frozen):
 
 
 class ExerciseBeat(Frozen):
+    """One moment of a worked solution. Each part runs `setup`, `strategy` (the method and
+    why it fits), `work` (one operation per beat, with the rule that permits it), `verify` and
+    `answer`, which emphasizes the result."""
+
     key: BeatKey
     kind: Literal["setup", "strategy", "work", "verify", "answer"]
     narration: tuple[Sentence, ...] = Field(default=(), max_length=12)
@@ -711,6 +723,10 @@ class Selection(Frozen):
 
 
 class SelectionFile(Frozen):
+    """The Study units, exercises and Exam patterns to make videos of, each with `video` or
+    `text-first` and why. A moving process or a worked method earns a video; a table to look
+    up stays text-first."""
+
     units: tuple[Selection, ...] = Field(default=(), max_length=300)
     exercises: tuple[ExerciseSelection, ...] = Field(default=(), max_length=300)
     patterns: tuple[PatternSelection, ...] = Field(default=(), max_length=300)

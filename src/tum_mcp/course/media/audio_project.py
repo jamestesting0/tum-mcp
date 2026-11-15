@@ -116,6 +116,10 @@ class LeftToPage(Frozen):
 
 
 class ScriptChapter(Frozen):
+    """One chapter of a track: it opens by naming its subject, so a listener who skips to it
+    knows what 'it' is, says each covered part in words a voice can read, and leaves dense
+    working (long algebra, a table, a diagram) to the page."""
+
     key: Key
     title: Short
     covers: tuple[Cover, ...] = Field(min_length=1, max_length=200)

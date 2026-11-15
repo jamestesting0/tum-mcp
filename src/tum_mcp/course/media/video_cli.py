@@ -95,11 +95,26 @@ def runtime_install() -> None:
 
 
 @app.command()
-def schema(name: SchemaName) -> None:
-    """Print a JSON schema for a Video Notes input or record."""
+def schema(
+    name: Annotated[str | None, typer.Argument()] = None,
+    example: Annotated[bool, typer.Option("--example", help="Show an example to copy.")] = False,
+) -> None:
+    """Print a JSON schema, or with --example a copyable example and its rule."""
+    from tum_mcp.course.media.examples import catalogue
+    from tum_mcp.course.media.examples import example as show
     from tum_mcp.course.media.video_project import schemas
 
-    typer.echo(json.dumps(schemas()[name.value].model_json_schema(), indent=2))
+    if example:
+        if name is None or name == "list":
+            _emit(sorted(catalogue("video")))
+            return
+        rule, value = show("video", name)
+        typer.echo(f"Rule: {rule}", err=True)
+        _emit(value)
+        return
+    if name not in {item.value for item in SchemaName}:
+        raise CampusError(Code.ACTION_REQUIRED, "Choose a schema name or use --example list.")
+    typer.echo(json.dumps(schemas()[name].model_json_schema(), indent=2))
 
 
 @app.command()

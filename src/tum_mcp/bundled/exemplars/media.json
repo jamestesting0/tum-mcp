@@ -1,0 +1,84 @@
+{
+  "video": {
+    "unit-beat": {
+      "key": "b03",
+      "kind": "mechanism",
+      "point": "The queue keeps discovery order",
+      "narration": [
+        "Breadth-first search takes the oldest vertex from the queue, so it finishes one layer before it starts the next."
+      ],
+      "on_screen": [
+        {"key": "queue", "kind": "label", "text": "Queue: A, B, C"},
+        {"key": "layer-rule", "kind": "math", "typst": "d(v) = d(u) + 1", "source_latex": "d(v) = d(u) + 1"}
+      ],
+      "locators": [
+        {"kind": "block", "ref": "blocks[2]", "fingerprint": "0000000000000000000000000000000000000000000000000000000000000000"}
+      ],
+      "intent": "Show the queue growing as each neighbour is discovered, one layer at a time."
+    },
+    "exercise-beat": {
+      "key": "b05",
+      "kind": "work",
+      "narration": [
+        "Relax the edge from A to C: two plus three is five, which beats the current seven."
+      ],
+      "on_screen": [
+        {"key": "relax-c", "kind": "math", "typst": "d(C) = min(7, 2 + 3) = 5", "source_latex": "d(C) = \\min(7, 2 + 3) = 5"}
+      ],
+      "locators": [
+        {"kind": "step", "ref": "relax-c", "fingerprint": "0000000000000000000000000000000000000000000000000000000000000000"}
+      ],
+      "intent": "Write the relaxation, then strike out the old distance of C."
+    },
+    "pattern-beat": {
+      "key": "b04",
+      "kind": "step",
+      "narration": [
+        "Step two: take the frontier node with the smallest path cost, not the one found first."
+      ],
+      "on_screen": [
+        {"key": "pick-cheapest", "kind": "math", "typst": "n = arg min_(m in F) g(m)", "source_latex": "n = \\arg\\min_{m \\in F} g(m)"}
+      ],
+      "locators": [
+        {"kind": "workflow", "ref": "workflow[1]", "fingerprint": "0000000000000000000000000000000000000000000000000000000000000000"}
+      ],
+      "intent": "Highlight the cheapest entry of the frontier table as the rule appears."
+    },
+    "on-screen": {"key": "relax-c", "kind": "math", "typst": "d(C) = min(7, 2 + 3) = 5", "source_latex": "d(C) = \\min(7, 2 + 3) = 5"},
+    "left-to-page": {
+      "locator": {"kind": "block", "ref": "blocks[5]", "fingerprint": "0000000000000000000000000000000000000000000000000000000000000000"},
+      "reason": "A twelve-row comparison table is read, not watched."
+    },
+    "selection": {
+      "units": [{"unit": "bfs", "decision": "video", "reason": "The traversal is a moving process."}],
+      "exercises": [
+        {"exercise": {"set": "sheet-1", "exercise": "dijkstra"}, "decision": "video", "reason": "A worked method with a decision at every step."}
+      ],
+      "patterns": [
+        {"pattern": "uniform-cost", "decision": "video", "reason": "The method runs the same steps on every exam question of this kind."}
+      ]
+    }
+  },
+  "audio": {
+    "chapter": {
+      "key": "relaxation",
+      "title": "Relaxing an edge",
+      "covers": [
+        {"kind": "exercise", "set": "sheet-1", "unit": "dijkstra", "locator": {"kind": "step", "ref": "relax-c", "fingerprint": "0000000000000000000000000000000000000000000000000000000000000000"}}
+      ],
+      "sentences": [
+        "Relaxing an edge compares two paths to the same vertex.",
+        "Through A, the path to C costs two plus three, which is five.",
+        "Five beats the current seven, so the distance of C becomes five."
+      ]
+    },
+    "left-to-page": {
+      "kind": "exercise",
+      "set": "sheet-1",
+      "unit": "dijkstra",
+      "locator": {"kind": "answer", "ref": "answers[0]", "fingerprint": "0000000000000000000000000000000000000000000000000000000000000000"},
+      "reason": "The full distance table is easier to read than to hear."
+    },
+    "source": {"kind": "pattern", "unit": "uniform-cost"}
+  }
+}
