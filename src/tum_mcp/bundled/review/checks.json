@@ -972,7 +972,7 @@
     {
       "id": "integration.lecture_links",
       "dimension": "integration",
-      "rule": "Units and Lecture entries link to the matching prepared passage when one exists. Missing unrelated Study content is not a link defect and does not authorize expanding the requested scope.",
+      "rule": "Units and Lecture entries link to the matching prepared passage when one exists. Missing unrelated Study content is not a link defect and does not authorize expanding the requested scope. A linked Study passage that still teaches a claim the lecture corrected, or omits a condition a note adds, is a finding against the unit.",
       "pass": "A matching prepared passage opens beside the entry; an unrelated topic needs no invented Recall link.",
       "fail": "A matching prepared explanation exists but its entry omits the link.",
       "profiles": [
@@ -980,7 +980,7 @@
         "lecture-entry"
       ],
       "scope": "item",
-      "version": 2
+      "version": 3
     },
     {
       "id": "integration.same_notation",
@@ -1256,7 +1256,7 @@
     {
       "id": "coverage.lecture_selection",
       "dimension": "coverage",
-      "rule": "Read the complete retained transcript and the selection map, including omissions. Every consequential clarification, correction and useful worked explanation is selected or has a specific defensible omission reason. Compare reasoning, assumptions and interpretation with the matching materials. A shared topic title alone does not justify omission. Report unavailable comparison evidence.",
+      "rule": "Read the complete retained transcript and the selection map, including omissions. Every consequential clarification, correction and useful worked explanation is selected or has a specific defensible omission reason. Compare reasoning, assumptions and interpretation with the matching materials. A shared topic title alone does not justify omission. Chapters follow the lecture's topics in recording order and name them in the course's terms; check each chapter's omitted time against its pages. Report unavailable comparison evidence.",
       "pass": "The whole eligible timeline is accounted for. Repeated numerical working is omitted because the cited slide already gives those steps; a new failure diagnosis is retained.",
       "fail": "A map calls a sustained worked explanation 'same topic as slide' without comparing the reasoning, or the review reads only the two chosen entries.",
       "profiles": [

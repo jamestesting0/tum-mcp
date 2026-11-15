@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Lecture content gets the shared content checks: `study lint` flags plain mathematics,
+  long note messages and other text problems in the summary, notes and highlights, and a
+  ruled `recording_narration` flag asks about sentences that narrate the recording. A left
+  arrow (`←`) now counts as plain mathematics everywhere.
+- A lecture has `chapters`: its topics in recording order with time ranges and pages. The
+  Lecture page shows each chapter with its notes and highlights, marks a missing or unclear
+  stretch where it happened, and drops the provenance line from its header. A selection
+  decision must stay inside one chapter, and readiness asks for chapters.
+- A note shows its object with up to three Study `blocks` (formula, derivation, table,
+  graph, tree, plot, UML, grid, code or a `study figure` slide crop); older notes' `figure`
+  loads as a block with an unchanged revision. Note labels are only `correction` and
+  `exam tip`, and highlight frames are larger, with their duration on the frame.
+- `study schema --example` adds `lecture-note`, `lecture-highlight`, `lecture-chapter` and
+  `selection-decision`, each printed with its authoring rule.
+- When a lecture corrects the materials, the linked Study passage is rewritten too, and
+  review treats a passage that still teaches the corrected claim as a finding.
+
 ## 0.25.0 — 2026-11-15
 
 - Verify packets ask checkers to judge each check on the blocks changed since the earlier

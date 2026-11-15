@@ -68,8 +68,12 @@ fails while a flag has no row or a row names a check that no longer exists.
 | --- | --- | --- |
 | L1 | A note stands alone for a student who skipped the lecture: setup, takeaway with condition, the lecturer's working or example, why it matters | `coverage.note_stands_alone` |
 | L2 | A frame of the slide or board is attached when it carries the point, legible and never decorative | `coverage.note_stands_alone` |
-| L3 | A note adds what the slides do not say and never narrates | `clarity.no_meta` |
+| L3 | A note adds what the slides do not say and never narrates | `clarity.no_meta`, `recording_narration` |
 | L4 | A note links the Study passage that teaches it | `undecided_link` |
+| L5 | Mathematics in the summary, notes and highlights is LaTeX; a note's message is one takeaway with its condition | `plain_math`, `math_word`, `dense_paragraph` |
+| L6 | A note shows the object it is about (a formula, graph, code or slide crop) instead of describing it | `described_object`, `representation.shown_not_described` |
+| L7 | The lecture is organised as chapters in recording order, and each selection decision stays inside one chapter | lecture readiness |
+| L8 | A linked Study passage never keeps teaching a claim the lecture corrected | `integration.lecture_links` |
 
 ## App text
 
