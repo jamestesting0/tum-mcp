@@ -170,8 +170,10 @@ class Part(Frozen):
     official: Text | None = Field(
         default=None,
         exclude_if=lambda value: value is None,
-        description="Where the official solution gives this part's answer, such as "
-        "'solution p. 2, (b)'. Omit when there is no official solution.",
+        description="Where the official solution (a solution sheet, tutorial slides or a "
+        "worked answer) gives this part's answer, such as 'tutorial slides p. 26'. Write "
+        "'none' when it does not answer this part; omit it when the course has no official "
+        "solution.",
     )
     needs: tuple[Need, ...] = Field(
         default=(),
@@ -411,6 +413,12 @@ def plan_problems(plan: Plan, value: dict | None, outcomes: set[str] | None) -> 
                     f"{concept.name}: a definition is shown with an example or case; name the "
                     "block that shows it in the concept's `blocks`"
                 )
+    located = [part.part for part in plan.parts if part.official]
+    if located and (missing := [part.part for part in plan.parts if not part.official]):
+        problems.append(
+            f"parts {', '.join(missing)} name no official locator while {located[0]} does: find "
+            "each part's answer in the official solution, or write 'none' when it gives none"
+        )
     if plan.parts and (declared := value.get("parts")) is not None:
         planned = [part.part for part in plan.parts]
         if planned != list(declared):

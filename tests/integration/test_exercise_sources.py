@@ -80,6 +80,22 @@ def test_an_exercise_part_map_needs_no_gate_and_its_needs_link_study(
         part = {"part": "a", "answer": "3", "method": "Compare.", "needs": list(needs)}
         return Plan.model_validate({"item": item, "parts": [part]})
 
+    # Every part is checked against the official solution once one part names it.
+    from tum_mcp.course.checks.plans import plan_problems
+
+    two = Plan.model_validate(
+        {
+            "item": item,
+            "parts": [
+                {"part": "a", "answer": "3", "method": "Compare.", "official": "slides p. 2"},
+                {"part": "b", "answer": "4", "method": "Compare."},
+            ],
+        }
+    )
+    assert any("official" in p for p in plan_problems(two, {"parts": ["a", "b"]}, None))
+    none = two.parts[1].model_copy(update={"official": "none"})
+    two = two.model_copy(update={"parts": (two.parts[0], none)})
+    assert not plan_problems(two, {"parts": ["a", "b"]}, None)
     # An exercise's part map is checked by code; Study plans still go to a checker.
     assert not gated(item) and gated(f"study/{unit['key']}")
     path = plan_path(exercise_project, item)

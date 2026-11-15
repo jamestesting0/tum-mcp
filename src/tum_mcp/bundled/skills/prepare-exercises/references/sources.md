@@ -13,10 +13,14 @@ diagram/file is unavailable, preserve the stored material and report the exact
 gap; leave that exercise pending instead of inventing a statement or a solution.
 Prepare independent complete exercises while a different item is blocked.
 
-Distinguish official solutions from your own derivation. An official label needs
-the actual declared solution source, and only what that source states is official. If
-no official solution is available, solve and review an authored one, including
-alternative valid methods and edge cases. A slide that builds up over several overlay
+Distinguish official solutions from your own derivation. Before solving, look for the
+official answers in every form the course publishes them: solution sheets, tutorial
+slides and worked answers in recordings; `study find` the problem number. An official
+label needs the actual declared solution source, and only what that source states is
+official. When your answer differs from the official one, check the convention first,
+such as what counts as a backtrack. Use the source's convention and name any difference
+in one line. If no official solution is available, solve and review an authored one,
+including alternative valid methods and edge cases. A slide that builds up over several overlay
 pages is read on its last page.
 Do not infer deadline/timezone or release status from a title. Dates are optional
 and, when present, require an explicit timezone and current source evidence.
