@@ -7,6 +7,7 @@ from tum_mcp.course.content.exam_data import read_exam
 from tum_mcp.course.ledger.preparation import read_preparation
 from tum_mcp.course.project.store import Write, apply, load_state, private_path, read_bytes
 from tum_mcp.course.review.items import digest
+from tum_mcp.course.review.ledger import read_record
 from tum_mcp.errors import CampusError, Code
 
 
@@ -40,6 +41,13 @@ def contract(root: Path, identifier: str, sources: tuple[str, ...] | None = None
     )
 
 
+def _removable(key: str, after: set[str]) -> bool:
+    """A Lecture entry may leave when its lecture stays: omitting a highlight that repeats a
+    slide is a repair, and the lecture's selection review checks the new omission."""
+    parts = key.split("/")
+    return len(parts) == 3 and parts[0] == "lecture" and "/".join(parts[:2]) in after
+
+
 def repair_scope(root: Path, reason: str) -> dict:
     from tum_mcp.course.review import loop
 
@@ -61,18 +69,27 @@ def repair_scope(root: Path, reason: str) -> dict:
     reading = assess_batch(context.root, state.batch.identifier, context)
     loop._require_ready(reading)
     before, after = set(state.scope), set(reading.items)
-    if not before <= after:
+    removed = sorted(before - after)
+    if not all(_removable(key, after) for key in removed):
         raise CampusError(
             Code.ACTION_REQUIRED,
-            "Keep original item keys when splitting; no reviewed item may disappear.",
+            "Keep original item keys when splitting; only a Lecture entry may be removed, "
+            "and its lecture stays in scope.",
         )
     added = sorted(after - before)
-    if not added or any(
+    if not (added or removed) or any(
         key.split("/")[0] not in {k.split("/")[0] for k in before} for key in added
     ):
         raise CampusError(
             Code.ACTION_REQUIRED, "Add complete repair items within the reviewed workspaces."
         )
+    # A removed entry's open findings stay visible in the scorecard.
+    unresolved = sorted(
+        f"{key}#{finding.id}"
+        for key in removed
+        for finding in read_record(context.root, key).findings
+        if finding.status in {"open", "reopened"}
+    )
     updated = state.model_copy(
         update={
             "scope": tuple(reading.items),
@@ -85,6 +102,8 @@ def repair_scope(root: Path, reason: str) -> dict:
                 {
                     "round": state.round,
                     "added": added,
+                    **({"removed": removed} if removed else {}),
+                    **({"removed_open_findings": unresolved} if unresolved else {}),
                     "reason": reason,
                 },
             ),
@@ -106,6 +125,7 @@ def repair_scope(root: Path, reason: str) -> dict:
     )
     return {
         "added": added,
+        **({"removed": removed} if removed else {}),
         "round": updated.round,
         "budget": updated.budget,
         "next": (

@@ -17,6 +17,11 @@ from tum_mcp.settings import Frozen
 
 
 class Decision(Frozen):
+    """One stretch of eligible recording time and what became of it: a note, a highlight or an
+    omission. The reason names what the cited pages already explain, what the recording adds
+    and what the student gains; a topic name alone is not a reason. A decision never
+    crosses a chapter boundary."""
+
     interval: Interval
     disposition: Literal["note", "highlight", "omit"]
     entry: Key | None = None
@@ -81,6 +86,21 @@ def selection_problems(root: Path, lecture: Lecture, evidence: tuple[Evidence, .
         for decision in selection.decisions
     ):
         problems.append("Every selected note and highlight must match its decision.")
+    # A decision stays within one topic, so an omission's reason speaks for one chapter.
+    boundaries = sorted(
+        {
+            edge
+            for chapter in lecture.chapters
+            for edge in (chapter.interval.start_s, chapter.interval.end_s)
+        }
+    )
+    problems.extend(
+        f"Decision {decision.interval.start_s:g}-{decision.interval.end_s:g} s crosses the "
+        f"chapter boundary at {edge:g} s; split it there."
+        for decision in selection.decisions
+        for edge in boundaries
+        if decision.interval.start_s < edge < decision.interval.end_s
+    )
     retained = merge_intervals(
         tuple(d.interval for d in selection.decisions if d.disposition != "omit")
     )
@@ -134,6 +154,12 @@ def selection_item(root: Path, lecture: Lecture) -> ReviewItem:
         "title": lecture.title,
         "summary": lecture.summary,
         "coverage": lecture.coverage.model_dump(mode="json"),
+        # Only when present, so an unchanged older lecture keeps its reviewed revision.
+        **(
+            {"chapters": [chapter.model_dump(mode="json") for chapter in lecture.chapters]}
+            if lecture.chapters
+            else {}
+        ),
         "notes": [entry.model_dump(mode="json") for entry in lecture.notes],
         "highlights": [entry.model_dump(mode="json") for entry in lecture.highlights],
         "sources": [

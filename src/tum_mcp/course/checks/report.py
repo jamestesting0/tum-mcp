@@ -48,6 +48,7 @@ from tum_mcp.course.project.store import load_state, private_path
 
 if TYPE_CHECKING:
     from tum_mcp.course.content.exam import ExamContent
+    from tum_mcp.course.lecture.content import LectureContent
 
 Flag = Callable[[str, str, str], None]
 
@@ -150,7 +151,7 @@ META_REFERENCE = re.compile(
 # Mathematics typed as plain text: Greek letters, math symbols, sub/superscripts, a function
 # applied to a condition or several arguments (P(A|B), Q(S, a)) or a one-letter equation (V = 3).
 PLAIN_MATH = re.compile(
-    r"[\u0391-\u03a9\u03b1-\u03c9≤≥≠≈∑∏∫√∞∀∃¬∧∨⇒⇔→↔∈∉⊂⊆∪∩∅⊥⊤×÷²³⁰-⁹₀-₉ᵈⁿ]"
+    r"[\u0391-\u03a9\u03b1-\u03c9≤≥≠≈∑∏∫√∞∀∃¬∧∨⇒⇐⇔→←↔↦∈∉⊂⊆∪∩∅⊥⊤×÷²³⁰-⁹₀-₉ᵈⁿ]"
     # A set, a predicate applied to variables, a product with a middle dot: X={1,2}, P(x), 0.6·200.
     r"|(?<![\w\\])[A-Za-z]\d{0,2}\s*=\s*\{"
     r"|(?<![\w\\])[A-Z]\([a-z](?:,\s*[a-z])*\)"
@@ -1368,6 +1369,99 @@ def exam_block_flags(exam: "ExamContent | None") -> list[dict[str, JsonValue]]:
             for error in arithmetic_errors(text):
                 flag(f"{item}#{path}", "arithmetic", error)
         _prose_text_flags(dumped, item, flag, plain=False)
+    return flags
+
+
+# A sentence about the recording instead of the subject. Attribution is right only for an
+# explicit exam or course instruction, so a checker rules on each.
+RECORDING_NARRATION = re.compile(
+    r"\b(?:the|our) (?:lecturer|professor|instructor|speaker|recording|video|livestream)\b"
+    r"|\bin this (?:part|segment|clip|recording)\b",
+    re.IGNORECASE,
+)
+# Fields of a lecture entry that locate it rather than say anything.
+LECTURE_LOCATORS = frozenset(
+    {"key", "evidence", "interval", "thumbnail", "image", "sources", "pages", "passage"}
+)
+
+
+def lecture_flags(lectures: "LectureContent | None") -> list[dict[str, JsonValue]]:
+    """The shared text checks on each lecture and on each of its notes and highlights."""
+    flags: list[dict[str, JsonValue]] = []
+
+    def flag(location: str, kind: str, detail: str) -> None:
+        flags.append({"item": location, "flag": kind, "detail": detail})
+
+    starts = {item.key: item.interval.start_s for item in lectures.evidence} if lectures else {}
+    for lecture in lectures.lectures if lectures else ():
+        base = f"lecture/{lecture.key}"
+        moments = [highlight.interval.start_s for highlight in lecture.highlights] + [
+            min(starts[key] for key in note.evidence if key in starts)
+            for note in lecture.notes
+            if any(key in starts for key in note.evidence)
+        ]
+        for index, chapter in enumerate(lecture.chapters):
+            span = chapter.interval
+            if not chapter.pages and not any(span.start_s <= at < span.end_s for at in moments):
+                flag(
+                    f"{base}#chapters[{index}]",
+                    "empty_chapter",
+                    f"Chapter '{chapter.title}' has no pages, notes or highlights. A chapter is a "
+                    "topic the lecture teaches; a guest talk, administration, a break, the "
+                    "recording's end or a topic outside the request belongs to no chapter.",
+                )
+        items: list[tuple[str, BaseModel | None, JsonValue]] = [
+            (base, None, {"title": lecture.title, "summary": lecture.summary}),
+            *(
+                (
+                    f"{base}/{entry.key}",
+                    entry,
+                    entry.model_dump(mode="json", exclude=LECTURE_LOCATORS),
+                )
+                for entry in lecture.entries
+            ),
+        ]
+        for item, entry, dumped in items:
+            if entry is not None:
+                flags.extend(item_block_flags(item, entry))
+            for path, text in _strings(dumped):
+                for error in arithmetic_errors(text):
+                    flag(f"{item}#{path}", "arithmetic", error)
+            _prose_text_flags(dumped, item, flag)
+            if words := math_words(dumped):
+                flags.append(math_word_flag(item, words))
+            sentences = [
+                sentence
+                for _, text in _prose(dumped, item)
+                for sentence in re.split(r"(?<=[.!?])\s+", text)
+            ]
+            if meta := [s for s in sentences if META_REFERENCE.search(s)]:
+                flag(
+                    item,
+                    "meta_reference",
+                    f"{len(meta)} sentence(s) talk about the material instead of the subject, "
+                    f"such as '{meta[0][:90]}'; state the idea itself.",
+                )
+            if narrated := [s for s in sentences if RECORDING_NARRATION.search(s)]:
+                flag(
+                    item,
+                    "recording_narration",
+                    f"{len(narrated)} sentence(s) narrate the recording, such as "
+                    f"'{narrated[0][:90]}'. Keep attribution only for an explicit exam or course "
+                    "instruction; otherwise state the idea directly.",
+                )
+            text = getattr(entry, "text", None)
+            if isinstance(text, str) and (
+                len(text.split()) > PARAGRAPH_WORDS
+                or (_sentences(text) > PARAGRAPH_SENTENCES and len(text.split()) > RUN_ON_WORDS)
+            ):
+                flag(
+                    item,
+                    "dense_paragraph",
+                    f"The note's message runs {len(text.split())} words in {_sentences(text)} "
+                    "sentences. Keep the takeaway with its condition; give the working as "
+                    "steps, the cases as points and an object as a block.",
+                )
     return flags
 
 

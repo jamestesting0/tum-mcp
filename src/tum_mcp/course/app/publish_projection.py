@@ -28,6 +28,8 @@ def project(payload: dict[str, JsonValue]) -> dict[str, JsonValue]:
             note["recording_source"] = recording.key
         for highlight in lecture["highlights"]:
             highlight["url"] = watch_link(recording, highlight["interval"]["start_s"])
+        for chapter in lecture.get("chapters", []):
+            chapter["url"] = watch_link(recording, chapter["interval"]["start_s"])
         lecture["recording"] = {
             "recorded_on": recording.recorded_on.isoformat(),
             "duration_s": recording.duration_s,

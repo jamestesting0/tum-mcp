@@ -7,12 +7,17 @@ from pathlib import Path
 
 from pydantic import Field, ValidationError, model_validator
 
-from tum_mcp.course.lecture.evidence import Interval
+from tum_mcp.course.lecture.evidence import Interval, merge_intervals
 from tum_mcp.course.project.store import confined
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_processing.runtime import recognition_profile
 from tum_mcp.lecture_processing.runtime_spec import selected as runtime_spec
-from tum_mcp.lecture_processing.transcript_models import AudioQuality, AudioStage, Passage
+from tum_mcp.lecture_processing.transcript_models import (
+    AudioQuality,
+    AudioStage,
+    Passage,
+    Recognition,
+)
 from tum_mcp.lecture_processing.transcription import analyze, passages, recognize, uncertainty
 from tum_mcp.lecture_processing.validity import Validity, require_content
 from tum_mcp.moodle.config import private_write
@@ -37,6 +42,14 @@ def staged[T](stage: AudioStage, call: Callable[..., T], *args: object, **kwargs
         raise StagedError(stage, error) from error
 
 
+# Issues that concern a whole chunk rather than one recognized segment.
+CHUNK_WIDE = frozenset(
+    {"language_changed", "audio_quality_or_speech_uncertain", "speech_not_recognized"}
+)
+# Seconds of unclear time kept on each side of a flagged segment.
+PAD_S = 2.0
+
+
 class Chunk(Frozen):
     fingerprint: str = Field(pattern=r"^[a-f0-9]{64}$")
     interval: Interval
@@ -45,6 +58,9 @@ class Chunk(Frozen):
     model: str
     passages: tuple[Passage, ...] = Field(max_length=5000)
     issues: tuple[str, ...] = ()
+    # The recording time a student cannot rely on. None in older checkpoints, which count
+    # the whole chunk.
+    uncertain: tuple[Interval, ...] | None = None
 
     @model_validator(mode="after")
     def bounded(self) -> "Chunk":
@@ -56,7 +72,30 @@ class Chunk(Frozen):
             for passage in self.passages
         ):
             raise ValueError("Cached passages must remain inside their verified chunk.")
+        if any(
+            not self.interval.start_s <= span.start_s < span.end_s <= self.interval.end_s
+            for span in self.uncertain or ()
+        ):
+            raise ValueError("Uncertain time must remain inside its verified chunk.")
         return self
+
+
+def unclear(result: Recognition, span: Interval, issues: tuple[str, ...]) -> tuple[Interval, ...]:
+    """Each flagged segment's time with a little padding, or the whole chunk when an issue
+    concerns all of it. One repeated phrase no longer hides ten minutes of clean speech."""
+    if not issues:
+        return ()
+    if CHUNK_WIDE.intersection(issues):
+        return (span,)
+    flagged = tuple(
+        Interval(
+            start_s=max(span.start_s, span.start_s + segment.start - PAD_S),
+            end_s=min(span.end_s, span.start_s + segment.end + PAD_S),
+        )
+        for segment in result.segments
+        if uncertainty(Recognition(language=result.language, segments=(segment,)))
+    )
+    return merge_intervals(flagged) or (span,)
 
 
 def _checkpoint(path: Path) -> "Chunk":
@@ -145,6 +184,7 @@ def process_chunk(
         model=selected,
         passages=staged("validate", passages, result, span, expected_language=language),
         issues=issues,
+        uncertain=unclear(result, span, issues),
     )
     private_write(path, chunk.model_dump_json().encode())
     return chunk, False

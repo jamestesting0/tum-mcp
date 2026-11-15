@@ -99,10 +99,18 @@ all parts.
 - Callout: a pitfall uses the Exam pattern pitfall item (situation, wrong and right move
   with their marks, why) under a muted "Pitfall" label; a note is one or two sentences
   beside a 3px `--line` rule. At most one per section; no icon, colour wash or banner.
-- Lecture note: a muted kind label (Clarification, Example, Exam tip, Intuition,
-  Correction), the title with its sources, the situation, the message, then the working
-  as numbered steps and consequences as points, an optional figure or frame, and a
-  footer with "Watch mm:ss" and Recall. The recording time appears only in the footer.
+- Lecture page: the lecture's chapters in recording order, each a section with its title,
+  sources and time range; its notes and highlights follow inside it in recording order. A
+  missing or unclear stretch is one muted row where it happened ("Not recorded 12:00-20:00");
+  the header carries no provenance. A lecture without chapters falls back to Notes, then
+  Highlights.
+- Lecture note: a muted label only for a Correction or an Exam tip, the title with its
+  sources, the situation, the message, then the working as numbered steps, consequences
+  as points, up to three Study blocks (formula, graph, code, slide crop and so on) or a
+  frame, and a footer with "Watch mm:ss" and Recall. The recording time appears only in
+  the footer.
+- Lecture highlight: a 16:9 frame (20rem beside the title on desktop, full width on a
+  phone) with the duration on it; the frame and the time range open the recording.
 - Walkthrough: a stage (graph, table, code, working, plot or figure) on top, the step
   card below it (eyebrow "Step N of M · subgoal", the action in bold, the reason, an
   optional pitfall on `--warning`, the variant contrast on `--wash`, then the state rows

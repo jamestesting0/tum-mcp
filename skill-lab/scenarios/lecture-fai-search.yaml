@@ -1,0 +1,17 @@
+id: lecture-fai-search
+turns:
+  - say: "Set up my Fundamentals of AI course in this folder."
+    skills: [sync-course, read-content]
+  - say: "Prepare the Lecture notes for the 22 October lecture on uninformed search."
+    skills: [prepare-lecture, sync-course, read-content]
+  - say: "Review them and fix any issues."
+    skills: [review-course, prepare-lecture]
+replies:
+  course: "Fundamentals of Artificial Intelligence (IN2406), this semester."
+  semester: "This semester, W26/27."
+  recording: "The 22 October recording on uninformed search."
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  publish: "No, keep it local."
+  learning record: "Keep the learning record off."
+  default: "Your choice, go ahead."

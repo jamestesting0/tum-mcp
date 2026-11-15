@@ -138,8 +138,11 @@ scores.
       item list, and fix links/paper assignments. Check only changed or new plans. After
       all original packets are recorded and the entire batch is ready, run
       `review repair-scope PROJECT --reason REASON`. This permits additions in the same
-      workspaces while preserving the original request, sources and required demands;
-      it cannot remove reviewed items or reset the budget. Do not keep a repairable
+      workspaces while preserving the original request, sources and required demands.
+      It cannot reset the budget or remove a reviewed item, with one exception: a Lecture
+      entry may go while its lecture stays in review. Dropping a highlight that repeats a
+      slide is a repair; the lecture's selection review checks the new omission, and the
+      scorecard lists the removal and any finding it left open. Do not keep a repairable
       structural finding merely because it needs another item. Mark the original finding
       fixed after its passage changes. Added items receive no copied scores or extra
       automatic review; report them as awaiting independent verification.

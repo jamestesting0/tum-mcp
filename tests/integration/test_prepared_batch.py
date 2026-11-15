@@ -115,6 +115,44 @@ def test_combined_round_includes_full_recording_selection_and_invalidates_change
         loop.record(prepared.root, answer(packet), "fresh")
 
 
+def test_repair_may_remove_a_lecture_entry_while_its_selection_stays_in_review(
+    prepared: Prepared,
+) -> None:
+    # Both baseline reviews dropped a highlight that repeats a worked slide; the loop refused
+    # the removal, so one author kept the key as a note and the other could not verify.
+    from tum_mcp.course.review.repair_scope import repair_scope
+
+    value = selection(prepared)
+    write_selection(prepared, value)
+    write_batch(prepared)
+    loop.start(prepared.root, batch="complete")
+    for packet in packets(prepared.root, loop.next_round(prepared.root)):
+        loop.record(prepared.root, answer(packet), "fresh")
+    lecture = prepared.notes["lectures"][0]
+    lecture["highlights"] = [h for h in lecture["highlights"] if h["key"] != "h-second"]
+    used = {key for entry in lecture["notes"] + lecture["highlights"] for key in entry["evidence"]}
+    prepared.notes["evidence"] = [e for e in prepared.notes["evidence"] if e["key"] in used]
+    prepared.write_notes()
+    value["decisions"][2:5] = [
+        {
+            "interval": {"start_s": 60, "end_s": 300},
+            "disposition": "omit",
+            "reason": "Pages 2-3 already work through the second trace.",
+        }
+    ]
+    write_selection(prepared, value)
+    build(prepared.root, publish=False)
+
+    result = repair_scope(prepared.root, "The second clip repeats the slide's worked trace.")
+
+    assert result["removed"] == ["lecture/bfs-lecture/h-second"] and result["added"] == []
+    card = loop.close_round(prepared.root)
+    assert card["preparation"]["ready"]
+    assert card["structural_repairs"][0]["removed"] == ["lecture/bfs-lecture/h-second"]
+    rows = {row["item"] for row in card["items"]}
+    assert "lecture/bfs-lecture/h-second" not in rows and "lecture/bfs-lecture" in rows
+
+
 def test_no_selected_additions_still_gets_a_selection_review(prepared: Prepared) -> None:
     prepared.notes["lectures"][0]["notes"] = []
     prepared.notes["lectures"][0]["highlights"] = []
@@ -165,6 +203,34 @@ def test_a_lecture_title_names_its_topic_not_its_date(
 
     assert report.ready is ready
     assert any("repeats a date" in problem for problem in report.problems) is not ready
+
+
+def test_a_lecture_needs_chapters_and_each_decision_stays_inside_one(prepared: Prepared) -> None:
+    # Omissions of 12-27 minutes with one-line reasons hid what they skipped; a decision now
+    # speaks for one topic.
+    value = selection(prepared)
+    write_selection(prepared, value)
+    write_batch(prepared)
+    lecture = prepared.notes["lectures"][0]
+    chapters = lecture.pop("chapters")
+    prepared.write_notes()
+    build(prepared.root, publish=False)
+
+    assert any("add chapters" in p for p in assess_batch(prepared.root, "complete").problems)
+
+    omitted = next(d["interval"] for d in value["decisions"] if d["disposition"] == "omit")
+    middle = (omitted["start_s"] + omitted["end_s"]) / 2
+    lecture["chapters"] = [
+        chapters[0] | {"interval": {"start_s": 0, "end_s": middle}},
+        {"key": "second", "title": "Second topic", "interval": {"start_s": middle, "end_s": 600}},
+    ]
+    prepared.write_notes()
+    build(prepared.root, publish=False)
+    report = assess_batch(prepared.root, "complete")
+
+    assert not report.ready
+    assert any("crosses the chapter boundary" in p for p in report.problems)
+    assert not any("add chapters" in p for p in report.problems)
 
 
 @pytest.mark.parametrize(

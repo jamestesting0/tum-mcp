@@ -215,6 +215,46 @@ def test_unchanged_audio_resumes_without_recognition_and_source_change_regenerat
     assert len(calls) == 2
 
 
+@pytest.mark.parametrize(
+    "language, unclear", [("en", [(4, 9)]), ("de", [(0, 10)])], ids=["segment", "chunk-wide"]
+)
+def test_only_flagged_speech_is_unclear_unless_the_issue_concerns_the_chunk(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str, unclear: list
+) -> None:
+    # One repeated phrase marked a whole ten-minute chunk unclear and hid a lecturer's
+    # correction in the 104 clean passages around it.
+    from tum_mcp.lecture_processing import chunk_store
+
+    quality = AudioQuality.model_validate(
+        {
+            "duration_s": 10,
+            "channels": [
+                {
+                    "channel": 0,
+                    "rms": 0.1,
+                    "clipped_fraction": 0,
+                    "windows": [{"start_s": 0, "end_s": 10, "speech_s": 5}],
+                }
+            ],
+        }
+    )
+    clean = recognition().segments[0]
+    repeated = clean.model_copy(update={"start": 6, "end": 7, "text": "thank you " * 15})
+    result = Recognition(language=language, segments=(clean, repeated))
+    monkeypatch.setattr(chunk_store, "analyze", lambda _: quality)
+    monkeypatch.setattr(chunk_store, "recognize", lambda *args, **kwargs: result)
+    audio = tmp_path / "audio.wav"
+    audio.write_bytes(b"synthetic protocol fixture")
+    validity = evaluate(RecordingTiming(duration_s=10))
+
+    chunk, _ = process_chunk(
+        audio, Interval(start_s=0, end_s=10), validity, tmp_path / "chunks", "s", language="en"
+    )
+
+    assert [(span.start_s, span.end_s) for span in chunk.uncertain or ()] == unclear
+    assert [passage.text for passage in chunk.passages] == ["A classical bit."]
+
+
 def test_invalid_recording_rejects_even_an_existing_audio_cache(tmp_path: Path) -> None:
     validity = evaluate(RecordingTiming(duration_s=10, silences=(SilenceMarker(start=0, end=10),)))
     with pytest.raises(CampusError, match="invalid"):

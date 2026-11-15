@@ -39,6 +39,9 @@
         "missing": [],
         "reviewed": true
       },
+      "chapters": [
+        {"key": "layers", "title": "Shortest paths by layers", "interval": {"start_s": 0, "end_s": 600}}
+      ],
       "notes": [
         {
           "key": "n-adjacency",

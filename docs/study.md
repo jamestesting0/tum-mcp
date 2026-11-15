@@ -324,6 +324,8 @@ After the complete repaired batch passes its draft checks, `review repair-scope`
 the added items in the same round and records why. It preserves source coverage and
 the approved budget. Added items await independent review; their scores are never copied
 from the original item. The final report distinguishes the repair from its verification.
+A Lecture repair may also drop an entry, such as a highlight that repeats a slide, while
+the lecture stays in review; its selection review checks the new omission.
 
 Checkers rule on advisory flags rather than silently ignoring them. A ruling that
 opens a finding must name the relevant check; an unrelated finding cannot clear it.

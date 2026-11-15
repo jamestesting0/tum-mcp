@@ -68,11 +68,12 @@ function noteView(note, active) {
   // working the lecturer gave; the moment in the recording is shown once, beside Recall.
   const head = append(node('div', 'lecture-note-head'), studyText('p', 'lecture-note-title', note.title),
     sourcesNote(sources, data.sources, data.course.synthetic, note.title, {}, note.pages || ''));
+  // Only a correction or an exam instruction is labelled: those change what the student does.
   if (note.kind) root.append(node('p', 'block-label lecture-note-kind', note.kind[0].toUpperCase() + note.kind.slice(1)));
   root.append(head, studyText('p', 'lecture-note-context', note.context), studyText('p', 'lecture-note-text', note.text));
   if (note.steps?.length) root.append(append(node('ol', 'steps lecture-note-steps'), ...note.steps.map(text => studyText('li', '', text))));
   if (note.points?.length) root.append(append(node('ul', 'lecture-note-points'), ...note.points.map(text => studyText('li', '', text))));
-  if (note.figure) root.append(renderBlockBody(note.figure));
+  for (const block of note.blocks || []) root.append(renderBlockBody(block));
   if (note.image) {
     const image = node('img', 'lecture-note-image');
     Object.assign(image, { src: note.image.asset, alt: note.image.alt, width: note.image.width, height: note.image.height, loading: 'lazy', decoding: 'async' });
@@ -93,7 +94,7 @@ function highlightView(highlight, active) {
   const image = node('img');
   Object.assign(image, { src: highlight.thumbnail.asset, alt: '', width: highlight.thumbnail.width, height: highlight.thumbnail.height, loading: 'lazy', decoding: 'async' });
   image.addEventListener('error', () => { thumb.hidden = true; });
-  thumb.append(image);
+  thumb.append(image, node('span', 'lecture-thumb-time small', duration(highlight.interval.end_s - highlight.interval.start_s)));
   const heading = append(node('div', 'section-heading'), studyText('h3', '', highlight.title));
   if (highlight.sources.length) heading.append(sourcesNote(highlight.sources, data.sources, data.course.synthetic, highlight.title, {}, highlight.pages || ''));
   const { start_s: start, end_s: end } = highlight.interval;
@@ -107,6 +108,52 @@ function highlightView(highlight, active) {
   if (recall) text.append(recall);
   root.append(thumb, body, text);
   return root;
+}
+// Stretches of the recording without usable speech, each shown once where it occurs.
+function gaps(lecture) {
+  const spans = [['Not recorded', lecture.coverage.missing || []], ['Unclear audio', lecture.coverage.uncertain || []]];
+  return spans.flatMap(([label, list]) => list.map(span => ({
+    start: span.start_s,
+    row: node('p', 'small lecture-gap', `${label} ${clock(span.start_s)}–${clock(span.end_s)}`),
+  }))).sort((a, b) => a.start - b.start);
+}
+// The lecture as its topics in recording order: each chapter holds its notes, highlights and gaps.
+function lectureChapters(lecture, chapters, active) {
+  const entries = [
+    ...lecture.notes.map(note => ({ start: note.at_s, note })),
+    ...lecture.highlights.map(highlight => ({ start: highlight.interval.start_s, highlight })),
+    ...gaps(lecture),
+  ].sort((a, b) => a.start - b.start);
+  const inside = (chapter, start) => chapter.interval.start_s <= start && start < chapter.interval.end_s;
+  // Anything outside every chapter (a gap during a break) is shown on its own.
+  const view = entry => entry.row || (entry.highlight ? highlightView(entry.highlight, entry.highlight.key === active)
+    : append(node('ul', 'lecture-note-list'), noteView(entry.note, entry.note.key === active)));
+  const parts = [];
+  let next = 0;
+  for (const chapter of chapters) {
+    // A gap between chapters (a break, a lost stretch) stands where it happened.
+    while (next < entries.length && entries[next].start < chapter.interval.start_s) parts.push(view(entries[next++]));
+    const section = node('section', 'read-section lecture-chapter');
+    section.dataset.lectureSection = chapter.key;
+    if (chapter.key === active) section.dataset.lectureActiveSection = '';
+    const heading = append(node('div', 'section-heading'), studyText('h2', '', chapter.title));
+    if (chapter.sources?.length) heading.append(sourcesNote(chapter.sources, data.sources, data.course.synthetic, chapter.title, {}, chapter.pages || ''));
+    section.append(heading, append(node('p', 'lecture-chapter-time small'), timeLink(chapter.url, chapter.interval.start_s, chapter.interval.end_s)));
+    let notes = null;
+    while (next < entries.length && inside(chapter, entries[next].start)) {
+      const entry = entries[next++];
+      if (entry.note) {
+        if (!notes) { notes = node('ul', 'lecture-note-list'); section.append(notes); }
+        notes.append(noteView(entry.note, entry.note.key === active));
+        continue;
+      }
+      notes = null;
+      section.append(entry.highlight ? highlightView(entry.highlight, entry.highlight.key === active) : entry.row);
+    }
+    parts.push(section);
+  }
+  while (next < entries.length) parts.push(view(entries[next++]));
+  return parts;
 }
 export function renderLectures(hash) {
   const [, key, highlightKey] = hash.split('/'), lecture = lectures.find(item => item.key === decode(key));
@@ -129,7 +176,6 @@ export function renderLectures(hash) {
   }
   const heading = studyText('h1', '', lecture.title), header = node('div', 'unit-header');
   header.append(node('p', 'eyebrow', date(lecture.recording.recorded_on)), heading, studyText('p', 'unit-summary', lecture.summary));
-  header.append(node('p', 'small lecture-meta', `${lecture.coverage.status === 'complete' ? '' : 'Partial coverage · '}Sources checked ${date(lecture.evidence_as_of)}`));
   // The Study topics that teach this lecture, so highlights and lessons lead to each other.
   const taught = data.units.filter(unit => (unit.lectures || []).includes(lecture.key));
   if (taught.length) {
@@ -137,30 +183,25 @@ export function renderLectures(hash) {
     taught.forEach((unit, index) => { if (index) line.append(', '); const link = studyText('a', '', unit.title); link.href = `#study/${unit.key}/content`; line.append(link); });
     header.append(line);
   }
-  if (lecture.coverage.status !== 'complete') {
-    const coverage = node('details', 'disclosure plain lecture-coverage small');
-    coverage.append(node('summary', '', 'Coverage'));
-    const missing = lecture.coverage.missing || [], uncertain = lecture.coverage.uncertain || [];
-    coverage.append(node('p', '', 'Some passages are missing or need review.'));
-    for (const [label, spans] of [['Missing', missing], ['Unclear speech', uncertain]]) {
-      for (const span of spans) coverage.append(node('p', '', `${label}: ${clock(span.start_s)}–${clock(span.end_s)}`));
-    }
-    header.append(coverage);
-  }
   root.append(header);
-  const active = decode(highlightKey);
-  if (highlightKey && ![...lecture.notes, ...lecture.highlights].some(item => item.key === active)) root.append(node('p', 'notice', 'That lecture passage is no longer here.'));
-  if (lecture.notes.length) {
+  const active = decode(highlightKey), chapters = lecture.chapters || [];
+  if (highlightKey && ![...lecture.notes, ...lecture.highlights, ...chapters].some(item => item.key === active)) root.append(node('p', 'notice', 'That lecture passage is no longer here.'));
+  if (chapters.length) {
+    root.append(...lectureChapters(lecture, chapters, active));
+  } else {
+    root.append(...gaps(lecture).map(gap => gap.row));
+  }
+  if (!chapters.length && lecture.notes.length) {
     const notes = append(node('section', 'lecture-notes read-section'), node('h2', '', 'Notes'));
     notes.append(append(node('ul', 'lecture-note-list'), ...lecture.notes.map(note => noteView(note, note.key === active))));
     root.append(notes);
   }
-  if (lecture.highlights.length) {
+  if (!chapters.length && lecture.highlights.length) {
     const highlights = append(node('section', 'lecture-highlights read-section'), node('h2', '', 'Highlights'));
     for (const highlight of lecture.highlights) highlights.append(highlightView(highlight, highlight.key === active));
     root.append(highlights);
   }
-  if (!lecture.notes.length && !lecture.highlights.length) root.append(node('p', 'small', 'No notes or highlights for this lecture.'));
+  if (!chapters.length && !lecture.notes.length && !lecture.highlights.length) root.append(node('p', 'small', 'No notes or highlights for this lecture.'));
   // The list shows the newest first; Next follows the course, from one lecture to the one after it.
   const following = lectures[lectures.indexOf(lecture) - 1];
   if (following) root.append(nextStep({ href: lectureLink(following), title: following.title, detail: date(following.recording.recorded_on) }));

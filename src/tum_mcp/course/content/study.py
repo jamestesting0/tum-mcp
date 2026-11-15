@@ -1321,6 +1321,17 @@ def block_guide(example: str) -> str:
     """The authoring rule of the block, check or guide step a `study schema --example` name
     shows."""
     union: object = Block
+    if example.startswith("lecture-"):
+        from tum_mcp.course.lecture.content import Chapter, Highlight, Note
+
+        model = {"note": Note, "highlight": Highlight, "chapter": Chapter}.get(
+            example.removeprefix("lecture-")
+        )
+        return " ".join((model.__doc__ or "").split()) if model else ""
+    if example.startswith("selection-"):
+        from tum_mcp.course.lecture.selection import Decision
+
+        return " ".join((Decision.__doc__ or "").split())
     if example.startswith("step-"):
         from tum_mcp.course.content.exercises import GuidanceStep
 

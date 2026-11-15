@@ -249,7 +249,12 @@ def report(
 
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.app.visuals import render_report
-    from tum_mcp.course.checks.report import exam_block_flags, language_flags, quality_flags
+    from tum_mcp.course.checks.report import (
+        exam_block_flags,
+        language_flags,
+        lecture_flags,
+        quality_flags,
+    )
     from tum_mcp.course.content.exam import ExamContent
     from tum_mcp.course.content.exam_data import exam_item_flags, meta_flags, sheet_flags
     from tum_mcp.course.project.context import content_language
@@ -337,6 +342,7 @@ def report(
         lambda: (
             quality_flags(content, exercises, root=root)
             + exam_quality(exam())
+            + lecture_flags(lectures())
             + language_flags(content_language(root), content, exercises, exam())
         )
     )

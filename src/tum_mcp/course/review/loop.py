@@ -163,6 +163,7 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
         citation_flags,
         exam_block_flags,
         language_flags,
+        lecture_flags,
         quality_flags,
     )
     from tum_mcp.course.checks.structure import course_map, forward_terms
@@ -226,6 +227,7 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
     flags = [
         *quality_flags(content, exercises, root=root),
         *exam_block_flags(exam),
+        *lecture_flags(lectures),
         *language_flags(content_language(root), content, exercises, exam),
         *links,
         *(forward_terms(content) if content else ()),

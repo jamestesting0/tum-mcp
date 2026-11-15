@@ -17,21 +17,24 @@ Ask: “Prepare Lecture from this recording and these slides.” It adds Lecture
 same course app, alongside Study and Exercises. Notes preserve useful short remarks,
 conditions, corrections and explicit instructions. Each note names what it concerns, the
 situation it answers (what the slide states, a question asked, the approach it corrects)
-and then its message, so it reads without having attended. A small label names its kind
-(clarification, example, exam tip, intuition, correction); the working or example the
-lecturer gave follows as numbered steps and its consequences as points. Sources sit behind
-a source control and the footer links the moment in the recording ("Watch"). A note may
-add a recording frame of the slide or board when that picture carries the point, a
-sourced SVG illustration and a Recall link to the Study passage on its subject. Lecture
-titles name the topic, never the date. Authored illustrations use the
-shared figure renderer; recording images retain their frame-evidence checks.
+and then its message, so it reads without having attended. Only a correction of the
+materials or an explicit exam instruction carries a small label; the working or example
+the lecturer gave follows as numbered steps and its consequences as points. Sources sit
+behind a source control and the footer links the moment in the recording ("Watch"). A note
+may show its object with up to three Study blocks (a formula, derivation, table, graph,
+tree, plot, UML diagram, grid, code or a crop of the slide), add a recording frame of the
+slide or board when that picture carries the point, and link the Study passage on its
+subject (Recall). Lecture titles name the topic, never the date; recording images retain
+their frame-evidence checks.
 Highlights are substantial worked explanations worth following: an example, derivation,
 demonstration, method comparison or conceptual explanation that adds to the materials.
 A highlight shows its time range and duration, a frame from the recording, a title,
 one sentence on what it teaches and up to three points; the range and the frame open
-the recording at its start. Notes appear first; each links its moment with "Watch" and
-needs no thumbnail. The lecture list shows note/highlight counts and highlight watching time.
-The Contents button follows the Notes/Highlights hierarchy.
+the recording at its start. The page follows the lecture's chapters: each topic with its time range and pages,
+then its notes and highlights in recording order. A note links its moment with "Watch"
+and needs no thumbnail. A missing or unclear stretch shows where it happened. The lecture
+list shows note/highlight counts and highlight watching time, and the Contents button
+lists the chapters.
 Either section may be absent; a reviewed lecture may have no worthwhile additions.
 Attribution review stays private, so the reading flow is clean.
 Lecture has no quizzes or flashcards; broader teaching/practice stays in Study.
@@ -44,7 +47,9 @@ Lecture has no quizzes or flashcards; broader teaching/practice stays in Study.
    original recording clock.
 2. Prefer existing captions or supplied original-time WebVTT. Otherwise the optional
    pinned local recognizer scans retained audio in resumable chunks. It checks all
-   channels, preserves coverage gaps and flags uncertain/repetitive recognition.
+   channels, preserves coverage gaps and flags uncertain/repetitive recognition. Only a
+   flagged segment's time (with two seconds either side) becomes unclear; an issue with
+   the whole chunk, such as poor audio or a language change, marks all of it.
    Three quiet samples alone cannot invalidate a recording.
 3. Read compact transcript passages, map the full retained lecture and compare with
    verified slides/materials. Classify contributions as Note, Highlight or Omit.

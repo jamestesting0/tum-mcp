@@ -22,8 +22,11 @@ The schema describes the assembled document. On disk,
 `app/lectures/lectures/LECTURE_KEY.json`; do not put objects in the index or place
 the item beside the index. Each lecture has a stable key and title, the recording identity and date,
 a `summary` (at most 600 characters: what the lecture teaches, never the recording or the notes), the exact source key/SHA versions, its checked-at
-time, coverage, `notes` (up to 100) and `highlights` (up to 40) in recording order.
-Either or both arrays may be empty; do not manufacture additions. Use the actual numeric
+time, coverage, `chapters` (up to 60), `notes` (up to 100) and `highlights` (up to 40) in
+recording order. Each chapter is one topic with its `title`, `interval`, `sources` and
+`pages`; chapters do not overlap, every highlight lies inside one, and breaks or
+administration between chapters belong to none.
+Notes, highlights or both may be empty; do not manufacture additions. Use the actual numeric
 course/recording IDs plus the opaque course slug; they are not interchangeable.
 Synthetic recordings belong only to a synthetic course.
 
@@ -36,7 +39,11 @@ namespace per lecture. A note has no authored clip interval: its speech evidence
 locates its recording source, and the note shows that moment as "Watch mm:ss".
 
 Write each note for a student who skipped the lecture: it must stand on its own.
-- `kind`: `clarification`, `example`, `exam tip`, `intuition` or `correction`.
+- `kind` (optional): `correction` when the note corrects the materials, `exam tip` for an
+  explicit exam instruction. Other notes carry no label.
+- `blocks` (at most 3): the object the note is about, shown rather than described: a
+  formula, derivation, table, graph, tree, plot, UML or grid, code, or a `study figure` crop of
+  the slide. Each cites the note's sources.
 - `context`: the setup in one sentence (the slide's claim, the question asked).
 - `text`: the takeaway in one sentence, with its condition.
 - `steps` (at most 6): the working or procedure the lecturer gave, one action each.

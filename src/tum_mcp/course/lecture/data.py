@@ -123,6 +123,8 @@ def render_lectures(root: Path, content: LectureContent) -> dict[str, JsonValue]
             else usable_receipt(root, lecture.recording.key).checked_at
         )
         rendered["source_link"] = watch_link(lecture.recording, 0).removesuffix("?t=0")
+        for chapter, body in zip(lecture.chapters, rendered["chapters"], strict=True):
+            body["url"] = watch_link(lecture.recording, chapter.interval.start_s)
         for highlight, body in zip(lecture.highlights, rendered["highlights"], strict=True):
             body["url"] = watch_link(lecture.recording, highlight.interval.start_s)
             for step, rendered_step in zip(highlight.steps, body["steps"], strict=True):

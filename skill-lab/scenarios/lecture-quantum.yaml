@@ -1,0 +1,17 @@
+id: lecture-quantum
+turns:
+  - say: "Set up my quantum computing course in this folder."
+    skills: [sync-course, read-content]
+  - say: "Prepare the Lecture notes for the 14 October lecture."
+    skills: [prepare-lecture, sync-course, read-content]
+  - say: "Review them and fix any issues."
+    skills: [review-course, prepare-lecture]
+replies:
+  course: "Einführung in Quantum Computing (IN2381), this semester."
+  semester: "This semester, W26/27."
+  recording: "The 14 October recording."
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  publish: "No, keep it local."
+  learning record: "Keep the learning record off."
+  default: "Your choice, go ahead."

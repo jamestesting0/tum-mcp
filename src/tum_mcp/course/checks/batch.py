@@ -187,6 +187,11 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
                     f"{selection_key}: the summary describes the recording or its notes; say "
                     "what the lecture teaches."
                 )
+            if not lecture.chapters:
+                problems.append(
+                    f"{selection_key}: add chapters, the lecture's topics in recording order "
+                    "(study schema --example lecture-chapter)."
+                )
             routes.append(f"#lectures/{lecture.key}")
             for entry in lecture.entries:
                 entry_key = f"{selection_key}/{entry.key}"
