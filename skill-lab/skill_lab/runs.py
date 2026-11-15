@@ -281,6 +281,39 @@ def restore(history: Path, turn: int, workspace: Path) -> None:
                 path.write_text(json.dumps(task, indent=2), encoding="utf-8")
 
 
+# Run with the variant's Python: a sync under that version would write these instructions.
+REFRESH = """
+import sys
+from pathlib import Path
+
+from tum_mcp.course.project.store import (
+    PRIVATE, agent_pointer, digest, load_state, private_path, replace_agents,
+)
+
+root = Path(sys.argv[1])
+state = load_state(root)
+block = agent_pointer(PRIVATE)
+agents = root / "AGENTS.md"
+agents.write_text(replace_agents(agents.read_text(encoding="utf-8"), block, state), "utf-8")
+updated = state.model_copy(update={"agents_block_sha256": digest(block.encode())})
+private_path(root, "state.json").write_text(updated.model_dump_json(indent=2), "utf-8")
+"""
+
+
+def refresh_instructions(python: Path, workspace: Path) -> list[str]:
+    """Give each restored project the generated instructions of the variant's code; the
+    course content stays as restored. Edited managed instructions stop the run, as in a sync."""
+    refreshed = []
+    for project in projects(workspace):
+        done = subprocess.run(
+            [str(python), "-I", "-c", REFRESH, str(project)], capture_output=True, text=True
+        )
+        if done.returncode:
+            raise LabError(f"Could not refresh {project.name}'s instructions: {done.stderr[-400:]}")
+        refreshed.append(project.relative_to(workspace).as_posix())
+    return refreshed
+
+
 def projects(workspace: Path) -> list[Path]:
     found = []
     for state in sorted(workspace.glob("**/.tum-mcp/state.json")):
@@ -456,6 +489,8 @@ def _run(
     subprocess.run(["git", "init", "-q", "--bare", str(history)], check=True)
     if source:
         restore(*source, workspace)
+    if source and drift is not None:
+        drift["instructions_refreshed"] = refresh_instructions(python, workspace)
     if plant:
         from skill_lab import calibrate
 
