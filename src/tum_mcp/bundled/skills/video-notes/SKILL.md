@@ -37,15 +37,15 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
    (`schema --example selection`). Run `tum-mcp video-notes plan PROJECT --selection
    FILE`. Explicit Exercise requests are not filtered out for being text-heavy. For a
    course, finish one demanding target end to end before batching.
-3. **Storyboard.** `tum-mcp video-notes outline PROJECT STEM` writes
-   `videos/storyboards/STEM.json` as a draft: one chapter per source section (unit
+3. **Storyboard.** For the stem `plan` printed, `tum-mcp video-notes outline PROJECT
+   STEM` writes `videos/storyboards/STEM.json` as a draft: one chapter per source section (unit
    sections, exercise parts, pattern stages), with every required part already located
    and fingerprinted. Replace every text that starts with `Write:`; the checks refuse
    it. Regroup beats freely. Every required part stays in a beat, or moves to
    `left_to_page` with the reason the page serves it better. `unit`, `exercise` or
    `pattern` prints the source itself. `schema --example NAME` prints a beat, an
    on-screen item or a `left_to_page` entry with its rule (`--example list`). Then
-   run `storyboard check PROJECT STEM`. For lessons, outline sections and their
+   run `storyboard check PROJECT STEM`. For lessons, name sections and their
    knowledge points, then an overview, sustained explanation and closing synthesis.
    For Exercises, establish the problem and work through every part to an emphasized
    checked answer. For an Exam pattern, teach the method a student reuses: its cues,

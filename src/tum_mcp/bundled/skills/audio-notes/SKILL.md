@@ -26,7 +26,7 @@ refresh campus sources or rebuild the website.
 | Request | Source | Job of the track |
 | --- | --- | --- |
 | "audio notes for the lecture content / Study" | `app/study/` units | Re-explain how the ideas work: mechanisms, worked examples, conditions, contrasts. |
-| "audio notes of the cheatsheet / for exam revision" | `app/exam/` cheatsheet entries and patterns | A spoken summary to revise on the go: each entry's rule or formula said aloud with its condition, one short example and the trap; each pattern's cue, steps and the formula each step applies. |
+| "audio notes of the cheatsheet / for exam revision" | `app/exam/` cheatsheet entries and patterns | A spoken summary to revise on the go: each entry's rule or formula said aloud with its condition, one short example and the trap; each pattern's cues, steps with the formula each applies, cases and pitfalls. |
 | "audio notes for problem 1.2.2" | `app/exercises/` exercises | Talk through the solution: what each part asks, the method and why it fits, each step's reason and every part's answer. |
 
 A track may combine kinds, such as a pattern and an exercise it solves. Design each kind with
@@ -47,7 +47,7 @@ All commands print JSON; prefix them with `tum-mcp audio-notes`.
    that starts with `Write:`; `check` refuses it. Split, merge and reorder chapters
    freely. A part the track does not say moves to `left_to_page` with the reason the
    page serves it better (`schema --example left-to-page`). One category per Study
-   unit group or per Exam topic. The draft's `voice` is the first profile in
+   unit group or per Exam topic; an exercise track holds the exercises asked for. The draft's `voice` is the first profile in
    `audio/voice.json`, else `narrator`; set it to the profile you use in step 4.
 3. **Check.** `check PROJECT STEM` rejects stale or missing coverage and sentences
    with symbols a voice cannot say; it warns about production wording and chapters
