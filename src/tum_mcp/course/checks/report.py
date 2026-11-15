@@ -44,6 +44,7 @@ from tum_mcp.course.content.study import (
 )
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.paths import app_path
+from tum_mcp.course.project.store import load_state, private_path
 
 if TYPE_CHECKING:
     from tum_mcp.course.content.exam import ExamContent
@@ -1258,6 +1259,47 @@ def _operations(blocks: tuple[Block, ...]) -> int:
     )
 
 
+# A rendered block or check that shows code, in a dumped item.
+CODE_MARKERS = ('"kind": "code"', '"kind": "files"', '"format": "code"')
+
+
+def programming_sources(root: Path | None) -> frozenset[str]:
+    """Source keys of programming exercises, whose parts are answered in code."""
+    if root is None or not private_path(root, "state.json").is_file():
+        return frozenset()
+    state = load_state(root)
+    artemis = {binding.key for binding in state.course.bindings if binding.provider == "artemis"}
+    return frozenset(
+        item.resource.key
+        for item in state.resources
+        if item.resource.binding in artemis and item.resource.kind == "exercise"
+    )
+
+
+def code_answer_flags(
+    exercise: Exercise, programming: frozenset[str]
+) -> list[dict[str, JsonValue]]:
+    """A part of a programming exercise whose Solution and guide show no code at all."""
+    if not programming & {source.key for source in exercise.sources}:
+        return []
+    flags: list[dict[str, JsonValue]] = []
+    labels = exercise.parts or (None,)
+    for label, answer in zip(labels, exercise.solution.answers, strict=False):
+        shown = [answer, *(step for step in exercise.steps if step.part == label)]
+        dumped = json.dumps([value.model_dump(mode="json") for value in shown])
+        if not any(marker in dumped for marker in CODE_MARKERS):
+            flags.append(
+                {
+                    "item": f"{exercise.key}/{label}" if label else exercise.key,
+                    "flag": "answer_without_code",
+                    "detail": f"Part {label or ''} of a programming exercise is answered in "
+                    "words only. Its Solution is the code, and its guide writes that code from a "
+                    "starter skeleton (`step-code`).",
+                }
+            )
+    return flags
+
+
 def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
     """The shared block, option and code checks on every part of one exercise or Exam item."""
     flags: list[dict[str, JsonValue]] = []
@@ -1277,7 +1319,7 @@ def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
                 if isinstance(code, str) and (problem := _code_problem(code, check.language or "")):
                     flag(location, "compressed_code", problem)
         if (
-            item.startswith("exercises/")
+            isinstance(value, Exercise)
             and check.kind in WORKED_CHECKS
             and isinstance(getattr(owner, "explanation", None), str)
         ):
@@ -1288,7 +1330,7 @@ def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
                 "working that reaches it as blocks: a derivation, a walkthrough or proof lines, "
                 "each operation with its rule.",
             )
-    steps = getattr(value, "steps", ()) if item.startswith("exercises/") else ()
+    steps = value.steps if isinstance(value, Exercise) else ()
     for part in dict.fromkeys(step.part for step in steps):
         guide = [step for step in steps if step.part == part]
         working = guide[0].explanation if len(guide) == 1 else ""
@@ -1434,6 +1476,7 @@ def quality_flags(
         flags.append({"item": item, "flag": kind, "detail": detail})
 
     units = content.units if content else ()
+    programming = programming_sources(root) if exercises and exercises.sets else frozenset()
     sizes = [len(unit.blocks) for unit in units]
     median = statistics.median(sizes) if sizes else 0
     if len(units) >= FLAT_OUTLINE_UNITS and not any(unit.path for unit in units):
@@ -1756,6 +1799,7 @@ def quality_flags(
             )
         for exercise in group.exercises:
             flags.extend(item_block_flags(exercise.key, exercise))
+            flags.extend(code_answer_flags(exercise, programming))
             flags.extend(variable_flags(exercise.key, exercise.model_dump(mode="json"), task=True))
             flags.extend(visual_state_flags(exercise.key, exercise.model_dump(mode="json")))
             for part, pictured in _part_context(exercise):

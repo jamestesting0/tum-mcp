@@ -49,7 +49,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | X1 | A released statement keeps its original wording and gives its givens; a part is titled with its number and its words appear once | `statement_framing`, `summary_repeats_objective`, `repeated_title` |
 | X2 | Guides and solutions follow S1-S6 | `prose_run`, `plain_math` |
 | X3 | The exercise links the Study passages, cheatsheet entries and patterns it uses (Recall) | `undecided_link` |
-| X4 | Every guide step's Compare shows the working from the step's inputs to its answer, each operation with its rule; a part's guide follows its solution's subgoals; the Solution gives each part's answer only | ruled `step_without_working`, ruled `single_step_part`, `unworked_result`, `prose_calculation`, `practice.complete_answer` |
+| X4 | Every guide step's Compare shows the working from the step's inputs to its answer, each operation with its rule; a part's guide follows its solution's subgoals; the Solution gives each part's answer only, as code for a programming task | ruled `step_without_working`, ruled `single_step_part`, ruled `answer_without_code`, `unworked_result`, `prose_calculation`, `practice.complete_answer` |
 | X5 | Study teaches what an exercise needs on other cases; it never teaches or practises a released exercise's own case | ruled `exercise_case_in_study`, `practice.new_case` |
 
 ## Exam

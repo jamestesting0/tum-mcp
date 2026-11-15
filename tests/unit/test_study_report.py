@@ -853,7 +853,7 @@ def test_a_long_part_guided_by_one_step_asks_for_a_ruling() -> None:
     def flagged() -> bool:
         model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
         return any(
-            f["flag"] == "single_step_part" for f in item_block_flags("exercises/s/e", model)
+            f["flag"] == "single_step_part" for f in item_block_flags(exercise["key"], model)
         )
 
     # Five operations in the only step of a part ask whether to split it at its subgoals.
@@ -862,6 +862,28 @@ def test_a_long_part_guided_by_one_step_asks_for_a_ruling() -> None:
     second = exercise["steps"][0] | {"key": "second", "explanation": "The sum follows."}
     exercise["steps"].append(second)
     assert not flagged()
+
+
+def test_a_programming_part_answered_in_words_asks_for_a_ruling() -> None:
+    from tum_mcp.course.checks.report import code_answer_flags
+
+    payload = exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    source = exercise["sources"][0]["key"]
+
+    def flagged(programming: frozenset[str]) -> list[str]:
+        model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+        return [str(f["item"]) for f in code_answer_flags(model, programming)]
+
+    # A non-programming source asks for nothing; a programming one wants each part in code.
+    assert not flagged(frozenset())
+    words = flagged(frozenset({source}))
+    assert words
+    code = {"kind": "code", "sources": [source], "language": "java", "code": "int x = 1;\n"}
+    code["explanation"] = "Sets the counter."
+    for answer in exercise["solution"]["answers"]:
+        answer["blocks"] = [code]
+    assert not flagged(frozenset({source}))
 
 
 def test_step_working_can_be_blocks_that_are_cited_and_checked() -> None:
@@ -884,12 +906,12 @@ def test_step_working_can_be_blocks_that_are_cited_and_checked() -> None:
     step["check"] = numeric
     model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
     assert not [
-        f for f in item_block_flags("exercises/s/e", model) if f["flag"] == "step_without_working"
+        f for f in item_block_flags(exercise["key"], model) if f["flag"] == "step_without_working"
     ]
     step["explanation"] = "Add the three costs."
     model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
     assert [
-        f for f in item_block_flags("exercises/s/e", model) if f["flag"] == "step_without_working"
+        f for f in item_block_flags(exercise["key"], model) if f["flag"] == "step_without_working"
     ]
     step["explanation"] = [block | {"paragraphs": paragraphs}]
     # Its sources must be declared, as for any step content.

@@ -58,12 +58,15 @@ its demand, so the student can find where their working diverged:
   \(A = U\).
 - A trace states its tie rules before the first step. The working is a walkthrough over
   the drawn object, such as a constraint graph with each variable's domain and the pruned
-  values marked, one stage per operation. When ties are broken at random, say that
+  values marked, one stage per operation. Split a long trace at its turning points, such
+  as each dead end and its backtrack; each step's walkthrough covers its stretch. When
+  ties are broken at random, say that
   several runs are valid and show one. The sheet's table appears only where the sheet
   asks for it, as that part's `table` check; the flag `trace_as_table` is then ruled "the
   sheet asks for this table".
 - Code gives each task's contract from the statement and its tests. The model answer is
-  the code. The working maps each part of it to the contract in a short list, then traces
+  the code, and so is the part's Solution; a programming part answered only in words is
+  flagged `answer_without_code`. The working maps each part of it to the contract in a short list, then traces
   one test case step by step with its state. Draw a state chart as a state diagram.
 - A proof checked by `self_check` keeps its lines in the model answer; the working adds
   only what the model answer leaves out. Check the labels against the task (seven results asked,
