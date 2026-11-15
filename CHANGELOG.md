@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.25.0 — 2026-11-15
+
+- Verify packets ask checkers to judge each check on the blocks changed since the earlier
+  pass, which already judged the rest, so a repair no longer sends the whole item through
+  review again.
 - Automatic publication after a build waits until the review gate covers every item and
   reports `held` meanwhile; `study publish sync` still publishes on request.
 - `study import` reads Jupyter notebooks and code files as numbered text that is never run;
