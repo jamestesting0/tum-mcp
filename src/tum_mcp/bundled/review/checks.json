@@ -201,8 +201,7 @@
       "fail": "A sentence opens on a new term and ends on the familiar topic.",
       "profiles": [
         "study-unit",
-        "exercise",
-        "exam-pattern"
+        "exercise"
       ],
       "scope": "item",
       "version": 1
@@ -215,8 +214,7 @@
       "fail": "The point of the paragraph arrives in its last sentence.",
       "profiles": [
         "study-unit",
-        "exercise",
-        "exam-pattern"
+        "exercise"
       ],
       "scope": "item",
       "version": 1
@@ -224,7 +222,7 @@
     {
       "id": "cohesion.linked",
       "dimension": "cohesion",
-      "rule": "a first-time reader can tell how each section and block relates to the one before (follows from it, contrasts with it, specializes it, a parallel case), and the text states the relation where they could not infer it.",
+      "rule": "a first-time reader can tell how each section and block relates to the one before (follows from it, contrasts with it, specializes it, a parallel case), and the text states the relation where they could not infer it. An Exam pattern needs no linking sentences; there only a jump between steps that the student cannot follow fails.",
       "pass": "'Greedy ignores the cost so far, so A* adds it back.'",
       "fail": "A new section on IDS starts with no hint how it relates to DFS above.",
       "profiles": [
@@ -233,7 +231,7 @@
         "exam-pattern"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "cohesion.honest_connectives",
@@ -243,8 +241,7 @@
       "fail": "'Moreover' and 'Furthermore' stack three unrelated facts.",
       "profiles": [
         "study-unit",
-        "exercise",
-        "exam-pattern"
+        "exercise"
       ],
       "scope": "item",
       "version": 1
@@ -353,14 +350,14 @@
     {
       "id": "cognitive_load.fits_student",
       "dimension": "cognitive_load",
-      "rule": "Study can be followed by a first-time reader who knows the teaching profile's prerequisites, without over-explaining what they already know; Exam stays concise and reaches depth through Recall instead of re-teaching.",
+      "rule": "Study can be followed by a first-time reader who knows the teaching profile's prerequisites, without over-explaining what they already know.",
       "pass": "Study assumes only the profile's prerequisites.",
       "fail": "Study re-teaches Python syntax the profile says students know.",
       "profiles": [
         "study-unit"
       ],
       "scope": "item",
-      "version": 1
+      "version": 2
     },
     {
       "id": "cognitive_load.moves_fit",

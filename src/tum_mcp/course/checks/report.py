@@ -1467,6 +1467,76 @@ def _check_shows_picture(step: GuidanceStep) -> bool:
     )
 
 
+# A run of this many required pages that no lesson cites asks for a ruling.
+UNCITED_PAGES = 5
+
+
+def _page_range(locator: str) -> range | None:
+    if found := re.search(r"(\d+)\s*[-\u2013]\s*(\d+)", locator):
+        start, end = int(found[1]), int(found[2])
+        return range(start, end + 1) if start <= end else None
+    return None
+
+
+def _cited(pages: str) -> set[int]:
+    span = _page_range(pages)
+    return set(span) if span else ({int(pages)} if pages.strip().isdigit() else set())
+
+
+def uncited_page_flags(root: Path, content: StudyContent, flag: Flag) -> None:
+    """A long range of a required source's pages that no lesson cites; it may be a title or
+    repeated slides, so a checker rules on it (`coverage.cited_pages`)."""
+    from tum_mcp.course.ledger.preparation import read_preparation
+    from tum_mcp.course.project.store import load_state
+    from tum_mcp.course.sources.text import cached_record
+
+    hashes = {item.resource.key: item.sha256 for item in load_state(root).resources}
+
+    def whole(source: str) -> range | None:
+        """A locator without pages covers the whole document, when its text is cached."""
+        record = cached_record(root, hashes[source]) if hashes.get(source) else None
+        return range(1, len(record.pages) + 1) if record and record.kind == "pdf" else None
+
+    folder = root / ".tum-mcp" / "preparation"
+    for path in sorted(folder.glob("*.json")) if folder.is_dir() else ():
+        scope = read_preparation(root, path.stem)
+        if scope is None or "study" not in scope.workspaces:
+            continue
+        for candidate in scope.inventory:
+            if candidate.disposition != "required":
+                continue
+            span = _page_range(candidate.locator) or whole(candidate.source)
+            citing = {
+                unit.key: sum(1 for b in unit.blocks if b.sources[:1] == (candidate.source,))
+                for unit in content.units
+                if candidate.source in {s.key for s in unit.sources}
+            }
+            if span is None or not citing:
+                continue
+            cited = {
+                page
+                for unit in content.units
+                for block in unit.blocks
+                if block.pages and block.sources[:1] == (candidate.source,)
+                for page in _cited(block.pages)
+            }
+            run: list[int] = []
+            for page in [*span, span.stop]:
+                if page in span and page not in cited:
+                    run.append(page)
+                    continue
+                if len(run) >= UNCITED_PAGES:
+                    home = max(citing, key=lambda key: citing[key])
+                    flag(
+                        f"study/{home}",
+                        "uncited_pages",
+                        f"Pages {run[0]}-{run[-1]} of {candidate.source} ({candidate.locator}), "
+                        "which the preparation requires, are cited by no lesson. Teach their "
+                        "points, or rule why they are left out (a title or repeated slides).",
+                    )
+                run = []
+
+
 def quality_flags(
     content: StudyContent | None, exercises: ExerciseContent | None, *, root: Path | None = None
 ) -> list[dict[str, JsonValue]]:
@@ -2001,6 +2071,8 @@ def quality_flags(
             for error in arithmetic_errors(text):
                 flag(f"{name}:{path}", "arithmetic", error)
         _prose_text_flags(value, "", flag)
+    if root is not None and content is not None:
+        uncited_page_flags(root, content, flag)
     return flags
 
 

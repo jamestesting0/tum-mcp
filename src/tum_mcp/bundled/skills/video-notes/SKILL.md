@@ -62,7 +62,9 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
    layout) and what the entry/middle/exit sheets show, then render again. Repeat
    until the sheets pass the six visual criteria; a defect you can see is yours to
    fix in this request, not a note for the student.
-8. **Final and publish.** A requested video ends published: `render --final`, then
+8. **Final and publish.** A requested video with narration ends published. One that
+   must stay a silent draft, because its language has no voice, is reported as pending.
+   Publish with `render --final`, then
    `publish` with the teaching review and the visual review state. Then
    `listen PROJECT STEM`: it transcribes the narration, checks every sentence and its
    timing against the cues, re-listens to doubtful sentences alone, and samples a

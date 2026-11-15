@@ -6,8 +6,9 @@ Read AGENTS.md, the Study files under app/study/ or the Exam files under app/exa
 relevant .tum-mcp/state.json entries and existing audio records. Use the content schema already used by prepare-study;
 `tum-mcp study schema content` describes unfamiliar fields. Reuse an existing source
 check; otherwise `tum-mcp study inspect PROJECT` identifies stale units without
-refreshing campus websites. A hash mismatch requires content review by
-prepare-study, not an automatic rebind by audio-notes.
+refreshing campus websites. A hash mismatch requires content review by the skill that
+owns the source workspace (prepare-study for Study, prepare-exams for Exam), not an
+automatic rebind by audio-notes.
 
 The prepared website is the only course-content input. Read its structured content
 rather than scraping rendered HTML or reopening raw PDFs/Notion pages. Include
@@ -15,8 +16,8 @@ distinct concepts and qualifications found in its flashcards and correct practic
 feedback; do not read every duplicate card or distractor aloud. Keep erroneous
 answer options clearly identified as misconceptions if they are discussed.
 
-If a requested website has not been prepared, complete prepare-study first when
-the user's request includes that work. An audio-only request does not authorize
+If a requested workspace has not been prepared, complete prepare-study or
+prepare-exams first when the user's request includes that work. An audio-only request does not authorize
 new course authoring, source refreshes, publication or campus actions. Continue
 unblocked categories and report any unavailable or stale inputs.
 

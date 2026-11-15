@@ -1641,3 +1641,39 @@ def test_partial_current_verdicts_do_not_look_like_a_complete_perfect_score(proj
     assert study["scores"] == {}
     assert not card["score_coverage"]["complete"]
     assert card["score_coverage"]["scored_items"] < card["score_coverage"]["in_scope_items"]
+
+
+def test_a_long_required_page_range_no_lesson_cites_asks_for_a_ruling(project: Path) -> None:
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.checks.report import uncited_page_flags
+
+    content = read_content(project)
+    assert content is not None
+    unit = content.units[0]
+    source = unit.sources[0].key
+    cited = unit.blocks[0].model_copy(update={"pages": "1-2", "sources": (source,)})
+    content = content.model_copy(
+        update={"units": (unit.model_copy(update={"blocks": (cited, *unit.blocks[1:])}),)}
+    )
+    folder = project / ".tum-mcp" / "preparation"
+    folder.mkdir(parents=True, exist_ok=True)
+    candidate = {
+        "source": source,
+        "disposition": "required",
+        "basis": "source",
+        "reason": "The requested lecture.",
+        "locator": "pages 1-9",
+    }
+    scope = {
+        "course_key": "c",
+        "semester": "s",
+        "workspaces": ["study"],
+        "mode": "selected_sources",
+        "inventory": [candidate],
+        "demands": [],
+    }
+    (folder / "scope.json").write_text(json.dumps(scope), encoding="utf-8")
+    found: list[tuple[str, str]] = []
+    uncited_page_flags(project, content, lambda item, kind, detail: found.append((item, detail)))
+    # Pages 3-9 run seven pages without a citation; pages 1-2 are cited.
+    assert [item for item, _ in found] == [f"study/{unit.key}"] and "Pages 3-9" in found[0][1]

@@ -1,7 +1,7 @@
 """Import a file the user already holds as a private, never-published local source."""
 
+import json
 import re
-import shutil
 import tempfile
 import unicodedata
 from datetime import UTC, datetime
@@ -23,6 +23,61 @@ SUFFIXES = {
     ".jpg": ".jpg",
     ".jpeg": ".jpg",
 }
+# Code and notebooks become Markdown text with line and cell locators; nothing is run.
+CODE = {
+    ".py": "python",
+    ".java": "java",
+    ".c": "c",
+    ".h": "c",
+    ".cpp": "cpp",
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".r": "r",
+    ".m": "matlab",
+    ".jl": "julia",
+    ".hs": "haskell",
+    ".sql": "sql",
+}
+
+
+def _numbered(code: str) -> str:
+    lines = code.splitlines() or [""]
+    width = len(str(len(lines)))
+    return "\n".join(f"{number:>{width}} | {line}" for number, line in enumerate(lines, 1))
+
+
+def code_text(name: str, code: str, language: str) -> str:
+    """A code file as text: each line keeps its number, so a citation can name it."""
+    body = _numbered(code)
+    return f"# {name}\n\nNever executed. Lines are numbered.\n\n```{language}\n{body}\n```\n"
+
+
+def notebook_text(name: str, data: bytes) -> str:
+    """A notebook as text: one section per cell; saved outputs are marked as not re-run."""
+    try:
+        notebook = json.loads(data)
+        cells = notebook["cells"]
+        language = notebook.get("metadata", {}).get("kernelspec", {}).get("language", "python")
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise CampusError(Code.INVALID_RESPONSE, "The notebook is not valid JSON.") from None
+    parts = [f"# {name}\n\nNever executed. Saved outputs were not re-run and are unverified."]
+    for number, cell in enumerate(cells, 1):
+        source = cell.get("source", "")
+        source = "".join(source) if isinstance(source, list) else str(source)
+        kind = cell.get("cell_type", "code")
+        if kind == "markdown":
+            parts.append(f"## Cell {number} (text)\n\n{source}")
+            continue
+        parts.append(f"## Cell {number} ({kind})\n\n```{language}\n{_numbered(source)}\n```")
+        shown = []
+        for output in cell.get("outputs", []):
+            text = output.get("text") or output.get("data", {}).get("text/plain") or ""
+            shown.append("".join(text) if isinstance(text, list) else str(text))
+        if any(item.strip() for item in shown):
+            parts.append(
+                "Saved output (unverified):\n\n```text\n" + "".join(shown).rstrip() + "\n```"
+            )
+    return "\n\n".join(parts) + "\n"
 
 
 class ImportReport(BaseModel):
@@ -44,14 +99,20 @@ def import_file(project: Path, file: Path, kind: Kind, title: str) -> ImportRepo
     title = title.strip()
     if not title or len(title) > 300:
         raise CampusError(Code.INVALID_RESPONSE, "Give the file a title of at most 300 characters.")
-    suffix = SUFFIXES.get(file.suffix.lower())
+    original = file.suffix.lower()
+    suffix = ".md" if original == ".ipynb" or original in CODE else SUFFIXES.get(original)
     if suffix is None:
         raise CampusError(
-            Code.CAPABILITY_UNSUPPORTED, "Import a PDF, text, Markdown or image file."
+            Code.CAPABILITY_UNSUPPORTED,
+            "Import a PDF, text, Markdown, image, notebook or code file.",
         )
     if file.is_symlink() or not file.is_file() or file.stat().st_size > MAX_FILE:
         raise CampusError(Code.INVALID_RESPONSE, "Choose a regular file of at most 50 MiB.")
     data = file.read_bytes()
+    if original == ".ipynb":
+        data = notebook_text(file.name, data).encode()
+    elif original in CODE:
+        data = code_text(file.name, data.decode("utf-8", "replace"), CODE[original]).encode()
     if suffix == ".pdf":
         from tum_mcp.moodle.errors import MoodleError
         from tum_mcp.moodle.extract_worker import validate_pdf
@@ -112,7 +173,7 @@ def import_file(project: Path, file: Path, kind: Kind, title: str) -> ImportRepo
     )
     with tempfile.TemporaryDirectory(prefix="tum-import-") as temporary:
         staging = Path(temporary)
-        shutil.copyfile(file, staging / f"upload{suffix}")
+        (staging / f"upload{suffix}").write_bytes(data)
         path = staging / "snapshot.json"
         path.write_text(snapshot.model_dump_json(exclude_none=True), encoding="utf-8")
         sync(root, path)

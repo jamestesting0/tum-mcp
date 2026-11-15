@@ -1443,7 +1443,7 @@ class Question(Frozen):
     prompt: Text
     level: Literal["recall", "apply", "reason"]
     # The situation the question is about, shown beside it in Practice and Revision.
-    # Optional: a question about a concept stands alone; a picture must carry information.
+    # Every question needs one that carries information; a text-only question holds readiness.
     blocks: tuple[Block, ...] = Field(default=(), max_length=3)
     options: tuple[Option, ...] = Field(min_length=3, max_length=5)
     correct: Key

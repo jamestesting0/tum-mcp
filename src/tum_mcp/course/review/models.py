@@ -327,6 +327,7 @@ RULED_FLAGS: dict[str, str] = {
     "step_without_working": "practice.complete_answer",
     "single_step_part": "cognitive_load.one_new_idea",
     "answer_without_code": "practice.complete_answer",
+    "uncited_pages": "coverage.cited_pages",
 }
 # Invariant flags about the whole course rather than the item they are filed under: a scoped
 # draft cannot clear them, so an item lint reports them and the review gate holds on them.

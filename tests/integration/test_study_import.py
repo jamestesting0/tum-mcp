@@ -55,6 +55,39 @@ def test_import_adds_a_private_local_exam_once(course: Path, tmp_path: Path) -> 
     assert statuses[report["key"]] == statuses["local-prufung-losung"] == "current"
 
 
+def test_notebooks_and_code_import_as_numbered_text_and_never_run(
+    course: Path, tmp_path: Path
+) -> None:
+    # Given a notebook with a saved output and a code file.
+    notebook = tmp_path / "search.ipynb"
+    cells = [
+        {"cell_type": "markdown", "source": ["# Breadth-first search"]},
+        {
+            "cell_type": "code",
+            "source": ["queue = [start]\n", "print(len(queue))"],
+            "outputs": [{"output_type": "stream", "text": ["1\n"]}],
+        },
+    ]
+    notebook.write_text(json.dumps({"cells": cells, "metadata": {}}), encoding="utf-8")
+    code = tmp_path / "Search.java"
+    code.write_text("class Search {\n    int depth;\n}\n", encoding="utf-8")
+    # When both are imported.
+    imported = [
+        import_file(course, notebook, "other", "Search notebook"),
+        import_file(course, code, "other", "Search code"),
+    ]
+    # Then each is stored as Markdown with cell and line locators, and outputs are unverified.
+    texts = [(course / report.path).read_text(encoding="utf-8") for report in imported]
+    assert all(report.path.endswith(".md") for report in imported)
+    assert "## Cell 2 (code)" in texts[0] and "1 | queue = [start]" in texts[0]
+    assert "Saved output (unverified)" in texts[0]
+    assert "2 |     int depth;" in texts[1]
+    broken = tmp_path / "broken.ipynb"
+    broken.write_text("not json", encoding="utf-8")
+    with pytest.raises(CampusError, match="not valid JSON"):
+        import_file(course, broken, "other", "Broken")
+
+
 def test_campus_sync_keeps_local_files_or_refuses_safely(course: Path, tmp_path: Path) -> None:
     exam = tmp_path / "exam.pdf"
     exam.write_bytes(pdf_bytes(["Task"]))
