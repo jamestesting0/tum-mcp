@@ -269,9 +269,12 @@ class Concept(Frozen):
     details: tuple[Block, ...] = Field(default=(), max_length=20)
     # The pattern whose workflow is this entry's method; the entry shows that workflow.
     workflow_from: Key | None = None
-    # Meanings of the variables in a non-formula entry's maths (line, tables, text), listed
-    # when the entry opens; a formula entry lists them with its formula.
-    symbols: tuple[Symbol, ...] = Field(default=(), max_length=20)
+    symbols: tuple[Symbol, ...] = Field(
+        default=(),
+        max_length=20,
+        description="Every variable in a non-formula entry's maths (line, tables, text), listed "
+        "when the entry opens; a formula entry lists them with its formula.",
+    )
 
     @model_validator(mode="after")
     def cited(self) -> "Concept":
@@ -332,8 +335,12 @@ class Apply(Frozen):
     )
     code: Annotated[str, Field(min_length=1, max_length=4000)] | None = None
     language: Annotated[str, Field(min_length=1, max_length=30)] | None = None
-    # What each variable in `math` means in this pattern; the student opens it in the formula.
-    symbols: tuple[Symbol, ...] = Field(default=(), max_length=12)
+    symbols: tuple[Symbol, ...] = Field(
+        default=(),
+        max_length=12,
+        description="What every variable of the applied formula means in this pattern, for a "
+        "formula in `math` or inline in `text`; the student opens it in the formula.",
+    )
 
     @model_validator(mode="after")
     def shown(self) -> "Apply":
@@ -343,9 +350,10 @@ class Apply(Frozen):
             raise ValueError("Applied code names its language, and only code does.")
         for line in self.math:
             compile_latex(line)
-        if self.symbols and not self.math:
+        inline = re.findall(r"\\\((.+?)\\\)", self.text or "", re.S)
+        if self.symbols and not (self.math or inline):
             raise ValueError("Only an applied formula lists variables.")
-        check_meanings(self.symbols, list(self.math), "An applied formula")
+        check_meanings(self.symbols, [*self.math, *inline], "An applied formula")
         return self
 
 

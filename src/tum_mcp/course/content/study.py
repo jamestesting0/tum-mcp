@@ -80,8 +80,7 @@ class TextBlock(Sourced):
 
 
 class Symbol(Frozen):
-    """A variable and what it is here, in about twelve words, never just its name; give it
-    where a reader would stop to recall it, once per context."""
+    """A variable and what it is here, in about twelve words, never just its name."""
 
     symbol: Text
     meaning: Text
@@ -958,8 +957,13 @@ class DerivationBlock(Sourced):
     # A walkthrough reveals one line at a time with Previous and Next, and the reader can
     # show every step at once; without it the whole working is shown.
     walkthrough: bool = False
-    # Variables a reader may need to recall here; each opens its meaning in the formula.
-    symbols: tuple[Symbol, ...] = Field(default=(), max_length=12)
+    symbols: tuple[Symbol, ...] = Field(
+        default=(),
+        max_length=12,
+        description="Meanings where a reader would stop to recall a variable: defined "
+        "elsewhere, compound, easily confused or shifting meaning. Obvious indices, constants "
+        "and just-defined variables get none. Each opens its meaning in the formula.",
+    )
 
     @model_validator(mode="after")
     def stepped(self) -> "DerivationBlock":

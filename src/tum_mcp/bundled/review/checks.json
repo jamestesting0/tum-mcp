@@ -4,7 +4,7 @@
     {
       "id": "correctness.source_match",
       "dimension": "correctness",
-      "rule": "every definition, claim and value agrees with the cited page. A taught procedure preserves initialization, explicitly scoped repetition, branches and result or failure exits; a correct worked trace or separate answer-key implementation cannot supply instructions missing from the published procedure. A lecture example the item teaches keeps the lecture's inputs, conventions and every state through its endpoint, drawn in the lecture's form (a tree as a tree); a smaller or changed case does not teach that example.",
+      "rule": "every definition, claim and value agrees with the cited page. A taught procedure preserves initialization, explicitly scoped repetition, branches and result or failure exits; a correct worked trace or separate answer-key implementation cannot supply instructions missing from the published procedure. A lecture example the item teaches keeps the lecture's inputs, conventions and every state through its endpoint, drawn in the lecture's form (a tree as a tree); a smaller or changed case does not teach that example. Inputs an authored application declares as its own, such as the givens of a practice or forecast question, are not source claims: check them for consistency with the rule they exercise. A released question keeps its source's givens exactly.",
       "pass": "The heuristic definition matches slide 4 word for word in meaning.",
       "fail": "The unit says A* expands the highest f first; the cited slide says lowest.",
       "profiles": [
@@ -16,7 +16,7 @@
         "lecture-selection"
       ],
       "scope": "block",
-      "version": 3,
+      "version": 4,
       "default_fail": true
     },
     {

@@ -1490,6 +1490,10 @@ def uncited_page_flags(root: Path, content: StudyContent, flag: Flag) -> None:
     from tum_mcp.course.project.store import load_state
     from tum_mcp.course.sources.text import cached_record
 
+    folder = root / ".tum-mcp" / "preparation"
+    scopes = sorted(folder.glob("*.json")) if folder.is_dir() else []
+    if not scopes:
+        return
     hashes = {item.resource.key: item.sha256 for item in load_state(root).resources}
 
     def whole(source: str) -> range | None:
@@ -1497,8 +1501,7 @@ def uncited_page_flags(root: Path, content: StudyContent, flag: Flag) -> None:
         record = cached_record(root, hashes[source]) if hashes.get(source) else None
         return range(1, len(record.pages) + 1) if record and record.kind == "pdf" else None
 
-    folder = root / ".tum-mcp" / "preparation"
-    for path in sorted(folder.glob("*.json")) if folder.is_dir() else ():
+    for path in scopes:
         scope = read_preparation(root, path.stem)
         if scope is None or "study" not in scope.workspaces:
             continue
