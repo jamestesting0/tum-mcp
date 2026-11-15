@@ -5,9 +5,12 @@
 - Exercise guides show the full working on Compare: a step's `explanation` can be blocks
   (a derivation, proof lines, a walkthrough or a code walkthrough), and a ruled
   `step_without_working` flag marks a worked answer explained in one sentence. The Solution
-  gives each part's answer only. Guide steps follow the solution's subgoals.
+  gives each part's answer only. Guide steps follow the solution's subgoals: a ruled
+  `single_step_part` flag marks a long part guided by one step, and a ruled
+  `answer_without_code` flag marks a programming part answered in words only.
 - An exercise's plan is its part map (`answer`, `method`, `official`, `needs`), checked by
-  lint instead of a plan checker; each need links its Study passage or gives a reason, and
+  lint instead of a plan checker. Once one part names its official answer, every part
+  does (or says `none`). Each need links its Study passage or gives a reason, and
   the exercise's prerequisites list the same links. A ruled `exercise_case_in_study` flag
   marks Study that copies a released exercise's statement or drawn case.
 - `study schema --example` lists one example per check kind and four guide steps

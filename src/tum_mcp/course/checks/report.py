@@ -1339,8 +1339,9 @@ def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
                 f"{item}/steps/{guide[0].key}",
                 "single_step_part",
                 f"Part {part or ''} is guided by one step whose working runs "
-                f"{_operations(working)} operations. Split it at the solution's subgoals, so "
-                "each step reaches one intermediate result the student can check.",
+                f"{_operations(working)} operations. Add a step at each of the solution's "
+                "subgoals, so the student checks an intermediate result; a walkthrough stays "
+                "whole in the part's last step.",
             )
     return flags
 
