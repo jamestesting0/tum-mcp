@@ -39,8 +39,10 @@ from tum_mcp.course.content.study import (
     TableBlock,
     TextBlock,
     WalkthroughBlock,
+    changed_lines,
     declared_meanings,
     has_visual,
+    line_span,
 )
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.paths import app_path
@@ -1261,7 +1263,13 @@ def _operations(blocks: tuple[Block, ...]) -> int:
 
 
 # A rendered block or check that shows code, in a dumped item.
-CODE_MARKERS = ('"kind": "code"', '"kind": "files"', '"format": "code"')
+CODE_MARKERS = (
+    '"kind": "code"',
+    '"kind": "files"',
+    '"format": "code"',
+    '"solution_code"',
+    '"code": [{"path"',
+)
 
 
 def programming_sources(root: Path | None) -> frozenset[str]:
@@ -1294,10 +1302,86 @@ def code_answer_flags(
                     "item": f"{exercise.key}/{label}" if label else exercise.key,
                     "flag": "answer_without_code",
                     "detail": f"Part {label or ''} of a programming exercise is answered in "
-                    "words only. Its Solution is the code, and its guide writes that code from a "
-                    "starter skeleton (`step-code`).",
+                    "words only. Its Solution is the code, and its guide writes that code into the "
+                    "exercise's project files (`step-code`).",
                 }
             )
+    return flags
+
+
+def project_flags(exercise: Exercise, programming: frozenset[str]) -> list[dict[str, JsonValue]]:
+    """A coding exercise works in one project: each code step writes into an editable file,
+    and each editable file has a solved version that its steps point into."""
+    flags: list[dict[str, JsonValue]] = []
+
+    def flag(location: str, kind: str, detail: str) -> None:
+        flags.append({"item": location, "flag": kind, "detail": detail})
+
+    block = next((item for item in exercise.statement if item.kind == "files"), None)
+    files = {item.path: item for item in block.files} if block else {}
+    written: set[str] = set()
+    for step in exercise.steps:
+        check = step.check
+        if not (check and check.kind == "self_check" and check.format == "code"):
+            continue
+        location = f"{exercise.key}/steps/{step.key}"
+        if not check.file:
+            flag(
+                location,
+                "code_step_without_project",
+                "This code step opens its own editor. Put the exercise's files in one `files` "
+                "block and let the step write into its editable file with `file`.",
+            )
+            continue
+        written.add(check.file)
+        for ref in check.solution_code:
+            first, last = line_span(ref.lines)
+            source = files[ref.path]
+            if source.solution is None or not any(
+                start <= last and end >= first
+                for start, end in changed_lines(source.code, source.solution)
+            ):
+                flag(
+                    location,
+                    "solved_lines_unchanged",
+                    f"Lines {ref.lines} of the solved {ref.path} are the same as the starter. "
+                    "Point at the lines this step writes.",
+                )
+    for path, item in files.items():
+        if not item.editable:
+            continue
+        location = f"{exercise.key}/files/{path}"
+        if item.solution is None:
+            flag(
+                location,
+                "editable_without_solution",
+                f"{path} is editable but has no solved version. Add `solution`: the whole file "
+                "as a correct answer leaves it.",
+            )
+        elif item.solution == item.code:
+            flag(
+                location,
+                "solution_unchanged",
+                f"The solved {path} is the same as its starter. Solve it, or make it read-only.",
+            )
+        if path not in written:
+            flag(
+                location,
+                "unwritten_editable",
+                f"No step writes into {path}. Guide the work it needs, or make it read-only.",
+            )
+    if (
+        block
+        and block.origin == "rebuilt"
+        and not block.rebuilt_because
+        and programming & {source.key for source in exercise.sources}
+    ):
+        flag(
+            exercise.key,
+            "rebuilt_without_reason",
+            "This Artemis exercise shows a project rebuilt from the statement. Read the real "
+            "files with `tum-mcp study repository`, or say why not in `rebuilt_because`.",
+        )
     return flags
 
 
@@ -1968,6 +2052,14 @@ def quality_flags(
         for exercise in group.exercises:
             flags.extend(item_block_flags(exercise.key, exercise))
             flags.extend(code_answer_flags(exercise, programming))
+            flags.extend(project_flags(exercise, programming))
+            if root is not None and programming & {source.key for source in exercise.sources}:
+                from tum_mcp.course.content.projects import drift
+
+                flags.extend(
+                    {"item": exercise.key, "flag": "project_drift", "detail": problem}
+                    for problem in drift(root, exercise)
+                )
             flags.extend(variable_flags(exercise.key, exercise.model_dump(mode="json"), task=True))
             flags.extend(visual_state_flags(exercise.key, exercise.model_dump(mode="json")))
             for part, pictured in _part_context(exercise):

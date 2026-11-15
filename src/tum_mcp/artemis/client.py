@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from tum_mcp.artemis.models import (
+    CommitHistory,
     Courses,
     Details,
     Exercise,
@@ -16,6 +17,7 @@ from tum_mcp.artemis.models import (
     Identity,
     Overview,
     Participation,
+    RepositoryFiles,
     StatementImage,
     Task,
 )
@@ -172,6 +174,45 @@ class Artemis:
         if len(matches) != 1:
             raise CampusError(Code.CAPABILITY_UNSUPPORTED, "Participation identity is ambiguous.")
         return matches[0]
+
+    def template_files(self, exercise: Exercise) -> tuple[str, dict[str, str]]:
+        """The text files of the student's own repository as Artemis copied the template:
+        the newest commit at or before the participation was set up. The student cannot
+        commit before their repository exists, so later commits are their work. Graded comes
+        first, because a practice repository may start from graded work."""
+        if exercise.type != "programming":
+            raise CampusError(Code.CAPABILITY_UNSUPPORTED, "Only programming exercises have code.")
+        for mode in ("graded", "practice"):
+            if any(
+                item.test_run == (mode == "practice")
+                for item in exercise.student_participations or ()
+            ):
+                participation = self.participation(exercise, mode)
+                break
+        else:
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                "not_started: start the exercise in Artemis first; this read never starts it.",
+            )
+        base = f"/api/programming/programming-exercise-participations/{participation.id}/"
+        current = decode(
+            Participation, self.api.get(f"{base}student-participation-with-all-results")
+        )
+        if current.id != participation.id or current.initialization_date is None:
+            raise CampusError(Code.STALE_RESULT, "The repository's setup time is unknown.")
+        history = decode(CommitHistory, self.api.get(f"{base}commit-history")).root
+        template = [item for item in history if item.timestamp <= current.initialization_date]
+        if not template:
+            raise CampusError(Code.STALE_RESULT, "No commit predates the repository's setup.")
+        commit = max(template, key=lambda item: item.timestamp).hash
+        files = decode(
+            RepositoryFiles,
+            self.api.get(
+                f"/api/programming/programming-exercises/{exercise.id}/files-content-commit-details",
+                {"commitId": commit, "participationId": str(participation.id)},
+            ),
+        ).root
+        return commit, files
 
     def feedback(
         self, exercise: Exercise, mode: Literal["graded", "practice"], commit: str

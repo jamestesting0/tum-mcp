@@ -270,6 +270,14 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "compressed_working": "representation",
     # Code summarised into long one-line stand-ins, unreadable in the app (user decision).
     "compressed_code": "representation",
+    # A coding exercise works in one project with solved files (user decision).
+    "code_step_without_project": "representation",
+    "editable_without_solution": "correctness",
+    "solution_unchanged": "correctness",
+    "unwritten_editable": "coverage",
+    "solved_lines_unchanged": "correctness",
+    "rebuilt_without_reason": "coverage",
+    "project_drift": "correctness",
     "static_trace": "representation",
     "static_walkthrough": "representation",
     "dropped_node_value": "representation",

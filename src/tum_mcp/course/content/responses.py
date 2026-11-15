@@ -4,7 +4,15 @@ from typing import Annotated, Literal
 
 from pydantic import Field, FiniteFloat, model_validator
 
-from tum_mcp.course.content.study import Block, DiagramBlock, FilePath, Option, PlotBlock, Text
+from tum_mcp.course.content.study import (
+    Block,
+    DiagramBlock,
+    FilePath,
+    Option,
+    PlotBlock,
+    SolvedLines,
+    Text,
+)
 from tum_mcp.course.project.models import Key
 from tum_mcp.settings import Frozen
 
@@ -39,7 +47,8 @@ class NumericCheck(Frozen):
 class SelfCheck(Frozen):
     """Work such as a proof, an argument or code, compared with a model answer and a rubric.
     A code model answer is real code that uses only what the statement and the starter code
-    declare."""
+    declare. A step that writes into a project `file` points at the solved lines it produces
+    with `solution_code` instead of copying them into `model_answer`."""
 
     kind: Literal["self_check"]
     format: Literal["text", "code"] = "text"
@@ -54,16 +63,31 @@ class SelfCheck(Frozen):
     file: FilePath | None = Field(
         default=None, description="The editable workspace file this step writes into."
     )
+    solution_code: tuple[SolvedLines, ...] = Field(
+        default=(), max_length=3, exclude_if=lambda value: not value
+    )
     rubric: tuple[Text, ...] = Field(min_length=1, max_length=12)
     # Code answers are literal code; text answers are blocks shaped like the answer
     # (a filled table, a list of cases, a formula) rather than one long paragraph.
     model_answer: (
         Annotated[str, Field(min_length=1, max_length=20000)]
         | Annotated[tuple[Block, ...], Field(min_length=1, max_length=8)]
-    )
+        | None
+    ) = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def code_only(self) -> "SelfCheck":
+        if self.solution_code and not self.file:
+            raise ValueError("Solved lines belong to a step that writes into a project file.")
+        if self.file and bool(self.solution_code) == (self.model_answer is not None):
+            raise ValueError(
+                "A step that writes into a project file points at its solved lines with "
+                "solution_code instead of a model answer."
+            )
+        if self.model_answer is None:
+            if not self.solution_code:
+                raise ValueError("A self-check needs a model answer.")
+            return self
         if (self.format == "code") != isinstance(self.model_answer, str):
             raise ValueError(
                 "A code model answer is code; a text model answer is a list of blocks."

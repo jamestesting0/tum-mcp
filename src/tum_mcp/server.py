@@ -4,7 +4,7 @@ import time
 from typing import Annotated, Literal, assert_never
 
 from mcp.types import ToolAnnotations
-from pydantic import Field
+from pydantic import Field, JsonValue
 
 from tum_mcp.artemis import Artemis
 from tum_mcp.artemis.discovery import artemis_list_courses
@@ -298,6 +298,34 @@ def artemis_get_feedback(
     """Fetch only visible feedback linked to the exact built commit and participation mode."""
     provider = Artemis(API(find_account(account_id, Provider.ARTEMIS)))
     return provider.feedback(provider.exercise(course_id, exercise_id).exercise, mode, commit)
+
+
+@server.tool(annotations=READ)
+def artemis_get_repository(
+    account_id: str, course_id: Id, exercise_id: Id, include: list[str] | None = None
+) -> dict[str, JsonValue]:
+    """Save the source files of a started programming exercise as Artemis copied its template,
+    never the student's later work; never starts, pushes or builds.
+
+    Returns the saved folder, the template commit and each file's path, size, digest and
+    TODO marker, never file text. Build scripts, wrappers, hidden and binary files stay out.
+    `include` narrows a repository too large for the editor to the globs it names. Copy the
+    folder into a course project with `tum-mcp study repository PROJECT --from FOLDER`.
+    """
+    from tum_mcp.course.project.store import confined
+    from tum_mcp.course.sources.repository import listing, read_snapshot, write_snapshot
+    from tum_mcp.settings import data_dir
+
+    provider = Artemis(API(find_account(account_id, Provider.ARTEMIS)))
+    exercise = provider.exercise(course_id, exercise_id).exercise
+    commit, files = provider.template_files(exercise)
+    target = confined(
+        data_dir(),
+        f"downloads/artemis/{account_id}/course-{course_id}/exercise-{exercise_id}/repository",
+    )
+    write_snapshot(target, f"artemis-{exercise_id}", commit, files, tuple(include or ()))
+    manifest, kept = read_snapshot(target)
+    return {"saved_path": str(target), **listing(manifest, kept)}
 
 
 @server.tool(
