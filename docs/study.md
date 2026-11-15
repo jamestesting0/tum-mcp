@@ -448,7 +448,8 @@ tum-mcp study exam-report ./pse-ws26         # what the agent reads before autho
 ```
 
 Imported files stay private and survive campus syncs. Copies of the same exam from
-different places count once.
+different places count once. A Jupyter notebook or a code file imports as numbered text
+that is never run; a notebook's saved outputs are marked as unverified.
 
 - **Cheatsheet**: a semester map of the exam-relevant ideas and one-line entries
   grouped by topic and section: facts, rules, comparisons, code and frameworks as well as
@@ -519,7 +520,9 @@ not required: the publisher uses authenticated GitHub API calls through the host
 `gh` CLI. Publication settings contain no credentials.
 
 After setup, successful `tum-mcp study build PROJECT` commands update that same
-repository automatically. Unchanged verified exports require no network calls
+repository automatically once the review gate covers every item; a draft that is
+still under review stays local (`held`) until then, and asking to publish anyway
+runs `study publish sync`. Unchanged verified exports require no network calls
 or commits. The study skills finish related edits in one build. Remote edits
 are preserved for review; the publisher never force-pushes.
 

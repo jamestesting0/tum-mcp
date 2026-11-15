@@ -21,7 +21,7 @@ project, `tum-mcp study find PROJECT "words"` finds the stored pages that mentio
 topic and `tum-mcp study text PROJECT --key KEY --pages N-M` reads them. That text drops
 figures and scrambles tables and formulas, so look at every page you answer from: open the
 PDF page if your tools display PDFs; otherwise add `--images` and open the image. A scanned page has
-no searchable text, so a phrase search does not find may still be on it. Check
+no searchable text, so a phrase search can miss what is on it. Check
 `tum_status` or discover IDs only when connection or identity is unknown.
 Do not initialize, refresh or build a project merely to answer a question.
 

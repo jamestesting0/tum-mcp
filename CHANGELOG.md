@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Automatic publication after a build waits until the review gate covers every item and
+  reports `held` meanwhile; `study publish sync` still publishes on request.
+- `study import` reads Jupyter notebooks and code files as numbered text that is never run;
+  a notebook's saved outputs are marked unverified.
+- A ruled `uncited_pages` flag asks about a long required page range that no lesson cites.
+- The skills follow the check registry's wording: text-only questions, prediction prompts,
+  shape fit, Exam cohesion and notation, multiple choice versus Compare, and when a workflow
+  step needs `apply` (only steps that compute). Video and audio checks route to the skill
+  that owns the source, and the scanned-page warning appears in every authoring skill.
+- Exam models carry their authoring rules in the schema. Model answers inside drills and
+  guides cite only the pattern's sources, a worked example's official solution must be one
+  of them, and a forecast question with parts answers each part. Exam guides show full
+  working like exercise guides, and an inline formula in `apply.text` can carry its
+  variables' meanings.
+- `correctness.source_match` checks the givens of an authored practice question for
+  consistency with its rule; released questions keep their source's givens.
 - Exercise guides show the full working on Compare: a step's `explanation` can be blocks
   (a derivation, proof lines, a walkthrough or a code walkthrough), and a ruled
   `step_without_working` flag marks a worked answer explained in one sentence. The Solution

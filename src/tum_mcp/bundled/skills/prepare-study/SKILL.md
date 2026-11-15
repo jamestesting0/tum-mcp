@@ -16,7 +16,7 @@ request. Do not re-read the whole inventory for each authoring step. Look at eve
 or sheet page you rely on: `tum-mcp study text` finds and quotes it but drops figures and
 scrambles tables and formulas. Open the PDF page if your tools display PDFs; otherwise
 add `--images` and open the image. A scanned page has
-no searchable text, so a phrase search does not find may still be on it.
+no searchable text, so a phrase search can miss what is on it.
 
 Write in the course's content language, recorded in `.tum-mcp/course.md`: the language the
 course is taught in, unless the student asked for another. Translate a released statement in
