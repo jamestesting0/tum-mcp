@@ -295,6 +295,9 @@ def _exercise_defects(document: dict) -> list[dict]:
             for step in exercise["steps"]:
                 check = step.get("check") or {}
                 answer = check.get("model_answer")
+                # A guide step's working holds the derivation when the check has no model answer.
+                working = step.get("explanation")
+                shown_answer = answer if isinstance(answer, list) else working
                 if "ex_plain_math" not in planted:
                     step["prompt"] += PLAIN_PROMPT
                     add("ex_plain_math", item, PLAIN_PROMPT.strip())
@@ -302,9 +305,9 @@ def _exercise_defects(document: dict) -> list[dict]:
                 if (
                     "ex_revealing_hint" not in planted
                     and step.get("hints")
-                    and isinstance(answer, list)
+                    and isinstance(shown_answer, list)
                 ):
-                    shown = json.dumps(answer[-1], ensure_ascii=False)[:160]
+                    shown = json.dumps(shown_answer[-1], ensure_ascii=False)[:160]
                     step["hints"][0] = f"The answer is: {shown}"
                     add("ex_revealing_hint", item, step["hints"][0])
                     continue
@@ -313,8 +316,8 @@ def _exercise_defects(document: dict) -> list[dict]:
                     add("ex_undeclared_member", item, UNDECLARED)
                     continue
                 derivations = (
-                    [b for b in answer if b.get("kind") == "derivation"]
-                    if isinstance(answer, list)
+                    [b for b in shown_answer if b.get("kind") == "derivation"]
+                    if isinstance(shown_answer, list)
                     else []
                 )
                 if "ex_wrong_answer" not in planted and derivations:
