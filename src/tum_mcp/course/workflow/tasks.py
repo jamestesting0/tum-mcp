@@ -3,9 +3,9 @@
 import os
 import shlex
 from pathlib import Path, PureWindowsPath
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from tum_mcp.course.checks.batch import Batch, assess_batch
 from tum_mcp.course.project.models import Digest, Key
@@ -25,11 +25,16 @@ from tum_mcp.moodle.browsers import is_wsl, wsl_path
 from tum_mcp.settings import Frozen
 
 NAME = ".tum-mcp/task.json"
+# A requested video or audio track, by the stem its plan or script names.
+MediaRef = Annotated[str, Field(pattern=r"^(video|audio)/[a-z0-9][a-z0-9_.-]{0,99}$")]
 
 
 class Task(Frozen):
+    """A requested batch of course content, or requested media that ends when published."""
+
     owner: str = Field(min_length=1, max_length=200)
-    batch: Key
+    batch: Key | None = None
+    media: tuple[MediaRef, ...] = Field(default=(), max_length=40)
     review_rounds: int = Field(default=0, ge=0, le=20)
     phase: Literal["pending", "ready", "complete", "paused", "stalled"] = "pending"
     inputs: Digest | None = None
@@ -39,6 +44,14 @@ class Task(Frozen):
     last_inputs: Digest | None = None
     stagnant: int = Field(default=0, ge=0, le=3)
     reason: str = Field(default="", max_length=2000)
+
+    @model_validator(mode="after")
+    def one_scope(self) -> "Task":
+        if (self.batch is None) == (not self.media):
+            raise ValueError("A task names either a batch or its media.")
+        if self.media and self.review_rounds:
+            raise ValueError("Media tasks have no review rounds.")
+        return self
 
 
 def read_task(root: Path) -> Task | None:
@@ -62,20 +75,29 @@ def _owner(explicit: str | None = None) -> str:
     return f"codex:{owner}"
 
 
-def begin(root: Path, batch: str, review_rounds: int = 0, *, owner: str | None = None) -> Task:
-    task = Task(owner=_owner(owner), batch=batch, review_rounds=review_rounds)
-    body = read_bytes(private_path(root, f"batches/{task.batch}.json"))
-    if body is None:
-        raise CampusError(Code.ACTION_REQUIRED, "Record the batch before starting its task.")
-    request = Batch.model_validate_json(body)
-    if request.course_key != load_state(root).course.key:
-        raise CampusError(Code.SCOPE_DENIED, "The task belongs to another course.")
+def begin(
+    root: Path,
+    batch: str | None,
+    review_rounds: int = 0,
+    *,
+    owner: str | None = None,
+    media: tuple[str, ...] = (),
+) -> Task:
+    task = Task(owner=_owner(owner), batch=batch, media=media, review_rounds=review_rounds)
+    state = load_state(root)
+    if task.batch is not None:
+        body = read_bytes(private_path(root, f"batches/{task.batch}.json"))
+        if body is None:
+            raise CampusError(Code.ACTION_REQUIRED, "Record the batch before starting its task.")
+        if Batch.model_validate_json(body).course_key != state.course.key:
+            raise CampusError(Code.SCOPE_DENIED, "The task belongs to another course.")
+    scope = (task.batch, task.media, task.review_rounds)
     existing = read_task(root)
     if (
         existing
         and existing.owner == task.owner
         and existing.phase in {"paused", "stalled"}
-        and (existing.batch, existing.review_rounds) == (task.batch, task.review_rounds)
+        and (existing.batch, existing.media, existing.review_rounds) == scope
     ):
         return _save(
             root, existing.model_copy(update={"phase": "pending", "stagnant": 0, "reason": ""})
@@ -85,7 +107,7 @@ def begin(root: Path, batch: str, review_rounds: int = 0, *, owner: str | None =
             raise CampusError(
                 Code.WORKSPACE_CONFLICT, "Another thread owns this active course task."
             )
-        if (existing.batch, existing.review_rounds) != (task.batch, task.review_rounds):
+        if (existing.batch, existing.media, existing.review_rounds) != scope:
             raise CampusError(
                 Code.ACTION_REQUIRED, "Pause the existing task before changing its scope."
             )
@@ -109,9 +131,51 @@ def _owned(root: Path, owner: str | None = None) -> Task:
     return task
 
 
-def inputs(root: Path) -> str:
+def media_problems(root: Path, media: tuple[str, ...]) -> list[str]:
+    """What keeps each requested video or track from being published and current."""
+    from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.content.store import present
+    from tum_mcp.course.media.audio import AudioManifest
+    from tum_mcp.course.media.audio_project import audio
+    from tum_mcp.course.media.inventory import discover
+    from tum_mcp.course.media.video_project import _read
+
+    content = read_content(root) if present(root, "study") else None
+    found = {item.item: item for item in discover(root, load_state(root), content).items}
+    tracks = _read(audio(root, "manifest.json"), AudioManifest)
+    keys = {entry.stem: key for key, entry in (tracks.categories if tracks else {}).items()}
+    problems = []
+    for ref in media:
+        kind, name = ref.split("/", 1)
+        item = found.get(ref if kind == "video" else f"audio/{keys.get(name, name)}")
+        if item is None:
+            problems.append(f"{ref} is not published yet.")
+        elif item.stale or item.technical:
+            reasons = ", ".join((*item.stale, *item.technical))
+            problems.append(f"{ref} is published but out of date ({reasons}).")
+    return problems
+
+
+# Media progress: what an author writes and what publish records, not renders or audio.
+MEDIA_INPUTS = (
+    "videos/plan.json",
+    "videos/manifest.json",
+    "videos/voice.json",
+    "videos/style.json",
+    "videos/storyboards/*.json",
+    "videos/scenes/*/*.py",
+    "videos/.build/*/timing.json",
+    "audio/manifest.json",
+    "audio/voice.json",
+    "audio/categories/*.json",
+)
+
+
+def inputs(root: Path, media: bool = False) -> str:
     """Hash authoring and checked evidence, excluding raw media, caches and this task."""
     paths = set((root / "app").rglob("*")) if (root / "app").exists() else set()
+    if media:
+        paths.update(path for pattern in MEDIA_INPUTS for path in root.glob(pattern))
     for pattern in (
         "state.json",
         "schedule.json",
@@ -146,6 +210,18 @@ def inputs(root: Path) -> str:
 
 def finish(root: Path, *, owner: str | None = None) -> dict:
     task = _owned(root, owner)
+    if task.media:
+        problems = media_problems(root, task.media)
+        if problems:
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                f"{problems[0]} Continue its workflow through publish and listen.",
+            )
+        _save(root, task.model_copy(update={"phase": "ready", "inputs": inputs(root, True)}))
+        return {
+            "ready": True,
+            "next_action": "Report each published item with its path, duration and checks.",
+        }
     readiness = assess_batch(root, task.batch)
     if not readiness.ready:
         raise CampusError(Code.ACTION_REQUIRED, readiness.report()["next_action"])
@@ -227,7 +303,7 @@ def stop(payload: dict) -> dict:
                 root, task.model_copy(update={"phase": "paused", "reason": "The user interrupted."})
             )
             continue
-        current = inputs(root)
+        current = inputs(root, bool(task.media))
         if task.phase == "ready" and task.inputs == current:
             _save(root, task.model_copy(update={"phase": "complete"}))
             continue
@@ -242,6 +318,20 @@ def stop(payload: dict) -> dict:
                 update={"phase": "pending", "last_inputs": current, "stagnant": stagnant}
             ),
         )
+        if task.media:
+            reasons.append(
+                f"The registered media task in {root} is unfinished: "
+                + " ".join(media_problems(root, task.media))
+                + " Continue the existing request through each stage: storyboard or script, "
+                "narration, scenes, render, publish and listen. "
+                f"Run tum-mcp study task finish {shlex.quote(str(root))} "
+                f"--owner {shlex.quote(owner)} before the final report. "
+                "A failed local check is pending work, not an external blocker. "
+                "If the user asks to pause, or a concrete external blocker needs their input, "
+                f"use study task pause PROJECT --owner {shlex.quote(owner)} "
+                "--reason REASON and report the evidence."
+            )
+            continue
         review = (
             "Then complete the already authorized combined review "
             f"(budget {task.review_rounds}) and repairs."

@@ -31,15 +31,17 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
 
 1. **Scope.** Run `tum-mcp video-notes inspect PROJECT` once; it lists planned,
    stale, pending and published videos. Read only the units you will work on. A video
-   request records no study batch and starts no study task, even where the course
-   AGENTS.md asks for them. Those steps belong to authoring Study, Exercises, Exam or
-   Lecture, and their readiness checks would hold the video.
+   request records no study batch, even where the course AGENTS.md asks for one: batch
+   readiness belongs to authoring Study, Exercises, Exam or Lecture.
 2. **Select.** Use [teaching](references/teaching.md) for concepts and
    [exercise walkthroughs](references/exercise-walkthroughs.md) for solutions and
    Exam patterns. The selection file lists `units`, `exercises` and `patterns`
    (`schema --example selection`). Run `tum-mcp video-notes plan PROJECT --selection
    FILE`. Explicit Exercise requests are not filtered out for being text-heavy. For a
-   course, finish one demanding target end to end before batching.
+   course, finish one demanding target end to end before batching. Register each planned
+   video with `tum-mcp study task start PROJECT --media video/STEM --owner OWNER` (the
+   owner comes from the hook context). `study task finish` passes once the video is
+   published and current.
 3. **Storyboard.** For the stem `plan` printed, `tum-mcp video-notes outline PROJECT
    STEM` writes `videos/storyboards/STEM.json` as a draft: one chapter per source section (unit
    sections, exercise parts, pattern stages), with every required part already located

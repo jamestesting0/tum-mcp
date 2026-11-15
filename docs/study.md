@@ -687,6 +687,10 @@ case of a decision step, works an example through every step, shows each pitfall
 wrong then right working, and ends with the steps in order. Drill items are never
 shown. The video plays on the pattern's Exam page.
 
+A video request registers each planned video with `tum-mcp study task start PROJECT
+--media video/STEM`; the task finishes once the video is published and current, and each
+stage command names the next one, so the agent carries the video through to publication.
+
 Behind the skill, `tum-mcp video-notes` does the checkable work. `outline` writes a
 draft storyboard with one chapter per source section and every required part already
 located; the checks refuse text still marked `Write:`, and a part the video does not

@@ -39,6 +39,10 @@
 - `video-notes outline` and `audio-notes outline` write a draft storyboard or script with
   one chapter per source section and every required part already located; checks refuse
   text still marked `Write:`.
+- A media request registers its videos and tracks with `study task start --media video/STEM`
+  (or `audio/STEM`) instead of a batch; `study task finish` passes once each is published and
+  current, so the completion hook keeps the session going until then. Media requests record no
+  batch, and each media stage command names the next stage in `next_action`.
 - `video-notes schema --example` and `audio-notes schema --example` print a copyable beat,
   chapter, `left_to_page` entry or selection with its rule. `study schema --example` adds
   Exam objects: a concept, a compact formula, a decision step, a pitfall, a drill item and

@@ -211,6 +211,31 @@ def test_an_exercise_track_has_its_own_shelf_and_recalls_the_exercise(
     assert track["chapters"][0]["recall"] == [target]
 
 
+def test_a_media_task_holds_the_session_until_its_track_is_published(
+    demo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Agents stopped after an outline; a media task keeps them going until publication.
+    from tum_mcp.course.media import video_runtime
+    from tum_mcp.course.workflow import tasks
+
+    monkeypatch.setattr(video_runtime, "call_worker", FakeWorker(output=TRACK, seconds=1.0))
+    owner = "codex:thread-a"
+    tasks.begin(demo, None, owner=owner, media=("audio/01_structures",))
+    with pytest.raises(CampusError, match="not published"):
+        tasks.finish(demo, owner=owner)
+    stop = {"session_id": owner, "cwd": str(demo)}
+    blocked = tasks.stop(stop)
+    assert blocked["decision"] == "block" and "audio/01_structures" in blocked["reason"]
+
+    script(demo)
+    synthesize(demo)
+    review = demo / "audio/.build/review.md"
+    review.write_text("Checked.\n", encoding="utf-8")
+    audio_project.publish(demo, "01_structures", review)
+    assert tasks.finish(demo, owner=owner)["ready"]
+    assert tasks.stop(stop) == {}
+
+
 def test_a_pattern_track_must_say_each_part_not_the_pattern_as_a_whole(demo: Path) -> None:
     # One whole-pattern locator let a track drop a workflow step or case unseen.
     pattern = audio_project.sources(demo)["exam"]["patterns"][0]

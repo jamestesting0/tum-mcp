@@ -39,10 +39,9 @@ All commands print JSON; prefix them with `tum-mcp audio-notes`.
 
 1. **Sources.** `sources PROJECT` lists each Study unit, exercise, cheatsheet entry
    and pattern with its required parts. Read only what the requested categories use.
-   Inventory existing `audio/` records first. An audio request records no study batch
-   and starts no study task, even where the course AGENTS.md asks for them. Those steps
-   belong to authoring Study, Exercises, Exam or Lecture, and their readiness checks
-   would hold the track.
+   Inventory existing `audio/` records first. An audio request records no study batch,
+   even where the course AGENTS.md asks for one: batch readiness belongs to authoring
+   Study, Exercises, Exam or Lecture.
 2. **Category script.** For each track, `outline PROJECT STEM --source unit:KEY`
    writes `audio/categories/STEM.json` as a draft with every required part already in
    a chapter. Repeat `--source`; it also takes `exercise:SET/KEY`, `pattern:KEY` and
@@ -52,6 +51,9 @@ All commands print JSON; prefix them with `tum-mcp audio-notes`.
    page serves it better (`schema --example left-to-page`). One category per Study
    unit group or per Exam topic; an exercise track holds the exercises asked for. The draft's `voice` is the first profile in
    `audio/voice.json`, else `narrator`; set it to the profile you use in step 4.
+   Register each track with `tum-mcp study task start PROJECT --media audio/STEM --owner
+   OWNER` (the owner comes from the hook context). `study task finish` passes once the
+   track is published and current.
 3. **Check.** `check PROJECT STEM` rejects stale or missing coverage and sentences
    with symbols a voice cannot say; it warns about production wording and chapters
    that open with a pronoun. Then review the script as continuous speech
