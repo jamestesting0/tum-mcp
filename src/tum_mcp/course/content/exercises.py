@@ -200,9 +200,15 @@ class Exercise(Frozen):
                 for block in step.explanation:
                     if not set(block.sources) <= source_keys:
                         raise ValueError("Step working cites an undeclared source.")
-            if step.check and step.check.kind == "self_check" and isinstance(answer, tuple):
-                if same_text(step.explanation, answer):
-                    raise ValueError("A step's explanation repeats its model answer; say it once.")
+            if step.check and step.check.kind == "self_check":
+                model = step.check.model_answer
+                if (isinstance(answer, tuple) and same_text(step.explanation, answer)) or (
+                    repeats(step.explanation, model)
+                ):
+                    raise ValueError(
+                        "A step's working repeats its model answer, which already shows it; "
+                        "keep the working in the model answer and explain only what it leaves out."
+                    )
             if step.check and step.check.kind == "plot":
                 if not set(step.check.plot.sources) <= source_keys:
                     raise ValueError("Plot check cites an undeclared source.")
@@ -222,6 +228,27 @@ def _block_words(blocks: tuple[Block, ...]) -> str:
         if block.kind == "text"
         for part in (*block.paragraphs, *block.steps, *block.points)
     )
+
+
+def _lines(value: str | tuple[Block, ...]) -> set[str]:
+    """The derivation lines and code lines a working or model answer shows, spacing aside."""
+    if isinstance(value, str):
+        return {"".join(line.split()) for line in value.splitlines() if line.strip()}
+    found: set[str] = set()
+    for block in value:
+        if block.kind == "derivation":
+            found |= {"".join(line.latex.split()) for g in block.groups for line in g.lines}
+        elif block.kind == "code":
+            found |= _lines(block.code)
+    return found
+
+
+def repeats(explanation: str | tuple[Block, ...], model: str | tuple[Block, ...]) -> bool:
+    """Whether a step's working shows again at least half of its model answer's lines."""
+    if isinstance(explanation, str):
+        return False
+    shown = _lines(model)
+    return len(shown) >= 2 and len(_lines(explanation) & shown) * 2 >= len(shown)
 
 
 def same_text(explanation: str | tuple[Block, ...], blocks: tuple[Block, ...]) -> bool:

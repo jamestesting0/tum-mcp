@@ -794,6 +794,21 @@ def test_solutions_answer_each_part_once_and_say_each_thing_once() -> None:
     step["explanation"] = " ".join(step["check"]["model_answer"][0]["paragraphs"])
     with pytest.raises(ValidationError, match="repeats its model answer"):
         ExerciseContent.model_validate(payload)
+    # A proof's lines live in the model answer; working that shows them again is rejected.
+    sources = step["check"]["model_answer"][0]["sources"]
+    lines = [{"latex": "a = b", "reason": "Given."}, {"latex": "= c", "reason": "Rule."}]
+    proof = {"kind": "derivation", "sources": sources, "groups": [{"lines": lines}]}
+    step["check"]["model_answer"] = [proof]
+    step["explanation"] = [proof | {"groups": [{"lines": [lines[0] | {"latex": "a  =  b"}]}]}]
+    with pytest.raises(ValidationError, match="repeats its model answer"):
+        ExerciseContent.model_validate(payload)
+    note = {
+        "kind": "text",
+        "sources": sources,
+        "paragraphs": ["The case \\(b = 0\\) needs no rule."],
+    }
+    step["explanation"] = [note]
+    ExerciseContent.model_validate(payload)
 
 
 def test_study_that_copies_a_released_exercise_case_is_flagged_for_a_ruling() -> None:
