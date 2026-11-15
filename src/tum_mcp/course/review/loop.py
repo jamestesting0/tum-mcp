@@ -61,6 +61,10 @@ PACKET_CHARS = 60_000
 PACKET_VERDICTS = 30
 GATED = ("correctness", "coverage")
 REPAIR_GUIDANCE = (
+    "This is a verify packet. The earlier pass already judged the unchanged blocks, and "
+    "each item's `changed` lists the blocks edited since. Judge each listed check on the "
+    "changed blocks and on how they fit the passages around them; read the rest as context, "
+    "not for a second review. "
     "Read every changed block against its cited source pages and the reference selection. "
     "A finding demanding an added worked example must name the decision the existing runs "
     "cannot show; otherwise it is not a defect."

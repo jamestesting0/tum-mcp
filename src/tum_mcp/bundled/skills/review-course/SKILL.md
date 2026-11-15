@@ -148,7 +148,9 @@ scores.
       while the original source revisions, request and required demands stay fixed.
    6. Finish every original finding and draft repair before running
       `tum-mcp review verify PROJECT` in the open round. Give its packets to fresh
-      checkers and record every batch. Read every changed block against its cited source
+      checkers and record every batch. A verify packet judges each listed check on the
+      changed blocks and how they fit their surroundings; the earlier pass already judged
+      the rest. Read every changed block against its cited source
       pages and the reference selection. A finding demanding another worked example
       must name the missing understanding or decision the existing examples cannot show;
       otherwise it is not a defect. The weakness is repetition added without a teaching
