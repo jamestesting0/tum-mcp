@@ -1,0 +1,23 @@
+id: media-walkthrough
+# Resume from fai-0191-r3/v4-1@6, which built the first six turns: turn 7 is the walkthrough video.
+turns:
+  - say: "Set up my Fundamentals of AI course in this folder."
+    skills: [sync-course, read-content]
+  - say: "Prepare study for the first two lectures."
+    skills: [prepare-study, read-content]
+  - say: "Make lecture notes for the first lecture recording."
+    skills: [prepare-lecture, sync-course, read-content]
+  - say: "Prepare the first exercise sheet."
+    skills: [prepare-exercises, read-content]
+  - say: "Prepare the exam from the mock exam I put in this folder."
+    skills: [prepare-exams, read-content]
+  - say: "The cheatsheet has no semester map, please add one."
+    skills: [prepare-exams, read-content]
+  - say: "Make a video that walks me through the solution of Problem 1.2.2."
+    skills: [video-notes, read-content]
+replies:
+  review: "Not now, I'll ask for a review later."
+  publish: "No, keep it local."
+  course: "Fundamentals of Artificial Intelligence, this semester."
+  sheet: "The first released exercise sheet."
+  default: "Your choice, go ahead."
