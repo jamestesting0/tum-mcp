@@ -11,7 +11,7 @@ function loadIndex() {
     .then(response => (response.ok ? response.json() : {}))
     .catch(() => ({})))
     .then(value => {
-      videos = { videos: value?.videos || {}, exercises: value?.exercises || {} };
+      videos = { videos: value?.videos || {}, exercises: value?.exercises || {}, patterns: value?.patterns || {} };
       return videos;
     });
   return index;
@@ -35,6 +35,18 @@ function panel(unit) {
   const entry = videos.videos[unit.key];
   if (!entry) return null;
   return player(entry, unit, 'Video explainer');
+}
+
+// An Exam pattern's walkthrough; a changed pattern is reported by the index as sourceStale.
+export function patternVideo(pattern) {
+  const made = () => {
+    const entry = videos.patterns[pattern.key];
+    return entry ? player(entry, { ...pattern, revision: entry.madeForRevision }, 'Video walkthrough') : null;
+  };
+  if (videos) return made() || node('div', 'video-slot');
+  const slot = node('div', 'video-slot');
+  loadIndex().then(() => { const panel = made(); if (panel) slot.replaceWith(panel); else slot.remove(); });
+  return slot;
 }
 
 // A walkthrough is mounted only inside an opened Solution, never into the Exam caller.

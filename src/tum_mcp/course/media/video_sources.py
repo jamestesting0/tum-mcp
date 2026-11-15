@@ -1,18 +1,21 @@
-"""Prepared Study and Exercise source projections shared by the video workflow."""
+"""Prepared Study, Exercise and Exam pattern sources shared by the video workflow."""
 
 from dataclasses import dataclass
 from pathlib import Path
 
+from tum_mcp.course.content.exam import ExamContent, Pattern
 from tum_mcp.course.content.exercise_data import read_exercises, stale_exercises
 from tum_mcp.course.content.exercises import Exercise, ExerciseContent
 from tum_mcp.course.content.store import document_digest, present
 from tum_mcp.course.content.study import SourceVersion, StudyContent, Unit
-from tum_mcp.course.media.sources import exercise_hash, missing, part_fingerprint
+from tum_mcp.course.media.sources import exercise_hash, missing, part_fingerprint, teaching_hash
 from tum_mcp.course.media.speech import spoken
 from tum_mcp.course.media.video_content import (
     ExerciseLocator,
     ExerciseRef,
     ExerciseStoryboard,
+    Locator,
+    PatternStoryboard,
     StoryboardReport,
     estimate_seconds,
     fingerprint,
@@ -27,7 +30,7 @@ from tum_mcp.settings import Frozen
 @dataclass(frozen=True, slots=True)
 class VideoSource:
     identity: str
-    data: Unit | Exercise
+    data: Unit | Exercise | Pattern
     exercise: ExerciseRef | None = None
     study: StudyContent | None = None
     stale: bool = False
@@ -39,6 +42,8 @@ class VideoSource:
                 return semantic_hash(self.data)
             case Exercise():
                 return exercise_hash(self.data)
+            case Pattern():
+                return teaching_hash(self.data)
 
     @property
     def revision(self) -> str:
@@ -47,6 +52,8 @@ class VideoSource:
                 return unit_revision(self.data)
             case Exercise():
                 return exercise_hash(self.data)
+            case Pattern():
+                return teaching_hash(self.data)
 
     @property
     def source_references(self) -> tuple[SourceVersion, ...]:
@@ -81,7 +88,11 @@ class VideoSource:
             case Unit():
                 return None
 
-    def locator_hash(self, locator: ExerciseLocator) -> str | None:
+    def locator_hash(self, locator: ExerciseLocator | Locator) -> str | None:
+        if isinstance(self.data, Pattern):
+            return part_fingerprint(self.data, locator.kind, locator.ref)
+        if isinstance(locator, Locator):
+            return None
         value = self.resolve(locator)
         match value:
             case None:
@@ -99,7 +110,7 @@ class VideoSource:
 
     def locators(self) -> tuple[ExerciseLocator, ...]:
         match self.data:
-            case Unit():
+            case Unit() | Pattern():
                 return ()
             case Exercise() as exercise:
                 addresses = [
@@ -132,6 +143,8 @@ class VideoSources:
     content_sha256: str | None
     exercises_sha256: str | None
     items: dict[str, VideoSource]
+    exam: ExamContent | None = None
+    exam_sha256: str | None = None
 
     def get(self, key: str) -> VideoSource:
         item = self.items.get(key)
@@ -146,16 +159,21 @@ class VideoSources:
 
 def read_sources(root: Path) -> VideoSources:
     from tum_mcp.course.app.build import read_content
+    from tum_mcp.course.content.exam_data import read_exam
 
     study = read_content(root) if present(root, "study") else None
     exercises = read_exercises(root)
-    if study is None and exercises is None:
-        raise CampusError(Code.ACTION_REQUIRED, "Prepare Study or Exercises before Video Notes.")
-    course_key = study.course_key if study is not None else exercises.course_key
+    exam = read_exam(root)
+    documents = [d for d in (study, exercises, exam) if d is not None]
+    if not documents:
+        raise CampusError(
+            Code.ACTION_REQUIRED, "Prepare Study, Exercises or Exam before Video Notes."
+        )
+    course_key = documents[0].course_key
+    if any(document.course_key != course_key for document in documents):
+        raise CampusError(Code.SCOPE_DENIED, "Study, Exercise and Exam course identities differ.")
     stale = ()
     if exercises is not None:
-        if exercises.course_key != course_key:
-            raise CampusError(Code.SCOPE_DENIED, "Exercise and Study course identities differ.")
         stale = stale_exercises(root, load_state(root), exercises)
     items = (
         {f"study/{unit.key}": VideoSource(f"study/{unit.key}", unit) for unit in study.units}
@@ -168,6 +186,9 @@ def read_sources(root: Path) -> VideoSources:
                 ref = ExerciseRef(set=group.key, exercise=exercise.key)
                 key = f"exercises/{ref.key}"
                 items[key] = VideoSource(key, exercise, ref, study, exercise.key in stale)
+    for pattern in exam.patterns if exam else ():
+        key = f"exam/patterns/{pattern.key}"
+        items[key] = VideoSource(key, pattern)
     return VideoSources(
         course_key,
         study,
@@ -175,6 +196,50 @@ def read_sources(root: Path) -> VideoSources:
         document_digest(root, "study") if study is not None else None,
         document_digest(root, "exercises") if exercises is not None else None,
         items,
+        exam,
+        document_digest(root, "exam") if exam is not None else None,
+    )
+
+
+def check_pattern(board: PatternStoryboard, source: VideoSource) -> StoryboardReport:
+    from tum_mcp.course.media.video_teaching import pattern_errors
+
+    errors = pattern_errors(board, source.data if isinstance(source.data, Pattern) else None)
+    if source.identity != f"exam/patterns/{board.pattern}":
+        errors.append("plan.pattern: storyboard does not match the selected pattern")
+    if source.teaching_hash != board.pattern_hash:
+        errors.append("pattern.stale: the prepared pattern changed; revise affected beats")
+    placed = [(beat.key, locator) for beat in board.beats() for locator in beat.locators]
+    placed += [("left_to_page", item.locator) for item in board.left_to_page]
+    for where, locator in placed:
+        actual = source.locator_hash(locator)
+        if actual is None:
+            errors.append(f"locator.missing {where}: {locator.kind} {locator.ref}")
+        elif actual != locator.fingerprint:
+            errors.append(f"locator.changed {where}: {locator.kind} {locator.ref}")
+    if isinstance(source.data, Pattern):
+        shown = {(loc.kind, loc.ref) for beat in board.beats() for loc in beat.locators}
+        left = {(item.locator.kind, item.locator.ref) for item in board.left_to_page}
+        if gaps := missing(source.data, shown, left):
+            errors.append(
+                "coverage.missing: "
+                + ", ".join(gaps)
+                + "; present them or leave them to the page with a reason"
+            )
+    warnings: list[str] = []
+    for chapter in board.chapters:
+        for index, beat in enumerate(chapter.beats):
+            found, notes = spoken(beat.key, beat.narration, opens=index == 0)
+            errors.extend(found)
+            warnings.extend(notes)
+    seconds, words = estimate_seconds(board)
+    return StoryboardReport(
+        video=board.video,
+        pattern=board.pattern,
+        errors=tuple(errors),
+        warnings=tuple(warnings),
+        estimated_seconds=seconds,
+        words=words,
     )
 
 

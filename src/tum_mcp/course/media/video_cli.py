@@ -131,8 +131,16 @@ def exercise(project: Path, key: str) -> None:
 
 
 @app.command()
+def pattern(project: Path, key: str) -> None:
+    """Print an Exam pattern's required parts, fingerprints and teaching hash. Read-only."""
+    from tum_mcp.course.media.video_project import pattern_locators
+
+    _emit(pattern_locators(_project(project), key))
+
+
+@app.command()
 def plan(project: Path, selection: Annotated[Path, typer.Option(help="Selection JSON.")]) -> None:
-    """Select Study units or Exercises for videos; keep existing video numbers."""
+    """Select Study units, Exercises or Exam patterns for videos; keep video numbers."""
     require_video_notes()
     from tum_mcp.course.media.video_project import plan as run
 

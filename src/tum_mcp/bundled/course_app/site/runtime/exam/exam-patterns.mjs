@@ -11,6 +11,7 @@ import { texElement } from '../reading/mathml.mjs';
 import { renderCode } from '../reading/code.mjs';
 import { withMeanings } from '../reading/symbols.mjs';
 import { iconButton, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
+import { patternVideo } from '../lecture/video.mjs';
 
 const plain = text => plainText(text || '');
 
@@ -255,7 +256,7 @@ export function renderPattern(key) {
   // The pattern is named already, so its concepts can be recalled before the student starts.
   const recall = examRecall(pattern.concepts);
   if (recall) header.append(recall);
-  root.append(header);
+  root.append(header, patternVideo(pattern));
   const cited = sourcesNote(pattern.sources.map(source => source.key), data.sources, data.course.synthetic, pattern.title);
   pageCitation(cited, eyebrow); root.dataset.citations = cited.dataset.sources;
   root.append(section('Recognise it', mark(list('exam-cues', pattern.cues), 'cues')));

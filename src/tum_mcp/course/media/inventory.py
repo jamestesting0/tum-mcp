@@ -23,6 +23,7 @@ from tum_mcp.course.media.sources import find, part_fingerprint, teaching_hash
 from tum_mcp.course.media.video_content import (
     ExerciseReceipt,
     Manifest,
+    PatternReceipt,
     Receipt,
     VideoPlan,
     canonical,
@@ -53,7 +54,7 @@ from tum_mcp.errors import CampusError, Code
 class MediaItem:
     item: str
     modality: Literal["audio", "video"]
-    profile: Literal["audio", "concept", "exercise"]
+    profile: Literal["audio", "concept", "exercise", "pattern"]
     title: str
     duration: float
     artifact_sha256: str
@@ -218,7 +219,7 @@ def _audio_item(
 def _video_item(
     root: Path,
     state: StudyState,
-    receipt: Receipt | ExerciseReceipt,
+    receipt: Receipt | ExerciseReceipt | PatternReceipt,
     inventory: VideoSources,
 ) -> MediaItem:
     hashes = {
@@ -236,6 +237,10 @@ def _video_item(
             published_hash = receipt.unit_hash
             profile = "concept"
             links = [f"study/{receipt.unit}"]
+        case PatternReceipt():
+            published_hash = receipt.pattern_hash
+            profile = "pattern"
+            links = [source_key(receipt)]
         case ExerciseReceipt():
             published_hash = receipt.exercise_hash
             profile = "exercise"

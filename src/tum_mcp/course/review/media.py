@@ -54,6 +54,14 @@ correctness.result_verified redundancy.exercise_scope synchronization.step_revea
 organization.exercise_setup representation.answer_emphasis
 """.split()
     ),
+    # A pattern video teaches a method: when it applies, each step worked in order, the result.
+    "pattern": frozenset(
+        """
+intuition.method_choice intuition.local_mechanism representation.working_shown
+correctness.result_verified synchronization.step_reveal representation.answer_emphasis
+organization.lesson_closure
+""".split()
+    ),
 }
 
 
