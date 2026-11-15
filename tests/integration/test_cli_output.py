@@ -38,6 +38,15 @@ def test_schema_examples_are_reachable_from_cli() -> None:
     assert example.exit_code == 0
     assert "walkthrough-tree" in json.loads(listing.stdout)
     assert json.loads(example.stdout)["stage"]["layout"] == "tree"
+    assert "Every step changes what the student sees" in example.stderr
+
+
+def test_every_example_states_its_block_rule() -> None:
+    from tum_mcp.course.content.study import block_guide
+
+    runner = CliRunner()
+    names = json.loads(runner.invoke(app, ["study", "schema", "--example"]).stdout)
+    assert all(block_guide(name) for name in names), "a block kind without its authoring rule"
 
 
 def test_readiness_summary_keeps_all_problems_and_saves_full_result(

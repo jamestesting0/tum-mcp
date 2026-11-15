@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Every Study block type, practice question, option and variable meaning carries its authoring
+  rule in the content schema, and `study schema KIND --example` prints that rule on stderr
+  above the unchanged example, where authors look while writing.
 - Study generalizes beyond search lectures: lessons use the language the student writes in and
   give a key term's source-language form once; the coverage ledger records each lecture section
   as its own outcome; a new review check reads the cited pages and the pages of each assigned

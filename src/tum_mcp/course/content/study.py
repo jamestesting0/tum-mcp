@@ -2,7 +2,7 @@
 
 import re
 from collections.abc import Iterable, Iterator
-from typing import Annotated, Literal, assert_never
+from typing import Annotated, Literal, assert_never, get_args
 
 from pydantic import (
     AfterValidator,
@@ -59,6 +59,10 @@ class Sourced(Frozen):
 
 
 class TextBlock(Sourced):
+    """Prose that frames an idea: one or two short paragraphs, numbered steps for a procedure,
+    points for conditions. Each point holds one idea; a long list mixing kinds of point splits
+    into labelled parts, and parallel facts go in a table."""
+
     kind: Literal["text"]
     paragraphs: tuple[Text, ...] = ()
     # A hard idea one claim at a time, shown as a numbered sequence after the paragraphs.
@@ -76,6 +80,9 @@ class TextBlock(Sourced):
 
 
 class Symbol(Frozen):
+    """A variable and what it is here, in about twelve words, never just its name; give it
+    where a reader would stop to recall it, once per context."""
+
     symbol: Text
     meaning: Text
 
@@ -167,6 +174,9 @@ class DefinitionBlock(Sourced):
 
 
 class FormulaBlock(Sourced):
+    """A displayed formula in LaTeX with what each symbol means; working that reaches a result
+    is a derivation or a worked example, not a formula."""
+
     kind: Literal["formula"]
     latex: Annotated[str, Field(min_length=1, max_length=5000)]
     plain: Text
@@ -182,6 +192,9 @@ class FormulaBlock(Sourced):
 
 
 class TableBlock(Sourced):
+    """Parallel facts compared across the same columns. A graph, search tree, trace or grid is
+    drawn, never tabled, and a one-row table of sentences is prose."""
+
     kind: Literal["table"]
     columns: tuple[Text, ...] = Field(min_length=2, max_length=8)
     rows: tuple[tuple[Text, ...], ...] = Field(min_length=1, max_length=100)
@@ -224,6 +237,10 @@ class CodeStep(Frozen):
 
 
 class CodeBlock(Sourced):
+    """A listing written as a programmer would: its real language, indented, one statement per
+    line, a blank line between classes and functions, never a one-line summary or plain-text
+    pseudo-code. A walkthrough points each stop at the lines it explains."""
+
     kind: Literal["code"]
     language: Annotated[str, Field(min_length=1, max_length=30)]
     code: Annotated[str, Field(min_length=1, max_length=20000)]
@@ -284,7 +301,8 @@ def tree_nodes(item: TreeNode, depth: int = 0) -> Iterator[tuple[TreeNode, int]]
 
 
 class FigureBlock(Sourced):
-    """A picture of what the idea looks like: an SVG drawing or an image in the app's figures/."""
+    """A picture of what the idea looks like: an SVG drawing or an image in the app's figures/.
+    A lecture crop shows the visual and its own labels, never the slide title, bullets or footer."""
 
     kind: Literal["figure"]
     alt: Text
@@ -441,6 +459,10 @@ def check_tree(nodes: tuple[Node, ...], edges: tuple[Edge, ...]) -> None:
 
 
 class DiagramBlock(Sourced):
+    """A graph or tree drawn with nodes and edges, such as a weighted map or a search tree; use
+    it instead of a table of edges or frontier rows. Place nodes on the row and column lattice in
+    reading order; a search or game tree uses layout "tree"."""
+
     kind: Literal["diagram"]
     description: Text
     nodes: tuple[Node, ...] = Field(min_length=1, max_length=30)
@@ -544,6 +566,10 @@ AxisTicks = tuple[Annotated[float, Field(allow_inf_nan=False)], ...]
 
 
 class PlotBlock(Sourced):
+    """A chart of quantities: short axis labels with units and a few labelled series. Discrete
+    values are stems or markers, never a joined line; growth over orders of magnitude uses a
+    log scale; a function is written as a formula, never hand-sampled."""
+
     kind: Literal["plot"]
     description: Text
     x_label: AxisLabel
@@ -705,7 +731,9 @@ class Flow(Frozen):
 
 
 class UmlBlock(Sourced):
-    """A UML class, sequence or state diagram or a flowchart, laid out by the app."""
+    """A UML class, sequence or state diagram or a flowchart, laid out by the app. Keep the model
+    whole: never drop a class, relation, state or message; list elements in reading order. A
+    flowchart is for a branch or loop; a straight procedure is numbered steps."""
 
     kind: Literal["uml"]
     diagram: Literal["class", "sequence", "state", "flowchart"]
@@ -1186,7 +1214,8 @@ class Variant(Frozen):
 
 class WalkthroughBlock(Sourced):
     """A worked process step by step: each step's action and reason, over an optional stage
-    (a graph, table, code, working, plot or figure) that shows the state it reaches."""
+    (a graph, table, code, working, plot or figure) that shows the state it reaches. Every step
+    changes what the student sees."""
 
     kind: Literal["walkthrough"]
     stage: Stage | None = None
@@ -1283,6 +1312,15 @@ Block = Annotated[
 ]
 
 
+def block_guide(example: str) -> str:
+    """The authoring rule of the block kind a `study schema --example` name shows."""
+    kind = example.removeprefix("stage-").split("-")[0]
+    for model in get_args(get_args(Block)[0]):
+        if model.model_fields["kind"].annotation == Literal[kind]:
+            return " ".join((model.__doc__ or "").split())
+    return ""
+
+
 # Authored questions pair their text with at least one of these, because prose alone
 # makes code, structures and calculations hard to picture.
 VISUAL_KINDS = frozenset(
@@ -1377,12 +1415,19 @@ class Flashcard(Frozen):
 
 
 class Option(Frozen):
+    """One answer, matched in length and grammar to the others; a wrong option is a real
+    reasoning error, never a joke or 'all of the above'."""
+
     key: Key
     text: Text
     feedback: Text
 
 
 class Question(Frozen):
+    """One stand-alone question on what the lesson taught: its blocks show the situation (graph,
+    table, code, formula) and the prompt only asks. It needs a new input or decision, never
+    a replay of a worked case; four options by default; feedback names the reasoning break."""
+
     key: Key
     objective: Key
     prompt: Text

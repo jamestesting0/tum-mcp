@@ -518,6 +518,10 @@ def schema(
         if kind is None or kind == "list":
             typer.echo(json.dumps(sorted(catalogue), indent=2))
         elif kind in catalogue:
+            from tum_mcp.course.content.study import block_guide
+
+            if guide := block_guide(kind):
+                typer.echo(f"Rule: {guide}", err=True)
             typer.echo(json.dumps(catalogue[kind], indent=2, ensure_ascii=False))
         else:
             raise CampusError(Code.ACTION_REQUIRED, f"Unknown example {kind}; use --example list.")
