@@ -83,6 +83,24 @@ def test_rejected_or_unrelated_findings_do_not_inflate_recall(tmp_path):
     assert result["rejected_share"] == 0.5
 
 
+def test_exercise_defects_are_planted_into_an_exercises_only_course(tmp_path):
+    from importlib.resources import files
+
+    from tum_mcp.course.content.exercises import ExerciseContent
+
+    root = tmp_path / "course"
+    (root / ".tum-mcp").mkdir(parents=True)
+    (root / ".tum-mcp/state.json").write_text("{}")
+    for source in ("bundled/course_app/example/exercises.json", "bundled/exemplars/exercises.json"):
+        payload = json.loads(files("tum_mcp").joinpath(source).read_bytes())
+        write_document(root, "exercises", payload)
+        planted = calibrate.plant(tmp_path)
+        ExerciseContent.model_validate(read_document(root, "exercises"))
+        names = {defect["defect"] for defect in planted["defects"]}
+        assert "ex_plain_math" in names
+        assert all(defect["item"].startswith("exercises/") for defect in planted["defects"])
+
+
 def test_catalogue_covers_ten_dimensions_without_breaking_content_schema(tmp_path):
     from importlib.resources import files
 

@@ -1,0 +1,14 @@
+id: exercises-fai-csp
+turns:
+  - say: "Turn problem 3.2 from Exercise 3 (CSP) of my AI course into a guided exercise."
+    skills: [sync-course, read-content, prepare-exercises]
+  - say: "Review it and fix any issues."
+    skills: [review-course, prepare-exercises]
+replies:
+  course: "Fundamentals of Artificial Intelligence, this semester (W26/27)."
+  semester: "This semester, W26/27."
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  publish: "No, keep it local."
+  default: "Your choice, go ahead."

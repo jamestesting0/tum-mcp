@@ -236,6 +236,106 @@ def _extra_defects(content: dict, touched: set[int]) -> list[dict]:
     return list(planted.values())
 
 
+EXERCISE_CHECKS = {
+    "ex_wrong_given": "correctness.statement_fidelity",
+    "ex_wrong_answer": "correctness.answer_key",
+    "ex_other_part": "coverage.all_parts",
+    "ex_revealing_hint": "practice.hint_ladder",
+    "ex_guide_dependent": "practice.complete_answer",
+    "ex_plain_math": "cognitive_load.math_set",
+    "ex_undeclared_member": "cognitive_load.first_encounter",
+    "ex_bare_compare": "representation.process_shown",
+}
+GUIDE_DEPENDENT = "See the guide steps above for how this answer is reached."
+PLAIN_PROMPT = " Use x = 2 where the given value is needed."
+UNDECLARED = "this.cache.clear();"
+
+
+def _last_digit(text: str) -> str | None:
+    digits = list(re.finditer(r"\d", text))
+    if not digits:
+        return None
+    at = digits[-1].start()
+    return text[:at] + str((int(text[at]) + 1) % 10) + text[at + 1 :]
+
+
+def _exercise_defects(document: dict) -> list[dict]:
+    """One of each exercise defect, in the first exercise that has a place for it."""
+    planted: dict[str, dict] = {}
+
+    def add(name: str, item: str, probe: str) -> None:
+        planted[name] = {
+            "defect": name,
+            "check": EXERCISE_CHECKS[name],
+            "dimension": EXERCISE_CHECKS[name].split(".")[0],
+            "item": item,
+            "probe": probe,
+        }
+
+    for group in document.get("sets", []):
+        for exercise in group.get("exercises", []):
+            item = f"exercises/{group['key']}/{exercise['key']}"
+            texts = [
+                b for b in exercise["statement"] if b.get("kind") == "text" and b.get("paragraphs")
+            ]
+            if "ex_wrong_given" not in planted:
+                for block in texts:
+                    changed = _last_digit(block["paragraphs"][0])
+                    if changed:
+                        block["paragraphs"][0] = changed
+                        add("ex_wrong_given", item, changed)
+                        break
+            answers = exercise["solution"]["answers"]
+            if "ex_other_part" not in planted and len(answers) > 1:
+                answers[-1]["blocks"] = json.loads(json.dumps(answers[-2]["blocks"]))
+                add("ex_other_part", item, json.dumps(answers[-1]["blocks"])[:120])
+            elif "ex_guide_dependent" not in planted and answers:
+                answers[0]["blocks"] = [{"kind": "text", "paragraphs": [GUIDE_DEPENDENT]}]
+                add("ex_guide_dependent", item, GUIDE_DEPENDENT)
+            for step in exercise["steps"]:
+                check = step.get("check") or {}
+                answer = check.get("model_answer")
+                if "ex_plain_math" not in planted:
+                    step["prompt"] += PLAIN_PROMPT
+                    add("ex_plain_math", item, PLAIN_PROMPT.strip())
+                    continue
+                if (
+                    "ex_revealing_hint" not in planted
+                    and step.get("hints")
+                    and isinstance(answer, list)
+                ):
+                    shown = json.dumps(answer[-1], ensure_ascii=False)[:160]
+                    step["hints"][0] = f"The answer is: {shown}"
+                    add("ex_revealing_hint", item, step["hints"][0])
+                    continue
+                if "ex_undeclared_member" not in planted and isinstance(answer, str):
+                    check["model_answer"] = f"{answer.rstrip()}\n{UNDECLARED}\n"
+                    add("ex_undeclared_member", item, UNDECLARED)
+                    continue
+                derivations = (
+                    [b for b in answer if b.get("kind") == "derivation"]
+                    if isinstance(answer, list)
+                    else []
+                )
+                if "ex_wrong_answer" not in planted and derivations:
+                    line = derivations[-1]["groups"][-1]["lines"][-1]
+                    if changed := _last_digit(line["latex"]):
+                        line["latex"] = changed
+                        add("ex_wrong_answer", item, changed)
+                        continue
+                if "ex_bare_compare" not in planted and derivations:
+                    groups = derivations[0]["groups"]
+                    last = groups[-1]["lines"][-1]
+                    if sum(len(group["lines"]) for group in groups) > 1:
+                        derivations[0]["groups"] = [{**groups[-1], "lines": [last]}]
+                        add(
+                            "ex_bare_compare",
+                            item,
+                            json.dumps(derivations[0], ensure_ascii=False)[:120],
+                        )
+    return list(planted.values())
+
+
 def _findings(project: Path) -> list[tuple[str, dict]]:
     """Every finding in the review records, in the shape recall compares: a rejected finding
     stays rejected, any other one was accepted."""
@@ -260,16 +360,21 @@ def plant(workspace: Path) -> dict:
     findings the scorecard already held, which do not count as finding a planted defect."""
     project = _project(workspace)
     content, exam = read_document(project, "study"), read_document(project, "exam")
-    if content is None:
-        raise LabError("Calibration needs Study content to plant defects in.")
+    exercises = read_document(project, "exercises")
+    if content is None and exercises is None:
+        raise LabError("Calibration needs Study or Exercises content to plant defects in.")
     planted, touched = [], set()
-    for name, (dimension, apply, _undone) in DEFECTS.items():
-        if record := apply(content, exam, touched):
-            planted.append(
-                {"defect": name, "check": CHECKS[name], "dimension": dimension, **record}
-            )
-    planted.extend(_extra_defects(content, touched))
-    write_document(project, "study", content)
+    if content is not None:
+        for name, (dimension, apply, _undone) in DEFECTS.items():
+            if record := apply(content, exam, touched):
+                planted.append(
+                    {"defect": name, "check": CHECKS[name], "dimension": dimension, **record}
+                )
+        planted.extend(_extra_defects(content, touched))
+        write_document(project, "study", content)
+    if exercises is not None:
+        planted.extend(_exercise_defects(exercises))
+        write_document(project, "exercises", exercises)
     if exam is not None:
         write_document(project, "exam", exam)
     prior = [
@@ -292,7 +397,11 @@ def recall(workspace: Path, planted: dict) -> dict:
     content = read_document(project, "study") or {"units": []}
     text = "\n".join(
         json.dumps(document, indent=2, ensure_ascii=False)
-        for document in (content, read_document(project, "exam"))
+        for document in (
+            content,
+            read_document(project, "exam"),
+            read_document(project, "exercises"),
+        )
         if document
     )
     results, by_dimension = [], {}
@@ -300,7 +409,7 @@ def recall(workspace: Path, planted: dict) -> dict:
         noted = any(
             item == defect["item"]
             and finding["dimension"] == defect["dimension"]
-            and finding.get("check") == CHECKS[defect["defect"]]
+            and finding.get("check") == defect["check"]
             and finding.get("status", "accepted") == "accepted"
             for item, finding in findings
         )
