@@ -1,6 +1,7 @@
 """Bounded, source-linked prepared guidance; no evaluators or network services."""
 
 import json
+import re
 from typing import Literal
 
 from pydantic import AwareDatetime, Field, model_validator
@@ -46,6 +47,11 @@ class Prerequisite(Frozen):
     # The keyed Study block that teaches it; it opens beside the exercise.
     block: Key | None = None
     explanation: Text
+
+
+def _part_label(label: str) -> str:
+    """A part label without its brackets, dots, spaces or case: "(a)" and "a." match."""
+    return re.sub(r"[()\s.]", "", label).casefold()
 
 
 class SolutionAnswer(Frozen):
@@ -117,6 +123,18 @@ class Exercise(Frozen):
                 raise ValueError("Exercise content cites an undeclared source.")
         if self.parts and len(self.solution.answers) != len(self.parts):
             raise ValueError("Give one solution answer for each original part, in order.")
+        labels = [_part_label(answer.label or "") for answer in self.solution.answers]
+        if len(labels) > 1 and len(set(labels)) != len(labels):
+            raise ValueError("Give each solution answer its own part label.")
+        # A part may be its label and its words, such as "(a) Compute the cost." When the
+        # labels name the parts, they follow the parts' order.
+        named = [_part_label(part) for part in self.parts]
+        if (
+            len(named) > 1
+            and all(any(part.startswith(label) for part in named) for label in labels)
+            and not all(part.startswith(label) for part, label in zip(named, labels, strict=True))
+        ):
+            raise ValueError("Label each solution answer with its part, in the order of the parts.")
         guided = [step.part for step in self.steps]
         if any(guided):
             if not all(guided) or set(guided) != set(self.parts):

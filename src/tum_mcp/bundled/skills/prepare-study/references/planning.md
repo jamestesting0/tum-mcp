@@ -17,8 +17,8 @@ AGENTS.md. Record, with sources:
 - What understanding means in this subject: compute, trace, prove, design, write code, argue.
 - The subject's natural representations and the difficulties the materials or exams show.
 - The student's stated background, when they give it.
-- The lesson language: the language the student writes in. When the sources use another
-  language, give the source's term once beside each defined term.
+- The lesson language: the course's content language from `.tum-mcp/course.md`. When the
+  sources use another language, give the source's term once beside each defined term.
 
 Keep it to a few lines. An unknown stays "not yet established".
 

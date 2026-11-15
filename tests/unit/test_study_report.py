@@ -1190,6 +1190,131 @@ def test_bookkeeping_in_set_summaries_and_exam_labels_is_flagged() -> None:
     assert flagged and all(flag["item"].startswith("exam/pattern/") for flag in flagged)
 
 
+DENSE = " ".join(["The candidate distance through A is two plus one, which is three."] * 5)
+
+
+def test_typed_maths_in_a_guide_step_stays_with_its_exercise() -> None:
+    from tum_mcp.course.review.models import _flagged_items
+
+    # Given an exercise whose first guide step types an equation as plain text.
+    guided = exercises()
+    exercise = guided["sets"][0]["exercises"][0]
+    exercise["steps"][0]["prompt"] = "Show that x = 1 holds."
+    content = ExerciseContent.model_validate(guided)
+    # Then the flag names the step under its exercise, and review routes it there.
+    typed = [flag for flag in quality_flags(None, content) if flag["flag"] == "plain_math"]
+    owner = f"{exercise['key']}/{exercise['steps'][0]['key']}"
+    assert owner in {flag["item"] for flag in typed}
+    assert _flagged_items(owner, None, content) == [
+        f"exercises/{guided['sets'][0]['key']}/{exercise['key']}"
+    ]
+
+
+def test_a_code_answer_is_read_as_code_not_as_maths() -> None:
+    # Given a code self-check whose model answer assigns a variable.
+    guided = exercises()
+    exercise = guided["sets"][0]["exercises"][0]
+    step = next(step for step in exercise["steps"] if step["check"]["kind"] == "self_check")
+    step["check"] = {
+        "kind": "self_check",
+        "format": "code",
+        "language": "java",
+        "rubric": ["Returns the stored value."],
+        "model_answer": "int x = 1;\nreturn x;",
+    }
+    flags = quality_flags(None, ExerciseContent.model_validate(guided))
+    # Then no maths flag lands on that step.
+    owner = f"{exercise['key']}/{step['key']}"
+    assert not [f for f in flags if f["item"] == owner and f["flag"] in {"plain_math", "math_word"}]
+    # And crowded code in that answer is still flagged as code.
+    step["check"]["model_answer"] = "int x = 1; return x;"
+    flags = quality_flags(None, ExerciseContent.model_validate(guided))
+    assert any(
+        f["flag"] == "compressed_code" and str(f["item"]).startswith(f"{exercise['key']}/")
+        for f in flags
+    )
+
+
+def test_guide_working_is_checked_but_a_released_statement_keeps_its_words() -> None:
+    guided = exercises()
+    exercise = guided["sets"][0]["exercises"][0]
+    key = exercise["key"]
+    step = next(step for step in exercise["steps"] if step["check"]["kind"] == "self_check")
+    # A dense paragraph in a Compare answer is flagged on the exercise's step.
+    step["check"]["model_answer"][0]["paragraphs"] = [DENSE]
+    flags = quality_flags(None, ExerciseContent.model_validate(guided))
+    assert any(
+        f["flag"] == "dense_paragraph" and str(f["item"]).startswith(f"{key}/steps/") for f in flags
+    )
+    # The same paragraph in the released statement is the sheet's wording: no prose flag.
+    guided = exercises()
+    exercise = guided["sets"][0]["exercises"][0]
+    exercise["statement"][0]["paragraphs"] = [DENSE]
+    flags = quality_flags(None, ExerciseContent.model_validate(guided))
+    assert not [f for f in flags if f["flag"] == "dense_paragraph"]
+
+
+def _shortest_route() -> dict:
+    payload = json.loads((files("tum_mcp") / "bundled/exemplars/exercises.json").read_bytes())
+    payload["sets"] = [s for s in payload["sets"] if s["key"] == "search"]
+    payload["sets"][0]["exercises"] = [
+        e for e in payload["sets"][0]["exercises"] if e["key"] == "shortest-route"
+    ]
+    return payload
+
+
+def test_each_anchored_part_needs_its_own_visual() -> None:
+    # Given a two-part exercise whose only visual is in part (a)'s guide.
+    payload = _shortest_route()
+    exercise = payload["sets"][0]["exercises"][0]
+    exercise["statement"] = [b for b in exercise["statement"] if b["kind"] == "text"]
+    for step in exercise["steps"]:
+        step["blocks"] = []
+        if step["part"] == "(a)":
+            step["blocks"] = [
+                {
+                    "kind": "formula",
+                    "latex": "f = g + h",
+                    "plain": "f equals g plus h",
+                    "symbols": [{"symbol": "f", "meaning": "estimated total route cost"}],
+                    "sources": exercise["statement"][0]["sources"],
+                }
+            ]
+    flags = quality_flags(None, ExerciseContent.model_validate(payload))
+    # Then part (b) is text-only even though the exercise has a visual elsewhere.
+    text_only = {f["item"] for f in flags if f["flag"] == "text_only_question"}
+    assert text_only == {f"{exercise['key']}/(b)"}
+
+
+def test_solution_answers_follow_the_parts_in_order() -> None:
+    payload = _shortest_route()
+    answers = payload["sets"][0]["exercises"][0]["solution"]["answers"]
+    answers[0]["label"], answers[1]["label"] = answers[1]["label"], answers[0]["label"]
+    with pytest.raises(ValidationError, match="in the order of the parts"):
+        ExerciseContent.model_validate(payload)
+
+
+def test_exam_patterns_get_the_shared_block_checks() -> None:
+    from tum_mcp.course.checks.report import exam_block_flags
+    from tum_mcp.course.content.exam import ExamContent
+
+    exam = json.loads((files("tum_mcp") / "bundled/course_app/example/exam.json").read_bytes())
+    assert not [
+        f
+        for f in exam_block_flags(ExamContent.model_validate(exam))
+        if f["flag"] == "dense_paragraph"
+    ]
+    # A guide answer written as a dense paragraph is flagged on its pattern.
+    pattern = exam["patterns"][0]
+    pattern["examples"][0]["steps"][0]["answer"][0]["paragraphs"] = [DENSE]
+    flags = exam_block_flags(ExamContent.model_validate(exam))
+    assert any(
+        f["flag"] == "dense_paragraph"
+        and str(f["item"]).startswith(f"exam/pattern/{pattern['key']}/examples/")
+        for f in flags
+    )
+
+
 def test_a_cited_page_past_the_end_of_its_source_is_flagged(monkeypatch, tmp_path) -> None:
     from types import SimpleNamespace
 

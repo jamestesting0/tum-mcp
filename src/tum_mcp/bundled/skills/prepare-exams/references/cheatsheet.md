@@ -96,7 +96,7 @@ lecture topic alone is not enough to claim that an exercise practises the concep
 The table guides the choice; it is not a quota. Keep one coherent reference in one entry
 (a whole access-modifier table), and split an entry that mixes unrelated retrieval tasks.
 
-Use the course's notation and language, set as in
+Use the course's notation and content language, set as in
 [notation](../../prepare-study/references/content.md#notation). Each fact appears once; link instead of
 repeating it in another entry. When Study exists, every concept names in `units` the
 units that teach it; its line and details compress that lesson, never copy it. When one

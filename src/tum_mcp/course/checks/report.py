@@ -6,16 +6,17 @@ import operator
 import re
 import statistics
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from functools import cache
 from importlib.resources import files
 from itertools import pairwise
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 from pydantic import BaseModel, JsonValue
 
 from tum_mcp.course.checks.plans import example_state_flags, read_plan
-from tum_mcp.course.content.exercises import ExerciseContent
+from tum_mcp.course.content.exercises import Exercise, ExerciseContent, GuidanceStep
 from tum_mcp.course.content.latex import (
     INLINE_SPANS,
     decorated_variants,
@@ -28,6 +29,7 @@ from tum_mcp.course.content.latex import (
 from tum_mcp.course.content.study import (
     LITERAL_FIELDS,
     MARKS,
+    Block,
     CodeBlock,
     DerivationBlock,
     DiagramBlock,
@@ -42,6 +44,11 @@ from tum_mcp.course.content.study import (
 )
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.paths import app_path
+
+if TYPE_CHECKING:
+    from tum_mcp.course.content.exam import ExamContent
+
+Flag = Callable[[str, str, str], None]
 
 # A prose paragraph frames an idea; anything longer becomes steps, points, a table or a figure.
 PARAGRAPH_WORDS = 45
@@ -520,7 +527,7 @@ def _strings(value: JsonValue, path: str = "") -> Iterator[tuple[str, str]]:
                 yield from _strings(item, f"{path}[{index}]")
         case dict():
             for key, item in value.items():
-                if key not in LITERAL_FIELDS:
+                if key not in LITERAL_FIELDS and not _code_answer(value, key):
                     yield from _strings(item, f"{path}.{key}" if path else key)
         case _:
             return
@@ -782,6 +789,599 @@ def visual_state_flags(item: str, value: JsonValue) -> list[dict[str, JsonValue]
     return flags
 
 
+def _trace_table_flag(location: str, block: Block, flag: Flag) -> None:
+    """A table listing successive process states, which a walkthrough would explain."""
+    if isinstance(block, TableBlock) and (
+        len(block.rows) >= 3
+        and re.match(
+            r"^\s*(step|action|operation|iteration|stage|phase|round|transition)\b",
+            block.columns[0],
+            re.I,
+        )
+        and any(
+            len({row[index] for row in block.rows}) > 1
+            and (
+                re.search(
+                    r"\b(state|snapshot|before|after|configuration|frontier|stack|queue|"
+                    r"reached|visited)\b",
+                    column,
+                    re.I,
+                )
+                or (
+                    all(re.fullmatch(r"\s*\d+[.)]?\s*", row[0]) for row in block.rows)
+                    and not re.search(
+                        r"\b(instruction|action|rule|reason|explanation|purpose)\b",
+                        column,
+                        re.I,
+                    )
+                )
+            )
+            for index, column in enumerate(block.columns[1:], start=1)
+        )
+    ):
+        flag(
+            location,
+            "trace_as_table",
+            f"Table '{_name(block)}' appears to list successive process states. Check "
+            "whether stepping through the object would explain how each state follows. "
+            "Keep a table when comparison, lookup or recorded observations are the "
+            "learning task; do not turn an instruction list into a simulated process.",
+        )
+
+
+def _walkthrough_flags(location: str, block: WalkthroughBlock, flag: Flag) -> None:
+    """Hidden nodes, merged operations, repeated reasons and dropped values in a walkthrough."""
+    runs = (block.steps, *((block.variant.steps,) if block.variant else ()))
+    if isinstance(block.stage, GraphStage):
+        nodes = {node.key for node in block.stage.nodes}
+        shown = set().union(
+            *(
+                nodes if step.visible_nodes is None else set(step.visible_nodes)
+                for steps in runs
+                for step in steps
+            )
+        )
+        if hidden := sorted(nodes - shown):
+            flag(
+                location,
+                "never_shown_nodes",
+                f"Walkthrough '{_name(block)}' never shows {', '.join(hidden)}. "
+                "Reveal each source element when it is used or stopped by a limit. "
+                "If the source shows the whole structure, leave out `visible_nodes` "
+                "so unreached nodes stay faint; drop them only if the source does "
+                "not draw them.",
+            )
+    for steps in runs:
+        for index, step in enumerate(steps, start=1):
+            clauses = re.split(r"[,;]\s*then\b|(?<=[.!?])\s+then\b", step.action, flags=re.I)
+            for clause in clauses[:-1]:
+                preceding = re.split(r"[.!?;]\s+", clause)[-1]
+                if preceding.strip() and not re.match(r"\s*(?:else\s+)?if\b", preceding, re.I):
+                    flag(
+                        location,
+                        "merged_step_operations",
+                        f"Walkthrough '{_name(block)}' step {index} joins operations "
+                        f"in '{step.action}'. Compare with the source pages. Split "
+                        "separate operations into one step per operation and keep every "
+                        "state in this walkthrough; never merge to shorten it. One "
+                        "atomic action touching several items stays one step.",
+                    )
+                    break
+        reasons = Counter(
+            " ".join(
+                re.sub(
+                    r"^[a-z][\w-]*(?:\s+\d+)?\b",
+                    "<item>",
+                    re.sub(r"\\[()\[\]]|\$+", "", step.why).casefold(),
+                )
+                .casefold()
+                .split()
+            )
+            for step in steps
+        )
+        for count in reasons.values():
+            if count >= 3:
+                flag(
+                    location,
+                    "repeated_step_reason",
+                    f"Walkthrough '{_name(block)}' gives the same reason on {count} "
+                    "steps, allowing for renamed subjects. Check whether the step's own "
+                    "facts and working justify its rule. Keep shared wording when that "
+                    "evidence is shown; otherwise supply the missing reasoning.",
+                )
+        if isinstance(block.stage, GraphStage):
+            nodes = {node.key for node in block.stage.nodes}
+            for index, (previous, current) in enumerate(pairwise(steps), start=2):
+                visible_before = (
+                    nodes if previous.visible_nodes is None else set(previous.visible_nodes)
+                )
+                visible_now = nodes if current.visible_nodes is None else set(current.visible_nodes)
+                dropped = sorted(
+                    previous.node_values.keys()
+                    & visible_before
+                    & visible_now - current.node_values.keys()
+                )
+                if dropped:
+                    flag(
+                        location,
+                        "dropped_node_value",
+                        f"Walkthrough '{_name(block)}' step {index} drops the values of "
+                        f"{', '.join(dropped)}. Each step lists the value of every "
+                        "visible node, including unchanged ones.",
+                    )
+
+
+def _derivation_flags(item: str, blocks: tuple[Block, ...], flag: Flag) -> None:
+    """Derivation lines with nothing to align on, or listing several statements."""
+    derived = [
+        line.latex
+        for block in blocks
+        if block.kind == "derivation"
+        for group in block.groups
+        for line in group.lines
+    ]
+    # A line listing several statements ("N=4,\quad M=1") is no transformation the app can
+    # align; a line without a top-level relation has nothing to align on.
+    listed = [latex for latex in derived if len(formula_parts(latex)) > 1]
+    unaligned = [latex for latex in derived if latex not in listed and not split_relation(latex)[1]]
+    if unaligned:
+        flag(
+            item,
+            "unaligned_line",
+            f"{len(unaligned)} derivation line(s) have no relation to align on, such as "
+            f"'{unaligned[0][:60]}'. Write the relation (\\(x = \\dots\\)) or join the line to "
+            "the one it continues.",
+        )
+    if listed:
+        flag(
+            item,
+            "listed_derivation_line",
+            f"{len(listed)} derivation line(s) list several statements, such as "
+            f"'{listed[0][:60]}'. Give each line one transformation; put givens one per "
+            "line or in the text before the derivation.",
+        )
+
+
+def _code_problem(code: str, language: str) -> str | None:
+    """Why a listing does not read as code a programmer wrote, or None when it does."""
+    lines = code.splitlines()
+    longest = max((len(line) for line in lines), default=0)
+    plain = language.lower() in PLAIN_LANGUAGES and bool(CODE_SYNTAX.search(code))
+    crowded = any(_crowded(line) for line in lines) or _unindented(lines) or _unspaced(lines)
+    if not (longest > CODE_LINE_CHARS or plain or crowded):
+        return None
+    return (
+        "Code is squeezed into summary lines"
+        + (f" up to {longest} characters" if longest > CODE_LINE_CHARS else "")
+        + (" typed as plain text" if plain else "")
+        + (
+            " crowded together (several statements on a line, no indentation, "
+            "or no blank line between declarations)"
+            if crowded
+            else ""
+        )
+        + ". Write the code as a programmer would in its language: one statement "
+        "per line, indented blocks, a blank line between methods, meaningful "
+        "names, and let each walkthrough step point at the lines it explains."
+    )
+
+
+def _code_flags(item: str, blocks: tuple[Block, ...], flag: Flag) -> None:
+    """Code squeezed into summary lines instead of written as a programmer would."""
+    for code in _code_blocks(blocks):
+        if problem := _code_problem(code.code, code.language):
+            flag(item, "compressed_code", problem)
+
+
+def _list_flags(location: str, block: Block, flag: Flag) -> None:
+    """A long mixed list, labelled lines run together, or members listed inside a sentence."""
+    if isinstance(block, TextBlock) and (
+        len(block.points) >= LIST_POINTS and sum(map(len, block.points)) > LIST_CHARS
+    ):
+        flag(
+            location,
+            "long_list",
+            f"{len(block.points)} points in one list mix several kinds of idea. Group them "
+            "under short labelled parts (such as idea, structure, strengths, limits, "
+            "example), or put parallel facts in a table, so each point has its place.",
+        )
+    listed = [
+        found.group(0)
+        for paragraph in getattr(block, "paragraphs", ())
+        if isinstance(block, TextBlock) and (found := INLINE_LIST.search(paragraph))
+    ]
+    if any(
+        len(INLINE_STEPS.findall(paragraph)) >= 3
+        for paragraph in getattr(block, "paragraphs", ())
+        if isinstance(block, TextBlock)
+    ):
+        flag(
+            location,
+            "inline_steps",
+            "Labelled lines run together in one paragraph; give each its own line, as a "
+            "list, a derivation or a formula.",
+        )
+    if listed:
+        flag(
+            location,
+            "inline_list",
+            f"Members run together in a sentence: '{listed[0][:90]}'; give them as a list "
+            "or table the student can scan.",
+        )
+
+
+def _prose_block_flags(location: str, block: Block, flag: Flag) -> None:
+    """A worked case, calculation or long section told as prose."""
+    if not isinstance(block, TextBlock):
+        return
+    if case := next((p for p in block.paragraphs if WORKED_CASE.match(p)), None):
+        flag(
+            location,
+            "example_in_prose",
+            f"'{_name(block)}': a worked case told as prose ('{case[:60]}'); give it as "
+            "an example (given, working, result), a table or a walkthrough.",
+        )
+    words = sum(len(part.split()) for part in block.paragraphs)
+    if words > SECTION_WORDS or len(block.paragraphs) > 2:
+        flag(
+            location,
+            "long_section",
+            f"'{_name(block)}': {words} words of prose in {len(block.paragraphs)} "
+            "paragraph(s). Check whether it holds more than one idea; a hard idea reads "
+            "better as short numbered steps.",
+        )
+    calculation = next((part for part in block.paragraphs if part.count("=") >= 2), None)
+    if calculation is not None:
+        flag(
+            location,
+            "prose_calculation",
+            f"'{_name(block)}': a chain of calculations inside a sentence. Give each "
+            "computed value as its own step: what is computed, the expression, the result.",
+        )
+    dense = [
+        (len(part.split()), _sentences(part))
+        for part in block.paragraphs
+        if len(part.split()) > PARAGRAPH_WORDS
+        or (_sentences(part) > PARAGRAPH_SENTENCES and len(part.split()) > RUN_ON_WORDS)
+    ]
+    if dense:
+        words, sentences = dense[0]
+        flag(
+            location,
+            "dense_paragraph",
+            f"'{_name(block)}': {words} words, {sentences} sentences. Keep one or two "
+            "framing sentences; give a procedure as labelled steps, conditions as points "
+            "and cases as a table.",
+        )
+
+
+def _unworked_flags(item: str, blocks: tuple[Block, ...], flag: Flag) -> None:
+    """A computed result stated in a section that shows no working."""
+    for section, members in _sections(blocks):
+        if any(stepped(block) or block.kind in {"code", "derivation"} for block in members):
+            continue
+        results = [
+            found
+            for block in members
+            if isinstance(block, TextBlock)
+            for text in (*block.paragraphs, *block.steps, *block.points)
+            for found in UNWORKED_RESULT.findall(text)
+        ]
+        if results:
+            flag(
+                f"{item}/{section}",
+                "unworked_result",
+                f"'\\({results[0]}\\)' states a computed result with no working in its "
+                "section. Show how it is reached: a derivation or a walkthrough.",
+            )
+
+
+def _drawing_flags(location: str, block: Block, flag: Flag) -> None:
+    """One frame of a process drawn as a static diagram."""
+    frame = block.frames[0] if isinstance(block, DiagramBlock) else None
+    if frame and len(block.frames) == 1 and (frame.visited or frame.frontier or frame.state):
+        flag(
+            location,
+            "single_frame_diagram",
+            f"'{_name(block)}' shows one moment of a process. If students must follow "
+            "how it gets there, step through it as a walkthrough.",
+        )
+
+
+def _table_kind_flags(location: str, block: Block, flag: Flag) -> None:
+    """A graph listed as table rows, or a table whose headers name nothing."""
+    if graph_as_table(block):
+        flag(
+            location,
+            "graph_as_table",
+            f"'{_name(block)}' lists a graph's edges as rows. Draw the graph as a "
+            '`diagram` (`layout: "tree"` for a tree) with the costs on its edges, and '
+            "run any search on that drawing in a walkthrough with the frontier as a "
+            "state row.",
+        )
+    if generic_table(block):
+        flag(
+            location,
+            "generic_table",
+            "A table's headers or caption only say 'Feature', 'Information', 'Case' "
+            "and the like; name what each column holds, or show the context another "
+            "way.",
+        )
+
+
+def _prose_text_flags(value: JsonValue, item: str, flag: Flag, *, plain: bool = True) -> None:
+    """Rendered text that types maths, spells out an object or copies an exemplar."""
+    typed: dict[str, list[str]] = {}
+    identities: dict[str, list[str]] = {}
+    described: dict[str, list[str]] = {}
+    tall: dict[str, list[str]] = {}
+    copied: dict[str, list[str]] = {}
+    for owner, text in _prose(value, item):
+        if reused := _long_sentences(text) & _exemplar_sentences():
+            copied.setdefault(owner, []).extend(sorted(reused))
+        if found := _typed_math(text):
+            typed.setdefault(owner, []).append(found[0])
+        if spelled := DESCRIBED_OBJECT.search(text):
+            described.setdefault(owner, []).append(spelled[0])
+        for expression in INLINE_SPANS.finditer(text):
+            latex = expression[1] or ""
+            letters = set(re.findall(r"(?<![\\A-Za-z])[A-Za-z](?![A-Za-z])", latex))
+            if "=" in latex and len(letters) >= IDENTITY_SYMBOLS:
+                identities.setdefault(owner, []).append(latex[:60])
+            for matrix in INLINE_MATRIX.finditer(latex):
+                rows = [row for row in re.split(r"\\\\", matrix[2]) if row.strip()]
+                columns = max(row.count("&") + 1 for row in rows) if rows else 0
+                if len(rows) > INLINE_MATRIX_ROWS or columns > INLINE_MATRIX_COLUMNS:
+                    tall.setdefault(owner, []).append(f"{len(rows)}x{columns}")
+    for owner, samples in identities.items():
+        flag(
+            owner,
+            "unexplained_identity",
+            f"{len(samples)} general identity(ies) with several symbols inside a sentence, "
+            f"such as '\\({samples[0]}\\)'. Say what each symbol stands for where it is "
+            "used, show the worked case first, then give the identity as a formula block "
+            "with its symbols and conditions.",
+        )
+    for owner, samples in described.items():
+        flag(
+            owner,
+            "described_object",
+            f"{len(samples)} text(s) spell out an object instead of showing it, such as "
+            f"'{samples[0]}'. Show the matrix, vector, table or graph itself and let the "
+            "text say what to notice in it.",
+        )
+    for owner, samples in tall.items():
+        flag(
+            owner,
+            "tall_inline_math",
+            f"{len(samples)} inline matrix or vector(s) of size {samples[0]} inside a "
+            "sentence; set anything larger than a 2x2 matrix or a three-entry column as a "
+            "formula block.",
+        )
+    for owner, samples in copied.items():
+        flag(
+            owner,
+            "exemplar_copy",
+            f"{len(samples)} sentence(s) copied from a bundled exemplar, such as "
+            f"'{samples[0]}'. Exemplars show a shape; write the course's own sentences "
+            "from its sources.",
+        )
+    for owner, samples in typed.items() if plain else ():
+        flag(
+            owner,
+            "plain_math",
+            f"{len(samples)} text(s) type mathematics as plain characters or words, such "
+            f"as '{samples[0]}'. Write every symbol, variable and formula as inline LaTeX: "
+            r"\(P(A \mid B)\), \(\gamma\), \(V = 3\).",
+        )
+
+
+def _block_flags(
+    item: str, blocks: tuple[Block, ...], flag: Flag, *, released: bool = False
+) -> None:
+    """The shared block checks on one list of blocks of an exercise or Exam item.
+
+    A released statement keeps its sheet's wording, so only its representation is checked.
+    """
+    _code_flags(item, blocks, flag)
+    for index, block in enumerate(blocks):
+        _list_flags(f"{item}#{index}", block, flag)
+        _table_kind_flags(f"{item}#{index}", block, flag)
+    if released:
+        return
+    _derivation_flags(item, blocks, flag)
+    _unworked_flags(item, blocks, flag)
+    for index, run, section in prose_runs(blocks):
+        flag(
+            f"{item}#{index}",
+            "prose_run",
+            f"'{section}': {run} paragraphs in a row. Keep the sentence that leads in, "
+            "then show the rest as points, numbered steps, an example, a table or a "
+            "figure; restructure, do not cut ideas.",
+        )
+    for index, block in enumerate(blocks):
+        named = f"{item}/{block.key or _name(block)}"
+        _trace_table_flag(named, block, flag)
+        _drawing_flags(named, block, flag)
+        if isinstance(block, WalkthroughBlock):
+            _walkthrough_flags(named, block, flag)
+        _prose_block_flags(f"{item}#{index}", block, flag)
+
+
+def _block_lists(value: object, path: str = "") -> Iterator[tuple[str, tuple[Block, ...]]]:
+    """Every list of content blocks inside an item, with its path; blocks are not entered."""
+    if isinstance(value, Sourced):
+        return
+    if isinstance(value, BaseModel):
+        for name in type(value).model_fields:
+            yield from _block_lists(getattr(value, name), f"{path}/{name}" if path else name)
+    elif isinstance(value, tuple):
+        entries = cast(tuple[object, ...], value)
+        if entries and all(isinstance(entry, Sourced) for entry in entries):
+            yield path, cast(tuple[Block, ...], entries)
+            return
+        for index, entry in enumerate(entries):
+            key = getattr(entry, "key", None)
+            yield from _block_lists(entry, f"{path}/{key if isinstance(key, str) else index}")
+
+
+def _check_owners(value: object, path: str = "") -> Iterator[tuple[str, BaseModel]]:
+    """Every step or item inside an item that carries a check, with its path."""
+    if isinstance(value, Sourced):
+        return
+    if isinstance(value, BaseModel):
+        if isinstance(getattr(value, "check", None), BaseModel):
+            yield path, value
+        for name in type(value).model_fields:
+            yield from _check_owners(getattr(value, name), f"{path}/{name}" if path else name)
+    elif isinstance(value, tuple):
+        for index, entry in enumerate(cast(tuple[object, ...], value)):
+            key = getattr(entry, "key", None)
+            yield from _check_owners(entry, f"{path}/{key if isinstance(key, str) else index}")
+
+
+def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
+    """The shared block, option and code checks on every part of one exercise or Exam item."""
+    flags: list[dict[str, JsonValue]] = []
+
+    def flag(location: str, kind: str, detail: str) -> None:
+        flags.append({"item": location, "flag": kind, "detail": detail})
+
+    for path, blocks in _block_lists(value):
+        _block_flags(f"{item}/{path}", blocks, flag, released=path.split("/")[0] == "statement")
+    for path, owner in _check_owners(value):
+        check = owner.check
+        location = f"{item}/{path}"
+        if check.kind == "choice" and isinstance(prompt := getattr(owner, "prompt", None), str):
+            flags.extend(option_flags(location, prompt, check.options, check.correct))
+        if check.kind == "self_check" and check.format == "code":
+            for code in (check.model_answer, check.starter_code):
+                if isinstance(code, str) and (problem := _code_problem(code, check.language or "")):
+                    flag(location, "compressed_code", problem)
+    return flags
+
+
+def exam_block_flags(exam: "ExamContent | None") -> list[dict[str, JsonValue]]:
+    """The shared checks on Exam patterns and forecast questions, which Study and Exercises get."""
+    flags: list[dict[str, JsonValue]] = []
+
+    def flag(location: str, kind: str, detail: str) -> None:
+        flags.append({"item": location, "flag": kind, "detail": detail})
+
+    items: list[tuple[str, BaseModel]] = [
+        *((f"exam/pattern/{pattern.key}", pattern) for pattern in (exam.patterns if exam else ())),
+        *(
+            (f"exam/mock/{mock.key}/{question.key}", question)
+            for mock in (exam.mocks if exam else ())
+            for question in mock.questions
+        ),
+    ]
+    for item, value in items:
+        flags.extend(item_block_flags(item, value))
+        dumped = value.model_dump(mode="json")
+        for path, text in _strings(dumped):
+            for error in arithmetic_errors(text):
+                flag(f"{item}#{path}", "arithmetic", error)
+        _prose_text_flags(dumped, item, flag, plain=False)
+    return flags
+
+
+# Common function words that show which language a passage is written in.
+LANGUAGE_WORDS = {
+    "en": frozenset("the and is are of to in that for with this on it as be by not".split()),
+    "de": frozenset(
+        "der die das und ist sind nicht mit ein eine den dem des zu von f\u00fcr auf wir sich wird "
+        "werden auch".split()
+    ),
+}
+LANGUAGE_NAMES = {"en": "English", "de": "German"}
+LANGUAGE_MIN_WORDS = 10
+
+
+def foreign_language(text: str, language: str) -> str | None:
+    """The language a text is mostly written in, when it is not the expected one."""
+    words = re.findall(r"[a-z\u00e4\u00f6\u00fc\u00df]+", text.lower())
+    counts = {code: sum(word in found for word in words) for code, found in LANGUAGE_WORDS.items()}
+    other = max((code for code in counts if code != language), key=lambda code: counts[code])
+    if counts[other] >= LANGUAGE_MIN_WORDS and counts[other] > 2 * counts.get(language, 0):
+        return other
+    return None
+
+
+def language_flags(
+    language: str | None,
+    content: StudyContent | None,
+    exercises: ExerciseContent | None,
+    exam: "ExamContent | None",
+) -> list[dict[str, JsonValue]]:
+    """Items written mostly in another language than the course's recorded content language."""
+    if language not in LANGUAGE_WORDS:
+        return []
+    items: list[tuple[str, BaseModel]] = [
+        *((unit.key, unit) for unit in (content.units if content else ())),
+        *(
+            (exercise.key, exercise)
+            for group in (exercises.sets if exercises else ())
+            for exercise in group.exercises
+        ),
+        *((f"exam/pattern/{pattern.key}", pattern) for pattern in (exam.patterns if exam else ())),
+    ]
+    flags: list[dict[str, JsonValue]] = []
+    for item, value in items:
+        text = " ".join(part for _, part in _prose(value.model_dump(mode="json"), item))
+        if other := foreign_language(text, language):
+            flags.append(
+                {
+                    "item": item,
+                    "flag": "content_language",
+                    "detail": f"Most of this item reads as {LANGUAGE_NAMES[other]}, but the "
+                    f"course's content language is {LANGUAGE_NAMES[language]}. Write it in "
+                    f"{LANGUAGE_NAMES[language]}, translating a released statement faithfully "
+                    "and giving each source term once.",
+                }
+            )
+    return flags
+
+
+def _part_context(exercise: Exercise) -> Iterator[tuple[str | None, bool]]:
+    """Whether a student sees a picture for each anchored part: in shared context, its
+    statement, its guide's blocks or what its checks show (a graph, plot, table or code).
+
+    An exercise without part anchors is one question with its whole statement and guide.
+    """
+    statement = exercise.statement
+    index = {block.key: position for position, block in enumerate(statement) if block.key}
+    anchors = [
+        index[exercise.part_blocks[part]] for part in exercise.parts if part in exercise.part_blocks
+    ]
+    if not anchors or len(anchors) != len(exercise.parts):
+        guide = (block for step in exercise.steps for block in step.blocks)
+        yield None, has_visual((*statement, *guide))
+        return
+    shared = statement[: min(anchors)]
+    for part, start in zip(exercise.parts, anchors, strict=True):
+        end = min((other for other in anchors if other > start), default=len(statement))
+        steps = [step for step in exercise.steps if step.part == part]
+        blocks = (
+            *shared,
+            *statement[start:end],
+            *(block for step in steps for block in step.blocks),
+        )
+        yield part, has_visual(blocks) or any(map(_check_shows_picture, steps))
+
+
+def _check_shows_picture(step: GuidanceStep) -> bool:
+    check = step.check
+    return check is not None and (
+        check.kind in {"graph", "plot", "table"}
+        or (
+            check.kind == "self_check"
+            and check.format == "code"
+            and bool(check.starter_code or check.file)
+        )
+    )
+
+
 def quality_flags(
     content: StudyContent | None, exercises: ExerciseContent | None, *, root: Path | None = None
 ) -> list[dict[str, JsonValue]]:
@@ -867,42 +1467,7 @@ def quality_flags(
                     "`subgoal`. Separate blocks are valid for different inputs or decisions, "
                     "such as a before/after contrast; judge the actual working, not the titles.",
                 )
-            if isinstance(block, TableBlock) and (
-                len(block.rows) >= 3
-                and re.match(
-                    r"^\s*(step|action|operation|iteration|stage|phase|round|transition)\b",
-                    block.columns[0],
-                    re.I,
-                )
-                and any(
-                    len({row[index] for row in block.rows}) > 1
-                    and (
-                        re.search(
-                            r"\b(state|snapshot|before|after|configuration|frontier|stack|queue|"
-                            r"reached|visited)\b",
-                            column,
-                            re.I,
-                        )
-                        or (
-                            all(re.fullmatch(r"\s*\d+[.)]?\s*", row[0]) for row in block.rows)
-                            and not re.search(
-                                r"\b(instruction|action|rule|reason|explanation|purpose)\b",
-                                column,
-                                re.I,
-                            )
-                        )
-                    )
-                    for index, column in enumerate(block.columns[1:], start=1)
-                )
-            ):
-                flag(
-                    location,
-                    "trace_as_table",
-                    f"Table '{_name(block)}' appears to list successive process states. Check "
-                    "whether stepping through the object would explain how each state follows. "
-                    "Keep a table when comparison, lookup or recorded observations are the "
-                    "learning task; do not turn an instruction list into a simulated process.",
-                )
+            _trace_table_flag(location, block, flag)
             if block.kind in MARKS and not (
                 isinstance(block, DiagramBlock) and len(block.frames) > 1
             ):
@@ -914,92 +1479,8 @@ def quality_flags(
                         "Use the walkthrough's first step when the copy adds nothing. Keep a "
                         "separate reference or comparison when it serves a distinct learning need.",
                     )
-            if not isinstance(block, WalkthroughBlock):
-                continue
-            runs = (block.steps, *((block.variant.steps,) if block.variant else ()))
-            if isinstance(block.stage, GraphStage):
-                nodes = {node.key for node in block.stage.nodes}
-                shown = set().union(
-                    *(
-                        nodes if step.visible_nodes is None else set(step.visible_nodes)
-                        for steps in runs
-                        for step in steps
-                    )
-                )
-                if hidden := sorted(nodes - shown):
-                    flag(
-                        location,
-                        "never_shown_nodes",
-                        f"Walkthrough '{_name(block)}' never shows {', '.join(hidden)}. "
-                        "Reveal each source element when it is used or stopped by a limit. "
-                        "If the source shows the whole structure, leave out `visible_nodes` "
-                        "so unreached nodes stay faint; drop them only if the source does "
-                        "not draw them.",
-                    )
-            for steps in runs:
-                for index, step in enumerate(steps, start=1):
-                    clauses = re.split(
-                        r"[,;]\s*then\b|(?<=[.!?])\s+then\b", step.action, flags=re.I
-                    )
-                    for clause in clauses[:-1]:
-                        preceding = re.split(r"[.!?;]\s+", clause)[-1]
-                        if preceding.strip() and not re.match(
-                            r"\s*(?:else\s+)?if\b", preceding, re.I
-                        ):
-                            flag(
-                                location,
-                                "merged_step_operations",
-                                f"Walkthrough '{_name(block)}' step {index} joins operations "
-                                f"in '{step.action}'. Compare with the source pages. Split "
-                                "separate operations into one step per operation and keep every "
-                                "state in this walkthrough; never merge to shorten it. One "
-                                "atomic action touching several items stays one step.",
-                            )
-                            break
-                reasons = Counter(
-                    " ".join(
-                        re.sub(
-                            r"^[a-z][\w-]*(?:\s+\d+)?\b",
-                            "<item>",
-                            re.sub(r"\\[()\[\]]|\$+", "", step.why).casefold(),
-                        )
-                        .casefold()
-                        .split()
-                    )
-                    for step in steps
-                )
-                for count in reasons.values():
-                    if count >= 3:
-                        flag(
-                            location,
-                            "repeated_step_reason",
-                            f"Walkthrough '{_name(block)}' gives the same reason on {count} "
-                            "steps, allowing for renamed subjects. Check whether the step's own "
-                            "facts and working justify its rule. Keep shared wording when that "
-                            "evidence is shown; otherwise supply the missing reasoning.",
-                        )
-                if isinstance(block.stage, GraphStage):
-                    nodes = {node.key for node in block.stage.nodes}
-                    for index, (previous, current) in enumerate(pairwise(steps), start=2):
-                        visible_before = (
-                            nodes if previous.visible_nodes is None else set(previous.visible_nodes)
-                        )
-                        visible_now = (
-                            nodes if current.visible_nodes is None else set(current.visible_nodes)
-                        )
-                        dropped = sorted(
-                            previous.node_values.keys()
-                            & visible_before
-                            & visible_now - current.node_values.keys()
-                        )
-                        if dropped:
-                            flag(
-                                location,
-                                "dropped_node_value",
-                                f"Walkthrough '{_name(block)}' step {index} drops the values of "
-                                f"{', '.join(dropped)}. Each step lists the value of every "
-                                "visible node, including unchanged ones.",
-                            )
+            if isinstance(block, WalkthroughBlock):
+                _walkthrough_flags(location, block, flag)
         worked = any(
             block.kind == "derivation"
             or (
@@ -1018,35 +1499,7 @@ def quality_flags(
                 "topic has a reusable rule; if so, state it with its symbols and conditions and "
                 "apply it once more to different numbers.",
             )
-        derived = [
-            line.latex
-            for block in unit.blocks
-            if block.kind == "derivation"
-            for group in block.groups
-            for line in group.lines
-        ]
-        # A line listing several statements ("N=4,\quad M=1") is no transformation the app can
-        # align; a line without a top-level relation has nothing to align on.
-        listed = [latex for latex in derived if len(formula_parts(latex)) > 1]
-        unaligned = [
-            latex for latex in derived if latex not in listed and not split_relation(latex)[1]
-        ]
-        if unaligned:
-            flag(
-                unit.key,
-                "unaligned_line",
-                f"{len(unaligned)} derivation line(s) have no relation to align on, such as "
-                f"'{unaligned[0][:60]}'. Write the relation (\\(x = \\dots\\)) or join the line to "
-                "the one it continues.",
-            )
-        if listed:
-            flag(
-                unit.key,
-                "listed_derivation_line",
-                f"{len(listed)} derivation line(s) list several statements, such as "
-                f"'{listed[0][:60]}'. Give each line one transformation; put givens one per "
-                "line or in the text before the derivation.",
-            )
+        _derivation_flags(unit.key, unit.blocks, flag)
         if len(unit.blocks) < median / 2:
             flag(
                 unit.key,
@@ -1086,64 +1539,9 @@ def quality_flags(
                 f"{definitions} definitions in one lesson; check whether it holds more than one "
                 "topic.",
             )
-        for code in _code_blocks(unit.blocks):
-            lines = code.code.splitlines()
-            longest = max((len(line) for line in lines), default=0)
-            plain = code.language.lower() in PLAIN_LANGUAGES and bool(CODE_SYNTAX.search(code.code))
-            crowded = (
-                any(_crowded(line) for line in lines) or _unindented(lines) or _unspaced(lines)
-            )
-            if longest > CODE_LINE_CHARS or plain or crowded:
-                flag(
-                    unit.key,
-                    "compressed_code",
-                    "Code is squeezed into summary lines"
-                    + (f" up to {longest} characters" if longest > CODE_LINE_CHARS else "")
-                    + (" typed as plain text" if plain else "")
-                    + (
-                        " crowded together (several statements on a line, no indentation, "
-                        "or no blank line between declarations)"
-                        if crowded
-                        else ""
-                    )
-                    + ". Write the code as a programmer would in its language: one statement "
-                    "per line, indented blocks, a blank line between methods, meaningful "
-                    "names, and let each walkthrough step point at the lines it explains.",
-                )
+        _code_flags(unit.key, unit.blocks, flag)
         for index, block in enumerate(unit.blocks):
-            if isinstance(block, TextBlock) and (
-                len(block.points) >= LIST_POINTS and sum(map(len, block.points)) > LIST_CHARS
-            ):
-                flag(
-                    f"{unit.key}#{index}",
-                    "long_list",
-                    f"{len(block.points)} points in one list mix several kinds of idea. Group them "
-                    "under short labelled parts (such as idea, structure, strengths, limits, "
-                    "example), or put parallel facts in a table, so each point has its place.",
-                )
-            listed = [
-                found.group(0)
-                for paragraph in getattr(block, "paragraphs", ())
-                if isinstance(block, TextBlock) and (found := INLINE_LIST.search(paragraph))
-            ]
-            if any(
-                len(INLINE_STEPS.findall(paragraph)) >= 3
-                for paragraph in getattr(block, "paragraphs", ())
-                if isinstance(block, TextBlock)
-            ):
-                flag(
-                    f"{unit.key}#{index}",
-                    "inline_steps",
-                    "Labelled lines run together in one paragraph; give each its own line, as a "
-                    "list, a derivation or a formula.",
-                )
-            if listed:
-                flag(
-                    f"{unit.key}#{index}",
-                    "inline_list",
-                    f"Members run together in a sentence: '{listed[0][:90]}'; give them as a list "
-                    "or table the student can scan.",
-                )
+            _list_flags(f"{unit.key}#{index}", block, flag)
         reading_blocks = (*unit.blocks, *(block for item in unit.explore for block in item.blocks))
         passages = [
             *((f"{unit.key}#{index}", block) for index, block in enumerate(unit.blocks)),
@@ -1166,47 +1564,7 @@ def quality_flags(
                     "figure; restructure, do not cut ideas.",
                 )
         for location, block in passages:
-            if not isinstance(block, TextBlock):
-                continue
-            if case := next((p for p in block.paragraphs if WORKED_CASE.match(p)), None):
-                flag(
-                    location,
-                    "example_in_prose",
-                    f"'{_name(block)}': a worked case told as prose ('{case[:60]}'); give it as "
-                    "an example (given, working, result), a table or a walkthrough.",
-                )
-            words = sum(len(part.split()) for part in block.paragraphs)
-            if words > SECTION_WORDS or len(block.paragraphs) > 2:
-                flag(
-                    location,
-                    "long_section",
-                    f"'{_name(block)}': {words} words of prose in {len(block.paragraphs)} "
-                    "paragraph(s). Check whether it holds more than one idea; a hard idea reads "
-                    "better as short numbered steps.",
-                )
-            calculation = next((part for part in block.paragraphs if part.count("=") >= 2), None)
-            if calculation is not None:
-                flag(
-                    location,
-                    "prose_calculation",
-                    f"'{_name(block)}': a chain of calculations inside a sentence. Give each "
-                    "computed value as its own step: what is computed, the expression, the result.",
-                )
-            dense = [
-                (len(part.split()), _sentences(part))
-                for part in block.paragraphs
-                if len(part.split()) > PARAGRAPH_WORDS
-                or (_sentences(part) > PARAGRAPH_SENTENCES and len(part.split()) > RUN_ON_WORDS)
-            ]
-            if dense:
-                words, sentences = dense[0]
-                flag(
-                    location,
-                    "dense_paragraph",
-                    f"'{_name(block)}': {words} words, {sentences} sentences. Keep one or two "
-                    "framing sentences; give a procedure as labelled steps, conditions as points "
-                    "and cases as a table.",
-                )
+            _prose_block_flags(location, block, flag)
         # A procedure is traced when it is stepped through, each step with what it does.
         traced = any(stepped(block) for block in unit.blocks)
         if not traced and any(TRACE_VERBS.search(item.text) for item in unit.objectives):
@@ -1225,36 +1583,9 @@ def quality_flags(
                     "An objective asks students to trace or apply a procedure, but the lesson has "
                     "no walkthrough, stepped diagram or code walkthrough.",
                 )
-        for section, members in _sections(unit.blocks):
-            if any(stepped(block) or block.kind in {"code", "derivation"} for block in members):
-                continue
-            results = [
-                found
-                for block in members
-                if isinstance(block, TextBlock)
-                for text in (*block.paragraphs, *block.steps, *block.points)
-                for found in UNWORKED_RESULT.findall(text)
-            ]
-            if results:
-                flag(
-                    f"{unit.key}/{section}",
-                    "unworked_result",
-                    f"'\\({results[0]}\\)' states a computed result with no working in its "
-                    "section. Show how it is reached: a derivation or a walkthrough.",
-                )
+        _unworked_flags(unit.key, unit.blocks, flag)
         for block in unit.blocks:
-            frame = block.frames[0] if isinstance(block, DiagramBlock) else None
-            if (
-                frame
-                and len(block.frames) == 1
-                and (frame.visited or frame.frontier or frame.state)
-            ):
-                flag(
-                    f"{unit.key}/{block.key or _name(block)}",
-                    "single_frame_diagram",
-                    f"'{_name(block)}' shows one moment of a process. If students must follow "
-                    "how it gets there, step through it as a walkthrough.",
-                )
+            _drawing_flags(f"{unit.key}/{block.key or _name(block)}", block, flag)
         narrated = [
             sentence
             for block in reading_blocks
@@ -1367,23 +1698,7 @@ def quality_flags(
                 for block in question.blocks
             ),
         ):
-            if graph_as_table(block):
-                flag(
-                    location,
-                    "graph_as_table",
-                    f"'{_name(block)}' lists a graph's edges as rows. Draw the graph as a "
-                    '`diagram` (`layout: "tree"` for a tree) with the costs on its edges, and '
-                    "run any search on that drawing in a walkthrough with the frontier as a "
-                    "state row.",
-                )
-            if generic_table(block):
-                flag(
-                    location,
-                    "generic_table",
-                    "A table's headers or caption only say 'Feature', 'Information', 'Case' "
-                    "and the like; name what each column holds, or show the context another "
-                    "way.",
-                )
+            _table_kind_flags(location, block, flag)
     for group in exercises.sets if exercises else ():
         # A set summary is teaching text: what the sheet practises, not where it came from.
         if (
@@ -1398,24 +1713,18 @@ def quality_flags(
                 "the sheet practises and keep provenance in the ledger.",
             )
         for exercise in group.exercises:
-            for step in exercise.steps:
-                for _, run, _ in prose_runs(step.blocks):
-                    flag(
-                        exercise.key,
-                        "prose_run",
-                        f"A guide step has {run} paragraphs in a row; show the working as "
-                        "steps, points, an example or a table.",
-                    )
+            flags.extend(item_block_flags(exercise.key, exercise))
             flags.extend(variable_flags(exercise.key, exercise.model_dump(mode="json"), task=True))
             flags.extend(visual_state_flags(exercise.key, exercise.model_dump(mode="json")))
-            guided = (*exercise.statement, *(b for step in exercise.steps for b in step.blocks))
-            if not has_visual(guided):
-                flag(
-                    exercise.key,
-                    "text_only_question",
-                    "Neither the statement nor a guide step shows a code snippet, diagram, "
-                    "formula, table or plot; add one to a guide step where it carries information.",
-                )
+            for part, pictured in _part_context(exercise):
+                if not pictured:
+                    flag(
+                        f"{exercise.key}/{part}" if part else exercise.key,
+                        "text_only_question",
+                        f"{f'Part {part}: n' if part else 'N'}either the statement nor a guide "
+                        "step shows a code snippet, diagram, formula, table or plot; add one to a "
+                        "guide step where it carries information.",
+                    )
             if len(exercise.parts) > 1 and not any(step.part for step in exercise.steps):
                 flag(
                     exercise.key,
@@ -1603,69 +1912,7 @@ def quality_flags(
         for path, text in _strings(value):
             for error in arithmetic_errors(text):
                 flag(f"{name}:{path}", "arithmetic", error)
-        plain: dict[str, list[str]] = {}
-        identities: dict[str, list[str]] = {}
-        described: dict[str, list[str]] = {}
-        tall: dict[str, list[str]] = {}
-        copied: dict[str, list[str]] = {}
-        for item, text in _prose(value):
-            if reused := _long_sentences(text) & _exemplar_sentences():
-                copied.setdefault(item, []).extend(sorted(reused))
-            if found := _typed_math(text):
-                plain.setdefault(item, []).append(found[0])
-            if spelled := DESCRIBED_OBJECT.search(text):
-                described.setdefault(item, []).append(spelled[0])
-            for expression in INLINE_SPANS.finditer(text):
-                latex = expression[1] or ""
-                letters = set(re.findall(r"(?<![\\A-Za-z])[A-Za-z](?![A-Za-z])", latex))
-                if "=" in latex and len(letters) >= IDENTITY_SYMBOLS:
-                    identities.setdefault(item, []).append(latex[:60])
-                for matrix in INLINE_MATRIX.finditer(latex):
-                    rows = [row for row in re.split(r"\\\\", matrix[2]) if row.strip()]
-                    columns = max(row.count("&") + 1 for row in rows) if rows else 0
-                    if len(rows) > INLINE_MATRIX_ROWS or columns > INLINE_MATRIX_COLUMNS:
-                        tall.setdefault(item, []).append(f"{len(rows)}x{columns}")
-        for item, samples in identities.items():
-            flag(
-                item,
-                "unexplained_identity",
-                f"{len(samples)} general identity(ies) with several symbols inside a sentence, "
-                f"such as '\\({samples[0]}\\)'. Say what each symbol stands for where it is "
-                "used, show the worked case first, then give the identity as a formula block "
-                "with its symbols and conditions.",
-            )
-        for item, samples in described.items():
-            flag(
-                item,
-                "described_object",
-                f"{len(samples)} text(s) spell out an object instead of showing it, such as "
-                f"'{samples[0]}'. Show the matrix, vector, table or graph itself and let the "
-                "text say what to notice in it.",
-            )
-        for item, samples in tall.items():
-            flag(
-                item,
-                "tall_inline_math",
-                f"{len(samples)} inline matrix or vector(s) of size {samples[0]} inside a "
-                "sentence; set anything larger than a 2x2 matrix or a three-entry column as a "
-                "formula block.",
-            )
-        for item, samples in copied.items():
-            flag(
-                item,
-                "exemplar_copy",
-                f"{len(samples)} sentence(s) copied from a bundled exemplar, such as "
-                f"'{samples[0]}'. Exemplars show a shape; write the course's own sentences "
-                "from its sources.",
-            )
-        for item, samples in plain.items():
-            flag(
-                item,
-                "plain_math",
-                f"{len(samples)} text(s) type mathematics as plain characters or words, such "
-                f"as '{samples[0]}'. Write every symbol, variable and formula as inline LaTeX: "
-                r"\(P(A \mid B)\), \(\gamma\), \(V = 3\).",
-            )
+        _prose_text_flags(value, "", flag)
     return flags
 
 
@@ -1772,7 +2019,7 @@ def math_words(value: JsonValue, field: str = "") -> list[str]:
             return [
                 word
                 for key, entry in value.items()
-                if key not in {"code", "svg"}
+                if key not in {"code", "svg"} and not _code_answer(value, key)
                 for word in math_words(entry, key)
             ]
         case _:
@@ -1804,6 +2051,11 @@ def slash_quotients(latex: str) -> list[str]:
     return [match[0] for match in _SLASH.finditer(stripped)]
 
 
+def _code_answer(value: dict[str, JsonValue], field: str) -> bool:
+    """A code-format answer, which is literal code, not prose or maths."""
+    return field == "model_answer" and value.get("format") == "code"
+
+
 def _prose(value: JsonValue, item: str = "") -> Iterator[tuple[str, str]]:
     """Rendered text with the unit or exercise it belongs to; drawings and code are skipped."""
     match value:
@@ -1813,10 +2065,16 @@ def _prose(value: JsonValue, item: str = "") -> Iterator[tuple[str, str]]:
             for entry in value:
                 yield from _prose(entry, item)
         case dict() if value.get("kind") not in DRAWN:
-            owner = value.get("key") if "blocks" in value or "statement" in value else None
+            key = value.get("key") if "blocks" in value or "statement" in value else None
+            # A nested step or question stays under the unit or exercise it belongs to.
+            owner = (f"{item}/{key}" if item else key) if isinstance(key, str) else item
             for field, entry in value.items():
-                if field not in LITERAL_FIELDS and field not in NON_PROSE:
-                    yield from _prose(entry, owner if isinstance(owner, str) else item)
+                if (
+                    field not in LITERAL_FIELDS
+                    and field not in NON_PROSE
+                    and not _code_answer(value, field)
+                ):
+                    yield from _prose(entry, owner)
         case _:
             return
 

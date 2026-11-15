@@ -7,6 +7,10 @@ When `tum-mcp study status PROJECT` reports `course_memory: true`, use
 the installed `course-memory` skill for relationships and scoped source updates.
 When disabled, leave retained graph files unused and follow the ordinary workflow.
 
+Write in the course's content language, recorded in `.tum-mcp/course.md`: the language the
+course is taught in, unless the student asked for another. Translate a released statement in
+another language faithfully: its givens, symbols, labels and code stay as printed, and each
+source term appears once.
 
 # Prepare Lecture
 

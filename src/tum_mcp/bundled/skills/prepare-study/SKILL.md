@@ -17,6 +17,11 @@ or sheet page you rely on: `tum-mcp study text` finds and quotes it but drops fi
 scrambles tables and formulas. Open the PDF page if your tools display PDFs; otherwise
 add `--images` and open the image.
 
+Write in the course's content language, recorded in `.tum-mcp/course.md`: the language the
+course is taught in, unless the student asked for another. Translate a released statement in
+another language faithfully: its givens, symbols, labels and code stay as printed, and each
+source term appears once.
+
 Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. You author
 `app/study/course.json` and one file per unit, `app/study/units/<key>.json`; edit them with
 your edit tools. `tum-mcp study build`
@@ -43,8 +48,8 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
 1. **Scope.** A missing binding goes through sync-course with the requested course
    and semester. Work from local sources and fetch only missing material through read-content. Run
    sync-course once, and only when fresh upstream content was requested. Write the lessons
-   in the language the student writes in, and record it in the teaching profile. When the
-   sources use another language, give a key term's source form once where it is introduced.
+   in the course's content language. When the sources use another language, give a key
+   term's source form once where it is introduced.
 2. **Plan units.** Inspect the app folder and the affected source and unit IDs. Keep
    notes, edits, labels and stable IDs of unchanged units. Record each source's stated
    outcomes in the [coverage ledger](references/coverage.md) first, then plan units that

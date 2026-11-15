@@ -17,6 +17,11 @@ every slide, sheet or exam page you rely on: `tum-mcp study text` finds and quot
 drops figures and scrambles tables and formulas. Open the PDF page if your tools display
 PDFs; otherwise add `--images` and open the image.
 
+Write in the course's content language, recorded in `.tum-mcp/course.md`: the language the
+course is taught in, unless the student asked for another. Translate a released statement in
+another language faithfully: its givens, symbols, labels and code stay as printed, and each
+source term appears once.
+
 You author the files under `app/exam/` (`exam.json`, and one file per concept, pattern
 and mock; `study schema exam`); `tum-mcp study build PROJECT`
 renders it as the Exam workspace beside Study and Exercises. Code derives every
