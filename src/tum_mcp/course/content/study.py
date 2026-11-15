@@ -1313,9 +1313,19 @@ Block = Annotated[
 
 
 def block_guide(example: str) -> str:
-    """The authoring rule of the block kind a `study schema --example` name shows."""
+    """The authoring rule of the block, check or guide step a `study schema --example` name
+    shows."""
+    union: object = Block
+    if example.startswith("step-"):
+        from tum_mcp.course.content.exercises import GuidanceStep
+
+        return " ".join((GuidanceStep.__doc__ or "").split())
+    if example.startswith("check-"):
+        from tum_mcp.course.content.responses import Check
+
+        union, example = Check, example.removeprefix("check-")
     kind = example.removeprefix("stage-").split("-")[0]
-    for model in get_args(get_args(Block)[0]):
+    for model in get_args(get_args(union)[0]):
         if model.model_fields["kind"].annotation == Literal[kind]:
             return " ".join((model.__doc__ or "").split())
     return ""

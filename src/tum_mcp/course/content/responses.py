@@ -10,6 +10,9 @@ from tum_mcp.settings import Frozen
 
 
 class ChoiceCheck(Frozen):
+    """A decision between four named options with one correct key. Each option's feedback
+    names its mistake. A value the student works out is a numeric or text check instead."""
+
     kind: Literal["choice"]
     options: tuple[Option, ...] = Field(min_length=4, max_length=4)
     correct: Key
@@ -24,7 +27,8 @@ class ChoiceCheck(Frozen):
 
 
 class NumericCheck(Frozen):
-    """A number worked out on paper, then compared with the shown answer."""
+    """A number worked out on paper, then compared with the shown answer. The feedback names
+    the usual slip."""
 
     kind: Literal["numeric"]
     answer: FiniteFloat = Field(strict=True)
@@ -33,11 +37,23 @@ class NumericCheck(Frozen):
 
 
 class SelfCheck(Frozen):
+    """Work such as a proof, an argument or code, compared with a model answer and a rubric.
+    A code model answer is real code that uses only what the statement and the starter code
+    declare."""
+
     kind: Literal["self_check"]
     format: Literal["text", "code"] = "text"
     language: str | None = Field(default=None, min_length=1, max_length=30)
-    starter_code: str | None = Field(default=None, min_length=1, max_length=20000)
-    file: FilePath | None = None
+    starter_code: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=20000,
+        description="The code the student starts from. It declares every class, field and "
+        "method the model answer uses.",
+    )
+    file: FilePath | None = Field(
+        default=None, description="The editable workspace file this step writes into."
+    )
     rubric: tuple[Text, ...] = Field(min_length=1, max_length=12)
     # Code answers are literal code; text answers are blocks shaped like the answer
     # (a filled table, a list of cases, a formula) rather than one long paragraph.
@@ -88,6 +104,9 @@ class TableRow(Frozen):
 
 
 class TableCheck(Frozen):
+    """A table filled in cell by cell. Use it where the sheet asks for a table or the answer
+    is a record of values; show a trace as a walkthrough."""
+
     kind: Literal["table"]
     caption: Text
     columns: tuple[Text, ...] = Field(min_length=1, max_length=8)
@@ -106,6 +125,8 @@ class TableCheck(Frozen):
 
 
 class GraphCheck(Frozen):
+    """Nodes, edges or a path picked on the drawn graph."""
+
     kind: Literal["graph"]
     graph: DiagramBlock
     mode: Literal["nodes", "edges", "path"]
@@ -136,6 +157,8 @@ class GraphCheck(Frozen):
 
 
 class PlotCheck(Frozen):
+    """Points placed on a plot at the given x positions, within a tolerance."""
+
     kind: Literal["plot"]
     plot: PlotBlock
     x_values: tuple[FiniteFloat, ...] = Field(min_length=2, max_length=20)

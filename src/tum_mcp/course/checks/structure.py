@@ -14,12 +14,14 @@ from itertools import combinations
 
 from pydantic import JsonValue
 
-from tum_mcp.course.checks.report import FLAT_OUTLINE_UNITS
-from tum_mcp.course.content.exam import ExamContent
+from tum_mcp.course.checks.report import FLAT_OUTLINE_UNITS, block_lists
+from tum_mcp.course.content.exam import ExamContent, shingles
+from tum_mcp.course.content.exam import similarity as share
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.study import (
     Block,
     DefinitionBlock,
+    DiagramBlock,
     StudyContent,
     TextBlock,
     term_markers,
@@ -30,6 +32,8 @@ from tum_mcp.course.sources.duplicates import similarity, sketch
 
 # Shared wording above this share of five-word shingles means one passage repeats the other.
 PASSAGE_SIMILARITY = 0.5
+# Share of a Study passage's word sequences taken from a released exercise statement.
+REPLAY_SHARE = 0.6
 # Practice items this close in words ask the same thing in the same form.
 PRACTICE_SIMILARITY = 0.8
 PRACTICE_WORDS = 6
@@ -307,7 +311,51 @@ def structure_flags(
     if content:
         _practice(content, flag)
         _links(content, exercises, exam, lectures, flag)
+        if exercises:
+            _replays(content, exercises, flag)
     return flags
+
+
+def _graph(block: Block) -> tuple[frozenset[str], frozenset[frozenset[str]]] | None:
+    """A drawn case as its node labels and its edges between them."""
+    if not isinstance(block, DiagramBlock) or len(block.nodes) < 3:
+        return None
+    labels = {node.key: node.label.casefold() for node in block.nodes}
+    edges = frozenset(frozenset((labels[e.start], labels[e.end])) for e in block.edges)
+    return frozenset(labels.values()), edges
+
+
+def _replays(content: StudyContent, exercises: ExerciseContent, flag: Flag) -> None:
+    """Study that teaches or practises a released exercise's own case turns the exercise into
+    a replay and gives its answer away."""
+    cases = [
+        (
+            f"exercises/{group.key}/{exercise.key}",
+            shingles(" ".join(_text(block) for block in exercise.statement)),
+            {graph for block in exercise.statement if (graph := _graph(block))},
+        )
+        for group in exercises.sets
+        for exercise in group.exercises
+    ]
+    for unit in content.units:
+        blocks = [block for _, found in block_lists(unit) for block in found]
+        texts = [_text(block) for block in blocks] + [
+            question.prompt for question in unit.questions
+        ]
+        drawn = {graph for block in blocks if (graph := _graph(block))}
+        for item, statement, graphs in cases:
+            copied = any(
+                len(own := shingles(text)) >= 4 and share(statement, own) >= REPLAY_SHARE
+                for text in texts
+            )
+            if copied or drawn & graphs:
+                flag(
+                    f"study/{unit.key}",
+                    "exercise_case_in_study",
+                    f"A passage {'copies the statement' if copied else 'draws the case'} of "
+                    f"{item}. Teach the idea on another case, so the exercise stays a fresh "
+                    "application.",
+                )
 
 
 def _defined(blocks: tuple[Block, ...]) -> set[str]:

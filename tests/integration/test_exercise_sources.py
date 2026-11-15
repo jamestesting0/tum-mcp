@@ -62,6 +62,45 @@ def test_exercises_alone_are_reviewable_and_study_added_later_asks_for_links(
     assert [pair.item for pair in pairs] == ["exercises/sheet-1/sample-minimum-proof"]
 
 
+def test_an_exercise_part_map_needs_no_gate_and_its_needs_link_study(
+    exercise_project: Path,
+) -> None:
+    from tum_mcp.course.checks.plans import Plan, gated, need_problems, plan_packet, plan_path
+    from tum_mcp.course.content.store import read_document
+    from tum_mcp.errors import CampusError
+
+    item = "exercises/sheet-1/sample-minimum-proof"
+    study = read_document(exercise_project, "study")
+    assert study is not None
+    unit, block = next((u, b["key"]) for u in study["units"] for b in u["blocks"] if b.get("key"))
+    need = {"idea": "the minimum", "unit": unit["key"], "block": block}
+
+    def plan(*needs: dict) -> Plan:
+        part = {"part": "a", "answer": "3", "method": "Compare.", "needs": list(needs)}
+        return Plan.model_validate({"item": item, "parts": [part]})
+
+    # An exercise's part map is checked by code; Study plans still go to a checker.
+    assert not gated(item) and gated(f"study/{unit['key']}")
+    path = plan_path(exercise_project, item)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(plan(need).model_dump_json())
+    with pytest.raises(CampusError, match="needs no plan check"):
+        plan_packet(exercise_project, (item,))
+    assert all(p["item"] != item for p in plan_packet(exercise_project)["plans"])
+    # A need links the block that teaches it, and the exercise lists the same link.
+    linked = {"prerequisites": [{"unit": unit["key"], "block": block, "explanation": "x"}]}
+    assert need_problems(exercise_project, plan(need), linked) == []
+    assert "prerequisites" in need_problems(exercise_project, plan(need), {"prerequisites": []})[0]
+    wrong = need_problems(exercise_project, plan(need | {"block": "nowhere"}), None)
+    assert "has no block nowhere" in wrong[0]
+    # An unlinked need gives its reason; without one it is reported.
+    assert need_problems(exercise_project, plan({"idea": "sets"}), None)
+    assert not need_problems(exercise_project, plan({"idea": "sets", "reason": "Given."}), None)
+    # Without Study, needs stay inline reminders.
+    content_file(exercise_project, "study").unlink()
+    assert need_problems(exercise_project, plan({"idea": "sets"}), {"prerequisites": []}) == []
+
+
 @pytest.mark.parametrize("fault", ["course", "source"])
 def test_invalid_exercise_binding_preserves_the_last_verified_build(
     exercise_project: Path, fault: str

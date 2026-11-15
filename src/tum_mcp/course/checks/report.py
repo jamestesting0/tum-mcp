@@ -1208,13 +1208,13 @@ def _block_flags(
         _prose_block_flags(f"{item}#{index}", block, flag)
 
 
-def _block_lists(value: object, path: str = "") -> Iterator[tuple[str, tuple[Block, ...]]]:
+def block_lists(value: object, path: str = "") -> Iterator[tuple[str, tuple[Block, ...]]]:
     """Every list of content blocks inside an item, with its path; blocks are not entered."""
     if isinstance(value, Sourced):
         return
     if isinstance(value, BaseModel):
         for name in type(value).model_fields:
-            yield from _block_lists(getattr(value, name), f"{path}/{name}" if path else name)
+            yield from block_lists(getattr(value, name), f"{path}/{name}" if path else name)
     elif isinstance(value, tuple):
         entries = cast(tuple[object, ...], value)
         if entries and all(isinstance(entry, Sourced) for entry in entries):
@@ -1222,7 +1222,7 @@ def _block_lists(value: object, path: str = "") -> Iterator[tuple[str, tuple[Blo
             return
         for index, entry in enumerate(entries):
             key = getattr(entry, "key", None)
-            yield from _block_lists(entry, f"{path}/{key if isinstance(key, str) else index}")
+            yield from block_lists(entry, f"{path}/{key if isinstance(key, str) else index}")
 
 
 def _check_owners(value: object, path: str = "") -> Iterator[tuple[str, BaseModel]]:
@@ -1247,7 +1247,7 @@ def item_block_flags(item: str, value: BaseModel) -> list[dict[str, JsonValue]]:
     def flag(location: str, kind: str, detail: str) -> None:
         flags.append({"item": location, "flag": kind, "detail": detail})
 
-    for path, blocks in _block_lists(value):
+    for path, blocks in block_lists(value):
         _block_flags(f"{item}/{path}", blocks, flag, released=path.split("/")[0] == "statement")
     for path, owner in _check_owners(value):
         check = owner.check
@@ -1739,11 +1739,12 @@ def quality_flags(
                     for text in (
                         step.prompt,
                         *step.hints,
-                        step.explanation,
+                        *((step.explanation,) if isinstance(step.explanation, str) else ()),
                         *(
                             part
                             for block in (
                                 *step.blocks,
+                                *(() if isinstance(step.explanation, str) else step.explanation),
                                 *(
                                     step.check.model_answer
                                     if step.check

@@ -5,12 +5,23 @@ Use the course's teaching profile, the moves in
 demands in [practice](../../prepare-study/references/practice.md). A step may assume the
 profile's prerequisites and what earlier units teach; it reminds the rest in one line.
 
-Keep the original problem first and useful on its own. Each step's purpose names
-the reasoning difficulty it addresses: choosing a premise, interpreting a symbol,
-constructing an invariant or combining two results. Omit ceremonial instructions
-such as “read the problem”; do not turn each algebraic manipulation into a screen.
-The app shows one step at a time with the statement still reachable, and the full
-solution is always available without passing steps.
+Keep the original problem first and useful on its own. Plan the steps from your own
+solution, not from the statement:
+1. Solve the part and list its subgoals: the intermediate results or decisions the
+   method passes through, such as "find the evidence \(P(+)\)" or "prune the
+   neighbours of A".
+2. Make one step per subgoal a student could get stuck on. Name the subgoal in the
+   prompt. A part usually needs two to five steps; a one-line part needs one.
+3. Keep routine operations, such as an addition or a substitution, inside the step's
+   working. A step never asks for one arithmetic operation.
+4. Ask for the next piece of work. Do not add "explain why" questions; Compare
+   explains.
+
+Each step's purpose names the reasoning difficulty it addresses: choosing a premise,
+interpreting a symbol, constructing an invariant or combining two results. Omit
+ceremonial instructions such as "read the problem". The app shows one step at a time
+with the statement still reachable, and the Solution is always available without
+passing steps.
 
 Review the reading order with every guide closed: shared context, part (a) with its
 supporting material, its Guide and Solution, then part (b) with its own controls. Use the explicit
@@ -24,8 +35,8 @@ Walk the exercise once as a student meeting it for the first time: which earlier
 definition each step needs, which new symbol appears, and where a step jumps. Put a
 one-line reminder of that definition in the step that needs it (with its `{{term}}` or
 prerequisite link); this is reinforcement, not redundancy. Sequence the steps so
-responsibility passes to the student: early steps may be worked more fully, later ones
-leave more to them. Keep every reminder and hint optional and never reveal the answer by
+responsibility passes to the student: later steps get shorter prompts and fewer
+hints. The Compare working stays complete in every step. Keep every reminder and hint optional and never reveal the answer by
 default.
 
 An early hint points to a relevant relation or asks a smaller question. A later

@@ -796,6 +796,53 @@ def test_solutions_answer_each_part_once_and_say_each_thing_once() -> None:
         ExerciseContent.model_validate(payload)
 
 
+def test_study_that_copies_a_released_exercise_case_is_flagged_for_a_ruling() -> None:
+    from tum_mcp.course.checks.structure import structure_flags
+
+    content, payload = study(), exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    case = "A courier visits the depot, then the bakery, then the station and returns by noon."
+    statement = next(b for b in exercise["statement"] if b["kind"] == "text")
+    statement["paragraphs"] = [case]
+    unit = content["units"][0]
+
+    def replays() -> set[str]:
+        flags = structure_flags(
+            StudyContent.model_validate(content),
+            ExerciseContent.model_validate(payload),
+            None,
+            None,
+        )
+        return {str(f["item"]) for f in flags if f["flag"] == "exercise_case_in_study"}
+
+    # Study on its own cases passes; a passage that copies the statement is flagged.
+    assert not replays()
+    block = next(b for b in unit["blocks"] if b["kind"] == "text" and b.get("paragraphs"))
+    block["paragraphs"] = [case]
+    assert replays() == {f"study/{unit['key']}"}
+
+
+def test_step_working_can_be_blocks_that_are_cited_and_checked() -> None:
+    from tum_mcp.course.checks.report import item_block_flags
+
+    payload = exercises()
+    exercise = payload["sets"][0]["exercises"][0]
+    step = exercise["steps"][0]
+    block = deepcopy(
+        next(b for b in exercise["solution"]["answers"][0]["blocks"] if b["kind"] == "text")
+    )
+    # A working written as blocks loads; a prose wall in it is flagged like any other block.
+    paragraphs = [f"Sentence {n} of the working says one more thing." for n in range(8)]
+    step["explanation"] = [block | {"paragraphs": paragraphs}]
+    model = ExerciseContent.model_validate(payload).sets[0].exercises[0]
+    flags = item_block_flags(exercise["key"], model)
+    assert any(f["flag"] == "prose_run" and "/explanation" in str(f["item"]) for f in flags)
+    # Its sources must be declared, as for any step content.
+    step["explanation"][0]["sources"] = ["undeclared"]
+    with pytest.raises(ValidationError, match="Step working cites an undeclared source"):
+        ExerciseContent.model_validate(payload)
+
+
 def test_mathematics_typed_as_plain_text_is_flagged_and_latex_passes() -> None:
     # Given one lesson that types a discount, a conditional and an equation as plain characters.
     content = study()

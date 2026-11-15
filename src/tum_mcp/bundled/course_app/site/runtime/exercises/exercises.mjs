@@ -18,6 +18,11 @@ function due(group) {
   return time && Number.isFinite(time.getTime())
     ? `Due ${new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)}` : '';
 }
+// How a step's answer is reached: one sentence, or blocks such as a derivation or a walkthrough.
+function working(step) {
+  return typeof step.explanation === 'string' ? studyText('p', '', step.explanation)
+    : append(node('div', 'reading-material'), ...step.explanation.map(block => renderBlockBody(block)));
+}
 
 // "a", "(b)", "2.", "b(ii)" or "Part c" label a question: the last token prints as "ii." and
 // each token is one level of nesting. Words such as "Hint" are titles, not labels.
@@ -329,13 +334,13 @@ export function exercisePage(exercise, options) {
           const section = node('section', 'feedback compare');
           section.append(node('h3', '', 'Answer'));
           if (check) section.append(expectedAnswer(check));
-          section.append(studyText('p', '', step.explanation));
+          section.append(working(step));
           if (check?.feedback) section.append(append(node('p', 'small'), node('strong', '', 'If yours differs: '), studyText('span', '', check.feedback)));
           feedback.append(section);
         } else if (checked && result.valid) {
           // A choice opens with the chosen option's feedback, as in Practice; Explain covers the rest.
           const choice = check.kind === 'choice', said = (choice || !result.correct ? result.repairs : []).map(repair => studyText('p', '', repair));
-          const section = verdict(result.correct, ...said, ...(result.correct ? [studyText('p', '', step.explanation)] : []));
+          const section = verdict(result.correct, ...said, ...(result.correct ? [working(step)] : []));
           if (choice) section.append(optionExplanations(shuffled(check.options, `exercise-${exercise.key}-${step.key}`), check.correct, result.chosen));
           feedback.append(section);
         }
