@@ -1,0 +1,17 @@
+id: exercises-pse-strategy
+# A past exercise the student never started: no repository exists, so the project is
+# rebuilt from the statement, with its reason and label.
+turns:
+  - say: "I'm revising for the exam. Prepare a guided exercise for the W00E07 Strategy Pattern programming exercise of Patterns in Software Engineering. I never started it in Artemis."
+    skills: [sync-course, read-content, prepare-exercises]
+replies:
+  course: "Patterns in Software Engineering, this semester (WS26/27)."
+  semester: "This semester, WS26/27."
+  start: "I don't want to start it in Artemis now; build it from the problem statement."
+  rebuilt: "Yes, build it from the problem statement."
+  study: "No, only the exercise for now."
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  publish: "No, keep it local."
+  default: "Your choice, go ahead."
