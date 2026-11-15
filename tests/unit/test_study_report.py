@@ -1673,6 +1673,12 @@ def test_a_workflow_step_that_computes_shows_its_formula() -> None:
     assert flagged()
     step["apply"] = {"text": r"Use \(EU(a) = \sum_s P(s \mid a)\,U(s)\)."}
     assert not flagged()
+    # A wholly verbal workflow, such as choosing a design pattern, needs no `apply`.
+    for each in pattern["workflow"]:
+        each.pop("apply", None)
+        each.pop("cases", None)
+        each["do"] = "Name the force that changes between the two designs."
+    assert not flagged()
 
 
 def test_the_cheatsheet_needs_a_semester_map_with_every_idea_linked() -> None:

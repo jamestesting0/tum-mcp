@@ -75,8 +75,10 @@ call has a bounded wait of at most 60 seconds plus bounded API requests.
 Resolve in-scope failures; report a real hosting/authentication/conflict blocker
 in plain language rather than handing the student a command checklist.
 
-After setup, completed `study build PROJECT` operations automatically update the
-same site. Batch related edits into one build; do not upload on each file save.
+After setup, a completed `study build PROJECT` updates the same site once the review gate
+covers every item. Until then the build reports `held` and the draft stays local;
+`study publish sync PROJECT` publishes it anyway when the student asks. Batch related
+edits into one build; do not upload on each file save.
 Unchanged verified exports require no network calls or new commits.
 `publish pause PROJECT` and `publish resume PROJECT` control future automatic
 uploads; `study build PROJECT --local-only` skips one upload. Do not undo a saved
