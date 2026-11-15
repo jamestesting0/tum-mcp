@@ -401,13 +401,30 @@ def import_material(
 def repository(
     project: Path,
     source: Annotated[
-        Path, typer.Option("--from", help="The folder artemis_get_repository saved.")
+        Path,
+        typer.Option(
+            "--from", help="The folder artemis_get_repository saved, or a clone you hold."
+        ),
     ],
+    exercise: Annotated[
+        int | None, typer.Option(help="The Artemis exercise ID, for a clone.")
+    ] = None,
+    include: Annotated[
+        list[str] | None, typer.Option(help="A glob of files to keep; repeat for each.")
+    ] = None,
 ) -> None:
-    """Copy a verified Artemis template snapshot into the project; prints no file text."""
-    from tum_mcp.course.sources.repository import import_snapshot, listing
+    """Snapshot an exercise's template files into the project; prints no file text."""
+    from tum_mcp.course.sources.repository import import_clone, import_snapshot, listing
 
-    manifest, files = import_snapshot(project.expanduser().resolve(), source.expanduser())
+    root, folder = project.expanduser().resolve(), source.expanduser().resolve()
+    if (folder / "manifest.json").is_file():
+        manifest, files = import_snapshot(root, folder)
+    elif exercise is None:
+        raise CampusError(
+            Code.ACTION_REQUIRED, "Name the Artemis exercise of a clone: --exercise ID."
+        )
+    else:
+        manifest, files = import_clone(root, folder, exercise, tuple(include or ()))
     typer.echo(json.dumps(listing(manifest, files), indent=2))
 
 

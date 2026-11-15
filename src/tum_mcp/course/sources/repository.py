@@ -149,6 +149,34 @@ def import_snapshot(root: Path, source: Path) -> tuple[Manifest, dict[str, str]]
     return read_snapshot(folder(root, manifest.key))
 
 
+def read_clone(folder: Path) -> dict[str, str]:
+    """A repository folder the student holds, read without entering hidden folders such as
+    `.git`, so credentials and remote URLs are never opened."""
+    if not folder.is_dir():
+        raise CampusError(Code.INVALID_RESPONSE, f"{folder} is not a folder.")
+    files: dict[str, str] = {}
+    for path in sorted(folder.rglob("*")):
+        relative = path.relative_to(folder)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 4 * MAX_FILE_CHARS:
+            continue
+        try:
+            files[relative.as_posix()] = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            files[relative.as_posix()] = "\x00"
+    return files
+
+
+def import_clone(
+    root: Path, clone: Path, exercise: int, include: tuple[str, ...] = ()
+) -> tuple[Manifest, dict[str, str]]:
+    """Snapshot a clone of the student's own repository as the exercise's template."""
+    key, files = f"artemis-{exercise}", read_clone(clone)
+    write_snapshot(folder(root, key), key, "clone", files, include)
+    return read_snapshot(folder(root, key))
+
+
 def project_snapshot(root: Path, key: str) -> tuple[Manifest, dict[str, str]] | None:
     """The project's snapshot for an exercise source, when it has one."""
     if not (folder(root, key) / "manifest.json").is_file():

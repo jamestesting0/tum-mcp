@@ -9,7 +9,11 @@ files.
 
 Use the first source that exists:
 
-1. **Artemis.** Call `artemis_get_repository` for the exercise. It saves the source files
+1. **A clone the student points to.** Snapshot it with `tum-mcp study repository PROJECT
+   --from FOLDER --exercise ARTEMIS_ID`. The command skips `.git` and other hidden files;
+   do not open them yourself, and never build, run, commit or push. Ask whether the clone
+   still holds the template or already has their own work.
+2. **Artemis.** Call `artemis_get_repository` for the exercise. It saves the source files
    as Artemis copied them from the template, never the student's later work, and returns
    a listing without file text. Copy the saved folder into the course project with
    `tum-mcp study repository PROJECT --from FOLDER`.
@@ -17,9 +21,6 @@ Use the first source that exists:
      accept a project rebuilt from the statement. Never start it yourself.
    - If the repository is larger than the editor holds, narrow it with `include` globs to
      the source folders the tasks touch.
-2. **A local clone** the user points to. Read source files only. Never open `.git/`, build
-   scripts, IDE settings or anything that may hold credentials or remote URLs; never
-   build, run, commit or push. Use the files as the template had them.
 3. **The statement**, only when neither exists, for example a programming question in a
    PDF exam. Rebuild the files:
    - each class or interface in the statement's UML gets a file with exactly its members;

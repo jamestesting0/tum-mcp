@@ -1,0 +1,21 @@
+id: exercises-pse-coding
+# exercises-pse-state with the student's clone of the Artemis template: the clone stands in
+# for artemis_get_repository, which lab variants may not change.
+turns:
+  - say: "Prepare my study lessons for the W02 State pattern lecture of Patterns in Software Engineering."
+    skills: [sync-course, read-content, prepare-study]
+  - say: "Now prepare a guided exercise for the W02E01 State Pattern programming exercise. I cloned my Artemis repository for it to ~/.skill-lab/fixtures/w02e01-state."
+    skills: [read-content, prepare-exercises, prepare-study]
+  - say: "Review them and fix any issues."
+    skills: [review-course, prepare-exercises, prepare-study]
+replies:
+  course: "Patterns in Software Engineering, this semester (WS26/27)."
+  semester: "This semester, WS26/27."
+  lecture: "Only the State pattern deck (W02U01) of the W02 lecture."
+  template: "It is the untouched template; I have not changed anything yet."
+  clone: "It is the untouched template; I have not changed anything yet."
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  publish: "No, keep it local."
+  default: "Your choice, go ahead."

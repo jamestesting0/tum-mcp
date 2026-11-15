@@ -5,7 +5,13 @@ import httpx2
 import pytest
 
 from tum_mcp.artemis import Artemis
-from tum_mcp.course.sources.repository import listing, read_snapshot, select, write_snapshot
+from tum_mcp.course.sources.repository import (
+    import_clone,
+    listing,
+    read_snapshot,
+    select,
+    write_snapshot,
+)
 from tum_mcp.credentials import Credential
 from tum_mcp.errors import CampusError
 from tum_mcp.settings import Account, Provider
@@ -109,3 +115,16 @@ def test_a_practice_repository_without_a_setup_time_uses_its_only_commit() -> No
     artemis, _ = provider([{"id": 9, "testRun": True}], initialized=False)
     with pytest.raises(CampusError, match="unclear"):
         artemis.template_files(artemis.exercise(77, 11).exercise)
+
+
+def test_a_clone_is_snapshotted_without_entering_git(tmp_path: Path) -> None:
+    clone, project = tmp_path / "clone", tmp_path / "course"
+    for path, text in FILES[TEMPLATE].items():
+        (clone / path).parent.mkdir(parents=True, exist_ok=True)
+        (clone / path).write_text(text)
+    (clone / ".git").mkdir()
+    (clone / ".git/config").write_text("url = https://user:secret@example.org/repo.git")
+    (project / ".tum-mcp").mkdir(parents=True)
+    manifest, files = import_clone(project, clone, 11)
+    assert manifest.key == "artemis-11" and sorted(files) == ["src/Idle.java", "src/State.java"]
+    assert ".git/config" not in {item.path for item in manifest.dropped}

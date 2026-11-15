@@ -1,0 +1,17 @@
+id: exercises-pse-factory
+# A second programming exercise with a different shape: several provided classes and a
+# visitor to complete, prepared on its own without Study.
+turns:
+  - say: "Prepare a guided exercise for the W03E01 Factory Method programming exercise of Patterns in Software Engineering. My Artemis repository for it is cloned at ~/.skill-lab/fixtures/w03e01-factory-method."
+    skills: [sync-course, read-content, prepare-exercises]
+replies:
+  course: "Patterns in Software Engineering, this semester (WS26/27)."
+  semester: "This semester, WS26/27."
+  template: "It is the untouched template; I have not changed anything yet."
+  clone: "It is the untouched template; I have not changed anything yet."
+  study: "No, only the exercise for now."
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  publish: "No, keep it local."
+  default: "Your choice, go ahead."
