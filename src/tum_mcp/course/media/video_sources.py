@@ -9,7 +9,7 @@ from tum_mcp.course.content.exercises import Exercise, ExerciseContent
 from tum_mcp.course.content.store import document_digest, present
 from tum_mcp.course.content.study import SourceVersion, StudyContent, Unit
 from tum_mcp.course.media.sources import exercise_hash, missing, part_fingerprint, teaching_hash
-from tum_mcp.course.media.speech import spoken
+from tum_mcp.course.media.speech import spoken, unwritten
 from tum_mcp.course.media.video_content import (
     ExerciseLocator,
     ExerciseRef,
@@ -205,6 +205,7 @@ def check_pattern(board: PatternStoryboard, source: VideoSource) -> StoryboardRe
     from tum_mcp.course.media.video_teaching import pattern_errors
 
     errors = pattern_errors(board, source.data if isinstance(source.data, Pattern) else None)
+    errors += unwritten(board.model_dump(mode="json"))
     if source.identity != f"exam/patterns/{board.pattern}":
         errors.append("plan.pattern: storyboard does not match the selected pattern")
     if source.teaching_hash != board.pattern_hash:
@@ -246,7 +247,7 @@ def check_pattern(board: PatternStoryboard, source: VideoSource) -> StoryboardRe
 def check_exercise(board: ExerciseStoryboard, source: VideoSource) -> StoryboardReport:
     from tum_mcp.course.media.video_teaching import exercise_errors
 
-    errors = exercise_errors(board)
+    errors = exercise_errors(board) + unwritten(board.model_dump(mode="json"))
     if source.identity != f"exercises/{board.exercise.key}":
         errors.append("plan.exercise: storyboard does not match the selected exercise")
     if source.teaching_hash != board.exercise_hash:

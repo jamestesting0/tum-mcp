@@ -38,7 +38,7 @@ from tum_mcp.course.media.sources import (
     parts,
     teaching_hash,
 )
-from tum_mcp.course.media.speech import spoken
+from tum_mcp.course.media.speech import spoken, unwritten
 from tum_mcp.course.media.video_content import (
     Locator,
     Sentence,
@@ -252,6 +252,7 @@ def check(root: Path, stem: str) -> dict:
     script = load_script(root, stem)
     items = _items(root, script)
     errors: list[str] = [f"source.missing: {key}" for key, item in items.items() if item is None]
+    errors += unwritten(script.model_dump(mode="json"))
     warnings: list[str] = []
     said: dict[str, set[tuple[str, str]]] = {key: set() for key in items}
     left: dict[str, set[tuple[str, str]]] = {key: set() for key in items}

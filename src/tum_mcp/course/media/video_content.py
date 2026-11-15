@@ -22,7 +22,7 @@ from pydantic import (
 from tum_mcp.course.content.exam import ExamContent
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.study import SourceVersion, StudyContent, Unit
-from tum_mcp.course.media.speech import spoken
+from tum_mcp.course.media.speech import spoken, unwritten
 from tum_mcp.course.project.models import Digest, Key
 from tum_mcp.settings import Frozen
 
@@ -324,7 +324,7 @@ def estimate_seconds(storyboard: "Storyboard | ExerciseStoryboard") -> tuple[flo
 def check_storyboard(storyboard: Storyboard, content: StudyContent) -> StoryboardReport:
     from tum_mcp.course.media.video_teaching import lesson_errors
 
-    errors = lesson_errors(storyboard)
+    errors = lesson_errors(storyboard) + unwritten(storyboard.model_dump(mode="json"))
     warnings: list[str] = []
     unit = next((item for item in content.units if item.key == storyboard.unit), None)
     if unit is None:

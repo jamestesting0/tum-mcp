@@ -2,6 +2,8 @@
 
 import re
 
+from pydantic import JsonValue
+
 # LaTeX, markup and symbols a voice reads as characters (or skips): say them in words.
 UNSPEAKABLE = re.compile(r"\\[(\[a-zA-Z]|[_^{}$|]|[∑∏∫√≤≥≠≈→←↔⇒⇔∀∃¬∧∨⊨⊢∈∉⊂⊆∪∩×÷·∞]")
 META = re.compile(
@@ -9,6 +11,22 @@ META = re.compile(
 )
 PRONOUN_START = re.compile(r"^(?:this|that|these|those|it|they|he|she)\b", re.I)
 LONG_WORDS = 40
+# An outline marks every text the author still has to write; none may reach a student.
+PLACEHOLDER = "Write:"
+
+
+def unwritten(value: JsonValue, path: str = "") -> list[str]:
+    if isinstance(value, str):
+        return (
+            [f"outline.unwritten {path}: replace the outline's placeholder"]
+            if value.startswith(PLACEHOLDER)
+            else []
+        )
+    if isinstance(value, dict):
+        return [e for key, item in value.items() for e in unwritten(item, f"{path}.{key}")]
+    if isinstance(value, list):
+        return [e for i, item in enumerate(value) for e in unwritten(item, f"{path}[{i}]")]
+    return []
 
 
 def spoken(where: str, sentences: tuple[str, ...], *, opens: bool) -> tuple[list[str], list[str]]:

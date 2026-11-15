@@ -139,6 +139,18 @@ def pattern(project: Path, key: str) -> None:
 
 
 @app.command()
+def outline(
+    project: Path,
+    video: str,
+    language: Annotated[str, typer.Option(help="Narration language code.")] = "en",
+) -> None:
+    """Write a draft storyboard whose beats already address every required part."""
+    from tum_mcp.course.media.outline import video as run
+
+    _emit(run(_project(project), video, language))
+
+
+@app.command()
 def plan(project: Path, selection: Annotated[Path, typer.Option(help="Selection JSON.")]) -> None:
     """Select Study units, Exercises or Exam patterns for videos; keep video numbers."""
     require_video_notes()

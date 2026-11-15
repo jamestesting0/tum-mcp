@@ -46,10 +46,26 @@ def schema(name: SchemaName) -> None:
 
 @app.command()
 def sources(project: Path) -> None:
-    """List Study units and Exam cheatsheet entries and patterns with their locators."""
+    """List Study units, exercises, Exam entries and patterns with their required parts."""
     from tum_mcp.course.media.audio_project import sources as run
 
     _emit(run(_ready(project)))
+
+
+@app.command()
+def outline(
+    project: Path,
+    stem: str,
+    source: Annotated[
+        list[str],
+        typer.Option(help="unit:KEY, exercise:SET/KEY, pattern:KEY or concept:KEY; repeatable."),
+    ],
+    title: Annotated[str | None, typer.Option(help="Track title.")] = None,
+) -> None:
+    """Write a draft script whose chapters already cover every required part."""
+    from tum_mcp.course.media.outline import audio as run
+
+    _emit(run(_ready(project), stem, source, title))
 
 
 @app.command()
