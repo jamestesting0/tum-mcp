@@ -339,6 +339,55 @@ def _exercise_defects(document: dict) -> list[dict]:
     return list(planted.values())
 
 
+EXAM_CHECKS = {
+    "xm_meta_summary": "clarity.no_meta",
+    "xm_wrong_answer": "correctness.answer_key",
+    "xm_case_feedback": "practice.case_feedback",
+    "xm_revealing_hint": "practice.hint_ladder",
+}
+CASE_FEEDBACK = "Not this case."
+
+
+def _exam_defects(exam: dict) -> list[dict]:
+    """One of each Exam pattern defect, in the first pattern that has a place for it."""
+    planted: dict[str, dict] = {}
+
+    def add(name: str, pattern: dict, probe: str) -> None:
+        planted[name] = {
+            "defect": name,
+            "check": EXAM_CHECKS[name],
+            "dimension": EXAM_CHECKS[name].split(".")[0],
+            "item": f"exam/pattern/{pattern['key']}",
+            "probe": probe,
+        }
+
+    for pattern in exam.get("patterns", []):
+        if "xm_meta_summary" not in planted:
+            pattern["summary"] = f"{META_LINE} {pattern['summary']}"
+            add("xm_meta_summary", pattern, pattern["summary"])
+            continue
+        steps = [s for e in pattern.get("examples", []) for s in e["steps"]]
+        steps += [s for d in pattern.get("drill", []) for s in d.get("guide", [])]
+        for step in steps:
+            if "xm_case_feedback" not in planted and step.get("case_feedback"):
+                wrong = next(i for i in range(len(step["case_feedback"])) if i + 1 != step["case"])
+                step["case_feedback"][wrong] = CASE_FEEDBACK
+                add("xm_case_feedback", pattern, CASE_FEEDBACK)
+            elif "xm_revealing_hint" not in planted and step.get("hint"):
+                shown = json.dumps(step["answer"][-1], ensure_ascii=False)[:160]
+                step["hint"] = f"The answer is: {shown}"
+                add("xm_revealing_hint", pattern, step["hint"])
+            elif "xm_wrong_answer" not in planted:
+                for block in step["answer"]:
+                    if block.get("kind") == "derivation":
+                        line = block["groups"][-1]["lines"][-1]
+                        if changed := _last_digit(line["latex"]):
+                            line["latex"] = changed
+                            add("xm_wrong_answer", pattern, changed)
+                            break
+    return list(planted.values())
+
+
 def _findings(project: Path) -> list[tuple[str, dict]]:
     """Every finding in the review records, in the shape recall compares: a rejected finding
     stays rejected, any other one was accepted."""
@@ -364,8 +413,8 @@ def plant(workspace: Path) -> dict:
     project = _project(workspace)
     content, exam = read_document(project, "study"), read_document(project, "exam")
     exercises = read_document(project, "exercises")
-    if content is None and exercises is None:
-        raise LabError("Calibration needs Study or Exercises content to plant defects in.")
+    if content is None and exercises is None and exam is None:
+        raise LabError("Calibration needs Study, Exercises or Exam content to plant defects in.")
     planted, touched = [], set()
     if content is not None:
         for name, (dimension, apply, _undone) in DEFECTS.items():
@@ -379,6 +428,7 @@ def plant(workspace: Path) -> dict:
         planted.extend(_exercise_defects(exercises))
         write_document(project, "exercises", exercises)
     if exam is not None:
+        planted.extend(_exam_defects(exam))
         write_document(project, "exam", exam)
     prior = [
         [item, finding["dimension"], finding.get("note", "")]
