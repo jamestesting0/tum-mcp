@@ -1,0 +1,45 @@
+id: exam-fai-confirm
+turns:
+- say: Set up my Fundamentals of AI course in this folder.
+  skills:
+  - sync-course
+  - read-content
+- say: Prepare study for the first two lectures.
+  skills:
+  - prepare-study
+  - read-content
+- say: Make lecture notes for the first lecture recording.
+  skills:
+  - prepare-lecture
+  - read-content
+- say: Make lecture notes for the earliest available lecture recording.
+  skills:
+  - prepare-lecture
+  - sync-course
+  - read-content
+- say: Prepare the first exercise sheet.
+  skills:
+  - prepare-exercises
+  - read-content
+- say: 'My FAI exam is in a few weeks. Prepare my exam prep for the whole course: the cheatsheet, solving
+    patterns, a mock exam like the real exam, and practice for the important ideas the patterns miss.'
+  skills:
+  - prepare-exams
+  - read-content
+  - sync-course
+- say: Review the exam prep and fix what is wrong or hard to use.
+  skills:
+  - review-course
+  - prepare-exams
+replies:
+  review: Not yet, I'll ask for a review when I'm ready.
+  review round: One round is enough.
+  another: One round is enough.
+  publish: No, keep it local.
+  learning record: Keep the learning record off.
+  study: Not now; just the exam prep.
+  lecture: Lectures 1 to 4 of this semester.
+  exam: Use only the past exams I gave you.
+  paper: Use only the past exams I gave you.
+  course: Fundamentals of Artificial Intelligence, this semester.
+  default: Your choice, go ahead.
