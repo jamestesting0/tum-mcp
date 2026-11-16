@@ -25,7 +25,8 @@ Do not initialize, refresh or build a project merely to answer a question.
 A course project links its Study, Exercises, Exam and Lecture items: exercise
 prerequisites, cheatsheet units, passages and exercises, pattern workflows and worked
 examples, mock variants, past-question guidance and lecture-note passages. Two commands
-read these links. They never fetch, build or write.
+read these links. They never fetch, build or write. For a question about how items connect,
+start here: one `study context` call replaces searching the files with `rg` or `study find`.
 
 | Request | Call |
 | --- | --- |
@@ -37,7 +38,8 @@ read these links. They never fetch, build or write.
 | No key known yet | one query: `tum-mcp study context . "few words" --purpose WORKSPACE --limit 4 --max-bytes 8000` |
 
 Concept keys are the cheatsheet entry keys in `app/exam/`. Skip these commands for a date,
-a simple fact or one item you already have open. Reuse one packet within a request.
+a simple fact or one item you already have open. Reuse one packet within a request, and do
+not search the course files beside it.
 
 Reading a packet:
 - `items` lists the selected item first, then the items it links to in the requested
@@ -49,7 +51,7 @@ Reading a packet:
 
 Answer navigation questions (which exercises practise X, what to review before Y, where Z
 is taught, how two concepts relate, what a change affects) from the packet's titles, notes
-and locators. Open a page only when you teach or quote its content, and then open every
+and locators. Do not open the files to confirm a link. Open a page only when you teach or quote its content, and then open every
 page you rely on. A packet maps course content; it says nothing about the student's
 mastery. [Selectors, limits and packet fields](references/links.md) cover the rarer cases.
 
