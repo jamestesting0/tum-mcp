@@ -236,7 +236,7 @@ def fidelity_project(tmp_path: Path) -> Path:
     """The knowledge course plus one instance of every authored link family and entries that
     cite a subset of their owner's sources."""
     from tum_mcp.course.checks.links import record_none
-    from tum_mcp.course.memory.store import load_inputs
+    from tum_mcp.course.memory.store import read_inputs
 
     root = knowledge_project(tmp_path)
     sha = {item.resource.key: item.sha256 for item in load_state(root).resources}
@@ -319,7 +319,7 @@ def fidelity_project(tmp_path: Path) -> Path:
         ("lectures", lectures),
     ):
         edit(workspace, change)
-    inputs = load_inputs(root)
+    inputs = read_inputs(root)
     record_none(
         root,
         inputs.study,
@@ -330,4 +330,33 @@ def fidelity_project(tmp_path: Path) -> Path:
         "exercises",
         "No sheet exercise trains Decorator yet.",
     )
+    return root
+
+
+def linked_project(tmp_path: Path, workspaces: frozenset[str] = WORKSPACES) -> Path:
+    """The knowledge course with the native links an author writes between workspaces."""
+    root = knowledge_project(tmp_path, workspaces=workspaces)
+
+    def edit(workspace: str, change) -> None:
+        path = content_file(root, workspace)
+        value = json.loads(path.read_bytes())
+        change(value)
+        path.write_text(json.dumps(value), encoding="utf-8")
+
+    def exam(value: dict) -> None:
+        concept = next(item for item in value["concepts"] if item["key"] == "observer")
+        if "study" in workspaces:
+            concept["units"] = ["observer"]
+            concept["passages"] = [PASSAGE]
+        if "exercises" in workspaces:
+            concept["exercises"] = [{"set": "sheet-1", "exercise": "observer-practice"}]
+
+    def lectures(value: dict) -> None:
+        if "study" in workspaces:
+            value["lectures"][0]["notes"][0]["passage"] = PASSAGE
+
+    if "exam" in workspaces:
+        edit("exam", exam)
+    if "lectures" in workspaces:
+        edit("lectures", lectures)
     return root

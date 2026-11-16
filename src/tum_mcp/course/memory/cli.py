@@ -1,4 +1,4 @@
-"""Register local knowledge commands on the existing study CLI."""
+"""Register the course-link commands on the study CLI."""
 
 from pathlib import Path
 from typing import Annotated
@@ -17,7 +17,9 @@ def register(app: typer.Typer) -> None:
         project: Path,
         query: Annotated[str | None, typer.Argument()] = None,
         item: Annotated[str | None, typer.Option(help="Exact typed item reference.")] = None,
-        concept: Annotated[str | None, typer.Option(help="Exact registry concept key.")] = None,
+        concept: Annotated[
+            str | None, typer.Option(help="Cheatsheet concept key in app/exam/.")
+        ] = None,
         purpose: Annotated[Purpose, typer.Option()] = "study",
         limit: Annotated[int, typer.Option(min=1, max=30)] = 12,
         max_bytes: Annotated[int, typer.Option(min=2048, max=65536)] = 24000,

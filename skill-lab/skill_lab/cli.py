@@ -341,7 +341,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--label", default="baseline", help="run: result label; compare: candidate")
     p.add_argument("--base", default="baseline", help="compare: the stored baseline label")
     p.add_argument("--stage", type=int, choices=(1, 2, 3), default=1, help="agent: trial stage")
-    p.add_argument("--arms", choices=("A", "B", "AB", "L", "O"), default="AB", help="agent: arms")
+    p.add_argument("--arms", choices=("B", "L", "O"), default="B", help="agent: arms")
     p.add_argument("--tasks", default="agent-tasks.json", help="agent: task file in the corpus")
     p.add_argument("--model", default=models.DEFAULT_AUTHORS["codex"], help="agent: model spec")
     p.add_argument("--trials", type=int, default=3, help="agent: stage 3 trials per task")

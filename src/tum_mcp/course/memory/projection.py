@@ -5,7 +5,7 @@ from tum_mcp.course.content.study import SourceVersion, term_markers
 from tum_mcp.course.lecture.content import Highlight
 from tum_mcp.course.ledger.coverage import outcome_state
 from tum_mcp.course.memory.graph import Edge, Graph, Node, block_records, cited, safe_text
-from tum_mcp.course.memory.models import LectureEvidence, SourceEvidence, normalized
+from tum_mcp.course.memory.models import normalized
 from tum_mcp.course.memory.store import CourseInputs
 
 
@@ -19,7 +19,6 @@ def project(inputs: CourseInputs) -> Graph:
     _lectures(graph)
     _links(graph)
     _gaps(graph)
-    _registry(graph)
     return graph
 
 
@@ -457,42 +456,3 @@ def _gaps(graph: Graph) -> None:
         graph.gaps.setdefault(ref, []).append(
             {"item": decision.item, "target": decision.target, "reason": decision.reason}
         )
-
-
-def _registry(graph: Graph) -> None:
-    registry = graph.inputs.registry
-    if registry is None:
-        return
-    for concept in registry.concepts:
-        graph.add(
-            Node(
-                f"concept/{concept.key}",
-                "concept",
-                "concept",
-                concept.label,
-                concept.summary,
-                " ".join(concept.aliases),
-                concept.model_dump(mode="json"),
-                scope={"role": "navigation"},
-            )
-        )
-    for assertion in registry.assertions:
-        graph.assertions[assertion.key] = assertion
-        for group in assertion.support_groups:
-            for evidence in group.evidence:
-                match evidence:
-                    case SourceEvidence():
-                        graph.source(evidence.source)
-                    case LectureEvidence():
-                        pass
-        if assertion.review.status == "reviewed":
-            graph.connect(
-                Edge(
-                    assertion.start.node_id,
-                    assertion.end.node_id,
-                    assertion.relation,
-                    "reviewed",
-                    assertion.key,
-                    assertion.conditions,
-                )
-            )

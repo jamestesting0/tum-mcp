@@ -1,11 +1,10 @@
-"""Budgeted evidence checks; support alternatives never become independent votes."""
+"""Budgeted, request-local checks that an item's cited sources and lecture evidence are current."""
 
 from dataclasses import dataclass, field
-from typing import Literal, assert_never
+from typing import Literal
 
 from tum_mcp.course.content.study import SourceVersion
 from tum_mcp.course.lecture.data import stale_lectures
-from tum_mcp.course.memory.models import Evidence, LectureEvidence, SourceEvidence, SupportGroup
 from tum_mcp.course.memory.store import CourseInputs, Observation
 from tum_mcp.course.project.store import confined
 from tum_mcp.errors import CampusError, Code
@@ -24,18 +23,12 @@ class Validity:
         return self.state == "current"
 
 
-@dataclass(frozen=True, slots=True)
-class GroupStatus:
-    key: str
-    current: bool
-    evidence: tuple[Validity, ...]
-
-
 @dataclass(slots=True)
 class EvidenceChecks:
     """Mutable per-request memo and budget; never stores anything on disk."""
 
     inputs: CourseInputs
+    # A full pass (corpus freezing) checks every payload without the request budget.
     full: bool = False
     sources: dict[tuple[str, str], Validity] = field(default_factory=dict)
     lectures: dict[str, Validity] = field(default_factory=dict)
@@ -125,12 +118,12 @@ class EvidenceChecks:
         self.lectures[key] = result
         return result
 
-    def timed(self, reference: LectureEvidence) -> Validity:
+    def timed(self, lecture_key: str, evidence_key: str) -> Validity:
         content = self.inputs.lectures
         if content is None:
             return Validity("unknown", "lecture workspace is missing")
-        lecture = next((item for item in content.lectures if item.key == reference.lecture), None)
-        evidence = next((item for item in content.evidence if item.key == reference.evidence), None)
+        lecture = next((item for item in content.lectures if item.key == lecture_key), None)
+        evidence = next((item for item in content.evidence if item.key == evidence_key), None)
         if lecture is None or evidence is None:
             return Validity("unknown", "timed evidence reference is missing")
         if evidence.interval is None or not evidence.reviewed or evidence.uncertainty:
@@ -156,20 +149,4 @@ class EvidenceChecks:
         )
         if not selected:
             return (Validity("unknown", "no timed evidence for this lecture item"),)
-        return tuple(
-            self.timed(LectureEvidence(kind="lecture", lecture=key, evidence=e))
-            for e in sorted(selected)
-        )
-
-    def evidence(self, reference: Evidence) -> Validity:
-        match reference:
-            case SourceEvidence():
-                return self.source(SourceVersion(key=reference.source, sha256=reference.sha256))
-            case LectureEvidence():
-                return self.timed(reference)
-            case unreachable:
-                assert_never(unreachable)
-
-    def group(self, group: SupportGroup) -> GroupStatus:
-        checks = tuple(self.evidence(item) for item in group.evidence)
-        return GroupStatus(group.key, all(item.current for item in checks), checks)
+        return tuple(self.timed(key, e) for e in sorted(selected))

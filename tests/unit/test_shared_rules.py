@@ -24,7 +24,6 @@ def test_copied_skill_passages_stay_identical() -> None:
     # Authors read SKILL.md and rarely open references, so these rules are copied on purpose.
     for marker in (
         "Write in the course's content language",
-        "When `tum-mcp study status PROJECT` reports `course_memory: true`",
         "**Maths.**",
         "| Write | Not |",
     ):

@@ -13,13 +13,13 @@ from tum_mcp.course.app.comment_cli import app as comments_app
 from tum_mcp.course.app.publish_cli import app as publish_app
 from tum_mcp.course.content.store import document_writes, index_name, present, read_document
 from tum_mcp.course.learner.cli import app as learner_app
-from tum_mcp.course.memory.cli import register as register_knowledge
+from tum_mcp.course.memory.cli import register as register_links
 from tum_mcp.course.output import emit, summarize
 from tum_mcp.course.workflow.cli import app as task_app
 from tum_mcp.errors import CampusError, Code
 
 app = typer.Typer(invoke_without_command=True, pretty_exceptions_show_locals=False)
-register_knowledge(app)
+register_links(app)
 app.add_typer(task_app, name="task", help="Track a complete local course request.")
 app.add_typer(
     comments_app,
@@ -137,7 +137,6 @@ def inspect(project: Path) -> None:
     from tum_mcp.course.project.context import context_review
     from tum_mcp.course.project.store import PRIVATE, load_state
     from tum_mcp.course.sources.duplicates import exact_groups
-    from tum_mcp.extension_selection import course_memory_enabled
 
     root = project.expanduser().resolve()
     state = load_state(root)
@@ -153,7 +152,6 @@ def inspect(project: Path) -> None:
                 "course": state.course.model_dump(mode="json"),
                 "generation": state.generation,
                 "private_folder": PRIVATE,
-                "course_memory": course_memory_enabled(),
                 "learner": consent(root),
                 "course_context": context_review(root, state).model_dump(mode="json"),
                 "coverage": [item.model_dump(mode="json") for item in state.coverage],
@@ -229,7 +227,6 @@ def report(
             "coverage",
             "review",
             "render",
-            "knowledge",
             "readiness",
             "coverage-plan",
         ]
@@ -323,20 +320,12 @@ def report(
         return
     if preparation is not None or batch is not None:
         raise CampusError(Code.ACTION_REQUIRED, "Use scope selectors with --section readiness.")
-    if section == "knowledge":
-        from tum_mcp.course.memory.report import knowledge_report
-
-        typer.echo(json.dumps({"knowledge": knowledge_report(root)}, ensure_ascii=False, indent=2))
-        return
     state = load_state(root)
     content = read_content(root) if present(root, "study") else None
     exercises = read_exercises(root)
     exam = cache(lambda: read_exam(root))
     lectures = cache(lambda: read_lectures(root))
     ledger = cache(lambda: read_ledger(root))
-    from tum_mcp.course.memory.report import knowledge_revision
-
-    semantics = cache(lambda: knowledge_revision(root))
     media = cache(lambda: discover(root, state, content))
     quality = cache(
         lambda: (
@@ -354,7 +343,6 @@ def report(
             exam(),
             lectures(),
             ledger=ledger(),
-            knowledge_revision=semantics(),
             media=media().structure,
         ),
         "coverage": lambda: coverage_report(state, content, exercises, ledger(), exam()),
@@ -635,10 +623,6 @@ def schema(
             from tum_mcp.course.lecture.selection import Selection
 
             result = Selection.model_json_schema()
-        case "knowledge":
-            from tum_mcp.course.memory.models import KnowledgeRegistry
-
-            result = KnowledgeRegistry.model_json_schema()
         case "snapshot":
             result = Snapshot.model_json_schema()
         case "content":

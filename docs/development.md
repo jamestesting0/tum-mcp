@@ -231,7 +231,7 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/course/checks/` | Report flags, structure map, answer keys (`answers.py`) and structured plans (`plans.py`) |
 | `src/tum_mcp/course/review/` | Review loop: check registry, items and fingerprints, ledger v2, packets, checker runner, scorecard and the `review` CLI |
 | `src/tum_mcp/course/app/` | Build, preview, visual and interaction checks, comments and publication |
-| `src/tum_mcp/course/memory/`, `media/`, `lecture/` | Course memory, audio and video notes, and the Lecture workspace |
+| `src/tum_mcp/course/relations/`, `media/`, `lecture/` | Links between workspaces, audio and video notes, and the Lecture workspace |
 | `src/tum_mcp/course/cli.py`, `output.py` | The `study` command group and its compact output |
 | `src/tum_mcp/bundled/course_app/site/` | Managed course app with feature modules under `runtime/` and vendor files and fonts under `assets/` |
 | `src/tum_mcp/bundled/review/checks.json`, `bundled/exemplars/` | The check registry and the gate-passing exemplar with its plan and answer key |
@@ -426,8 +426,8 @@ it; default validation checks the selected workflows. Activation statistics rema
 unmeasured until genuine fresh-session trial records exist. Default tests use
 synthetic media and course data. `test:upgrade` exercises optional lecture, audio and
 video install/update/export/removal from an actual local npm artifact on every platform;
-`test:consumer` covers the course-memory extension on a fresh installation and logs the
-duration of each phase. Never publish or
+`test:consumer` runs `study context` and `study impact` on a fresh installation and logs
+the duration of each phase. Never publish or
 stage npm as a test.
 
 ## Explore maintenance boundary
@@ -447,43 +447,31 @@ installed browser journey, rather than adding a platform matrix. Focused regress
 live in `test_study_explore.py` and `test_study_explore_browser.py`; run them plus affected
 study/course-app/exercise tests and installation/migration checks for integration.
 
-## Knowledge harness verification
+## Course relations verification
 
-Course Memory is an opt-in selection in the shared extension registry. Disabled
-graph requests fail before loading course metadata; native structure/review reports
-ignore retained graph files. The course review stores its optional semantic binding
-separately from the native revision so disabling memory leaves native review intact.
-Graph fixtures opt in explicitly; base/default-off tests must remain unselected.
-`test_course_memory_extension.py` exercises setup, source sync, client update,
-conflict-safe removal, reinstall and stale evidence. The installed consumer runs
-the extension lifecycle through the packaged launcher. No model trials are needed.
+`study context` and `study impact` are part of every installation. Projection is
+request-local: `course/relations/store.py` captures metadata and selected source
+observations; evidence checks reuse lecture receipts/figures through optional observers;
+projection preserves native schemas; query and packet modules enforce deterministic
+traversal and UTF-8 output limits. Resource maps and candidate views are reused only
+within a request; selection retains current homes across workspaces without validating
+every discarded view. No persistent cache or new runtime dependency is introduced.
 
-Knowledge projection is request-local: `course/memory/store.py` captures metadata and
-selected source observations; evidence checks reuse lecture receipts/figures through
-optional observers; projection preserves native schemas; assertions compute independent
-review fingerprints; query and packet modules enforce deterministic traversal and UTF-8
-output limits. Resource maps and candidate views are reused only within a request;
-selection retains current homes across workspaces without validating every discarded
-view. The graph walk still checks reviewed paths and cycle/support dependencies.
-Revision-only checks preserve the full reviewed semantic hash and snapshot validation;
-explicit knowledge reports also diagnose inactive assertions. No persistent cache or
-new runtime dependency is introduced.
+The learning record (`course/learner/`) reads item ids through
+`relations.store.read_inputs`. Its decisions are deterministic and covered by
+`tests/integration/test_learner_record.py`: consent from setup only, refusal while off,
+dedupe, forget, the revisit schedule, brief selection and byte cap, owner-only files and
+the `study init --learner` requirement. Agent behaviour (asking nothing, recording in the
+same turn, staying out of unrelated chats, correcting a recorded mistake) is not part of
+the automated suite.
 
-The learning record (`course/learner/`) reads item ids through the ungated
-`memory.store.read_inputs`, so it works with Course Memory off. Its decisions are
-deterministic and covered by `tests/integration/test_learner_record.py`: consent from
-setup only, refusal while off, dedupe, forget, the revisit schedule, brief selection and
-byte cap, owner-only files and the `study init --learner` requirement. Agent behaviour
-(asking nothing, recording in the same turn, staying out of unrelated chats, correcting a
-recorded mistake) is not part of the automated suite.
-
-Use `uv run pytest -q tests/unit/test_study_knowledge*
- tests/integration/test_study_knowledge*` (on one shell line) for focused behavior, plus
+Use `uv run pytest -q tests/unit/test_course_relations*
+ tests/integration/test_course_relations*` (on one shell line) for focused behavior, plus
 existing structure/review, lecture freshness, migration and export tests when those
-boundaries change. Installed consumer checks exercise schema/context/impact through the
+boundaries change. Installed consumer checks exercise context/impact through the
 packaged launcher; retain all native installation, upgrade and lifecycle gates.
 
-`test_course_memory_fidelity.py` holds one instance of every authored link family and
+`test_course_relations_fidelity.py` holds one instance of every authored link family and
 checks that each reaches its other end, that exact selectors list authored links before
 weaker items, that locators name only the sources an entry cites, and that every key
 reference in the four content schemas is either a tested link family or classified as
@@ -495,17 +483,17 @@ cold extraction versus warm lookup timing. Projection and source verification ar
 separately on 300 synthetic units without a wall-clock CI threshold. CI checks every
 case's safety, status and graph completeness and that the control cases' baselines still
 find their answers, using one prepared project copied per case. The bridge comparison,
-timings, 300-unit profile and `.omo/evidence/study-knowledge-harness/` files run only
-with `TUM_MCP_KNOWLEDGE_EVALUATION=1 uv run pytest -q
-tests/integration/test_study_knowledge_evaluation.py`. Agent effectiveness
+timings, 300-unit profile and `.omo/evidence/course-relations/` files run only
+with `TUM_MCP_RELATIONS_EVALUATION=1 uv run pytest -q
+tests/integration/test_course_relations_evaluation.py`. Agent effectiveness
 needs paired model trials with exact model/revision/corpus
 identity, unsuccessful runs retained and quality, tokens, setup and update latency
 reported separately. Retrieval tests alone do not establish student learning gains.
 
-Local Course Memory optimization profiling uses only synthetic inputs:
+Local course relations profiling uses only synthetic inputs:
 
 ```sh
-TUM_MCP_MEMORY_PROFILE=1 TUM_MCP_MEMORY_PROFILE_OUTPUT="$PWD/.omo/evidence/course-memory-optimization/profile.json" uv run pytest -q tests/integration/test_study_knowledge_efficiency.py -k profile
+TUM_MCP_RELATIONS_PROFILE=1 TUM_MCP_RELATIONS_PROFILE_OUTPUT="$PWD/.omo/evidence/course-relations-profile/profile.json" uv run pytest -q tests/integration/test_course_relations_efficiency.py -k profile
 ```
 
 The fixed helper records input/harness identities, candidate views, actual fingerprint

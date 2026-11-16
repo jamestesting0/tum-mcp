@@ -70,7 +70,8 @@ from tum_mcp.skills import bundled
 from tum_mcp.uninstall import uninstall_client
 def forbidden():
     raise AssertionError('Native credential storage must not be opened')
-assert (bundled()/'course-memory/references/knowledge.md').is_file()
+assert (bundled()/'read-content/references/links.md').is_file()
+assert not (bundled()/'course-memory').exists()
 auth.system_keyring=forbidden
 root=Path(os.environ['TUM_MOODLE_DATA_DIR'])
 root.mkdir(parents=True,exist_ok=True)
@@ -107,7 +108,7 @@ for name in ('cursor','antigravity'):
 `;
   phase('check local storage and additional clients');
   run(first.python, ['-I', '-c', storage], 60000);
-  phase('check study routing and the course-memory lifecycle');
+  phase('check study routing and course links');
   const studyProject = join(root, 'course Ω');
   const status = () => JSON.parse(run(process.execPath, [launcher, 'study', 'status', studyProject]));
   assert.equal(status().mode, 'initialize');
@@ -116,18 +117,10 @@ for name in ('cursor','antigravity'):
   const boundStatus = status();
   assert.equal(boundStatus.mode, 'sync');
   assert.equal(boundStatus.course.synthetic, true);
+  assert.equal('course_memory' in boundStatus, false);
   const studyIndex = JSON.parse(readFileSync(join(studyProject, 'app/study/course.json'), 'utf8'));
   const nativeUnit = JSON.parse(readFileSync(join(studyProject, 'app/study/units', `${studyIndex.units[0]}.json`), 'utf8'));
-  assert.equal(boundStatus.course_memory, false);
-  const denied = () => spawnSync(process.execPath, [launcher, 'study', 'context', studyProject, 'topic'], { env, encoding: 'utf8', shell: false, timeout: 60000 });
-  assert.notEqual(denied().status, 0);
-  run(process.execPath, [launcher, 'install', 'course-memory', '--json']);
-  assert.equal(status().course_memory, true);
-  const beforeKnowledge = readdirSync(studyProject, { recursive: true }).sort();
-  const knowledgeSchema = JSON.parse(run(process.execPath, [launcher, 'study', 'schema', 'knowledge']));
-  assert.equal(knowledgeSchema.properties.schema_version.const, 1);
-  const contextPacket = JSON.parse(run(process.execPath, [launcher, 'study', 'context', studyProject, '--item', `study/unit/${nativeUnit.key}`]));
-  assert.ok(contextPacket.items.some(item => item.id === `study/unit/${nativeUnit.key}`));
+  const beforeLinks = readdirSync(studyProject, { recursive: true }).sort();
   const narrowRaw = run(process.execPath, [launcher, 'study', 'context', studyProject, '--item', `study/unit/${nativeUnit.key}`, '--limit', '4', '--max-bytes', '8000']);
   const narrowPacket = JSON.parse(narrowRaw);
   assert.ok(narrowPacket.items.some(item => item.id === `study/unit/${nativeUnit.key}`));
@@ -138,21 +131,7 @@ for name in ('cursor','antigravity'):
   assert.equal(impactPacket.source_status, 'current');
   assert.ok(impactPacket.items.some(item => impactPacket.direct.includes(item.id) && item.owner && item.evidence_status));
   assert.ok(impactPacket.owners.includes(`study/unit/${nativeUnit.key}`));
-  assert.deepEqual(readdirSync(studyProject, { recursive: true }).sort(), beforeKnowledge);
-  const memoryPath = join(studyProject, '.tum-mcp/knowledge.json');
-  const memoryBytes = JSON.stringify({ schema_version: 1, course_key: boundStatus.course.key, semester: boundStatus.course.semester, concepts: [], assertions: [] });
-  writeFileSync(memoryPath, memoryBytes);
-  run(process.execPath, [launcher, 'update', '--local']);
-  assert.equal(status().course_memory, true);
-  run(process.execPath, [launcher, 'uninstall', 'course-memory', '--json']);
-  assert.equal(status().course_memory, false);
-  assert.notEqual(denied().status, 0);
-  assert.equal(readFileSync(memoryPath, 'utf8'), memoryBytes);
-  run(process.execPath, [launcher, 'install', 'course-memory', '--json']);
-  const restored = JSON.parse(run(process.execPath, [launcher, 'study', 'context', studyProject, '--item', `study/unit/${nativeUnit.key}`]));
-  assert.ok(restored.items.some(item => item.id === `study/unit/${nativeUnit.key}`));
-  assert.equal(readFileSync(memoryPath, 'utf8'), memoryBytes);
-  run(process.execPath, [launcher, 'uninstall', 'course-memory', '--json']);
+  assert.deepEqual(readdirSync(studyProject, { recursive: true }).sort(), beforeLinks);
   // The upgrade consumer owns the optional lecture/audio/video lifecycle on every platform.
   const studyState = join(studyProject, '.tum-mcp/state.json');
   writeFileSync(studyState, 'synthetic damaged study state');

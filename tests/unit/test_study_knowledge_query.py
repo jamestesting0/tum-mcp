@@ -1,7 +1,5 @@
 """Retrieval invariants independent of any particular course serialization."""
 
-from types import SimpleNamespace
-
 import pytest
 
 from tum_mcp.course.memory.graph import Edge, Graph, Node
@@ -21,13 +19,6 @@ def test_word_matching_prefers_titles_and_normalizes_unicode():
     assert lexical_score(value, "funct") == 0
 
 
-def test_alias_collision_is_explicit_without_arbitrary_selection():
-    graph = Graph(None)
-    for key in ("a", "b"):
-        graph.add(node(f"concept/{key}", workspace="concept", payload={"aliases": ["Shared"]}))
-    assert seeds(graph, "shared") == ([], ["concept/a", "concept/b"])
-
-
 def test_navigation_never_bridges_shared_source_or_sibling_parent():
     graph = Graph(None)
     graph.nodes = {ref: node(ref) for ref in ("a", "parent", "b", "source/common")}
@@ -37,7 +28,7 @@ def test_navigation_never_bridges_shared_source_or_sibling_parent():
         Edge("a", "source/common", "supported_by"),
         Edge("b", "source/common", "supported_by"),
     }
-    routes, exhausted = walk(graph, ["a"], SimpleNamespace(edge=lambda _: True))
+    routes, exhausted = walk(graph, ["a"])
     assert set(routes) == {"a", "parent"} and not exhausted
 
 
@@ -48,7 +39,7 @@ def test_reverse_navigation_preserves_fact_direction_and_stops_at_two_hops():
         Edge("b", "c", "prerequisite_of"),
         Edge("c", "d", "prerequisite_of"),
     }
-    routes, _ = walk(graph, ["c"], SimpleNamespace(edge=lambda _: True))
+    routes, _ = walk(graph, ["c"])
     assert routes["a"][0][0][0].start == "b"
     assert routes["a"][0][0][1] == "reverse"
     assert len(routes["a"][0]) == 2
@@ -57,7 +48,7 @@ def test_reverse_navigation_preserves_fact_direction_and_stops_at_two_hops():
 def test_traversal_node_and_edge_exhaustion_are_reported():
     graph = Graph(None)
     graph.edges = {Edge("a", str(i), "teaches") for i in range(2200)}
-    routes, exhausted = walk(graph, ["a"], SimpleNamespace(edge=lambda _: True))
+    routes, exhausted = walk(graph, ["a"])
     assert exhausted and len(routes) == 256
 
 
@@ -101,32 +92,9 @@ def test_conversational_multi_concept_query_finds_existing_homes():
     graph.add(
         node("study/unit/transitions", "Deterministic transitions", "A fixed transition rule.")
     )
-    selected, ambiguous = seeds(
-        graph, "Explain the vacuum cleaner observability deterministic please"
-    )
+    selected = seeds(graph, "Explain the vacuum cleaner observability deterministic please")
     assert set(selected) == {"study/unit/vacuum", "study/unit/transitions"}
-    assert not ambiguous
-    assert seeds(graph, "Please explain the quuxnebula") == ([], [])
-
-
-def test_polite_query_does_not_resolve_a_shared_alias_arbitrarily():
-    graph = Graph(None)
-    for key, title in (("observer", "Observer"), ("coupling", "Loose coupling")):
-        graph.add(
-            node(
-                f"concept/{key}",
-                title,
-                "Notification pattern",
-                "concept",
-                {"aliases": ["Notification pattern"]},
-            )
-        )
-    assert seeds(graph, "Please explain the notification pattern") == (
-        [],
-        ["concept/coupling", "concept/observer"],
-    )
-    assert seeds(graph, "notification pattern exam") == ([], [])
-    assert seeds(graph, "Observer notification pattern exam")[0] == ["concept/observer"]
+    assert seeds(graph, "Please explain the quuxnebula") == []
 
 
 def test_partial_body_match_needs_distinct_terms_without_matching_a_substring():
@@ -134,10 +102,3 @@ def test_partial_body_match_needs_distinct_terms_without_matching_a_substring():
     assert lexical_score(value, "composition missing") == 0
     assert lexical_score(value, "composition registration missing") == 2
     assert lexical_score(value, "composit") == 0
-
-
-def test_exact_symbol_and_short_aliases_precede_scaffold_filtering():
-    graph = Graph(None)
-    graph.add(node("concept/sum", "Sum", "", "concept", {"aliases": ["∑", "a_b", "a", "BFS"]}))
-    for value in ("∑", "a_b", "a", "Please explain BFS"):
-        assert seeds(graph, value) == (["concept/sum"], [])

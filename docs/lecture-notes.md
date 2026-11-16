@@ -205,14 +205,10 @@ silently omitted or compressed. A prepared Lecture-only app can be published.
 
 ## Cross-workspace relationships
 
-The following graph commands require the optional Course Memory extension
-(`tum-mcp install course-memory`); Lecture installation alone does not enable it.
-
 `study context PROJECT --item lectures/lecture/KEY --purpose lectures` connects prepared
 notes with authored teaching/practice links, including each note's Study passage. It reads only cached evidence and never
 starts recording processing or installs the optional lecture extension. Selected lectures
 reuse receipt, transcript, original-frame and derived-thumbnail validation. Unreviewed,
-uncertain or stale timed evidence cannot activate reviewed clarification assertions.
-`study report PROJECT --section knowledge` is an explicit full local semantic audit;
-ordinary bounded context checks at most four lectures. An explicit source refresh can
+uncertain or stale timed evidence makes a note navigation only, never evidence. A
+context request checks at most four lectures. An explicit source refresh can
 be followed by `study impact PROJECT --source KEY`, then actual content review.

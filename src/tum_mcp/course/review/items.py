@@ -185,8 +185,6 @@ def collect(
     return items
 
 
-def course_item(structure: dict, revision: str, knowledge: str | None = None) -> ReviewItem:
-    """The course as one item: its map is read; its structure revision, and the reviewed
-    Course Memory relations when enabled, decide staleness."""
-    blocks = {"structure": revision} | ({"knowledge": knowledge[:16]} if knowledge else {})
-    return ReviewItem("course", "course", "Course", structure, blocks)
+def course_item(structure: dict, revision: str) -> ReviewItem:
+    """The course as one item: its map is read; its structure revision decides staleness."""
+    return ReviewItem("course", "course", "Course", structure, {"structure": revision})

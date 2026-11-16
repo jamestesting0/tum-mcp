@@ -8,7 +8,6 @@ from typing import Literal
 from pydantic import JsonValue
 
 from tum_mcp.course.content.study import SourceVersion
-from tum_mcp.course.memory.models import Assertion
 from tum_mcp.course.memory.store import CourseInputs
 
 
@@ -31,8 +30,7 @@ class Edge:
     start: str
     end: str
     relation: str
-    origin: Literal["native", "lexical", "reviewed"] = "native"
-    assertion: str | None = None
+    origin: Literal["native", "lexical"] = "native"
     conditions: tuple[str, ...] = ()
     note: str = ""
 
@@ -51,7 +49,6 @@ class Graph:
     inputs: CourseInputs
     nodes: dict[str, Node] = field(default_factory=dict)
     edges: set[Edge] = field(default_factory=set)
-    assertions: dict[str, Assertion] = field(default_factory=dict)
     issues: list[Issue] = field(default_factory=list)
     gaps: dict[str, list[dict[str, str]]] = field(default_factory=dict)
 

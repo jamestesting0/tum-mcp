@@ -90,10 +90,10 @@ def test_protected_changes_flag_content_and_memory_writes_but_not_caches():
     after = {
         "app/study/course.json": "a2",
         ".tum-mcp/cache/x": "b2",
-        ".tum-mcp/knowledge.json": "new",
+        ".tum-mcp/links.json": "new",
         ".tum-mcp/notes/finding.md": "n",
     }
-    assert protected_changes(before, after) == [".tum-mcp/knowledge.json", "app/study/course.json"]
+    assert protected_changes(before, after) == [".tum-mcp/links.json", "app/study/course.json"]
 
 
 def test_stage_two_repeats_only_tasks_whose_arms_disagree():

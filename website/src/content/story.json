@@ -174,7 +174,7 @@
       "weight": 0.66,
       "caption": {
         "title": "Add workflows",
-        "line": "Lecture, Audio Notes, Video Notes and Course Memory are optional."
+        "line": "Lecture, Audio Notes and Video Notes are optional."
       },
       "focus": "terminal",
       "terminal": {
@@ -1008,77 +1008,6 @@
         }
       ],
       "appStart": "#audio/01_breadth-first-search"
-    },
-    {
-      "key": "ext-memory",
-      "chapter": "extensions",
-      "weight": 2,
-      "caption": {
-        "title": "Course Memory",
-        "line": "Answers that follow the course’s own links."
-      },
-      "focus": "chat",
-      "folder": true,
-      "chat": {
-        "send": "How does A* relate to Dijkstra?",
-        "messages": [
-          {
-            "role": "tool",
-            "kind": "skill",
-            "name": "course-memory",
-            "result": "3 links"
-          },
-          {
-            "role": "agent",
-            "text": "A* is Dijkstra plus an estimate: it expands by f = g + h. With h = 0 both expand in the same order. Lecture 3 compares them on the same graph, and Exercise 3 practises the heuristic."
-          }
-        ],
-        "files": []
-      },
-      "app": "#astar/content",
-      "guide": [
-        {
-          "target": [
-            {
-              "css": "aside a",
-              "text": "^Lecture 3\\s*A\\* search"
-            }
-          ],
-          "click": true,
-          "route": "#astar/content",
-          "label": "Lecture 3",
-          "line": "The answer opens the lesson it cites.",
-          "at": 0.259
-        },
-        {
-          "target": {
-            "css": "main a",
-            "text": "^Exercise 3"
-          },
-          "label": "Linked",
-          "line": "Practice for the same idea.",
-          "at": 0.4
-        },
-        {
-          "target": {
-            "css": "main h2",
-            "text": "^Expand by estimated total cost$"
-          },
-          "label": "f = g + h",
-          "line": "The rule the answer explains.",
-          "at": 0.6
-        },
-        {
-          "target": {
-            "css": "main h3",
-            "text": "^Dijkstra and A\\* on the same graph$"
-          },
-          "label": "Compared",
-          "line": "Dijkstra and A* on one graph.",
-          "at": 0.8
-        }
-      ],
-      "appStart": "#dijkstra/content"
     }
   ]
 }

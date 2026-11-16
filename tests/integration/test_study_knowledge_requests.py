@@ -2,21 +2,18 @@ from pathlib import Path
 
 import pytest
 from documents import content_file
-from knowledge_annotations import connected_annotations, write_registry
-from knowledge_fixture import knowledge_project
+from knowledge_fixture import knowledge_project, linked_project
 
 from tum_mcp.course.memory.packet import encoded
 from tum_mcp.course.memory.query import context, impact
-from tum_mcp.course.memory.report import knowledge_report
 from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError
 
-pytestmark = pytest.mark.usefixtures("course_memory")
+pytestmark = pytest.mark.usefixtures("lecture_extension")
 
 
 def test_context_four_homes_is_deterministic_safe_and_read_only(tmp_path: Path):
-    root = knowledge_project(tmp_path)
-    write_registry(root, connected_annotations(root), reviewed=True)
+    root = linked_project(tmp_path)
     before = {p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()}
     packet = context(root, concept="observer")
     assert {item["workspace"] for item in packet["items"]} == {
@@ -33,14 +30,6 @@ def test_context_four_homes_is_deterministic_safe_and_read_only(tmp_path: Path):
     assert b'"payload"' not in output and b'"recording"' not in output
     assert before == {p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()}
     assert len(encoded(context(root, concept="observer", max_bytes=2048))) <= 2048
-
-
-def test_ambiguous_alias_has_no_semantic_paths(tmp_path: Path):
-    root = knowledge_project(tmp_path)
-    write_registry(root, connected_annotations(root), reviewed=True)
-    packet = context(root, "Notification pattern")
-    assert packet["status"] == "ambiguous" and len(packet["candidates"]) == 2
-    assert packet["items"] == packet["paths"] == []
 
 
 @pytest.mark.parametrize(
@@ -80,17 +69,6 @@ def test_impact_distinguishes_unknown_unmapped_direct_and_transitive(tmp_path: P
     assert len(encoded(impact(root, unused, max_bytes=2048))) <= 2048
 
 
-def test_full_report_exposes_expected_receipt_without_approving(tmp_path: Path):
-    root = knowledge_project(tmp_path)
-    write_registry(root, connected_annotations(root))
-    report = knowledge_report(root)
-    assert report["knowledge_revision"] is None
-    assert all(
-        row["state"] == "candidate" and row["expected_revision"] and row["ready_for_review"]
-        for row in report["assertions"]
-    )
-
-
 def test_uncertain_timed_evidence_never_becomes_supported_clarification(tmp_path: Path):
     import json
 
@@ -103,9 +81,6 @@ def test_uncertain_timed_evidence_never_becomes_supported_clarification(tmp_path
     packet = context(root, item="lectures/lecture/observer-lecture/section/registration")
     section = next(item for item in packet["items"] if item["kind"] == "section")
     assert section["evidence_status"] == "stale" and not section["usable_as_evidence"]
-    write_registry(root, connected_annotations(root), reviewed=True)
-    row = next(row for row in knowledge_report(root)["assertions"] if row["key"] == "lecture")
-    assert row["state"] == "invalid"
 
 
 def test_exam_packet_preserves_paper_and_official_solution_roles(tmp_path: Path):
@@ -116,26 +91,6 @@ def test_exam_packet_preserves_paper_and_official_solution_roles(tmp_path: Path)
     assert {row["role"] for row in item["source_roles"]} == {"paper", "official_solution"}
     assert item["tags"]["origin"] == "past"
     assert b"https://" not in encoded(packet) and b"SOLUTION_SECRET" not in encoded(packet)
-
-
-@pytest.mark.parametrize("max_bytes", [65536, 2048])
-def test_impact_reports_assertion_diagnostics_omitted_by_its_key_cap(tmp_path: Path, max_bytes):
-    from knowledge_annotations import annotation
-
-    root = knowledge_project(tmp_path)
-    rows = [
-        annotation(root, key=f"candidate-{i}-" + "x" * 80) | {"conditions": [f"Toy scope {i}."]}
-        for i in range(31)
-    ]
-    write_registry(root, rows)
-
-    packet = impact(root, "slides", max_bytes=max_bytes)
-
-    assert len(packet["assertion_candidates"]) <= 30
-    assert len(packet["assertion_candidates"]) + packet["omitted"]["assertion_candidates"] == 31
-    assert len(encoded(packet)) <= max_bytes
-    assert set(packet["assertion_candidates"]) <= {row["key"] for row in rows}
-    assert packet["status"] == "partial"
 
 
 def test_context_reports_native_reference_issues_omitted_by_its_cap(tmp_path: Path):

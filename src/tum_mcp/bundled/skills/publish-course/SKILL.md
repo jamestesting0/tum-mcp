@@ -61,7 +61,7 @@ note citations and clickable highlight images. A recording may require the
 visitor's campus login; linking does not upload or grant access to the recording.
 
 Original downloads, raw recording/transcript evidence, authoring files, comments,
-progress, Course Memory, `.tum-mcp/`, audio and generated videos stay local.
+progress, `.tum-mcp/`, audio and generated videos stay local.
 Prepared explanations, reproduced questions and embedded quotations do become
 public; source-file exclusion does not redact their teaching content.
 

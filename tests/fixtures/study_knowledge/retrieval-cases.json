@@ -22,7 +22,7 @@
       "study/unit/observer",
       "exercises/set/sheet-1/exercise/observer-practice",
       "exam/concept/observer",
-      "lectures/lecture/observer-lecture/section/registration"
+      "lectures/lecture/observer-lecture"
     ]
   },
   {
@@ -135,8 +135,7 @@
     "selector": {
       "concept": "observer"
     },
-    "change": "bytes",
-    "forbid_trusted_assertion": "teaching"
+    "change": "bytes"
   },
   {
     "id": "F02",
@@ -144,8 +143,7 @@
     "selector": {
       "concept": "observer"
     },
-    "change": "missing_payload",
-    "forbid_trusted_assertion": "teaching"
+    "change": "missing_payload"
   },
   {
     "id": "F03",
@@ -153,35 +151,7 @@
     "selector": {
       "concept": "observer"
     },
-    "change": "withdrawn",
-    "forbid_trusted_assertion": "teaching"
-  },
-  {
-    "id": "F04",
-    "group": "freshness",
-    "selector": {
-      "concept": "observer"
-    },
-    "change": "candidate",
-    "forbid_trusted_assertion": "teaching"
-  },
-  {
-    "id": "F05",
-    "group": "freshness",
-    "selector": {
-      "concept": "observer"
-    },
-    "change": "rejected",
-    "forbid_trusted_assertion": "teaching"
-  },
-  {
-    "id": "F06",
-    "group": "freshness",
-    "selector": {
-      "concept": "observer"
-    },
-    "change": "missing_endpoint",
-    "forbid_trusted_assertion": "teaching"
+    "change": "withdrawn"
   },
   {
     "id": "F07",
@@ -189,25 +159,7 @@
     "selector": {
       "concept": "observer"
     },
-    "change": "uncertain",
-    "forbid_trusted_assertion": "lecture"
-  },
-  {
-    "id": "F08",
-    "group": "freshness",
-    "selector": {
-      "concept": "observer"
-    },
-    "change": "wrong_semester",
-    "forbid_trusted_assertion": "teaching"
-  },
-  {
-    "id": "A01",
-    "group": "scope",
-    "selector": {
-      "query": "Notification pattern"
-    },
-    "expected_status": "ambiguous"
+    "change": "uncertain"
   },
   {
     "id": "A02",
@@ -256,15 +208,6 @@
       "source": "unknown-source"
     },
     "expected_status": "unknown_source"
-  },
-  {
-    "id": "A08",
-    "group": "scope",
-    "selector": {
-      "query": "Notification pattern",
-      "max_bytes": 2048
-    },
-    "expected_status": "ambiguous"
   },
   {
     "id": "R01",

@@ -8,13 +8,12 @@ from pathlib import Path
 
 from pydantic import JsonValue
 
-from tum_mcp.course.memory.assertions import AssertionChecks
 from tum_mcp.course.memory.evidence import EvidenceChecks
 from tum_mcp.course.memory.graph import Edge, Graph, Node
 from tum_mcp.course.memory.models import Purpose, normalized
 from tum_mcp.course.memory.packet import envelope, excerpt, fit, item_view, validity
 from tum_mcp.course.memory.projection import project
-from tum_mcp.course.memory.store import load_inputs
+from tum_mcp.course.memory.store import read_inputs
 from tum_mcp.errors import CampusError, Code
 
 LEARNING = frozenset({"study", "exercises", "exam", "lectures"})
@@ -64,55 +63,26 @@ def lexical_score(node: Node, query: str) -> int:
     return _lexical(node, tokens(query) - SCAFFOLD)[0]
 
 
-def seeds(graph: Graph, query: str) -> tuple[list[str], list[str]]:
+def seeds(graph: Graph, query: str) -> list[str]:
     value = normalized(query)
     exact = [
         node.id
         for node in graph.nodes.values()
-        if node.workspace in LEARNING | {"concept"}
+        if node.workspace in LEARNING
         and value in {normalized(node.id), normalized(node.id.rsplit("/", 1)[-1])}
     ]
     if exact:
-        return sorted(exact)[:8], []
-    names: dict[str, list[str]] = {}
-    labels: dict[str, set[str]] = {}
-    for node in graph.nodes.values():
-        if node.workspace != "concept":
-            continue
-        aliases = node.payload.get("aliases", []) if isinstance(node.payload, dict) else []
-        labels[node.id] = {normalized(node.title), *(normalized(a) for a in aliases)}
-        for name in labels[node.id]:
-            names.setdefault(name, []).append(node.id)
-    aliases = names.get(value, [])
-    if aliases:
-        return ([], sorted(aliases)) if len(aliases) > 1 else (aliases, [])
+        return sorted(exact)[:8]
     exact_titles = [
         node.id
         for node in graph.nodes.values()
         if node.workspace in LEARNING and normalized(node.title) == value
     ]
     if exact_titles:
-        return sorted(exact_titles)[:8], []
+        return sorted(exact_titles)[:8]
     words = [word for word in re.findall(r"[^\W_]+", value) if word not in SCAFFOLD]
-    filtered = " ".join(words)
-    wanted = frozenset(words)
-    aliases = names.get(filtered, [])
-    if aliases:
-        return ([], sorted(aliases)) if len(aliases) > 1 else (aliases, [])
-    candidates = []
-    for node in graph.nodes.values():
-        if node.workspace not in LEARNING | {"concept"}:
-            continue
-        if node.workspace == "concept":
-            collided = {name for name in labels[node.id] if len(names[name]) > 1}
-            alias_words = frozenset(word for name in collided for word in tokens(name))
-            unique_phrase = any(
-                len(names[name]) == 1 and f" {name} " in f" {filtered} " for name in labels[node.id]
-            )
-            if wanted & alias_words and not unique_phrase:
-                continue
-        candidates.append(node)
-    return _ranked(candidates, wanted), []
+    candidates = [node for node in graph.nodes.values() if node.workspace in LEARNING]
+    return _ranked(candidates, frozenset(words))
 
 
 # Words that name a workspace or the asking itself; the purpose already carries them.
@@ -180,11 +150,10 @@ def _edge_order(edge: Edge) -> tuple:
         edge.start,
         edge.end,
         edge.relation,
-        edge.assertion or "",
     )
 
 
-def walk(graph: Graph, selected: list[str], checks: AssertionChecks, *, outgoing: bool = False):
+def walk(graph: Graph, selected: list[str], *, outgoing: bool = False):
     adjacency: dict[str, list[tuple[Edge, str, str]]] = {}
     for edge in sorted(graph.edges, key=_edge_order):
         if edge.relation in NAVIGATION:
@@ -205,7 +174,7 @@ def walk(graph: Graph, selected: list[str], checks: AssertionChecks, *, outgoing
             examined += 1
             if examined > 2048:
                 return routes, True
-            if target in routes or not checks.edge(edge):
+            if target in routes:
                 continue
             if len(routes) >= 256:
                 exhausted = True
@@ -217,9 +186,7 @@ def walk(graph: Graph, selected: list[str], checks: AssertionChecks, *, outgoing
     return routes, exhausted
 
 
-def _path(
-    graph: Graph, target: str, route, views: dict[str, dict], checks: AssertionChecks
-) -> dict:
+def _path(graph: Graph, target: str, route, views: dict[str, dict]) -> dict:
     edges, refs = route
     steps = []
     for edge, direction in edges:
@@ -233,28 +200,12 @@ def _path(
         }
         if edge.note:
             step["note"] = excerpt(edge.note)
-        if edge.assertion:
-            assertion = graph.assertions[edge.assertion]
-            assessment = checks.assertion(edge.assertion)
-            step["assertion"] = assertion.key
-            step["rationale"] = excerpt(assertion.rationale)
-            step["support_groups"] = [
-                {
-                    "key": group.key,
-                    "current": status.current,
-                    "evidence": [e.model_dump(mode="json") for e in group.evidence],
-                }
-                for group, status in zip(assertion.support_groups, assessment.groups, strict=True)
-            ]
         steps.append(step)
     return {
         "target": target,
         "nodes": refs,
         "steps": steps,
-        "usable_as_evidence": all(
-            views[ref]["usable_as_evidence"] or graph.nodes[ref].workspace == "concept"
-            for ref in refs
-        ),
+        "usable_as_evidence": all(views[ref]["usable_as_evidence"] for ref in refs),
     }
 
 
@@ -270,9 +221,8 @@ def _collect(
     exact: bool = True,
 ) -> dict:
     evidence = EvidenceChecks(graph.inputs)
-    checks = AssertionChecks(graph, evidence)
     packet = envelope(graph, selector)
-    routes, exhausted = walk(graph, selected, checks, outgoing=outgoing)
+    routes, exhausted = walk(graph, selected, outgoing=outgoing)
     refs = [ref for ref in routes if graph.nodes[ref].workspace in LEARNING]
     order = PRIORITY[purpose]
     direct: dict[str, int] = {}
@@ -290,8 +240,6 @@ def _collect(
             return 0
         if ref in direct and node.workspace == purpose:
             return 1
-        if any(edge.origin == "reviewed" for edge, _ in routes[ref][0]):
-            return 2
         if ref in direct:
             return 3
         return 5 if any(edge.origin == "lexical" for edge, _ in routes[ref][0]) else 4
@@ -324,7 +272,6 @@ def _collect(
             exact and graph.nodes[ref].granularity == "owner",
             graph.nodes[ref].scope.get("role") == "enrichment",
             ref not in selected,
-            not any(edge.origin == "reviewed" for edge, _ in routes[ref][0]),
             len(routes[ref][0]),
             ref,
         )
@@ -375,7 +322,7 @@ def _collect(
     for ref in sorted(needed - views.keys()):
         views[ref] = item_view(graph.nodes[ref], evidence)
     packet["items"] = [views[ref] for ref in chosen]
-    packet["paths"] = [_path(graph, ref, routes[ref], views, checks) for ref in chosen]
+    packet["paths"] = [_path(graph, ref, routes[ref], views) for ref in chosen]
     packet["nodes"] = [views[ref] for ref in sorted(needed) if ref not in chosen]
     packet["gaps"] = list(
         {
@@ -430,7 +377,7 @@ def context(
             Code.INVALID_RESPONSE,
             "Choose exactly one nonempty query (up to 500 characters), item or concept.",
         )
-    graph = project(load_inputs(project_path))
+    graph = project(read_inputs(project_path))
     selector = (
         {"query": excerpt(query, 2000)}
         if query is not None
@@ -440,30 +387,14 @@ def context(
     )
     selector["purpose"] = purpose
     if query is not None:
-        selected, ambiguous = seeds(graph, query)
+        selected = seeds(graph, query)
     else:
-        options = [item] if item is not None else [f"exam/concept/{concept}", f"concept/{concept}"]
-        found = [
-            ref
-            for ref in options
-            if ref in graph.nodes and graph.nodes[ref].workspace in LEARNING | {"concept"}
-        ]
-        if not found:
+        ref = item if item is not None else f"exam/concept/{concept}"
+        if ref not in graph.nodes or graph.nodes[ref].workspace not in LEARNING:
             raise CampusError(
                 Code.INVALID_RESPONSE, "Unknown exact item or concept in this course."
             )
-        # An Exam concept and a registry concept with the same key name one idea: seed both.
-        selected, ambiguous = found, []
-    if ambiguous:
-        packet = envelope(graph, selector)
-        packet.update(
-            status="ambiguous",
-            candidates=[
-                {"id": ref, "label": excerpt(graph.nodes[ref].title, 200)} for ref in ambiguous
-            ],
-        )
-        packet["snapshot_digest"] = graph.inputs.reader.verify()
-        return fit(packet, max_bytes)
+        selected = [ref]
     return _collect(graph, selected, selector, purpose, limit, max_bytes, exact=query is None)
 
 
@@ -478,7 +409,7 @@ def owner_of(ref: str) -> str:
 
 def impact(project_path: Path, source: str, *, limit: int = 12, max_bytes: int = 24000) -> dict:
     _limits(limit, max_bytes)
-    graph = project(load_inputs(project_path))
+    graph = project(read_inputs(project_path))
     ref = f"source/{source}"
     if ref not in graph.nodes:
         packet = envelope(graph, {"source": excerpt(source, 200)})
@@ -491,8 +422,7 @@ def impact(project_path: Path, source: str, *, limit: int = 12, max_bytes: int =
         {edge.start for edge in graph.edges if edge.end == ref and edge.relation == "supported_by"}
     )
     evidence = EvidenceChecks(graph.inputs)
-    checks = AssertionChecks(graph, evidence)
-    routes, exhausted = walk(graph, direct, checks, outgoing=True)
+    routes, exhausted = walk(graph, direct, outgoing=True)
     candidates = sorted(
         (
             other
@@ -548,13 +478,6 @@ def impact(project_path: Path, source: str, *, limit: int = 12, max_bytes: int =
     packet["omitted"] = (
         {"review_candidates": len(candidates) - limit} if len(candidates) > limit else {}
     )
-    packet["assertion_candidates"] = [
-        key
-        for key, a in sorted(graph.assertions.items())
-        if any(
-            e.kind == "source" and e.source == source for g in a.support_groups for e in g.evidence
-        )
-    ]
     stored = graph.inputs.resources.get(source)
     packet.update(
         unknown_source=stored is None,
@@ -564,10 +487,5 @@ def impact(project_path: Path, source: str, *, limit: int = 12, max_bytes: int =
     )
     packet["truncation"].update(traversal=exhausted, verification=evidence.exhausted)
     packet["scope"]["checked"] = sorted(evidence.payloads)
-    # Assertion diagnostics are bounded as whole keys, including inactive records.
-    if len(packet["assertion_candidates"]) > 30:
-        packet["omitted"]["assertion_candidates"] = len(packet["assertion_candidates"]) - 30
-        packet["assertion_candidates"] = packet["assertion_candidates"][:30]
-        packet["status"] = "partial"
     packet["snapshot_digest"] = graph.inputs.reader.verify()
     return fit(packet, max_bytes)

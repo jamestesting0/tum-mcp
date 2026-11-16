@@ -17,7 +17,7 @@ def install(
         list[ExtensionName] | None,
         typer.Argument(
             metavar="[WORKFLOW]...",
-            help="lecture, audio-notes, video-notes or course-memory; omit to choose.",
+            help="lecture, audio-notes or video-notes; omit to choose.",
             show_default=False,
         ),
     ] = None,
@@ -72,7 +72,6 @@ def _install_workflows(
     from tum_mcp.extensions import (
         install_lecture,
         set_audio_notes,
-        set_course_memory,
         set_video_notes,
     )
 
@@ -90,9 +89,6 @@ def _install_workflows(
                 review = False
             case ExtensionName.VIDEO_NOTES:
                 report = {"extension": name, "state": set_video_notes(True)}
-                review = False
-            case ExtensionName.COURSE_MEMORY:
-                report = {"extension": name, "state": set_course_memory(True)}
                 review = False
             case unreachable:
                 assert_never(unreachable)
@@ -296,7 +292,7 @@ def uninstall(
         list[ExtensionName] | None,
         typer.Argument(
             metavar="[WORKFLOW]...",
-            help="lecture, audio-notes, video-notes or course-memory; omit to choose.",
+            help="lecture, audio-notes or video-notes; omit to choose.",
             show_default=False,
         ),
     ] = None,

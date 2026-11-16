@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Every course answers how its items connect, with no extra install: `study context`
+  and `study impact` follow the links authors write between Study, Exercises, Exam and
+  Lecture, and the read-content skill explains them. The optional Course Memory
+  extension, its skill and the unused relationship registry (`knowledge.json`, the
+  knowledge report and schema, and the extra course-review binding) are removed. After a
+  source refresh, sync-course lists the items that build on the changed ones.
 - A programming exercise opens as an editor workspace: files, code and task side by side, as
   in the Artemis online editor. One Files and one Task button fold their panels, the
   dividers resize them by pointer or keyboard, and where the tree does not fit beside the

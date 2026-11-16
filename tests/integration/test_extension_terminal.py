@@ -264,13 +264,11 @@ def test_cancelled_install_picker_does_not_enable_any_workflow(tmp_path: Path) -
     assert state == {"lecture": False, "audio-notes": False}
 
 
-def test_install_picker_can_select_only_course_memory(tmp_path: Path) -> None:
-    code, output, state = run_removal(
-        tmp_path, b"\x1b[B\x1b[B\x1b[B \r", enabled=(), mode="install"
-    )
+def test_install_picker_can_select_only_the_last_workflow(tmp_path: Path) -> None:
+    code, output, state = run_removal(tmp_path, b"\x1b[B\x1b[B \r", enabled=(), mode="install")
     assert code == 0, output
     selected = json.loads((tmp_path / "config/extensions.json").read_bytes())
-    assert selected["course_memory"] is True
+    assert selected["video_notes"] is True
     assert state == {"lecture": False, "audio-notes": False}
 
 
@@ -296,11 +294,11 @@ def test_setup_can_skip_the_clients_and_still_offer_the_workflows(tmp_path: Path
 
 def test_setup_installs_an_optional_workflow_chosen_after_the_clients(tmp_path: Path) -> None:
     code, output, _ = run_removal(
-        tmp_path, b"\x1b[B \r", mode="setup", enabled=(), workflows=b"\x1b[B\x1b[B\x1b[B \r"
+        tmp_path, b"\x1b[B \r", mode="setup", enabled=(), workflows=b"\x1b[B\x1b[B \r"
     )
     assert code == 0, output
     assert (tmp_path / "profile/.claude.json").is_file()
-    assert json.loads((tmp_path / "config/extensions.json").read_bytes())["course_memory"] is True
+    assert json.loads((tmp_path / "config/extensions.json").read_bytes())["video_notes"] is True
 
 
 def test_cancelled_setup_does_not_create_client_registrations(tmp_path: Path) -> None:

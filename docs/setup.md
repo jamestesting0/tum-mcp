@@ -67,16 +67,6 @@ client setup after one confirmation that lists what is removed and kept.
 Personal notes, sessions and customized files are retained. Scripts can name extensions:
 `tum-mcp uninstall lecture audio-notes --json`.
 
-Course Memory is disabled by default. Run `tum-mcp install course-memory`, reload
-the client, then ask a relationship or study-planning question in a bound course.
-The agent reads the links the course already holds; it writes nothing while answering.
-Installation does not scan courses or read PDFs.
-`tum-mcp uninstall course-memory` disables retrieval and maintenance while retaining
-private graph files and notes. Reinstall validates current evidence before reuse.
-Customized client files are preserved and reported; disabled graph calls remain
-blocked even if old instructions survive. A fresh chat may be needed to clear
-context already read before uninstall. See [course memory](study.md#local-course-relationships).
-
 Use `--json` for machine-readable status, named extension removal/installation,
 skill listing/validation, lecture runtime status or TUMonline permissions.
 The default human output changed in 0.9.1; scripts that parsed those commands

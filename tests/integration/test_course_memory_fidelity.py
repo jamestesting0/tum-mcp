@@ -1,11 +1,10 @@
-"""Course Memory reads every authored link and cites only the sources each entry cites."""
+"""Course links read every authored link and cite only the sources each entry cites."""
 
 import json
 import typing
 from pathlib import Path
 
 import pytest
-from knowledge_annotations import write_registry
 from knowledge_fixture import fidelity_project
 from pydantic import BaseModel
 
@@ -17,7 +16,7 @@ from tum_mcp.course.memory.packet import encoded
 from tum_mcp.course.memory.query import context, impact
 from tum_mcp.course.project.models import Key
 
-pytestmark = pytest.mark.usefixtures("course_memory")
+pytestmark = pytest.mark.usefixtures("lecture_extension")
 
 PAST = "exam/sitting/ws23/variant/ws23-a/question/ws23-a-1"
 BLOCK = "study/unit/observer/block/observer-definition"
@@ -231,13 +230,6 @@ def test_impact_names_entries_by_their_own_sources(course):
 
 def test_concept_selector_resolves_exam_concepts(course):
     packet = context(course, concept="observer", purpose="exam", limit=4, max_bytes=8000)
-    assert ids(packet)[0] == "exam/concept/observer"
-
-
-def test_concept_selector_seeds_exam_and_registry_concepts_sharing_a_key(course):
-    write_registry(course, [])
-    packet = context(course, concept="observer", purpose="exam", limit=4, max_bytes=8000)
-    assert packet["status"] == "ok"
     assert ids(packet)[0] == "exam/concept/observer"
 
 

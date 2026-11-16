@@ -6,17 +6,16 @@ from pathlib import Path
 
 import pytest
 from course_memory_profile import profile, scaled_course
-from documents import content_file
 
-from tum_mcp.course.memory.store import load_inputs
+from tum_mcp.course.memory.store import read_inputs
 
-pytestmark = pytest.mark.usefixtures("course_memory")
+pytestmark = pytest.mark.usefixtures("lecture_extension")
 
 
 def test_crowded_profile_respects_native_schema_and_snapshot(tmp_path: Path):
     root = scaled_course(tmp_path, 10, crowded=True)
     before = {p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()}
-    inputs = load_inputs(root)
+    inputs = read_inputs(root)
     assert len(inputs.study.units) == 10
     assert all(len(u.blocks) == 20 for u in inputs.study.units)
     inputs.reader.verify()
@@ -38,14 +37,14 @@ def test_resource_lookup_is_request_local_and_replaced_with_state(tmp_path: Path
     from dataclasses import replace
 
     root = scaled_course(tmp_path, 14)
-    inputs = load_inputs(root)
+    inputs = read_inputs(root)
     resources = inputs.resources
     assert resources is inputs.resources
     with pytest.raises(TypeError):
         resources["invented"] = next(iter(resources.values()))
     state = inputs.state.model_copy(update={"resources": ()})
     assert not replace(inputs, state=state).resources
-    assert resources and load_inputs(root).resources == resources
+    assert resources and read_inputs(root).resources == resources
 
 
 def test_small_packet_avoids_validating_discarded_native_candidates(tmp_path: Path):
@@ -87,92 +86,13 @@ def test_selection_skips_stale_top_home_and_preserves_workspace_reservations(tmp
     ),
 )
 def test_natural_query_quality_contract(tmp_path: Path, case):
-    from knowledge_annotations import annotation, write_registry
     from knowledge_fixture import knowledge_project
 
     from tum_mcp.course.memory.query import context
 
     root = knowledge_project(tmp_path, workspaces=frozenset({"study"}))
-    write_registry(root, [annotation(root)], reviewed=True)
     packet = context(root, case["query"])
     if case.get("required"):
         assert case["required"] in {i["id"] for i in packet["items"]}
-    if case.get("ambiguous"):
-        assert packet["status"] == "ambiguous" and not packet["items"]
     if case.get("empty"):
         assert packet["status"] == "empty" and not packet["items"]
-
-
-def test_revision_only_does_not_assess_inactive_history(tmp_path: Path, monkeypatch):
-    from course_memory_profile import mixed_registry
-
-    from tum_mcp.course.memory.assertions import AssertionChecks
-    from tum_mcp.course.memory.report import knowledge_report, knowledge_revision
-
-    root = mixed_registry(tmp_path)
-    expected = knowledge_report(root)["knowledge_revision"]
-    assessed = set()
-    original = AssertionChecks._basic
-
-    def assess(checks, key):
-        assessed.add(key)
-        return original(checks, key)
-
-    monkeypatch.setattr(AssertionChecks, "_basic", assess)
-    assert knowledge_revision(root) == expected
-    assert assessed == {f"claim-{i:03}" for i in range(8)}
-
-
-@pytest.mark.parametrize("state", ["empty", "candidate", "rejected", "reviewed", "stale", "cycle"])
-def test_revision_only_matches_full_semantic_audit(tmp_path: Path, state):
-    from knowledge_annotations import annotation, write_registry
-    from knowledge_fixture import knowledge_project
-
-    from tum_mcp.course.memory.report import knowledge_report, knowledge_revision
-
-    root = knowledge_project(tmp_path, workspaces=frozenset({"study"}))
-    rows = [] if state == "empty" else [annotation(root)]
-    if state == "rejected":
-        rows[0]["review"]["status"] = "rejected"
-    if state == "cycle":
-        rows = [annotation(root, key=f"cycle-{i}") for i in range(2)]
-        for row, (start, end) in zip(
-            rows, [("observer", "coupling"), ("coupling", "observer")], strict=True
-        ):
-            row.update(relation="prerequisite_of")
-            row["from"] = {"kind": "concept", "key": start}
-            row["to"] = {"kind": "concept", "key": end}
-    write_registry(root, rows, reviewed=state in {"reviewed", "stale", "cycle"})
-    current = knowledge_revision(root)
-    if state == "stale":
-        source = next(s for s in load_inputs(root).state.resources if s.resource.key == "slides")
-        path = root / source.path
-        stamp = path.stat()
-        path.write_bytes(path.read_bytes().replace(b"Observer", b"Strategy"))
-        os.utime(path, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
-    assert knowledge_revision(root) == knowledge_report(root)["knowledge_revision"]
-    if state == "stale":
-        assert knowledge_revision(root) != current
-
-
-def test_revision_revalidates_snapshot_before_return(tmp_path: Path, monkeypatch):
-    from course_memory_profile import mixed_registry
-
-    from tum_mcp.course.memory.report import knowledge_revision
-    from tum_mcp.course.memory.store import SnapshotReader
-    from tum_mcp.errors import CampusError, Code
-
-    root = mixed_registry(tmp_path)
-    original = SnapshotReader.verify
-
-    def changed(reader):
-        path = content_file(root, "study")
-        value = json.loads(path.read_bytes())
-        value["introduction"] += " Changed during the request."
-        path.write_text(json.dumps(value))
-        return original(reader)
-
-    monkeypatch.setattr(SnapshotReader, "verify", changed)
-    with pytest.raises(CampusError) as error:
-        knowledge_revision(root)
-    assert error.value.code == Code.STALE_RESULT

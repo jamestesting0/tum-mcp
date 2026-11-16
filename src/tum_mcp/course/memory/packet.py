@@ -114,7 +114,6 @@ def envelope(graph: Graph, selector: dict[str, JsonValue]) -> dict[str, JsonValu
                 "lectures",
                 "coverage",
                 "links",
-                "knowledge",
             ],
         },
         "selector": selector,
@@ -148,14 +147,6 @@ def fit(packet: dict[str, JsonValue], max_bytes: int) -> dict[str, JsonValue]:
         elif packet["issues"]:
             packet["issues"].pop()
             packet["omitted"]["issues"] = packet["omitted"].get("issues", 0) + 1
-        elif packet.get("assertion_candidates"):
-            packet["assertion_candidates"].pop()
-            packet["omitted"]["assertion_candidates"] = (
-                packet["omitted"].get("assertion_candidates", 0) + 1
-            )
-        elif packet.get("candidates"):
-            packet["candidates"].pop()
-            packet["omitted"]["candidates"] = packet["omitted"].get("candidates", 0) + 1
         else:
             raise CampusError(
                 Code.INVALID_RESPONSE, "The complete context envelope exceeds the byte budget."

@@ -13,16 +13,13 @@ from pathlib import Path
 
 import pytest
 from documents import content_file
-from knowledge_annotations import annotation, write_registry
 from knowledge_fixture import knowledge_project
 
 from tum_mcp.course.content.study import StudyContent
 from tum_mcp.course.memory import query
-from tum_mcp.course.memory.assertions import AssertionChecks, review_revision
 from tum_mcp.course.memory.packet import encoded
 from tum_mcp.course.memory.projection import project
-from tum_mcp.course.memory.report import knowledge_revision
-from tum_mcp.course.memory.store import SnapshotReader, load_inputs
+from tum_mcp.course.memory.store import SnapshotReader, read_inputs
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.store import private_path
 
@@ -81,30 +78,10 @@ def scaled_course(folder: Path, units: int, *, crowded: bool = False) -> Path:
     ]
     path.write_text(json.dumps(exercises), encoding="utf-8")
     private_path(root, "coverage.json").unlink()
-    graph = project(load_inputs(root))
+    graph = project(read_inputs(root))
     if crowded:
-        routes, exhausted = query.walk(
-            graph, [EXERCISE], AssertionChecks(graph, query.EvidenceChecks(graph.inputs))
-        )
+        routes, exhausted = query.walk(graph, [EXERCISE])
         assert 200 < len(routes) < 256 and not exhausted
-    return root
-
-
-def mixed_registry(folder: Path) -> Path:
-    root = knowledge_project(folder, workspaces=frozenset({"study"}))
-    rows = [annotation(root, key=f"claim-{i:03}") for i in range(200)]
-    for i, row in enumerate(rows):
-        row["conditions"] = [f"Synthetic scope {i}."]
-        if i >= 104:
-            row["review"]["status"] = "rejected"
-    write_registry(root, rows)
-    graph = project(load_inputs(root))
-    for row in rows[:8]:
-        row["review"] = {
-            "status": "reviewed",
-            "revision": review_revision(graph, graph.assertions[row["key"]]),
-        }
-    write_registry(root, rows)
     return root
 
 
@@ -151,7 +128,7 @@ def measured_context(root: Path, *, limit: int = 4, max_bytes: int = 65536) -> d
         patch.setattr(SnapshotReader, "fingerprint", fingerprint)
         patch.setattr(SnapshotReader, "verify", verify)
         patch.setattr(query, "item_view", view)
-        for name in ("load_inputs", "project", "walk", "fit"):
+        for name in ("read_inputs", "project", "walk", "fit"):
             patch.setattr(query, name, timed(getattr(query, name), name))
         start = time.perf_counter()
         packet = query.context(root, item=EXERCISE, limit=limit, max_bytes=max_bytes)
@@ -194,14 +171,7 @@ def profile(folder: Path) -> dict:
         tracemalloc.stop()
         rows["peak_python_bytes"] = peak
         results[name] = rows
-    location = folder / "registry"
-    location.mkdir()
-    root = mixed_registry(location)
-    registry_samples = []
-    for _ in range(9):
-        start = time.perf_counter()
-        revision = knowledge_revision(root)
-        registry_samples.append(time.perf_counter() - start)
+    root = datasets["scale-14"]
     cli = []
     for _ in range(7):
         start = time.perf_counter()
@@ -235,7 +205,6 @@ def profile(folder: Path) -> dict:
         Path(__file__),
         REPO / "tests/fixtures/study_knowledge/efficiency-cases.json",
         Path(__file__).with_name("knowledge_fixture.py"),
-        Path(__file__).with_name("knowledge_annotations.py"),
         Path(__file__).with_name("material_fixture.py"),
     ]
     product = sorted((REPO / "src/tum_mcp").glob("study_knowledge*.py"))
@@ -249,9 +218,6 @@ def profile(folder: Path) -> dict:
         "module_root": str(Path(tum_mcp.__file__).resolve()),
         "harness_hashes": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
         "datasets": results,
-        "revision": revision,
-        "revision_samples": registry_samples[2:],
-        "revision_median_seconds": statistics.median(registry_samples[2:]),
         "cli_samples": cli,
         "cli_median_seconds": statistics.median(cli),
     }

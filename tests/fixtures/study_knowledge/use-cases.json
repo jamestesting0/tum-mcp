@@ -110,35 +110,6 @@
     "proposed_decision": "Ask a focused check about registration and conditions; do not store a deficit."
   },
   {
-    "id": "U5",
-    "request": "Help me bridge the prerequisite for coupling.",
-    "student_information": {
-      "goal": "course study",
-      "prior_mastery": "unknown"
-    },
-    "available_workspaces": [
-      "study",
-      "exercises",
-      "exam",
-      "lectures"
-    ],
-    "selector": {
-      "concept": "coupling"
-    },
-    "expected_refs": [
-      "study/unit/observer"
-    ],
-    "forbidden_conclusions": [
-      "viewing proves mastery",
-      "graph centrality proves readiness",
-      "a missing date is a confirmed deadline"
-    ],
-    "permitted_side_effects": [
-      "read existing local files"
-    ],
-    "proposed_decision": "Show the foundation-to-dependent direction and a short bridge."
-  },
-  {
     "id": "U6",
     "request": "What should I study this week?",
     "student_information": {

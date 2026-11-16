@@ -15,12 +15,11 @@ from tum_mcp.course.content.store import index_name, read_json
 from tum_mcp.course.content.study import StudyContent
 from tum_mcp.course.lecture.content import LectureContent
 from tum_mcp.course.ledger.coverage import CoverageLedger
-from tum_mcp.course.memory.models import KnowledgeRegistry, canonical_digest
+from tum_mcp.course.memory.models import canonical_digest
 from tum_mcp.course.project.models import ResourceState, StudyState
 from tum_mcp.course.project.paths import app_path
 from tum_mcp.course.project.store import confined, digest, private_path
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.extension_selection import require_course_memory
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,7 +122,6 @@ class CourseInputs:
     exam: ExamContent | None
     lectures: LectureContent | None
     ledger: CoverageLedger | None
-    registry: KnowledgeRegistry | None
     decisions: Decisions | None = None
 
     _resources: Mapping[str, ResourceState] = field(init=False, repr=False, compare=False)
@@ -197,13 +195,8 @@ def _validate[T: BaseModel](body: bytes, model: type[T], name: str) -> T:
         ) from None
 
 
-def load_inputs(project: Path) -> CourseInputs:
-    require_course_memory()
-    return read_inputs(project)
-
-
 def read_inputs(project: Path) -> CourseInputs:
-    """The course's own files, for callers that need item ids without Course Memory."""
+    """The course's own files, read once and verified again before a packet is returned."""
     root = project.expanduser().resolve()
     reader = SnapshotReader(root)
     state = _model(reader, private_path(root, "state.json"), StudyState)
@@ -218,7 +211,6 @@ def read_inputs(project: Path) -> CourseInputs:
         _document(reader, root, "exam", ExamContent),
         _document(reader, root, "lectures", LectureContent),
         _model(reader, private_path(root, "coverage.json"), CoverageLedger),
-        _model(reader, private_path(root, "knowledge.json"), KnowledgeRegistry),
         _model(reader, private_path(root, "links.json"), Decisions),
     )
     for model in (
@@ -227,12 +219,9 @@ def read_inputs(project: Path) -> CourseInputs:
         result.exam,
         result.lectures,
         result.ledger,
-        result.registry,
     ):
         if model is not None and model.course_key != state.course.key:
             raise CampusError(Code.SCOPE_DENIED, "Course content belongs to another course.")
-    if result.registry is not None and result.registry.semester != state.course.semester:
-        raise CampusError(Code.SCOPE_DENIED, "Knowledge annotations belong to another semester.")
     if result.lectures and any(
         item.recording.synthetic != state.course.synthetic for item in result.lectures.lectures
     ):
