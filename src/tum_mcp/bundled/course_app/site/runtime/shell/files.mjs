@@ -16,6 +16,7 @@ const ICON = {
   folder: 'M1.5 3.5h4.5l1.5 1.5h7v8.5h-13z',
   close: 'M4.5 4.5l7 7M11.5 4.5l-7 7',
   tree: 'M2 3h12v10H2zM6 3v10',
+  task: 'M2 4.5l1.5 1.5L6 3.5M8.5 5h5.5M2 10.5l1.5 1.5L6 9.5M8.5 11h5.5',
   edit: 'M10.5 2.5l3 3-7.5 7.5H3v-3z',
 };
 export const fileIcon = kind => icon(ICON[kind]);

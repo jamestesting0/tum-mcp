@@ -41,7 +41,7 @@ export function editorWorkspace({ block, task, exerciseKey, stepLabel }) {
   filesToggle.append(fileIcon('tree'), node('span', '', 'Files'));
   const taskToggle = button('', () => { taskOpen = !taskOpen; save({ taskOpen }); layout(); }, 'quiet ide-toggle ide-task-toggle');
   const taskStep = node('span', 'ide-toggle-step');
-  taskToggle.append(node('span', '', 'Task'), taskStep);
+  taskToggle.append(fileIcon('task'), node('span', '', 'Task'), taskStep);
   const bar = append(node('div', 'ide-bar'), filesToggle);
   if (block.origin === 'rebuilt') bar.append(node('span', 'ide-origin', 'Built from the problem statement'));
   // Narrow pages switch between the three panels instead.
