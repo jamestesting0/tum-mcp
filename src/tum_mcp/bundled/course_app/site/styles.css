@@ -485,6 +485,8 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 /* A drawn figure: strokes and text follow the theme; classes pick theme colours, never fixed ones. */
 .figure { margin: var(--s4) 0 0; }
 .figure svg, .figure img { display: block; width: 100%; max-width: 640px; height: auto; max-height: 460px; margin-inline: auto; }
+/* An image shrinks to its height cap without stretching: width follows its own ratio. */
+.figure img { width: auto; max-width: min(100%, 640px); }
 .figure svg { color: var(--ink); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; font-family: inherit; font-size: 16px; }
 /* An opaque halo in the page colour keeps every label off the strokes behind it. */
 .figure svg text, .figure svg tspan { fill: currentColor; stroke: var(--panel) !important; stroke-width: 6px; paint-order: stroke; font-weight: 500; }
@@ -981,6 +983,8 @@ button.lecture-recall { margin-top: var(--s2); }
   .card-face { min-height: 240px; padding: var(--s6); }
   th, td { padding: var(--s2); }
   .step-navigation { top: calc(var(--target) + 2 * var(--s1) + 1px); }
+  /* The workspace's task panel scrolls on its own, below the outline bar. */
+  .ide-task .step-navigation { top: 0; }
 }
 /* Phones fit the whole drawing; larger glyphs keep labels legible after scaling. */
 @media (max-width: 599px) {
@@ -1372,6 +1376,78 @@ button.project-reset { min-height: 28px; min-width: 28px; padding: 0; }
 .project-pane { max-height: min(70vh, 640px); overflow: auto; }
 .project-pane > .code-pre { margin: 0; padding: var(--s3) 0; }
 .project-pane .code-editor { border: 0; border-radius: 0; box-shadow: none; }
+/* The Yours | Solution switch and what a solution changed. */
+.project-views { display: inline-flex; flex: none; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r1); }
+button.project-view { min-height: 24px; padding: 0 var(--s2); border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: 12px; }
+button.project-view + button.project-view { border-inline-start: 1px solid var(--line); }
+button.project-view[aria-pressed="true"] { background: var(--wash); color: var(--ink); font-weight: 600; }
+.code-line.changed { background: color-mix(in srgb, var(--accent) 9%, transparent); box-shadow: inset 3px 0 var(--accent); }
+.code-refs.compact .code-ref-head { border-bottom: 0; }
+.code-notes { margin: 0; padding: var(--s2) var(--s4) var(--s3) var(--s8); border-top: 1px solid var(--line); font-size: var(--text-small); }
+.code-notes li + li { margin-top: var(--s1); }
+.code-note-lines { margin-inline-end: var(--s2); color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+
+/* Editor workspace: a coding exercise as files | code | task, as in the Artemis editor. */
+.page-layout:has(.ide) { height: 100%; }
+.reading:has(> .ide) { max-width: none; height: 100%; margin: 0; padding: 0; }
+.main:has(.ide) { overflow: hidden; }
+.ide { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: 100%; min-height: 0; background: var(--canvas); }
+.ide-bar { display: flex; align-items: center; gap: var(--s2); min-height: 40px; padding: 0 var(--s3); border-bottom: 1px solid var(--line); background: var(--surface); }
+.ide-spacer { flex: 1 1 auto; }
+button.ide-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 var(--s2); color: var(--muted); font-size: var(--text-small); }
+button.ide-toggle[aria-expanded="true"] { background: var(--wash); color: var(--ink); }
+.ide svg { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
+.ide-origin { min-width: 0; overflow: hidden; color: var(--muted); font-size: var(--text-small); white-space: nowrap; text-overflow: ellipsis; }
+.ide-views { display: none; }
+.ide-body { display: grid; grid-template-columns: minmax(0, 1fr) 5px var(--task-width, 400px); min-height: 0; }
+.ide[data-task="closed"] .ide-body { grid-template-columns: minmax(0, 1fr) 28px; }
+.ide[data-task="closed"] :is(.ide-divider, .ide-task), .ide[data-task="open"] .ide-task-rail { display: none; }
+.ide-code { display: flex; min-width: 0; min-height: 0; }
+.ide-code > .project { flex: 1 1 auto; min-width: 0; }
+.ide-task { min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: var(--s6) var(--s6) var(--s12); }
+.ide-divider, .project-tree-divider { background: var(--line); cursor: col-resize; touch-action: none; }
+.ide-divider { box-shadow: inset 2px 0 var(--canvas), inset -2px 0 var(--canvas); }
+:is(.ide-divider, .project-tree-divider):is(:hover, :focus-visible) { background: var(--accent); outline: none; }
+button.ide-rail { display: flex; flex-direction: column; align-items: center; gap: var(--s2); width: 28px; min-height: 0; padding: var(--s3) 0; border: 0; border-radius: 0; background: var(--surface); color: var(--muted); }
+button.ide-rail:hover { background: var(--wash); color: var(--ink); }
+/* At the top of its strip: the outline's edge control sits at mid-height on the sidebar border. */
+button.ide-rail.ide-files-rail { flex: none; align-self: flex-start; min-height: 38px; padding: 0; justify-content: center; border-inline-end: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ide-code:has(> .ide-files-rail:not([hidden])) { box-shadow: inset 28px 0 var(--surface), inset 29px 0 var(--line); }
+button.ide-rail.ide-task-rail { border-inline-start: 1px solid var(--line); }
+.ide-rail-label { writing-mode: vertical-rl; font-size: var(--text-small); font-weight: 600; }
+.ide-rail-step { font-size: 12px; font-variant-numeric: tabular-nums; }
+.project.in-workspace { height: 100%; margin: 0; border: 0; border-radius: 0; }
+.in-workspace .project-body { grid-template-columns: var(--tree-width, 220px) 1px minmax(0, 1fr); height: 100%; min-height: 0; }
+.in-workspace .project-body.tree-hidden { grid-template-columns: minmax(0, 1fr); }
+.in-workspace .tree-hidden > .project-tree-divider, .in-workspace button.project-tree-toggle { display: none; }
+.in-workspace .project-tree { contain: none; min-height: 0; border-right: 0; }
+.in-workspace .project-tree-divider { position: relative; }
+.in-workspace .project-tree-divider::after { content: ''; position: absolute; inset: 0 -3px; }
+.in-workspace .project-editor { min-height: 0; }
+.in-workspace .project-pane { flex: 1 1 auto; min-height: 0; max-height: none; }
+.in-workspace .project-pane > :is(.code-editor, .code-pre) { min-height: 100%; }
+.ide-task .unit-header h1 { font-size: var(--text-title-small, 1.75rem); }
+/* Narrow pages: one panel at a time behind a Files | Code | Task switch. */
+.ide[data-size="narrow"] .ide-views { display: flex; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r1); }
+.ide[data-size="narrow"] button.ide-view { min-height: 30px; padding: 0 var(--s3); border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: var(--text-small); }
+.ide[data-size="narrow"] button.ide-view + button.ide-view { border-inline-start: 1px solid var(--line); }
+.ide[data-size="narrow"] button.ide-view[aria-selected="true"] { background: var(--wash); color: var(--ink); font-weight: 600; }
+.ide[data-size="narrow"] .ide-bar { flex-wrap: wrap; row-gap: var(--s1); padding-block: var(--s2); }
+.ide[data-size="narrow"] .ide-spacer { display: none; }
+.ide[data-size="narrow"] .ide-views { order: -1; flex: 1 0 100%; }
+.ide[data-size="narrow"] button.ide-view { flex: 1 1 0; }
+.ide[data-size="narrow"] .ide-body { grid-template-columns: minmax(0, 1fr); }
+.ide[data-size="narrow"] :is(.ide-divider, .ide-rail) { display: none; }
+.ide[data-size="narrow"][data-view="task"] .ide-code, .ide[data-size="narrow"]:not([data-view="task"]) .ide-task { display: none; }
+.ide[data-size="narrow"] .ide-task { padding: var(--s5) var(--s5) var(--s12); }
+.ide[data-size="narrow"][data-view="files"] .project-body { grid-template-columns: minmax(0, 1fr); }
+.ide[data-size="narrow"][data-view="files"] :is(.project-editor, .project-tree-divider) { display: none; }
+.ide[data-size="narrow"][data-view="files"] .project-tree { max-height: none; border-bottom: 0; }
+@media (max-width: 799px) {
+  /* The document scrolls under the top bar on phones; the workspace fills the rest. */
+  .reading:has(> .ide) { height: auto; }
+  .ide { height: calc(100dvh - var(--target) - 2 * var(--s1) - 1px); }
+}
 @media (max-width: 719px) {
   .project-body { grid-template-columns: minmax(0, 1fr); }
   .project-tree { contain: none; min-height: 0; max-height: 260px; border-right: 0; border-bottom: 1px solid var(--line); }

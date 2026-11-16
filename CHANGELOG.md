@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- A programming exercise opens as an editor workspace: files, code and task side by side, as
+  in the Artemis online editor. Files and Task fold to rails and resize by pointer or
+  keyboard, the layout is remembered per course, and phones switch between Files, Code and
+  Task. A writing step opens its file at its lines; Compare and the Solution show the solved
+  lines with walkthrough notes, and each editable file switches between Yours and Solution
+  with the task's changes marked.
+- `artemis_get_repository` saves a started programming exercise's source files as Artemis
+  copied them from the template (the newest commit at or before the repository was set up),
+  never later work; it never starts, pushes or builds, drops build scripts, IDE settings and
+  hidden files, and prints no file text. `tum-mcp study repository` copies the verified
+  snapshot into a course project, and `tum-mcp study files` packs an exercise's project from
+  real files.
+- Exercise projects record their `origin` (repository, rebuilt or authored); editable files
+  carry their solved version, and writing steps and Solution answers point at solved lines
+  (`solution_code`, `code`) instead of copying code. `study lint` flags drift from the
+  Artemis template, code steps without a project, unsolved or unwritten editable files and
+  a rebuilt project on an Artemis exercise without `rebuilt_because`. Existing starter-code
+  exercises still render.
+- A tall figure image keeps its proportions at the height limit instead of stretching.
+- `study lint` flags Markdown bold (`**word**`) left in course text, such as a statement
+  copied from Artemis, since the app shows it as asterisks (`markdown_markup`).
+
 - Lecture content gets the shared content checks: `study lint` flags plain mathematics,
   long note messages and other text problems in the summary, notes and highlights, and a
   ruled `recording_narration` flag asks about sentences that narrate the recording. A left

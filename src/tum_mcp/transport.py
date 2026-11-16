@@ -34,7 +34,8 @@ READ_PATHS: Final = {
         r"/api/exercise/exercises/\d+/details|"
         r"/api/core/files/markdown/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,199}|"
         r"/api/programming/programming-exercise-participations/\d+/"
-        r"student-participation-with-all-results|"
+        r"(?:student-participation-with-all-results|commit-history)|"
+        r"/api/programming/programming-exercises/\d+/files-content-commit-details|"
         r"/api/assessment/participations/\d+/results/\d+/details"
     ),
 }

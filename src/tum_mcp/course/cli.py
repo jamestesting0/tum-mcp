@@ -398,6 +398,79 @@ def import_material(
 
 
 @app.command(rich_help_panel="Sources")
+def repository(
+    project: Path,
+    source: Annotated[
+        Path,
+        typer.Option(
+            "--from", help="The folder artemis_get_repository saved, or a clone you hold."
+        ),
+    ],
+    exercise: Annotated[
+        int | None, typer.Option(help="The Artemis exercise ID, for a clone.")
+    ] = None,
+    include: Annotated[
+        list[str] | None, typer.Option(help="A glob of files to keep; repeat for each.")
+    ] = None,
+) -> None:
+    """Snapshot an exercise's template files into the project; prints no file text."""
+    from tum_mcp.course.sources.repository import import_clone, import_snapshot, listing
+
+    root, folder = project.expanduser().resolve(), source.expanduser().resolve()
+    if (folder / "manifest.json").is_file():
+        manifest, files = import_snapshot(root, folder)
+    elif exercise is None:
+        raise CampusError(
+            Code.ACTION_REQUIRED, "Name the Artemis exercise of a clone: --exercise ID."
+        )
+    else:
+        manifest, files = import_clone(root, folder, exercise, tuple(include or ()))
+    typer.echo(json.dumps(listing(manifest, files), indent=2))
+
+
+@app.command(name="files", rich_help_panel="Author")
+def project_files(
+    project: Path,
+    exercise: Annotated[str, typer.Argument(help="The exercise key.")],
+    source: Annotated[
+        str,
+        typer.Option("--from", help="artemis-ID for a snapshot, or a folder of starter files."),
+    ],
+    origin: Annotated[
+        Literal["repository", "rebuilt", "authored"],
+        typer.Option(help="Where the files come from."),
+    ] = "repository",
+    editable: Annotated[
+        list[str] | None, typer.Option(help="A path the student edits; repeat for each file.")
+    ] = None,
+    solutions: Annotated[
+        Path | None, typer.Option(help="A folder holding each editable file solved.")
+    ] = None,
+    open_path: Annotated[str | None, typer.Option("--open", help="The file shown first.")] = None,
+    description: Annotated[str | None, typer.Option(help="What the project is.")] = None,
+    rebuilt_because: Annotated[
+        str | None, typer.Option(help="Why a rebuilt project stands in for Artemis files.")
+    ] = None,
+) -> None:
+    """Write an exercise's project from real files: a snapshot byte for byte, or starters."""
+    from tum_mcp.course.content.projects import pack
+
+    root = project.expanduser().resolve()
+    result = pack(
+        root,
+        exercise,
+        source,
+        origin=origin,
+        editable=tuple(editable or ()),
+        solutions=(root / solutions.expanduser()) if solutions else None,
+        open_path=open_path,
+        description=description,
+        rebuilt_because=rebuilt_because,
+    )
+    typer.echo(json.dumps(result, indent=2))
+
+
+@app.command(rich_help_panel="Sources")
 def text(
     project: Path,
     key: Annotated[str, typer.Option(help="Inventory resource key.")],

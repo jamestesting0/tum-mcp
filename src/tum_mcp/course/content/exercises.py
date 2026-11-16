@@ -19,6 +19,7 @@ from tum_mcp.course.content.study import (
     Text,
     check_code_refs,
     check_heading_levels,
+    check_solved_refs,
     check_target_file,
     has_visual,
     project_files,
@@ -72,12 +73,20 @@ class SolutionAnswer(Frozen):
 
     label: Label | None = None
     blocks: tuple[Block, ...] = Field(
-        min_length=1,
+        default=(),
         max_length=10,
         description="Only the answer, in the form the part asks for: a value, a table, a proof "
         "or code. The guide's Compare already shows how it is reached; do not repeat that "
         "working here.",
     )
+    # A coding part's answer as lines of the solved project files, never copied code.
+    code: tuple[CodeRef, ...] = Field(default=(), max_length=3, exclude_if=lambda value: not value)
+
+    @model_validator(mode="after")
+    def given(self) -> "SolutionAnswer":
+        if not self.blocks and not self.code:
+            raise ValueError("A solution answer shows blocks, solved code lines, or both.")
+        return self
 
 
 class WorkedSolution(Frozen):
@@ -203,7 +212,7 @@ class Exercise(Frozen):
             if step.check and step.check.kind == "self_check":
                 model = step.check.model_answer
                 if (isinstance(answer, tuple) and same_text(step.explanation, answer)) or (
-                    repeats(step.explanation, model)
+                    model is not None and repeats(step.explanation, model)
                 ):
                     raise ValueError(
                         "A step's working repeats its model answer, which already shows it; "
@@ -217,7 +226,13 @@ class Exercise(Frozen):
                     raise ValueError("Graph check cites an undeclared source.")
         if self.solution.official_source and self.solution.official_source not in source_keys:
             raise ValueError("The official solution source must be declared.")
+        if sum(block.kind == "files" for block in self.statement) > 1:
+            raise ValueError("An exercise has one project: put all its files in one files block.")
         check_steps_against_files(self.statement, self.steps)
+        check_solved_refs(
+            project_files(self.statement),
+            tuple(ref for answer in self.solution.answers for ref in answer.code),
+        )
         return self
 
 
@@ -267,6 +282,7 @@ def check_steps_against_files(
         check_code_refs(files, step.code)
         if step.check and step.check.kind == "self_check" and step.check.file:
             check_target_file(files, step.check.file)
+            check_solved_refs(files, step.check.solution_code)
 
 
 class ExerciseSet(Frozen):

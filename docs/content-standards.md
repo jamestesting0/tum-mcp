@@ -15,7 +15,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | S3 | A worked case shows what is given, the working and the result (`example`, table or walkthrough), not a story; code is real code in its language, one statement per line | `example_in_prose`, `unworked_result`, `prose_calculation`, `compressed_working`, `compressed_code` |
 | S4 | Each idea has the shape that fits it: comparisons as tables, procedures stepped, models drawn, parallel cases as tables or examples | `no_visual`, `static_trace`, `static_walkthrough`, `graph_as_table`, `trace_as_table`, `unstepped_table`, `slide_image`, `representation.shape_fits` |
 | S5 | Objects the text names are shown, not described | `described_object`, `representation.shown_not_described` |
-| S6 | Every symbol and formula is LaTeX, with words in math set as text | `plain_math`, `math_word` |
+| S6 | Every symbol and formula is LaTeX, with words in math set as text; text carries no Markdown markup | `plain_math`, `math_word`, `markdown_markup` |
 | S7 | Terms are defined before use and never redefined differently | `forward_term`, `definition_refined` |
 | S8 | No narration of the source or the page | `meta_reference`, `clarity.no_meta` |
 | S9 | Facts, values and citations match the cited pages | `arithmetic`, `citation_page`, `answer_key`, `correctness.source_match` |
@@ -51,6 +51,7 @@ fails while a flag has no row or a row names a check that no longer exists.
 | X3 | The exercise links the Study passages, cheatsheet entries and patterns it uses (Recall) | `undecided_link` |
 | X4 | Every guide step's Compare shows the working from the step's inputs to its answer, each operation with its rule; a part's guide follows its solution's subgoals; the Solution gives each part's answer only, as code for a programming task | ruled `step_without_working`, ruled `single_step_part`, ruled `answer_without_code`, `unworked_result`, `prose_calculation`, `practice.complete_answer` |
 | X5 | Study teaches what an exercise needs on other cases; it never teaches or practises a released exercise's own case | ruled `exercise_case_in_study`, `practice.new_case` |
+| X6 | A programming exercise works in one project faithful to its source: each code step writes into an editable file, each editable file has a solved version that its steps point into, and a project from Artemis matches the template byte for byte | `code_step_without_project`, `editable_without_solution`, `solution_unchanged`, `unwritten_editable`, `solved_lines_unchanged`, `project_drift`, `rebuilt_without_reason` |
 
 ## Exam
 

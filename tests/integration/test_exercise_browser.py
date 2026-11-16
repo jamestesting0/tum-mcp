@@ -1198,31 +1198,33 @@ def test_distilled_code_practice_writes_code_and_checks_literal_code(
 def test_project_files_open_referenced_lines_and_keep_edits(
     course_browser: Browser, exercise_url: str
 ) -> None:
+    # A coding exercise is an editor workspace; legacy model answers still compare.
     context = course_browser.new_context(viewport={"width": 1280, "height": 900})
     try:
         page = context.new_page()
         errors: list[str] = []
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(exercise_url + "#exercises/responses/project-files/read")
-        project = page.locator(".project")
+        project = page.locator(".ide .project")
         expect(project.locator(".project-tab-item.active")).to_have_text("Counter.java")
         expect(project.locator(".tok-keyword").first).to_be_visible()
         expect(page.locator(".page-citation")).to_have_count(1)
-        expect(page.locator("main .source-note:visible")).to_have_count(1)
-        project.get_by_role("button", name="Hide files").click()
+        # With the outline open the page area is medium: the tree starts folded to a rail.
         expect(project.locator(".project-tree")).to_be_hidden()
-        project.get_by_role("button", name="Show files").click()
+        page.get_by_role("button", name="Show files").click()
         expect(project.locator(".project-tree")).to_be_visible()
-        reference = page.locator(".code-ref")
+        page.locator(".ide-files-toggle").click()
+        expect(project.locator(".project-tree")).to_be_hidden()
+        reference = page.locator(".ide-task .code-ref")
         expect(reference.locator(".code-ref-path")).to_have_text("src/Main.java")
-        expect(reference.locator(".code-line")).to_have_count(3)
+        expect(reference.locator(".code-line")).to_have_count(0)
         reference.get_by_role("button", name="Open in files").click()
         expect(project.locator(".project-tab-item.active")).to_have_text("Main.java")
         expect(project.locator(".code-line.marked")).to_have_count(3)
+        assert page.evaluate("document.querySelector('.ide-task').scrollTop >= 0")
         page.goto(exercise_url + "#exercises/responses/project-files/write")
-        # The step already shows Counter.java's lines, so it opens from that excerpt only.
+        # The writing step opens its own file, so no separate open button appears.
         expect(page.get_by_role("button", name="Open Counter.java")).to_have_count(0)
-        page.locator(".code-ref").get_by_role("button", name="Open in files").click()
         editor = page.get_by_label("Edit src/Counter.java", exact=True)
         expect(editor).to_have_value(re.compile(r"// TODO: add one"))
         editor.evaluate(
@@ -1230,13 +1232,103 @@ def test_project_files_open_referenced_lines_and_keep_edits(
         )
         editor.press_sequentially("count++;")
         page.reload()
-        page.locator(".code-ref").get_by_role("button", name="Open in files").click()
         expect(editor).to_have_value(re.compile(r"count\+\+;"))
         expect(project.locator(".project-tab.changed")).to_have_count(1)
         page.get_by_role("button", name="Compare", exact=True).click()
         expect(page.locator(".model-code")).to_contain_text("count++;")
         project.get_by_role("button", name="Reset file", exact=True).click()
         expect(editor).to_have_value(re.compile(r"// TODO: add one"))
+        assert errors == []
+    finally:
+        context.close()
+
+
+SOLVED_COUNTER = (
+    "public class Counter {\n    private int count;\n\n    public void increment() {\n"
+    "        count++;\n    }\n\n    public int value() {\n        return count;\n    }\n}\n"
+)
+
+
+@pytest.fixture
+def solved_project_url(exercise_project: Path) -> Iterator[str]:
+    from tum_mcp.course.content.store import read_document, write_document
+
+    document = read_document(exercise_project, "exercises")
+    exercise = next(
+        item for group in document["sets"] for item in group["exercises"]
+        if item["key"] == "project-files"
+    )  # fmt: skip
+    block = next(item for item in exercise["statement"] if item["kind"] == "files")
+    block["origin"] = "rebuilt"
+    block["files"][0]["solution"] = SOLVED_COUNTER
+    check = next(step for step in exercise["steps"] if step["key"] == "write")["check"]
+    del check["model_answer"]
+    check["solution_code"] = [
+        {"path": "src/Counter.java", "lines": "4-6",
+         "walkthrough": [{"lines": "5", "note": "The field grows by one."}]}
+    ]  # fmt: skip
+    exercise["solution"] = {"answers": [{"code": [{"path": "src/Counter.java", "lines": "4-6"}]}]}
+    write_document(exercise_project, "exercises", document)
+    build(exercise_project, publish=False)
+    with PreviewServer(
+        ("127.0.0.1", 0), partial(Handler, directory=str(exercise_project / "app"))
+    ) as server:
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            yield f"http://127.0.0.1:{server.server_port}/#exercises/responses/project-files/write"
+        finally:
+            server.shutdown()
+            thread.join(timeout=3)
+
+
+@pytest.mark.parametrize("exercise_project", ["responses"], indirect=True)
+def test_solved_files_compare_and_the_workspace_layout_is_remembered(
+    course_browser: Browser, solved_project_url: str
+) -> None:
+    context = course_browser.new_context(viewport={"width": 1440, "height": 900})
+    try:
+        page = context.new_page()
+        errors: list[str] = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(solved_project_url)
+        page.get_by_role("button", name="Collapse course outline").click()
+        workspace = page.locator(".ide")
+        expect(workspace).to_have_attribute("data-size", "wide")
+        expect(workspace.locator(".ide-origin")).to_have_text("Built from the problem statement")
+        page.get_by_role("button", name="Compare", exact=True).click()
+        solved = page.locator(".ide-task .solved-code")
+        expect(solved.locator(".code-line")).to_have_count(3)
+        expect(solved.locator(".code-notes")).to_contain_text("The field grows by one.")
+        solved.get_by_role("button", name="Open solved file").click()
+        version = workspace.locator(".project-views")
+        expect(version.get_by_role("button", name="Solution")).to_have_attribute(
+            "aria-pressed", "true"
+        )
+        expect(workspace.locator(".project-pane .code-line.changed")).to_have_count(1)
+        divider = page.get_by_role("separator", name="Resize task")
+        divider.focus()
+        before = int(divider.get_attribute("aria-valuenow") or 0)
+        divider.press("ArrowLeft")
+        assert int(divider.get_attribute("aria-valuenow") or 0) == before + 16
+        page.locator(".ide-task-toggle").click()
+        expect(workspace).to_have_attribute("data-task", "closed")
+        expect(page.locator(".ide-task-rail")).to_contain_text("2/2")
+        page.reload()
+        expect(workspace).to_have_attribute("data-task", "closed")
+        page.get_by_role("button", name="Show task").click()
+        expect(divider).to_have_attribute("aria-valuenow", str(before + 16))
+        phone = context.new_page()
+        phone.on("pageerror", lambda error: errors.append(str(error)))
+        phone.set_viewport_size({"width": 390, "height": 844})
+        phone.goto(solved_project_url)
+        narrow = phone.locator(".ide")
+        expect(narrow).to_have_attribute("data-size", "narrow")
+        phone.get_by_role("tab", name="Task").click()
+        phone.locator(".ide-task .code-ref").get_by_role("button", name="Open in files").click()
+        expect(narrow).to_have_attribute("data-view", "code")
+        expect(phone.get_by_label("Edit src/Counter.java", exact=True)).to_be_visible()
+        assert phone.evaluate("document.documentElement.scrollWidth <= innerWidth")
         assert errors == []
     finally:
         context.close()

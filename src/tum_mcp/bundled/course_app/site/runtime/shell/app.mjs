@@ -401,7 +401,8 @@ function render() {
   document.querySelector('#app').replaceChildren(shell);
   sidebar.restoreOutline();
   if (!notesPage && !unavailable && !home) renderPanel();
-  contentsOutline(reading, !(home || unavailable || (notesPage && !notesPage.current)));
+  // An editor workspace is its own layout: its task panel scrolls apart from the code.
+  contentsOutline(reading, !(home || unavailable || (notesPage && !notesPage.current) || notesPage?.workspace));
   persist();
   syncDock();
 }

@@ -103,6 +103,7 @@ TEMPLATE_FILES = (
     "runtime/shell/reference-panel.mjs",
     "runtime/shell/search.mjs",
     "runtime/shell/start.mjs",
+    "runtime/shell/workspace.mjs",
     "runtime/study/explore.mjs",
     "runtime/study/flashcards.mjs",
     "runtime/study/learning.mjs",

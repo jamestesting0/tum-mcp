@@ -4,7 +4,7 @@ import { node, studyText, append, sourcesNote, plainText, toggletip, answerMark 
 import { iconButton, iconGlyph, arrowPaging, cycleIndex } from '../shell/navigation.mjs';
 import { renderPlot } from '../visuals/plot.mjs';
 import { renderCode, codeHead, languageName, lineSet, markLines } from './code.mjs';
-import { renderFiles, fileIcon } from '../shell/files.mjs';
+import { renderFiles, fileIcon, solvedCode } from '../shell/files.mjs';
 import { renderFormula } from './formulas.mjs';
 import { typesetLabels } from './mathml.mjs';
 import { renderDerivation } from './derivation.mjs';
@@ -237,13 +237,16 @@ function treeBlock(block) {
 }
 
 // The direct answers of a solution, one labelled answer per original part, then any notes.
-export function renderAnswers(solution, target = element => element, answerIndex = null) {
+export function renderAnswers(solution, target = element => element, answerIndex = null, files = new Map()) {
   const root = node('div', 'solution-answers');
   solution.answers.forEach((answer, index) => {
     if (answerIndex !== null && index !== answerIndex) return;
     const item = node('section', 'solution-answer');
     if (answerIndex === null && answer.label) item.append(studyText('h3', 'solution-label', answer.label));
-    item.append(target(append(node('div', 'reading-material'), ...answer.blocks.map(block => renderBlockBody(block))), `solution:${index}`));
+    // A coding part's answer is read from the solved project files, never copied.
+    const shown = append(node('div', 'reading-material'), ...(answer.blocks || []).map(block => renderBlockBody(block)));
+    if (answer.code?.length) shown.append(solvedCode(answer.code, files));
+    item.append(target(shown, `solution:${index}`));
     root.append(item);
   });
   if (answerIndex === null && solution.notes?.length) {

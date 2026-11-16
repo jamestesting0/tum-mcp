@@ -255,23 +255,49 @@ class CodeBlock(Sourced):
 
 
 class ProjectFile(Frozen):
+    """One file of a project. `code` is what the student starts from: an editable file keeps the
+    template's `TODO` markers, and a file the student must create starts empty. `solution` is
+    the whole solved file, for editable files only; steps and the Solution point at its lines."""
+
     path: FilePath
     code: Annotated[str, Field(max_length=50000)]
     editable: bool = False
     language: Annotated[str, Field(min_length=1, max_length=30)] | None = None
+    solution: Annotated[str, Field(max_length=50000)] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+    @model_validator(mode="after")
+    def solved(self) -> "ProjectFile":
+        if self.solution is not None and not self.editable:
+            raise ValueError(f"Only an editable file has a solution; {self.path} is read-only.")
+        return self
 
 
 class FilesBlock(Sourced):
-    """A small project, such as an Artemis exercise's files, opened in a light code workspace."""
+    """A small project opened in a light code workspace. `origin` says where its files come
+    from: `repository` copies the real template (an Artemis repository or a clone) byte for
+    byte and cites its snapshot source; `rebuilt` is built from the problem statement, says
+    why in `rebuilt_because` when the real files exist, and is labelled for the student;
+    `authored` is a practice project in a fresh domain."""
 
     kind: Literal["files"]
     key: Key
     description: Text
     files: tuple[ProjectFile, ...] = Field(min_length=1, max_length=60)
     open: FilePath | None = None
+    origin: Literal["repository", "rebuilt", "authored"] = Field(
+        default="repository", exclude_if=lambda value: value == "repository"
+    )
+    # Never shown: why a rebuilt project stands in for an Artemis repository.
+    rebuilt_because: Text | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def tree(self) -> "FilesBlock":
+        if self.rebuilt_because and self.origin != "rebuilt":
+            raise ValueError("Only a rebuilt project says why it was rebuilt.")
+        if sum(len(item.solution or "") for item in self.files) > 400_000:
+            raise ValueError("Keep a workspace's solved files below 400,000 characters.")
         paths = [item.path for item in self.files]
         if len(set(paths)) != len(paths):
             raise ValueError("Workspace file paths must be distinct.")
@@ -339,10 +365,32 @@ class TreeBlock(Sourced):
 
 
 class CodeRef(Frozen):
-    """A step's pointer into the question's workspace: a file and optionally its lines."""
+    """A step's pointer into the question's workspace: a file and optionally its lines. In a
+    step these are the starter lines, where the work goes; in a Solution answer they are the
+    solved file's lines."""
 
     path: FilePath
     lines: LineRange | None = None
+
+
+class SolvedLines(Frozen):
+    """The lines of a solved project file that a writing step produces, shown on Compare.
+    `lines` count in the solved file. Each walkthrough stop explains lines inside them."""
+
+    path: FilePath
+    lines: LineRange
+    walkthrough: tuple[CodeStep, ...] = Field(
+        default=(), max_length=12, exclude_if=lambda value: not value
+    )
+
+    @model_validator(mode="after")
+    def stops_inside(self) -> "SolvedLines":
+        first, last = line_span(self.lines)
+        for step in self.walkthrough:
+            start, end = line_span(step.lines)
+            if start < first or end > last:
+                raise ValueError(f"Walkthrough lines {step.lines} lie outside {self.lines}.")
+        return self
 
 
 def project_files(blocks: "tuple[Block, ...]") -> dict[str, ProjectFile]:
@@ -363,6 +411,30 @@ def check_code_refs(files: dict[str, ProjectFile], refs: "tuple[CodeRef, ...]") 
             raise ValueError(f"The step refers to {ref.path}, which the question does not show.")
         if ref.lines:
             check_lines(ref.lines, item.code, ref.path)
+
+
+def changed_lines(starter: str, solved: str) -> tuple[tuple[int, int], ...]:
+    """The 1-based line ranges of a solved file that differ from its starter."""
+    from difflib import SequenceMatcher
+
+    matcher = SequenceMatcher(a=starter.splitlines(), b=solved.splitlines(), autojunk=False)
+    return tuple(
+        (first + 1, last)
+        for tag, _, _, first, last in matcher.get_opcodes()
+        if tag in ("replace", "insert") and last > first
+    )
+
+
+def check_solved_refs(
+    files: dict[str, ProjectFile], refs: "tuple[CodeRef | SolvedLines, ...]"
+) -> None:
+    """Solved lines point into an editable file's solution."""
+    for ref in refs:
+        item = files.get(ref.path)
+        if item is None or item.solution is None:
+            raise ValueError(f"{ref.path} has no solved version to point at.")
+        if ref.lines:
+            check_lines(ref.lines, item.solution, f"the solved {ref.path}")
 
 
 def check_target_file(files: dict[str, ProjectFile], path: str) -> None:

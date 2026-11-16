@@ -110,6 +110,7 @@ FIELDS = {
     "GuidedStep.code": INTERNAL,
     "GuidedStep.part": INTERNAL,
     "GuidanceStep.code": INTERNAL,
+    "SolutionAnswer.code": INTERNAL,
     "Exercise.part_blocks": INTERNAL,
     "Edge.start": INTERNAL,
     "Edge.end": INTERNAL,

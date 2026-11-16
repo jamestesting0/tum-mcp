@@ -1,5 +1,7 @@
 """Student-facing Artemis response projections; secrets and staff fields are dropped."""
 
+from typing import Annotated
+
 from pydantic import (
     AwareDatetime,
     BaseModel,
@@ -85,6 +87,20 @@ class Participation(Wire):
     exercise: Reference | None = None
     submissions: tuple[Submission, ...] | None = None
     submission_count: int | None = Field(default=None, alias="submissionCount", ge=0)
+    initialization_date: AwareDatetime | None = Field(default=None, alias="initializationDate")
+
+
+class Commit(Wire):
+    hash: Annotated[str, Field(pattern=r"^[a-fA-F0-9]{40}$")]
+    timestamp: AwareDatetime
+
+
+class CommitHistory(RootModel[tuple[Commit, ...]]):
+    pass
+
+
+class RepositoryFiles(RootModel[dict[str, str]]):
+    pass
 
 
 class Exercise(Wire):

@@ -9,7 +9,8 @@ six base course workflows and three optional extensions.
 The sixteen `moodle_*` tools provide materials, announcements, forums and
 own grades, feedback and submission reads. Artemis adds
 available-course metadata, lectures and learning units, student PDF attachments,
-released non-quiz statements and permitted exact-commit feedback. Zulip provides
+released non-quiz statements, permitted exact-commit feedback and the template source
+files of a programming exercise the student has already started. Zulip provides
 bounded channel/topic search and cited discussion reads.
 
 Website access is read-only. There are no public exercise workspace, test-run,
@@ -25,6 +26,14 @@ status alone does not establish a semester. Explicit older course IDs use the sa
 lecture, student attachment and released exercise statement tools, even when absent from
 discovery. Artemis still decides access and which old content it retains; the
 integration does not enroll, start an exercise or download staff archives.
+
+`artemis_get_repository` reads the student's own existing participation: its commit
+history and the files at the newest commit at or before the repository was set up,
+which is the template Artemis copied. Later commits, the student's own work, are not
+read. It keeps source files only, drops build scripts, wrappers, IDE settings, hidden and
+binary files, never returns the repository URI or file text, and saves the files with
+their digests in the local download folder. Without a participation it reports
+`not_started`; it never starts the exercise.
 
 Artemis lecture reads use the student overview/detail endpoints, verify the
 selected course and omit unreleased units and personal completion records.

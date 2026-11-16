@@ -89,19 +89,20 @@ function lines(code, language) {
   }
   return result;
 }
-function lineNode(parts, number, marked) {
-  const line = node('span', `code-line${marked ? ' marked' : ''}`);
+function lineNode(parts, number, marked, changed = false) {
+  const line = node('span', `code-line${marked ? ' marked' : ''}${changed ? ' changed' : ''}`);
   if (number) line.dataset.line = String(number);
   for (const [type, text] of parts) line.append(type ? node('span', `tok-${type}`, text) : document.createTextNode(text));
   return line;
 }
 
-// A highlighted listing; `start` numbers an excerpt from its real line, `marked` lines stand out.
-export function renderCode(code, language, { numbers = false, start = 1, marked = new Set() } = {}) {
+// A highlighted listing; `start` numbers an excerpt from its real line, `marked` lines stand out
+// and `changed` lines carry the edge mark of what a solution changed.
+export function renderCode(code, language, { numbers = false, start = 1, marked = new Set(), changed = new Set() } = {}) {
   const listing = node('code', `code-view${numbers ? ' numbered' : ''}`);
   lines(code, language).forEach((parts, index) => {
     if (index) listing.append('\n');
-    listing.append(lineNode(parts, numbers ? start + index : 0, marked.has(start + index)));
+    listing.append(lineNode(parts, numbers ? start + index : 0, marked.has(start + index), changed.has(start + index)));
   });
   return append(node('pre', 'code-pre'), listing);
 }

@@ -83,10 +83,11 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
       | Computation | A derivation, one transformation per line with its reason | `step-derivation` |
       | Proof | Each inference on its own line with what permits it | `step-proof` |
       | Trace | A walkthrough over the drawn object, one stage per operation | `step-trace` |
-      | Code | A walkthrough over the model code, then one test traced | `step-code` |
+      | Code | The solved lines the step writes, with a walkthrough of them | `step-code` |
 
-   For large programming tasks, add distilled practice per [coding](references/coding.md)
-   only when the student asks for it.
+   A programming exercise works in one project of real files: read
+   [coding](references/coding.md) before writing it. Add distilled practice only when the
+   student asks for it.
    Questions you write show their figure, code, diagram, UML diagram, formula, table or plot
    beside the text. Keep a released statement's wording but structure it by part, with
    its numeric givens as a table and its setting drawn ([content](references/content.md)). Every

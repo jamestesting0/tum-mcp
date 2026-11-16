@@ -28,6 +28,18 @@ Use the same ten dimensions, with these replacements for Study-specific checks:
 | Clarity | Shared checks, plus `clarity.symbols_recall` on the Guide's and Solution's derivations: a variable the student must recall from the lecture or an earlier part opens its meaning in this exercise, with its value when the task gives one. |
 
 Cognitive load, representation and redundancy retain their shared checks.
+
+A programming exercise works in one project. Open it in the app and judge it with the
+checks above:
+- `correctness.statement_fidelity`: a project from Artemis passes lint without
+  `project_drift`; a rebuilt one matches the statement (each UML class with exactly its
+  members, no invented class or method), and every file a step relies on is in it.
+- `coverage.all_parts`: every part's work lands in an editable file that a step writes.
+- `practice.student_control`: the starter files leave the work to the student; a
+  `TODO` names the place, never the answer.
+- `correctness.answer_key`: the solved files meet the rubric and the statement's
+  constraints, and change only what the tasks ask for.
+
 Statements keep every given and task verbatim, but omit the sheet's framing sentences
 that contribute neither. `meta_reference` reads statements as well as guides and solutions.
 Do not change a released case to satisfy `practice.new_case`: apply that check to authored

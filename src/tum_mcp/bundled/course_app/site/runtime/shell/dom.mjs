@@ -194,10 +194,31 @@ export function confirmAction({ title, message, action, onConfirm, trigger }) {
 // The heading of a reading section, whatever its level.
 export const SECTION_HEADING = '.section-heading > :is(h2, h3, h4, h5, h6)';
 export function focusHeading(heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
-export function scrollReadingTo(element) {
-  const main = element.closest('main');
-  if (!main || matchMedia('(max-width: 799px)').matches) element.scrollIntoView({ block: 'start' });
-  else main.scrollTo({ top: main.scrollTop + element.getBoundingClientRect().top - main.getBoundingClientRect().top - (parseFloat(getComputedStyle(element).scrollMarginTop) || 0), behavior: 'instant' });
+export function scrollReadingTo(target) {
+  // A stuck sticky bar reports where it is pinned, not where it sits; its parent starts there.
+  const element = getComputedStyle(target).position === 'sticky' ? target.parentElement : target;
+  // In the editor workspace the task panel scrolls on its own; phones scroll the page.
+  const panel = element.closest('.ide-task');
+  const scroller = panel || (matchMedia('(max-width: 799px)').matches ? null : element.closest('main'));
+  const offset = () => element.getBoundingClientRect().top - (scroller ? scroller.getBoundingClientRect().top : 0)
+    - (parseFloat(getComputedStyle(element).scrollMarginTop) || 0);
+  if (scroller) scroller.scrollTo({ top: scroller.scrollTop + offset(), behavior: 'instant' });
+  else element.scrollIntoView({ block: 'start' });
+  holdInPlace(scroller || document.scrollingElement, offset);
+}
+const USER_SCROLL = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
+// WebKit has no scroll anchoring: a diagram above the target that finishes its layout after the
+// jump would move the target, so keep it where it landed until the reader acts or a moment passes.
+function holdInPlace(scroller, offset) {
+  const wanted = offset();
+  const observer = new ResizeObserver(() => {
+    const drift = offset() - wanted;
+    if (Math.abs(drift) >= 1) scroller.scrollTop += drift;
+  });
+  for (const child of (scroller === document.scrollingElement ? document.body : scroller).children) observer.observe(child);
+  const stop = () => { observer.disconnect(); for (const type of USER_SCROLL) removeEventListener(type, stop, true); };
+  for (const type of USER_SCROLL) addEventListener(type, stop, { capture: true, passive: true });
+  setTimeout(stop, 2000);
 }
 let announcer;
 // Announces a change whose visible element is replaced, such as advancing to the next card.

@@ -8,6 +8,7 @@ Choose the route needed; known IDs go directly to the read tool.
 | Student slides | `artemis_get_attachment` with needed page_start/page_limit. Set save_original=true only for a reusable local student copy. |
 | Exercise statement | `artemis_get_exercise`; discover through `artemis_list_exercises` only when needed. |
 | Own programming feedback | `artemis_get_feedback` with the exact full built commit and graded/practice mode from the user/record. |
+| Programming exercise files | `artemis_get_repository` saves the source files of a started exercise as Artemis copied them from the template, never later work; it returns a listing, not file text. `not_started` means ask the student to start it. |
 | Course inventory | List both lectures and exercises. Teaching units include text, slides, video/online links and embedded exercise references. |
 
 Use `artemis_list_courses` only for missing course metadata. By default it reads only

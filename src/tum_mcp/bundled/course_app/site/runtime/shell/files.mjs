@@ -1,5 +1,5 @@
 import data from '../../data.mjs';
-import { node, svgNode, button, append } from './dom.mjs';
+import { node, svgNode, button, append, studyText } from './dom.mjs';
 import { renderCode, codeEditor, languageName, lineSet } from '../reading/code.mjs';
 import { iconButton } from './navigation.mjs';
 
@@ -25,16 +25,23 @@ function readDrafts(key) {
   catch { return {}; }
 }
 
-// Ask the project on this page that holds `path` to open it, optionally at `lines`.
-export function openInWorkspace(path, lines) {
+// Ask the project on this page that holds `path` to open it, optionally at `lines` and in its
+// solved version. A project in the editor workspace moves its own panel, never the page.
+export function openInWorkspace(path, lines, { solution = false } = {}) {
   const target = [...document.querySelectorAll('.project')].find(item => item.workspace?.has(path));
   if (!target) return false;
-  target.workspace.open(path, lines);
-  target.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  target.workspace.open(path, lines, { solution });
+  const workspace = target.closest('.ide');
+  if (workspace?.ide) workspace.ide.reveal('code');
+  else target.scrollIntoView({ block: 'start', behavior: 'smooth' });
   return true;
 }
+const spanSet = spans => new Set((spans || []).flatMap(([first, last]) => Array.from({ length: last - first + 1 }, (_, index) => first + index)));
+const TREE = { min: 160, max: 320, start: 220 };
 
-export function renderFiles(block) {
+// `ide` places the project in the editor workspace: the workspace owns the tree's visibility,
+// the tree resizes by its divider, and opening a file from the tree reports it.
+export function renderFiles(block, ide = null) {
   const files = new Map(block.files.map(file => [file.path, file]));
   const drafts = readDrafts(block.key);
   const content = path => typeof drafts[path] === 'string' ? drafts[path] : files.get(path).code;
@@ -43,6 +50,7 @@ export function renderFiles(block) {
   root.setAttribute('role', 'region'); root.setAttribute('aria-label', `Code workspace: ${block.description}`);
   const start = block.open || block.files.find(file => file.editable)?.path || block.files[0].path;
   let open = [start], active = start, marked = new Set();
+  const solved = new Set();
 
   // Folders first, then files, alphabetically; a single top folder chain stays open.
   const tree = { folders: new Map(), files: [] };
@@ -64,7 +72,7 @@ export function renderFiles(block) {
     }
     for (const file of [...level.files].sort((a, b) => a.path.localeCompare(b.path))) {
       const name = file.path.split('/').pop();
-      const control = button('', () => { show(file.path); if (narrow.matches) setTree(false); }, 'project-file');
+      const control = button('', () => { show(file.path); if (ide) ide.onOpen?.(file.path); else if (narrow.matches) setTree(false); }, 'project-file');
       control.style.setProperty('--depth', depth);
       control.append(icon(ICON.file), node('span', 'project-file-name', name));
       if (file.editable) { const mark = icon(ICON.edit); mark.classList.add('project-editable'); control.append(mark); }
@@ -84,6 +92,34 @@ export function renderFiles(block) {
   const editor = append(node('div', 'project-editor'), append(node('div', 'project-bar'), treeToggle, tabs), pathBar, pane);
   const body = append(node('div', 'project-body'), treePanel, editor);
   root.append(body);
+  if (ide) {
+    root.classList.add('in-workspace');
+    const divider = node('div', 'project-tree-divider');
+    divider.setAttribute('role', 'separator'); divider.setAttribute('aria-orientation', 'vertical');
+    divider.setAttribute('aria-label', 'Resize files'); divider.tabIndex = 0;
+    divider.setAttribute('aria-valuemin', String(TREE.min)); divider.setAttribute('aria-valuemax', String(TREE.max));
+    const width = value => {
+      const clamped = Math.round(Math.min(TREE.max, Math.max(TREE.min, value)));
+      body.style.setProperty('--tree-width', `${clamped}px`); divider.setAttribute('aria-valuenow', String(clamped));
+      return clamped;
+    };
+    width(ide.treeWidth || TREE.start);
+    divider.addEventListener('pointerdown', event => {
+      divider.setPointerCapture(event.pointerId);
+      const left = body.getBoundingClientRect().left;
+      const move = moved => width(moved.clientX - left);
+      const end = () => { divider.removeEventListener('pointermove', move); ide.onTreeWidth?.(width(treePanel.getBoundingClientRect().width)); };
+      divider.addEventListener('pointermove', move);
+      divider.addEventListener('pointerup', end, { once: true });
+    });
+    divider.addEventListener('keydown', event => {
+      const step = { ArrowLeft: -16, ArrowRight: 16 }[event.key];
+      if (!step) return;
+      event.preventDefault(); ide.onTreeWidth?.(width(treePanel.getBoundingClientRect().width + step));
+    });
+    divider.addEventListener('dblclick', () => ide.onTreeWidth?.(width(TREE.start)));
+    body.insertBefore(divider, editor);
+  }
   // The file tree folds away on any width; phones start with it folded.
   function setTree(open) {
     treePanel.hidden = !open; body.classList.toggle('tree-hidden', !open);
@@ -91,7 +127,7 @@ export function renderFiles(block) {
     treeToggle.setAttribute('aria-label', open ? 'Hide files' : 'Show files'); treeToggle.title = open ? 'Hide files' : 'Show files';
   }
   const syncNarrow = () => setTree(!narrow.matches);
-  narrow.addEventListener('change', () => { if (root.isConnected) syncNarrow(); });
+  if (!ide) narrow.addEventListener('change', () => { if (root.isConnected) syncNarrow(); });
 
   function paintTabs() {
     tabs.replaceChildren();
@@ -118,13 +154,28 @@ export function renderFiles(block) {
     crumbs.title = file.path;
     const side = node('span', 'project-meta', [languageName(file.language, file.path), file.editable ? 'editable' : 'read only'].filter(Boolean).join(' · '));
     pathBar.append(crumbs, side);
-    if (file.editable && typeof drafts[file.path] === 'string' && drafts[file.path] !== file.code) {
+    if (typeof file.solution === 'string') {
+      // Yours is the student's file; Solution is the solved file with the task's changes marked.
+      const views = node('span', 'project-views'); views.setAttribute('role', 'group'); views.setAttribute('aria-label', 'Version');
+      for (const [label, on] of [['Yours', false], ['Solution', true]]) {
+        // Marked lines belong to one version, so switching clears them.
+        const choice = button(label, () => { if (on) solved.add(file.path); else solved.delete(file.path); marked = new Set(); paint(); }, 'quiet project-view');
+        choice.setAttribute('aria-pressed', String(solved.has(file.path) === on));
+        views.append(choice);
+      }
+      pathBar.append(views);
+    }
+    if (file.editable && !solved.has(file.path) && typeof drafts[file.path] === 'string' && drafts[file.path] !== file.code) {
       const reset = iconButton('Reset file', 'reset', () => { delete drafts[file.path]; save(); paint(); });
       reset.classList.add('project-reset'); pathBar.append(reset);
     }
   }
   function paintPane(file) {
     pane.replaceChildren();
+    if (solved.has(file.path)) {
+      pane.append(renderCode(file.solution, file.language || file.path.split('.').pop(), { numbers: true, marked, changed: spanSet(file.changed) }));
+      return;
+    }
     if (file.editable) {
       const input = node('textarea'); input.value = content(file.path); input.maxLength = 50000;
       input.setAttribute('aria-label', `Edit ${file.path}`);
@@ -142,20 +193,26 @@ export function renderFiles(block) {
     const file = files.get(active);
     paintTabs(); paintPath(file); paintPane(file);
   }
-  function show(path, lines) {
+  function show(path, lines, { solution = false } = {}) {
     if (!open.includes(path)) open = [...open, path].slice(-6);
+    if (solution && typeof files.get(path).solution === 'string') solved.add(path);
     active = path; marked = lineSet(lines); paint();
     const first = pane.querySelector('.code-line.marked');
     pane.scrollTop = first ? Math.max(0, first.getBoundingClientRect().top - pane.getBoundingClientRect().top - pane.clientHeight / 3) : 0;
   }
-  root.workspace = { has: path => files.has(path), open: (path, lines) => show(path, lines) };
-  syncNarrow(); paint();
+  root.workspace = {
+    has: path => files.has(path), open: (path, lines, options) => show(path, lines, options),
+    setTree, get treeOpen() { return !treePanel.hidden; },
+  };
+  if (ide) setTree(ide.treeOpen !== false); else syncNarrow();
+  paint();
   return root;
 }
 
 // What a step points at: the file, the lines, and a jump into the project above.
-export function codeReferences(refs, files) {
-  const box = node('div', 'code-refs');
+// In the editor workspace the code is already beside the step, so a reference is a link.
+export function codeReferences(refs, files, { compact = false } = {}) {
+  const box = node('div', `code-refs${compact ? ' compact' : ''}`);
   for (const ref of refs) {
     const file = files.get(ref.path);
     if (!file) continue;
@@ -166,7 +223,8 @@ export function codeReferences(refs, files) {
     const caption = append(node('figcaption', 'code-ref-head'), icon(ICON.file), append(node('span', 'code-ref-path'), node('bdi', '', ref.path)), node('span', 'code-ref-lines', found ? (first === last ? `line ${first}` : `lines ${first}–${last}`) : ''));
     const jump = button('Open in files', () => openInWorkspace(ref.path, ref.lines), 'quiet code-ref-open');
     caption.append(jump);
-    card.append(caption, renderCode(excerpt, file.language || ref.path.split('.').pop(), { numbers: true, start: first }));
+    card.append(caption);
+    if (!compact) card.append(renderCode(excerpt, file.language || ref.path.split('.').pop(), { numbers: true, start: first }));
     box.append(card);
   }
   return box;
@@ -177,4 +235,28 @@ export function filesIn(blocks = []) {
   const map = new Map();
   for (const block of blocks) if (block.kind === 'files') for (const file of block.files) map.set(file.path, file);
   return map;
+}
+
+// The solved lines a step writes or a Solution answer shows, read from the solved files, each
+// with the walkthrough notes that explain them and a way to open the whole solved file.
+export function solvedCode(refs, files) {
+  const box = node('div', 'code-refs solved-code');
+  for (const ref of refs) {
+    const file = files.get(ref.path);
+    if (typeof file?.solution !== 'string') continue;
+    const found = span(ref.lines), all = file.solution.split('\n');
+    const first = found ? found.first : 1, last = found ? found.last : all.length;
+    const card = node('figure', 'code-ref');
+    const caption = append(node('figcaption', 'code-ref-head'), icon(ICON.file), append(node('span', 'code-ref-path'), node('bdi', '', ref.path)), node('span', 'code-ref-lines', first === last ? `line ${first}` : `lines ${first}–${last}`));
+    caption.append(button('Open solved file', () => openInWorkspace(ref.path, ref.lines, { solution: true }), 'quiet code-ref-open'));
+    card.append(caption, renderCode(all.slice(first - 1, last).join('\n'), file.language || ref.path.split('.').pop(), { numbers: true, start: first }));
+    if (ref.walkthrough?.length) {
+      card.append(append(node('ol', 'code-notes'), ...ref.walkthrough.map(stop => {
+        const at = span(stop.lines);
+        return append(node('li'), node('span', 'code-note-lines', at.first === at.last ? `Line ${at.first}` : `Lines ${at.first}–${at.last}`), studyText('span', '', stop.note));
+      })));
+    }
+    box.append(card);
+  }
+  return box;
 }
