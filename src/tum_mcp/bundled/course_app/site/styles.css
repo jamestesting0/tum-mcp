@@ -335,7 +335,7 @@ html[data-audio-dock] .page-layout { padding-bottom: 96px; }
 @container (max-width: 480px) {
   button.player-mute { display: none; }
   .player-bar { gap: 0; }
-  button.player-button { width: 36px; min-height: 36px; }
+  button.player-button:not(.player-big) { width: 36px; min-height: 36px; }
   button.player-speed { min-width: 36px; padding: 0 var(--s1); }
   .player-time { padding: 0 var(--s1); }
 }
