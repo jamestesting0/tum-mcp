@@ -55,6 +55,17 @@ def test_import_adds_a_private_local_exam_once(course: Path, tmp_path: Path) -> 
     assert statuses[report["key"]] == statuses["local-prufung-losung"] == "current"
 
 
+def test_importing_a_copy_of_a_course_file_reports_the_course_resource(
+    course: Path, tmp_path: Path
+) -> None:
+    slides = next(item for item in load_state(course).resources if item.path)
+    copy = tmp_path / "downloaded.pdf"
+    copy.write_bytes((course / slides.path).read_bytes())
+    report = import_file(course, copy, "exam", "My copy")
+    assert not report.imported and report.key == slides.resource.key
+    assert len(load_state(course).resources) == 1
+
+
 def test_notebooks_and_code_import_as_numbered_text_and_never_run(
     course: Path, tmp_path: Path
 ) -> None:
