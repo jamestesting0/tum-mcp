@@ -5,9 +5,9 @@ import os
 from pathlib import Path
 
 import pytest
-from course_memory_profile import profile, scaled_course
+from relations_profile import profile, scaled_course
 
-from tum_mcp.course.memory.store import read_inputs
+from tum_mcp.course.relations.store import read_inputs
 
 pytestmark = pytest.mark.usefixtures("lecture_extension")
 
@@ -23,12 +23,12 @@ def test_crowded_profile_respects_native_schema_and_snapshot(tmp_path: Path):
 
 
 @pytest.mark.skipif(
-    os.environ.get("TUM_MCP_MEMORY_PROFILE") != "1", reason="local profiling opt-in"
+    os.environ.get("TUM_MCP_RELATIONS_PROFILE") != "1", reason="local profiling opt-in"
 )
 def test_profile_course_memory(tmp_path: Path):
-    output = Path(os.environ["TUM_MCP_MEMORY_PROFILE_OUTPUT"]).resolve()
+    output = Path(os.environ["TUM_MCP_RELATIONS_PROFILE_OUTPUT"]).resolve()
     repo = Path(__file__).resolve().parents[2]
-    assert output.is_relative_to(repo / ".omo/evidence/course-memory-optimization")
+    assert output.is_relative_to(repo / ".omo/evidence/course-relations-profile")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(profile(tmp_path), indent=2), encoding="utf-8")
 
@@ -48,7 +48,7 @@ def test_resource_lookup_is_request_local_and_replaced_with_state(tmp_path: Path
 
 
 def test_small_packet_avoids_validating_discarded_native_candidates(tmp_path: Path):
-    from course_memory_profile import measured_context
+    from relations_profile import measured_context
 
     root = scaled_course(tmp_path, 10, crowded=True)
     result = measured_context(root)
@@ -65,7 +65,7 @@ def test_small_packet_avoids_validating_discarded_native_candidates(tmp_path: Pa
 
 @pytest.mark.parametrize("limit", [1, 4, 12])
 def test_selection_skips_stale_top_home_and_preserves_workspace_reservations(tmp_path: Path, limit):
-    from tum_mcp.course.memory.query import context
+    from tum_mcp.course.relations.query import context
 
     root = scaled_course(tmp_path, 10, crowded=True)
     (root / "materials/content/material-source-000.md").write_text("Changed evidence.")
@@ -82,13 +82,13 @@ def test_selection_skips_stale_top_home_and_preserves_workspace_reservations(tmp
 @pytest.mark.parametrize(
     "case",
     json.loads(
-        (Path(__file__).parents[1] / "fixtures/study_knowledge/efficiency-cases.json").read_bytes()
+        (Path(__file__).parents[1] / "fixtures/course_relations/efficiency-cases.json").read_bytes()
     ),
 )
 def test_natural_query_quality_contract(tmp_path: Path, case):
-    from knowledge_fixture import knowledge_project
+    from relations_fixture import knowledge_project
 
-    from tum_mcp.course.memory.query import context
+    from tum_mcp.course.relations.query import context
 
     root = knowledge_project(tmp_path, workspaces=frozenset({"study"}))
     packet = context(root, case["query"])

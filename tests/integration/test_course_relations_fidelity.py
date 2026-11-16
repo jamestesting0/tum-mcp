@@ -5,16 +5,16 @@ import typing
 from pathlib import Path
 
 import pytest
-from knowledge_fixture import fidelity_project
 from pydantic import BaseModel
+from relations_fixture import fidelity_project
 
 from tum_mcp.course.content.exam import ExamContent
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.study import StudyContent
 from tum_mcp.course.lecture.content import LectureContent
-from tum_mcp.course.memory.packet import encoded
-from tum_mcp.course.memory.query import context, impact
 from tum_mcp.course.project.models import Key
+from tum_mcp.course.relations.packet import encoded
+from tum_mcp.course.relations.query import context, impact
 
 pytestmark = pytest.mark.usefixtures("lecture_extension")
 

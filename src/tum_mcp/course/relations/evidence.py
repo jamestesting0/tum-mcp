@@ -5,8 +5,8 @@ from typing import Literal
 
 from tum_mcp.course.content.study import SourceVersion
 from tum_mcp.course.lecture.data import stale_lectures
-from tum_mcp.course.memory.store import CourseInputs, Observation
 from tum_mcp.course.project.store import confined
+from tum_mcp.course.relations.store import CourseInputs, Observation
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_processing.receipts import evidence_bytes
 

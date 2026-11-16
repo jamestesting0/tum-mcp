@@ -13,8 +13,8 @@ from tum_mcp.course.app.comment_cli import app as comments_app
 from tum_mcp.course.app.publish_cli import app as publish_app
 from tum_mcp.course.content.store import document_writes, index_name, present, read_document
 from tum_mcp.course.learner.cli import app as learner_app
-from tum_mcp.course.memory.cli import register as register_links
 from tum_mcp.course.output import emit, summarize
+from tum_mcp.course.relations.cli import register as register_links
 from tum_mcp.course.workflow.cli import app as task_app
 from tum_mcp.errors import CampusError, Code
 

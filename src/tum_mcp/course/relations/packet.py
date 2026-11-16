@@ -5,8 +5,8 @@ import re
 
 from pydantic import JsonValue
 
-from tum_mcp.course.memory.evidence import EvidenceChecks, Validity
-from tum_mcp.course.memory.graph import Graph, Node
+from tum_mcp.course.relations.evidence import EvidenceChecks, Validity
+from tum_mcp.course.relations.graph import Graph, Node
 from tum_mcp.errors import CampusError, Code
 
 

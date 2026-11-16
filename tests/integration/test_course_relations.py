@@ -5,16 +5,16 @@ from pathlib import Path
 
 import pytest
 from documents import content_file
-from knowledge_fixture import knowledge_project
+from relations_fixture import knowledge_project
 
 from tum_mcp.course.app.build import read_content, stale_units
 from tum_mcp.course.content.exam_data import read_exam
 from tum_mcp.course.content.exercise_data import read_exercises
 from tum_mcp.course.lecture.data import read_lectures, stale_lectures
-from tum_mcp.course.memory.projection import project
-from tum_mcp.course.memory.store import read_inputs
 from tum_mcp.course.project.paths import app_path
 from tum_mcp.course.project.store import load_state
+from tum_mcp.course.relations.projection import project
+from tum_mcp.course.relations.store import read_inputs
 from tum_mcp.errors import CampusError
 
 pytestmark = pytest.mark.usefixtures("lecture_extension")
@@ -126,8 +126,8 @@ def test_cli_invalid_context_does_not_write(tmp_path: Path, args) -> None:
 
 
 def test_retained_registry_file_is_ignored(tmp_path: Path) -> None:
-    from tum_mcp.course.memory.query import context
     from tum_mcp.course.project.store import private_path
+    from tum_mcp.course.relations.query import context
 
     root = knowledge_project(tmp_path)
     before = context(root, item="exercises/set/sheet-1/exercise/observer-practice", limit=4)

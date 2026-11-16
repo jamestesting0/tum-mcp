@@ -30,7 +30,7 @@ def course_blocks(project: Path) -> dict:
 def test_a_retained_registry_file_changes_neither_the_course_review_nor_the_build(
     tmp_path: Path, lecture_extension: Path
 ) -> None:
-    from knowledge_fixture import knowledge_project
+    from relations_fixture import knowledge_project
 
     from tum_mcp.course.app.build import build
     from tum_mcp.course.project.store import private_path
@@ -47,7 +47,7 @@ def test_a_retained_registry_file_changes_neither_the_course_review_nor_the_buil
 
 
 def test_the_cheatsheet_and_each_pattern_are_reviewed_items(tmp_path: Path) -> None:
-    from knowledge_fixture import knowledge_project
+    from relations_fixture import knowledge_project
 
     root = knowledge_project(tmp_path, workspaces=frozenset({"exam"}))
     items = loop.load(root).items
@@ -63,7 +63,7 @@ def test_the_cheatsheet_and_each_pattern_are_reviewed_items(tmp_path: Path) -> N
 
 
 def test_every_native_solution_transfer_compare_and_explore_visual_can_be_scored(tmp_path: Path):
-    from knowledge_fixture import knowledge_project
+    from relations_fixture import knowledge_project
 
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.app.visuals import visual_ids

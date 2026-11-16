@@ -208,7 +208,7 @@ def own_sources(inputs) -> dict[str, frozenset[str]]:
 
 
 def statement_text(blocks) -> str:
-    from tum_mcp.course.memory.graph import safe_text
+    from tum_mcp.course.relations.graph import safe_text
 
     return " ".join(safe_text([block.model_dump(mode="json") for block in blocks]).split())[:500]
 
@@ -266,7 +266,7 @@ class Selector:
 
 
 def build_cases(course: Path, queries: list[dict], heldout: list[dict] = ()) -> dict:
-    from tum_mcp.course.memory.store import read_inputs
+    from tum_mcp.course.relations.store import read_inputs
 
     inputs = read_inputs(course)
     authored = links(inputs)
@@ -335,7 +335,7 @@ def build_cases(course: Path, queries: list[dict], heldout: list[dict] = ()) -> 
 
 
 def call(course: Path, selector: Selector) -> dict:
-    from tum_mcp.course.memory.query import context, impact
+    from tum_mcp.course.relations.query import context, impact
     from tum_mcp.errors import CampusError
 
     args = dict(selector.args)
@@ -349,9 +349,9 @@ def call(course: Path, selector: Selector) -> dict:
 
 def observed_files(course: Path) -> set[Path]:
     """Every file a full-evidence projection reads, so the frozen copy is an exact closure."""
-    from tum_mcp.course.memory.evidence import EvidenceChecks
-    from tum_mcp.course.memory.projection import project
-    from tum_mcp.course.memory.store import read_inputs
+    from tum_mcp.course.relations.evidence import EvidenceChecks
+    from tum_mcp.course.relations.projection import project
+    from tum_mcp.course.relations.store import read_inputs
 
     inputs = read_inputs(course)
     graph = project(inputs)

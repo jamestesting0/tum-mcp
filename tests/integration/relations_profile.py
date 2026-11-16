@@ -13,15 +13,15 @@ from pathlib import Path
 
 import pytest
 from documents import content_file
-from knowledge_fixture import knowledge_project
+from relations_fixture import knowledge_project
 
 from tum_mcp.course.content.study import StudyContent
-from tum_mcp.course.memory import query
-from tum_mcp.course.memory.packet import encoded
-from tum_mcp.course.memory.projection import project
-from tum_mcp.course.memory.store import SnapshotReader, read_inputs
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.store import private_path
+from tum_mcp.course.relations import query
+from tum_mcp.course.relations.packet import encoded
+from tum_mcp.course.relations.projection import project
+from tum_mcp.course.relations.store import SnapshotReader, read_inputs
 
 REPO = Path(__file__).resolve().parents[2]
 EXERCISE = "exercises/set/sheet-1/exercise/observer-practice"
@@ -203,11 +203,11 @@ def profile(folder: Path) -> dict:
     assert Path(tum_mcp.__file__).resolve().is_relative_to(REPO / "src")
     files = [
         Path(__file__),
-        REPO / "tests/fixtures/study_knowledge/efficiency-cases.json",
-        Path(__file__).with_name("knowledge_fixture.py"),
+        REPO / "tests/fixtures/course_relations/efficiency-cases.json",
+        Path(__file__).with_name("relations_fixture.py"),
         Path(__file__).with_name("material_fixture.py"),
     ]
-    product = sorted((REPO / "src/tum_mcp").glob("study_knowledge*.py"))
+    product = sorted((REPO / "src/tum_mcp/course/relations").glob("*.py"))
     product_digest = hashlib.sha256(
         b"".join(p.name.encode() + p.read_bytes() for p in product)
     ).hexdigest()

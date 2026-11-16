@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
-from knowledge_fixture import fidelity_project
+from relations_fixture import fidelity_project
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app

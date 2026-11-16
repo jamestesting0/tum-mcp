@@ -236,7 +236,7 @@ def fidelity_project(tmp_path: Path) -> Path:
     """The knowledge course plus one instance of every authored link family and entries that
     cite a subset of their owner's sources."""
     from tum_mcp.course.checks.links import record_none
-    from tum_mcp.course.memory.store import read_inputs
+    from tum_mcp.course.relations.store import read_inputs
 
     root = knowledge_project(tmp_path)
     sha = {item.resource.key: item.sha256 for item in load_state(root).resources}

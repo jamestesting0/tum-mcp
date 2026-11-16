@@ -15,10 +15,10 @@ from tum_mcp.course.content.store import index_name, read_json
 from tum_mcp.course.content.study import StudyContent
 from tum_mcp.course.lecture.content import LectureContent
 from tum_mcp.course.ledger.coverage import CoverageLedger
-from tum_mcp.course.memory.models import canonical_digest
 from tum_mcp.course.project.models import ResourceState, StudyState
 from tum_mcp.course.project.paths import app_path
 from tum_mcp.course.project.store import confined, digest, private_path
+from tum_mcp.course.relations.models import canonical_digest
 from tum_mcp.errors import CampusError, Code
 
 

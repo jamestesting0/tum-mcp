@@ -43,7 +43,7 @@ Runner = Callable[[str, Path, dict, Path], dict]
 
 def aliases(course: Path) -> dict[str, set[str]]:
     """Every key, label and title a student-facing answer may use, mapped to item refs."""
-    from tum_mcp.course.memory.store import read_inputs
+    from tum_mcp.course.relations.store import read_inputs
 
     with isolated_config():
         inputs = read_inputs(course)

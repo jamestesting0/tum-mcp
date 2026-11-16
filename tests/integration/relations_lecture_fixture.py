@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from documents import content_file
-from knowledge_fixture import knowledge_project
+from relations_fixture import knowledge_project
 
 from tum_mcp.course.lecture.evidence import Crop, Interval, Recording
 from tum_mcp.course.project.store import digest, load_state, private_path

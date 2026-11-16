@@ -4,13 +4,13 @@ import json
 from pathlib import Path
 
 import pytest
-from knowledge_fixture import linked_project
+from relations_fixture import linked_project
 
-from tum_mcp.course.memory.packet import encoded
-from tum_mcp.course.memory.query import context, impact
+from tum_mcp.course.relations.packet import encoded
+from tum_mcp.course.relations.query import context, impact
 
 CASES = json.loads(
-    (Path(__file__).parents[1] / "fixtures/study_knowledge/use-cases.json").read_bytes()
+    (Path(__file__).parents[1] / "fixtures/course_relations/use-cases.json").read_bytes()
 )
 
 

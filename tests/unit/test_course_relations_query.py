@@ -2,9 +2,9 @@
 
 import pytest
 
-from tum_mcp.course.memory.graph import Edge, Graph, Node
-from tum_mcp.course.memory.packet import encoded, excerpt, fit
-from tum_mcp.course.memory.query import lexical_score, seeds, walk
+from tum_mcp.course.relations.graph import Edge, Graph, Node
+from tum_mcp.course.relations.packet import encoded, excerpt, fit
+from tum_mcp.course.relations.query import lexical_score, seeds, walk
 from tum_mcp.errors import CampusError
 
 

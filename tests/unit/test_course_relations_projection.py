@@ -1,7 +1,7 @@
 """Graph interpretation must not turn shared content into false dependencies."""
 
-from tum_mcp.course.memory.graph import safe_text
-from tum_mcp.course.memory.packet import excerpt
+from tum_mcp.course.relations.graph import safe_text
+from tum_mcp.course.relations.packet import excerpt
 
 
 def test_packet_excerpts_remove_links_with_mixed_case_schemes() -> None:

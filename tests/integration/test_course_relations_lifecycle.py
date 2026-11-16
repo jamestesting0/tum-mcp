@@ -5,20 +5,20 @@ from pathlib import Path
 
 import pytest
 from documents import content_file
-from knowledge_fixture import knowledge_project
-from knowledge_lecture_fixture import real_cached_lecture
+from relations_fixture import knowledge_project
+from relations_lecture_fixture import real_cached_lecture
 
-from tum_mcp.course.memory.evidence import EvidenceChecks
-from tum_mcp.course.memory.store import read_inputs
 from tum_mcp.course.project.paths import app_path
 from tum_mcp.course.project.store import private_path
+from tum_mcp.course.relations.evidence import EvidenceChecks
+from tum_mcp.course.relations.store import read_inputs
 from tum_mcp.errors import CampusError, Code
 
 pytestmark = pytest.mark.usefixtures("lecture_extension")
 
 
 def test_unkeyed_and_repeated_passages_have_only_stable_owner_anchors(tmp_path: Path):
-    from tum_mcp.course.memory.projection import project
+    from tum_mcp.course.relations.projection import project
 
     root = knowledge_project(tmp_path)
     path = content_file(root, "study")
@@ -42,7 +42,7 @@ def test_unkeyed_and_repeated_passages_have_only_stable_owner_anchors(tmp_path: 
 def test_saved_packets_never_enter_site_exports(tmp_path: Path):
     from tum_mcp.course.app.build import build
     from tum_mcp.course.app.publish_site import export_site
-    from tum_mcp.course.memory.query import context
+    from tum_mcp.course.relations.query import context
 
     root = knowledge_project(tmp_path)
     packet = context(root, concept="observer") | {"note": "PRIVATE_PACKET_SENTINEL"}

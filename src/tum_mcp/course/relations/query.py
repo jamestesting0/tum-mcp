@@ -8,12 +8,12 @@ from pathlib import Path
 
 from pydantic import JsonValue
 
-from tum_mcp.course.memory.evidence import EvidenceChecks
-from tum_mcp.course.memory.graph import Edge, Graph, Node
-from tum_mcp.course.memory.models import Purpose, normalized
-from tum_mcp.course.memory.packet import envelope, excerpt, fit, item_view, validity
-from tum_mcp.course.memory.projection import project
-from tum_mcp.course.memory.store import read_inputs
+from tum_mcp.course.relations.evidence import EvidenceChecks
+from tum_mcp.course.relations.graph import Edge, Graph, Node
+from tum_mcp.course.relations.models import Purpose, normalized
+from tum_mcp.course.relations.packet import envelope, excerpt, fit, item_view, validity
+from tum_mcp.course.relations.projection import project
+from tum_mcp.course.relations.store import read_inputs
 from tum_mcp.errors import CampusError, Code
 
 LEARNING = frozenset({"study", "exercises", "exam", "lectures"})

@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import JsonValue
 
 from tum_mcp.course.content.study import SourceVersion
-from tum_mcp.course.memory.store import CourseInputs
+from tum_mcp.course.relations.store import CourseInputs
 
 
 @dataclass(frozen=True, slots=True)

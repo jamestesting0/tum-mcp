@@ -5,10 +5,10 @@ from typing import Annotated
 
 import typer
 
-from tum_mcp.course.memory.models import Purpose
-from tum_mcp.course.memory.packet import encoded
-from tum_mcp.course.memory.query import context as get_context
-from tum_mcp.course.memory.query import impact as get_impact
+from tum_mcp.course.relations.models import Purpose
+from tum_mcp.course.relations.packet import encoded
+from tum_mcp.course.relations.query import context as get_context
+from tum_mcp.course.relations.query import impact as get_impact
 
 
 def register(app: typer.Typer) -> None:

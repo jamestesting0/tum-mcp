@@ -2,11 +2,11 @@ from pathlib import Path
 
 import pytest
 from documents import content_file
-from knowledge_fixture import knowledge_project, linked_project
+from relations_fixture import knowledge_project, linked_project
 
-from tum_mcp.course.memory.packet import encoded
-from tum_mcp.course.memory.query import context, impact
 from tum_mcp.course.project.store import load_state
+from tum_mcp.course.relations.packet import encoded
+from tum_mcp.course.relations.query import context, impact
 from tum_mcp.errors import CampusError
 
 pytestmark = pytest.mark.usefixtures("lecture_extension")

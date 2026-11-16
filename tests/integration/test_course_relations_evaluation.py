@@ -11,24 +11,24 @@ from pathlib import Path
 
 import pytest
 from documents import content_file
-from knowledge_fixture import linked_project
+from relations_fixture import linked_project
 
 from tum_mcp.course.checks.structure import course_map
-from tum_mcp.course.memory.evidence import EvidenceChecks
-from tum_mcp.course.memory.packet import encoded
-from tum_mcp.course.memory.projection import project
-from tum_mcp.course.memory.query import _collect, context, impact, seeds
-from tum_mcp.course.memory.store import read_inputs
 from tum_mcp.course.project.store import confined, load_state, private_path
+from tum_mcp.course.relations.evidence import EvidenceChecks
+from tum_mcp.course.relations.packet import encoded
+from tum_mcp.course.relations.projection import project
+from tum_mcp.course.relations.query import _collect, context, impact, seeds
+from tum_mcp.course.relations.store import read_inputs
 from tum_mcp.course.sources.text import find_sources
 from tum_mcp.errors import CampusError
 
 CASES = json.loads(
-    (Path(__file__).parents[1] / "fixtures/study_knowledge/retrieval-cases.json").read_bytes()
+    (Path(__file__).parents[1] / "fixtures/course_relations/retrieval-cases.json").read_bytes()
 )
-ARTIFACTS = Path(".omo/evidence/study-knowledge-harness/implementation")
+ARTIFACTS = Path(".omo/evidence/course-relations/implementation")
 # Baseline timings and evidence files are local evidence, never a CI gate.
-EVALUATION = os.environ.get("TUM_MCP_KNOWLEDGE_EVALUATION") == "1"
+EVALUATION = os.environ.get("TUM_MCP_RELATIONS_EVALUATION") == "1"
 evaluation_only = pytest.mark.skipif(not EVALUATION, reason="local evaluation opt-in")
 
 

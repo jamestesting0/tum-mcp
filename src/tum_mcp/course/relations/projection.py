@@ -4,9 +4,9 @@ from tum_mcp.course.checks.links import outlines
 from tum_mcp.course.content.study import SourceVersion, term_markers
 from tum_mcp.course.lecture.content import Highlight
 from tum_mcp.course.ledger.coverage import outcome_state
-from tum_mcp.course.memory.graph import Edge, Graph, Node, block_records, cited, safe_text
-from tum_mcp.course.memory.models import normalized
-from tum_mcp.course.memory.store import CourseInputs
+from tum_mcp.course.relations.graph import Edge, Graph, Node, block_records, cited, safe_text
+from tum_mcp.course.relations.models import normalized
+from tum_mcp.course.relations.store import CourseInputs
 
 
 def project(inputs: CourseInputs) -> Graph:
