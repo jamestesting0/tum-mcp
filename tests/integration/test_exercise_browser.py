@@ -1209,12 +1209,23 @@ def test_project_files_open_referenced_lines_and_keep_edits(
         expect(project.locator(".project-tab-item.active")).to_have_text("Counter.java")
         expect(project.locator(".tok-keyword").first).to_be_visible()
         expect(page.locator(".page-citation")).to_have_count(1)
-        # With the outline open the page area is medium: the tree starts folded to a rail.
+        # With the outline open the page area is medium: the tree starts folded. Opening it
+        # where it does not fit beside the task folds the task; opening the task folds it.
+        workspace = page.locator(".ide")
         expect(project.locator(".project-tree")).to_be_hidden()
-        page.get_by_role("button", name="Show files").click()
-        expect(project.locator(".project-tree")).to_be_visible()
+        expect(page.locator(".ide-rail")).to_have_count(0)
         page.locator(".ide-files-toggle").click()
+        expect(project.locator(".project-tree")).to_be_visible()
+        expect(workspace).to_have_attribute("data-task", "open")
+        page.set_viewport_size({"width": 1100, "height": 900})
         expect(project.locator(".project-tree")).to_be_hidden()
+        page.locator(".ide-files-toggle").click()
+        expect(project.locator(".project-tree")).to_be_visible()
+        expect(workspace).to_have_attribute("data-task", "closed")
+        page.locator(".ide-task-toggle").click()
+        expect(workspace).to_have_attribute("data-task", "open")
+        expect(project.locator(".project-tree")).to_be_hidden()
+        page.set_viewport_size({"width": 1280, "height": 900})
         reference = page.locator(".ide-task .code-ref")
         expect(reference.locator(".code-ref-path")).to_have_text("src/Main.java")
         expect(reference.locator(".code-line")).to_have_count(0)
@@ -1268,6 +1279,18 @@ def solved_project_url(exercise_project: Path) -> Iterator[str]:
          "walkthrough": [{"lines": "5", "note": "The field grows by one."}]}
     ]  # fmt: skip
     exercise["solution"] = {"answers": [{"code": [{"path": "src/Counter.java", "lines": "4-6"}]}]}
+    exercise["statement"].insert(
+        exercise["statement"].index(block) + 1,
+        {"kind": "uml", "diagram": "class", "sources": block["sources"],
+         "description": "The counter and its user.",
+         "classes": [{"key": "main", "name": "Main"},
+                     {"key": "counter", "name": "Counter",
+                      "operations": [{"text": "+ add(): void"}]}],
+         "relations": [{"kind": "dependency", "start": "main", "end": "counter"}]},
+    )  # fmt: skip
+    next(group for group in document["sets"] if exercise in group["exercises"])["due_at"] = (
+        "2099-01-05T09:00:00+01:00"
+    )
     write_document(exercise_project, "exercises", document)
     build(exercise_project, publish=False)
     with PreviewServer(
@@ -1296,10 +1319,29 @@ def test_solved_files_compare_and_the_workspace_layout_is_remembered(
         workspace = page.locator(".ide")
         expect(workspace).to_have_attribute("data-size", "wide")
         expect(workspace.locator(".ide-origin")).to_have_text("Built from the problem statement")
+        # A diagram in the task panel keeps its drawn size; only the bar's icons are small.
+        expect(page.locator(".ide-task svg.uml")).to_be_visible()
+        assert page.locator(".ide-task svg.uml").bounding_box()["height"] > 60
+        # An upcoming deadline sits in the label row, beside the page's one citation.
+        expect(page.locator(".ide-task .unit-header .due")).to_contain_text("Due")
+        expect(page.locator(".ide-task .page-eyebrow .page-citation")).to_have_count(1)
+        # No visible heading row is left holding only a citation under the title.
+        assert page.evaluate(
+            "[...document.querySelectorAll('.ide-task .section-heading')]"
+            ".filter(row => row.offsetHeight)"
+            ".every(row => [...row.children].some(child => !child.matches('.source-note')))"
+        )
         page.get_by_role("button", name="Compare", exact=True).click()
         solved = page.locator(".ide-task .solved-code")
         expect(solved.locator(".code-line")).to_have_count(3)
         expect(solved.locator(".code-notes")).to_contain_text("The field grows by one.")
+        # A note is a choice: it highlights its lines in the listing, and again clears them.
+        note = solved.get_by_role("button", name=re.compile("The field grows by one"))
+        note.click()
+        expect(note).to_have_attribute("aria-pressed", "true")
+        expect(solved.locator(".code-line.marked")).to_have_count(1)
+        note.click()
+        expect(solved.locator(".code-line.marked")).to_have_count(0)
         solved.get_by_role("button", name="Open solved file").click()
         version = workspace.locator(".project-views")
         expect(version.get_by_role("button", name="Solution")).to_have_attribute(
@@ -1313,10 +1355,10 @@ def test_solved_files_compare_and_the_workspace_layout_is_remembered(
         assert int(divider.get_attribute("aria-valuenow") or 0) == before + 16
         page.locator(".ide-task-toggle").click()
         expect(workspace).to_have_attribute("data-task", "closed")
-        expect(page.locator(".ide-task-rail")).to_contain_text("2/2")
+        expect(page.locator(".ide-task-toggle")).to_contain_text("2/2")
         page.reload()
         expect(workspace).to_have_attribute("data-task", "closed")
-        page.get_by_role("button", name="Show task").click()
+        page.locator(".ide-task-toggle").click()
         expect(divider).to_have_attribute("aria-valuenow", str(before + 16))
         phone = context.new_page()
         phone.on("pageerror", lambda error: errors.append(str(error)))

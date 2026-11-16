@@ -239,6 +239,35 @@ export function filesIn(blocks = []) {
 
 // The solved lines a step writes or a Solution answer shows, read from the solved files, each
 // with the walkthrough notes that explain them and a way to open the whole solved file.
+// Notes on solved lines: choosing one highlights its lines in the listing above, as a
+// walkthrough stop does; choosing it again clears them. Up and Down move between notes.
+function codeNotes(stops, listing, first) {
+  const lines = [...listing.querySelectorAll('.code-line')];
+  const list = node('ul', 'code-notes');
+  const choices = stops.map(stop => {
+    const at = span(stop.lines);
+    const choice = button('', () => select(choice.getAttribute('aria-pressed') === 'true' ? null : choice), 'code-note');
+    choice.setAttribute('aria-pressed', 'false'); choice.span = at;
+    choice.append(node('span', 'code-note-lines', at.first === at.last ? `Line ${at.first}` : `Lines ${at.first}–${at.last}`), studyText('span', '', stop.note));
+    list.append(append(node('li'), choice));
+    return choice;
+  });
+  function select(active) {
+    for (const choice of choices) choice.setAttribute('aria-pressed', String(choice === active));
+    lines.forEach((line, index) => {
+      const number = first + index;
+      line.classList.toggle('marked', Boolean(active?.span) && number >= active.span.first && number <= active.span.last);
+    });
+  }
+  list.addEventListener('keydown', event => {
+    const step = { ArrowDown: 1, ArrowUp: -1 }[event.key], at = choices.indexOf(document.activeElement);
+    if (!step || at < 0) return;
+    event.preventDefault(); event.stopPropagation();
+    const next = choices[Math.min(choices.length - 1, Math.max(0, at + step))];
+    next.focus(); select(next);
+  });
+  return list;
+}
 export function solvedCode(refs, files) {
   const box = node('div', 'code-refs solved-code');
   for (const ref of refs) {
@@ -249,13 +278,9 @@ export function solvedCode(refs, files) {
     const card = node('figure', 'code-ref');
     const caption = append(node('figcaption', 'code-ref-head'), icon(ICON.file), append(node('span', 'code-ref-path'), node('bdi', '', ref.path)), node('span', 'code-ref-lines', first === last ? `line ${first}` : `lines ${first}–${last}`));
     caption.append(button('Open solved file', () => openInWorkspace(ref.path, ref.lines, { solution: true }), 'quiet code-ref-open'));
-    card.append(caption, renderCode(all.slice(first - 1, last).join('\n'), file.language || ref.path.split('.').pop(), { numbers: true, start: first }));
-    if (ref.walkthrough?.length) {
-      card.append(append(node('ol', 'code-notes'), ...ref.walkthrough.map(stop => {
-        const at = span(stop.lines);
-        return append(node('li'), node('span', 'code-note-lines', at.first === at.last ? `Line ${at.first}` : `Lines ${at.first}–${at.last}`), studyText('span', '', stop.note));
-      })));
-    }
+    const listing = renderCode(all.slice(first - 1, last).join('\n'), file.language || ref.path.split('.').pop(), { numbers: true, start: first });
+    card.append(caption, listing);
+    if (ref.walkthrough?.length) card.append(codeNotes(ref.walkthrough, listing, first));
     box.append(card);
   }
   return box;

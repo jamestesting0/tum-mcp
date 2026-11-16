@@ -3,7 +3,7 @@ import { node, button, append } from './dom.mjs';
 import { renderFiles, fileIcon } from './files.mjs';
 
 // A coding exercise as an editor: files, the code and the task side by side, as in the
-// Artemis online editor. Files and Task fold to rails and resize by their dividers; each
+// Artemis online editor. Files and Task fold away and resize by their dividers; each
 // course remembers the layout. Narrow pages show one panel at a time.
 const TASK = { min: 340, start: 400, share: 0.5 };
 const EDITOR_MIN = 420, WIDE = 1100, NARROW = 760;
@@ -31,12 +31,17 @@ export function editorWorkspace({ block, task, exerciseKey, stepLabel }) {
     onOpen: () => { if (size === 'narrow') setView('code'); },
   });
 
+  // One control per panel. Opening the tree where it does not fit beside an open task folds
+  // the task; opening the task folds the tree, which comes back when the task folds again.
   const filesToggle = button('', () => {
-    treeWanted = !project.workspace.treeOpen; save({ treeOpen: treeWanted }); layout();
+    treeWanted = !project.workspace.treeOpen; save({ treeOpen: treeWanted });
+    if (treeWanted && taskOpen && !treeFits(true)) { taskOpen = false; save({ taskOpen }); }
+    layout();
   }, 'quiet ide-toggle ide-files-toggle');
   filesToggle.append(fileIcon('tree'), node('span', '', 'Files'));
   const taskToggle = button('', () => { taskOpen = !taskOpen; save({ taskOpen }); layout(); }, 'quiet ide-toggle ide-task-toggle');
-  taskToggle.append(node('span', '', 'Task'));
+  const taskStep = node('span', 'ide-toggle-step');
+  taskToggle.append(node('span', '', 'Task'), taskStep);
   const bar = append(node('div', 'ide-bar'), filesToggle);
   if (block.origin === 'rebuilt') bar.append(node('span', 'ide-origin', 'Built from the problem statement'));
   // Narrow pages switch between the three panels instead.
@@ -49,17 +54,11 @@ export function editorWorkspace({ block, task, exerciseKey, stepLabel }) {
   bar.append(node('span', 'ide-spacer'), views, taskToggle);
 
   const code = append(node('div', 'ide-code'), project);
-  const filesRail = button('', () => { treeWanted = true; save({ treeOpen: true }); layout(); }, 'ide-rail ide-files-rail');
-  filesRail.append(fileIcon('tree')); filesRail.setAttribute('aria-label', 'Show files'); filesRail.title = 'Show files';
-  code.prepend(filesRail);
   const divider = node('div', 'ide-divider');
   divider.setAttribute('role', 'separator'); divider.setAttribute('aria-orientation', 'vertical');
   divider.setAttribute('aria-label', 'Resize task'); divider.tabIndex = 0;
   const panel = append(node('div', 'ide-task'), task); panel.setAttribute('role', 'complementary'); panel.setAttribute('aria-label', 'Task');
-  const taskRail = button('', () => { taskOpen = true; save({ taskOpen }); layout(); }, 'ide-rail ide-task-rail');
-  const railStep = node('span', 'ide-rail-step');
-  taskRail.append(node('span', 'ide-rail-label', 'Task'), railStep); taskRail.setAttribute('aria-label', 'Show task');
-  const body = append(node('div', 'ide-body'), code, divider, panel, taskRail);
+  const body = append(node('div', 'ide-body'), code, divider, panel);
   ide.append(bar, body);
 
   const maxTask = () => Math.max(TASK.min, Math.min(ide.clientWidth * TASK.share, ide.clientWidth - EDITOR_MIN));
@@ -86,27 +85,29 @@ export function editorWorkspace({ block, task, exerciseKey, stepLabel }) {
   function setView(name) {
     view = name; write(viewKey(exerciseKey), name); layout();
   }
+  // The tree needs 160px beside the editor and, when open, the task and its divider.
+  const treeFits = withTask => ide.clientWidth - (withTask ? taskWidth + 5 : 0) - EDITOR_MIN >= 160;
+  const showStep = () => { taskStep.textContent = taskOpen ? '' : stepLabel(); taskStep.hidden = !taskStep.textContent; };
   function layout() {
     const width = ide.clientWidth;
     size = width >= WIDE ? 'wide' : width >= NARROW ? 'medium' : 'narrow';
     ide.dataset.size = size; ide.dataset.view = view;
     const single = block.files.length < 2;
     // The tree yields first when the editor and an open task panel do not fit beside it.
-    const room = width - (taskOpen ? taskWidth : 28) - EDITOR_MIN >= 160;
-    const tree = size === 'narrow' ? view === 'files' : !single && (treeWanted ?? size === 'wide') && room;
+    const tree = size === 'narrow' ? view === 'files' : !single && (treeWanted ?? size === 'wide') && treeFits(taskOpen);
     project.workspace.setTree(tree);
     ide.dataset.files = tree ? 'open' : 'closed';
     ide.dataset.task = size === 'narrow' || taskOpen ? 'open' : 'closed';
-    filesToggle.hidden = single || size === 'narrow'; filesRail.hidden = single || tree || size === 'narrow';
+    filesToggle.hidden = single || size === 'narrow';
     filesToggle.setAttribute('aria-expanded', String(tree));
     taskToggle.hidden = size === 'narrow'; taskToggle.setAttribute('aria-expanded', String(taskOpen));
     viewButtons.get('files').hidden = single;
     for (const [name, choice] of viewButtons) choice.setAttribute('aria-selected', String(name === view));
-    railStep.textContent = stepLabel();
+    showStep();
     if (size !== 'narrow') setTask(taskWidth, false);
   }
   new ResizeObserver(() => { if (ide.isConnected) layout(); }).observe(ide);
-  task.addEventListener('study-activity-change', () => { railStep.textContent = stepLabel(); });
+  task.addEventListener('study-activity-change', showStep);
   ide.ide = {
     // "Open in files" and Compare's solved file bring the code into view on narrow pages.
     reveal(name) { if (size === 'narrow' && view !== name) setView(name); },
