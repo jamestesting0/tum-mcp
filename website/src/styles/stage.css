@@ -96,4 +96,6 @@
   .bw-bar { height: 38px; gap: 10px; padding: 0 10px; }
   .bw-nav, .bw .traffic { display: none; }
   .resume { bottom: 12px; }
+  /* The callout spans the window, so it reads as part of it rather than a chip floating beside the control. */
+  .guide-callout { width: calc(100% - 24px); max-width: none; justify-content: space-between; }
 }

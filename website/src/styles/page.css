@@ -185,6 +185,8 @@ h1 { font-size: clamp(40px, 6vw, 88px); line-height: 0.98; letter-spacing: -0.04
 :root[data-theme="dark"] .finish { color: #0b1420; }
 .finish::after { content: ""; width: 8px; height: 8px; border-top: 2px solid currentColor; border-right: 2px solid currentColor; transform: rotate(45deg); transition: transform var(--fast) var(--ease); }
 .finish.is-visible { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
+/* While the visitor uses the app, Resume tour is the one action at the bottom; Get started returns with it. */
+.sticky:has(.stage.is-engaged) .finish.is-visible { opacity: 0; transform: translate(-50%, 18px) scale(.96); pointer-events: none; }
 .finish:hover::after { transform: translateX(3px) rotate(45deg); }
 
 .page[hidden] { display: none; }
