@@ -429,6 +429,41 @@ def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
         if pattern.workflow
         and (lines := _unformulated(pattern.model_dump(mode="json")["workflow"]))
     ]
+    bare += [
+        {
+            "item": f"exam/pattern/{pattern.key}",
+            "flag": "bare_rules",
+            "detail": f"{len(lines)} of {len(pattern.workflow)} steps show nothing to apply, such "
+            f"as '{lines[0][:80]}'. Show the rule each step applies under `apply`: the order "
+            "key, the tie or stop rule, the test, the formula or the code. Only a judgement step "
+            "that applies no rule has none.",
+        }
+        for pattern in content.patterns
+        if 2 * len(lines := [s.do for s in pattern.workflow if not s.apply and not s.cases])
+        > len(pattern.workflow)
+    ]
+    bare += [
+        {
+            "item": f"exam/pattern/{pattern.key}",
+            "flag": "hidden_cases",
+            "detail": f"A step's `apply` lists rules for different situations, such as "
+            f"'{text[:80]}'. Make each situation a case on that step, with an example per case.",
+        }
+        for pattern in content.patterns
+        if (
+            text := next(
+                (
+                    step.apply.text
+                    for step in pattern.workflow
+                    if not step.cases
+                    and step.apply
+                    and step.apply.text
+                    and len(_SITUATION.findall(step.apply.text)) > 1
+                ),
+                "",
+            )
+        )
+    ]
     bare += [math_word_flag(item, words) for item, words in worded.items() if words]
     bare += _map_flags(content)
     return bare + [
@@ -441,6 +476,16 @@ def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
         for item, found in texts.items()
         if found
     ]
+
+
+# A sentence that opens with its own situation ("For DFS tree completeness, ..."): two in one
+# `apply` are cases the step hides.
+# A sentence that opens a situation: "For bidirectional search ...", or a short label that
+# maps a situation to its rule ("Tree treated uniformly: Composite.").
+_SITUATION = re.compile(
+    r"(?:^|(?<=[.;]\s))(?:(?:For|If|When|With)\s+(?!each\b|every\b|all\b|example\b|instance\b)\w"
+    r"|[A-Z][\w-]*(?:\s+[\w-]+){0,5}:\s)"
+)
 
 
 def sheet_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:

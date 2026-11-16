@@ -5,7 +5,13 @@ import pytest
 from material_fixture import exam_document, exam_project, pdf_bytes
 
 from tum_mcp.course.content.exam import Concept, ExamContent
-from tum_mcp.course.content.exam_data import exam_report, exam_statistics, stale_exam
+from tum_mcp.course.content.exam_data import (
+    exam_item_flags,
+    exam_report,
+    exam_statistics,
+    render_exam,
+    stale_exam,
+)
 from tum_mcp.course.content.exam_layout import NODE_GAP, NODE_WIDTH, layout
 from tum_mcp.course.project.store import load_state
 
@@ -268,3 +274,38 @@ def test_entry_meanings_and_prose_prompts_for_non_formula_entries(content: ExamC
     )
     flags = {f["flag"] for f in sheet_flags(changed) if f["item"] == f"concept:{concept.key}"}
     assert {"sheet_dense_paragraph", "prose_legend"} <= flags
+
+
+def test_a_workflow_that_mostly_shows_no_rule_is_flagged(content: ExamContent) -> None:
+    def rules(exam: ExamContent) -> set[str]:
+        return {f["item"] for f in exam_item_flags(exam) if f["flag"] == "bare_rules"}
+
+    pattern = next(p for p in content.patterns if all(s.apply or s.cases for s in p.workflow))
+    assert f"exam/pattern/{pattern.key}" not in rules(content)
+    bare = pattern.model_copy(
+        update={"workflow": tuple(s.model_copy(update={"apply": None}) for s in pattern.workflow)}
+    )
+    others = tuple(p for p in content.patterns if p.key != pattern.key)
+    stripped = content.model_copy(update={"patterns": (bare, *others)})
+    assert f"exam/pattern/{pattern.key}" in rules(stripped)
+
+
+@pytest.mark.parametrize(
+    "rules",
+    [
+        "For DFS completeness, look for an infinite branch. If costs differ, use UCS.",
+        "Tree treated uniformly: Composite. Swap an algorithm: Strategy.",
+    ],
+)
+def test_a_step_hiding_cases_in_its_apply_is_flagged(content: ExamContent, rules: str) -> None:
+    def hidden(exam: ExamContent) -> list[dict]:
+        return [f for f in exam_item_flags(exam) if f["flag"] == "hidden_cases"]
+
+    pattern = content.patterns[0]
+    step = next(s for s in pattern.workflow if s.apply and not s.cases)
+    assert hidden(content) == []
+    mixed = step.model_copy(update={"apply": step.apply.model_copy(update={"text": rules})})
+    workflow = tuple(mixed if s is step else s for s in pattern.workflow)
+    changed = pattern.model_copy(update={"workflow": workflow})
+    flagged = content.model_copy(update={"patterns": (changed, *content.patterns[1:])})
+    assert [f["item"] for f in hidden(flagged)] == [f"exam/pattern/{pattern.key}"]
