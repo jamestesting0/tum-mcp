@@ -146,6 +146,10 @@ class PastQuestion(Frozen):
     def consistent(self) -> "PastQuestion":
         if (self.status == "classified") == (self.reason is not None):
             raise ValueError("Only out-of-scope or unreadable questions carry a reason.")
+        if re.search(r"\w\s*\u2013\s*\w|\w\s+-\s+\w", self.number):
+            raise ValueError(
+                f"Question {self.number} merges several subquestions; give each its own entry."
+            )
         if self.status == "classified" and not self.patterns:
             raise ValueError("A classified question belongs to at least one pattern.")
         if len(set(self.patterns)) != len(self.patterns) or len(set(self.concepts)) != len(
@@ -212,7 +216,11 @@ class Sitting(Frozen):
     label: Text
     held: Held
     kind: Literal["final", "retake", "midterm", "official_mock", "unofficial_mock", "recollection"]
-    relevance: Literal["current", "partial", "outdated"] = "current"
+    relevance: Literal["current", "partial", "outdated"] = Field(
+        default="current",
+        description="How well this exam fits the course as taught now (its topics and format), "
+        "never the request's scope: mark questions outside the request `out_of_scope` instead.",
+    )
     relevance_note: Text | None = None
     variants: tuple[Variant, ...] = Field(min_length=1, max_length=6)
 

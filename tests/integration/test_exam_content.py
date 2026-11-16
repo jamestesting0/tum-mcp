@@ -244,3 +244,13 @@ def test_concept_progress_survives_detail_edits(document: dict) -> None:
 def test_empty_exam_prep_is_rejected(document: dict, tmp_path: Path) -> None:
     with pytest.raises(ValidationError, match="needs past exams"):
         ExamContent.model_validate({"course_key": document["course_key"]})
+
+
+def test_a_past_question_names_one_subquestion(document: dict) -> None:
+    merged = copy.deepcopy(document)
+    merged["sittings"][0]["variants"][0]["questions"][0]["number"] = "1 e\u2013f"
+    with pytest.raises(ValidationError, match="merges several subquestions"):
+        ExamContent.model_validate(merged)
+    single = copy.deepcopy(document)
+    single["sittings"][0]["variants"][0]["questions"][0]["number"] = "2-1"
+    ExamContent.model_validate(single)
