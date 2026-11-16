@@ -75,9 +75,9 @@ press(" ")
 record("clients-selected")
 press("\r", 15)
 record("workflows")
-for index in range(4):
+for index in range(3):
     press(" ")
-    if index < 3:
+    if index < 2:
         press(DOWN)
 record("workflows-selected")
 press(ESCAPE, 6)

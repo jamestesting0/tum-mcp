@@ -109,7 +109,7 @@
       "arguments": [
         [
           "[WORKFLOW]...",
-          "lecture, audio-notes, video-notes or course-memory; omit to choose."
+          "lecture, audio-notes or video-notes; omit to choose."
         ]
       ],
       "options": [
@@ -140,7 +140,7 @@
       "arguments": [
         [
           "[WORKFLOW]...",
-          "lecture, audio-notes, video-notes or course-memory; omit to choose."
+          "lecture, audio-notes or video-notes; omit to choose."
         ]
       ],
       "options": [

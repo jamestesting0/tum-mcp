@@ -56,7 +56,7 @@ def test_future_boolean_flags_load_and_survive_rewrites(config: Path) -> None:
         '{"schema_version":1,"future_tool":"yes"}',
         '{"schema_version":1,"Future-Tool":true}',
         '{"schema_version":1,"video_notes":1}',
-        '{"schema_version":1,"course_memory":1}',
+        '{"schema_version":1,"video_notes":1}',
         '{"schema_version":2}',
     ],
 )
@@ -91,3 +91,9 @@ def test_installing_another_workflow_preserves_future_flags(config: Path) -> Non
         "audio_notes": True,
         "future_tool": True,
     }
+
+
+def test_course_links_are_not_an_installable_workflow(config: Path) -> None:
+    result = CliRunner().invoke(app, ["install", "course-memory", "--json"])
+    assert result.exit_code != 0
+    assert not (config / "extensions.json").exists()

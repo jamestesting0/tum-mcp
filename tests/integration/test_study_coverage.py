@@ -334,11 +334,11 @@ def test_ledger_references_must_resolve_before_the_build_trusts_them(
 
 
 def test_cheatsheet_is_judged_against_source_exam_requirements(
-    tmp_path: Path, course_memory: Path
+    tmp_path: Path, lecture_extension: Path
 ) -> None:
     # Past-exam links alone never showed what the sources make exam-relevant; the ledger's
     # exam requirements do, and a requirement may not point at an entry that does not exist.
-    from knowledge_fixture import knowledge_project
+    from relations_fixture import knowledge_project
 
     from tum_mcp.course.content.exam_data import read_exam
 

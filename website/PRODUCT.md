@@ -16,7 +16,7 @@ TUM students who already use, or are about to use, a coding agent: Codex, Claude
 
 ## Product Purpose
 
-TUM MCP connects a student's coding agent to Moodle, Artemis, Zulip and TUMonline. It reads course sources with citations and turns them into a private study app with Study, Exercises and Exam workspaces, plus optional Lecture, Audio Notes, Video Notes and Course Memory. This walkthrough is a surface that shows the whole path from installation to a working study app. A visitor should finish knowing how to install it and what they will get.
+TUM MCP connects a student's coding agent to Moodle, Artemis, Zulip and TUMonline. It reads course sources with citations and turns them into a private study app with Study, Exercises and Exam workspaces, plus optional Lecture, Audio Notes and Video Notes. This walkthrough is a surface that shows the whole path from installation to a working study app. A visitor should finish knowing how to install it and what they will get.
 
 ## Positioning
 

@@ -3,12 +3,6 @@ name: sync-course
 description: Initialize or refresh one TUM course project, its shared sources and source-backed course handbook. Chooses from local state; lesson or exercise authoring uses the preparation skills.
 ---
 
-When `tum-mcp study status PROJECT` reports `course_memory: true`, use
-the installed `course-memory` skill for relationships and scoped source updates: after a
-refresh, run `tum-mcp study impact PROJECT --source KEY` for each changed source key.
-When disabled, leave retained graph files unused and follow the ordinary workflow.
-
-
 Run `tum-mcp study status PROJECT` once. Read AGENTS.md, `.tum-mcp/course.md`
 and relevant inventory records; reuse this check unless state changes. Status is local, not live freshness.
 
@@ -57,6 +51,8 @@ course page or TUMonline, or else the material's release date with `basis: relea
 proxy). `tum-mcp study schedule PROJECT` then resolves "this week" by code, and the
 prepare skills take their scope from it. An item rebound to a changed source's new hash
 changes, so the review loop checks it again; new sources join the next loop's scope.
+For each changed source key, run `tum-mcp study impact PROJECT --source KEY`: its
+`review_candidates` build on the changed items through authored links, so check them too.
 
 Report the course, imported/indexed/changed material, handbook review, coverage and conflicts.
 Inspect stale Study units and Exercises once when relevant. Continue with the

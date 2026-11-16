@@ -24,7 +24,7 @@ try {
   } else if (hasHelp(args[0]) && args.some(arg => ['--help', '-h'].includes(arg))) {
     printHelp(version, args[0]);
   } else {
-    const hasExtension = args.slice(1).some(arg => ['lecture', 'audio-notes', 'video-notes', 'course-memory'].includes(arg));
+    const hasExtension = args.slice(1).some(arg => ['lecture', 'audio-notes', 'video-notes'].includes(arg));
     let packageAction = args[0] === 'update';
     if (args[0] === 'update') {
       if (args.length > 2 || (args.length === 2 && args[1] !== '--local')) throw new Error('Usage: tum-mcp update [--local]. Run tum-mcp update --help for details.');

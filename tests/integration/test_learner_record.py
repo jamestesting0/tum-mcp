@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
-from knowledge_fixture import fidelity_project
+from relations_fixture import fidelity_project
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
@@ -18,11 +18,8 @@ NOTE = "Registers observers after the first notification"
 
 
 @pytest.fixture
-def course(tmp_path: Path, course_memory: Path) -> Path:
+def course(tmp_path: Path, lecture_extension: Path) -> Path:
     root = fidelity_project(tmp_path)
-    # The record must work for students without the Course Memory extension.
-    selection = json.loads((course_memory / "extensions.json").read_text())
-    (course_memory / "extensions.json").write_text(json.dumps(selection | {"course_memory": False}))
     return root
 
 
@@ -136,4 +133,4 @@ def test_study_init_requires_the_one_time_setup_answer_before_binding(tmp_path: 
     assert CliRunner().invoke(app, [*command, "--learner", "on"]).exit_code == 0
     assert record.consent(root) == "on"
     inspected = json.loads(CliRunner().invoke(app, ["study", "inspect", str(root)]).output)
-    assert inspected["learner"] == "on" and inspected["course_memory"] is False
+    assert inspected["learner"] == "on" and "course_memory" not in inspected

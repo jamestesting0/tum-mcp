@@ -531,7 +531,7 @@ definitions and links between workspaces remain available.
 
 Only the generated renderer, sanitized learning data and required images are
 uploaded. Downloaded originals, raw lecture evidence, credentials, AGENTS.md,
-course inventory, Course Memory, authoring plans, passage comments, personal
+course inventory, link packets, authoring plans, passage comments, personal
 progress, audio, generated videos and arbitrary files stay local. Git itself is
 not required: the publisher uses authenticated GitHub API calls through the host's
 `gh` CLI. Publication settings contain no credentials.
@@ -877,60 +877,29 @@ recording. Preferences about how to help ("hints before solutions") go in the co
 
 ## Local course relationships
 
-These commands require the optional **Course Memory** extension, disabled by default.
-Enable it with `tum-mcp install course-memory` and reload your client. The installed
-`course-memory` skill reads the links the course already holds and writes nothing while
-answering; reviewed relationships are recorded only on an explicit request.
-`study status PROJECT` reports the `course_memory` capability without reading the
-graph. No whole-course ingestion, background process or model benchmark is started.
+Every course project can answer how its items connect. The agent's `read-content` skill
+uses two read-only commands. They follow the links the course already holds and write
+nothing. No install, background process, index, embeddings or provider call is involved.
 
 `study context PROJECT "topic" --limit 4 --max-bytes 8000` connects Study, Exercises, Exam
 and Lecture items through the links authors write: exercise prerequisites, cheatsheet
 units, passages, exercises and pattern workflows, pattern worked examples, mock variants,
-past-question guidance, lecture-note passages and unit lectures, plus optional reviewed
-assertions. Use `--item REF` or `--concept KEY` (a cheatsheet entry key) for an exact
-selector, and `--purpose exercises` (or study, exam, lectures, review) for the workspace
-the answer needs: an exact selector lists itself first, then its authored links in that
-workspace. Each item cites only the sources and pages it cites itself, items carry their
-semester-map `topic`, and `gaps` reports links an author recorded as not fitting.
+past-question guidance, lecture-note passages and unit lectures. Use `--item REF` or
+`--concept KEY` (a cheatsheet entry key) for an exact selector, and `--purpose exercises`
+(or study, exam, lectures, review) for the workspace the answer needs: an exact selector
+lists itself first, then its authored links in that workspace. Each item cites only the
+sources and pages it cites itself, items carry their semester-map `topic`, and `gaps`
+reports links an author recorded as not fitting.
 
 `study impact PROJECT --source KEY` lists every direct dependent as a compact row with
 its owner (lesson, exercise, exam item or lecture) and evidence status, then possible
-review targets reached through authored links. Unknown and unmapped sources remain explicit. `study report PROJECT --section
-knowledge` performs a full local semantic audit; it is excluded from the default five
-report sections. `study schema knowledge` defines the optional private
-`.tum-mcp/knowledge.json`. No graph database, embeddings, provider call
-or persistent index is involved.
+review targets reached through authored links. Unknown and unmapped sources remain
+explicit. After a source refresh, `sync-course` runs it for each changed key.
 
-For teaching, reuse one narrow packet within the unchanged request, then read its
-actual source pages natively. Long queries may match partial terms; those matches
-remain navigation, not reviewed semantic claims. Avoid speculative whole-course
-source searches alongside context. Context defaults remain 12 items / 24,000 UTF-8 bytes, at most two hops, 256 nodes, 2,048
-examined edges, 64 distinct checked payloads and four lectures. All limits are reported;
-partial or ambiguous navigation is not supported teaching. Review receipts bind complete
-item meaning and source scope, independently of learner progress. Source changes require
-actual evidence review, content repair and explicit re-review. Candidate/rejected-only
-registries leave native course review unchanged. When reviewed relationships exist,
-the course report supplies a separate `knowledge_revision`: save it alongside the
-native `revision` only after reviewing the integration. Semantic changes stale that
-optional binding, including stale reviewed records. Native revisions and student
-progress remain independent. Earlier graph-bound review hashes may require one
-explicit course review; approvals are never silently migrated or rewritten.
-
-Finish bounded authored-content changes before reviewing their relationships together.
-Structure/review reports verify reviewed semantic dependencies without constructing all
-inactive-assertion diagnostics; the explicit knowledge report remains a full audit.
-Snapshot byte verification and review fingerprints are unchanged.
-
-Annotations and packets stay private and are not exported to the course website. Ordinary
-builds do not load this optional registry. Use the installed `course-memory` skill's
-`references/knowledge.md` for annotation, update and tutoring guidance. The graph
-models course content; it does not infer a student's mastery or readiness.
-
-`tum-mcp uninstall course-memory` stops graph queries, maintenance and semantic-review
-binding while preserving `knowledge.json`, history, source evidence and user notes.
-Malformed retained memory cannot break native course reports while disabled.
-Reinstall preserves the files and revalidates them on use; changed sources while
-disabled do not become trusted by reinstalling. Static `study schema knowledge`
-remains available for inspection. Removing a skill cannot erase an open chat's
-existing context; reload or start a fresh chat to clear it.
+For teaching, reuse one narrow packet within the request, then read its actual source
+pages. Long queries may match partial terms; those matches are navigation only. Context
+defaults are 12 items / 24,000 UTF-8 bytes, at most two hops, 256 nodes, 2,048 examined
+edges, 64 distinct checked payloads and four lectures. All limits are reported, and a
+partial packet is not supported teaching. Packets stay private and are never exported
+to the course website. They describe course content, not a student's mastery or
+readiness.

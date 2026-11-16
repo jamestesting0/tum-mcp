@@ -41,13 +41,12 @@ def sha(path: Path) -> str:
 
 
 @contextmanager
-def memory_enabled() -> Iterator[None]:
-    """Enable Course Memory in a throwaway config; the user's selection is never touched."""
+def isolated_config() -> Iterator[None]:
+    """Read courses with a throwaway config and data folder; the user's profile is untouched."""
     saved = {key: os.environ.get(key) for key in ("TUM_MCP_CONFIG_DIR", "TUM_MCP_DATA_DIR")}
     with tempfile.TemporaryDirectory(prefix="memory-bench-") as folder:
         config = Path(folder) / "config"
         config.mkdir()
-        (config / "extensions.json").write_text('{"schema_version":1,"course_memory":true}')
         os.environ["TUM_MCP_CONFIG_DIR"] = str(config)
         os.environ["TUM_MCP_DATA_DIR"] = str(Path(folder) / "data")
         try:
@@ -209,7 +208,7 @@ def own_sources(inputs) -> dict[str, frozenset[str]]:
 
 
 def statement_text(blocks) -> str:
-    from tum_mcp.course.memory.graph import safe_text
+    from tum_mcp.course.relations.graph import safe_text
 
     return " ".join(safe_text([block.model_dump(mode="json") for block in blocks]).split())[:500]
 
@@ -267,9 +266,9 @@ class Selector:
 
 
 def build_cases(course: Path, queries: list[dict], heldout: list[dict] = ()) -> dict:
-    from tum_mcp.course.memory.store import load_inputs
+    from tum_mcp.course.relations.store import read_inputs
 
-    inputs = load_inputs(course)
+    inputs = read_inputs(course)
     authored = links(inputs)
     neighbours: dict[str, set[str]] = defaultdict(set)
     families: dict[tuple[str, str, str, str], set[str]] = defaultdict(set)
@@ -336,7 +335,7 @@ def build_cases(course: Path, queries: list[dict], heldout: list[dict] = ()) -> 
 
 
 def call(course: Path, selector: Selector) -> dict:
-    from tum_mcp.course.memory.query import context, impact
+    from tum_mcp.course.relations.query import context, impact
     from tum_mcp.errors import CampusError
 
     args = dict(selector.args)
@@ -350,11 +349,11 @@ def call(course: Path, selector: Selector) -> dict:
 
 def observed_files(course: Path) -> set[Path]:
     """Every file a full-evidence projection reads, so the frozen copy is an exact closure."""
-    from tum_mcp.course.memory.evidence import EvidenceChecks
-    from tum_mcp.course.memory.projection import project
-    from tum_mcp.course.memory.store import load_inputs
+    from tum_mcp.course.relations.evidence import EvidenceChecks
+    from tum_mcp.course.relations.projection import project
+    from tum_mcp.course.relations.store import read_inputs
 
-    inputs = load_inputs(course)
+    inputs = read_inputs(course)
     graph = project(inputs)
     checks = EvidenceChecks(inputs, full=True)
     for node in graph.nodes.values():
@@ -372,7 +371,7 @@ def freeze(source: Path, name: str) -> dict:
     target = corpus(name)
     if target.exists():
         raise LabError(f"Corpus {name} exists; freeze into a new name.")
-    with memory_enabled():
+    with isolated_config():
         files = observed_files(source)
     state = load_state(source)
     files |= {source / item.path for item in state.resources if item.path}
@@ -399,7 +398,7 @@ def freeze(source: Path, name: str) -> dict:
     queries = target / "queries.json"
     if not queries.exists():
         queries.write_text("[]\n")
-    with memory_enabled():
+    with isolated_config():
         cases = build_cases(course, [])
         mismatched = [
             case["seed"]
@@ -433,7 +432,7 @@ def identity(name: str) -> dict:
             ["git", *args], cwd=paths.REPO, capture_output=True, text=True, check=True
         ).stdout.strip()
 
-    memory = sorted((paths.REPO / "src/tum_mcp/course/memory").glob("*.py"))
+    memory = sorted((paths.REPO / "src/tum_mcp/course/relations").glob("*.py"))
     return {
         "commit": git("rev-parse", "HEAD"),
         "memory_sources": hashlib.sha256(b"".join(p.read_bytes() for p in memory)).hexdigest(),
@@ -473,7 +472,7 @@ def run(name: str, label: str) -> dict:
     queries = json.loads((corpus(name) / "queries.json").read_text())
     held = corpus(name) / "queries-heldout.json"
     heldout = json.loads(held.read_text()) if held.is_file() else []
-    with memory_enabled():
+    with isolated_config():
         cases = build_cases(course, queries, heldout)
         selectors = {
             case["selector"].key: case["selector"] for group in GROUPS for case in cases[group]

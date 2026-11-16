@@ -27,50 +27,27 @@ def course_blocks(project: Path) -> dict:
     return loop.load(project).items["course"].blocks
 
 
-def test_course_memory_relations_stale_the_course_without_resetting_progress(
-    tmp_path: Path, course_memory: Path
+def test_a_retained_registry_file_changes_neither_the_course_review_nor_the_build(
+    tmp_path: Path, lecture_extension: Path
 ) -> None:
-    from knowledge_annotations import annotation, write_registry
-    from knowledge_fixture import knowledge_project
-
-    from tum_mcp.course.content.exam import concept_revision
-    from tum_mcp.course.content.exam_data import read_exam
-    from tum_mcp.course.project.store import private_path
-
-    root = knowledge_project(tmp_path)
-    native = course_blocks(root)["structure"]
-    write_registry(root, [annotation(root, "exam/concept/observer")], reviewed=True)
-    active = course_blocks(root)
-    assert active["structure"] == native and "knowledge" in active
-    progress = concept_revision(read_exam(root).concepts[0])
-    path = content_file(root, "exam")
-    value = json.loads(path.read_bytes())
-    value["concepts"][0]["details"][0]["title"] = "Revised meaning"
-    path.write_text(json.dumps(value))
-    changed = course_blocks(root)
-    assert changed["structure"] == native and changed["knowledge"] != active["knowledge"]
-    assert concept_revision(read_exam(root).concepts[0]) == progress
-    private_path(root, "knowledge.json").unlink()
-    assert course_blocks(root) == {"structure": native}
-
-
-def test_malformed_sidecar_blocks_semantic_report_but_not_local_build(
-    tmp_path: Path, course_memory: Path
-) -> None:
-    from knowledge_fixture import knowledge_project
+    from relations_fixture import knowledge_project
 
     from tum_mcp.course.app.build import build
     from tum_mcp.course.project.store import private_path
 
     root = knowledge_project(tmp_path)
+    before = course_blocks(root)
+    assert before == {"structure": before["structure"]}
     private_path(root, "knowledge.json").write_text("{PRIVATE_SENTINEL")
+    assert course_blocks(root) == before
     result = CliRunner().invoke(app, ["study", "report", str(root), "--section", "structure"])
-    assert result.exit_code != 0 and "PRIVATE_SENTINEL" not in str(result.exception)
+    assert result.exit_code == 0, result.output
+    assert "knowledge_revision" not in json.loads(result.output)["structure"]
     build(root, publish=False)
 
 
 def test_the_cheatsheet_and_each_pattern_are_reviewed_items(tmp_path: Path) -> None:
-    from knowledge_fixture import knowledge_project
+    from relations_fixture import knowledge_project
 
     root = knowledge_project(tmp_path, workspaces=frozenset({"exam"}))
     items = loop.load(root).items
@@ -86,7 +63,7 @@ def test_the_cheatsheet_and_each_pattern_are_reviewed_items(tmp_path: Path) -> N
 
 
 def test_every_native_solution_transfer_compare_and_explore_visual_can_be_scored(tmp_path: Path):
-    from knowledge_fixture import knowledge_project
+    from relations_fixture import knowledge_project
 
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.app.visuals import visual_ids

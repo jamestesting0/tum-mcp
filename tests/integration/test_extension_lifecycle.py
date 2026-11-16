@@ -1,4 +1,4 @@
-"""Shared lifecycle of the optional media workflows; lecture and course memory keep their own."""
+"""Shared lifecycle of the optional media workflows; lecture keeps its own."""
 
 import json
 from collections.abc import Callable

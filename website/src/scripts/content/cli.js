@@ -7,7 +7,7 @@ import antigravity from '../../content/cli/setup-antigravity.json';
 import login from '../../content/cli/login.json';
 
 const recorded = { codex, claude, cursor, antigravity };
-const WORKFLOWS = ['Lecture', 'Audio Notes', 'Video Notes', 'Course Memory'];
+const WORKFLOWS = ['Lecture', 'Audio Notes', 'Video Notes'];
 const text = line => line.map(([value]) => value).join('');
 
 // The capture cancels the workflow step so nothing installs. After Enter, setup prints the

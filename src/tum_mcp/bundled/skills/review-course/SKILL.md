@@ -3,10 +3,6 @@ name: review-course
 description: Run the review loop on prepared Study, Exercises, Exam, Lecture content and course structure - fresh checkers read packets, the maker fixes by check, code re-checks, and the gate decides. Also reviews audio and video against their sources, frames and machine listening (listen); media scores stay separate.
 ---
 
-When `tum-mcp study status PROJECT` reports `course_memory: true`, use
-the installed `course-memory` skill for relationships and scoped source updates.
-When disabled, leave retained graph files unused and follow the ordinary workflow.
-
 Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. Content lives in
 one file per item under `app/` (`app/study/units/`, `app/exercises/<set>/`, `app/exam/`,
 `app/lectures/`). `tum-mcp review` owns the loop state, packets and recorded verdicts

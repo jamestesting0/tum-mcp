@@ -95,8 +95,8 @@ def _save(root: Path, rows: list[Event]) -> None:
 
 
 def _graph(root: Path):
-    from tum_mcp.course.memory.projection import project
-    from tum_mcp.course.memory.store import read_inputs
+    from tum_mcp.course.relations.projection import project
+    from tum_mcp.course.relations.store import read_inputs
 
     return project(read_inputs(root))
 

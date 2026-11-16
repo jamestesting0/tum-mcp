@@ -1,5 +1,6 @@
-"""Paired offline agent check (Tier C): the same model answers fixed course questions with
-Course Memory disabled (arm A) and enabled (arm B) on fresh clones of a frozen corpus.
+"""Offline agent check (Tier C): a model answers fixed course questions on fresh clones of a
+frozen corpus. Arm B is the current build; stored arm A runs (Course Memory off, before course
+links were built in) stay readable as the old default for comparisons.
 
 Grading is deterministic: the answer's SOURCES line against pre-registered gold, a file
 hash diff for side effects, and whether the memory commands ran. No judge model is used.
@@ -19,14 +20,14 @@ from pathlib import Path
 from filelock import FileLock, Timeout
 
 from skill_lab import LabError, hosts, models, paths, runs, safety, variants
-from skill_lab.memory_bench import check_manifest, corpus, memory_enabled, owner
+from skill_lab.memory_bench import check_manifest, corpus, isolated_config, owner
 from skill_lab.models import ModelSpec
 
 AUTHOR = models.DEFAULT_AUTHORS["codex"]
 CAP = 72
 TIMEOUT = 600
 PROTECTED = ("app/", "materials/", "AGENTS.md")
-PROTECTED_PRIVATE = ("state.json", "coverage.json", "links.json", "knowledge.json")
+PROTECTED_PRIVATE = ("state.json", "coverage.json", "links.json")
 CONTRACT = (
     "\n\nAnswer from the course in this folder. End your answer with one line "
     "`SOURCES: kind:key[#pages], ...` naming the course items you relied on by the keys in "
@@ -42,10 +43,10 @@ Runner = Callable[[str, Path, dict, Path], dict]
 
 def aliases(course: Path) -> dict[str, set[str]]:
     """Every key, label and title a student-facing answer may use, mapped to item refs."""
-    from tum_mcp.course.memory.store import load_inputs
+    from tum_mcp.course.relations.store import read_inputs
 
-    with memory_enabled():
-        inputs = load_inputs(course)
+    with isolated_config():
+        inputs = read_inputs(course)
     found: dict[str, set[str]] = defaultdict(set)
 
     def add(ref: str, *names: str | None) -> None:
@@ -432,7 +433,7 @@ def run_stage(
     label: str,
     stage: int,
     *,
-    arms: tuple[str, ...] = ("A", "B"),
+    arms: tuple[str, ...] = ("B",),
     tasks_file: str = "agent-tasks.json",
     author: str = AUTHOR,
     trials: int = 3,
@@ -494,18 +495,15 @@ def run_stage(
             shim.chmod(0o755)
             runner = runner_factory(bin_dir, home, variant_dir)
             block = managed_block(variant_dir)
-            for arm in ("A", "B", "L", "O"):
+            for arm in ("B", "L", "O"):
                 todo = [item for item in pending if item[1] == arm]
                 if not todo:
                     continue
                 config, data = scratch / arm / "config", scratch / arm / "data"
                 config.mkdir(parents=True)
                 data.mkdir(parents=True)
-                memory = arm != "A"
-                selection = {"schema_version": 1} | ({"course_memory": True} if memory else {})
-                (config / "extensions.json").write_text(json.dumps(selection))
                 skills = installer(variant_dir, home, config, data)
-                if ("course-memory" in skills) != memory:
+                if "read-content" not in skills or "course-memory" in skills:
                     raise LabError(f"Arm {arm} installed the wrong skills: {skills}.")
                 environment = hosts.clean_environment(
                     {"TUM_MCP_CONFIG_DIR": str(config), "TUM_MCP_DATA_DIR": str(data)},

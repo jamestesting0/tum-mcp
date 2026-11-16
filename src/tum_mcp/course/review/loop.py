@@ -195,22 +195,13 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
     items = collect(
         root, content=content, exercises=exercises, exam=exam, lectures=lectures, ledger=ledger
     )
-    from tum_mcp.course.memory.report import knowledge_revision
-
     media = discover(root, state, content)
     links: list[dict[str, JsonValue]] = []
     if items:
-        semantics = knowledge_revision(root)
         structure = course_map(
-            content,
-            exercises,
-            exam,
-            lectures,
-            ledger=ledger,
-            knowledge_revision=semantics,
-            media=media.structure,
+            content, exercises, exam, lectures, ledger=ledger, media=media.structure
         )
-        items["course"] = course_item(structure, str(structure["revision"]), semantics)
+        items["course"] = course_item(structure, str(structure["revision"]))
         # Every exercise, cheatsheet entry, note and unit links each existing workspace or
         # records why none fits; an open decision holds that item's gate.
         from tum_mcp.course.checks.links import undecided
