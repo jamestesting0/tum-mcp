@@ -92,7 +92,8 @@ def run_removal(
     captured = bytearray()
     sent = False
     sent_at = 0
-    deadline = time.monotonic() + 15
+    # A bound, not a pace: loaded macOS runners need well over 15 s to start the picker.
+    deadline = time.monotonic() + 60
     try:
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.1)[0]:
