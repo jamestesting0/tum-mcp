@@ -1410,6 +1410,8 @@ def block_guide(example: str) -> str:
             "pitfall": exam.Pitfall,
             "drill": exam.DrillItem,
             "guided-step": exam.GuidedStep,
+            "pattern": exam.Pattern,
+            "mock": exam.Mock,
         }.get(example.removeprefix("exam-"))
         return " ".join((model.__doc__ or "").split()) if model else ""
     if example.startswith("selection-"):

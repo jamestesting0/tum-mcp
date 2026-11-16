@@ -602,7 +602,10 @@ def schema(
     if example:
         if definition is not None:
             raise CampusError(Code.ACTION_REQUIRED, "Choose an example or a schema, not both.")
-        catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+        exemplars = files("tum_mcp") / "bundled/exemplars"
+        catalogue = json.loads((exemplars / "blocks.json").read_bytes())
+        for name in ("exam-pattern", "exam-mock"):
+            catalogue[name] = json.loads((exemplars / f"{name}.json").read_bytes())
         if kind is None or kind == "list":
             typer.echo(json.dumps(sorted(catalogue), indent=2))
         elif kind in catalogue:
