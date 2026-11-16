@@ -41,11 +41,9 @@ function legendItem(dashed, text) {
 const READABLE = 0.75;
 
 export function renderMap() {
-  // Phones draw the same map reflowed into one column (built as `narrow`), shown whole at the
-  // screen's width; crossing the breakpoint redraws it with the other arrangement.
+  // Phones show the same map scaled down to the screen's width; full screen zooms into it.
   const phone = matchMedia('(max-width: 719px)');
-  const map = phone.matches && exam.map?.narrow ? exam.map.narrow : exam.map;
-  const compact = map !== exam.map;
+  const map = exam.map;
   const root = node('section', 'exam-map'); root.setAttribute('aria-labelledby', 'exam-map-title');
   const title = node('h2', '', 'Semester map'); title.id = 'exam-map-title';
   const heading = append(node('div', 'section-heading exam-map-heading'), title);
@@ -87,7 +85,7 @@ export function renderMap() {
     status.textContent = `Selected: ${plainTitle(key)}`;
     if (focus) elements.get(key).focus();
     // In full screen the details sit beside the map, which narrows: keep the node in view.
-    if (root.classList.contains('expanded') || matchMedia('(max-width: 719px)').matches) requestAnimationFrame(() => { if (!disposed) reveal(position.get(key)); });
+    if (root.classList.contains('expanded')) requestAnimationFrame(() => { if (!disposed) reveal(position.get(key)); });
   }
   function deselect() {
     const key = selected;
@@ -164,9 +162,7 @@ export function renderMap() {
       const free = side => [a, b].every(end => !members.some(item => item.y === end.y && (item.x - end.x) * side > 0));
       const side = free(-1) ? -1 : free(1) ? 1 : 0;
       if (!side) return null;
-      // The reflowed phone map leaves room beside its single column for the arrowhead.
-      const aside = compact ? 14 : 8;
-      const x = side < 0 ? Math.min(...members.map(item => item.x)) - aside : Math.max(...members.map(item => item.x)) + width + aside;
+      const x = side < 0 ? Math.min(...members.map(item => item.x)) - 8 : Math.max(...members.map(item => item.x)) + width + 8;
       const out = side < 0 ? a.x : a.x + width, into = (side < 0 ? b.x : b.x + width) + side * (arrow ? head : 0);
       return rounded([[out, a.y + height / 2], [x, a.y + height / 2], [x, b.y + height / 2], [into, b.y + height / 2]]);
     };
@@ -270,10 +266,11 @@ export function renderMap() {
     const width = scroller.clientWidth, height = scroller.clientHeight;
     if (!width || !height) return;
     const across = (width - 32) / map.width;
-    const inline = compact && !root.classList.contains('expanded');
-    view.scale = clamp(whole && !inline ? Math.min(across, (height - 32) / map.height, 1.25) : Math.min(Math.max(across, phone.matches ? 14 / 13 : READABLE), 1.25));
-    // Inline on a phone, the frame grows to the whole reflowed map and the page scrolls past it.
-    if (inline) scroller.style.height = `${Math.ceil(map.height * view.scale + 32)}px`;
+    const inline = phone.matches && !root.classList.contains('expanded');
+    view.scale = inline ? Math.min(across, 1.25)
+      : clamp(whole ? Math.min(across, (height - 32) / map.height, 1.25) : Math.min(Math.max(across, phone.matches ? 14 / 13 : READABLE), 1.25));
+    // Inline on a phone, the whole map fits the width and the frame takes the map's proportions.
+    scroller.style.height = inline ? `${Math.ceil(map.height * view.scale + 32)}px` : '';
     const room = inline ? map.height * view.scale + 32 : height;
     const start = (size, room) => size * view.scale <= room - 32 ? (size - room / view.scale) / 2 : -16 / view.scale;
     view.x = start(map.width, width); view.y = start(map.height, room);
@@ -423,15 +420,12 @@ export function renderMap() {
   const observer = new ResizeObserver((entries, observer) => {
     if (!scroller.isConnected) { observer.disconnect(); return; }
     // The inline phone map follows the screen's width; its own height change is not a resize.
-    if (compact && !root.classList.contains('expanded') && scroller.clientWidth !== measured) { measured = scroller.clientWidth; fit(false); return; }
+    if (phone.matches && !root.classList.contains('expanded') && scroller.clientWidth !== measured) { measured = scroller.clientWidth; fit(false); return; }
     if (fitted) apply(); else fit(false);
   });
   observer.observe(scroller);
-  phone.addEventListener('change', () => {
-    if (!root.isConnected || !exam.map?.narrow) return;
-    const fresh = renderMap(), retire = root.dispose;
-    retire(); root.replaceWith(fresh); root.dispose = () => fresh.dispose();
-  }, { signal });
+  // Crossing the breakpoint switches between the fitted phone frame and the desktop frame.
+  phone.addEventListener('change', () => { measured = 0; if (!root.classList.contains('expanded')) fit(false); }, { signal });
   root.dispose = () => {
     closeFallback(); disposed = true; lifetime.abort(); observer.disconnect(); cancelPointers();
     document.removeEventListener('fullscreenchange', onFullscreen);

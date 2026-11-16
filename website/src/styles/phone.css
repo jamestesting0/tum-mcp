@@ -34,7 +34,8 @@
   .start-links { column-gap: var(--s4); }
   .header-actions { gap: var(--s2); }
   .header-cta { height: 34px; padding: 0 12px; font-size: 14px; }
-  .finish { bottom: 96px; height: 48px; font-size: 16px; }
+  /* Clears the stage foot (caption and playback bar), so it sits inside the window above them. */
+  .finish { bottom: 132px; height: 48px; font-size: 16px; }
   .command { padding-left: 12px; }
   .command code { white-space: pre-wrap; overflow-wrap: anywhere; }
 }

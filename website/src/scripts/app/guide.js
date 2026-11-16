@@ -14,7 +14,7 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 // as a small accent disc, widens into the highlight around each control (dimming the rest) and
 // stays wrapped around it, following it as the app moves. The dimming stays steady while the guide
 // shows; after a click the lens glides on to whatever the click revealed.
-export function createGuide() {
+export function createGuide({ topInset = () => 0 } = {}) {
   const ring = h('div.guide-ring');
   const label = h('strong');
   const line = h('span');
@@ -29,14 +29,20 @@ export function createGuide() {
   let follow = null;
 
   // Click beats default to a callout above the control, since what the click opens appears below it.
+  // The callout never covers the app's own sticky bar; a control too tall for either side (a whole
+  // map) gets the callout over its lower part, keeping its heading in view.
   function moveCallout(rect, beat) {
     const box = { width: callout.offsetWidth, height: callout.offsetHeight };
+    const ceiling = GAP + topInset();
+    const floor = element.offsetHeight - GAP - box.height;
     const above = rect.top - PAD - GAP - box.height;
     const below = rect.bottom + PAD + GAP;
-    const fitsAbove = above >= GAP;
-    const fitsBelow = below + box.height <= element.offsetHeight - GAP;
+    const fitsAbove = above >= ceiling;
+    const fitsBelow = below <= floor;
     const prefer = beat.place ?? (beat.click ? 'above' : 'below');
-    const top = prefer === 'above' ? (fitsAbove || !fitsBelow ? Math.max(GAP, above) : below) : (fitsBelow || !fitsAbove ? below : above);
+    const runsOff = rect.bottom + PAD > floor;
+    const top = !fitsAbove && !fitsBelow ? Math.max(ceiling, floor)
+      : prefer === 'above' ? (fitsAbove ? above : below) : (fitsBelow ? below : runsOff ? floor : above);
     const left = Math.min(Math.max(GAP, rect.left), element.offsetWidth - box.width - GAP);
     callout.style.transform = `translate(${left}px, ${top}px)`;
   }

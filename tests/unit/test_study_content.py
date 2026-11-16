@@ -70,7 +70,7 @@ def test_explore_preserves_legacy_core_progress_but_changes_teaching_review() ->
     before = StudyContent.model_validate(payload).units[1]
     assert before.key == "bfs"
     assert (
-        unit_revision(before) == "3c3f0059e28219e78082801a80a63cc0e63d05e9372bbdd27a17f703df1d42b5"
+        unit_revision(before) == "399388f355693c1e285725ecb19ee3d54f37533a8b4dbe136ba3f6daf5e844a1"
     )
     assert revision(before) == "5d634d65707b01aa"
     material = {

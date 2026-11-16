@@ -335,7 +335,7 @@ html[data-audio-dock] .page-layout { padding-bottom: 96px; }
 @container (max-width: 480px) {
   button.player-mute { display: none; }
   .player-bar { gap: 0; }
-  button.player-button { width: 36px; min-height: 36px; }
+  button.player-button:not(.player-big) { width: 36px; min-height: 36px; }
   button.player-speed { min-width: 36px; padding: 0 var(--s1); }
   .player-time { padding: 0 var(--s1); }
 }
@@ -1091,7 +1091,9 @@ button.exam-map-item { display: flex; justify-content: space-between; gap: var(-
 .exam-map-modal { inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: var(--canvas); color: var(--ink); }
 .exam-map-modal .exam-map.expanded { padding: max(var(--s4), env(safe-area-inset-top)) max(var(--s4), env(safe-area-inset-right)) max(var(--s4), env(safe-area-inset-bottom)) max(var(--s4), env(safe-area-inset-left)); }
 @media (max-width: 719px) {
-  .exam-map:not(.expanded) .exam-map-scroll { max-height: none; }
+  .exam-map:not(.expanded) .exam-map-scroll { min-height: 0; max-height: none; }
+  /* The fitted map is small, so its tools sit under it instead of covering ideas. */
+  .exam-map:not(.expanded) .exam-map-tools { position: static; width: fit-content; margin: var(--s2) 0 0 auto; }
   button.exam-map-tool { min-width: var(--target); min-height: var(--target); }
   .exam-map.expanded .exam-map-frame { min-height: 160px; }
   .exam-map.expanded .exam-map-card { max-height: 35dvh; }

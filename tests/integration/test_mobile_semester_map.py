@@ -101,13 +101,35 @@ def test_semester_graph_is_visible_readable_and_keeps_one_surface(
                 font:parseFloat(getComputedStyle(node.querySelector('text')).fontSize),
                 scale:node.getScreenCTM().a, viewBox:node.ownerSVGElement.getAttribute('viewBox')};
         })""")
-        assert all(
-            item["width"] >= (44 if width < 720 else 36)
-            and item["height"] >= (44 if width < 720 else 36)
-            and item["font"] * item["scale"] >= (13.95 if width < 720 else 9.65)
-            for item in metrics
-        ), metrics
-        before_fit = camera(page)[2]
+        if width < 720:
+            # Phones show the desktop map whole, scaled to the width; the frame takes its shape.
+            frame = page.locator(".exam-map-scroll").bounding_box()
+            boxes = usable.evaluate_all(
+                "nodes => nodes.map(node => node.getBoundingClientRect().toJSON())"
+            )
+            assert all(
+                box["left"] >= frame["x"]
+                and box["right"] <= frame["x"] + frame["width"]
+                and box["top"] >= frame["y"]
+                and box["bottom"] <= frame["y"] + frame["height"]
+                for box in boxes
+            ), (frame, boxes)
+            fitted = page.evaluate("""() => {
+                const svg = document.querySelector('.exam-map-svg'), box = svg.getBBox();
+                const frame = document.querySelector('.exam-map-scroll');
+                return { content: box.height * Number(frame.dataset.scale) + 32,
+                         frame: frame.clientHeight };
+            }""")
+            assert abs(fitted["frame"] - fitted["content"]) <= 40, fitted
+        else:
+            assert all(
+                item["width"] >= 36
+                and item["height"] >= 36
+                and item["font"] * item["scale"] >= 9.65
+                for item in metrics
+            ), metrics
+        inline_scale = camera(page)[2]
+        before_fit = inline_scale
         page.get_by_role("button", name="Fit", exact=True).click()
         assert camera(page)[2] <= before_fit
         page.get_by_role("button", name="Zoom in", exact=True).click()
@@ -127,6 +149,12 @@ def test_semester_graph_is_visible_readable_and_keeps_one_surface(
         expect(dialog).to_be_visible()
         assert handle.evaluate("svg => svg === document.querySelector('.exam-map-svg')")
         assert page.locator(".exam-map-svg").count() == 1
+        if width < 720:
+            # Full screen opens closer than the fitted inline map, ready to pan and zoom.
+            expect(page.locator(".exam-map-scroll")).not_to_have_attribute(
+                "data-scale", str(inline_scale)
+            )
+            assert camera(page)[2] > inline_scale
         page.get_by_role("button", name="Zoom in", exact=True).click()
         canvas = page.locator(".exam-map-scroll")
         canvas.focus()
@@ -181,7 +209,7 @@ def test_real_chromium_touch_preserves_inline_scroll_and_expanded_pan_pinch(
         expect(canvas).to_have_attribute("data-scale", re.compile("."))
         box = canvas.bounding_box()
         session = context.new_cdp_session(page)
-        x, y = box["x"] + box["width"] / 2, box["y"] + 170
+        x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
         before_horizontal = camera(page)
         touch(session, "touchStart", [(0, x, y)])
         touch(session, "touchMove", [(0, x - 70, y)])

@@ -214,7 +214,9 @@ def stale_units(root: Path, state: StudyState, content: StudyContent) -> tuple[s
 
 def unit_revision(unit: Unit) -> str:
     return digest(
-        unit.model_dump_json(exclude={"path", "lectures", "explore"}, exclude_none=True).encode()
+        unit.model_dump_json(
+            exclude={"path", "lectures", "explore"}, exclude_none=True, exclude_defaults=True
+        ).encode()
     )
 
 

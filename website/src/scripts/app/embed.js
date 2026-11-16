@@ -4,6 +4,8 @@ import { createGuide } from './guide.js';
 
 const THEME_KEY = 'study-space:theme';
 const TRAVEL_MS = 640;
+// Room kept under a walkthrough's control for the guide's callout.
+const CALLOUT_ROOM = 96;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const frames = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -12,7 +14,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 // the tour drives it and keeps keyboard focus on the page; once engaged, it is theirs.
 export function createAppEmbed({ documentText, stage, onEngage }) {
   const frame = h('iframe.app-frame', { title: 'Graph Search study app, live', tabindex: '-1', loading: 'eager' });
-  const guide = createGuide();
+  const guide = createGuide({ topInset: () => (loaded ? viewOf(win().document.scrollingElement).top : 0) });
   const shield = h('button.app-shield', { type: 'button', 'aria-label': 'Use the study app' });
   const resume = h('button.resume', { type: 'button' }, stroke('arrow', 16), h('span', { text: 'Resume tour' }));
   const element = h('div.app-slot', {}, frame, guide.element, shield, resume);
@@ -82,9 +84,14 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     return box ?? win().document.scrollingElement;
   }
 
+  // On phones the app's sidebar is a sticky top bar, so the page's view starts below it and a
+  // target is never scrolled underneath it.
   function viewOf(box) {
     const doc = win().document;
-    return box === doc.scrollingElement ? { top: 0, height: win().innerHeight } : { top: box.getBoundingClientRect().top, height: box.clientHeight };
+    if (box !== doc.scrollingElement) return { top: box.getBoundingClientRect().top, height: box.clientHeight };
+    const bar = doc.querySelector('.sidebar')?.getBoundingClientRect();
+    const top = bar && bar.top <= 1 && bar.height < win().innerHeight / 3 && win().getComputedStyle(doc.querySelector('.sidebar')).position === 'sticky' ? bar.bottom : 0;
+    return { top, height: win().innerHeight - top };
   }
 
   // The app's scroll containers use CSS smooth scrolling; every scroll the guide makes is
@@ -139,9 +146,54 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     const view = viewOf(box);
     const rect = item.getBoundingClientRect();
     const offset = rect.top - view.top;
-    if (offset >= view.height * 0.1 && offset + Math.min(rect.height, view.height * 0.4) <= view.height * 0.66) return;
+    // A control in the sticky top bar stays put whatever the page does.
+    if (rect.bottom <= view.top && item.closest('.sidebar')) return;
+    // A control of a walkthrough frames the whole walkthrough from its top: the visual that changes
+    // and the step bar together, with room for the callout below the control.
+    const walk = item.closest('.walk')?.getBoundingClientRect();
+    const framed = walk
+      ? walk.top >= view.top && rect.bottom + CALLOUT_ROOM <= view.top + view.height
+      : offset >= view.height * 0.1 && offset + Math.min(rect.height, view.height * 0.4) <= view.height * 0.66;
+    const want = framed ? box.scrollTop : box.scrollTop + (walk ? walk.top - view.top - 8 : offset - view.height * 0.24);
+    const top = clearRow(box, view, want, rect);
+    if (Math.abs(top - box.scrollTop) < 2) return;
     guide.lift();
-    await glide(box, box.scrollTop + offset - view.height * 0.24, smooth, live);
+    await glide(box, top, smooth, live);
+  }
+
+  // The view's top edge never cuts a row (a tab bar, a card's header) in half: the row shows whole
+  // when the target still fits below it, else it scrolls out of view.
+  function clearRow(box, view, top, target) {
+    const end = box.scrollHeight - box.clientHeight;
+    top = Math.max(0, Math.min(top, end));
+    for (let pass = 0; pass < 3; pass += 1) {
+      const line = view.top + top - box.scrollTop;
+      const row = rowAt(line, view);
+      if (!row) break;
+      const above = Math.max(0, top - (line - row.top) - 8);
+      const past = top + (row.bottom - line) + 1;
+      // Near the page's end the row cannot scroll out, so it shows whole instead.
+      top = past > end || target.bottom - (above - box.scrollTop) <= view.top + view.height ? above : past;
+    }
+    return top;
+  }
+
+  // The largest row the line crosses: an element short enough to be a row, or a line of text.
+  function rowAt(line, view) {
+    const doc = win().document;
+    const crosses = rect => rect.top < line - 1 && rect.bottom > line + 1 && rect.height < view.height * 0.3;
+    let row = null;
+    const consider = rect => { if (crosses(rect) && (!row || rect.height > row.height)) row = rect; };
+    for (const element of doc.querySelectorAll('main *')) consider(element.getBoundingClientRect());
+    const texts = doc.createTreeWalker(doc.querySelector('main') ?? doc.body, NodeFilter.SHOW_TEXT);
+    const range = doc.createRange();
+    for (let text = texts.nextNode(); text; text = texts.nextNode()) {
+      const parent = text.parentElement.getBoundingClientRect();
+      if (parent.top > line || parent.bottom < line || !text.data.trim()) continue;
+      range.selectNodeContents(text);
+      for (const rect of range.getClientRects()) consider(rect);
+    }
+    return row;
   }
 
   // What the visitor sees as the control: a link's text rather than its tall tap area, and the
@@ -279,7 +331,8 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     if (!item) { guide.hide(); await settleRoute(beat.route); closeSidebar(); return true; }
     await bringIntoView(item, animate && !reducedMotion.matches, live);
     if (!live()) return false;
-    guide.place(outline(item), beat, { animate, index: scene.beat, count: scene.beats.length, measure: () => (item.isConnected ? outline(item) : null) });
+    // In a walkthrough the click changes the visual above the control, so the callout goes below.
+    guide.place(outline(item), item.closest('.walk') && !beat.place ? { ...beat, place: 'below' } : beat, { animate, index: scene.beat, count: scene.beats.length, measure: () => (item.isConnected ? outline(item) : null) });
     if (!beat.click) return true;
     if (animate) await rest(TRAVEL_MS);
     if (!live()) return false;
@@ -314,6 +367,9 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     if (!live()) return false;
     if (result) {
       if (animate) await rest(TRAVEL_MS / 2);
+      if (!live()) return false;
+      // What the click revealed may sit under the app's sticky bar or below the view.
+      await bringIntoView(result, animate && !reducedMotion.matches, live);
       if (!live()) return false;
       guide.follow(outline(result), beat, () => (result.isConnected ? outline(result) : null), animate);
     }
