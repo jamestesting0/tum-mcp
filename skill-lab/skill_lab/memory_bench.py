@@ -432,7 +432,7 @@ def identity(name: str) -> dict:
             ["git", *args], cwd=paths.REPO, capture_output=True, text=True, check=True
         ).stdout.strip()
 
-    memory = sorted((paths.REPO / "src/tum_mcp/course/memory").glob("*.py"))
+    memory = sorted((paths.REPO / "src/tum_mcp/course/relations").glob("*.py"))
     return {
         "commit": git("rev-parse", "HEAD"),
         "memory_sources": hashlib.sha256(b"".join(p.read_bytes() for p in memory)).hexdigest(),

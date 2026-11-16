@@ -25,7 +25,7 @@ def test_crowded_profile_respects_native_schema_and_snapshot(tmp_path: Path):
 @pytest.mark.skipif(
     os.environ.get("TUM_MCP_RELATIONS_PROFILE") != "1", reason="local profiling opt-in"
 )
-def test_profile_course_memory(tmp_path: Path):
+def test_profile_course_relations(tmp_path: Path):
     output = Path(os.environ["TUM_MCP_RELATIONS_PROFILE_OUTPUT"]).resolve()
     repo = Path(__file__).resolve().parents[2]
     assert output.is_relative_to(repo / ".omo/evidence/course-relations-profile")

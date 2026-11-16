@@ -1,1 +1,1 @@
-"""Optional Course Memory: reviewed relationships across workspaces."""
+"""Links between a course's Study, Exercises, Exam and Lecture items, read on request."""
