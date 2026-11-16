@@ -179,7 +179,8 @@ def inspect(project: Path) -> None:
 def exam_report_command(
     project: Path,
     section: Annotated[
-        Literal["stats", "blueprint", "review", "targets", "stale", "duplicates"] | None,
+        Literal["stats", "blueprint", "practice", "review", "targets", "stale", "duplicates"]
+        | None,
         typer.Option(help="Only this part; duplicates also compares exam and exercise text."),
     ] = None,
     full: Annotated[bool, typer.Option("--json", help="Print the whole result.")] = False,
@@ -207,6 +208,7 @@ def exam_report_command(
         parts = {
             "stats": report["statistics"],
             "blueprint": report["blueprint"],
+            "practice": report["practice"],
             "review": report["review"],
             "targets": {"flags": report["targets"], "uncovered_core": report["uncovered_core"]},
             "stale": list(stale_exam(root, state, exam)),

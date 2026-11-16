@@ -120,6 +120,33 @@ def test_report_flags_targets_and_review_items_without_enforcing_them(content: E
     json.dumps(report)
 
 
+def test_practice_sets_do_not_enter_the_exam_blueprint(project: Path) -> None:
+    from tum_mcp.course.review.items import collect
+
+    raw = exam_document(project)
+    before = exam_report(ExamContent.model_validate(raw))
+    practice = json.loads(json.dumps(raw["mocks"][0]))
+    practice.update(key="core-practice", kind="practice", duration_minutes=1)
+    del practice["instructions"]
+    practice["questions"] = [practice["questions"][1]]
+    practice["questions"][0].update(key="core-1", concepts=["cohesion"])
+    raw["mocks"].append(practice)
+    content = ExamContent.model_validate(raw)
+
+    report = exam_report(content)
+
+    assert report["blueprint"] == before["blueprint"]
+    assert report["targets"] == before["targets"]
+    assert report["uncovered_core"] == []
+    assert report["practice"] == [{"key": "core-practice", "questions": 1, "points": 8.0}]
+    rendered = render_exam(content)
+    assert rendered["statistics"]["mock_exams"] == 1
+    assert rendered["statistics"]["practice_sets"] == 1
+    assert "duration_minutes" not in rendered["mocks"][1]
+    assert rendered["mocks"][1]["kind"] == "practice"
+    assert "exam/mock/core-practice/core-1" in collect(project, exam=content)
+
+
 def test_workflow_from_names_a_pattern_that_lists_the_concept(project: Path) -> None:
     document = exam_document(project)
     pattern = document["patterns"][0]

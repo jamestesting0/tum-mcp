@@ -698,18 +698,31 @@ class MockQuestion(Frozen):
 
 
 class Mock(Frozen):
-    """A forecast practice exam written to the real exam's blueprint, labelled as practice,
-    never a prediction."""
+    """An authored set: kind selects a timed mock exam or untimed additional practice."""
 
     key: Key
     title: Text
-    duration_minutes: Minutes
-    instructions: Text
+    kind: Literal["exam", "practice"] = "exam"
+    duration_minutes: Minutes | None = None
+    instructions: Text | None = Field(
+        default=None,
+        description="A mock exam's cover rules: time, aids and what to answer. A practice set "
+        "has none; its questions speak for themselves.",
+    )
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=30)
     questions: tuple[MockQuestion, ...] = Field(min_length=1, max_length=200)
 
     @model_validator(mode="after")
     def cited(self) -> "Mock":
+        if self.kind == "exam" and self.duration_minutes is None:
+            raise ValueError("A mock exam requires duration_minutes.")
+        if self.kind == "exam" and not self.instructions:
+            raise ValueError("A mock exam requires its cover instructions.")
+        if self.kind == "practice" and self.instructions:
+            raise ValueError(
+                "A practice set has no instructions: a line that describes the set or tells "
+                "the student how to work teaches nothing. Remove `instructions`."
+            )
         keys = {item.key for item in self.sources}
         for question in self.questions:
             blocks = (*question.statement, *question.solution.blocks)

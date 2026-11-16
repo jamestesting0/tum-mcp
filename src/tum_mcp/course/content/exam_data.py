@@ -262,6 +262,8 @@ def exam_statistics(content: ExamContent) -> dict[str, JsonValue]:
     coverage = content.concept_coverage()
     return {
         "sittings_considered": len(sittings),
+        "mock_exams": sum(mock.kind == "exam" for mock in content.mocks),
+        "practice_sets": sum(mock.kind == "practice" for mock in content.mocks),
         "sittings_outdated": sum(item.relevance == "outdated" for item in content.sittings),
         "years": [sittings[0].held[:4], sittings[-1].held[:4]] if sittings else [],
         "points_known": marked,
@@ -743,6 +745,8 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
     mocks: list[dict[str, JsonValue]] = []
     profile = content.profile
     for mock in content.mocks:
+        if mock.kind != "exam":
+            continue
         minutes = sum(question.minutes for question in mock.questions)
         scale = sum(q.points for q in mock.questions if q.change == "scale") / mock.points
         shares = _mock_topic_shares(content, mock)
@@ -763,7 +767,8 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
                     TARGETS["similar_statement"],
                 )
         if (
-            abs(minutes - mock.duration_minutes)
+            mock.duration_minutes is not None
+            and abs(minutes - mock.duration_minutes)
             > TARGETS["mock_minutes_tolerance"] * mock.duration_minutes
         ):
             flag(
@@ -847,6 +852,11 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
             "mocks": mocks,
         },
         "review": review,
+        "practice": [
+            {"key": mock.key, "questions": len(mock.questions), "points": mock.points}
+            for mock in content.mocks
+            if mock.kind == "practice"
+        ],
         "uncovered_core": sorted(
             concept.key
             for concept in content.concepts
@@ -879,6 +889,8 @@ def render_exam(content: ExamContent) -> dict[str, JsonValue]:
     for mock, rendered in zip(content.mocks, value.get("mocks", []), strict=True):
         rendered["revision"] = mock_revision(mock)
         rendered["points"] = mock.points
+        if mock.kind == "practice":
+            rendered.pop("duration_minutes", None)
     for sitting, rendered_sitting in zip(content.sittings, value.get("sittings", []), strict=True):
         for variant, rendered in zip(sitting.variants, rendered_sitting["variants"], strict=True):
             rendered["revision"] = variant_revision(variant)

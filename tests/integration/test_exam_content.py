@@ -21,6 +21,27 @@ def test_the_synthetic_exam_document_is_valid(document: dict) -> None:
     assert "composite" in content.concept_coverage()
 
 
+def test_only_mock_exams_carry_a_duration_and_instructions(document: dict) -> None:
+    from tum_mcp.course.content.exam import Mock
+
+    value = copy.deepcopy(document["mocks"][0])
+    assert Mock.model_validate(value).kind == "exam"
+    value.pop("duration_minutes")
+    with pytest.raises(ValidationError, match="duration"):
+        Mock.model_validate(value)
+    value["kind"] = "practice"
+    with pytest.raises(ValidationError, match="practice set has no instructions"):
+        Mock.model_validate(value)
+    value.pop("instructions")
+    practice = Mock.model_validate(value)
+    assert practice.duration_minutes is None
+    assert practice.kind == "practice"
+    value["kind"] = "exam"
+    value["duration_minutes"] = 60
+    with pytest.raises(ValidationError, match="cover instructions"):
+        Mock.model_validate(value)
+
+
 def test_optional_drill_guides_are_source_bound_and_do_not_change_legacy_revisions(
     document: dict,
 ) -> None:
