@@ -25,6 +25,8 @@ REQUEST = re.compile(
 class Turn:
     say: str
     skills: list[str] = field(default_factory=list)
+    # Workspaces this turn only adds to (a practice exam beside restored patterns).
+    extends: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -63,7 +65,13 @@ def parse(data: dict, source: str) -> Scenario:
         if isinstance(item, str):
             turns.append(Turn(item))
         elif isinstance(item, dict) and isinstance(item.get("say"), str):
-            turns.append(Turn(item["say"], [str(s) for s in item.get("skills", [])]))
+            turns.append(
+                Turn(
+                    item["say"],
+                    [str(s) for s in item.get("skills", [])],
+                    [str(s) for s in item.get("extends", [])],
+                )
+            )
         else:
             raise LabError(f"Scenario {source} has a turn that is neither text nor say/skills.")
     replies = {str(k): str(v) for k, v in (data.get("replies") or {}).items()}
@@ -94,13 +102,34 @@ AUTHORING = frozenset(
 )
 
 
-def drift_refusal(scenario: Scenario, start_turn: int) -> str | None:
+# The app workspace each prepare skill builds. sync-course refreshes sources and the
+# handbook but never writes a workspace, so it may follow a restore.
+BUILDS = {
+    "prepare-study": "study",
+    "prepare-exercises": "exercises",
+    "prepare-exams": "exam",
+    "prepare-lecture": "lectures",
+}
+
+
+def drift_refusal(
+    scenario: Scenario, start_turn: int, restored: frozenset[str] = frozenset(BUILDS.values())
+) -> str | None:
     """Changed code is acceptable only when the later turns read the restored workspaces and
-    never rebuild them, so the restored content stays the same input for every variant."""
+    never rebuild them, so the restored content stays the same input for every variant. A
+    later turn may build a workspace the checkpoint does not have, or add to one it declares in
+    `extends`."""
     later = scenario.turns[start_turn:]
     if any(not turn.skills for turn in later):
         return "A later turn does not list its skills, so it may rebuild restored content."
-    rebuilt = sorted({skill for turn in later for skill in turn.skills} & AUTHORING)
+    rebuilt = sorted(
+        {
+            skill
+            for turn in later
+            for skill in set(turn.skills) & AUTHORING
+            if skill in BUILDS and BUILDS[skill] in restored and BUILDS[skill] not in turn.extends
+        }
+    )
     if rebuilt:
         return f"Later turns use {', '.join(rebuilt)}, which rebuild restored content."
     return None
