@@ -1,4 +1,4 @@
-# Past papers and practice exams
+# Past papers, mock exams and practice
 
 ## Replay a past paper
 
@@ -10,15 +10,20 @@ paper shows every question with its solution and marking points behind a disclos
 so students check themselves; there is no scoring. Follow prepare-exercises'
 [guidance](../../prepare-exercises/references/guidance.md) for useful steps and hints:
 one step per subgoal, and each step's explanation shows the full working that reaches
-its answer.
+its answer. Keep the printed statement and add the picture in a step.
 
-## Write a forecast practice exam
+## Write a mock exam
 
 Read `exam-report --section blueprint` first: profile (duration, points, aids, format),
-historical topic shares and question formats. Design to that blueprint, then check:
+historical topic shares and question formats. Use `kind: "exam"` and set
+`duration_minutes`; `instructions` holds the cover rules: time, aids and what to answer.
+A mock exam simulates the real exam's timing and blueprint.
+Design to that blueprint, then check:
 
-1. **Coverage**: across all practice exams and pattern drills, every `core` concept is
-   exercised (`exam-report` lists `uncovered_core`).
+1. **Coverage**: match the real exam's topic shares and question formats within the
+   prepared scope. For part of the course, use that part's questions and share of the
+   time; never add topics the request left out. A mock exam need not practise every
+   cheatsheet idea.
 2. **Novelty**: every question is a `variant` of past questions or targets `untested`
    core ideas. A variant names the questions it varies and what changed: a cue,
    constraint, representation, combination or reversal. Changing only numbers
@@ -33,10 +38,17 @@ historical topic shares and question formats. Design to that blueprint, then che
    [content](../../prepare-exercises/references/content.md#show-the-question-not-only-tell-it).
    A coding question shows the code or signatures it builds on.
 
-`exam-report --section targets` flags gaps, similar statements, blueprint drift and
+`exam-report --section targets` flags similar statements, blueprint drift and
 guided past questions that stay text only. The build rejects text-only practice
 questions and copies of past statements, even with text or code added around them.
 
-For guided past questions, keep the printed statement and add the picture in a step.
+## Write additional practice
+
+Use a separate set with `kind: "practice"` for important core cheatsheet ideas that
+the patterns and their drills leave unpractised. It is untimed; omit
+`duration_minutes` and `instructions`. No blueprint or timing check applies.
+Keep the same question, novelty, marking and solution standards as mock exams.
+`uncovered_core` counts practice across patterns, mock exams and practice sets.
+It is advisory. Other uncovered ideas are fine and never block readiness.
 
 The app labels forecasts as AI-written practice, never as a prediction or a leak.
