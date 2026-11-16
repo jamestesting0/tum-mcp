@@ -61,9 +61,10 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    or inventing a Study link.
 3. Solve each problem before writing it. The statement and any official solution are
    given, so the work is solving, guidance and representation:
-   1. For graded or bonus work, follow the collaboration rules in course.md first: coach
-      rather than write the submission. A student who asks only for hints gets them in
-      chat, as a tutor, not as a prepared exercise.
+   1. Prepare graded and bonus work like any other exercise: in the app, with its solved
+      files and Solution. Never write it as a separate guide file. While it is still open,
+      set the set's `due_at` from the Artemis due date and name the deadline once in your
+      reply. A student who asks only for hints gets them in chat, as a tutor.
    2. Write the answer key in `.tum-mcp/checks/` for anything computed. It prints every
       intermediate value the working will show, so the working copies values, never hand
       arithmetic.

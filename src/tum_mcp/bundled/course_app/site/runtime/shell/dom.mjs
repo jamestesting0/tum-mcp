@@ -281,13 +281,13 @@ export function shareCitations(root, eyebrow) {
   if (!root.dataset.citations) return;
   for (const note of notes()) if (note.dataset.sources === root.dataset.citations) note.hidden = true;
 }
-export function pageCitation(note, eyebrow) {
+export function pageCitation(note, eyebrow, label = 'Sources for this page') {
   if (note.hidden) return;
   let row = eyebrow.parentElement;
   if (!row?.classList.contains('page-eyebrow')) { row = node('div', 'page-eyebrow'); eyebrow.replaceWith(row); row.append(eyebrow); }
   row.querySelector('.page-citation')?.remove();
   note.classList.add('page-citation'); note.hidden = false;
-  note.querySelector('summary').setAttribute('aria-label', 'Sources for this page');
+  note.querySelector('summary').setAttribute('aria-label', label);
   row.append(note);
 }
 document.addEventListener('pointerdown', event => {

@@ -3,11 +3,17 @@
 ## Unreleased
 
 - A programming exercise opens as an editor workspace: files, code and task side by side, as
-  in the Artemis online editor. Files and Task fold to rails and resize by pointer or
-  keyboard, the layout is remembered per course, and phones switch between Files, Code and
-  Task. A writing step opens its file at its lines; Compare and the Solution show the solved
-  lines with walkthrough notes, and each editable file switches between Yours and Solution
-  with the task's changes marked.
+  in the Artemis online editor. One Files and one Task button fold their panels, the
+  dividers resize them by pointer or keyboard, and where the tree does not fit beside the
+  task, opening one folds the other; a folded task shows the current step. The layout is
+  remembered per course, and phones switch between Files, Code and Task. A writing step
+  opens its file at its lines; Compare and the Solution show the solved lines with notes,
+  and choosing a note highlights its lines. Each editable file switches between Yours and
+  Solution with the task's changes marked. Diagrams and other blocks in the Task panel keep
+  their size and place, and a lone citation sits beside the exercise label.
+- An exercise shows its sheet's deadline on its own line under the label until it passes.
+- prepare-exercises prepares graded and bonus work like any other exercise, in the app with
+  its solved files, and names an open deadline once in its reply.
 - `artemis_get_repository` saves a started programming exercise's source files as Artemis
   copied them from the template (the newest commit at or before the repository was set up),
   never later work; it never starts, pushes or builds, drops build scripts, IDE settings and

@@ -409,7 +409,8 @@ Ask `prepare-exercises` to prepare released weekly sheets in the same app. Study
 and Exercises can be prepared in either order. When both exist, the workspace selector
 at the bottom of the outline switches between them and remembers your place; on phones
 it sits inside the open outline. The exercise list groups exercises by sheet and shows
-each sheet's summary and due date when the sources provide them.
+each sheet's summary and due date when the sources provide them; an exercise shows its
+deadline under its label until it passes.
 
 Each sub-question keeps its statement, supporting blocks, Guide and Solution together.
 Shared givens come first. Work on paper, open that question's Solution directly (as a
@@ -426,11 +427,12 @@ lecture note and Study unit to each workspace that exists, or records why none f
 (`study links`); a new lecture reopens those decisions, and readiness waits for them.
 A link added to an older item does not reopen its review. A sheet whose problems are not all prepared
 says which ones are still missing. A programming exercise opens as an editor workspace, as
-in the Artemis online editor: its files, the code and the task side by side. Files and Task
-fold to thin rails and resize by their dividers, and the app remembers the layout per
+in the Artemis online editor: its files, the code and the task side by side. The Files and Task
+buttons fold and open their panels, and the dividers resize them. Where the file tree does
+not fit beside the task, opening one folds the other. The app remembers the layout per
 course; on a phone a Files | Code | Task switch shows one at a time. A writing step opens
 its file at the lines to change, and Compare shows the solved lines with notes that
-explain them. Each editable file switches between Yours and Solution, where the lines the
+explain them: choosing a note highlights its lines. Each editable file switches between Yours and Solution, where the lines the
 task changed are marked. Code is never run, and nothing is graded by keywords.
 
 The files come from Artemis when you have started the exercise there: the agent reads them

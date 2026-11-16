@@ -154,6 +154,7 @@ a check. Record whether a solution is authored or official (official requires
 a declared official_source) for provenance; the app shows every solution simply as the
 solution. Optional transfer contains a fresh prompt and comparison answer blocks. Set category, summary, week
 and due_at are optional and appear in the exercise list; date values include a timezone.
+The app shows `due_at` beside the exercise label only until it passes.
 
 Semantic exercise changes start fresh progress while retaining old browser records;
 reviewing source hashes or changing group labels alone preserves learning revision.

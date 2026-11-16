@@ -1,5 +1,5 @@
 import data from '../../data.mjs';
-import { node, studyText, button, append, announce, sourcesNote, shareCitations, focusHeading, scrollReadingTo, preparationDisclosure, topicRow, shuffled, pillPanel } from '../shell/dom.mjs';
+import { node, studyText, button, append, announce, sourcesNote, shareCitations, pageCitation, focusHeading, scrollReadingTo, preparationDisclosure, topicRow, shuffled, pillPanel } from '../shell/dom.mjs';
 import { renderReading, renderBlockBody, renderAnswers } from '../reading/reading.mjs';
 import { arrowPaging, usePager, iconButton, iconGlyph, nextStep, cycleIndex } from '../shell/navigation.mjs';
 import { renderResponse, optionExplanations, expectedAnswer } from './exercise-response.mjs';
@@ -14,10 +14,11 @@ import { exerciseVideo } from '../lecture/video.mjs';
 const sets = data.exercises?.sets || [];
 const ordered = sets.flatMap(group => group.exercises.map(exercise => ({ group, exercise })));
 export const exerciseLink = (group, exercise, step = '') => `#exercises/${group.key}/${exercise.key}${step ? `/${step}` : ''}`;
+// Only an upcoming deadline matters while studying; a passed one is left out.
 function due(group) {
   const time = group.due_at && new Date(group.due_at);
-  return time && Number.isFinite(time.getTime())
-    ? `Due ${new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)}` : '';
+  return time && time.getTime() > Date.now()
+    ? `Due ${new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)}` : '';
 }
 // How a step's answer is reached: one sentence, or blocks such as a derivation or a walkthrough.
 function working(step) {
@@ -178,7 +179,7 @@ export function renderExercises(hash, state) {
   const following = ordered[ordered.findIndex(item => item.exercise === exercise) + 1];
   return exercisePage(exercise, {
     state, stepKey, completes: exerciseLink(group, exercise), video: `${group.key}/${exercise.key}`, set: group.key,
-    eyebrow: [group.title, exercise.label, due(group)].filter(Boolean).join(' · '),
+    eyebrow: [group.title, exercise.label].filter(Boolean).join(' · '), due: due(group),
     link: step => exerciseLink(group, exercise, step),
     annotate: (element, field, step) => annotateExercise(element, group, exercise, field, step),
     comment: root => renderCommentedView({ ...exercise, setKey: group.key }, 'exercises', root).root,
@@ -197,7 +198,10 @@ export function exercisePage(exercise, options) {
   const target = (element, field, step = '') => options.annotate(element, field, step);
   const activityChanged = () => root.dispatchEvent(new Event('study-activity-change', { bubbles: true }));
   const eyebrow = studyText('p', 'eyebrow', options.eyebrow);
-  header.append(eyebrow, heading);
+  header.append(eyebrow);
+  // The deadline has its own line under the label, so a narrow task panel never splits it.
+  if (options.due) header.append(node('p', 'eyebrow due', options.due));
+  header.append(heading);
   if (exercise.kind === 'distilled') {
     const practice = node('p', 'small practice-for', 'Practice for ');
     exercise.distilled_from.forEach((key, index) => {
@@ -255,7 +259,16 @@ export function exercisePage(exercise, options) {
   // were set above, so the other blocks keep their places.
   const projectBlock = exercise.statement.find(block => block.kind === 'files');
   const shownProject = projectBlock && statement.querySelector('.project');
-  if (shownProject) (shownProject.closest('[data-block-index]') || shownProject.closest('.block-body') || shownProject).remove();
+  if (shownProject) {
+    // Untitled blocks after the project share its section, so only the project's own body
+    // leaves; its section goes too once nothing else is in it.
+    const own = shownProject.closest('.block-body') || shownProject, section = own.closest('.read-section');
+    own.remove();
+    if (section && !section.querySelector('.block-body, dl.definitions')) section.remove();
+    else if (section && exercise.statement[Number(section.dataset.blockIndex)] === projectBlock) {
+      section.querySelector(':scope > .reading-material > .section-heading > :is(h2, h3, h4, h5, h6)')?.remove();
+    }
+  }
   let workspace = null;
   const openStepFile = step => {
     const file = step.check?.kind === 'self_check' && step.check.file;
@@ -466,6 +479,13 @@ export function exercisePage(exercise, options) {
   }
   if (onward) root.append(onward);
   shareCitations(root, eyebrow);
+  // A citation left alone in the statement's first heading row moves up to the label row, as a
+  // shared one does, so no empty row opens under the title.
+  const top = !root.dataset.citations && !options.untitledStatement && statement.querySelector('.section-heading');
+  const topNote = top && top.querySelector(':scope > .source-note');
+  if (topNote && top.closest('.read-section') === statement.querySelector('.read-section') && top.children.length === 1) {
+    pageCitation(topNote, eyebrow, 'Sources'); top.remove();
+  }
   const task = options.comment(root);
   if (projectBlock) {
     const stepLabel = () => {
