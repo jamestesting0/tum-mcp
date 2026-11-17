@@ -47,7 +47,9 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    `tum-mcp study exam-report PROJECT`. A missing binding goes through sync-course.
    If past exams are missing, ask once: the user may sync them, import files they hold
    with `tum-mcp study import PROJECT --file F --kind exam --title T`. Prepare what
-   the evidence supports; report the rest. Without past exams, the exercises set the
+   the evidence supports; report the rest. A request for the whole course covers the
+   material released so far: prepare that now and name the unreleased weeks in the
+   report; never pause the request for material that does not exist yet. Without past exams, the exercises set the
    question types: read the Exercises workspace, else the released exercises and the
    repositories that are available (a missing one never stops the work). Without Study,
    Exam works alone; offer once, in the report, to prepare Study. Exam serves students
