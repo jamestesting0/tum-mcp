@@ -15,6 +15,7 @@ from tum_mcp.cli import app
 from tum_mcp.course.app import github as study_github
 from tum_mcp.course.app import preview as study_preview
 from tum_mcp.course.app import publish as study_publish
+from tum_mcp.course.app import publish_site
 from tum_mcp.course.app.build import RETIRED_TEMPLATE_FILES, build
 from tum_mcp.course.app.publish_models import load_publication
 from tum_mcp.course.app.publish_site import MARKER, SITE_FILES, blob_sha
@@ -69,10 +70,32 @@ def test_a_draft_is_published_anyway_on_explicit_sync(project: Path, github: Git
     assert len(github.commits) == commits + 1
 
 
-def first_publish(project: Path):
+def first_publish(project: Path, *options: str):
     return CliRunner().invoke(
-        app, ["study", "publish", "--project", str(project), "--public-site", "--wait-seconds", "0"]
+        app,
+        [
+            "study",
+            "publish",
+            "--project",
+            str(project),
+            "--public-site",
+            "--wait-seconds",
+            "0",
+            *options,
+        ],
     )
+
+
+# Binary, so each file travels as its own uploaded blob.
+MEDIA = {f"videos/tracks/0{index}_topic.mp4": bytes([index, 255]) * 64 for index in range(1, 4)}
+
+
+def install_media(monkeypatch: pytest.MonkeyPatch, files: dict[str, bytes]) -> None:
+    from tum_mcp.course.app import publish_cli
+
+    monkeypatch.setattr(publish_site, "media_files", lambda root: dict(files))
+    monkeypatch.setattr(study_publish, "installed", lambda root: bool(files))
+    monkeypatch.setattr(publish_cli, "installed", lambda root: bool(files))
 
 
 def change_lesson(project: Path) -> None:
@@ -101,7 +124,7 @@ def test_full_app_publication_requires_renewed_consent_for_selective_settings(
     root = exercise_project
     assert first_publish(root).exit_code == 0
     before = load_publication(root)
-    assert before.schema_version == 2
+    assert before.schema_version == 3
     assert b"sample-relaxation" in github.files(before.repository)["data.mjs"]
     saved = root / ".tum-mcp/github.json"
     old = json.loads(saved.read_bytes())
@@ -117,7 +140,7 @@ def test_full_app_publication_requires_renewed_consent_for_selective_settings(
     assert len(github.requests) == requests
     assert first_publish(root).exit_code == 0
     after = load_publication(root)
-    assert after.schema_version == 2
+    assert after.schema_version == 3
     assert (after.repository, after.branch, after.hosted_url) == (
         before.repository,
         before.branch,
@@ -180,8 +203,8 @@ def test_concurrent_publish_cannot_restore_an_older_prepared_snapshot(
     captured, release = Event(), Event()
     prepare = study_publish.build_for_publication
 
-    def pause_first_snapshot(root: Path) -> dict[str, bytes]:
-        site = prepare(root)
+    def pause_first_snapshot(root: Path, **options: bool) -> dict[str, bytes]:
+        site = prepare(root, **options)
         if not captured.is_set():
             captured.set()
             assert release.wait(10), "The competing publisher did not release the first snapshot."
@@ -270,24 +293,134 @@ def test_pending_deployment_retries_without_duplicate_commits(
     assert load_publication(project).deployed_commit == pending_publication.commit
 
 
-def test_plan_failure_retains_a_resumable_private_repository(
+def test_free_plan_publishes_from_a_new_public_repository(
     project: Path,
     github: GitHubFixture,
 ) -> None:
-    # Given an account without Pages eligibility for private repositories.
+    # Given an account whose plan serves Pages only from public repositories.
     github.plan_eligible = False
-    # When publication reaches the Pages configuration boundary.
+    # When the student publishes for the first time.
     result = first_publish(project)
-    # Then it preserves the private repository and retries it after eligibility is fixed.
+    # Then the new repository turns public before any site file is uploaded, and stays so.
+    assert result.exit_code == 0, result.output
+    [(name, remote)] = github.repositories.items()
+    assert remote["private"] is False and name in github.pages
+    switched = next(i for i, r in enumerate(github.requests) if r.method == "PATCH")
+    first_blob = next(i for i, r in enumerate(github.requests) if r.endpoint.endswith("/git/trees"))
+    assert switched < first_blob
+    saved = load_publication(project)
+    assert saved.repository_visibility == "public" and saved.deployed_commit == saved.commit
+    change_lesson(project)
+    assert build(project).publication.status == "deployed"
+
+
+def test_an_organization_repository_never_turns_public(
+    project: Path,
+    github: GitHubFixture,
+) -> None:
+    # Given an organization repository on a plan without private Pages.
+    github.plan_eligible = False
+    # When publication reaches the Pages step.
+    result = first_publish(project, "--repository", "synthetic-org/course-site")
+    # Then it stops with a plan message and the repository stays private.
     assert isinstance(result.exception, CampusError)
+    assert "plan" in str(result.exception)
     assert "synthetic-private-value" not in str(result.exception)
-    assert len(github.repositories) == 1 and all(
-        repo["private"] for repo in github.repositories.values()
-    )
-    github.plan_eligible = True
-    retry = first_publish(project)
+    assert github.repositories["synthetic-org/course-site"]["private"] is True
+    assert not any(request.method == "PATCH" for request in github.requests)
+
+
+def test_large_uploads_continue_across_bounded_calls(
+    project: Path, github: GitHubFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Given installed media and a time budget that lets each call start one upload.
+    install_media(monkeypatch, MEDIA)
+    monkeypatch.setattr(publish_site, "UPLOAD_SECONDS", -1)
+    # When the first publication runs, the site stays unchanged until every blob is there.
+    first = first_publish(project)
+    assert first.exit_code == 2, first.output
+    assert json.loads(first.output)["status"] == "uploading"
+    repository = load_publication(project).repository
+    assert set(github.files(repository)) == {"README.md"}
+    sync = ["study", "publish", "sync", str(project), "--wait-seconds", "0"]
+    statuses = []
+    while not statuses or statuses[-1] == "uploading":
+        assert len(statuses) < 100, statuses
+        statuses.append(json.loads(CliRunner().invoke(app, sync).output)["status"])
+    # Then each call sends new blobs only, and one commit carries the whole site.
+    assert statuses[-1] == "deployed", statuses
+    files = github.files(repository)
+    assert all(files[name] == value for name, value in MEDIA.items())
+    posts = [r for r in github.requests if r.endpoint.endswith("/git/blobs")]
+    assert len(posts) == len(github.blobs)
+    assert sum(1 for r in github.requests if r.endpoint.endswith("/git/commits")) == 1
+
+
+def test_a_dropped_upload_resumes_without_resending(
+    project: Path, github: GitHubFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Given a connection that drops after two of the media uploads.
+    install_media(monkeypatch, MEDIA)
+    github.upload_limit = 2
+    failed = first_publish(project)
+    assert isinstance(failed.exception, CampusError) and failed.exception.code == Code.OFFLINE
+    sent = dict(github.blobs)
+    # When the student retries.
+    github.upload_limit = None
+    retry = CliRunner().invoke(app, ["study", "publish", "sync", str(project)])
+    # Then the blobs that arrived are not sent again and the site is complete.
     assert retry.exit_code == 0, retry.output
-    assert len(github.repositories) == 1
+    posts = [r for r in github.requests if r.endpoint.endswith("/git/blobs")]
+    assert len(sent) == 2 and len(github.blobs) > len(sent)
+    assert len(posts) == len(github.blobs) + 1  # the dropped request
+    assert set(MEDIA) <= set(github.files(load_publication(project).repository))
+
+
+def test_an_earlier_site_adds_media_only_when_asked(
+    project: Path, github: GitHubFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Given a site published before media could be published.
+    install_media(monkeypatch, {})
+    assert first_publish(project).exit_code == 0
+    saved = project / ".tum-mcp/github.json"
+    settings = json.loads(saved.read_bytes())
+    settings["schema_version"] = 2
+    saved.write_text(json.dumps(settings))
+    repository = load_publication(project).repository
+    # When videos are installed and the next build publishes.
+    install_media(monkeypatch, MEDIA)
+    change_lesson(project)
+    held = build(project).publication
+    # Then the site updates without media and says why.
+    assert held.status == "deployed" and "stay local" in held.message
+    assert not set(MEDIA) & set(github.files(repository))
+    # And an explicit publish request adds them.
+    assert first_publish(project).exit_code == 0
+    assert load_publication(project).schema_version == 3
+    assert set(MEDIA) <= set(github.files(repository))
+
+
+def test_automatic_sync_keeps_a_paused_site(project: Path, github: GitHubFixture) -> None:
+    assert first_publish(project).exit_code == 0
+    assert CliRunner().invoke(app, ["study", "publish", "pause", str(project)]).exit_code == 0
+    change_lesson(project)
+    _ = build(project, publish=False)
+    count = len(github.requests)
+    result = CliRunner().invoke(app, ["study", "publish", "sync", str(project), "--automatic"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["status"] == "paused"
+    assert len(github.requests) == count
+
+
+def test_oversized_media_stops_before_any_upload(
+    project: Path, github: GitHubFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_media(monkeypatch, MEDIA)
+    monkeypatch.setattr(publish_site, "FILE_BUDGET", 100)
+    result = first_publish(project)
+    assert isinstance(result.exception, CampusError)
+    assert "videos/tracks/01_topic.mp4" in str(result.exception)
+    assert github.requests == []
 
 
 def test_lost_creation_response_reuses_the_chosen_repository(

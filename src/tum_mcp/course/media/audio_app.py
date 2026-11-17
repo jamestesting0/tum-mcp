@@ -102,6 +102,7 @@ def preview_index(root: Path) -> dict:
                 "track": f"audio/{receipt.track.path}",
                 "script": f"audio/{receipt.script.path}",
                 "revision": receipt.track.sha256[:16],
+                "provider": receipt.voice.provider,
                 "chapters": _chapters(root, receipt),
                 "sentences": _sentences(root, receipt),
             }
@@ -133,10 +134,11 @@ def playlist_zip(root: Path) -> tuple[str, bytes]:
             playlist += [f"#EXTINF:{round(receipt.duration)},{receipt.title}", path.name]
             readme.append(f"{path.name}  {receipt.title} ({_clock(receipt.duration)})")
         voice = tracks[0][0].voice
+        made = "synthesized locally" if voice.route.startswith("local") else f"via {voice.route}"
         readme += [
             "",
             "Each track has chapters; open playlist.m3u to play them in order.",
-            f"Narration: {voice.provider} voice {voice.voice}, synthesized locally.",
+            f"Narration: {voice.provider} voice {voice.voice}, {made}.",
         ]
         archive.writestr("playlist.m3u", "\n".join(playlist) + "\n")
         archive.writestr("README.txt", "\n".join(readme) + "\n")

@@ -6,8 +6,9 @@ from urllib.parse import quote
 
 from filelock import FileLock
 
-from tum_mcp.course.app.github import Account, GitHub, Head, Pages, Repository
+from tum_mcp.course.app.github import Account, GitHub, Head, Pages, PagesPlanRequired, Repository
 from tum_mcp.course.app.publish_checks import create_pages, deployed, verify_pages
+from tum_mcp.course.app.publish_media import installed
 from tum_mcp.course.app.publish_models import (
     SETUP,
     Publication,
@@ -20,7 +21,7 @@ from tum_mcp.course.app.publish_models import (
     repository_name,
     save_publication,
 )
-from tum_mcp.course.app.publish_site import commit_site, export_site, site_digest
+from tum_mcp.course.app.publish_site import Uploading, commit_site, export_site, site_digest
 from tum_mcp.course.project.store import (
     Write,
     apply,
@@ -37,8 +38,13 @@ def configure(
     *,
     repository: str | None = None,
     site: dict[str, bytes] | None = None,
+    consent: bool = True,
 ) -> Publication:
-    """Create a private repository only after the caller explicitly requests a public site."""
+    """Create the repository only after the caller explicitly requests a public site.
+
+    `consent` is that request: it moves saved settings to the current scope (schema 3,
+    including Video and Audio Notes). A plain rerun keeps the saved scope.
+    """
     from pydantic import TypeAdapter, ValidationError
 
     root = root.expanduser().resolve()
@@ -49,8 +55,8 @@ def configure(
                 raise CampusError(
                     Code.WORKSPACE_CONFLICT, "This course already has a publishing repository."
                 )
-            if previous.schema_version != 2:
-                previous = previous.model_copy(update={"schema_version": 2})
+            if consent and previous.schema_version != 3:
+                previous = previous.model_copy(update={"schema_version": 3})
                 save_publication(root, previous)
             return previous
         interrupted = load_setup(root)
@@ -81,6 +87,8 @@ def configure(
                 Code.ACTION_REQUIRED, "Use a GitHub repository in OWNER/NAME form."
             ) from None
         remote = github.api(f"repos/{chosen}", Repository, missing_ok=True)
+        # Only a repository this setup created may become public; it holds just its README.
+        created = interrupted is not None and remote is not None
         if remote is not None and repository is None and interrupted is None:
             owner, name = chosen.split("/")
             chosen = f"{owner}/{name[:91].rstrip('-')}-{course_identity(course)[:8]}"
@@ -124,20 +132,68 @@ def configure(
                     "description": "Generated course study website",
                 },
             )
-        if not remote.private or remote.full_name.casefold() != chosen.casefold():
+            created = True
+        visibility = interrupted.repository_visibility if interrupted else "private"
+        if (
+            remote.private != (visibility == "private")
+            or remote.full_name.casefold() != chosen.casefold()
+        ):
             raise CampusError(
-                Code.SCOPE_DENIED, "Publishing requires the chosen private repository."
+                Code.SCOPE_DENIED, f"Publishing requires the chosen {visibility} repository."
             )
+        if github.api(f"repos/{remote.full_name}/pages", Pages, missing_ok=True) is None:
+            draft = Publication(
+                course_identity=course_identity(course),
+                repository=remote.full_name,
+                branch=remote.default_branch,
+                commit="0" * 40,
+                public_site=True,
+            )
+            try:
+                _ = create_pages(github, draft)
+            except PagesPlanRequired:
+                owner = remote.full_name.split("/")[0]
+                if not created or owner.casefold() != account.login.casefold():
+                    raise
+                visibility = "public"
+                setup = PublicationSetup(
+                    course_identity=course_identity(course),
+                    repository=remote.full_name,
+                    public_site=True,
+                    repository_visibility=visibility,
+                )
+                apply(
+                    root,
+                    (
+                        Write(
+                            private_name(root, SETUP),
+                            read_bytes(private_path(root, SETUP)),
+                            setup.model_dump_json().encode(),
+                        ),
+                    ),
+                )
+                remote = github.require(
+                    f"repos/{remote.full_name}",
+                    Repository,
+                    method="PATCH",
+                    payload={"visibility": "public"},
+                )
+                if remote.private:
+                    raise CampusError(
+                        Code.INVALID_RESPONSE, "GitHub did not make the repository public."
+                    ) from None
+                _ = create_pages(github, draft)
         head = github.require(
             f"repos/{remote.full_name}/git/ref/heads/{quote(remote.default_branch, safe='')}", Head
         )
         publication = Publication(
-            schema_version=2,
             course_identity=course_identity(course),
             repository=remote.full_name,
             branch=remote.default_branch,
             commit=head.object.sha,
             public_site=True,
+            repository_visibility=visibility,
+            schema_version=3,
         )
         # Save before uploading: an interrupted setup retries the same repository.
         save_publication(root, publication)
@@ -161,18 +217,24 @@ def publish(
             raise CampusError(
                 Code.ACTION_REQUIRED, "Configure study publish with --public-site first."
             )
-        if publication.schema_version != 2:
+        if publication.schema_version == 1:
             raise CampusError(
                 Code.ACTION_REQUIRED,
                 "The saved selective publication needs explicit --public-site consent "
                 "for all prepared workspaces.",
             )
+        media = publication.schema_version == 3
+        notes: list[str] = []
+        if not media and installed(root):
+            notes.append(
+                "Videos and audio notes stay local until the student asks to publish them."
+            )
         if site is None:
             if rebuild:
-                site = build_for_publication(root)
+                site = build_for_publication(root, media=media)
             else:
                 with FileLock(str(private_path(root, "update.lock"))):
-                    site = export_site(root)
+                    site = export_site(root, media=media)
         fingerprint = site_digest(site)
         if (
             fingerprint == publication.site_digest
@@ -184,16 +246,33 @@ def publish(
             )
         github = GitHub.discover()
         remote = github.require(f"repos/{publication.repository}", Repository)
-        if not remote.private or remote.default_branch != publication.branch:
+        if (
+            remote.private != (publication.repository_visibility == "private")
+            or remote.default_branch != publication.branch
+        ):
             raise CampusError(
                 Code.WORKSPACE_CONFLICT,
                 "The repository visibility or default branch changed; review before publishing.",
+            )
+        if remote.size > 1_000_000:
+            notes.append(
+                f"The repository holds {remote.size / 1_000_000:.1f} GB, above GitHub's 1 GB "
+                "recommendation; earlier media versions stay in its history."
             )
         # Check an existing site's source before changing its publishing branch.
         existing = github.api(f"repos/{publication.repository}/pages", Pages, missing_ok=True)
         if existing is not None:
             verify_pages(existing, publication)
         commit = commit_site(github, publication, site)
+        if isinstance(commit, Uploading):
+            return PublishReport(
+                "uploading",
+                publication.repository,
+                publication.hosted_url,
+                publication.commit,
+                f"Uploaded {commit.sent / 1_000_000:.0f} of {commit.total / 1_000_000:.0f} MB. "
+                "Run study publish sync again to continue.",
+            )
         publication = publication.model_copy(update={"commit": commit, "site_digest": fingerprint})
         save_publication(root, publication)
         pages = existing or create_pages(github, publication)
@@ -210,21 +289,28 @@ def publish(
                     publication.repository,
                     publication.hosted_url,
                     commit,
-                    "Retry study publish sync; deployment or commit checks are pending.",
+                    " ".join(
+                        (
+                            "Retry study publish sync; deployment or commit checks are pending.",
+                            *notes,
+                        )
+                    ),
                 )
             time.sleep(min(3, max(0, deadline - time.monotonic())))
         publication = publication.model_copy(update={"deployed_commit": commit})
         save_publication(root, publication)
-        return PublishReport("deployed", publication.repository, publication.hosted_url, commit)
+        return PublishReport(
+            "deployed", publication.repository, publication.hosted_url, commit, " ".join(notes)
+        )
 
 
-def build_for_publication(root: Path) -> dict[str, bytes]:
+def build_for_publication(root: Path, *, media: bool = True) -> dict[str, bytes]:
     """Build once, then capture one validated public export before network access."""
     from tum_mcp.course.app.build import build
 
-    build(root, publish=False)
+    _ = build(root, publish=False)
     with FileLock(str(private_path(root, "update.lock"))):
-        return export_site(root)
+        return export_site(root, media=media)
 
 
 def unreviewed(root: Path) -> list[str]:

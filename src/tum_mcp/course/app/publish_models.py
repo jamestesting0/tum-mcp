@@ -35,13 +35,16 @@ class PublicationSetup(Frozen):
     course_identity: Digest
     repository: RepositoryName
     public_site: Literal[True]
+    # Public only when the account's plan cannot serve Pages from a private repository.
+    repository_visibility: Literal["private", "public"] = "private"
     # Read saved selective settings without treating them as full-app consent.
     include_exercises: bool = Field(default=False, strict=True, exclude=True)
     include_lectures: bool = Field(default=False, strict=True, exclude=True)
 
 
 class Publication(PublicationSetup):
-    schema_version: Literal[1, 2] = 1
+    # 2: all workspaces; 3: also installed Video and Audio Notes.
+    schema_version: Literal[1, 2, 3] = 1
     branch: str = Field(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_./-]+$")
     auto_sync: bool = True
     commit: GitSha
@@ -70,7 +73,7 @@ class Publication(PublicationSetup):
 
 @dataclass(frozen=True, slots=True)
 class PublishReport:
-    status: Literal["deployed", "unchanged", "pending", "failed", "paused", "held"]
+    status: Literal["deployed", "unchanged", "pending", "uploading", "failed", "paused", "held"]
     repository: str
     hosted_url: str | None = None
     commit: str | None = None

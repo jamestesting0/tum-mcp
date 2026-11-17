@@ -4,11 +4,69 @@ import base64
 import hashlib
 import json
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from io import BytesIO
+from pathlib import Path
+from threading import Thread
 
 from pydantic import JsonValue
 
+from tum_mcp.course.app.preview import byte_range
 from tum_mcp.course.app.publish_site import blob_sha
+
+
+class PagesHandler(SimpleHTTPRequestHandler):
+    """A static host that answers one byte range, as GitHub Pages does for media."""
+
+    extensions_map = {
+        **SimpleHTTPRequestHandler.extensions_map,
+        ".mjs": "text/javascript",
+        ".m4a": "audio/mp4",
+        ".vtt": "text/vtt",
+    }
+
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+        pass
+
+    def send_head(self):  # noqa: ANN201 - returns the body stream like the base class
+        path = Path(self.translate_path(self.path))
+        if not path.is_file() or "Range" not in self.headers:
+            return super().send_head()
+        size = path.stat().st_size
+        span = byte_range(self.headers["Range"], size)
+        if not isinstance(span, tuple):
+            return super().send_head()
+        start, end = span
+        with path.open("rb") as stream:
+            _ = stream.seek(start)
+            body = stream.read(end - start + 1)
+        self.send_response(206)
+        self.send_header("Content-Type", self.guess_type(str(path)))
+        self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        self.send_header("Content-Length", str(end - start + 1))
+        self.send_header("Accept-Ranges", "bytes")
+        self.end_headers()
+        return BytesIO(body)
+
+
+@contextmanager
+def serve_export(site: dict[str, bytes], directory: Path) -> Iterator[str]:
+    """Write a public export and serve it the way a Pages site would."""
+    for name, value in site.items():
+        target = directory / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(value)
+    handler = partial(PagesHandler, directory=str(directory))
+    with ThreadingHTTPServer(("127.0.0.1", 0), handler) as server:
+        Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            yield f"http://127.0.0.1:{server.server_port}"
+        finally:
+            server.shutdown()
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +95,15 @@ class GitHubFixture:
         self.authentication = True
         self.concurrent_push = False
         self.lose_creation_response = False
+        self.timeouts: list[int] = []
+        # Blob uploads fail after this many, as if the network dropped mid-publication.
+        self.upload_limit: int | None = None
+
+    def known(self, sha: str) -> bytes | None:
+        if sha in self.blobs:
+            return self.blobs[sha]
+        found = (value for tree in self.trees.values() for value in tree.values())
+        return next((value for value in found if blob_sha(value) == sha), None)
 
     def tree(self, files: dict[str, bytes]) -> str:
         sha = hashlib.sha1(
@@ -81,7 +148,8 @@ class GitHubFixture:
         env: dict[str, str],
     ) -> subprocess.CompletedProcess[bytes]:
         assert arguments[:4] == ["/synthetic/gh", "api", "--hostname", "github.com"]
-        assert capture_output and timeout == 45 and not check
+        assert capture_output and timeout >= 45 and not check
+        self.timeouts.append(timeout)
         assert "GH_DEBUG" not in env and env["GH_PROMPT_DISABLED"] == "1"
         method = arguments[arguments.index("--method") + 1]
         endpoint = arguments[8]
@@ -91,11 +159,13 @@ class GitHubFixture:
         if self.lose_creation_response and endpoint == "user/repos" and status == 201:
             self.lose_creation_response = False
             raise subprocess.TimeoutExpired(arguments, timeout)
+        message = result.get("message", "synthetic-private-value")
+        error = f"gh: HTTP {status}" if method == "HEAD" else f"gh: {message} (HTTP {status})"
         return subprocess.CompletedProcess(
             arguments,
             0 if status < 400 else 1,
-            json.dumps(result).encode(),
-            b"" if status < 400 else f"gh: synthetic-private-value (HTTP {status})".encode(),
+            b"" if method == "HEAD" else json.dumps(result).encode(),
+            b"" if status < 400 else error.encode(),
         )
 
     def respond(self, method: str, endpoint: str, body: dict | None) -> tuple[int, dict]:
@@ -112,6 +182,9 @@ class GitHubFixture:
         if remote is None:
             return 404, {}
         action = "/".join(parts[3:])
+        if not action and method == "PATCH":
+            remote["private"] = body["visibility"] == "private"
+            return 200, remote
         if not action:
             return 200, remote
         if action.startswith("git/ref/heads/"):
@@ -128,6 +201,8 @@ class GitHubFixture:
                     for path, content in self.trees[sha].items()
                 ],
             }
+        if action.startswith("git/blobs/") and method == "HEAD":
+            return (200, {}) if self.known(parts[-1]) is not None else (404, {})
         if action.startswith("git/blobs/"):
             content = next(
                 value
@@ -137,6 +212,10 @@ class GitHubFixture:
             )
             return 200, {"content": base64.b64encode(content).decode(), "encoding": "base64"}
         if action == "git/blobs" and method == "POST":
+            if self.upload_limit is not None:
+                if self.upload_limit == 0:
+                    raise subprocess.TimeoutExpired(["gh"], 45)
+                self.upload_limit -= 1
             content = base64.b64decode(body["content"])
             sha = blob_sha(content)
             self.blobs[sha] = content
@@ -150,7 +229,7 @@ class GitHubFixture:
                     files[entry["path"]] = (
                         entry["content"].encode()
                         if "content" in entry
-                        else self.blobs[entry["sha"]]
+                        else self.known(entry["sha"])
                     )
             return 201, {"sha": self.tree(files)}
         if action == "git/commits" and method == "POST":
@@ -165,8 +244,11 @@ class GitHubFixture:
             return 200, {"object": {"sha": remote["head"]}}
         if action == "pages":
             if method == "POST":
-                if not self.plan_eligible:
-                    return 422, {}
+                if not self.plan_eligible and remote["private"]:
+                    return 422, {
+                        "message": "Your current plan does not support GitHub Pages for "
+                        "this repository."
+                    }
                 self.pages[name] = {
                     "html_url": f"https://student.github.io/{parts[2]}/",
                     "source": body["source"],

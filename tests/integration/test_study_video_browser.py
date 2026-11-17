@@ -9,10 +9,12 @@ from threading import Thread
 import httpx2
 import pytest
 from documents import content_file
+from study_publish_fixture import serve_export
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.course.app.preview import Handler, PreviewServer
+from tum_mcp.course.app.publish_site import export_site
 
 STEM = "01_reusable-components"
 
@@ -112,6 +114,28 @@ def test_index_omits_missing_or_changed_files_and_survives_bad_manifests(
             "exercises": {},
             "patterns": {},
         }
+
+
+def test_export_carries_installed_videos_and_nothing_behind_them(demo: Path) -> None:
+    site = export_site(demo)
+    media = {name for name in site if name.startswith("videos/")}
+    assert media == {
+        "videos/index.json",
+        f"videos/tracks/{STEM}.mp4",
+        f"videos/captions/{STEM}.vtt",
+        f"videos/posters/{STEM}.jpg",
+        f"videos/narration/{STEM}.txt",
+    }
+    assert site[f"videos/tracks/{STEM}.mp4"] == (demo / f"videos/tracks/{STEM}.mp4").read_bytes()
+    index = json.loads(site["videos/index.json"])
+    assert index["videos"]["components"]["track"] == f"videos/tracks/{STEM}.mp4"
+    assert "provider" not in index["videos"]["components"]
+    # A track changed outside its receipt is no longer installed, so it stays local.
+    poster = demo / f"videos/posters/{STEM}.jpg"
+    poster.write_bytes(poster.read_bytes() + b"x")
+    exported = export_site(demo)
+    assert [name for name in exported if name.startswith("videos/")] == ["videos/index.json"]
+    assert json.loads(exported["videos/index.json"])["videos"] == {}
 
 
 @pytest.fixture(scope="module")
@@ -221,9 +245,20 @@ def test_a_slow_video_index_never_holds_back_the_page(browsers: dict, server: st
 
 
 @browser_only
-def test_stale_videos_warn_and_hosted_sites_never_ask(
-    browsers: dict, demo: Path, server: str
+def test_a_published_site_plays_seeks_and_captions_its_videos(
+    browsers: dict, demo: Path, tmp_path: Path
 ) -> None:
+    with serve_export(export_site(demo), tmp_path / "pages") as hosted:
+        for name, width in (("chromium", 390), ("chromium", 1440), ("webkit", 390)):
+            if name not in browsers:
+                continue
+            context = browsers[name].new_context(viewport={"width": width, "height": 900})
+            check_page(context.new_page(), hosted)
+            context.close()
+
+
+@browser_only
+def test_stale_videos_warn(browsers: dict, demo: Path, server: str) -> None:
     course_browser = browsers["chromium"]
     manifest = json.loads((demo / "videos/manifest.json").read_text(encoding="utf-8"))
     manifest["videos"][STEM]["made_for_revision"] = "0" * 64
@@ -232,21 +267,6 @@ def test_stale_videos_warn_and_hosted_sites_never_ask(
     page = context.new_page()
     page.goto(server + "/#components")
     page.get_by_text("made for an earlier version").wait_for()
-    context.close()
-    data = demo / "app/data.mjs"
-    original = data.read_bytes()
-    data.write_bytes(
-        original.replace(b"export default ", b"const data = ", 1)
-        + b"data.hosted = true;\nexport default data;\n"
-    )
-    requests: list[str] = []
-    context = course_browser.new_context(viewport={"width": 1440, "height": 900})
-    page = context.new_page()
-    page.on("request", lambda request: requests.append(request.url))
-    page.goto(server + "/#components")
-    page.get_by_role("heading", name="Reusable components").wait_for()
-    assert page.locator("section.video-note").count() == 0
-    assert not any("/videos/" in url for url in requests)
     context.close()
 
 

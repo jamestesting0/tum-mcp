@@ -442,20 +442,43 @@ def test_audio_workspace_reads_along_and_keeps_playing_elsewhere(chromium, serve
     context.close()
 
 
+def test_export_carries_the_installed_track_its_script_and_playlist(published: Path) -> None:
+    from tum_mcp.course.app.publish_site import export_site
+
+    site = export_site(published)
+    assert {name for name in site if name.startswith("audio/")} == {
+        "audio/index.json",
+        "audio/playlist.zip",
+        "audio/tracks/01_structures.m4a",
+        "audio/scripts/01_structures.txt",
+    }
+    index = json.loads(site["audio/index.json"])
+    [track] = index["tracks"]
+    assert index["download"].endswith("-audio-notes.zip") and "provider" not in track
+    assert len(track["sentences"]) == 6
+    assert site["audio/tracks/01_structures.m4a"] == TRACK.read_bytes()
+
+
 @browser_only
-def test_hosted_sites_never_ask_for_audio(chromium, published: Path, server: str) -> None:  # noqa: ANN001
-    data = published / "app/data.mjs"
-    original = data.read_bytes()
-    data.write_bytes(
-        original.replace(b"export default ", b"const data = ", 1)
-        + b"data.hosted = true;\nexport default data;\n"
-    )
-    context = chromium.new_context(viewport={"width": 1440, "height": 900})
-    page = context.new_page()
-    requests: list[str] = []
-    page.on("request", lambda request: requests.append(request.url))
-    page.goto(server + "/#audio")
-    page.get_by_text("Audio notes play in the local app.").wait_for()
-    assert not any(url.startswith(server + "/audio/") for url in requests)
-    assert page.locator(".audio-dock").count() == 0
-    context.close()
+def test_a_published_site_plays_its_audio(chromium, published: Path, tmp_path: Path) -> None:  # noqa: ANN001
+    from playwright.sync_api import expect
+    from study_publish_fixture import serve_export
+
+    from tum_mcp.course.app.publish_site import export_site
+
+    site = export_site(published)
+    name = json.loads(site["audio/index.json"])["download"]
+    with serve_export(site, tmp_path / "pages") as hosted:
+        context = chromium.new_context(viewport={"width": 1440, "height": 900})
+        page = context.new_page()
+        page.goto(hosted + "/#audio")
+        row = page.locator(".audio-shelf .topic-row", has_text="Structures")
+        row.wait_for()
+        expect(page.locator(".audio-download")).to_have_attribute("download", name)
+        row.locator("a").click()
+        page.locator(".audio-player").get_by_role("button", name="Play", exact=True).click()
+        sentences = page.locator(".audio-sentence")
+        expect(sentences.first).to_have_attribute("aria-current", "true", timeout=10000)
+        sentences.nth(2).click()
+        expect(sentences.nth(2)).to_have_attribute("aria-current", "true", timeout=10000)
+        context.close()
