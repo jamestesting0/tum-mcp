@@ -49,9 +49,11 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    with `tum-mcp study import PROJECT --file F --kind exam --title T`. Prepare what
    the evidence supports; report the rest. A request for the whole course covers the
    material released so far: prepare that now and name the unreleased weeks in the
-   report; never pause the request for material that does not exist yet. Without past exams, the exercises set the
-   question types: read the Exercises workspace, else the released exercises and the
-   repositories that are available (a missing one never stops the work). Without Study,
+   report; never pause the request for material that does not exist yet. Without past
+   exams, the exercises set the question types: read the Exercises workspace, else the
+   released exercises and the repositories that are available (a missing one never
+   stops the work). Every kind of task the exercises ask becomes a pattern, or a
+   practice question when only one exercise asks it. Without Study,
    Exam works alone; offer once, in the report, to prepare Study. Exam serves students
    who have studied the material: keep it concise and never re-teach. Depth stays in
    Study, one tap away through the Recall row of each pattern and solution.
@@ -125,6 +127,7 @@ per sitting, acyclic prerequisites, truthful labels and consistent marking.
 
 Speak to the student in your own words: never link to or quote skill files.
 Never call a forecast a prediction, a leak or official; frequencies are history.
+Say how uncertain a forecast is in your report, never in the app.
 Student solutions are unverified; official labels need an official source. Solve every
 answer independently. Never start, submit or execute course code, read `.git/` or
 credentials. Original campus and imported files stay local. Prepared Exam content may
