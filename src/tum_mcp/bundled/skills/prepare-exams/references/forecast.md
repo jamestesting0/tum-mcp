@@ -45,10 +45,15 @@ questions and copies of past statements, even with text or code added around the
 ## Write additional practice
 
 Use a separate set with `kind: "practice"` for important core cheatsheet ideas that
-the patterns and their drills leave unpractised. It is untimed; omit
-`duration_minutes` and `instructions`. No blueprint or timing check applies.
+the patterns and their drills leave unpractised. With few past papers, the patterns train
+only the moves those papers asked. Compare each pattern's family with the lectures: a
+method taught for it that no paper asked yet (a second algorithm for the same task, the
+reverse computation, a variant of a design pattern) gets a practice question too.
+The set is untimed; omit `duration_minutes` and `instructions`. No blueprint or timing
+check applies.
 Keep the same question, novelty, marking and solution standards as mock exams.
-`uncovered_core` counts practice across patterns, mock exams and practice sets.
+`uncovered_core` counts practice across patterns, mock exams and practice sets, per whole
+entry, so it cannot see an unpractised method inside a practised entry.
 It is advisory. Other uncovered ideas are fine and never block readiness.
 
 The app labels forecasts as AI-written practice, never as a prediction or a leak.

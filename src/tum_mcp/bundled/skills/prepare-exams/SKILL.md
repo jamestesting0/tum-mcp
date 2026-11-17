@@ -89,7 +89,9 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    style and blueprint (`exam-report --section blueprint`) within the prepared scope; for
    part of the course it takes that part's share of the time. A separate untimed set
    (`kind: "practice"`) targets important core ideas the patterns and drills leave
-   unpractised. Other uncovered cheatsheet ideas are fine; they do not block readiness.
+   unpractised, and the lecture methods of a pattern's question family that no past paper
+   asked yet (a second algorithm for the same task, the reverse computation). Other
+   uncovered cheatsheet ideas are fine; they do not block readiness.
    Every question you write shows a figure, code, diagram, formula, table or plot beside
    its text, written as in [writing](../prepare-study/references/writing.md).
 7. **Build and verify** ([verification](references/verification.md)). Edit each item's
