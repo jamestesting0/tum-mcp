@@ -21,8 +21,9 @@ turns:
   skills:
   - prepare-exercises
   - read-content
-- say: 'My FAI exam is in a few weeks. Prepare my exam prep for the whole course: the cheatsheet, solving
-    patterns, a mock exam like the real exam, and practice for the important ideas the patterns miss.'
+- say: My FAI exam is in a few weeks. Prepare my exam prep for the whole course from the past exams I
+    downloaded (a mock exam with its solution and an older retake). Include the cheatsheet, solving patterns,
+    a mock exam like the real exam, and practice for the important ideas the patterns miss.
   skills:
   - prepare-exams
   - read-content
@@ -38,8 +39,8 @@ replies:
   publish: No, keep it local.
   learning record: Keep the learning record off.
   study: Not now; just the exam prep.
-  lecture: Lectures 1 to 4 of this semester.
-  exam: Use only the past exams I gave you.
-  paper: Use only the past exams I gave you.
+  lecture: The whole course.
+  exam: These are all the past exams I have; there are no others.
+  paper: These are all the past exams I have; there are no others.
   course: Fundamentals of Artificial Intelligence, this semester.
   default: Your choice, go ahead.
