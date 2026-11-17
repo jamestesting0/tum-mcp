@@ -16,7 +16,8 @@ its answer. Keep the printed statement and add the picture in a step.
 
 Read `exam-report --section blueprint` first: profile (duration, points, aids, format),
 historical topic shares and question formats. Use `kind: "exam"` and set
-`duration_minutes`; `instructions` holds the cover rules: time, aids and what to answer.
+`duration_minutes`; `instructions` says what to answer and how. The app already shows
+the time, points and aids, so never repeat them there.
 A mock exam simulates the real exam's timing and blueprint.
 Design to that blueprint, then check:
 

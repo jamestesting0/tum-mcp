@@ -3,7 +3,7 @@
   "title": "Mock exam",
   "kind": "exam",
   "duration_minutes": 60,
-  "instructions": "60 minutes. No aids. Answer both questions.",
+  "instructions": "Answer both questions and show your working.",
   "sources": [
     {
       "key": "components",

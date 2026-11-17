@@ -706,8 +706,9 @@ class Mock(Frozen):
     duration_minutes: Minutes | None = None
     instructions: Text | None = Field(
         default=None,
-        description="A mock exam's cover rules: time, aids and what to answer. A practice set "
-        "has none; its questions speak for themselves.",
+        description="A mock exam's cover rule: what to answer and how. The app already shows "
+        "its time, points and aids. A practice set has none; its questions speak for "
+        "themselves.",
     )
     sources: tuple[SourceVersion, ...] = Field(min_length=1, max_length=30)
     questions: tuple[MockQuestion, ...] = Field(min_length=1, max_length=200)
