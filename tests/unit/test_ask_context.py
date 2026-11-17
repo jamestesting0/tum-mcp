@@ -274,6 +274,15 @@ def test_checks_after_the_answer_keep_the_answer_out_of_the_log() -> None:
     ]
 
 
+def test_step_labels_name_the_file_on_every_system() -> None:
+    from tum_mcp.course.app.ask_runtime import status_line
+
+    assert status_line("Edit", "/course/app/study/units/graphs.json") == "Editing graphs.json"
+    assert (
+        status_line("fileChange", r"C:\Course\app\study\units\graphs.json") == "Editing graphs.json"
+    )
+
+
 def test_chats_keep_the_newest_fifty(tmp_path, monkeypatch) -> None:
     root = course(tmp_path)
     monkeypatch.setattr(ask_threads, "KEEP", 3)

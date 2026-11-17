@@ -17,7 +17,8 @@ def emit(event: dict) -> None:
 
 
 def turn(args: list[str]) -> None:
-    prompt = sys.stdin.read()
+    # Cursor is a Node program and reads its stdin as UTF-8 on every system.
+    prompt = sys.stdin.buffer.read().decode("utf-8")
     session = args[args.index("--resume") + 1] if "--resume" in args else "cursor-session-1"
     if log := os.environ.get("FAKE_ASK_LOG"):
         Path(log).write_text(prompt, encoding="utf-8")

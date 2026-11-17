@@ -18,7 +18,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from importlib.resources import files
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PureWindowsPath
 from typing import Literal
 from uuid import uuid4
 
@@ -369,7 +369,8 @@ def claude_logout() -> None:
 
 
 def status_line(tool: str, detail: str) -> str:
-    name = PurePosixPath(detail).name if detail else ""
+    # Tools report paths in the system's own form; the Windows parser splits on / and \.
+    name = PureWindowsPath(detail).name if detail else ""
     if tool in ("Read", "read") and name:
         return f"Reading {name}"
     if tool in ("Edit", "Write", "fileChange") and name:
