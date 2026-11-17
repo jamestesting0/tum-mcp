@@ -139,6 +139,7 @@ def test_wide_tree_fits_available_reading_space(
                 graph = page.locator("#wide-test-tree .graph-region")
                 metrics = graph.evaluate("""region => {
                   const r = region.getBoundingClientRect();
+                  const card = (region.closest('.surface') || region).getBoundingClientRect();
                   const main = document.querySelector('main').getBoundingClientRect();
                   const outline = document.querySelector('.page-outline');
                   const o = outline && outline.getClientRects().length
@@ -147,6 +148,7 @@ def test_wide_tree_fits_available_reading_space(
                     .map(n => n.getBoundingClientRect());
                   return {scroll: region.scrollWidth - region.clientWidth,
                     inside: nodes.every(n => n.left >= r.left - 1 && n.right <= r.right + 1 &&
+                      n.left >= card.left && n.right <= card.right &&
                       n.left >= main.left && n.right <= main.right &&
                       (!o || n.right <= o.left + 1)),
                     natural: Number(region.querySelector('svg').dataset.naturalWidth)};
