@@ -114,7 +114,7 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    [review-course](../review-course/SKILL.md) checks the cheatsheet, each pattern and
    each mock question. Finish the requested draft and its checks, then offer one
    review-and-repair round in a short question of your own, unless review was already
-   requested. The offer needs no reason or source.
+   requested.
 8. **Report** sittings, questions and coverage, review items, kept outliers, gaps and
    checks run, in plain words. Launch with `tum-mcp study`.
 
@@ -127,7 +127,6 @@ per sitting, acyclic prerequisites, truthful labels and consistent marking.
 
 ## Boundaries
 
-Speak to the student in your own words: never link to or quote skill files.
 Never call a forecast a prediction, a leak or official; frequencies are history.
 Say how uncertain a forecast is in your report, never in the app.
 Student solutions are unverified; official labels need an official source. Solve every

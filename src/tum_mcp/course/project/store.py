@@ -133,6 +133,7 @@ Content preparation alone stops after the complete draft passes its internal che
 ask whether to run one review-and-repair round. If review was already requested,
 continue without asking again. After the round report scores, fixes and unresolved
 verification; extend the round budget only when the student requests it.
+Speak to the student in your own words: never link to or quote skill files.
 
 ### Read vague requests
 - "This week" or "the current lecture": `tum-mcp study schedule .`; without a recorded

@@ -11,7 +11,8 @@ function lines(text, width = 20) {
     if (last && (last + ' ' + word).length <= width) result[result.length - 1] = `${last} ${word}`;
     else result.push(word);
   }
-  return result.length > 2 ? [result[0], `${result.slice(1).join(' ').slice(0, width - 1)}…`] : result;
+  // A 56px card holds three 13px lines; only a longer title is shortened.
+  return result.length > 3 ? [...result.slice(0, 2), `${result.slice(2).join(' ').slice(0, width - 1)}…`] : result;
 }
 const plainTitle = key => studyText('span', '', concepts.get(key)?.title || key).textContent;
 
