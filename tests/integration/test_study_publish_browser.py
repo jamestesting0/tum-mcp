@@ -354,9 +354,7 @@ def test_complete_public_app_keeps_learning_panels_and_lecture_timestamp_links(
                 page.keyboard.press("Escape")
             assert errors == [] and failed == [], (errors, failed)
         assert all(url.startswith(base) or url == lecture["notes"][0]["url"] for url in requests)
-        assert not any(
-            "/materials/" in url or "/videos/" in url or "/_study/" in url for url in requests
-        )
+        assert not any("/materials/" in url or "/_study/" in url for url in requests)
     finally:
         context.close()
         server.shutdown()

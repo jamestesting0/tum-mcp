@@ -8,6 +8,7 @@ from typing import Annotated
 import typer
 from filelock import FileLock
 
+from tum_mcp.course.app.publish_media import installed
 from tum_mcp.course.app.publish_models import load_publication, repository_name, save_publication
 from tum_mcp.course.content.store import present
 from tum_mcp.course.project.store import load_state, private_path
@@ -18,7 +19,7 @@ app = typer.Typer(invoke_without_command=True, pretty_exceptions_show_locals=Fal
 
 def report(result_json: str, status: str) -> None:
     typer.echo(result_json)
-    if status in {"pending", "failed"}:
+    if status in {"pending", "uploading", "failed"}:
         raise typer.Exit(2)
 
 
@@ -52,14 +53,19 @@ def setup(
                     "repository": repository,
                     "suggested_name": repository_name(course),
                     "repository_visibility": "private",
+                    "public_repository_when": (
+                        "The GitHub plan cannot serve Pages from a private repository "
+                        "(GitHub Free). The repository then shows earlier site versions "
+                        "in its history."
+                    ),
                     "website_visibility": "public",
                     "workspaces": [
                         workspace
                         for workspace in ("study", "exercises", "lectures", "exam")
                         if present(root, workspace)
                     ],
+                    "media": installed(root),
                     "authentication": "Host GitHub CLI: gh auth login --hostname github.com",
-                    "requires": "An eligible paid GitHub plan for Pages from private repositories.",
                     "next": "Review website contents, then rerun with --public-site to publish.",
                 },
                 indent=2,
@@ -74,16 +80,17 @@ def setup(
         raise CampusError(
             Code.WORKSPACE_CONFLICT, "This course already has a publishing repository."
         )
-    if existing is not None and existing.schema_version != 2 and not public_site:
+    if existing is not None and existing.schema_version == 1 and not public_site:
         raise CampusError(
             Code.ACTION_REQUIRED,
             "Confirm --public-site to publish all prepared workspaces instead of the saved "
             "selective scope.",
         )
     # Keep snapshot preparation and upload ordered with competing automatic publications.
+    media = public_site or (existing is not None and existing.schema_version == 3)
     with FileLock(str(private_path(root, "publish.lock")), is_singleton=True):
-        site = build_for_publication(root)
-        configure(root, repository=repository, site=site)
+        site = build_for_publication(root, media=media)
+        _ = configure(root, repository=repository, site=site, consent=public_site)
         result = publish(root, wait_seconds=wait_seconds, site=site, verify_unchanged=True)
     report(json.dumps(asdict(result), indent=2), result.status)
 
@@ -92,11 +99,26 @@ def setup(
 def sync(
     project: Path,
     wait_seconds: Annotated[int, typer.Option(min=0, max=60)] = 60,
+    automatic: Annotated[
+        bool,
+        typer.Option(
+            "--automatic",
+            help="Publish as a build would: skip a paused site and hold unreviewed drafts.",
+        ),
+    ] = False,
 ) -> None:
     """Retry or update a configured study site's repository and deployment."""
-    from tum_mcp.course.app.publish import publish
+    from tum_mcp.course.app.publish import after_build, publish
 
-    result = publish(project, wait_seconds=wait_seconds, verify_unchanged=True)
+    root = project.expanduser().resolve()
+    if automatic:
+        outcome = after_build(root)
+        if outcome is None:
+            typer.echo("null")
+            return
+        report(json.dumps(asdict(outcome), indent=2), outcome.status)
+        return
+    result = publish(root, wait_seconds=wait_seconds, verify_unchanged=True)
     report(json.dumps(asdict(result), indent=2), result.status)
 
 

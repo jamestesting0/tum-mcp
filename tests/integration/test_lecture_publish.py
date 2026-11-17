@@ -10,7 +10,13 @@ from tum_mcp.course.app.build import build
 from tum_mcp.course.app.github import GitHub
 from tum_mcp.course.app.publish import configure, publish
 from tum_mcp.course.app.publish_models import Publication, course_identity
-from tum_mcp.course.app.publish_site import MARKER, SITE_FILES, commit_site, export_site
+from tum_mcp.course.app.publish_site import (
+    MARKER,
+    MAX_FILES,
+    SITE_FILES,
+    commit_site,
+    export_site,
+)
 from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError
 
@@ -155,7 +161,7 @@ def test_export_limits_reject_before_remote_read_or_write(
     identity = course_identity(load_state(lecture_project).course)
     site = {"data.mjs": b"x"}
     if failure == "files":
-        site.update({f"lecture-assets/{index:064x}.png": b"x" for index in range(99)})
+        site.update({f"lecture-assets/{index:064x}.png": b"x" for index in range(MAX_FILES - 1)})
     elif failure == "bytes":
         site["data.mjs"] = b"x" * (16 * 1024**2)
     else:

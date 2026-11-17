@@ -2,14 +2,15 @@ import data from '../../data.mjs';
 import { node, studyText, append, button, topicRow } from '../shell/dom.mjs';
 import { iconGlyph, nextStep } from '../shell/navigation.mjs';
 
-// Audio notes are a local-preview feature, like videos: hosted sites never ask for the index.
-let tracks = [];
+// The local preview builds the index on request; a published site carries it as a file.
+let tracks = [], playlistName = '';
 export async function loadAudio() {
-  if (data.hosted) return tracks;
   try {
     const response = await fetch('audio/index.json', { cache: 'no-store', signal: AbortSignal.timeout(10000) });
     const value = response.ok ? await response.json() : null;
     if (Array.isArray(value?.tracks)) tracks = value.tracks;
+    // The preview names the download in its header; a static host needs the name here.
+    if (typeof value?.download === 'string') playlistName = value.download;
   } catch { /* opened without the local preview */ }
   return tracks;
 }
@@ -213,11 +214,11 @@ function libraryPage(missing) {
   root.append(header);
   if (missing) root.append(node('p', 'notice', 'That track is no longer here.'));
   if (!tracks.length) {
-    root.append(node('p', '', data.hosted ? 'Audio notes play in the local app.' : 'No audio notes have been made for this course.'));
+    root.append(node('p', '', 'No audio notes have been made for this course.'));
     return { root, heading, title: 'Audio', empty: true };
   }
   const total = tracks.reduce((sum, track) => sum + track.duration, 0);
-  const download = node('a', 'audio-download small'); download.href = 'audio/playlist.zip'; download.download = '';
+  const download = node('a', 'audio-download small'); download.href = 'audio/playlist.zip'; download.download = playlistName;
   download.append(iconGlyph('download'), node('span', '', 'Download playlist'));
   header.append(append(node('p', 'small audio-meta'), node('span', '', `${plural(tracks.length, 'track')} · ${minutes(total)}`), download));
   for (const [kind, label] of shelves) {

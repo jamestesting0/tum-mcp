@@ -75,10 +75,13 @@ All commands print JSON; prefix them with `tum-mcp audio-notes`.
    swallows, "A and B, may each" heard as "and B. Mage"), synthesize it again,
    publish and listen again until nothing is flagged or the flag is a recognizer
    quirk you can name.
-7. **Report.** Name created, updated and reused tracks, durations, the actual voice,
+7. **Published site.** When the request's tracks are installed and the course has a
+   published site, run `tum-mcp study publish sync PROJECT --automatic` once. It
+   respects a paused site and the review gate. Never upload after each track.
+8. **Report.** Name created, updated and reused tracks, durations, the actual voice,
    the checks that ran (including `listen` results), the parts left to the page, and
-   absolute paths under `audio/tracks/`; the tracks play in the local app's Audio
-   workspace (`tum-mcp study`). A requested track ends published; machine
+   absolute paths under `audio/tracks/`; the tracks play in the app's Audio
+   workspace, locally (`tum-mcp study`) and on a published site. A requested track ends published; machine
    listening does not judge how natural the voice sounds, so say a person has not
    listened yet.
 
@@ -96,5 +99,6 @@ Send only reviewed narration text to an authorized cloud speech service. If no v
 host or speak the course language, keep the scripts and report the precise limit.
 
 Keep all course outputs inside `audio/`; reusable models and runtimes stay in the
-host's shared user storage. Preserve existing files and edits. Generated audio stays
-local: do not upload tracks, candidates or the course project.
+host's shared user storage. Preserve existing files and edits. Only publish-course
+uploads installed tracks, with their scripts and playlist, to the course's published
+site. Never upload candidates, `.build/` or the course project.

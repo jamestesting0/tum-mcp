@@ -1,15 +1,14 @@
-import data from '../../data.mjs';
 import { node, append, button } from '../shell/dom.mjs';
 import { iconGlyph } from '../shell/navigation.mjs';
 
-// Videos are a local-preview feature: hosted sites never request the index. The index loads
+// The local preview builds the index on request; a published site carries it as a file. It loads
 // beside the app rather than holding it back, so a busy server only delays the video panel.
 let videos = null;
 let index = null;
 function loadIndex() {
-  if (!index) index = (data.hosted ? Promise.resolve({}) : fetch('videos/index.json', { cache: 'no-store', signal: AbortSignal.timeout(30000) })
+  if (!index) index = fetch('videos/index.json', { cache: 'no-store', signal: AbortSignal.timeout(30000) })
     .then(response => (response.ok ? response.json() : {}))
-    .catch(() => ({})))
+    .catch(() => ({}))
     .then(value => {
       videos = { videos: value?.videos || {}, exercises: value?.exercises || {}, patterns: value?.patterns || {} };
       return videos;

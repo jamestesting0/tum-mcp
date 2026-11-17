@@ -848,6 +848,14 @@
     "expected_skill": "publish-course"
   },
   {
+    "id": "publish-course-media",
+    "target_skill": "publish-course",
+    "prompt": "Put my video notes and audio notes on my course website so my friends can watch them.",
+    "context": "bound_course_configured_publication_auto_sync",
+    "partition": "held_out",
+    "expected_skill": "publish-course"
+  },
+  {
     "id": "publish-course-all-workspaces",
     "target_skill": "publish-course",
     "prompt": "Update my published course app with Exercises, Exam and Lecture, keeping the lecture timestamp links.",

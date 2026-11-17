@@ -1681,6 +1681,7 @@ def preview_index(root: Path) -> dict:
             "captions": f"videos/{receipt.files['captions'].path}",
             "poster": f"videos/{receipt.files['poster'].path}",
             "transcript": f"videos/{receipt.files['transcript'].path}",
+            "provider": receipt.voice_profile.provider if receipt.voice_profile else None,
             "chapters": [
                 {"title": bound.title, "start": bound.start} for bound in receipt.chapters
             ],
