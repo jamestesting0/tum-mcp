@@ -104,8 +104,9 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    Cheatsheet facts taught in the requested Study need a Revision flashcard or question;
    topics beyond it are judged through Exam practice, never by adding Study units.
    [review-course](../review-course/SKILL.md) checks the cheatsheet, each pattern and
-   each mock question. Finish the requested draft and its checks, then ask once whether
-   to run one review-and-repair round, unless review was already requested.
+   each mock question. Finish the requested draft and its checks, then offer one
+   review-and-repair round in a short question of your own, unless review was already
+   requested. The offer needs no reason or source.
 8. **Report** sittings, questions and coverage, review items, kept outliers, gaps and
    checks run, in plain words. Launch with `tum-mcp study`.
 
