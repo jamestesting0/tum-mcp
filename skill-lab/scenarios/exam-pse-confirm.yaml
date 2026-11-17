@@ -1,0 +1,33 @@
+id: exam-pse-confirm
+turns:
+- say: Set up Patterns in Software Engineering in this folder.
+  skills:
+  - sync-course
+  - read-content
+- say: Prepare a guided exercise for the W02E01 State Pattern programming exercise. I cloned my Artemis
+    repository for it to ~/.skill-lab/fixtures/w02e01-state.
+  skills:
+  - read-content
+  - prepare-exercises
+- say: 'There are no past exams for PSE. Prepare my exam prep for the whole course: the cheatsheet, solving
+    patterns, a mock exam like the real exam, and practice for the important ideas the patterns miss.'
+  skills:
+  - prepare-exams
+  - read-content
+- say: Review the exam prep and fix what is wrong or hard to use.
+  skills:
+  - review-course
+  - prepare-exams
+replies:
+  review: Not yet, I'll ask for a review when I'm ready.
+  review round: One round is enough.
+  another: One round is enough.
+  publish: No, keep it local.
+  learning record: Keep the learning record off.
+  study: Not now; just the exam prep.
+  course: Patterns in Software Engineering, this semester (WS26/27).
+  semester: This semester, WS26/27.
+  exam: There are no past exams; use the course material and exercises.
+  default: Your choice, go ahead.
+  template: It is the untouched template; I have not changed anything yet.
+  clone: It is the untouched template; I have not changed anything yet.

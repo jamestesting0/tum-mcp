@@ -124,13 +124,19 @@ def test_wide_tree_fits_available_reading_space(
                         nodes.map(item => [item.key, '2 + 3 = 5']));
                       const block = {stage: {kind:'diagram', layout:'tree',
                         description:'Tree', nodes, edges}, steps:[step]};
-                      const small = renderWalkthrough({stage: {...block.stage,
+                      const smallBlock = {stage: {...block.stage,
                         nodes: nodes.slice(0, 3), edges: edges.slice(0, 2)},
-                        steps: [{...step, active: [], frontier: []}]}, () => null);
+                        steps: [{...step, active: [], frontier: []}]};
+                      const small = renderWalkthrough(smallBlock, () => null);
                       small.id = 'small-test-tree';
                       const wide = renderWalkthrough(block, () => null);
                       wide.id = 'wide-test-tree';
-                      reading.append(small, wide);
+                      // An unopened example tab: drawn while hidden, then shown.
+                      const later = document.createElement('div');
+                      later.hidden = true;
+                      later.append(renderWalkthrough(smallBlock, () => null));
+                      later.id = 'later-test-tree';
+                      reading.append(small, wide, later);
                       await new Promise(resolve =>
                         requestAnimationFrame(() => requestAnimationFrame(resolve)));
                     }""",
@@ -139,6 +145,7 @@ def test_wide_tree_fits_available_reading_space(
                 graph = page.locator("#wide-test-tree .graph-region")
                 metrics = graph.evaluate("""region => {
                   const r = region.getBoundingClientRect();
+                  const card = (region.closest('.surface') || region).getBoundingClientRect();
                   const main = document.querySelector('main').getBoundingClientRect();
                   const outline = document.querySelector('.page-outline');
                   const o = outline && outline.getClientRects().length
@@ -147,6 +154,7 @@ def test_wide_tree_fits_available_reading_space(
                     .map(n => n.getBoundingClientRect());
                   return {scroll: region.scrollWidth - region.clientWidth,
                     inside: nodes.every(n => n.left >= r.left - 1 && n.right <= r.right + 1 &&
+                      n.left >= card.left && n.right <= card.right &&
                       n.left >= main.left && n.right <= main.right &&
                       (!o || n.right <= o.left + 1)),
                     natural: Number(region.querySelector('svg').dataset.naturalWidth)};
@@ -158,6 +166,16 @@ def test_wide_tree_fits_available_reading_space(
                 assert page.locator("#small-test-tree .graph-region").evaluate(
                     "region => !region.style.width && !region.style.marginLeft"
                 )
+                shown = page.locator("#later-test-tree").evaluate("""async later => {
+                  const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
+                  await frame();
+                  later.hidden = false;
+                  for (let i = 0; i < 3; i += 1) await frame();
+                  const region = later.querySelector('.graph-region');
+                  const box = region.closest('.surface') || region;
+                  return {width: box.style.width, margin: box.style.marginLeft};
+                }""")
+                assert shown == {"width": "", "margin": ""}, shown
                 if width == 1440 and contents == "open" and valued:
                     from tum_mcp.course.app.visuals import _shoot
 

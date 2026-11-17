@@ -123,12 +123,12 @@ def import_file(project: Path, file: Path, kind: Kind, title: str) -> ImportRepo
             raise CampusError(Code.INVALID_RESPONSE, error.message) from None
     sha256 = digest(data)
     local = next((item for item in state.course.bindings if item.provider == "local"), None)
-    if local is not None:
-        for item in state.resources:
-            if item.resource.binding == local.key and item.sha256 == sha256 and item.path:
-                return ImportReport(
-                    key=item.resource.key, sha256=sha256, imported=False, path=item.path
-                )
+    # A file the course already holds is that resource, whichever binding fetched it.
+    for item in state.resources:
+        if item.sha256 == sha256 and item.path:
+            return ImportReport(
+                key=item.resource.key, sha256=sha256, imported=False, path=item.path
+            )
     if local is None:
         used = {item.key for item in state.course.bindings}
         local = Binding(

@@ -32,8 +32,9 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   Write it so a student who studied the topic can follow it under exam time without
   recalling anything elsewhere: each step acts on the question's givens, and every step
   that writes an equation, computes a value or applies a rule shows it under `apply`.
-  A step that computes without its formula is refused (`bare_workflow`); a wholly verbal
-  workflow, such as choosing a design, needs no `apply`.
+  A rule includes an order key, a tie or stop rule, a test and a code idiom. A step that
+  computes without its formula is refused (`bare_workflow`). Only a judgement step that
+  applies no rule, such as weighing two designs, has no `apply`.
   It must solve every listed instance; check it against each one. When the method only
   holds under conditions, the first step checks them; when the answer can be verified,
   the last step says how.
@@ -52,6 +53,7 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   | --- | --- |
   | Picks a final formula or value (the Master theorem's three results) | A cheatsheet entry, reached through Recall |
   | Changes the next move (\(0/0\) -> L'Hopital, \(c/0\) -> one-sided limits) | Cases on a decision step |
+  | Changes only the rule one shared step applies (the frontier's order key in BFS, UCS, greedy and A\*) | Cases on that step, in one pattern |
   | Changes the first moves | A separate pattern |
 
   Cases never overlap: every listed instance falls under exactly one.
@@ -64,9 +66,11 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   computes a value shows the formula it computes with, in `math` or inline in `text`
   (\(EU(a) = \sum_s P(s \mid a)\,U(s)\)); "multiply each utility by its probability and
   sum" in words is not a formula (`bare_workflow`). A complete one-line verbal rule with
-  nothing to compute can stand alone. An expansion adds a missing formula, code, condition or
+  nothing to compute can stand alone. One `apply` holds one rule: rules for different
+  situations ("For DFS ...; for UCS ...", "Tree: Composite. Wrapper: Adapter.") are
+  cases on that step (`hidden_cases`). An expansion adds a missing formula, code, condition or
   useful working detail; never copy or merely paraphrase `do` or `then` into `apply.text`.
-  Omit `apply` when opening it would add nothing. The answer's shape (a proof frame, a table to fill, a code skeleton) is
+  The answer's shape (a proof frame, a table to fill, a code skeleton) is
   split over the steps that write it; there is no separate template. An applied formula
   gives its variables' meanings in this pattern (`symbols`, required; a meaning written once
   serves every formula of the pattern), following
@@ -98,6 +102,10 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
     applies?". The app shows the cases as the options. The student answers on paper; a choice is checked, anything
     else is compared. For code patterns, the steps that matter write code from a starter
     signature and compare with a model answer.
+  - Size and format: match the exam. Use an input as large as the exam's (the same
+    number of nodes, rows or classes) and its answer format (tick a sequence, fill a
+    table, write code). When exams ask the reverse question (find the value that gives a
+    stated result), practise it too.
   - The question states its task in the first sentence, adds no filler such as "work
     through the steps", and shows everything the answers use: the current classes as UML
     or code, the data as a table, a programming task's files as a `files` block that
@@ -118,7 +126,9 @@ concept. The page shows a Recall row for its `concepts`, which opens the Study p
   when it would repeat that answer; both fields are visible together.
   Try solving the drill without its key workflow step. Ask for the relevant working
   or change the givens if a student can get full credit while skipping that step.
-  Order items so neighbours need different cases.
+  Order items so neighbours need different cases. In a programming course, a drill on a
+  code pattern asks for code from a starter file or signature, never a prose
+  explanation of the code.
 
 Every question you write here, worked practice and drills included, shows its
 situation with code, a diagram, a UML diagram, a formula, a table or a plot beside the text; the

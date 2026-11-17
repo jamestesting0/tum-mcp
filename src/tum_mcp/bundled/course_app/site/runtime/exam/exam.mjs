@@ -32,6 +32,10 @@ function card(href, title, detail) {
 }
 const replayable = () => variants.filter(({ variant }) => variant.replayable);
 const orderedPatterns = () => (exam.statistics.pattern_order || []).map(key => exam.patterns.find(item => item.key === key)).filter(Boolean);
+const authoredGroups = [
+  { title: 'Mock exams', sets: exam.mocks.filter(mock => mock.kind !== 'practice') },
+  { title: 'Practice', sets: exam.mocks.filter(mock => mock.kind === 'practice') },
+];
 // The first practice paper: past papers before forecasts.
 const firstPaper = () => { const past = replayable()[0]; return past ? `#exam/paper/${past.variant.key}` : exam.mocks[0] ? `#exam/mock/${exam.mocks[0].key}` : ''; };
 // Exam pages in reading order, as the outline lists them: cheatsheet, patterns, then papers.
@@ -40,7 +44,7 @@ function sequence() {
     ...(exam.concepts.length ? [{ href: '#exam/sheet', title: 'Cheatsheet', detail: `${exam.concepts.length} entries` }] : []),
     ...orderedPatterns().map(pattern => ({ href: `#exam/patterns/${pattern.key}`, title: pattern.title, detail: 'Exam pattern' })),
     ...replayable().map(({ variant }) => ({ href: `#exam/paper/${variant.key}`, title: paperFor('paper', variant.key).title, detail: 'Past paper' })),
-    ...exam.mocks.map(mock => ({ href: `#exam/mock/${mock.key}`, title: paperFor('mock', mock.key).title, detail: 'Practice exam' })),
+    ...authoredGroups.flatMap(group => group.sets.map(mock => ({ href: `#exam/mock/${mock.key}`, title: paperFor('mock', mock.key).title, detail: paperFor('mock', mock.key).label }))),
   ];
 }
 function onward(href) {
@@ -74,9 +78,11 @@ function home() {
       const started = paper.questions.some(question => question.guidance && exerciseStarted(guided.get(guidedExercise(paper, question))));
       return { href: `#exam/paper/${variant.key}`, title: paper.title, details: ['Past paper'], started };
     }),
-    ...exam.mocks.map(mock => ({ href: `#exam/mock/${mock.key}`, title: paperFor('mock', mock.key).title, details: ['Practice exam'] })),
   ];
-  if (practice.length) groups.push({ title: 'Practice exams', rows: practice });
+  if (practice.length) groups.push({ title: 'Past papers', rows: practice });
+  for (const group of authoredGroups) if (group.sets.length) {
+    groups.push({ title: group.title, rows: group.sets.map(mock => ({ href: `#exam/mock/${mock.key}`, title: paperFor('mock', mock.key).title, details: [] })) });
+  }
   const rows = groups.flatMap(group => group.rows).map(row => ({ ...row, status: status(row.href, row.started) }));
   const empty = !rows.length;
   if (empty) { root.append(node('p', '', 'Exam has not been prepared for this course.')); return { root, heading, title: 'Exam', items: [], empty }; }
@@ -199,11 +205,13 @@ export function examOutline(current = '', currentKey = '') {
     ]));
   }
   const papers = replayable();
-  if (papers.length || exam.mocks.length) {
-    nav.append(group('Practice exams', ['paper', 'mock'].includes(current), [
+  if (papers.length) {
+    nav.append(group('Past papers', current === 'paper', [
       ...papers.map(({ variant }) => link(paperFor('paper', variant.key).title, `#exam/paper/${variant.key}`, current === 'paper' && currentKey === variant.key, 'Past paper')),
-      ...exam.mocks.map(mock => link(paperFor('mock', mock.key).title, `#exam/mock/${mock.key}`, current === 'mock' && currentKey === mock.key, 'Forecast')),
     ]));
+  }
+  for (const authored of authoredGroups) if (authored.sets.length) {
+    nav.append(group(authored.title, current === 'mock' && authored.sets.some(mock => mock.key === currentKey), authored.sets.map(mock => link(paperFor('mock', mock.key).title, `#exam/mock/${mock.key}`, current === 'mock' && currentKey === mock.key))));
   }
   return nav;
 }

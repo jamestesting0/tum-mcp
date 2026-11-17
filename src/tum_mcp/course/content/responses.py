@@ -89,8 +89,11 @@ class SelfCheck(Frozen):
                 raise ValueError("A self-check needs a model answer.")
             return self
         if (self.format == "code") != isinstance(self.model_answer, str):
+            given = "a code string" if isinstance(self.model_answer, str) else "a list of blocks"
             raise ValueError(
-                "A code model answer is code; a text model answer is a list of blocks."
+                f"This self-check has format {self.format!r} but its model_answer is {given}. "
+                "With format 'code', give model_answer as one code string; with any other "
+                "format, give a list of blocks."
             )
         if self.format != "code" and (self.language or self.starter_code or self.file):
             raise ValueError("Language, starter code and file belong to code responses only.")

@@ -111,6 +111,7 @@ def cmd_run(args: argparse.Namespace) -> None:
                 confirm=args.confirm,
                 plant=args.plant,
                 accept_drift=args.accept_code_drift,
+                until=args.until,
             )
             records.append({key: record.get(key) for key in ("id", "status", "minutes", "error")})
         return records
@@ -284,6 +285,9 @@ def parser() -> argparse.ArgumentParser:
         "--accept-code-drift",
         metavar="REASON",
         help="resume a checkpoint whose code changed, when later turns never rebuild its content",
+    )
+    p.add_argument(
+        "--until", type=int, metavar="TURN", help="stop after this turn (one stage of a scenario)"
     )
     p.add_argument("--confirm", action="store_true")
     p.add_argument(

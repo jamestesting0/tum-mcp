@@ -1,5 +1,6 @@
 """One trial run: an empty (or checkpointed) folder, a simulated student, a variant, a host."""
 
+import dataclasses
 import hashlib
 import io
 import json
@@ -261,6 +262,23 @@ def parse_checkpoint(text: str, round_id: str) -> tuple[Path, int]:
     return history, int(turn_text)
 
 
+def restored_workspaces(history: Path, turn: int) -> frozenset[str]:
+    """The app workspaces a checkpoint holds in any of its course projects."""
+    listing = subprocess.run(
+        ["git", f"--git-dir={history}", "ls-tree", "-r", "--name-only", f"turn-{turn}"],
+        capture_output=True,
+        check=True,
+        text=True,
+    ).stdout.splitlines()
+    found = set()
+    for path in listing:
+        parts = path.split("/")
+        for index, part in enumerate(parts[:-2]):
+            if part == "app":
+                found.add(parts[index + 1])
+    return frozenset(found)
+
+
 def restore(history: Path, turn: int, workspace: Path) -> None:
     archive = subprocess.run(
         ["git", f"--git-dir={history}", "archive", "--format=tar", f"turn-{turn}"],
@@ -386,6 +404,7 @@ def execute(
     confirm: bool = False,
     plant: bool = False,
     accept_drift: str | None = None,
+    until: int | None = None,
     installer: Installer = install,
     python: Path | None = None,
     campus_check: Callable[[], None] = lambda: require_moodle(campus_states()),
@@ -399,6 +418,9 @@ def execute(
     if not scenario_id:
         raise LabError("This round has no confirmation scenario; pass --scenario.")
     scenario = scenarios.load(scenario_id)
+    if until is not None:
+        # One stage of a staged scenario: the run ends after this turn.
+        scenario = dataclasses.replace(scenario, turns=scenario.turns[:until])
     variant_dir = paths.round_dir(round_id) / "variants" / variant_name
     if not (variant_dir / "variant.json").is_file():
         raise LabError(f"Variant {variant_name} does not exist; create it with `lab variant`.")
@@ -415,7 +437,9 @@ def execute(
         changed = variants.changed_inputs(previous, variant_dir)
         refusal = scenarios.checkpoint_refusal(scenario, start, changed)
         if refusal and accept_drift:
-            refusal = scenarios.drift_refusal(scenario, start)
+            refusal = scenarios.drift_refusal(
+                scenario, start, restored_workspaces(source[0], start)
+            )
             drift = {"reason": accept_drift, "files": changed}
         if refusal:
             raise LabError(f"Checkpoint refused: {refusal}")

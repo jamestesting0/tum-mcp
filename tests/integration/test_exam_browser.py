@@ -24,6 +24,13 @@ def exam_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     root = exam_project(tmp_path_factory.mktemp("exam-browser"))
     (root / "app").mkdir()
     document = with_guided_paper(exam_document(root))
+    practice = json.loads(json.dumps(document["mocks"][0]))
+    practice.update(key="core-practice", kind="practice", title="Core ideas")
+    practice.pop("duration_minutes")
+    practice.pop("instructions")
+    for question in practice["questions"]:
+        question["key"] = "core-" + question["key"]
+    document["mocks"].append(practice)
     document["profile"]["notes"] = "Based on the latest available paper: February 2024."
     cases = document["patterns"][0]["workflow"][1]["cases"]
     cases[0]["apply"]["text"] = cases[0]["then"]
@@ -400,5 +407,32 @@ def test_practice_exam_shows_each_solution_on_demand(
     expect(solution).to_contain_text("Loop over members.")
     expect(first.locator(".exam-marking")).to_contain_text("Notification implemented (10)")
     expect(page.get_by_role("button", name="Start")).to_have_count(0)
+    no_overflow(page)
+    assert errors == []
+
+
+@pytest.mark.parametrize("width", [390, 1440])
+def test_mock_exams_and_untimed_practice_have_separate_lists(
+    course_browser: Browser, exam_url: str, width: int
+) -> None:
+    errors: list[str] = []
+    page = open_page(course_browser, exam_url, width, errors)
+    expect(page.locator(".exam-list .topic-group")).to_have_text(
+        ["Exam patterns", "Past papers", "Mock exams", "Practice"]
+    )
+    page.locator('.exam-list a[href="#exam/mock/core-practice"]').click()
+    expect(page.locator(".exam-mode .unit-header .eyebrow")).to_have_text("Practice")
+    expect(page.locator(".exam-mode .unit-header")).not_to_contain_text("minutes")
+    expect(page.locator(".exam-mode .notice")).to_have_count(0)
+    question = page.locator(".exam-question").first
+    question.get_by_role("button", name="Solution", exact=True).click()
+    expect(question.locator(".pill-content")).to_contain_text("Loop over members.")
+    no_overflow(page)
+    page.goto(exam_url + "#exam/mock/forecast-1")
+    expect(page.locator(".exam-mode .unit-header .eyebrow")).to_have_text("Mock exam")
+    expect(page.locator(".exam-mode .unit-header")).to_contain_text("90 minutes")
+    expect(page.locator(".sidebar .unit-group > summary")).to_have_text(
+        ["Exam patterns", "Past papers", "Mock exams", "Practice"]
+    )
     no_overflow(page)
     assert errors == []

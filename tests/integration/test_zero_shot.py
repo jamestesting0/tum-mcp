@@ -288,7 +288,7 @@ def test_each_kind_of_item_ships_a_valid_exemplar_the_checklist_points_to() -> N
     from importlib.resources import files
 
     from tum_mcp.course.checks.report import quality_flags
-    from tum_mcp.course.content.exam import Pattern
+    from tum_mcp.course.content.exam import Mock, Pattern
     from tum_mcp.course.content.exercise_data import check_prerequisites
     from tum_mcp.course.content.exercises import ExerciseContent
     from tum_mcp.course.content.study import StudyContent
@@ -301,6 +301,7 @@ def test_each_kind_of_item_ships_a_valid_exemplar_the_checklist_points_to() -> N
     check_prerequisites(exercises, study)
     assert not {flag["flag"] for flag in quality_flags(study, exercises)} & set(INVARIANT_FLAGS)
     Pattern.model_validate_json((folder / "exam-pattern.json").read_bytes())
+    Mock.model_validate_json((folder / "exam-mock.json").read_bytes())
     Note.model_validate_json((folder / "lecture-note.json").read_bytes())
     for profile in ("study-unit", "exercise", "exam-pattern", "lecture-entry"):
         result = CliRunner().invoke(app, ["review", "checklist", "--profile", profile])

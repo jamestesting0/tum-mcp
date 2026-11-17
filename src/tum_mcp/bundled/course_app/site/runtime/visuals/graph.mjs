@@ -352,31 +352,41 @@ export function drawGraph(block, label = '', values = {}) {
   requestAnimationFrame(() => {
     const region = graph.closest('.graph-region'), reading = graph.closest('.reading');
     if (!region || !reading) return;
+    // A diagram drawn in a card widens the whole card, so the drawing stays centred inside
+    // its border, caption and state rows instead of spilling out of one side.
+    const box = region.closest('.surface') ?? region;
     const layout = reading.parentElement;
     const fit = () => {
-      region.style.width = ''; region.style.marginLeft = ''; region.style.marginRight = '';
+      box.style.width = ''; box.style.marginLeft = ''; box.style.marginRight = '';
       graph.style.minWidth = `${Math.ceil(Number(graph.dataset.naturalWidth) * 12 / (innerWidth < 1200 ? SIZES.label : Number(graph.dataset.smallestText)))}px`;
       if (innerWidth < 1200) return;
-      const column = region.getBoundingClientRect(), area = layout.getBoundingClientRect();
+      const column = box.getBoundingClientRect(), area = layout.getBoundingClientRect();
+      // A hidden diagram (an unopened example tab) has no width to fit; it fits when shown.
+      if (!column.width) return;
+      const inset = column.width - region.getBoundingClientRect().width;
       const outline = layout.querySelector('.page-outline');
       const outlineBox = outline?.getClientRects().length ? outline.getBoundingClientRect() : null;
       const right = Math.min(area.right, outlineBox?.left ?? area.right);
       const available = Math.max(column.width, right - area.left);
-      const width = Math.min(parseFloat(graph.style.minWidth), available);
+      const width = Math.min(parseFloat(graph.style.minWidth) + inset, available);
       if (width <= column.width) return;
       const left = Math.max(area.left, Math.min(column.left - (width - column.width) / 2, right - width));
-      region.style.width = `${width}px`;
-      region.style.marginLeft = `${left - column.left}px`;
-      region.style.marginRight = `${column.width - width - (left - column.left)}px`;
+      box.style.width = `${width}px`;
+      box.style.marginLeft = `${left - column.left}px`;
+      box.style.marginRight = `${column.width - width - (left - column.left)}px`;
     };
     // The reading area changes width only when the window resizes or the outline or reference
     // panel opens. Fitting sets the region's margins, so a size observer on the area would see
-    // its own change (a ResizeObserver loop); a resize listener cannot.
+    // its own change (a ResizeObserver loop); a resize listener cannot. The card's container
+    // keeps its width whatever the card's margins are, so observing it catches only the
+    // diagram being shown or hidden.
     const refit = () => {
-      if (!graph.isConnected) { removeEventListener('resize', refit); changes.disconnect(); return; }
+      if (!graph.isConnected) { removeEventListener('resize', refit); changes.disconnect(); shown.disconnect(); return; }
       requestAnimationFrame(fit);
     };
     const changes = new MutationObserver(refit);
+    const shown = new ResizeObserver(refit);
+    shown.observe(box.parentElement);
     addEventListener('resize', refit);
     changes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-contents', 'data-reference'] });
     graph.addEventListener('graphdraw', fit);

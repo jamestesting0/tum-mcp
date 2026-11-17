@@ -7,17 +7,17 @@ import { examRecall } from '../study/recall.mjs';
 
 const plain = text => plainText(text || '');
 
-// A paper is either a forecast practice exam or a replayed past variant, in one shape.
+// Authored sets and replayed past variants share their question and solution rendering.
 export function paperFor(kind, key) {
   if (kind === 'mock') {
     const mock = exam.mocks.find(item => item.key === key);
-    return mock && { kind, key, revision: mock.revision, title: plain(mock.title), minutes: mock.duration_minutes, instructions: mock.instructions,
-      forecast: true, questions: mock.questions, item: `mock:${mock.key}` };
+    return mock && { kind, key, revision: mock.revision, title: plain(mock.title), minutes: mock.kind === 'practice' ? null : mock.duration_minutes, instructions: mock.instructions,
+      label: mock.kind === 'practice' ? 'Practice' : 'Mock exam', forecast: mock.kind !== 'practice', practice: mock.kind === 'practice', questions: mock.questions, item: `mock:${mock.key}` };
   }
   for (const sitting of exam.sittings) for (const variant of sitting.variants) if (variant.key === key && variant.replayable) {
     const label = sitting.variants.length > 1 ? `${plain(sitting.label)} · ${plain(variant.label)}` : plain(sitting.label);
     return { kind: 'paper', key, revision: variant.revision, title: label, minutes: exam.profile?.duration_minutes || null,
-      instructions: '', forecast: false, questions: variant.questions, sitting };
+      label: 'Past paper', instructions: '', forecast: false, questions: variant.questions, sitting };
   }
   return null;
 }
@@ -33,11 +33,11 @@ function statementBody(blocks, mark = () => {}) {
 // The whole paper on one page; each solution opens when the student wants to check.
 export function renderPaper(paper) {
   const root = node('div', 'exam-mode'), heading = node('h1', '', paper.title);
-  const eyebrow = node('p', 'eyebrow', paper.forecast ? 'Practice exam' : 'Past paper');
+  const eyebrow = node('p', 'eyebrow', paper.label);
   const header = append(node('div', 'unit-header'), eyebrow, heading);
   root.append(header);
   const total = paper.questions.reduce((sum, question) => sum + (question.points || 0), 0);
-  const facts = [paper.minutes && `${paper.minutes} minutes`, total && `${total} points`, exam.profile?.allowed_aids].filter(Boolean);
+  const facts = [paper.minutes && `${paper.minutes} minutes`, total && `${total} points`, !paper.practice && exam.profile?.allowed_aids].filter(Boolean);
   if (facts.length) header.append(studyText('p', 'small', facts.join(' · ')));
   if (paper.forecast) header.append(node('p', 'notice', 'AI-written from past patterns and course material. Not a past exam; the real exam can differ.'));
   if (paper.instructions) header.append(studyText('p', '', paper.instructions));
