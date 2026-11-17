@@ -179,7 +179,8 @@ def inspect(project: Path) -> None:
 def exam_report_command(
     project: Path,
     section: Annotated[
-        Literal["stats", "blueprint", "review", "targets", "stale", "duplicates"] | None,
+        Literal["stats", "blueprint", "practice", "review", "targets", "stale", "duplicates"]
+        | None,
         typer.Option(help="Only this part; duplicates also compares exam and exercise text."),
     ] = None,
     full: Annotated[bool, typer.Option("--json", help="Print the whole result.")] = False,
@@ -207,6 +208,7 @@ def exam_report_command(
         parts = {
             "stats": report["statistics"],
             "blueprint": report["blueprint"],
+            "practice": report["practice"],
             "review": report["review"],
             "targets": {"flags": report["targets"], "uncovered_core": report["uncovered_core"]},
             "stale": list(stale_exam(root, state, exam)),
@@ -600,7 +602,10 @@ def schema(
     if example:
         if definition is not None:
             raise CampusError(Code.ACTION_REQUIRED, "Choose an example or a schema, not both.")
-        catalogue = json.loads((files("tum_mcp") / "bundled/exemplars/blocks.json").read_bytes())
+        exemplars = files("tum_mcp") / "bundled/exemplars"
+        catalogue = json.loads((exemplars / "blocks.json").read_bytes())
+        for name in ("exam-pattern", "exam-mock"):
+            catalogue[name] = json.loads((exemplars / f"{name}.json").read_bytes())
         if kind is None or kind == "list":
             typer.echo(json.dumps(sorted(catalogue), indent=2))
         elif kind in catalogue:

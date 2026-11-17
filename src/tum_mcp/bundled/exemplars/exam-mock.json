@@ -1,0 +1,163 @@
+{
+  "key": "demo-forecast",
+  "title": "Mock exam",
+  "kind": "exam",
+  "duration_minutes": 60,
+  "instructions": "Answer both questions and show your working.",
+  "sources": [
+    {
+      "key": "components",
+      "sha256": "30628adb92c9f29a2ec5146ff728653a8eb4d3c6f4e02118cc3c9a18dbbd766d"
+    }
+  ],
+  "questions": [
+    {
+      "key": "demo-f1",
+      "number": "1",
+      "points": 10,
+      "format": "short",
+      "patterns": [
+        "name-structure"
+      ],
+      "concepts": [
+        "stack"
+      ],
+      "novelty": "variant",
+      "varies_from": [
+        "demo-q1"
+      ],
+      "change": "reversal",
+      "change_note": "The newest item is removed first, so the answer flips to a stack.",
+      "statement": [
+        {
+          "kind": "text",
+          "title": "Question 1",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "A browser returns to the most recently visited page first. Name the structure and its costs."
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Visits",
+          "sources": [
+            "components"
+          ],
+          "columns": [
+            "Step",
+            "Page shown"
+          ],
+          "rows": [
+            [
+              "Open",
+              "home"
+            ],
+            [
+              "Click",
+              "news"
+            ],
+            [
+              "Click",
+              "sport"
+            ],
+            [
+              "Back",
+              "news"
+            ]
+          ],
+          "caption": "Back returns to the page visited most recently."
+        }
+      ],
+      "marking": [
+        {
+          "text": "Stack",
+          "points": 4
+        },
+        {
+          "text": "Both costs O(1)",
+          "points": 6
+        }
+      ],
+      "minutes": 25,
+      "difficulty": 1,
+      "solution": {
+        "answers": [
+          {
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Solution",
+                "sources": [
+                  "components"
+                ],
+                "paragraphs": [
+                  "A stack: push and pop at the top in O(1)."
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "demo-f2",
+      "number": "2",
+      "points": 8,
+      "format": "short",
+      "concepts": [
+        "stack"
+      ],
+      "novelty": "untested",
+      "statement": [
+        {
+          "kind": "text",
+          "title": "Question 2",
+          "sources": [
+            "components"
+          ],
+          "paragraphs": [
+            "Explain why depth-first search can use a stack instead of recursion."
+          ]
+        },
+        {
+          "kind": "code",
+          "title": "Recursive search",
+          "sources": [
+            "components"
+          ],
+          "language": "python",
+          "code": "def dfs(node, seen):\n    seen.add(node)\n    for nxt in node.neighbours:\n        if nxt not in seen:\n            dfs(nxt, seen)",
+          "explanation": "Rewrite this without recursion."
+        }
+      ],
+      "marking": [
+        {
+          "text": "Stack replaces the call stack",
+          "points": 8
+        }
+      ],
+      "minutes": 30,
+      "difficulty": 2,
+      "solution": {
+        "answers": [
+          {
+            "blocks": [
+              {
+                "kind": "text",
+                "title": "Solution",
+                "sources": [
+                  "components"
+                ],
+                "paragraphs": [
+                  "Recursion keeps pending nodes on the call stack; an explicit stack stores the same frontier."
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

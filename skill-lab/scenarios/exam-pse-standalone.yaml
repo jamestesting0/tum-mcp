@@ -1,0 +1,44 @@
+id: exam-pse-standalone
+turns:
+- say: Set up Patterns in Software Engineering in this folder.
+  skills:
+  - sync-course
+  - read-content
+- say: There are no past exams for PSE. Prepare my exam prep for what we have covered so far. Start with
+    the cheatsheet and solving patterns; I will ask for a practice exam afterwards.
+  skills:
+  - prepare-exams
+  - read-content
+- say: Review the cheatsheet and patterns and fix what is wrong or hard to use.
+  skills:
+  - review-course
+  - prepare-exams
+- say: Now make a mock exam that simulates the real exam.
+  skills:
+  - prepare-exams
+  - read-content
+  extends:
+  - exam
+- say: Add practice for the important cheatsheet ideas the patterns and the mock exam do not practise.
+  skills:
+  - prepare-exams
+  - read-content
+  extends:
+  - exam
+- say: Review the mock exam and the practice and fix what is wrong or hard to use.
+  skills:
+  - review-course
+  - prepare-exams
+  extends:
+  - exam
+replies:
+  review: Not yet, I'll ask for a review when I'm ready.
+  review round: One round is enough.
+  another: One round is enough.
+  publish: No, keep it local.
+  learning record: Keep the learning record off.
+  study: Not now; just the exam prep.
+  course: Patterns in Software Engineering, this semester (WS26/27).
+  semester: This semester, WS26/27.
+  exam: There are no past exams; use the course material and exercises.
+  default: Your choice, go ahead.

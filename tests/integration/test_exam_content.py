@@ -21,6 +21,27 @@ def test_the_synthetic_exam_document_is_valid(document: dict) -> None:
     assert "composite" in content.concept_coverage()
 
 
+def test_only_mock_exams_carry_a_duration_and_instructions(document: dict) -> None:
+    from tum_mcp.course.content.exam import Mock
+
+    value = copy.deepcopy(document["mocks"][0])
+    assert Mock.model_validate(value).kind == "exam"
+    value.pop("duration_minutes")
+    with pytest.raises(ValidationError, match="duration"):
+        Mock.model_validate(value)
+    value["kind"] = "practice"
+    with pytest.raises(ValidationError, match="practice set has no instructions"):
+        Mock.model_validate(value)
+    value.pop("instructions")
+    practice = Mock.model_validate(value)
+    assert practice.duration_minutes is None
+    assert practice.kind == "practice"
+    value["kind"] = "exam"
+    value["duration_minutes"] = 60
+    with pytest.raises(ValidationError, match="cover instructions"):
+        Mock.model_validate(value)
+
+
 def test_optional_drill_guides_are_source_bound_and_do_not_change_legacy_revisions(
     document: dict,
 ) -> None:
@@ -244,3 +265,13 @@ def test_concept_progress_survives_detail_edits(document: dict) -> None:
 def test_empty_exam_prep_is_rejected(document: dict, tmp_path: Path) -> None:
     with pytest.raises(ValidationError, match="needs past exams"):
         ExamContent.model_validate({"course_key": document["course_key"]})
+
+
+def test_a_past_question_names_one_subquestion(document: dict) -> None:
+    merged = copy.deepcopy(document)
+    merged["sittings"][0]["variants"][0]["questions"][0]["number"] = "1 e\u2013f"
+    with pytest.raises(ValidationError, match="merges several subquestions"):
+        ExamContent.model_validate(merged)
+    single = copy.deepcopy(document)
+    single["sittings"][0]["variants"][0]["questions"][0]["number"] = "2-1"
+    ExamContent.model_validate(single)

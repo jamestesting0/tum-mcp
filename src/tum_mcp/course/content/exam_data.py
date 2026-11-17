@@ -262,6 +262,8 @@ def exam_statistics(content: ExamContent) -> dict[str, JsonValue]:
     coverage = content.concept_coverage()
     return {
         "sittings_considered": len(sittings),
+        "mock_exams": sum(mock.kind == "exam" for mock in content.mocks),
+        "practice_sets": sum(mock.kind == "practice" for mock in content.mocks),
         "sittings_outdated": sum(item.relevance == "outdated" for item in content.sittings),
         "years": [sittings[0].held[:4], sittings[-1].held[:4]] if sittings else [],
         "points_known": marked,
@@ -429,6 +431,41 @@ def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
         if pattern.workflow
         and (lines := _unformulated(pattern.model_dump(mode="json")["workflow"]))
     ]
+    bare += [
+        {
+            "item": f"exam/pattern/{pattern.key}",
+            "flag": "bare_rules",
+            "detail": f"{len(lines)} of {len(pattern.workflow)} steps show nothing to apply, such "
+            f"as '{lines[0][:80]}'. Show the rule each step applies under `apply`: the order "
+            "key, the tie or stop rule, the test, the formula or the code. Only a judgement step "
+            "that applies no rule has none.",
+        }
+        for pattern in content.patterns
+        if 2 * len(lines := [s.do for s in pattern.workflow if not s.apply and not s.cases])
+        > len(pattern.workflow)
+    ]
+    bare += [
+        {
+            "item": f"exam/pattern/{pattern.key}",
+            "flag": "hidden_cases",
+            "detail": f"A step's `apply` lists rules for different situations, such as "
+            f"'{text[:80]}'. Make each situation a case on that step, with an example per case.",
+        }
+        for pattern in content.patterns
+        if (
+            text := next(
+                (
+                    step.apply.text
+                    for step in pattern.workflow
+                    if not step.cases
+                    and step.apply
+                    and step.apply.text
+                    and len(_SITUATION.findall(step.apply.text)) > 1
+                ),
+                "",
+            )
+        )
+    ]
     bare += [math_word_flag(item, words) for item, words in worded.items() if words]
     bare += _map_flags(content)
     return bare + [
@@ -441,6 +478,16 @@ def exam_item_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
         for item, found in texts.items()
         if found
     ]
+
+
+# A sentence that opens with its own situation ("For DFS tree completeness, ..."): two in one
+# `apply` are cases the step hides.
+# A sentence that opens a situation: "For bidirectional search ...", or a short label that
+# maps a situation to its rule ("Tree treated uniformly: Composite.").
+_SITUATION = re.compile(
+    r"(?:^|(?<=[.;]\s))(?:(?:For|If|When|With)\s+(?!each\b|every\b|all\b|example\b|instance\b)\w"
+    r"|[A-Z][\w-]*(?:\s+[\w-]+){0,5}:\s)"
+)
 
 
 def sheet_flags(content: ExamContent | None) -> list[dict[str, JsonValue]]:
@@ -698,6 +745,8 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
     mocks: list[dict[str, JsonValue]] = []
     profile = content.profile
     for mock in content.mocks:
+        if mock.kind != "exam":
+            continue
         minutes = sum(question.minutes for question in mock.questions)
         scale = sum(q.points for q in mock.questions if q.change == "scale") / mock.points
         shares = _mock_topic_shares(content, mock)
@@ -718,7 +767,8 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
                     TARGETS["similar_statement"],
                 )
         if (
-            abs(minutes - mock.duration_minutes)
+            mock.duration_minutes is not None
+            and abs(minutes - mock.duration_minutes)
             > TARGETS["mock_minutes_tolerance"] * mock.duration_minutes
         ):
             flag(
@@ -802,6 +852,11 @@ def exam_report(content: ExamContent) -> dict[str, JsonValue]:
             "mocks": mocks,
         },
         "review": review,
+        "practice": [
+            {"key": mock.key, "questions": len(mock.questions), "points": mock.points}
+            for mock in content.mocks
+            if mock.kind == "practice"
+        ],
         "uncovered_core": sorted(
             concept.key
             for concept in content.concepts
@@ -834,6 +889,8 @@ def render_exam(content: ExamContent) -> dict[str, JsonValue]:
     for mock, rendered in zip(content.mocks, value.get("mocks", []), strict=True):
         rendered["revision"] = mock_revision(mock)
         rendered["points"] = mock.points
+        if mock.kind == "practice":
+            rendered.pop("duration_minutes", None)
     for sitting, rendered_sitting in zip(content.sittings, value.get("sittings", []), strict=True):
         for variant, rendered in zip(sitting.variants, rendered_sitting["variants"], strict=True):
             rendered["revision"] = variant_revision(variant)

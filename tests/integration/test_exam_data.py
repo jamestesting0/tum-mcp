@@ -5,7 +5,13 @@ import pytest
 from material_fixture import exam_document, exam_project, pdf_bytes
 
 from tum_mcp.course.content.exam import Concept, ExamContent
-from tum_mcp.course.content.exam_data import exam_report, exam_statistics, stale_exam
+from tum_mcp.course.content.exam_data import (
+    exam_item_flags,
+    exam_report,
+    exam_statistics,
+    render_exam,
+    stale_exam,
+)
 from tum_mcp.course.content.exam_layout import NODE_GAP, NODE_WIDTH, layout
 from tum_mcp.course.project.store import load_state
 
@@ -112,6 +118,33 @@ def test_report_flags_targets_and_review_items_without_enforcing_them(content: E
     mock = report["blueprint"]["mocks"][0]
     assert mock["points"] == 18 and mock["novelty"] == {"variant": 1, "untested": 1}
     json.dumps(report)
+
+
+def test_practice_sets_do_not_enter_the_exam_blueprint(project: Path) -> None:
+    from tum_mcp.course.review.items import collect
+
+    raw = exam_document(project)
+    before = exam_report(ExamContent.model_validate(raw))
+    practice = json.loads(json.dumps(raw["mocks"][0]))
+    practice.update(key="core-practice", kind="practice", duration_minutes=1)
+    del practice["instructions"]
+    practice["questions"] = [practice["questions"][1]]
+    practice["questions"][0].update(key="core-1", concepts=["cohesion"])
+    raw["mocks"].append(practice)
+    content = ExamContent.model_validate(raw)
+
+    report = exam_report(content)
+
+    assert report["blueprint"] == before["blueprint"]
+    assert report["targets"] == before["targets"]
+    assert report["uncovered_core"] == []
+    assert report["practice"] == [{"key": "core-practice", "questions": 1, "points": 8.0}]
+    rendered = render_exam(content)
+    assert rendered["statistics"]["mock_exams"] == 1
+    assert rendered["statistics"]["practice_sets"] == 1
+    assert "duration_minutes" not in rendered["mocks"][1]
+    assert rendered["mocks"][1]["kind"] == "practice"
+    assert "exam/mock/core-practice/core-1" in collect(project, exam=content)
 
 
 def test_workflow_from_names_a_pattern_that_lists_the_concept(project: Path) -> None:
@@ -268,3 +301,38 @@ def test_entry_meanings_and_prose_prompts_for_non_formula_entries(content: ExamC
     )
     flags = {f["flag"] for f in sheet_flags(changed) if f["item"] == f"concept:{concept.key}"}
     assert {"sheet_dense_paragraph", "prose_legend"} <= flags
+
+
+def test_a_workflow_that_mostly_shows_no_rule_is_flagged(content: ExamContent) -> None:
+    def rules(exam: ExamContent) -> set[str]:
+        return {f["item"] for f in exam_item_flags(exam) if f["flag"] == "bare_rules"}
+
+    pattern = next(p for p in content.patterns if all(s.apply or s.cases for s in p.workflow))
+    assert f"exam/pattern/{pattern.key}" not in rules(content)
+    bare = pattern.model_copy(
+        update={"workflow": tuple(s.model_copy(update={"apply": None}) for s in pattern.workflow)}
+    )
+    others = tuple(p for p in content.patterns if p.key != pattern.key)
+    stripped = content.model_copy(update={"patterns": (bare, *others)})
+    assert f"exam/pattern/{pattern.key}" in rules(stripped)
+
+
+@pytest.mark.parametrize(
+    "rules",
+    [
+        "For DFS completeness, look for an infinite branch. If costs differ, use UCS.",
+        "Tree treated uniformly: Composite. Swap an algorithm: Strategy.",
+    ],
+)
+def test_a_step_hiding_cases_in_its_apply_is_flagged(content: ExamContent, rules: str) -> None:
+    def hidden(exam: ExamContent) -> list[dict]:
+        return [f for f in exam_item_flags(exam) if f["flag"] == "hidden_cases"]
+
+    pattern = content.patterns[0]
+    step = next(s for s in pattern.workflow if s.apply and not s.cases)
+    assert hidden(content) == []
+    mixed = step.model_copy(update={"apply": step.apply.model_copy(update={"text": rules})})
+    workflow = tuple(mixed if s is step else s for s in pattern.workflow)
+    changed = pattern.model_copy(update={"workflow": workflow})
+    flagged = content.model_copy(update={"patterns": (changed, *content.patterns[1:])})
+    assert [f["item"] for f in hidden(flagged)] == [f"exam/pattern/{pattern.key}"]

@@ -444,3 +444,67 @@ At the user's request, obsolete pilot caches were removed while concise results,
 the active verification workspace and account profiles were preserved. Old-format
 compatibility work was dropped. Installed consumer fixtures were ported to the
 per-item layout; installation, browser journeys and lifecycle safeguards were kept.
+
+## xcf5-fai (2026-11-17)
+
+- scenario: exam-fai-integrated; confirm: None
+- author: codex:gpt-6.1-terra:high; probe judge: codex:gpt-6.1-sol:xhigh
+- base: 13b5b79f0ac6 + 0 patch(es)
+
+### Weakness
+Exam patterns were template minimums: steps named moves without the rule they apply, one pattern per
+search method or per question, toy-sized drills, prose-only practice in a coding course, and the
+course's own mock exam labelled as an unofficial student copy. Review checkers gave up on large
+pattern packets.
+
+### Edits
+| File | Change | Observed difference | Verdict |
+| --- | --- | --- | --- |
+| prepare-exams patterns reference, SKILL.md | Every rule step shows its rule under `apply`; methods differing only in one step's rule are cases on that step; practice at the exam's size and answer format; code patterns practise code | Steps without Apply 9/10 patterns -> 0; four search patterns -> one with 6-7 past instances and a decision step; PSE practice exam gained code and diagram questions | helped |
+| exam-report `bare_rules` flag | Flags a pattern whose steps mostly show nothing to apply | Fires on 13/13 baseline patterns, 0 candidate patterns | helped |
+| SKILL.md evidence | Without past exams the exercises set question types; read repositories that are available | Candidate read 22 Artemis repositories; first wording stopped the turn when templates were missing, fixed by "a missing one never stops the work" | helped |
+| study import, Sitting.relevance description, SKILL.md registry | An imported copy of a course file resolves to the course resource; relevance is fit to the course, never request scope | Mock registered official with official solution; relevance current | helped |
+| `study schema --example exam-pattern` | A complete valid pattern file to start from | Schema lookups per authoring turn 62 -> 24 | helped |
+| review packets | Long items get proportionally fewer checks per checker reply | Refused packets per FAI review: 8 (xc2) -> 1 (xc4), 3 short ones (xc5), 0 (xc6) | helped |
+| PastQuestion number | Rejects merged part ranges such as "1 e-f" | All 60 past subquestions registered one by one from xc4 on | helped |
+
+| prepare-exams SKILL.md, trimmed (xc3) | Shorter Patterns step without the grouping rule, relying on the reference | Nine thin patterns, search methods split again; the agent did not read the reference for it | hurt (reverted) |
+| Lab: staged Exam scenarios, `Turn.extends`, `lab run --until` | Cheatsheet and patterns, their review, mock exam, practice, final review as separate turns; a stage resumes from the previous stage's checkpoint | A mock-exam or practice change reruns only those turns (about 10 minutes instead of a full Exam build) | helped |
+| Exam format: set `kind` exam or practice | Mock exams simulate the real exam (timed, blueprint-checked); practice sets cover important ideas patterns leave unpractised, untimed, listed separately | FAI: 90-minute six-question mock plus a two-question practice set; PSE: 75-minute five-question mock plus six practice questions; no core idea left unpractised | helped |
+| `untrained_core` lint flag (xc5, withdrawn) | Flag core ideas no practice trains | Withdrawn by user decision: uncovered cheatsheet ideas are not a blocker; the exam report keeps an advisory count | no observed effect |
+| `hidden_cases` flag, patterns reference | One `apply` holds one rule; situation lists ("For X ...; for Y ..." or "Label: rule.") become cases | Caught one FAI and two PSE patterns; no false positives on four earlier runs; zero flagged after (xc6) | helped |
+| Practice sets carry no `instructions` | A practice set's only authored line described the page | App check found filler on the PSE practice page; every later practice set (FAI and PSE) came without instructions on the first try | helped |
+| self-check format error | Names the format and the answer type given | PSE repeated the old error four times in one turn; not repeated in later PSE stages | helped |
+
+| Mock exam scope (SKILL step 6, forecast reference) | A mock exam simulates the real exam's style within the prepared scope and takes that part's share of the time | Before: "simulates the real exam" produced a whole-course mock and seven cheatsheet entries outside the requested lectures (29 min). After: a 20-minute four-question mock within the lectures, cheatsheet unchanged (23 min including review) | helped |
+| `study schema --example exam-mock` | A complete valid mock exam file | PSE tried the missing example and made 14 schema lookups for one mock; later mocks validated first time, but no round isolated the example | kept, effect not isolated |
+| Review offer wording | Offer the review round in a short question of the agent's own | Skill-file links in every earlier offer; none in the next two offers (one round) | helped |
+
+| Mock-exam instructions | Instructions say what to answer and how; the app already shows time, points and aids | App check found the time and aids repeated under the header; then both courses put forecast doubts there, fixed by keeping doubts in the report; the last PSE mock says only what to answer | helped |
+| Practice for untested lecture methods | The practice set also covers methods of a pattern's family that no past paper asked | Held-out check: four of eight held-out problems asked methods the two past papers never did (an ordering heuristic, smoothing, value iteration, a second traversal order); the staged round's own prompt limited practice to cheatsheet ideas, so it could not test this | the cut-off FAI full-course run practised smoothing, value iteration and the CSP ordering heuristics, covering all eight held-out problems | helped |
+| Whole-course request scope | Prepare the released material and name the unreleased weeks; never pause | PSE confirmation paused the whole Exam request because later weeks were unreleased and delivered nothing; both PSE reruns prepared weeks 0-4 and named the rest | helped |
+
+| Exercise task kinds without past exams | Every kind of task the exercises ask becomes a pattern, or a practice question when one exercise asks it | A PSE run left UML class modelling, a graded exercise, practised nowhere; the rerun practises it | helped |
+| Checks once per batch | Lint and recheck a written batch once; fix every finding before the next check | The FAI full-course run hit the two-hour turn limit after 47 lint and 32 verify calls; the final FAI round wrote sheet and patterns in 24 min (44 before) and the mock in 7 (23 before) | helped |
+
+### Lesson
+Cue: a richer content standard. Lesson: the author's time follows content size; measure where a
+slower run spends time (lookups, lint loops, refused review packets) before trimming content.
+
+Cue: one round reran a whole workspace to test one part. Lesson: stage scenarios by part and resume
+from the last unchanged stage; a mock-exam change then costs about ten minutes, not a full build.
+
+Cue: splitting one skill rule into two. Lesson: when a rule is split, carry every clause over; the
+mock/practice split dropped "size it to the request's share", and the next run widened the scope.
+
+Cue: a confirmation scenario built from an iteration scenario. Lesson: rewrite its whole request
+and every canned reply for the new scope; one leftover reply ("use only the past exams") narrowed
+the course, and a dropped file path left one past exam unread.
+
+### Decision
+Keep every change marked helped. Final confirmations: PSE (weeks 0-4, no past exams) 33 min with
+review, UML modelling now practised, clean mock instructions, every Java answer compiles. FAI
+(lectures 1-4, staged) 61 min and 76.3M tokens against 56.6 min and 77.6M at baseline, now with
+review, a scoped mock and a practice set for lecture methods the past papers never asked; all
+eight answer checks pass and no quality flags remain. A whole-course FAI run exceeded two hours in
+one turn; the batching change targets that and was confirmed only at the smaller scope.

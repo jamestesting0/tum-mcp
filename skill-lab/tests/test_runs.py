@@ -236,6 +236,14 @@ def test_checkpoint_run_starts_after_the_named_turn(lab):
     assert messages[-1] == "Build lessons." and messages[0] == "Set up my course project."
 
 
+def test_a_staged_run_stops_after_its_last_turn_and_the_next_stage_resumes_there(lab):
+    first = execute(lab, until=1)
+    assert first["status"] == "completed", first.get("error")
+    assert [turn["turn"] for turn in first["turns"]] == [1]
+    record = execute(lab, checkpoint=f"{first['id']}@1")
+    assert [turn["turn"] for turn in record["turns"]] == [2]
+
+
 def test_checkpoint_reuses_the_identical_installed_patch(lab, tmp_path):
     variant = paths.round_dir("r1") / "variants/base"
     patch = tmp_path / "sync.patch"

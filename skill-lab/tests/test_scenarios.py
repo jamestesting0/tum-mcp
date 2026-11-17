@@ -116,3 +116,30 @@ def test_bad_scenarios_are_rejected():
         scenarios.parse({"id": "x", "turns": [{"skills": []}]}, "x")
     with pytest.raises(LabError):
         scenarios.load("missing-scenario")
+
+
+def test_drift_allows_building_a_workspace_the_checkpoint_lacks():
+    exam = scenarios.Scenario(
+        "exam-after-restore",
+        [
+            scenarios.Turn("Set up.", ["sync-course"]),
+            scenarios.Turn("Prepare the exam.", ["prepare-exams"]),
+        ],
+    )
+    assert scenarios.drift_refusal(exam, 1, frozenset({"study", "exercises"})) is None
+    assert "prepare-exams" in scenarios.drift_refusal(exam, 1, frozenset({"study", "exam"}))
+    assert scenarios.drift_refusal(exam, 0, frozenset()) is None
+
+
+def test_drift_allows_a_turn_that_only_adds_to_a_restored_workspace():
+    practice = scenarios.Scenario(
+        "exam-practice",
+        [
+            scenarios.Turn("Patterns.", ["prepare-exams"]),
+            scenarios.Turn("Practice exam.", ["prepare-exams"], ["exam"]),
+            scenarios.Turn("Patterns again.", ["prepare-exams"]),
+        ],
+    )
+    assert scenarios.drift_refusal(practice, 1, frozenset({"exam"})) is not None
+    two = scenarios.Scenario("two", practice.turns[:2])
+    assert scenarios.drift_refusal(two, 1, frozenset({"exam"})) is None

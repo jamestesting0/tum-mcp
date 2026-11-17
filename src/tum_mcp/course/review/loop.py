@@ -850,11 +850,17 @@ def _packets(
                 for task in ("needs", "verify", "visuals", "rule")
                 for value in items[0][task]
             ]
-            if len(items) != 1 or len(tasks) <= PACKET_VERDICTS:
+            # An item longer than one packet's text leaves less room per verdict, so it is
+            # asked fewer checks at a time (a 125 KB pattern lost verdicts at 30).
+            length = len(json.dumps(items[0]["passages"]))
+            limit = max(
+                PACKET_VERDICTS // 3, PACKET_VERDICTS * PACKET_CHARS // max(length, PACKET_CHARS)
+            )
+            if len(items) != 1 or len(tasks) <= limit:
                 packet_items[packet_id] = items
                 continue
-            for offset in range(0, len(tasks), PACKET_VERDICTS):
-                selected = tasks[offset : offset + PACKET_VERDICTS]
+            for offset in range(0, len(tasks), limit):
+                selected = tasks[offset : offset + limit]
                 entry = items[0] | {
                     task: [value for name, value in selected if name == task]
                     for task in ("needs", "verify", "visuals", "rule")
@@ -865,8 +871,8 @@ def _packets(
                     else flag
                     for flag in entry["report"]
                 ]
-                packet_items[f"{packet_id}b{offset // PACKET_VERDICTS + 1}"] = [entry]
-                split.add(f"{packet_id}b{offset // PACKET_VERDICTS + 1}")
+                packet_items[f"{packet_id}b{offset // limit + 1}"] = [entry]
+                split.add(f"{packet_id}b{offset // limit + 1}")
         for packet_id, items in packet_items.items():
             judged = registry.judged(profile)
             # A split packet briefs only the checks it asks about; the index of the item's

@@ -1171,6 +1171,25 @@ def test_cli_uses_one_round_unless_a_budget_is_requested(project: Path) -> None:
     assert json.loads(result.output)["budget"] == 3
 
 
+def test_a_long_item_is_asked_fewer_verdicts_per_packet(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A 125 KB pattern lost verdicts at 30 per packet; longer items get fewer at a time.
+    monkeypatch.setattr(loop, "PACKET_VERDICTS", 9)
+    monkeypatch.setattr(loop, "PACKET_CHARS", 1)
+    loop.start(project, workspaces=("study",))
+    context = loop.load(project)
+    expected = {key: loop.item_tasks(context, key) for key in loop.read_state(project).scope}
+    opened = packets(project, loop.next_round(project))
+    for packet in opened:
+        for entry in packet["items"]:
+            assert sum(len(entry[task]) for task in ("needs", "verify", "visuals", "rule")) <= 3
+    for key, tasks in expected.items():
+        entries = [e for p in opened for e in p["items"] if e["item"] == key]
+        for task in ("needs", "verify", "visuals", "rule"):
+            assert [v for e in entries for v in e[task]] == tasks[task]
+
+
 def test_a_packet_asks_no_more_verdicts_than_one_checker_reply_can_hold(
     project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
