@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""A scripted stand-in for the Claude Code CLI: auth status and stream-json turns, no network."""
+
+import json
+import os
+import re
+import sys
+import tempfile
+from pathlib import Path
+
+SESSIONS = Path(os.environ.get("FAKE_ASK_STATE", tempfile.gettempdir())) / "fake-claude-sessions.json"
+
+
+EFFORTS = ["low", "medium", "high", "xhigh", "max"]
+MODELS = [
+    {"value": "default", "resolvedModel": "claude-opus-9", "displayName": "Default (recommended)", "supportedEffortLevels": EFFORTS},
+    {"value": "opus", "resolvedModel": "claude-opus-9", "displayName": "Opus 9", "description": "For complex work", "supportedEffortLevels": EFFORTS},
+    {"value": "sonnet", "resolvedModel": "claude-sonnet-9", "displayName": "Sonnet 9", "description": "Efficient", "supportedEffortLevels": EFFORTS},
+    {"value": "claude-opus-8", "resolvedModel": "claude-opus-8", "displayName": "Opus 8", "description": "Older", "supportedEffortLevels": EFFORTS},
+]
+
+
+def emit(event: dict) -> None:
+    print(json.dumps(event), flush=True)
+
+
+def session(args: list[str]) -> str:
+    for flag in ("--resume", "--session-id"):
+        if flag in args:
+            return args[args.index(flag) + 1]
+    return ""
+
+
+def turn(args: list[str], prompt: str) -> None:
+    known = json.loads(SESSIONS.read_text(encoding="utf-8")) if SESSIONS.exists() else {}
+    if found := re.search(r"file: \S+ · blocks\[\d+\]", prompt):
+        known[session(args)] = found[0]
+        SESSIONS.write_text(json.dumps(known), encoding="utf-8")
+    elif session(args) in known:
+        prompt = known[session(args)] + "\n" + prompt
+    if log := os.environ.get("FAKE_ASK_LOG"):
+        Path(log).write_text(prompt, encoding="utf-8")
+        Path(log).with_suffix(".args.json").write_text(json.dumps(args), encoding="utf-8")
+    answer = (
+        "Breadth-first orders the frontier by depth; uniform-cost by path cost \\(g(n)\\).\n\n"
+        "1. Equal step costs: depth order is cost order.\n"
+        "2. Unequal costs: \\(99 + 211 = 310\\) beats nothing.\n\n"
+        "Source: Lecture 3, p. 41"
+    )
+    # Like Claude Code's print mode: a thinking block whose text is redacted.
+    emit({"type": "stream_event", "event": {"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": ""}}})
+    emit({"type": "stream_event", "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "thinking_delta", "thinking": ""}}})
+    target = re.search(r"file: (\S+) · blocks\[(\d+)\]", prompt)
+    if target and any(word in prompt for word in ("IMPROVE", "BREAK", "SLOPPY")):
+        path = Path.cwd() / target[1]
+        unit = json.loads(path.read_text(encoding="utf-8"))
+        block = unit["blocks"][int(target[2])]
+        if "BREAK" in prompt:
+            block["kind"] = "nonsense"
+        elif "SLOPPY" in prompt:
+            block["paragraphs"][0] += " So **always** check x^2 + y^2 = 1 by hand."
+        else:
+            block["paragraphs"][-1] += " Uniform-cost needs a priority queue."
+        emit({"type": "stream_event", "event": {"type": "content_block_delta", "index": 1, "delta": {"type": "text_delta", "text": "Adding the rule to this section."}}})
+        emit({
+            "type": "assistant",
+            "message": {"content": [{"type": "tool_use", "name": "Edit", "input": {"file_path": str(path)}}]},
+        })
+        path.write_text(json.dumps(unit, indent=2), encoding="utf-8")
+        answer = f"Updated {block.get('title', 'the section')}: added the priority-queue rule."
+    if "LONG" in prompt:
+        # A long stretch of narration before a tool call, for checking the panel stays smooth.
+        for index in range(4000):
+            emit({"type": "stream_event", "event": {"type": "content_block_delta", "index": 1, "delta": {"type": "text_delta", "text": f"Step {index}: checking the next frontier node and its cost. "}}})
+        emit({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read", "input": {"file_path": "course.md"}}]}})
+    if "TABLE" in prompt:
+        answer = (
+            "### Two examples from the lecture\n\n"
+            "| Algorithm | Complete? | Why |\n|---|:-:|---|\n"
+            "| Breadth-first search | Yes, if \\(d\\) and \\(b\\) are finite | It goes level by level |\n"
+            "| Depth-first search | No | It can follow an infinite path (\\(m = \\infty\\)) |\n\n"
+            "- **Tree search** may revisit states\n  - so a cycle can trap it\n"
+            "- *Graph search* keeps an explored set\n\n"
+            "$$f(n) = g(n) + h(n)$$\n\n"
+            "> A finite branching factor is the key assumption.\n\n"
+            "```python\ndef bfs(start):\n    frontier = [start]\n    return frontier\n```\n\n"
+            "Source: Lecture 3, p. 41"
+        )
+    if "PROTECTED" in prompt:
+        (Path.cwd() / "AGENTS.md").write_text("changed by the agent", encoding="utf-8")
+    for part in re.findall(r".{1,40}", answer, flags=re.S):
+        emit({"type": "stream_event", "event": {"delta": {"type": "text_delta", "text": part}}})
+    emit({"type": "result", "is_error": False, "result": answer})
+
+
+def main() -> None:
+    args = sys.argv[1:]
+    signed_out = SESSIONS.with_name("fake-claude-signed-out")
+    if args[:2] == ["auth", "status"]:
+        signed_in = os.environ.get("FAKE_ASK_SIGNED_IN", "1") == "1" and not signed_out.exists()
+        print(json.dumps({"loggedIn": signed_in, "subscriptionType": "max"}))
+    elif args[:2] == ["auth", "login"]:
+        signed_out.unlink(missing_ok=True)
+    elif args[:2] == ["auth", "logout"]:
+        signed_out.write_text("", encoding="utf-8")
+    elif "-p" in args:
+        # One process serves a chat's turns over stream-json input, like the real CLI.
+        if log := os.environ.get("FAKE_ASK_LOG"):
+            with Path(log).with_suffix(".starts").open("a", encoding="utf-8") as starts:
+                starts.write(session(args) + "\n")
+        for line in sys.stdin:
+            message = json.loads(line)
+            if message.get("type") == "control_request":
+                reply = {"subtype": "success"}
+                if message["request"].get("subtype") == "initialize":
+                    reply["response"] = {"models": MODELS}
+                emit({"type": "control_response", "response": reply})
+            else:
+                turn(args, message["message"]["content"])
+
+
+if __name__ == "__main__":
+    main()

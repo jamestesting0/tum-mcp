@@ -1,4 +1,4 @@
-"""Ask Codex itself to identify and verify this installer's user-level hooks."""
+"""Codex app-server over JSON-RPC: setup verification and the course app's Ask agent."""
 
 import json
 import os
@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from tum_mcp.clients.hosts import ClientHost
@@ -16,7 +17,18 @@ from tum_mcp.errors import CampusError, Code
 
 
 class Runtime:
-    def __init__(self, home: Path) -> None:
+    """One app-server. Responses answer `call`; with a listener, notifications and server
+    requests go to it as they arrive (from the reader thread)."""
+
+    def __init__(
+        self,
+        home: Path,
+        *,
+        codex_home: Path | None = None,
+        cwd: Path | None = None,
+        listener: Callable[[dict], None] | None = None,
+        timeout: float = 15,
+    ) -> None:
         executable = shutil.which("codex")
         if executable is None:
             raise CampusError(
@@ -26,10 +38,12 @@ class Runtime:
                 "(or /hooks in the CLI) to review only the TUM course guard. "
                 "Run tum-mcp doctor when the CLI is available; native loading remains unverified.",
             )
+        self.listener, self.timeout = listener, timeout
+        self.lock = threading.Lock()
         self.process = subprocess.Popen(  # noqa: S603
             [executable, "app-server", "--stdio", "-c", "mcp_servers={}"],
-            cwd=home,
-            env={**os.environ, "CODEX_HOME": str(home / ".codex")},
+            cwd=cwd or home,
+            env={**os.environ, "CODEX_HOME": str(codex_home or home / ".codex")},
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -43,19 +57,25 @@ class Runtime:
     def _read(self) -> None:
         try:
             for line in self.process.stdout:
-                self.messages.put(json.loads(line))
+                message = json.loads(line)
+                if self.listener is not None and "method" in message:
+                    self.listener(message)
+                else:
+                    self.messages.put(message)
         except (ValueError, OSError):
             pass
         finally:
             self.messages.put(None)
 
+    def send(self, message: dict) -> None:
+        with self.lock:
+            self.process.stdin.write(json.dumps(message) + "\n")
+            self.process.stdin.flush()
+
     def call(self, method: str, params: dict) -> dict:
         self.sequence += 1
-        self.process.stdin.write(
-            json.dumps({"id": self.sequence, "method": method, "params": params}) + "\n"
-        )
-        self.process.stdin.flush()
-        deadline = time.monotonic() + 15
+        self.send({"id": self.sequence, "method": method, "params": params})
+        deadline = time.monotonic() + self.timeout
         while True:
             try:
                 message = self.messages.get(timeout=max(0, deadline - time.monotonic()))

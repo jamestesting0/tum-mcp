@@ -69,8 +69,8 @@ note citations and clickable highlight images. A recording may require the
 visitor's campus login; linking does not upload or grant access to the recording.
 
 Original downloads, raw recording/transcript evidence, authoring files, comments,
-progress, `.tum-mcp/`, media drafts, storyboards, scene code and media build files
-stay local.
+Ask agent chats, progress, `.tum-mcp/`, media drafts, storyboards, scene code and media
+build files stay local. Ask agent is absent from a published site.
 Prepared explanations, reproduced questions and embedded quotations do become
 public; source-file exclusion does not redact their teaching content.
 

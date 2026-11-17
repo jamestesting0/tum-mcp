@@ -467,6 +467,8 @@ function route(initial = false) {
 }
 document.querySelector('.skip').addEventListener('click', event => { event.preventDefault(); main.focus(); });
 addEventListener('hashchange', () => route());
+// An Ask agent edit replaced the course data: redraw this view where the reader is.
+addEventListener('course-data', () => route(true));
 addEventListener('keydown', event => { if (workspace === 'study' && currentView === 'flashcards') flashcardShortcut(event); });
 addEventListener('pagehide', rememberPosition);
 route(true);

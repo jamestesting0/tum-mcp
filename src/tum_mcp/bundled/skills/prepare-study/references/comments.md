@@ -37,7 +37,11 @@ markup into teaching JSON, or mark an issue resolved before verifying it. Report
 addressed IDs/units, relevant checks and notes still open. The open preview picks
 up note and status changes automatically; reload it after a rebuild to see changed
 teaching. An open editor keeps its draft when the note changes elsewhere and asks
-the student to choose Use latest or Keep mine. No AI process runs inside the website.
+the student to choose Use latest or Keep mine.
+
+Ask agent requests from the app follow these same steps for one passage, without a
+batch or task. The app gives the passage's file and location. It lints, builds and
+updates the page itself, so run neither; it reports any problem back to fix.
 
 Students select text and choose Comment; the app shows numbered markers beside the
 commented section or item and keeps notes on hidden answer fields reachable. Notes

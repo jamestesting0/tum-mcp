@@ -48,7 +48,10 @@ export function plainText(text) {
 // second click or moving on hides it. Terms, Recall chips and insights share it. The bubble
 // is built on demand, so the text a trigger contributes elsewhere (labels, outlines) is its own.
 let openTip = null;
-const annotations = new Map((data.annotations || []).map(entry => [entry.term.toLowerCase(), entry]));
+const annotations = new Map();
+const annotate = () => { annotations.clear(); for (const entry of data.annotations || []) annotations.set(entry.term.toLowerCase(), entry); };
+annotate();
+addEventListener('course-data', annotate);
 const followTip = () => openTip?.position?.();
 document.addEventListener('scroll', followTip, { capture: true, passive: true });
 window.addEventListener('resize', followTip);

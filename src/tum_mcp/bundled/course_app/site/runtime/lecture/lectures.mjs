@@ -5,7 +5,10 @@ import { renderCommentedView } from '../comments/comments.mjs';
 import { nextStep } from '../shell/navigation.mjs';
 import { renderBlockBody } from '../reading/reading.mjs';
 
-const lectures = [...(data.lectures?.lectures || [])].sort((a, b) => b.recording.recorded_on.localeCompare(a.recording.recorded_on) || a.key.localeCompare(b.key));
+const sorted = () => [...(data.lectures?.lectures || [])].sort((a, b) => b.recording.recorded_on.localeCompare(a.recording.recorded_on) || a.key.localeCompare(b.key));
+let lectures = sorted();
+// An Ask agent edit swaps the course data in place; the redraw that follows reads the new list.
+addEventListener('course-data', () => { lectures = sorted(); });
 export const lectureLink = (lecture, highlight) => `#lectures/${encodeURIComponent(lecture.key)}${highlight ? `/${encodeURIComponent(highlight.key)}` : ''}`;
 function date(value) {
   const day = new Date(value.length === 10 ? value + 'T12:00:00Z' : value);

@@ -148,7 +148,7 @@ def study_smoke(browser: Browser, site: Path, unit: str) -> SmokeEvidence:
     def serve(route: Route) -> None:
         url = urlsplit(route.request.url)
         assert url.netloc == "study.invalid"
-        if url.path == "/_study/comments":
+        if url.path == "/_study/comments" or url.path.startswith("/_study/agent/"):
             route.fulfill(status=404, content_type="application/json", body='{"error":"Static QA"}')
             return
         assert url.path.startswith("/course/")

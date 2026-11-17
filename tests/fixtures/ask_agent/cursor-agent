@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""A scripted stand-in for the Cursor agent CLI: account, model list and stream-json turns."""
+
+import json
+import os
+import re
+import sys
+import tempfile
+from pathlib import Path
+
+STATE = Path(os.environ.get("FAKE_ASK_STATE", tempfile.gettempdir()))
+SIGNED_IN = STATE / "fake-cursor-signed-in"
+
+
+def emit(event: dict) -> None:
+    print(json.dumps(event), flush=True)
+
+
+def turn(args: list[str]) -> None:
+    prompt = sys.stdin.read()
+    session = args[args.index("--resume") + 1] if "--resume" in args else "cursor-session-1"
+    if log := os.environ.get("FAKE_ASK_LOG"):
+        Path(log).write_text(prompt, encoding="utf-8")
+        Path(log).with_suffix(".cursor-args.json").write_text(json.dumps(args), encoding="utf-8")
+    emit({"type": "system", "subtype": "init", "session_id": session, "model": "Auto"})
+    answer = "Auto here: depth order is cost order when steps cost the same."
+    target = re.search(r"file: (\S+) · blocks\[(\d+)\]", prompt)
+    if target and "IMPROVE" in prompt:
+        path = Path.cwd() / target[1]
+        unit = json.loads(path.read_text(encoding="utf-8"))
+        block = unit["blocks"][int(target[2])]
+        block["paragraphs"][-1] += " Cursor adds a sentence."
+        emit({"type": "tool_call", "subtype": "started", "call_id": "1",
+              "tool_call": {"editToolCall": {"args": {"path": str(path)}}}, "session_id": session})
+        path.write_text(json.dumps(unit, indent=2), encoding="utf-8")
+        answer = f"Updated {block.get('title', 'the section')}: added one sentence."
+    for part in re.findall(r".{1,30}", answer, flags=re.S):
+        emit({"type": "assistant", "timestamp_ms": 1,
+              "message": {"role": "assistant", "content": [{"type": "text", "text": part}]}})
+    # Cursor repeats the text in a final flush; the app must not show it twice.
+    emit({"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": answer}]}})
+    emit({"type": "result", "subtype": "success", "is_error": False, "result": answer, "session_id": session})
+
+
+def main() -> None:
+    args = sys.argv[1:]
+    if args[:1] in (["status"], ["whoami"]):
+        print(json.dumps({"status": "ok", "isAuthenticated": SIGNED_IN.exists()}))
+    elif args[:1] == ["login"]:
+        SIGNED_IN.write_text("", encoding="utf-8")
+    elif args[:1] == ["logout"]:
+        SIGNED_IN.unlink(missing_ok=True)
+    elif args[:1] == ["models"]:
+        print("\x1b[2mAvailable models\x1b[22m\n")
+        print("auto - Auto (current, default)")
+        print("claude-opus-4-8 - Opus 4.8")
+        print("claude-opus-4-7 - Opus 4.7")
+        print("\nTip: use --model <id> to switch.")
+    elif "-p" in args:
+        turn(args)
+
+
+if __name__ == "__main__":
+    main()

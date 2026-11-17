@@ -33,6 +33,7 @@ function strings(value, out = []) {
 const titleOf = item => plain(item.title || item.term || item.label || '');
 
 let index = null;
+addEventListener('course-data', () => { index = null; });
 // `own` says whether the title belongs to this entry; a passage shown under its section's or
 // page's title matches by its own text only, so one title hit lists the page once.
 function entry(where, crumb, title, text, href, target = '', own = true) {

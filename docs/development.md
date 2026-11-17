@@ -230,7 +230,7 @@ tag and artifact integrity before pushing the release documentation.
 | `src/tum_mcp/course/ledger/` | Coverage ledger and private, dated or selected preparation scopes |
 | `src/tum_mcp/course/checks/` | Report flags, structure map, answer keys (`answers.py`) and structured plans (`plans.py`) |
 | `src/tum_mcp/course/review/` | Review loop: check registry, items and fingerprints, ledger v2, packets, checker runner, scorecard and the `review` CLI |
-| `src/tum_mcp/course/app/` | Build, preview, visual and interaction checks, comments and publication |
+| `src/tum_mcp/course/app/` | Build, preview, visual and interaction checks, comments, Ask agent and publication |
 | `src/tum_mcp/course/relations/`, `media/`, `lecture/` | Links between workspaces, audio and video notes, and the Lecture workspace |
 | `src/tum_mcp/course/cli.py`, `output.py` | The `study` command group and its compact output |
 | `src/tum_mcp/bundled/course_app/site/` | Managed course app with feature modules under `runtime/` and vendor files and fonts under `assets/` |
@@ -257,9 +257,73 @@ The Codex adapter generates a small host plugin to load skills and MCP together.
 Extraction uses bounded subprocesses. POSIX enforces CPU/process-group limits;
 Windows terminates the worker and observed children. Study imports and preview
 paths are confined to the chosen project. Course sources never become agent rules.
-The preview's only write endpoint accepts bounded same-origin comment operations.
-Comments use private project files and optimistic revisions; comments and quoted
-material remain untrusted data for the skill.
+The preview has two write endpoints. One accepts bounded same-origin comment
+operations. Comments use private project files and optimistic revisions; comments and
+quoted material remain untrusted data for the skill.
+
+The other runs Ask agent (`ask_*.py` in `course/app/`). It needs the same origin plus
+a per-start token in the `X-Ask-Token` header.
+- **Agent homes.** It drives the installed Claude Code (`claude -p`, stream-json) or
+  Codex (`codex app-server`) from agent homes under the tum-mcp data folder. Sign-in
+  runs through each vendor's own flow; only a pasted Anthropic key is stored, encrypted,
+  and Claude Code reads it through `apiKeyHelper`.
+- **Live process.** An open chat keeps one `claude -p` process and sends each message
+  over stream-json input; Stop is an `interrupt` control request. The preview closes a
+  process after 10 idle minutes, beyond three live chats, or when the model or effort
+  changes, and the next process resumes the session. A pasted key also sets the
+  one-hour prompt cache. The instructions and settings go in files under the agent home
+  (`--append-system-prompt-file`, `--settings <file>`), because on Windows npm's
+  `claude.cmd` shim passes arguments through cmd.exe, which mangles quotes and line
+  breaks. Each CLI is started by its full path (`shutil.which`), which finds the shim.
+- **Work log.** Runtimes emit `thinking`, `note` and `status` events before the answer:
+  Claude Code's print mode redacts thinking text but still marks thinking blocks, Codex
+  streams reasoning summaries and marks its `final_answer` message, and text written
+  before a tool call is a note. `WorkLog` keeps a compact copy with the saved message
+  (`log`, `worked`): at most 40 entries of 600 characters, without the answer itself.
+  Saved logs live only in `.tum-mcp/agent/`, so publishing never includes them.
+- **Accounts.** Each signed-in account is a profile: `claude-subscription`, `claude-key`,
+  `codex-subscription` and `codex-key`. An OpenAI key runs in its own Codex home
+  (`agent/codex-key`), because Codex keeps one sign-in per home. A browser sign-in
+  becomes active only once it appears. Model menus come from Claude Code's stream-json
+  `initialize` reply (cached for six hours), Codex's `model/list` and `agent models`,
+  newest per family; Codex models marked legacy are hidden.
+- **Cursor.** Offered when `cursor-agent` is on PATH. It runs with `HOME`, `USERPROFILE`,
+  `APPDATA`, `XDG_CONFIG_HOME` and `CURSOR_CONFIG_DIR` inside `agent/cursor` and
+  `AGENT_CLI_CREDENTIAL_STORE=file`, so its sign-in stays out of the student's own Cursor
+  login on every system. The prompt goes in on stdin. Each message is one `agent -p` run with `--resume` and `--sandbox enabled`.
+  Print mode runs any shell command, so the sandbox's workspace is the course's `app/`
+  folder: writes elsewhere in the course or home folder fail (checked live), and
+  `tum-mcp`, which Cursor allowlists, runs outside it; instructions go in front of a
+  new session's first message. A Cursor key reaches only the child's environment.
+- **Edit transaction.** Around each turn, `ask_edits.py` snapshots the authored app
+  content and reverts protected files. It gates the change on `build(publish=False)`
+  and on the anchored item's lint problems that the edit added (the item's problems
+  before the turn are found while the agent works). The agent gets one repair turn;
+  then the edit is undone. Undo keeps the previous and the edited files, so Redo can
+  put the edit back while the files are still as the Undo left them.
+- **In-place update.** After an edit, Undo or Redo the page imports `data.mjs` under a
+  fresh query, copies it into the shared `data` object and dispatches `course-data`;
+  modules that cache course data rebuild on it, and the app redraws the current view.
+  On desktop the redraw goes into a second `#app` layer behind the page, which stays
+  on screen while diagrams and math lay out; the block being read is pinned to its
+  viewport position each frame (instant scrolls, since `.main` scrolls smoothly), then
+  the layer fades in over 180 ms and the old page is removed. View transitions were
+  not used: they pause the frames and resize observers that diagrams and math need.
+  A failure falls back to reopening the page under `/_v/<id>/`, because WebKit reuses
+  in-memory modules across reloads.
+- **Status.** The preview checks the three sign-ins in parallel and reuses the result
+  for a minute; sign-in and sign-out clear it and the sign-in wait asks
+  `status?fresh=1`. A switch keeps it and returns the new status; the panel shows the
+  switch at once and fills the menus from what it knows. The first status call loads
+  the other accounts' model lists in the background, and Codex's list is cached like
+  the others. The page preloads status, the open chat and the lexer while idle. Calls to the shared
+  Codex app-server hold a lock, because its replies share one queue.
+- **Answers.** `assets/marked/` is the vendored marked lexer (MIT). `ask.mjs` turns its
+  tokens into DOM nodes and draws math with the app's KaTeX, so no answer text reaches
+  `innerHTML`.
+- **Tests.** They drive the scripted CLIs in `tests/fixtures/ask_agent/` (`claude`,
+  `cursor-agent`; on Windows through `.cmd` shims the test writes); no test uses a real
+  account.
 
 ## Study renderer
 

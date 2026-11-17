@@ -56,12 +56,18 @@ website/
   embeds smaller copies of the audio and video; the course keeps its published files.
   `app/embed.js` hands the frame to the visitor on click or focus and back on Esc or
   Resume.
+- **Ask agent demo.** `tools/lib/ask-demo-frame.js` runs in the frame and answers the
+  preview's agent API from `src/content/ask-demo.json`: the panel opens signed in, a
+  scripted turn streams its log, and the edit adds one step to a real lesson, served as an
+  edited `data.mjs` so the app applies it in place. It shows Ask agent on phones too, which
+  the app itself does not. A scene played again starts from a fresh frame.
 - **Guide.** A step's `guide` beats in `story.json` name a control in the app (`target.css`,
   optional `text` regex and `nth`; a list gives alternatives, such as the phone layout's), a
   label and one line, and whether the tour clicks it (`after` names what the click reveals).
   Workspace switches are beats too: a step's `appStart` is the page it opens on, `route` is
   where a click leads (the guide goes there itself if the click cannot happen), and `opens`
-  marks a beat that opens a menu for the next one.
+  marks a beat that opens a menu for the next one. A beat with `type` types its text into
+  the field, and `wait` gives a beat longer to find its control (the agent's result).
   `app/embed.js` plays them as the visitor scrolls; `app/guide.js` draws the lens (a disc
   that travels and widens into the spotlight) and the callout. `npm run check` validates the beats' order and fields.
 - **Pacing.** The scroll chooses the scene; the CLI and agent parts of a scene play by

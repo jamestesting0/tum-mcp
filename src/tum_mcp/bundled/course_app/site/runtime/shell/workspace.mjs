@@ -1,6 +1,7 @@
 import data from '../../data.mjs';
 import { node, button, append } from './dom.mjs';
 import { renderFiles, fileIcon } from './files.mjs';
+import { askButton } from '../ask/ask.mjs';
 
 // A coding exercise as an editor: files, the code and the task side by side, as in the
 // Artemis online editor. Files and Task fold away and resize by their dividers; each
@@ -52,6 +53,8 @@ export function editorWorkspace({ block, task, exerciseKey, stepLabel }) {
     return [name, choice];
   }));
   bar.append(node('span', 'ide-spacer'), views, taskToggle);
+  // The corner Ask agent button would cover this bar, so the bar carries its own.
+  const ask = askButton('ide-toggle ide-ask'); if (ask) bar.append(ask);
 
   const code = append(node('div', 'ide-code'), project);
   const divider = node('div', 'ide-divider');

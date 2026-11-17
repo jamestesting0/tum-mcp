@@ -9,9 +9,10 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { build } from 'esbuild';
-import { previewIndexes } from './python.mjs';
+import { inlineMath, previewIndexes } from './python.mjs';
 
 const run = promisify(execFile);
 
@@ -63,6 +64,8 @@ function inlineDataImages(app) {
         let source = await readFile(file, 'utf8');
         const images = new Set([...source.matchAll(/"([\w./-]+\.(?:png|jpe?g|webp|svg))"/g)].map(match => match[1]));
         for (const image of images) source = source.replaceAll(`"${image}"`, JSON.stringify(await dataUri(path.join(app, image))));
+        // The Ask agent demo serves an edited copy of the course, so the frame keeps the object.
+        source = source.replace(/^export default /, 'const course = ').replace(/;\s*$/, ';\nglobalThis.__walkthroughData = course;\nexport default course;\n');
         return { contents: source, loader: 'js' };
       });
     },
@@ -129,7 +132,8 @@ const script = value => JSON.stringify(value).replaceAll('</', '<\\/');
 /** Returns the complete app document and its size details. */
 export async function appDocument({ project, repo }) {
   const app = path.join(project, 'app');
-  const [bundle, katexCss, appCss, katexJs, template, indexes] = await Promise.all([
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const [bundle, katexCss, appCss, katexJs, template, indexes, askDemo, askScript] = await Promise.all([
     build({
       entryPoints: [path.join(app, 'runtime/shell/start.mjs')], bundle: true, format: 'esm', write: false,
       minify: true, target: 'es2022', legalComments: 'none', plugins: [inlineDataImages(app)], logLevel: 'silent',
@@ -139,8 +143,13 @@ export async function appDocument({ project, repo }) {
     readFile(path.join(app, 'assets/katex/katex.min.js'), 'utf8'),
     readFile(path.join(app, 'index.html'), 'utf8'),
     previewIndexes({ project, repo }),
+    readFile(path.join(here, '../../src/content/ask-demo.json'), 'utf8'),
+    readFile(path.join(here, 'ask-demo-frame.js'), 'utf8'),
   ]);
   const css = (await inlineUrls(katexCss, path.join(app, 'assets/katex'))) + (await inlineUrls(appCss, app));
+  // The demo's edit skips the app build, so its step's inline math is compiled here as the build would.
+  const demo = JSON.parse(askDemo);
+  demo.math = await inlineMath({ repo, text: demo.step });
   const files = await mediaFiles(project, indexes);
   const identity = JSON.parse((await readFile(path.join(app, 'data.mjs'), 'utf8')).match(/"identity":("[^"]+")/)[1]);
   const body = template.slice(template.indexOf('<body>') + 6, template.indexOf('</body>'));
@@ -153,7 +162,8 @@ export async function appDocument({ project, repo }) {
 <script type="application/json" id="app-files">${script(files)}</script>
 <script type="application/json" id="app-indexes">${script(indexes)}</script>
 <script type="application/json" id="app-identity">${script(identity)}</script>
-<script>${SHIM}</script><script>${katexJs.replaceAll('</script', '<\\/script')}</script>
+<script type="application/json" id="ask-demo">${script(demo)}</script>
+<script>${SHIM}</script><script>${askScript.replaceAll('</script', '<\\/script')}</script><script>${katexJs.replaceAll('</script', '<\\/script')}</script>
 <script type="module">${js.replaceAll('</script', '<\\/script')}</script>
 </head><body>${body}</body></html>`;
   return { html, sizes: { total: html.length, script: js.length, css: css.length, media: JSON.stringify(files).length } };

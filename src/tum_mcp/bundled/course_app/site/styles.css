@@ -818,7 +818,178 @@ h1 > .comment-marker { margin-inline-start: var(--s2); }
 .comment-message { margin-block: var(--s2); }
 .comment-message:empty, .comment-error:empty { display: none; }
 .comment-dialog textarea { display: block; width: 100%; min-height: 140px; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r1); color: var(--ink); background: var(--surface); font: var(--text-ui)/1.5 var(--font-ui); resize: vertical; }
-.selection-comment { position: fixed; z-index: 8; color: var(--ink); background: var(--surface); }
+.selection-toolbar { position: fixed; z-index: 8; display: flex; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface); }
+.selection-toolbar button { border: 0; border-radius: 0; color: var(--ink); background: transparent; }
+.selection-toolbar button:hover { background: var(--wash); }
+
+/* Ask agent: a chat in the Recall panel's slot. */
+/* The Ask agent button: a square like the contents button, beside it in the top corner. */
+button.ask-launch { position: fixed; z-index: 5; top: var(--s4); right: calc(var(--s4) + var(--target) + var(--s2)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); background: var(--canvas); color: var(--accent); }
+body:not(:has(button.contents-toggle:not([hidden]))) button.ask-launch { right: var(--s4); }
+/* The coding workspace's own bar carries Ask agent, so the corner button stays out of its way. */
+body:has(.ide) button.ask-launch { display: none; }
+.ide-bar button.ide-ask { color: var(--accent); }
+button.ask-launch:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--canvas)); }
+button.ask-launch svg { fill: color-mix(in srgb, var(--accent) 22%, transparent); }
+button.ask-launch[hidden] { display: none; }
+@media print { button.ask-launch { display: none; } }
+.reference-panel.ask-panel { display: flex; flex-direction: column; padding: 0; overflow: hidden; font-size: var(--text-ui); }
+.ask-panel:not([open]) { display: none; }
+.ask-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: var(--s3) var(--s3) var(--s3) var(--s6); border-bottom: 1px solid var(--line); }
+.ask-title { display: flex; align-items: center; gap: var(--s1); min-width: 0; }
+.ask-title .icon-button { margin-inline-start: calc(-1 * var(--s3)); }
+.ask-head h2 { margin: 0; font-size: var(--text-subsection); line-height: 1.3; }
+.ask-actions { display: flex; align-items: center; gap: var(--s1); }
+.ask-thread { flex: 1; overflow: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--s5); padding: var(--s5) var(--s6); }
+.ask-thread > *, .ask-composer > * { width: 100%; max-width: 44rem; margin-inline: auto; }
+.ask-thread > .ask-mark { flex: 1; display: grid; place-items: center; pointer-events: none; user-select: none; }
+/* The provider's mark as an outlined silhouette in theme colours. */
+.ask-mark svg { width: 72px; height: 72px; overflow: visible; }
+.ask-mark path { fill: color-mix(in srgb, var(--accent) 7%, transparent); stroke: color-mix(in srgb, var(--accent) 45%, var(--line)); stroke-width: .28; stroke-linejoin: round; }
+.ask-thread > .ask-user { width: auto; max-width: min(85%, 44rem); margin-inline: auto 0; padding: var(--s2) var(--s3); border-radius: var(--r1); background: var(--surface); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ask-answer { font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.ask-answer > :first-child { margin-top: 0; }
+.ask-answer p { margin: 0 0 var(--s3); }
+.ask-answer ol, .ask-answer ul { margin: 0 0 var(--s3); padding-inline-start: 1.3em; }
+.ask-answer li + li { margin-top: var(--s2); }
+.ask-answer li > :is(ul, ol) { margin: var(--s2) 0 0; }
+.ask-answer li > p { margin: 0 0 var(--s2); }
+.ask-answer li.ask-task { list-style: none; margin-inline-start: -1.3em; }
+.ask-answer li.ask-task input { margin: 0 var(--s2) 0 0; vertical-align: -1px; }
+.ask-answer .ask-heading { margin: var(--s5) 0 var(--s2); font-size: 16px; font-weight: 600; line-height: 1.4; }
+.ask-answer h3.ask-heading { font-size: 17px; }
+.ask-answer blockquote { margin: 0 0 var(--s3); padding-inline-start: var(--s3); border-inline-start: 3px solid var(--line); color: var(--muted); }
+.ask-answer blockquote > :last-child { margin-bottom: 0; }
+.ask-answer hr { margin: var(--s4) 0; border: 0; border-top: 1px solid var(--line); }
+.ask-answer a { color: var(--accent); text-underline-offset: 2px; }
+.ask-answer .inline-math { white-space: nowrap; }
+.ask-answer .ask-display { display: block; margin: var(--s3) 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
+.ask-answer .code-region { margin: 0 0 var(--s3); padding: var(--s3) var(--s4); }
+.ask-answer .code-region pre { font-size: var(--text-small); }
+.ask-answer .ask-table { max-width: 100%; margin: 0 0 var(--s3); overflow-x: auto; }
+.ask-answer .ask-table table { font-size: var(--text-small); line-height: 1.45; }
+.ask-answer .ask-table :is(th, td) { padding: 6px var(--s3); overflow-wrap: normal; min-width: 4em; }
+.ask-source { color: var(--muted); font-size: var(--text-small); }
+/* The agent's steps: one quiet line while it works, folded above the answer afterwards. */
+.ask-work { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--text-small); }
+.ask-work > summary { display: inline-flex; align-items: center; gap: var(--s2); max-width: 100%; padding: 2px 0; cursor: pointer; list-style: none; }
+.ask-work > summary::-webkit-details-marker { display: none; }
+.ask-work > summary:hover { color: var(--ink); }
+.ask-work-now { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ask-work-count:not(:empty)::before { content: '·'; margin-inline-end: var(--s2); }
+.ask-work > summary svg { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.ask-work[open] > summary svg { transform: rotate(180deg); }
+.ask-work[data-running] .ask-work-now { background: linear-gradient(90deg, var(--muted) 35%, var(--ink) 50%, var(--muted) 65%) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: ask-work-shine 2s linear infinite; }
+@keyframes ask-work-shine { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .ask-work[data-running] .ask-work-now { animation: none; color: var(--muted); background: none; } }
+.ask-work ol { display: grid; gap: var(--s1); margin: var(--s2) 0 var(--s1); padding: 0 0 0 var(--s3); border-inline-start: 1px solid var(--line); list-style: none; }
+.ask-work li { margin: 0; line-height: 1.45; }
+/* The log: notes the agent wrote before tool calls, and thinking with its length. While the agent
+   works the list is bounded and follows its end; entries off screen skip layout. */
+.ask-work li { content-visibility: auto; contain-intrinsic-size: auto 1.45em; }
+.ask-work[data-running] ol { max-height: 15rem; overflow-y: auto; overscroll-behavior: contain; }
+.ask-work-note { color: var(--muted); overflow-wrap: anywhere; }
+.ask-work-label { display: block; color: var(--muted); }
+.ask-work-text { margin-top: 2px; color: var(--muted); font-style: italic; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ask-work-text:empty { display: none; }
+.ask-change { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); margin-top: var(--s3); padding-block: var(--s2); border-block: 1px solid var(--line); }
+.ask-change p { margin: 0; line-height: 1.5; }
+.ask-composer { display: grid; gap: var(--s2); padding: var(--s2) var(--s6) var(--s5); }
+.ask-context-slot:empty { display: none; }
+/* The context card: what the next message is about. A selection clamps to two lines over its
+   section; the section in view takes one line. */
+.ask-context { display: flex; align-items: center; gap: var(--s3); min-width: 0; padding: var(--s2) var(--s1) var(--s2) var(--s2); border-radius: var(--r1); background: var(--surface); animation: ask-context-in .18s ease-out; }
+.ask-context-icon { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r1); color: var(--accent); background: var(--wash); }
+.ask-context-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ask-context-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.ask-context p { margin: 0; font-size: var(--text-small); line-height: 1.4; }
+.ask-context-quote { color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.ask-context-place, .ask-context-line { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ask-context-place { color: var(--muted); font-size: 13px; }
+.ask-context-line .ask-context-title { color: var(--ink); font-weight: 500; }
+.ask-context-line .ask-context-place::before { content: '·'; margin-inline: 6px; }
+.ask-context .icon-button { flex-basis: 32px; width: 32px; min-height: 32px; padding: 6px; color: var(--muted); }
+.ask-context .icon-button svg { width: 16px; height: 16px; }
+.ask-thread > .ask-context.is-sent { width: auto; max-width: min(85%, 44rem); margin: 0 0 calc(var(--s2) - var(--s5)) auto; padding: 0; gap: var(--s2); border: 0; background: none; animation: none; }
+.ask-context.is-sent .ask-context-icon { width: 20px; height: 20px; background: none; color: var(--muted); }
+.ask-context.is-sent .ask-context-icon svg { width: 14px; height: 14px; }
+.ask-context.is-sent :is(.ask-context-quote, .ask-context-title) { color: var(--muted); font-size: 13px; font-weight: 400; }
+.ask-context.is-sent .ask-context-quote { display: block; white-space: nowrap; text-overflow: ellipsis; }
+.ask-context.is-sent.is-selection .ask-context-place { display: none; }
+@keyframes ask-context-in { from { opacity: 0; transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) { .ask-context { animation: none; } }
+.ask-input { display: grid; gap: var(--s1); padding: var(--s2); border: 1px solid var(--line); border-radius: var(--r2); background: var(--canvas); cursor: text; transition: border-color .15s, box-shadow .15s; }
+.ask-input > .ask-context-slot:not(:empty) { margin-bottom: var(--s1); }
+.ask-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
+.ask-input textarea { display: block; min-height: 24px; max-height: 200px; margin: 0; padding: var(--s1) var(--s2) 0; resize: none; border: 0; outline: none; color: var(--ink); background: transparent; font: inherit; line-height: 1.6; }
+.ask-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.ask-menus { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.ask-pick { position: relative; min-width: 0; }
+.ask-pick-trigger { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; height: 32px; padding: 0 var(--s1) 0 var(--s2); border-radius: var(--r1); color: var(--muted); font-size: 13px; white-space: nowrap; cursor: pointer; list-style: none; user-select: none; }
+.ask-pick-trigger::-webkit-details-marker { display: none; }
+.ask-pick-trigger span { overflow: hidden; text-overflow: ellipsis; }
+.ask-pick-trigger:hover, .ask-pick[open] .ask-pick-trigger { color: var(--ink); background: var(--wash); }
+.ask-pick-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ask-pick svg { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ask-pick[open] .ask-pick-trigger > svg { transform: rotate(180deg); }
+/* Opens upward from the message box, like the workspace switcher. */
+.ask-pick-menu { position: absolute; bottom: calc(100% + var(--s2)); left: 0; z-index: 9; display: grid; gap: 2px; width: max-content; min-width: 168px; max-width: 280px; max-height: 50vh; overflow-y: auto; padding: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); background: var(--canvas); box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 12%, transparent); animation: ask-pick-in .14s ease-out; }
+.ask-pick-item { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 36px; padding: 6px var(--s3); border: 0; border-radius: var(--r1); color: var(--ink); background: transparent; font: inherit; font-size: var(--text-small); font-weight: 400; text-align: start; }
+.ask-pick-item:hover, .ask-pick-item:focus-visible { background: var(--wash); outline: none; }
+.ask-pick-text { flex: 1; min-width: 0; display: grid; line-height: 1.35; }
+.ask-pick-label { font-weight: 500; }
+.ask-pick-detail { overflow: hidden; color: var(--muted); font-size: 13px; white-space: nowrap; text-overflow: ellipsis; }
+.ask-pick-item svg { width: 16px; height: 16px; color: var(--accent); }
+@keyframes ask-pick-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .ask-pick-menu { animation: none; } .ask-pick[open] .ask-pick-trigger > svg { transform: none; } }
+button.ask-send { flex: none; display: grid; place-items: center; width: 32px; min-height: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--r1); color: var(--canvas); background: var(--accent); }
+button.ask-send:hover { background: var(--accent); opacity: .88; }
+button.ask-send svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ask-list { flex: 1; overflow: auto; margin: 0; padding: var(--s2) var(--s3); list-style: none; }
+.ask-list li { display: flex; align-items: center; gap: var(--s1); border-radius: var(--r1); }
+.ask-list li { position: relative; }
+.ask-list li:hover { background: color-mix(in srgb, var(--wash) 60%, transparent); }
+/* The open chat: an accent-tinted row with a bar on its leading edge. */
+.ask-list li[aria-current] { background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.ask-list li[aria-current]::before { content: ''; position: absolute; inset: 8px auto 8px 0; width: 3px; border-radius: 3px; background: var(--accent); }
+.ask-list li[aria-current] .ask-row-title { color: var(--accent); font-weight: 500; }
+.ask-list li .icon-button { color: var(--muted); }
+@media (hover: hover) { .ask-list li:not(:hover):not(:focus-within) .icon-button { opacity: 0; } }
+button.ask-row { flex: 1; min-width: 0; display: grid; gap: 2px; padding: var(--s3); border: 0; text-align: start; background: transparent; font-weight: 400; }
+.ask-row-title, .ask-row-meta { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ask-row-meta { color: var(--muted); font-size: var(--text-small); }
+.ask-empty { padding: var(--s3); color: var(--muted); }
+.ask-account { position: relative; display: flex; align-items: center; }
+.ask-avatar { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.ask-avatar svg { width: 16px; height: 16px; fill: currentColor; }
+summary.ask-avatar { margin: 0 var(--s1); cursor: pointer; list-style: none; }
+summary.ask-avatar::-webkit-details-marker { display: none; }
+summary.ask-avatar:hover, .ask-account[open] > summary.ask-avatar { box-shadow: inset 0 0 0 1px var(--accent); }
+summary.ask-avatar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ask-account-menu { position: absolute; top: calc(100% + var(--s2)); right: 0; z-index: 9; display: grid; gap: 2px; width: 272px; padding: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); background: var(--canvas); box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 12%, transparent); animation: ask-pick-in .14s ease-out; }
+.ask-account-row { display: flex; align-items: center; border-radius: var(--r1); }
+.ask-account-row:hover, .ask-account-row:focus-within { background: var(--wash); }
+.ask-account-pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s3); padding: var(--s2); border: 0; border-radius: var(--r1); color: var(--ink); background: transparent; font: inherit; font-size: var(--text-small); font-weight: 400; text-align: start; }
+.ask-account-pick > svg { width: 16px; height: 16px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ask-account-row .icon-button { flex-basis: 32px; width: 32px; min-height: 32px; padding: 6px; color: var(--muted); }
+@media (hover: hover) { .ask-account-row:not(:hover):not(:focus-within) .icon-button { opacity: 0; } }
+.ask-account-add { display: flex; align-items: center; gap: var(--s3); margin-top: 2px; padding: var(--s2); border: 0; border-top: 1px solid var(--line); border-radius: 0 0 var(--r1) var(--r1); color: var(--muted); background: transparent; font: inherit; font-size: var(--text-small); font-weight: 400; text-align: start; }
+.ask-account-add:hover { color: var(--ink); background: var(--wash); }
+.ask-account-add svg { width: 16px; height: 16px; margin-inline: 7px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.ask-connected { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); padding: 0 var(--s2); color: var(--muted); font-size: var(--text-small); }
+.ask-connected svg { width: 16px; height: 16px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ask-rows { display: grid; padding: var(--s2) var(--s6); }
+.ask-row-provider { display: grid; gap: var(--s2); padding: var(--s4) 0; border-bottom: 1px solid var(--line); }
+.ask-row-provider h3 { margin: 0; font-size: var(--text-body); font-weight: 500; }
+.ask-row-provider .cluster { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.ask-key { display: flex; gap: var(--s2); }
+.ask-key input { flex: 1; min-width: 0; min-height: var(--target); padding: 0 var(--s3); border: 1px solid var(--line); border-radius: var(--r1); color: var(--ink); background: var(--canvas); }
+.ask-note { margin: 0; padding: var(--s3) var(--s6); color: var(--muted); font-size: var(--text-small); }
+.ask-row-provider .ask-note { padding: 0; }
+/* A missing CLI: its name over the install command, which never breaks mid-command. */
+.ask-install { display: grid; justify-items: start; gap: 6px; }
+.ask-install code.inline-code { max-width: 100%; overflow-x: auto; white-space: nowrap; overflow-wrap: normal; }
+.ask-error { color: var(--error); }
 ::highlight(study-comments) { background-color: var(--wash); color: var(--ink); }
 ::highlight(study-comment-focus) { background-color: var(--accent); color: var(--canvas); }
 
@@ -968,7 +1139,11 @@ button.lecture-recall { margin-top: var(--s2); }
   [data-outline="collapsed"] .outline-context { display: block; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--text-ui); font-weight: 500; }
   /* On phones the Contents button sits at the end of the top bar. */
   button.contents-toggle { top: var(--s1); right: var(--s5); }
+  /* In the phone's top bar the Ask agent button sits in line with the contents button. */
+  button.ask-launch { top: var(--s1); right: calc(var(--s5) + var(--target) + var(--s2)); }
+  body:not(:has(button.contents-toggle:not([hidden]))) button.ask-launch { right: var(--s5); }
   :root:has(.contents-toggle:not([hidden])) .outline-context { margin-inline-end: calc(var(--target) + var(--s2)); }
+  :root:has(.ask-launch:not([hidden])) .outline-context { margin-inline-end: calc(2 * var(--target) + 2 * var(--s2)); }
   .page-outline { top: calc(var(--target) + 2 * var(--s1) + var(--s2)); }
   /* Align the menu glyph, not its touch target, with the reading text. */
   .outline-toggle { position: static; order: -1; margin-inline-start: -15px; opacity: 1; border-radius: var(--r1); background: transparent; }
@@ -1617,6 +1792,10 @@ dialog.search-dialog::backdrop { background: var(--scrim); }
 .search-snippet { color: var(--muted); line-height: 1.45; }
 .search-result mark { padding: 0 1px; border-radius: 2px; background: color-mix(in srgb, var(--accent) 28%, transparent); color: var(--ink); }
 ::highlight(search-hit) { background-color: color-mix(in srgb, var(--accent) 32%, transparent); }
+/* An Ask agent edit draws the new page in this layer behind the current one, then fades it in.
+   It has the page background, so the old page never shows through it. */
+#app.app-next { position: fixed; inset: 0; z-index: 1; opacity: 0; pointer-events: none; background: var(--canvas); transition: opacity .18s ease-out; }
+#app.app-next.app-shown { opacity: 1; }
 .search-arrival { animation: search-arrival 2s ease-out; }
 @keyframes search-arrival { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent); } to { box-shadow: 0 0 0 3px transparent; } }
 @media (prefers-reduced-motion: reduce) { .search-arrival { animation: none; } }

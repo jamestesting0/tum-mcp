@@ -1,0 +1,10 @@
+{
+  "unit": "dijkstra",
+  "block": 4,
+  "section": "Why a settled distance stays fixed",
+  "file": "dijkstra.json",
+  "note": "The trace settles C at 4, so I'll check the argument there.",
+  "step": "In the trace, \\(C\\) settles at \\(4\\). The only other way in is through \\(B\\), already at \\(6\\), so it costs at least \\(6 + 1 = 7\\), more than \\(4\\).",
+  "answer": "Added a fourth step that checks the argument on the trace: when \\(C\\) settles at \\(4\\), the only other way in goes through \\(B\\), already at \\(6\\).\n\nSource: Lecture 2 · Dijkstra's algorithm",
+  "summary": "Updated Why a settled distance stays fixed: added a check on the trace."
+}

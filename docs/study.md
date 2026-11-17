@@ -382,8 +382,9 @@ or an unattended preview, use `tum-mcp study serve ./pse-ws26 --port 8765`.
 If port 8765 is busy, stop the other preview or choose `tum-mcp study --port 8766`.
 Keep the same address and port between sessions so browser progress remains available.
 
-The preview binds `127.0.0.1`, serves `app/` and saves comments through a bounded
-same-origin endpoint. It makes no campus requests.
+The preview binds `127.0.0.1`, serves `app/` and has two bounded same-origin
+endpoints: one saves comments, the other runs Ask agent (below). It makes no campus
+requests.
 No course credentials are copied into the website. Browser storage holds progress
 locally. Nothing is published by these commands.
 
@@ -402,6 +403,49 @@ verifies the result before recording a resolution. Notes and status changes sync
 automatically while the preview is open. Your draft is kept if a note changes
 elsewhere; choose Use latest or Keep mine before saving. Reload after the agent
 rebuilds the teaching content.
+
+## Ask agent
+
+Click the sparkle button in the top corner, beside the contents button, or press
+Ctrl/Command+Alt+K. A panel opens beside the page; the text you select, or else the
+section in view, is what you ask about. It runs on your own account, in a desktop browser:
+
+- **Claude:** sign in with your Claude subscription, or paste an Anthropic API key.
+  Needs Claude Code (`npm install -g @anthropic-ai/claude-code`).
+- **ChatGPT:** sign in with your ChatGPT subscription, or paste an OpenAI API key.
+  Needs Codex (`npm install -g @openai/codex`).
+- **Cursor:** sign in with your Cursor plan, or paste a Cursor API key. Needs the Cursor
+  CLI (`curl https://cursor.com/install -fsS | bash`). Its model menu starts on Auto.
+
+You can connect several accounts at once: a Claude subscription, an Anthropic key, a
+ChatGPT subscription, an OpenAI key, a Cursor plan and a Cursor key. The round account button at the top of the
+panel lists them: choose one to switch, or sign out of one with the button beside it.
+**Add account** connects another; once its sign-in finishes, the panel returns to the
+chat with the new account in use. Chats belong to the course, not to an account, so
+any account can continue one with its earlier messages. The model menu follows Claude
+Code and Codex: it lists the current model of each family, so new models appear on
+their own. Sign-in opens the provider's own login page; tum-mcp never sees subscription
+tokens. The agents run from their own homes under the tum-mcp data folder, so your
+personal Claude Code and Codex settings are untouched. A pasted Anthropic key is
+stored encrypted with your other tum-mcp credentials; a pasted OpenAI key is stored
+by Codex.
+
+A card above the message box shows what the agent will see. While the panel is open,
+it follows the page: the text you select, or the section in view when nothing is
+selected. Its x sends the next message without it. The agent also gets where the
+passage lives in the course, its sources and the course items that build on it. Two
+menus under the message box choose the model and the reasoning effort. While the agent
+works, a log above its answer shows its thinking, the notes it writes and each step; it
+folds to one line when the answer arrives, and is kept with the chat in short form.
+Answers show tables, lists, code and math. Ask a question, or say what to improve: "this is
+explained badly" or "add an example". An edit is checked by a build and the course
+checks, then the page shows it in place without moving, with the panel still open; **Undo** restores
+the previous version and **Redo** puts the edit back, while nothing else has changed
+since. While the agent works, one line shows its current step; afterwards the steps
+fold above the answer. Edited items count as unreviewed until the next
+review round. Chats stay in `.tum-mcp/agent/`, the newest 50 per course, listed under
+the clock icon. Ask agent works only in the local preview, never on a published
+site.
 
 ## Prepare weekly exercises
 
@@ -566,8 +610,8 @@ repository update alone is not a deployed site. Authentication, plan or network
 failures preserve the local build. Polling has a budget of at most 60 seconds,
 in addition to bounded API requests.
 The `tum-mcp study` launcher prints local, hosted and repository URLs, plus pending
-or paused status. Study progress remains per browser; passage comments require
-the local preview and are disabled in the hosted export. Device synchronization
+or paused status. Study progress remains per browser; passage comments and Ask agent
+require the local preview and are disabled in the hosted export. Device synchronization
 and offline support are not included.
 
 ## Create and maintain audio notes

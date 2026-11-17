@@ -43,10 +43,11 @@ function textIndex(material) {
   }
   return { text, starts, ends, segments };
 }
-export function selectedPassage(root, unit) {
+// The passage under the page selection, or under `given` (a Range) when one is passed.
+export function selectedPassage(root, unit, given = null) {
   const selection = getSelection();
-  if (!selection || selection.isCollapsed || selection.rangeCount !== 1) return null;
-  const range = selection.getRangeAt(0);
+  if (!given && (!selection || selection.isCollapsed || selection.rangeCount !== 1)) return null;
+  const range = given || selection.getRangeAt(0);
   const element = range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement;
   const material = element.closest('[data-comment-target]');
   if (!material || !root.contains(material) || !material.contains(range.endContainer)) return null;

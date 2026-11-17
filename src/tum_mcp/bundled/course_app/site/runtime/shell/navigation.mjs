@@ -38,6 +38,15 @@ const paths = {
   ahead: 'M20 12a8 8 0 1 1-2.34-5.66L20 8.7M20 4v4.7h-4.7',
   chapterBack: 'M6 5v14M18 6l-8 6 8 6z',
   chapterNext: 'M18 5v14M6 6l8 6-8 6z',
+  history: 'M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4M12 8v4l3 2',
+  plus: 'M12 5v14M5 12h14',
+  send: 'M12 19V5m-6 6 6-6 6 6',
+  stop: 'M7 7h10v10H7z',
+  selection: 'M4 8V5h3m10 0h3v3m0 8v3h-3M7 19H4v-3M8 10h8m-8 4h5',
+  section: 'M5 6h14M5 10h14M5 14h14M5 18h8',
+  down: 'm7 10 5 5 5-5',
+  sparkle: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM18.5 15l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z',
+  logout: 'M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h10',
 };
 export function iconGlyph(icon) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

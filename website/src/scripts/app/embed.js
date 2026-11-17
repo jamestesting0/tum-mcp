@@ -233,12 +233,15 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
   function dismiss() {
     const doc = win().document;
     doc.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-    doc.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
+    // The Ask agent panel stays open across its scene's beats; a rebuild closes it.
+    doc.querySelectorAll('dialog[open]:not(.ask-panel)').forEach(dialog => dialog.close());
   }
 
   // Returns the app to the route's first view: dialogs closed, toggles the guide switched on
   // switched off, the visit's answers and scroll positions forgotten, the route rendered anew.
   async function rebuild(hash) {
+    // A scene that ran the Ask agent demo changed the course in the frame; a fresh frame undoes it.
+    if (win().__askDemo?.used) await reload();
     const w = win();
     const doc = w.document;
     doc.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
@@ -316,6 +319,20 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     if (toggle?.getAttribute('aria-expanded') === 'true') toggle.click();
   }
 
+  // A beat with `type` types its text into the field, as the visitor would; silent rebuilds fill it at once.
+  // Typing follows the clock frame by frame, at about 30 characters a second.
+  async function typeInto(item, text, animate, live) {
+    const put = value => { item.value = value; item.dispatchEvent(new (win().Event)('input', { bubbles: true })); };
+    if (!animate || reducedMotion.matches) { put(text); return; }
+    const start = performance.now();
+    for (let shown = 0; shown < text.length;) {
+      await new Promise(requestAnimationFrame);
+      if (!live()) return;
+      const length = Math.min(text.length, Math.floor((performance.now() - start) / 34) + 1);
+      if (length !== shown) { put(text.slice(0, length)); shown = length; }
+    }
+  }
+
   // Returns false when a newer scene took over before the beat finished.
   async function playBeat(scene, id, animate) {
     const beat = scene.beats[scene.beat];
@@ -325,14 +342,22 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     // A beat that opened a menu (the workspace switcher) leaves it open for the next beat to use.
     if (!scene.beats[scene.beat - 1]?.opens) dismiss();
     await landed();
-    let item = await find(beat.target, inSidebar(beat) ? 300 : 900);
-    if (!item && inSidebar(beat) && live()) item = await revealSidebar(beat, scene, animate, live);
+    // `wait` gives a beat longer to find its control, such as the result of the agent's work.
+    let item = await find(beat.target, beat.wait ?? (inSidebar(beat) ? 300 : 900));
+    const revealed = !item && inSidebar(beat) && live();
+    if (revealed) item = await revealSidebar(beat, scene, animate, live);
     if (!live()) return false;
     if (!item) { guide.hide(); await settleRoute(beat.route); closeSidebar(); return true; }
     await bringIntoView(item, animate && !reducedMotion.matches, live);
     if (!live()) return false;
     // In a walkthrough the click changes the visual above the control, so the callout goes below.
     guide.place(outline(item), item.closest('.walk') && !beat.place ? { ...beat, place: 'below' } : beat, { animate, index: scene.beat, count: scene.beats.length, measure: () => (item.isConnected ? outline(item) : null) });
+    if (beat.type) {
+      if (animate) await rest(TRAVEL_MS);
+      if (!live()) return false;
+      await typeInto(item, beat.type, animate, live);
+      if (!live()) return false;
+    }
     if (!beat.click) return true;
     if (animate) await rest(TRAVEL_MS);
     if (!live()) return false;
@@ -363,9 +388,11 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
       if (item.isConnected && beat.opens) guide.follow(outline(item), beat, () => (item.isConnected ? outline(item) : null), animate);
       return true;
     }
-    const result = await find(beat.after, 1500);
+    const result = await find(beat.after, beat.wait ?? 1500);
     if (!live()) return false;
-    if (result) {
+    // On a phone the switcher opens inside the revealed sidebar, so the lens stays on it and goes
+    // straight to the workspace next, as on a desktop, rather than widening over the whole menu.
+    if (result && !(revealed && beat.opens)) {
       if (animate) await rest(TRAVEL_MS / 2);
       if (!live()) return false;
       // What the click revealed may sit under the app's sticky bar or below the view.
@@ -428,6 +455,8 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
       if (beat >= 0 && !(await playBeat({ ...goal.scene, beat }, id, false))) return false;
     } finally {
       quiet = false;
+      const demo = win().__askDemo;
+      if (demo) demo.instant = false;
     }
     return id === run;
   }
@@ -489,12 +518,15 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
       if (id !== run) return;
       if (anchor) alignTop(anchor);
     }
+    const demo = win().__askDemo;
+    if (demo) demo.instant = true;
     for (const beat of scene.beats.slice(0, Math.max(scene.beat, 0))) {
-      if (!beat.click) continue;
-      let item = await find(beat.target, inSidebar(beat) ? 300 : 900);
+      if (!beat.click && !beat.type) continue;
+      let item = await find(beat.target, beat.wait ?? (inSidebar(beat) ? 300 : 900));
       if (!item && inSidebar(beat)) item = await revealSidebar(beat, scene, false, () => id === run);
       if (id !== run) return;
-      if (item) click(scene.hash, beat.target, item);
+      if (item && beat.type) await typeInto(item, beat.type, false, () => true);
+      if (item && beat.click) click(scene.hash, beat.target, item);
       await settleRoute(beat.route);
       if (beat.route) closeSidebar();
       await frames();
@@ -534,7 +566,21 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     else win().dispatchEvent(new HashChangeEvent('hashchange'));
   }
 
+  // Loads the app afresh in the frame, keeping the tour's own state.
+  function reload() {
+    return new Promise(resolve => {
+      frame.addEventListener('load', () => { prepare(); resolve(); }, { once: true });
+      frame.srcdoc = documentText();
+    });
+  }
+
   function onLoad() {
+    prepare();
+    if (request) present(request);
+    else releaseFocus();
+  }
+
+  function prepare() {
     loaded = true;
     const doc = win().document;
     doc.head.append(Object.assign(doc.createElement('style'), { textContent: 'html, body, main, .sidebar-body { overscroll-behavior: contain; }' }));
@@ -561,8 +607,6 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     });
     win().localStorage.setItem(THEME_KEY, JSON.stringify(theme));
     doc.documentElement.dataset.theme = theme;
-    if (request) present(request);
-    else releaseFocus();
   }
 
   function load() {
