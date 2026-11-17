@@ -361,6 +361,8 @@ export function drawGraph(block, label = '', values = {}) {
       graph.style.minWidth = `${Math.ceil(Number(graph.dataset.naturalWidth) * 12 / (innerWidth < 1200 ? SIZES.label : Number(graph.dataset.smallestText)))}px`;
       if (innerWidth < 1200) return;
       const column = box.getBoundingClientRect(), area = layout.getBoundingClientRect();
+      // A hidden diagram (an unopened example tab) has no width to fit; it fits when shown.
+      if (!column.width) return;
       const inset = column.width - region.getBoundingClientRect().width;
       const outline = layout.querySelector('.page-outline');
       const outlineBox = outline?.getClientRects().length ? outline.getBoundingClientRect() : null;
@@ -375,12 +377,16 @@ export function drawGraph(block, label = '', values = {}) {
     };
     // The reading area changes width only when the window resizes or the outline or reference
     // panel opens. Fitting sets the region's margins, so a size observer on the area would see
-    // its own change (a ResizeObserver loop); a resize listener cannot.
+    // its own change (a ResizeObserver loop); a resize listener cannot. The card's container
+    // keeps its width whatever the card's margins are, so observing it catches only the
+    // diagram being shown or hidden.
     const refit = () => {
-      if (!graph.isConnected) { removeEventListener('resize', refit); changes.disconnect(); return; }
+      if (!graph.isConnected) { removeEventListener('resize', refit); changes.disconnect(); shown.disconnect(); return; }
       requestAnimationFrame(fit);
     };
     const changes = new MutationObserver(refit);
+    const shown = new ResizeObserver(refit);
+    shown.observe(box.parentElement);
     addEventListener('resize', refit);
     changes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-contents', 'data-reference'] });
     graph.addEventListener('graphdraw', fit);
