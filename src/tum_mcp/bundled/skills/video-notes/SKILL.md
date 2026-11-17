@@ -84,7 +84,10 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
    that show the wrong object for their sentence, render and publish again. Never
    leave a requested video as a draft in `.build`. Details, records and recovery:
    [workflow](references/workflow.md).
-9. **Report.** Name created, updated, reused and text-first units, exercises and
+9. **Published site.** When the request's videos are installed and the course has a
+   published site, run `tum-mcp study publish sync PROJECT --automatic` once. It
+   respects a paused site and the review gate. Never upload after each video.
+10. **Report.** Name created, updated, reused and text-first units, exercises and
    patterns, parts left to the page, gaps, narrator,
    durations, checks actually run and paths under `videos/`. Run
    [verification](references/verification.md) before claiming anything is complete.
@@ -105,7 +108,8 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
 ## Boundaries
 
 All course outputs stay inside `videos/`; shared runtimes and voice models live in
-host user storage. Videos are local: they play in Study, inside Exercise solutions and
-on Exam pattern pages through `tum-mcp study` and are never uploaded, including by publish-course. Silent
-drafts are for visual review only and are never published. Lecture recordings,
+host user storage. Installed videos play in Study, inside Exercise solutions and
+on Exam pattern pages, in the local app and on a published site. Storyboards, scene code,
+narration drafts and `.build/` never leave the project. Silent drafts are for visual
+review only and are never published. Lecture recordings,
 transcription and voice cloning are out of scope.

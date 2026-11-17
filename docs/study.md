@@ -507,21 +507,25 @@ verification, then returns the website link. You do not need to run commands or
 choose workspace flags. If GitHub needs authentication, the agent starts sign-in
 and you complete account authorization.
 
-The GitHub repository is private; the Pages website is public. An eligible paid
-GitHub plan is required for Pages from private repositories. This workflow does
-not provide private website access. All prepared Study, Exercises, Exam and
-Lecture content is included, with statements, hints, solutions and required
-images. Review that content for the intended public audience. Missing workspaces
+The Pages website is public. The GitHub repository is private when your plan serves
+Pages from private repositories (GitHub Pro, free with the Student Developer Pack).
+On GitHub Free, the publisher makes the new repository public before it uploads
+anything; a public repository also shows earlier versions of the site in its
+history. This workflow does not provide private website access. All prepared
+Study, Exercises, Exam and Lecture content is included, with statements, hints,
+solutions and required images, and so are installed video and audio notes. Review that content for the intended public audience. Missing workspaces
 are not generated merely to publish.
 
 Names use `study-<course>-<semester>` in lowercase with hyphens. A collision gets
-a stable course suffix; existing repositories are never made public. Settings in
+a stable course suffix; an existing repository is never made public. Settings in
 `.tum-mcp/github.json` bind updates to that course, semester and repository. A
 failed setup retries the same saved repository rather than creating duplicates.
 
 Older selective publication settings do not silently expand on an automatic
 build. Ask to publish the complete app once to adopt the new contract, retaining
-the same repository, URL and automatic-upload preference.
+the same repository, URL and automatic-upload preference. A site published before
+video and audio notes could be published keeps them local until you ask to publish
+them.
 
 The export removes local-document citations and their source metadata. Canonical
 external Lecture recording links remain: notes open their cited times, and
@@ -529,10 +533,16 @@ highlight ranges and thumbnails open the original recording. The recording
 service may still require the visitor's campus login. Internal Recall panels,
 definitions and links between workspaces remain available.
 
-Only the generated renderer, sanitized learning data and required images are
-uploaded. Downloaded originals, raw lecture evidence, credentials, AGENTS.md,
-course inventory, link packets, authoring plans, passage comments, personal
-progress, audio, generated videos and arbitrary files stay local. Git itself is
+Only the generated renderer, sanitized learning data, required images and
+installed media are uploaded. Media means each installed video's track, captions,
+poster and transcript, and each installed audio track with its script and the
+playlist download; a track voiced by ElevenLabs carries "(elevenlabs.io)" in its
+title, as that service's free plan requires. Downloaded originals, raw lecture
+evidence, credentials, AGENTS.md, course inventory, link packets, authoring plans,
+passage comments, personal progress, media drafts, storyboards, scene code, media
+build files and arbitrary files stay local. Sites are limited to 900 MiB and media
+files to 40 MiB each. A large first upload continues over several short publish
+calls, and the site changes only once every file has arrived. Git itself is
 not required: the publisher uses authenticated GitHub API calls through the host's
 `gh` CLI. Publication settings contain no credentials.
 
@@ -634,8 +644,8 @@ transcript that follows the voice and plays from any sentence you tap, playback
 speed, and a mini player that keeps playing while you move to Study, Exercises or
 Exam. Each track resumes where you stopped. **Download playlist** saves a ZIP of
 every track (chapters included), an M3U playlist and a short README for any phone or
-podcast player; each track also downloads on its own. Like videos, audio is local
-only: hosted study sites never include or request it.
+podcast player; each track also downloads on its own. A published study site plays
+the same installed tracks (see publishing above).
 
 Names remain stable across updates, using prefixes and slugs such as
 `01_security-foundations`. New content within a category updates that complete
@@ -759,9 +769,8 @@ Published videos appear above the topic's Content in the local app (`tum-mcp stu
 with chapters, captions and a transcript link, and show a notice when the topic
 changed after the video was made. Exercise videos mount only when Solution (or
 “Video solution (all parts)”) opens, never autoplay, pause on close, and do not
-change written-answer progress. Exam does not expose them. Hosted study sites
-never include or request videos; copy files from `videos/tracks/` to watch them
-elsewhere. `tum-mcp video-notes inspect PROJECT` reports planned, stale, pending and
+change written-answer progress. A published study site plays the same installed
+videos; copy files from `videos/tracks/` to watch them elsewhere. `tum-mcp video-notes inspect PROJECT` reports planned, stale, pending and
 published videos, and `tum-mcp study demo PROJECT --videos` adds a synthetic preview
 clip.
 

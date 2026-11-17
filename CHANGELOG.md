@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- A published study site plays the course's installed video and audio notes: tracks,
+  captions, posters, transcripts, read-along scripts and the playlist download. Drafts,
+  storyboards, scene code and build files stay local. Sites published earlier add media
+  only when the student asks once. On GitHub Free, whose Pages cannot serve private
+  repositories, the publisher makes the new repository public before it uploads anything.
+  Large uploads continue over several short publish calls and never send a file twice;
+  `study publish sync --automatic` publishes once after a media batch as a build would.
+  ElevenLabs-voiced tracks show "(elevenlabs.io)" in their published title.
 - Every course answers how its items connect, with no extra install: `study context`
   and `study impact` follow the links authors write between Study, Exercises, Exam and
   Lecture, and the read-content skill explains them. The optional Course Memory
