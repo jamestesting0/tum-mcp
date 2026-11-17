@@ -43,7 +43,7 @@ build-backend = "hatchling.build"
 packages = ["src/tum_mcp"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["skill-lab"]
+exclude = ["skill-lab", "website"]
 
 [dependency-groups]
 dev = [
@@ -70,6 +70,8 @@ filterwarnings = ["error::pytest.PytestUnhandledThreadExceptionWarning"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+# The walkthrough's synthetic course holds Video Notes scenes, checked by that pipeline's lint.
+extend-exclude = ["website/course"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "S", "ASYNC"]
