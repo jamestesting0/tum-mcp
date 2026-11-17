@@ -99,9 +99,11 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    Every question you write shows a figure, code, diagram, formula, table or plot beside
    its text, written as in [writing](../prepare-study/references/writing.md).
 7. **Build and verify** ([verification](references/verification.md)). Edit each item's
-   own file and preserve unrelated items; plan patterns (their cases) before writing and
-   lint each with `tum-mcp study lint PROJECT --item exam/pattern/KEY`; after editing
-   cheatsheet entries lint the sheet with `--item exam/sheet`. Build once per
+   own file and preserve unrelated items; plan patterns (their cases) before writing.
+   Write a coherent batch (one topic's entries and patterns), then lint it once with
+   `tum-mcp study lint PROJECT` and fix every finding before linting again. Use
+   `--item exam/pattern/KEY` or `--item exam/sheet` only to recheck one repair. Run
+   each check once per round of fixes, never after each single fix. Build once per
    coherent batch, review `exam-report --section targets`, finish Phase A of the
    [draft checks](../prepare-study/references/loop.md), run
    `tum-mcp study visuals PROJECT --exam` and `--interact`, and fix what they report. Solutions
