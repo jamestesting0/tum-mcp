@@ -23,7 +23,9 @@ language. Record each language as a two-letter code such as `en` or `de`. Transl
 faithfully: its givens, symbols and labels stay as printed. Never translate code or
 identifiers such as method, class, variable and file names. When the workspace language
 differs from the course's or the student's, list each key term once in `app/terms.json`
-under `pairs` (`study schema terms`); skip a term spelled the same in both. The build marks
+under `pairs` (`study schema terms`). Both cases need it: an English workspace of a German
+course, and a German workspace for a student who writes in English. Skip a term spelled the
+same in both languages. The build marks
 its first use in each unit and shows the other language there, so never add it in brackets.
 
 Use the course binding in AGENTS.md and `.tum-mcp/state.json`. Work in the same app

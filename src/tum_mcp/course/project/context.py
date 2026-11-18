@@ -122,6 +122,15 @@ def workspace_languages(root: Path) -> dict[Workspace, str | None]:
     }
 
 
+def student_and_course_language(root: Path) -> tuple[str | None, str | None]:
+    """The language the student writes in and the one the course is taught in, when recorded."""
+    try:
+        header = _header(root)
+    except (UnicodeError, yaml.YAMLError, ValidationError):
+        header = None
+    return (header.student_language, header.content_language) if header else (None, None)
+
+
 def handbook_problem(root: Path) -> str | None:
     """Why course.md's frontmatter is invalid, or None when it is valid or absent."""
     try:

@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
+from tum_mcp.course.checks.report import missing_pair_flags
 from tum_mcp.course.content.terms import TermList
 
 TERMS = TermList.model_validate(
@@ -67,3 +68,17 @@ def test_a_form_belongs_to_one_pair_and_a_pair_needs_two_languages() -> None:
         TermList.model_validate({"pairs": [{"en": "set"}]})
     with pytest.raises(ValidationError, match="spelled the same"):
         TermList.model_validate({"pairs": [{"en": "Pumping-Lemma", "de": "Pumping-Lemma"}]})
+
+
+def test_a_workspace_in_another_language_than_the_student_needs_pairs() -> None:
+    present = {"study": True, "exercises": False}
+    # German Study for a student who writes in English, with no pairs yet.
+    flags = missing_pair_flags(
+        TermList(), {"study": "de", "exercises": "de"}, ("en", "de"), present
+    )
+    assert [(flag["flag"], "study" in str(flag["detail"])) for flag in flags] == [
+        ("missing_pairs", True)
+    ]
+    assert not missing_pair_flags(TERMS, {"study": "de"}, ("en", "de"), present)
+    assert not missing_pair_flags(TermList(), {"study": "de"}, ("de", "de"), present)
+    assert not missing_pair_flags(TermList(), {"study": "de"}, (None, "de"), present)

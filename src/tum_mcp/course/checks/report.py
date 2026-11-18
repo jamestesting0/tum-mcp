@@ -1637,6 +1637,29 @@ def handbook_flags(problem: str | None) -> list[dict[str, JsonValue]]:
     ]
 
 
+def missing_pair_flags(
+    terms: TermList,
+    languages: Mapping[str, str | None],
+    known: tuple[str | None, str | None],
+    present: Mapping[str, bool],
+) -> list[dict[str, JsonValue]]:
+    """A prepared workspace whose language differs from the student's or the course's, while
+    the term list names no key term in two languages."""
+    if terms.pairs or None in known:
+        return []
+    return [
+        {
+            "item": "course",
+            "flag": "missing_pairs",
+            "detail": f"The {workspace} language ({language}) differs from the student's or the "
+            f"course's ({' or '.join(sorted({code for code in known if code != language}))}), "
+            "but app/terms.json lists no pairs. List each key term once in both languages.",
+        }
+        for workspace, language in languages.items()
+        if present.get(workspace) and language and any(code != language for code in known)
+    ]
+
+
 def term_flags(terms: TermList, *workspaces: BaseModel | None) -> list[dict[str, JsonValue]]:
     """Listed terms the build would mark nowhere, usually because the text uses a spelling the
     list does not name."""

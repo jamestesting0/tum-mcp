@@ -165,6 +165,7 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
         handbook_flags,
         language_flags,
         lecture_flags,
+        missing_pair_flags,
         quality_flags,
         term_flags,
     )
@@ -184,7 +185,11 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
     from tum_mcp.course.ledger.coverage import read_ledger
     from tum_mcp.course.ledger.coverage import sheet_flags as coverage_flags
     from tum_mcp.course.media.inventory import discover
-    from tum_mcp.course.project.context import handbook_problem, workspace_languages
+    from tum_mcp.course.project.context import (
+        handbook_problem,
+        student_and_course_language,
+        workspace_languages,
+    )
     from tum_mcp.course.project.store import load_state
     from tum_mcp.course.review.media import media_report, read_media_reviews
 
@@ -224,6 +229,17 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
         *lecture_flags(lectures),
         *language_flags(workspace_languages(root), content, exercises, exam),
         *term_flags(read_terms(root), content, exercises, exam, lectures),
+        *missing_pair_flags(
+            read_terms(root),
+            workspace_languages(root),
+            student_and_course_language(root),
+            {
+                "study": content is not None,
+                "exercises": exercises is not None,
+                "exam": exam is not None,
+                "lectures": lectures is not None,
+            },
+        ),
         *handbook_flags(handbook_problem(root)),
         *links,
         *(forward_terms(content) if content else ()),
