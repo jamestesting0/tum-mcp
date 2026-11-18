@@ -165,6 +165,7 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
         language_flags,
         lecture_flags,
         quality_flags,
+        term_flags,
     )
     from tum_mcp.course.checks.structure import course_map, forward_terms
     from tum_mcp.course.content.exam_data import (
@@ -177,11 +178,12 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
     )
     from tum_mcp.course.content.exercise_data import read_exercises
     from tum_mcp.course.content.store import present
+    from tum_mcp.course.content.terms import read_terms
     from tum_mcp.course.lecture.data import read_lectures
     from tum_mcp.course.ledger.coverage import read_ledger
     from tum_mcp.course.ledger.coverage import sheet_flags as coverage_flags
     from tum_mcp.course.media.inventory import discover
-    from tum_mcp.course.project.context import content_language
+    from tum_mcp.course.project.context import workspace_languages
     from tum_mcp.course.project.store import load_state
     from tum_mcp.course.review.media import media_report, read_media_reviews
 
@@ -219,7 +221,8 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
         *quality_flags(content, exercises, root=root),
         *exam_block_flags(exam),
         *lecture_flags(lectures),
-        *language_flags(content_language(root), content, exercises, exam),
+        *language_flags(workspace_languages(root), content, exercises, exam),
+        *term_flags(read_terms(root), content, exercises, exam, lectures),
         *links,
         *(forward_terms(content) if content else ()),
         *sheet_flags(exam),

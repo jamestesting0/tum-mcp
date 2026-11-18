@@ -67,6 +67,15 @@ Zulip channel.
 - Exercise guides follow the solution step by step. Compare shows the full working;
   Solution shows only the answer.
 
+### Languages
+
+- Each workspace (Study, Exercises, Exam, Lecture) has its own language. When the course
+  is taught in a language other than the one you write in, the agent asks once per
+  workspace and remembers your answer.
+- Audio and video notes use the language of the workspace they come from.
+- A translated key term shows its other-language form in a bubble at its first use in each
+  unit. Code and method names are never translated.
+
 ### Preparation and review
 
 1. The agent checks coverage and completes the draft.

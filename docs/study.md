@@ -60,8 +60,9 @@ keeps the rest of the file; an edited guide is kept and reported for review.
 The guide sends the agent to `.tum-mcp/course.md` first. That short handbook explains
 the course's goals, lectures/tutorials, weekly work and platforms, assessment/bonus
 conditions, conventions (textbook, notation, answer format), communication and
-preparation map. Its `content_language` names the language every workspace is written in: the
-course's own, unless the student asked for another. Claims carry source
+preparation map. Its `content_language` names the language the course is taught in,
+`student_language` the language you write to the agent in, and `languages` the language
+chosen for each workspace (see [Course languages](#course-languages)). Claims carry source
 links/locators and checked dates; unknowns and conflicting announcements stay visible.
 Detailed source content remains in materials/. All TUM MCP course state, plans and
 agent notes live under .tum-mcp/.
@@ -157,8 +158,8 @@ Ask `prepare-study` to create or extend the Study workspace in `app/`. The agent
 writes one file per unit under `app/study/` from your stored course material, and `tum-mcp study build`
 installs the shared course app and checks every cited source. Units follow the
 course's lecture or week sequence when useful, or consistent topics, with at most
-one category level. Lessons use the language you write in and give a key term's
-source-language form once. Study teaches proofs, derivations and code in full and checks a
+one category level. Lessons use the language chosen for Study; a key term's
+source-language form appears in its bubble. Study teaches proofs, derivations and code in full and checks a
 decisive step; writing them yourself is Exercises work, prepared when you ask. Code listings
 have a Wrap lines toggle. Every unit has:
 
@@ -366,6 +367,21 @@ sources' exam requirements). Every current classified past question appears in i
 pattern packet, with statement, solution and guide; changing one reopens the affected
 checks. Forecast questions, Lecture selection
 and Lecture entries have their own checks; the course pass checks their organization.
+
+## Course languages
+
+Each workspace (Study, Exercises, Exam, Lecture) has its own language. When the course
+is taught in a language other than the one you write in, the agent asks once, before
+it first prepares a workspace, which of the two to use, and records the answer in
+`.tum-mcp/course.md`. Audio and video notes use the language of the workspace they come
+from.
+
+The agent lists key terms once in `app/terms.json`, in both languages, plus short
+explanations of difficult words (`study schema terms`). The build marks each term's
+first use in every unit, exercise, Exam page and lecture: a dotted term whose bubble
+shows the other language ("German · Kettenregel" in an English lesson, "English · chain
+rule" in a German one) and any explanation. Code, method, class and variable names are
+never translated. `study report` flags a listed term that no text uses.
 
 ## Preview the app
 
@@ -630,8 +646,8 @@ Audio Notes makes three kinds of track. Study tracks re-explain the lessons unde
 cheatsheet entry's condition, rule or formula (read with audible grouping), one short
 example and its trap, and each exam pattern's cues, steps, cases and pitfalls. Exercise
 tracks talk through one prepared solution: what each part asks, the method and why it
-fits, each step's reason and every answer. All keep the
-course's language, examples, assumptions and limitations. It turns tables, formulas, code and diagram sequences
+fits, each step's reason and every answer. All use the language of the workspace they
+come from and keep its examples, assumptions and limitations. It turns tables, formulas, code and diagram sequences
 into explanations that work without a screen. It does not independently research
 the course or create new subject matter. An audio-only request reuses the prepared
 course; it does not refresh campus sources or rebuild the website automatically.

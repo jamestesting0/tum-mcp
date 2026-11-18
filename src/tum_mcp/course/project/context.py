@@ -1,7 +1,7 @@
 """A small, agent-authored course handbook with explicit review freshness."""
 
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal, get_args
 
 import yaml
 from pydantic import Field, ValidationError
@@ -10,15 +10,20 @@ from tum_mcp.course.project.models import Course, Digest, Key, StudyState
 from tum_mcp.course.project.store import confined, digest, private_path
 from tum_mcp.settings import Frozen
 
+Language = Annotated[str, Field(pattern=r"^[a-z]{2}$")]
+Workspace = Literal["study", "exercises", "exam", "lectures"]
+
 
 class ContextHeader(Frozen):
     course_key: Key
     semester: str
     reviewed_generation: Digest | None = None
     reviewed_sources: dict[Key, Digest] = Field(default_factory=dict, max_length=1000)
-    # The language every workspace is written in: the course's own, unless the student asked
-    # for another (a two-letter code such as en or de).
-    content_language: str | None = Field(default=None, pattern=r"^[a-z]{2}$")
+    # Two-letter codes such as en or de: the language the course is taught in, the one the
+    # student writes to the agent in, and each workspace's chosen language.
+    content_language: Language | None = None
+    student_language: Language | None = None
+    languages: dict[Workspace, Language] = Field(default_factory=dict)
 
 
 def scaffold(course: Course) -> str:
@@ -29,6 +34,8 @@ def scaffold(course: Course) -> str:
             "reviewed_generation": None,
             "reviewed_sources": {},
             "content_language": None,
+            "student_language": None,
+            "languages": {},
         },
         sort_keys=False,
     ).rstrip()
@@ -92,17 +99,22 @@ class CourseReview(Frozen):
     coverage_gaps: tuple[str, ...] = ()
 
 
-def content_language(root: Path) -> str | None:
-    """The course's recorded content language, or None while course.md does not record one."""
+def workspace_languages(root: Path) -> dict[Workspace, str | None]:
+    """Each workspace's language: its recorded choice, else the course's language."""
     path = private_path(root, "course.md")
+    header = None
     try:
         text = path.read_text(encoding="utf-8") if path.is_file() else ""
-        if not text.startswith("---\n") or "\n---\n" not in text[4:]:
-            return None
-        header = ContextHeader.model_validate(yaml.safe_load(text[4:].split("\n---\n", 1)[0]))
+        if text.startswith("---\n") and "\n---\n" in text[4:]:
+            header = ContextHeader.model_validate(yaml.safe_load(text[4:].split("\n---\n", 1)[0]))
     except (UnicodeError, yaml.YAMLError, ValidationError):
-        return None
-    return header.content_language
+        header = None
+    if header is None:
+        return dict.fromkeys(get_args(Workspace))
+    return {
+        workspace: header.languages.get(workspace, header.content_language)
+        for workspace in get_args(Workspace)
+    }
 
 
 def context_review(root: Path, state: StudyState) -> CourseReview:

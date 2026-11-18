@@ -165,10 +165,10 @@ Every sentence must teach. Cut lines that only restate a title, describe the pag
 tell the student to read, work or compare; the app already shows how to use itself.
 Follow [writing](writing.md): short active sentences, one idea at a time, consistent
 technical terms and the lecturer's notation, and no sentences about the material itself. Aim around 20–25 words; do not spend iterations counting words
-or sacrifice qualifications to meet a limit. Write in the course's content language.
-When the sources use another language, give a key term's source form once where the lesson
-introduces it, such as "chain rule (Kettenregel)", so the student can match the slides
-and the exam. These
+or sacrifice qualifications to meet a limit. Write in the workspace's language. When the
+sources use another language, list each key term with its source form in `app/terms.json`;
+the app shows that form where the term first appears in each unit, so the student can match
+the slides and the exam. These
 local rules adapt [STE structural guidance](https://github.com/danyuchn/asd-ste100-skill/tree/c7b11cd9258708909d8574c8176d4c70969c8b29);
 that link is provenance, not required research. No certified dictionary claim.
 

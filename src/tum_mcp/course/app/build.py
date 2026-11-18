@@ -12,6 +12,7 @@ from tum_mcp.course.app.publish_models import PublishReport
 from tum_mcp.course.content.exam import ExamContent
 from tum_mcp.course.content.exercise_data import (
     check_prerequisites,
+    check_terms,
     read_exercises,
     render_exercises,
     stale_exercises,
@@ -19,7 +20,7 @@ from tum_mcp.course.content.exercise_data import (
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.figures import figure_bytes, figure_images
 from tum_mcp.course.content.latex import compile_latex, inline_math
-from tum_mcp.course.content.store import locate, present, read_json
+from tum_mcp.course.content.store import index_name, locate, present, read_json
 from tum_mcp.course.content.study import (
     ExploreMaterial,
     StudyContent,
@@ -27,6 +28,7 @@ from tum_mcp.course.content.study import (
     compile_formulas,
     resolve_meanings,
 )
+from tum_mcp.course.content.terms import TermList, move_annotations, read_terms
 from tum_mcp.course.lecture.assets import asset_writes
 from tum_mcp.course.lecture.content import LectureContent
 from tum_mcp.course.lecture.data import read_lectures, render_lectures, stale_lectures
@@ -179,11 +181,13 @@ class BuildReport:
 
 
 def read_content(root: Path) -> StudyContent:
+    move_annotations(root, index_name("study"))
     body = read_json(root, "study")
     if body is None:
         raise CampusError(Code.ACTION_REQUIRED, "Prepare app/study/course.json first.")
     try:
-        return StudyContent.model_validate_json(body)
+        listed = {form.casefold() for form in read_terms(root).bubbles()}
+        return StudyContent.model_validate_json(body, context={"listed": listed})
     except ValidationError as error:
         document = json.loads(body)
         locations = [
@@ -238,6 +242,8 @@ def _app_data(
     exam: ExamContent | None = None,
 ) -> dict[str, JsonValue]:
     continuity = _read_progress_continuity(root)
+    terms = read_terms(root) if root is not None else TermList()
+    marker = terms.marker()
     units: list[JsonValue] = []
     for unit in content.units if content else ():
         value = compile_formulas(unit.model_dump(mode="json", exclude_none=True))
@@ -248,6 +254,7 @@ def _app_data(
         for item, rendered in zip(unit.explore, value.get("explore", []), strict=True):
             rendered["revision"] = explore_revision(item)
         resolve_meanings(value)
+        marker.mark(value)
         units.append(value)
     referenced = (
         {source.key for unit in content.units for source in unit.sources} if content else set()
@@ -307,8 +314,8 @@ def _app_data(
         else {},
         "incompleteSources": sum(item.status != "complete" for item in state.coverage),
     }
-    if content and content.annotations:
-        payload["annotations"] = [entry.model_dump(mode="json") for entry in content.annotations]
+    if bubbles := terms.bubbles():
+        payload["terms"] = bubbles
     payload["workspaces"] = (["study"] if content else []) + (["exercises"] if exercises else [])
     if root is not None:
         from tum_mcp.course.ledger.coverage import pending_exercises, read_ledger, study_preparation
@@ -321,6 +328,8 @@ def _app_data(
         if root is None:
             raise CampusError(Code.ACTION_REQUIRED, "Lecture projection needs its bound project.")
         value = render_lectures(root, lectures)
+        for lecture in value["lectures"]:
+            marker.mark(lecture)
         payload["lectures"] = value
         payload["workspaces"].append("lectures")
         payload["inlineMath"] = {**payload["inlineMath"], **_inline_math(value)}
@@ -330,6 +339,9 @@ def _app_data(
         value = render_exam(exam)
         for context in _exam_contexts(value):
             resolve_meanings(context)
+            marker.mark(context)
+        for concept in value.get("concepts", []):
+            marker.mark(concept)
         payload["exam"] = value
         payload["workspaces"].append("exam")
         payload["inlineMath"] = {**payload["inlineMath"], **_inline_math(value)}
@@ -338,6 +350,7 @@ def _app_data(
         for exercise_set in value.get("sets", []):
             for exercise in exercise_set.get("exercises", []):
                 resolve_meanings(exercise)
+                marker.mark(exercise)
                 old_exercise = continuity.exercises.get(exercise["key"])
                 if old_exercise and old_exercise.current == exercise["revision"]:
                     exercise["progressFrom"] = old_exercise.previous
@@ -457,6 +470,20 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
             stale += stale_exam(root, state, exam)
             check_unit_links(exam, content)
             check_exercise_links(exam, exercises)
+        terms = read_terms(root)
+        if content and (
+            both := {entry.term.casefold() for entry in terms.glosses}
+            & {term.casefold() for term in content.definitions()}
+        ):
+            raise CampusError(
+                Code.INVALID_RESPONSE,
+                "Gloss a term in app/terms.json or define it in Study, not both: "
+                f"{sorted(both)[:5]}.",
+            )
+        listed = set(terms.bubbles())
+        for name, value in (("Exercises", exercises), ("Exam", exam)):
+            if value is not None:
+                check_terms(value.model_dump(mode="json"), content, name, listed)
         from tum_mcp.course.ledger.coverage import check_ledger, read_ledger
 
         ledger = read_ledger(root)

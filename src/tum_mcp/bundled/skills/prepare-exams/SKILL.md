@@ -13,10 +13,16 @@ drops figures and scrambles tables and formulas. Open the PDF page if your tools
 PDFs; otherwise add `--images` and open the image. A scanned page has
 no searchable text, so a phrase search can miss what is on it.
 
-Write in the course's content language, recorded in `.tum-mcp/course.md`: the language the
-course is taught in, unless the student asked for another. Translate a released statement in
-another language faithfully: its givens, symbols, labels and code stay as printed, and each
-source term appears once.
+Write in the course's content language for this workspace: `languages.<workspace>` in
+`.tum-mcp/course.md` (`study`, `exercises`, `exam` or `lectures`). When it is missing, use
+`content_language`, the language the course is taught in. If that differs from the student's
+language (`student_language`; record it from this chat when missing), first ask which of the
+two they want, unless you cannot ask. Record the answer. Translate a released statement
+faithfully: its givens, symbols and labels stay as printed. Never translate code or
+identifiers such as method, class, variable and file names. When the workspace language
+differs from the course's or the student's, list each key term once in `app/terms.json`
+under `pairs` (`study schema terms`). The build marks its first use in each unit and
+shows the other language there, so never add it in brackets.
 
 You author the files under `app/exam/` (`exam.json`, and one file per concept, pattern
 and mock; `study schema exam`); `tum-mcp study build PROJECT`

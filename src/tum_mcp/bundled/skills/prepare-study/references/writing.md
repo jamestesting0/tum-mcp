@@ -183,9 +183,9 @@ teacher or features the app deliberately leaves out.
 
 Teach assessed and method-critical concepts in the lesson with a worked example and
 practice. For incidental words, use a familiar equivalent when it preserves the meaning.
-When the specialized term matters, add a short plain-text `annotations` entry
-(`term` and `meaning`) in `app/study/course.json` and mark its first useful occurrence
-with `{{term}}`. Keep glosses in Study explanations and Exercise guide or solution
-prose. Leave official wording, headings, choices, code and math as they are.
+When the specialized term matters, add a short plain-text gloss (`term` and `meaning`)
+under `glosses` in `app/terms.json`. Write no marker: the build marks the term's first use
+in each unit's explanations and Exercise guides, solutions and statements, and the app
+shows the meaning there. Headings, choices, code and math stay unmarked.
 Judge difficulty from the learner's prerequisites and the action the sentence asks
 them to take. Use a formal definition when the concept has a Study passage to revisit.

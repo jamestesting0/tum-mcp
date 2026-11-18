@@ -253,10 +253,12 @@ def report(
         language_flags,
         lecture_flags,
         quality_flags,
+        term_flags,
     )
     from tum_mcp.course.content.exam import ExamContent
     from tum_mcp.course.content.exam_data import exam_item_flags, meta_flags, sheet_flags
-    from tum_mcp.course.project.context import content_language
+    from tum_mcp.course.content.terms import read_terms
+    from tum_mcp.course.project.context import workspace_languages
 
     def exam_quality(exam_content: ExamContent | None) -> list[dict[str, JsonValue]]:
         # The quality section covers Exam as it covers Study and Exercises.
@@ -334,7 +336,8 @@ def report(
             quality_flags(content, exercises, root=root)
             + exam_quality(exam())
             + lecture_flags(lectures())
-            + language_flags(content_language(root), content, exercises, exam())
+            + language_flags(workspace_languages(root), content, exercises, exam())
+            + term_flags(read_terms(root), content, exercises, exam(), lectures())
         )
     )
     parts = {
@@ -636,6 +639,10 @@ def schema(
             from tum_mcp.course.content.exercises import ExerciseContent
 
             result = ExerciseContent.model_json_schema()
+        case "terms":
+            from tum_mcp.course.content.terms import TermList
+
+            result = TermList.model_json_schema()
         case "exam":
             from tum_mcp.course.content.exam import ExamContent
 

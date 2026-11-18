@@ -305,6 +305,8 @@ INVARIANT_FLAGS: dict[str, Dimension] = {
     "unrecorded_sources": "coverage",
     # A listed past paper students cannot practise.
     "unreplayable_paper": "coverage",
+    # A listed term no prose uses, so its bubble never appears.
+    "unused_term": "clarity",
 }
 # Advisory flags a checker must rule on before the gate passes: a finding on the check named
 # here, or why the flag does not apply. A flag no one rules on is how a weak lesson passed.
