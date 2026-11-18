@@ -48,7 +48,7 @@ def test_report_and_lint_hold_source_states_and_phase_gaps(
     from types import SimpleNamespace
 
     from tum_mcp.course.checks.plans import Plan
-    from tum_mcp.course.cli import _lint_item
+    from tum_mcp.course.cli import lint_item
     from tum_mcp.course.review.models import INVARIANT_FLAGS
 
     value = study()
@@ -121,7 +121,7 @@ def test_report_and_lint_hold_source_states_and_phase_gaps(
             items={current.item: SimpleNamespace(value=unit)},
             answer_keys=[],
         )
-        assert _lint_item(tmp_path, context, current.item, None)["passed"] is (not expected)
+        assert lint_item(tmp_path, context, current.item, None)["passed"] is (not expected)
 
 
 def test_walkthrough_quality_signals_and_visibility_boundaries() -> None:

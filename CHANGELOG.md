@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Ask agent: a button in the local course app asks about the selected text or the
+  section in view, in a panel beside the page, on your own Claude (subscription or API
+  key) or ChatGPT (subscription or API key) through the installed Claude Code or Codex.
+  The agent gets the passage, its file, sources and related course items; when asked, it
+  edits the page, the preview builds and checks it, and the page updates in place with
+  Undo and Redo. Chats are kept per course. Sign-in runs through each
+  provider's own login in agent homes under the tum-mcp data folder. The context card
+  follows your selection or the section in view, menus choose the model and reasoning
+  effort, and answers render full Markdown with math. Desktop browsers only. Several
+  accounts can stay connected, including a ChatGPT subscription beside an OpenAI key;
+  the account button switches between them, and any account continues any chat. The
+  model menus list each provider's current models as its CLI reports them. Cursor is a
+  third provider through its CLI, starting on Auto. A log above each answer shows the
+  agent's thinking, notes and steps, and edits apply in place without a reload. The
+  walkthrough shows Ask agent editing a lesson, on phones too. An open chat
+  keeps its agent running between messages, and the preview checks each edit itself.
 - A published study site plays the course's installed video and audio notes: tracks,
   captions, posters, transcripts, read-along scripts and the playlist download. Drafts,
   storyboards, scene code and build files stay local. Sites published earlier add media

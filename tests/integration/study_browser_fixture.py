@@ -148,6 +148,12 @@ def study_website(browser: Browser) -> dict[str, object]:
                         body=json.dumps({"error": error.message}),
                     )
                 return
+            if url.netloc == "study.invalid" and url.path.startswith("/_study/agent/"):
+                # The app preloads Ask agent's state; this fixture runs no agent.
+                route.fulfill(
+                    status=404, content_type="application/json", body='{"error":"No agent"}'
+                )
+                return
             if url.netloc == "study.invalid" and url.path == "/videos/index.json":
                 # The local preview answers this for every app; this course has no videos.
                 route.fulfill(status=200, content_type="application/json", body='{"videos": {}}')

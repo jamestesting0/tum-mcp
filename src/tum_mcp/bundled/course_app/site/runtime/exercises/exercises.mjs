@@ -11,8 +11,11 @@ import { renderCommentedView } from '../comments/comments.mjs';
 import { editorWorkspace } from '../shell/workspace.mjs';
 import { exerciseVideo } from '../lecture/video.mjs';
 
-const sets = data.exercises?.sets || [];
-const ordered = sets.flatMap(group => group.exercises.map(exercise => ({ group, exercise })));
+const flat = list => list.flatMap(group => group.exercises.map(exercise => ({ group, exercise })));
+let sets = data.exercises?.sets || [];
+let ordered = flat(sets);
+// An Ask agent edit swaps the course data in place; the redraw that follows reads the new sets.
+addEventListener('course-data', () => { sets = data.exercises?.sets || []; ordered = flat(sets); });
 export const exerciseLink = (group, exercise, step = '') => `#exercises/${group.key}/${exercise.key}${step ? `/${step}` : ''}`;
 // Only an upcoming deadline matters while studying; a passed one is left out.
 function due(group) {

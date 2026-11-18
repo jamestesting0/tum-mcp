@@ -801,17 +801,17 @@ def lint(
     )
     if item is None:
         results = {
-            key: _lint_item(root, context, key, outcomes)
+            key: lint_item(root, context, key, outcomes)
             for key in sorted(context.items)
             if key != "course"
         }
         result = {"passed": all(r["passed"] for r in results.values()), "items": results}
     else:
-        result = _lint_item(root, context, resolve_item(context.items, item), outcomes)
+        result = lint_item(root, context, resolve_item(context.items, item), outcomes)
     emit(root, "lint", result, full=full)
 
 
-def _lint_item(root: Path, context, item: str, outcomes: set[str] | None) -> dict:
+def lint_item(root: Path, context, item: str, outcomes: set[str] | None) -> dict:
     from tum_mcp.course.checks.plans import (
         gate_status,
         gated,

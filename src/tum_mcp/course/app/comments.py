@@ -195,7 +195,7 @@ def change_comment(root: Path, operation: Operation) -> dict:
         return updated.model_dump(mode="json") | {"revision": digest(after)}
 
 
-def _keyed(value: object, key: str) -> dict | None:
+def keyed(value: object, key: str) -> dict | None:
     """The first object in the data whose `key` is `key`."""
     if isinstance(value, dict):
         if value.get("key") == key:
@@ -203,7 +203,7 @@ def _keyed(value: object, key: str) -> dict | None:
         value = list(value.values())
     if isinstance(value, list):
         for item in value:
-            if (found := _keyed(item, key)) is not None:
+            if (found := keyed(item, key)) is not None:
                 return found
     return None
 
@@ -212,21 +212,21 @@ def _exists(anchor: object, data: dict[str, dict]) -> bool:
     """Whether the item a comment is anchored to is still in the course."""
     match anchor:
         case ExploreAnchor():
-            unit = _keyed(data["content"].get("units", []), anchor.unit_key)
-            item = _keyed((unit or {}).get("explore", []), anchor.item_key)
-            return _keyed((item or {}).get("blocks", []), anchor.block_key) is not None
+            unit = keyed(data["content"].get("units", []), anchor.unit_key)
+            item = keyed((unit or {}).get("explore", []), anchor.item_key)
+            return keyed((item or {}).get("blocks", []), anchor.block_key) is not None
         case LectureAnchor():
-            lecture = _keyed(data["lectures"].get("lectures", []), anchor.lecture_key)
-            return _keyed(list((lecture or {}).values()), anchor.section_key) is not None
+            lecture = keyed(data["lectures"].get("lectures", []), anchor.lecture_key)
+            return keyed(list((lecture or {}).values()), anchor.section_key) is not None
         case ExerciseAnchor():
-            group = _keyed(data["exercises"].get("sets", []), anchor.set_key)
-            return _keyed((group or {}).get("exercises", []), anchor.exercise_key) is not None
+            group = keyed(data["exercises"].get("sets", []), anchor.set_key)
+            return keyed((group or {}).get("exercises", []), anchor.exercise_key) is not None
         case ExamAnchor():
-            return _keyed(data["exam"], anchor.item_key.partition(":")[2]) is not None
+            return keyed(data["exam"], anchor.item_key.partition(":")[2]) is not None
         case Anchor():
-            unit = _keyed(data["content"].get("units", []), anchor.unit_key)
+            unit = keyed(data["content"].get("units", []), anchor.unit_key)
             return unit is not None and (
-                anchor.item_key is None or _keyed(unit, anchor.item_key) is not None
+                anchor.item_key is None or keyed(unit, anchor.item_key) is not None
             )
     return True
 

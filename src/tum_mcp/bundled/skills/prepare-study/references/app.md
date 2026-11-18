@@ -44,8 +44,8 @@ optional backlog are demonstrated in the private agent report.
   frame of the slide or board. Either section may be absent.
 - **Contents:** a button lists the current page's headings in every workspace; wide
   screens can keep the list beside the text. Clear, short block titles make it useful.
-- **Progress** stays in the student's browser. Passage comments work in the local
-  preview only, never on a published site.
+- **Progress** stays in the student's browser. Passage comments and Ask agent work in
+  the local preview only, never on a published site.
 
 The builder keeps the shared renderer under `app/runtime/` and libraries and fonts
 under `app/assets/`. Author content in its workspace directory. A build migrates

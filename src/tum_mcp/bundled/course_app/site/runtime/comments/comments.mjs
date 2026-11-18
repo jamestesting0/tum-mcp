@@ -5,6 +5,9 @@ import { selectedPassage, locatePassage, highlightPassages } from './anchors.mjs
 import { commentStore } from './comment-store.mjs';
 import { commentComposer, createCommentsList } from './comment-ui.mjs';
 import { commentPopover } from './comment-popover.mjs';
+import { trackAsk } from '../ask/ask.mjs';
+
+const touch = matchMedia('(pointer: coarse)');
 
 let active;
 export function stopComments() { active?.abort(); highlightPassages([]); }
@@ -38,7 +41,55 @@ export function renderCommentedView(unit, view, activity, activate) {
     const chosen = selectedPassage(reading, unit);
     if (chosen) openComposer({ anchor: chosen.anchor, id: crypto.randomUUID() }, passageFocus(chosen.anchor)); hide();
   }, 'selection-comment');
-  bubble.hidden = true; bubble.dataset.commentUi = ''; bubble.addEventListener('pointerdown', event => event.preventDefault());
+  const toolbar = node('div', 'selection-toolbar'); toolbar.append(bubble);
+  toolbar.hidden = true; toolbar.dataset.commentUi = '';
+  toolbar.addEventListener('pointerdown', event => event.preventDefault());
+  // Ask agent context: the selected passage, or the section in view when nothing is selected.
+  const askContext = (found, material) => ({ anchor: found.anchor, title: found.anchor.block_title || unit.title || '', unit: unit.title || '', focus: () => passageFocus(found.anchor), material });
+  // Ask accepts any selection on the page, even across sections, where Comment needs one passage.
+  // The agent gets the selected text; the anchor is the first passage the selection touches, or
+  // the section in view when it touches none.
+  function askSelection() {
+    const selection = getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount !== 1 || root.closest('[hidden]')) return null;
+    const range = selection.getRangeAt(0), page = root.closest('main') || reading;
+    if (!page.contains(range.commonAncestorContainer)) return null;
+    const exact = selectedPassage(reading, unit);
+    if (exact) return askContext(exact, selection.anchorNode?.parentElement);
+    const quote = selection.toString().replace(/\s+/g, ' ').trim().slice(0, 2000);
+    if (!quote) return null;
+    for (const material of reading.querySelectorAll('[data-comment-target]')) {
+      if (!range.intersectsNode(material)) continue;
+      const part = document.createRange(); part.selectNodeContents(material);
+      if (range.compareBoundaryPoints(Range.START_TO_START, part) > 0) part.setStart(range.startContainer, range.startOffset);
+      if (range.compareBoundaryPoints(Range.END_TO_END, part) < 0) part.setEnd(range.endContainer, range.endOffset);
+      const found = selectedPassage(reading, unit, part);
+      if (found) return { ...askContext(found, material), quote };
+    }
+    const section = sectionInView();
+    return section && { ...section, title: unit.title || section.title, quote };
+  }
+  function sectionInView() {
+    if (!root.isConnected || root.closest('[hidden]')) return null;
+    let chosen = null;
+    for (const material of reading.querySelectorAll('[data-comment-target]')) {
+      const box = material.getBoundingClientRect();
+      if (!box.height || box.bottom < 0 || box.top > innerHeight) continue;
+      if (chosen && box.top > innerHeight * 0.3) break;
+      chosen = material;
+    }
+    if (!chosen) return null;
+    const walker = document.createTreeWalker(chosen, NodeFilter.SHOW_TEXT);
+    for (let text = walker.nextNode(), tries = 0; text && tries < 8; text = walker.nextNode()) {
+      if (!text.data.trim()) continue;
+      tries++;
+      const range = document.createRange(); range.selectNodeContents(text);
+      const found = selectedPassage(reading, unit, range);
+      if (found) return askContext(found, chosen);
+    }
+    return null;
+  }
+  trackAsk({ selection: askSelection, section: sectionInView }, signal);
   const composer = commentComposer(root, async (draft, text) => {
     await store.change(draft.text !== undefined ? { op: 'edit', id: draft.id, text } : { op: 'create', id: draft.id, anchor: draft.anchor, text }, draft.baseline);
     getSelection()?.removeAllRanges(); savedId = draft.id; paint(); message.textContent = '';
@@ -46,20 +97,22 @@ export function renderCommentedView(unit, view, activity, activate) {
     const item = store.value?.comments.find(item => item.id === (savedId || selectedId)); savedId = null;
     if (item && !signal.aborted) show(item);
   });
-  root.prepend(failure, reading, bubble);
+  root.prepend(failure, reading, toolbar);
   function passageFocus(anchor) {
     return locatePassage(reading, unit, anchor)?.focus || reading.querySelector('h2, h3, .flashcard, legend');
   }
   function openComposer(value, trigger) { if (value.text === undefined) selectedId = null; popup.hide(); composer.show(value, trigger); schedule(1000); }
-  function hide() { bubble.hidden = true; }
+  function hide() { toolbar.hidden = true; }
   function selection() {
     if (!root.isConnected || root.closest('[hidden]') || composer.open) return;
     const passage = selectedPassage(reading, unit);
     if (!passage) { hide(); return; }
-    const { rect } = passage;
-    bubble.style.left = `${Math.max(12, Math.min(rect.left, innerWidth - 136))}px`;
-    bubble.style.top = `${Math.max(8, Math.min(rect.top > 60 ? rect.top - 52 : rect.bottom + 8, innerHeight - 52))}px`;
-    bubble.hidden = false;
+    const rect = passage.rect || getSelection().getRangeAt(0).getBoundingClientRect();
+    // Touch screens show their own copy menu above a selection, so the toolbar goes below it.
+    const above = rect.top > 60 && !touch.matches;
+    toolbar.style.left = `${Math.max(12, Math.min(rect.left, innerWidth - 248))}px`;
+    toolbar.style.top = `${Math.max(8, Math.min(above ? rect.top - 52 : rect.bottom + 8, innerHeight - 52))}px`;
+    toolbar.hidden = false;
   }
   document.addEventListener('selectionchange', () => { clearTimeout(selectionTimer); selectionTimer = setTimeout(selection, 100); }, { signal });
   document.addEventListener('scroll', hide, { signal, capture: true });
@@ -76,7 +129,8 @@ export function renderCommentedView(unit, view, activity, activate) {
       const menu = popup.element.querySelector('.comment-more[open]');
       if (menu) { menu.open = false; menu.querySelector('summary').focus(); } else popup.hide(true);
     }
-    if (event.key.toLowerCase() !== 'm' || !event.altKey || !(event.ctrlKey || event.metaKey) || composer.open) return;
+    if (!['m', 'k'].includes(event.key.toLowerCase()) || !event.altKey || !(event.ctrlKey || event.metaKey) || composer.open) return;
+    if (event.key.toLowerCase() === 'k') return;
     const chosen = selectedPassage(reading, unit);
     if (!chosen || root.closest('[hidden]')) return;
     event.preventDefault(); openComposer({ anchor: chosen.anchor, id: crypto.randomUUID() }, passageFocus(chosen.anchor)); hide();

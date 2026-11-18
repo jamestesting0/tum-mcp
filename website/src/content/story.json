@@ -708,6 +708,78 @@
       "appStart": "#exercises/sheet-01/dijkstra-trace"
     },
     {
+      "key": "open-ask",
+      "chapter": "open",
+      "weight": 2.9,
+      "caption": {
+        "title": "Ask agent",
+        "line": "Ask about what you read; the agent edits the page in place."
+      },
+      "focus": "app",
+      "folder": true,
+      "app": "#dijkstra/content",
+      "appScroll": "main section.read-section[data-block-index=\"4\"]",
+      "guide": [
+        {
+          "at": 0.04,
+          "target": {
+            "css": "button.ask-launch"
+          },
+          "click": true,
+          "label": "Ask agent",
+          "line": "Ask about the section you are reading.",
+          "after": {
+            "css": ".ask-panel .ask-context"
+          }
+        },
+        {
+          "at": 0.15,
+          "target": {
+            "css": ".ask-panel textarea"
+          },
+          "type": "Show this with numbers from the trace.",
+          "label": "Your request",
+          "line": "A question, or what to improve.",
+          "place": "above"
+        },
+        {
+          "at": 0.27,
+          "target": {
+            "css": ".ask-panel button[aria-label=\"Send\"]"
+          },
+          "click": true,
+          "label": "Send",
+          "line": "It reads the lecture, then edits the lesson.",
+          "after": {
+            "css": ".ask-panel .ask-work"
+          }
+        },
+        {
+          "at": 0.6,
+          "target": {
+            "css": ".ask-panel .ask-change"
+          },
+          "wait": 9000,
+          "label": "Edited in place",
+          "line": "Checked by a build. Undo puts it back."
+        },
+        {
+          "at": 0.74,
+          "target": {
+            "css": ".ask-panel button[aria-label=\"Close\"]"
+          },
+          "click": true,
+          "label": "The lesson",
+          "line": "The new step is already on the page.",
+          "after": {
+            "css": "main section.read-section li",
+            "text": "^In the trace"
+          }
+        }
+      ],
+      "appStart": "#dijkstra/content"
+    },
+    {
       "key": "ext-lecture",
       "chapter": "extensions",
       "weight": 2.41,
@@ -809,7 +881,7 @@
           "place": "below"
         }
       ],
-      "appStart": "#exam/sheet"
+      "appStart": "#dijkstra/content"
     },
     {
       "key": "ext-audio",

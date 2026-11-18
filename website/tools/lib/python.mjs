@@ -11,6 +11,16 @@ async function python({ repo, code, args = [] }) {
   return stdout;
 }
 
+/** MathML for the inline math in a text, as `tum-mcp study build` compiles it into `inlineMath`. */
+export async function inlineMath({ repo, text }) {
+  const code = [
+    'import json, sys',
+    'from tum_mcp.course.app.build import _inline_math',
+    'print(json.dumps(_inline_math(sys.argv[1])))',
+  ].join('\n');
+  return JSON.parse(await python({ repo, code, args: [text] }));
+}
+
 /** The media indexes the local preview (`tum-mcp study`) serves for a course project. */
 export async function previewIndexes({ project, repo }) {
   const code = [

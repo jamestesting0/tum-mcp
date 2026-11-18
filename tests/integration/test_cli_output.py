@@ -89,13 +89,13 @@ def test_batch_start_names_missing_and_invalid_batch_file(project: Path) -> None
 
 def test_repeated_example_requires_ruling_without_failing_lint(project: Path, monkeypatch) -> None:
     from tum_mcp.course.checks import plans
-    from tum_mcp.course.cli import _lint_item
+    from tum_mcp.course.cli import lint_item
     from tum_mcp.course.review.models import RULED_FLAGS
 
     monkeypatch.setattr(plans, "read_plan", lambda root, item: None)
     context = SimpleNamespace(
         flags_by_item={"study/one": [{"flag": "repeated_example"}]}, answer_keys=[]
     )
-    result = _lint_item(project, context, "study/one", None)
+    result = lint_item(project, context, "study/one", None)
     assert result["passed"] is True
     assert RULED_FLAGS["repeated_example"] == "redundancy.said_once"

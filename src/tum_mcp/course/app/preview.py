@@ -1,4 +1,4 @@
-"""Loopback course preview with a confined, same-origin passage-comment endpoint."""
+"""Loopback course preview with confined, same-origin comment and Ask agent endpoints."""
 
 import errno
 import gzip
@@ -50,6 +50,9 @@ AUDIO_FOLDERS = {"tracks": ".m4a", "scripts": ".txt"}
 AUDIO_TYPES = {".m4a": "audio/mp4", ".txt": "text/plain; charset=utf-8"}
 VIDEO_NAME = re.compile(r"[0-9a-z][0-9a-z_.-]{0,120}")
 RANGE = re.compile(r"bytes=(\d*)-(\d*)")
+# After an Ask agent edit the app reopens under /_v/<id>/, so browsers that keep modules in
+# memory across reloads (WebKit) fetch the rebuilt data module; the prefix is dropped here.
+VERSIONED = re.compile(r"^/_v/[0-9a-z]{1,40}(?=/)")
 
 
 class Slice:
@@ -125,18 +128,25 @@ class Handler(SimpleHTTPRequestHandler):
             pass  # A player that seeks or changes track drops the rest of a download.
 
     def do_GET(self) -> None:
+        from tum_mcp.course.app import ask_api
         from tum_mcp.course.app.comment_api import ENDPOINT, comments_request
 
+        self.path = VERSIONED.sub("", self.path)
         if self.path == ENDPOINT:
             comments_request(self, self.directory, write=False)
+        elif self.path.startswith(ask_api.PREFIX):
+            ask_api.handle(self, self.directory, write=False)
         else:
             super().do_GET()
 
     def do_POST(self) -> None:
+        from tum_mcp.course.app import ask_api
         from tum_mcp.course.app.comment_api import ENDPOINT, comments_request
 
         if self.path == ENDPOINT:
             comments_request(self, self.directory, write=True)
+        elif self.path.startswith(ask_api.PREFIX):
+            ask_api.handle(self, self.directory, write=True)
         else:
             self.send_error(404)
 
