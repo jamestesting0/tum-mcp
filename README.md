@@ -13,9 +13,9 @@ Requires **Node.js 22.14+**, a Chromium browser and your TUM account.
 
 ```sh
 npm install --global @jamestesting888/tum-mcp@latest
-tum-mcp setup
-tum-mcp login
-tum-mcp doctor
+tum-mcp setup     # Connect your coding clients and pick extensions
+tum-mcp login     # Sign in with your TUM account
+tum-mcp doctor    # Check that everything works
 ```
 
 Then create a folder for one course, open an agent chat in it and run `$sync-course`
