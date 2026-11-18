@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.26.0 — 2026-11-18
+
 - Course languages: each workspace has its own language. When the course is taught in
   another language than the student writes in, the agent asks once per workspace and
   records the answer with the student's language in `.tum-mcp/course.md`; audio and video
@@ -50,8 +52,12 @@
   remembered per course, and phones switch between Files, Code and Task. A writing step
   opens its file at its lines; Compare and the Solution show the solved lines with notes,
   and choosing a note highlights its lines. Each editable file switches between Yours and
-  Solution with the task's changes marked. Diagrams and other blocks in the Task panel keep
-  their size and place, and a lone citation sits beside the exercise label.
+  Solution, which share one look: the same tabs, gutter and background, with the task's
+  changes marked on the gutter's edge. In Solution, a dot marks each explained section;
+  choosing it opens its note under the code, with a link to the step that writes it and
+  arrows through the file's notes. The task can grow until the editor is 360 pixels wide,
+  and dragging it far to the right folds it. Diagrams and other blocks in the Task panel
+  keep their size and place, and a lone citation sits beside the exercise label.
 - An exercise shows its sheet's deadline on its own line under the label until it passes.
 - prepare-exercises prepares graded and bonus work like any other exercise, in the app with
   its solved files, and names an open deadline once in its reply.
