@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Course languages: each workspace has its own language. When the course is taught in
+  another language than the student writes in, the agent asks once per workspace and
+  records the answer with the student's language in `.tum-mcp/course.md`; audio and video
+  notes follow the workspace they adapt. Key terms are listed once in `app/terms.json` in
+  both languages, with glosses for difficult words (Study's former `annotations` move there
+  automatically). The build marks each term's first use per unit, exercise statement
+  included, and its bubble shows the other language. Identifiers are never translated.
+  `study report` flags a listed term no prose uses, a workspace that needs term pairs but
+  lists none, and a handbook whose language fields are not two-letter codes.
+  Definition bubbles no longer repeat the term, and marked terms keep their dotted
+  underline in Safari and on iOS.
 - Ask agent: a button in the local course app asks about the selected text or the
   section in view, in a panel beside the page, on your own Claude (subscription or API
   key) or ChatGPT (subscription or API key) through the installed Claude Code or Codex.

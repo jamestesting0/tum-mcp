@@ -74,38 +74,20 @@ def check_prerequisites(content: ExerciseContent, study: StudyContent | None) ->
                         f"Exercise {exercise.key} links to block {prerequisite.block}, which "
                         f"unit {prerequisite.unit} does not have.",
                     )
-    names = study.annotation_names()
-    for group in content.sets:
-        if term_markers(group.model_dump(mode="json", exclude={"exercises"}), fold=False) & names:
-            raise CampusError(
-                Code.INVALID_RESPONSE, "Exercise set labels cannot contain annotations."
-            )
-        for exercise in group.exercises:
-            prose = {"steps", "solution"}
-            misplaced = (
-                term_markers(exercise.model_dump(mode="json", exclude=prose), fold=False) & names
-            )
-            misplaced |= study.annotation_problems(exercise.model_dump(mode="json", include=prose))
-            if misplaced:
-                raise CampusError(
-                    Code.INVALID_RESPONSE,
-                    f"Exercise {exercise.key} annotations belong in guide or solution prose: "
-                    f"{sorted(misplaced)[:5]}.",
-                )
-    check_terms(content.model_dump(mode="json"), study, "Exercises")
 
 
-def check_terms(value: JsonValue, study: StudyContent | None, workspace: str) -> None:
-    """Marked terms in other workspaces open Study definitions, so each must exist."""
+def check_terms(
+    value: JsonValue, study: StudyContent | None, workspace: str, listed: set[str]
+) -> None:
+    """Marked terms open a Study definition or a listed term's bubble, so each must exist."""
     if study is None:
         return
-    known = {term.casefold() for term in study.definitions()}
-    annotations = study.annotation_names() if workspace == "Exercises" else set()
-    missing = term_markers(value, fold=False) - annotations
-    if unknown := {term for term in missing if term.casefold() not in known}:
+    known = {term.casefold() for term in study.definitions()} | listed
+    if unknown := {term for term in term_markers(value) if term not in known}:
         raise CampusError(
             Code.INVALID_RESPONSE,
-            f"{workspace} mark terms that Study does not define: {sorted(unknown)[:5]}.",
+            f"{workspace} marks terms that are neither Study definitions nor listed in "
+            f"app/terms.json: {sorted(unknown)[:5]}.",
         )
 
 

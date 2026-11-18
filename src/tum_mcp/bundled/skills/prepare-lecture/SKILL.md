@@ -3,10 +3,20 @@ name: prepare-lecture
 description: Prepare or update the Lecture workspace in a local TUM course app with self-contained notes for useful remarks and timestamped highlights for substantial worked explanations worth watching, checked against recordings and course materials, or address its comments. General lessons and practice use prepare-study.
 ---
 
-Write in the course's content language, recorded in `.tum-mcp/course.md`: the language the
-course is taught in, unless the student asked for another. Translate a released statement in
-another language faithfully: its givens, symbols, labels and code stay as printed, and each
-source term appears once.
+Write in the course's content language for this workspace: `languages.<workspace>` in
+`.tum-mcp/course.md` (`study`, `exercises`, `exam` or `lectures`). When it is missing, use
+`content_language`, the language the course is taught in. If that differs from the student's
+language (`student_language`; record it from this chat when missing), ask which of the two
+they want before you plan or write anything, and end your turn with that question. Never draft
+in one language while the answer is open. Only when you cannot ask at all, use the course's
+language. Record each language as a two-letter code such as `en` or `de`. Translate a released statement
+faithfully: its givens, symbols and labels stay as printed. Never translate code or
+identifiers such as method, class, variable and file names. When the workspace language
+differs from the course's or the student's, list each key term once in `app/terms.json`
+under `pairs` (`study schema terms`). Both cases need it: an English workspace of a German
+course, and a German workspace for a student who writes in English. A term spelled the same
+in both languages needs no pair. The build marks
+its first use in each unit and shows the other language there, so never add it in brackets.
 
 # Prepare Lecture
 

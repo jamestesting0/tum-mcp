@@ -48,10 +48,7 @@ export function plainText(text) {
 // second click or moving on hides it. Terms, Recall chips and insights share it. The bubble
 // is built on demand, so the text a trigger contributes elsewhere (labels, outlines) is its own.
 let openTip = null;
-const annotations = new Map();
-const annotate = () => { annotations.clear(); for (const entry of data.annotations || []) annotations.set(entry.term.toLowerCase(), entry); };
-annotate();
-addEventListener('course-data', annotate);
+const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
 const followTip = () => openTip?.position?.();
 document.addEventListener('scroll', followTip, { capture: true, passive: true });
 window.addEventListener('resize', followTip);
@@ -89,20 +86,31 @@ export function toggletip(trigger, fill, className = '') {
   wrap.addEventListener('focusout', event => { if (openTip === tip && !wrap.contains(event.relatedTarget)) tip.close(); });
   wrap.append(trigger); return wrap;
 }
+// A listed term shows its form in each other language, then its gloss; a defined term adds
+// that line above its definition. The trigger already shows the term, so no title repeats it.
+function otherForms(bubble, listed) {
+  for (const [language, form] of Object.entries(listed?.pair || {})) {
+    const line = append(node('span', 'term-source'), node('span', 'term-source-language', languageNames.of(language)));
+    const value = node('span', '', form); value.lang = language; line.append(value);
+    bubble.append(line);
+  }
+}
 function termTip(text) {
   const key = text.trim().toLowerCase();
-  const annotation = annotations.get(key);
-  if (annotation) return toggletip(node('button', 'term', text), bubble => {
-    bubble.textContent = annotation.meaning;
-  }, 'annotation-tip');
+  const listed = data.terms?.[key];
   const entry = data.definitions?.[key];
-  if (!entry) return document.createTextNode(text);
-  return toggletip(node('button', 'term', text), bubble => {
-    bubble.append(append(node('span', 'term-name'), entry.term), studyText('span', 'term-statement', entry.statement));
+  if (entry) return toggletip(node('button', 'term', text), bubble => {
+    otherForms(bubble, listed);
+    bubble.append(studyText('span', 'term-statement', entry.statement));
     for (const condition of entry.conditions) bubble.append(studyText('span', 'term-condition', condition));
     const more = node('a', 'term-more', 'Open in Study'); more.href = `#${entry.unit}/content${entry.block ? `/${entry.block}` : ''}`;
     bubble.append(more);
   });
+  if (!listed) return document.createTextNode(text);
+  return toggletip(node('button', 'term', text), bubble => {
+    otherForms(bubble, listed);
+    if (listed.meaning) bubble.append(node('span', '', listed.meaning));
+  }, 'annotation-tip');
 }
 // One row of a workspace home's list: the item, its detail lines and, where progress is kept,
 // its status. Study, Exercises and Lecture list their items the same way.

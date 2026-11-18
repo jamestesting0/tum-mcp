@@ -4,6 +4,7 @@ A verdict stays current while the blocks it covers keep their fingerprints, so a
 re-opens exactly the checks that could have changed.
 """
 
+import copy
 import hashlib
 import json
 from dataclasses import dataclass, field, replace
@@ -12,6 +13,7 @@ from pathlib import Path
 from pydantic import JsonValue
 
 from tum_mcp.course.content.study import term_markers
+from tum_mcp.course.content.terms import read_terms
 from tum_mcp.course.project.store import confined, read_bytes
 from tum_mcp.course.review.models import SHEET, item_passages, sheet_model
 from tum_mcp.errors import CampusError, Code
@@ -107,16 +109,23 @@ def collect(
     ledger=None,
 ) -> dict[str, ReviewItem]:
     items: dict[str, ReviewItem] = {}
-    glossary = (
-        {entry.term.lower(): entry.meaning for entry in content.annotations} if content else {}
-    )
+    terms = read_terms(root)
+    glossary = {
+        term: "; ".join(
+            [*(f"{lang}: {form}" for lang, form in bubble.get("pair", {}).items())]
+            + ([bubble["meaning"]] if "meaning" in bubble else [])
+        )
+        for term, bubble in terms.bubbles().items()
+    }
 
     def add(key: str, profile: str, title: str, value: dict) -> None:
         item = _item(root, key, profile, title, value)
         if glossary and profile in {"study-unit", "exercise"}:
+            marked = copy.deepcopy(value)
+            terms.marker().mark(marked)
             used = {
                 term: glossary[term]
-                for term in sorted(term_markers(value, fold=False) & glossary.keys())
+                for term in sorted(term_markers(marked, fold=False) & glossary.keys())
             }
             if used:
                 item = replace(

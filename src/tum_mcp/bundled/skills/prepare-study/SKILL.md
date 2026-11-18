@@ -13,10 +13,20 @@ scrambles tables and formulas. Open the PDF page if your tools display PDFs; oth
 add `--images` and open the image. A scanned page has
 no searchable text, so a phrase search can miss what is on it.
 
-Write in the course's content language, recorded in `.tum-mcp/course.md`: the language the
-course is taught in, unless the student asked for another. Translate a released statement in
-another language faithfully: its givens, symbols, labels and code stay as printed, and each
-source term appears once.
+Write in the course's content language for this workspace: `languages.<workspace>` in
+`.tum-mcp/course.md` (`study`, `exercises`, `exam` or `lectures`). When it is missing, use
+`content_language`, the language the course is taught in. If that differs from the student's
+language (`student_language`; record it from this chat when missing), ask which of the two
+they want before you plan or write anything, and end your turn with that question. Never draft
+in one language while the answer is open. Only when you cannot ask at all, use the course's
+language. Record each language as a two-letter code such as `en` or `de`. Translate a released statement
+faithfully: its givens, symbols and labels stay as printed. Never translate code or
+identifiers such as method, class, variable and file names. When the workspace language
+differs from the course's or the student's, list each key term once in `app/terms.json`
+under `pairs` (`study schema terms`). Both cases need it: an English workspace of a German
+course, and a German workspace for a student who writes in English. A term spelled the same
+in both languages needs no pair. The build marks
+its first use in each unit and shows the other language there, so never add it in brackets.
 
 Work in the course project bound by AGENTS.md and `.tum-mcp/state.json`. You author
 `app/study/course.json` and one file per unit, `app/study/units/<key>.json`; edit them with
@@ -43,9 +53,7 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
 
 1. **Scope.** A missing binding goes through sync-course with the requested course
    and semester. Work from local sources and fetch only missing material through read-content. Run
-   sync-course once, and only when fresh upstream content was requested. Write the lessons
-   in the course's content language. When the sources use another language, give a key
-   term's source form once where it is introduced.
+   sync-course once, and only when fresh upstream content was requested.
 2. **Plan units.** Inspect the app folder and the affected source and unit IDs. Keep
    notes, edits, labels and stable IDs of unchanged units. Record each source's stated
    outcomes in the [coverage ledger](references/coverage.md) first, then plan units that

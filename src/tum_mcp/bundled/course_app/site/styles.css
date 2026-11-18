@@ -538,11 +538,12 @@ table > :last-child > tr:last-child > :last-child { border-end-end-radius: calc(
 
 /* A defined term in running text; activating it shows the definition beside it. */
 .term-tip { position: relative; }
-button.term { display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; font-weight: inherit; text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: help; }
+button.term { display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; font-weight: inherit; text-decoration-line: underline; text-decoration-style: dotted; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: help; }
 button.term[aria-expanded="true"] { color: var(--accent); }
 .term-bubble { position: absolute; z-index: 6; top: calc(100% + var(--s1)); left: 0; display: flex; flex-direction: column; gap: var(--s1); width: min(340px, 80vw); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r2); background: var(--canvas); color: var(--ink); font-size: var(--text-ui); font-weight: 400; line-height: 1.5; text-align: start; }
 .annotation-tip .term-bubble { position: fixed; z-index: 40; max-height: calc(100dvh - 16px); overflow: auto; }
-.term-name { font-weight: 650; }
+.term-source { display: flex; align-items: baseline; gap: var(--s2); }
+.term-source-language { color: var(--muted); font-size: var(--text-small); }
 .term-condition { color: var(--muted); }
 .term-more { font-size: var(--text-small); }
 button.term-more { align-self: flex-start; min-height: 0; padding: 0; border: 0; background: none; color: var(--accent); text-decoration: underline; text-underline-offset: var(--s1); }

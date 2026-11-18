@@ -6,7 +6,7 @@ import operator
 import re
 import statistics
 from collections import Counter
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from functools import cache
 from importlib.resources import files
 from itertools import pairwise
@@ -44,6 +44,7 @@ from tum_mcp.course.content.study import (
     has_visual,
     line_span,
 )
+from tum_mcp.course.content.terms import TermList
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.paths import app_path
 from tum_mcp.course.project.store import load_state, private_path
@@ -1585,38 +1586,97 @@ def foreign_language(text: str, language: str) -> str | None:
 
 
 def language_flags(
-    language: str | None,
+    languages: Mapping[str, str | None],
     content: StudyContent | None,
     exercises: ExerciseContent | None,
     exam: "ExamContent | None",
 ) -> list[dict[str, JsonValue]]:
-    """Items written mostly in another language than the course's recorded content language."""
-    if language not in LANGUAGE_WORDS:
-        return []
-    items: list[tuple[str, BaseModel]] = [
-        *((unit.key, unit) for unit in (content.units if content else ())),
+    """Items written mostly in another language than their workspace's recorded language."""
+    items: list[tuple[str | None, str, BaseModel]] = [
+        *((languages.get("study"), unit.key, unit) for unit in (content.units if content else ())),
         *(
-            (exercise.key, exercise)
+            (languages.get("exercises"), exercise.key, exercise)
             for group in (exercises.sets if exercises else ())
             for exercise in group.exercises
         ),
-        *((f"exam/pattern/{pattern.key}", pattern) for pattern in (exam.patterns if exam else ())),
+        *(
+            (languages.get("exam"), f"exam/pattern/{pattern.key}", pattern)
+            for pattern in (exam.patterns if exam else ())
+        ),
     ]
     flags: list[dict[str, JsonValue]] = []
-    for item, value in items:
+    for language, item, value in items:
+        if language not in LANGUAGE_WORDS:
+            continue
         text = " ".join(part for _, part in _prose(value.model_dump(mode="json"), item))
         if other := foreign_language(text, language):
             flags.append(
                 {
                     "item": item,
                     "flag": "content_language",
-                    "detail": f"Most of this item reads as {LANGUAGE_NAMES[other]}, but the "
-                    f"course's content language is {LANGUAGE_NAMES[language]}. Write it in "
-                    f"{LANGUAGE_NAMES[language]}, translating a released statement faithfully "
-                    "and giving each source term once.",
+                    "detail": f"Most of this item reads as {LANGUAGE_NAMES[other]}, but its "
+                    f"workspace's language is {LANGUAGE_NAMES[language]}. Write it in "
+                    f"{LANGUAGE_NAMES[language]}, translating a released statement faithfully; "
+                    "list key terms in app/terms.json instead of bracketing translations.",
                 }
             )
     return flags
+
+
+def handbook_flags(problem: str | None) -> list[dict[str, JsonValue]]:
+    """An invalid course.md frontmatter silently voids its review receipt and languages."""
+    if problem is None:
+        return []
+    return [
+        {
+            "item": "course",
+            "flag": "invalid_handbook",
+            "detail": f"The .tum-mcp/course.md frontmatter is invalid ({problem}). Fix it; "
+            "languages are two-letter codes such as en or de.",
+        }
+    ]
+
+
+def missing_pair_flags(
+    terms: TermList,
+    languages: Mapping[str, str | None],
+    known: tuple[str | None, str | None],
+    present: Mapping[str, bool],
+) -> list[dict[str, JsonValue]]:
+    """A prepared workspace whose language differs from the student's or the course's, while
+    the term list names no key term in two languages."""
+    if terms.pairs or None in known:
+        return []
+    return [
+        {
+            "item": "course",
+            "flag": "missing_pairs",
+            "detail": f"The {workspace} language ({language}) differs from the student's or the "
+            f"course's ({' or '.join(sorted({code for code in known if code != language}))}), "
+            "but app/terms.json lists no pairs. List each key term once in both languages.",
+        }
+        for workspace, language in languages.items()
+        if present.get(workspace) and language and any(code != language for code in known)
+    ]
+
+
+def term_flags(terms: TermList, *workspaces: BaseModel | None) -> list[dict[str, JsonValue]]:
+    """Listed terms the build would mark nowhere, usually because the text uses a spelling the
+    list does not name."""
+    marker = terms.marker()
+    for workspace in workspaces:
+        if workspace is not None:
+            marker.mark(workspace.model_dump(mode="json"))
+    return [
+        {
+            "item": "course",
+            "flag": "unused_term",
+            "detail": f"app/terms.json lists '{name}', but no explanatory prose uses it "
+            "(headings, objectives, code and math are never marked). Add the spelling the "
+            "prose uses as another form, or remove the entry.",
+        }
+        for name in marker.unused()
+    ]
 
 
 def _part_context(exercise: Exercise) -> Iterator[tuple[str | None, bool]]:

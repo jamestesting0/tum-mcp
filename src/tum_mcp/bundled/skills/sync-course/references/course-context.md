@@ -25,10 +25,10 @@ Record the course's actual structure, in these sections as needed:
   conditions, bonus threshold/cap/conditions and effect on the grade. Never assume a
   bonus exists. Preserve distinctions such as “60% of sheets” versus “60% of points”.
 - Conventions: textbook and edition, notation, terminology and the answer format the
-  course expects, so explanations and practice match lectures and exams. Record the content
-  language: the language the course is taught in, unless the student explicitly asks for
-  another. It holds for every workspace. Put its code in the frontmatter as
-  `content_language` (for example `en` or `de`). Add them as
+  course expects, so explanations and practice match lectures and exams. Record the
+  language the course is taught in as `content_language` in the frontmatter (a code such
+  as `en` or `de`). The authoring skills add `student_language`, the language the student
+  writes to you in, and `languages`, each workspace's chosen language. Add these as
   sources confirm them; the agent guide in AGENTS.md tells other workflows to do the same.
 - Teaching profile: prior courses and what students can be assumed to know, what
   understanding means in this subject, its natural representations and common

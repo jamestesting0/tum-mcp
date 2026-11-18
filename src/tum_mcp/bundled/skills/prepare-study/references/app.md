@@ -64,6 +64,7 @@ managed flat templates when their files are unedited.
 | flashcard `front`, `back` | One card that flips; its sources appear after reveal |
 | question `prompt`, `blocks`, `options`, `explanation`, `hint` | Practice and Revision; the blocks sit between prompt and options, options appear in a stable shuffled order, the hint is one optional button before checking; after a check the app marks the chosen and correct options, shows the chosen option's feedback and the explanation, and keeps the other options' feedback on request |
 | `definition` block | The term in bold above its full-width meaning, inside the section before it; consecutive terms form one list; `{{term}}` mentions open it in place |
+| `app/terms.json` entry | A dotted underline at the term's first use in each unit, exercise, Exam page and lecture; its bubble shows the term in the other language, then any gloss |
 | text `steps` | A numbered sequence after the paragraphs, one action per step; a step or point opening with a short `Label: ` shows the label in bold |
 | `figure` block | The drawing or image at full width with its caption; the `alt` text names it for screen readers |
 

@@ -172,9 +172,6 @@ def check_unit_links(content: ExamContent, study: StudyContent | None) -> None:
                 Code.INVALID_RESPONSE,
                 f"Exam links to block {link.block}, which unit {link.unit} does not have.",
             )
-    from tum_mcp.course.content.exercise_data import check_terms
-
-    check_terms(content.model_dump(mode="json"), study, "Exam")
 
 
 def _considered(content: ExamContent):

@@ -2,9 +2,9 @@ import json
 from importlib.resources import files
 from pathlib import Path
 
-from tum_mcp.course.checks.report import foreign_language, language_flags
+from tum_mcp.course.checks.report import foreign_language, handbook_flags, language_flags
 from tum_mcp.course.content.study import StudyContent
-from tum_mcp.course.project.context import content_language
+from tum_mcp.course.project.context import handbook_problem, workspace_languages
 
 SKILLS = Path(str(files("tum_mcp") / "bundled/skills"))
 AUTHORING = {"prepare-study", "prepare-exercises", "prepare-exams", "prepare-lecture"}
@@ -46,8 +46,10 @@ def test_text_in_another_language_than_the_course_is_recognised() -> None:
     english = StudyContent.model_validate(
         json.loads((FIXTURES / "course_app/content.json").read_bytes())
     )
-    assert not language_flags("en", english, None, None)
-    assert not language_flags(None, english, None, None)
+    assert not language_flags({"study": "en"}, english, None, None)
+    assert not language_flags({}, english, None, None)
+    # The same English Study is flagged once the student chose German for it.
+    assert language_flags({"study": "de"}, english, None, None)
 
 
 def test_every_check_named_in_skill_text_is_registered() -> None:
@@ -69,12 +71,31 @@ def test_every_check_named_in_skill_text_is_registered() -> None:
     assert named and not sorted(named - known)
 
 
-def test_the_content_language_is_read_from_the_course_handbook(tmp_path: Path) -> None:
+def test_each_workspace_uses_its_chosen_language_else_the_course_language(
+    tmp_path: Path,
+) -> None:
     folder = tmp_path / ".tum-mcp"
     folder.mkdir()
     (folder / "course.md").write_text(
+        "---\ncourse_key: c\nsemester: ws\ncontent_language: de\nstudent_language: en\n"
+        "languages:\n  study: en\n---\n# C\n",
+        encoding="utf-8",
+    )
+    languages = workspace_languages(tmp_path)
+    assert (languages["study"], languages["exercises"], languages["exam"]) == ("en", "de", "de")
+    # A handbook written before languages were recorded still resolves to the course language.
+    (folder / "course.md").write_text(
         "---\ncourse_key: c\nsemester: ws\ncontent_language: de\n---\n# C\n", encoding="utf-8"
     )
-    assert content_language(tmp_path) == "de"
+    assert set(workspace_languages(tmp_path).values()) == {"de"}
     (folder / "course.md").write_text("# No header\n", encoding="utf-8")
-    assert content_language(tmp_path) is None
+    assert set(workspace_languages(tmp_path).values()) == {None}
+    assert handbook_problem(tmp_path) is None
+    # A language name instead of its code is reported, not silently treated as unrecorded.
+    (folder / "course.md").write_text(
+        "---\ncourse_key: c\nsemester: ws\ncontent_language: German\n---\n# C\n",
+        encoding="utf-8",
+    )
+    flags = handbook_flags(handbook_problem(tmp_path))
+    assert [flag["flag"] for flag in flags] == ["invalid_handbook"]
+    assert "content_language" in str(flags[0]["detail"])
