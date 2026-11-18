@@ -1,0 +1,19 @@
+id: language-bwl
+# A German-taught course whose student writes in English but keeps Study in German.
+turns:
+  - say: "Prepare my study lessons for lecture 5, Organisation part 1, of BWL 1 from the summer semester 2025."
+    skills: [sync-course, prepare-study]
+replies:
+  language: "Keep the lessons in German, like the lecture and the exam."
+  english: "Keep the lessons in German, like the lecture and the exam."
+  german: "Keep the lessons in German, like the lecture and the exam."
+  deutsch: "Keep the lessons in German, like the lecture and the exam."
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  course: "Betriebswirtschaftslehre 1 - Grundlagen (WI000728), summer semester 2025."
+  semester: "Summer semester 2025."
+  more: "No, only lecture 5, Organisation part 1."
+  exam: "No exam preparation for now."
+  publish: "No, keep it local."
+  default: "Your choice, go ahead."
