@@ -1506,6 +1506,32 @@ button.code-ref-open { min-height: 32px; margin-left: auto; padding: 0 var(--s2)
 .code-editor .code-editor-view { position: absolute; inset: 0; overflow: hidden; pointer-events: none; color: var(--ink); }
 .code-editor textarea.code-editor-input { position: relative; display: block; width: 100%; min-height: 0; overflow-x: auto; overflow-y: hidden; border: 0; border-radius: 0; outline: none; background: transparent; color: transparent; caret-color: var(--ink); resize: none; }
 .code-editor textarea.code-editor-input::selection { background: rgb(48 112 179 / .3); color: transparent; }
+/* A read-only file in the editor's frame: one gutter row per line, the code scrolls sideways. */
+.code-editor.read-only .code-editor-gutter { opacity: 1; }
+.code-gutter-row { position: relative; display: block; }
+.code-gutter-number { opacity: .75; }
+.code-gutter-row.marked .code-gutter-number { opacity: 1; color: var(--ink); }
+/* What a solution changed: a bar on the gutter's edge, so the tint stays for the lines in focus. */
+.code-gutter-row.changed::after { content: ''; position: absolute; inset-block: 0; right: calc(-1 * var(--s2)); width: 3px; background: var(--accent); }
+.code-editor.read-only .code-editor-view { position: static; overflow-x: auto; overflow-y: hidden; pointer-events: auto; }
+.code-line.explained { cursor: pointer; }
+.code-line.hovered:not(.marked) { background: color-mix(in srgb, var(--code-mark) 50%, transparent); }
+.code-note-card:focus { outline: none; }
+/* A note's dot sits in the gutter's start padding, clear of the line number. Every project
+   gutter has that room, so a file keeps its layout between Yours and Solution. */
+.project-pane .code-editor .code-editor-gutter { padding-inline-start: var(--s5); }
+button.code-note-dot { position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--s5)); width: var(--s5); min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+button.code-note-dot::before { content: ''; display: block; width: 6px; height: 6px; margin: auto auto auto 5px; border: 1.5px solid var(--accent); border-radius: 50%; }
+button.code-note-dot[aria-expanded="true"]::before { background: var(--accent); }
+button.code-note-dot:hover { background: transparent; }
+.code-gutter-gap { display: block; }
+.code-note-card { position: sticky; left: 0; display: block; max-width: 46em; margin: var(--s1) 0 var(--s2); padding: var(--s2) var(--s3) var(--s1); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--r1); background: var(--canvas); color: var(--ink); font: var(--text-small)/1.5 var(--font-ui); white-space: normal; user-select: none; }
+.code-note-text { display: block; }
+.code-note-foot { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s1); }
+button.code-note-step { flex: 1 1 auto; min-width: 0; min-height: 32px; padding: 0 var(--s1); border: 0; color: var(--accent); font-size: 13px; text-align: start; }
+.code-note-step-label { font-weight: 600; }
+.code-note-nav { display: inline-flex; flex: none; align-items: center; margin-inline-start: auto; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.code-note-nav .icon-button { min-height: 32px; width: 32px; flex-basis: 32px; padding: var(--s1); }
 button.project-target { justify-self: start; }
 /* Trees: each child hangs off its parent's vertical line; the last child ends it. */
 .tree-view { width: fit-content; min-width: min(100%, 320px); max-width: 100%; margin: var(--s3) 0; overflow-x: auto; }
@@ -1535,7 +1561,7 @@ button.project-file[aria-current="true"] { background: var(--wash); color: var(-
 .project-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .project svg.project-editable { margin-left: auto; color: var(--accent); }
 .project-editor { display: flex; flex-direction: column; min-width: 0; }
-.project-bar { display: flex; align-items: stretch; overflow-x: auto; border-bottom: 1px solid var(--line); background: var(--surface); }
+.project-bar { display: flex; flex: none; align-items: stretch; overflow-x: auto; border-bottom: 1px solid var(--line); background: var(--surface); }
 .project-tabs { display: flex; min-width: 0; }
 .project-tab-item { display: flex; align-items: center; border-right: 1px solid var(--line); }
 .project-tab-item.active { background: var(--canvas); box-shadow: inset 0 -2px var(--accent); }
@@ -1543,9 +1569,11 @@ button.project-tab { min-height: 38px; padding: 0 var(--s3); border: 0; border-r
 .project-tab-item.active button.project-tab { color: var(--ink); }
 button.project-tab.changed::after { content: ''; display: inline-block; width: 7px; height: 7px; margin-left: 7px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
 button.project-tab-close { min-width: 28px; min-height: 38px; padding: 0 6px 0 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+/* Where a pointer can hover, a background tab shows its close button only on hover or focus. */
+@media (hover: hover) { .project-tab-item:not(.active, :hover, :focus-within) button.project-tab-close { opacity: 0; } }
 button.project-tree-toggle { min-width: 42px; min-height: 38px; border: 0; border-right: 1px solid var(--line); border-radius: 0; }
 .project-body.tree-hidden { grid-template-columns: minmax(0, 1fr); }
-.project-path { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--s1) var(--s3); padding: 6px var(--s4); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.project-path { display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: var(--s1) var(--s3); padding: 6px var(--s4); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 .project-crumbs { flex: 1 1 auto; min-width: 0; overflow: hidden; direction: rtl; text-align: left; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-mono); }
 .project-crumbs-inner { direction: ltr; unicode-bidi: embed; }
 .project-folders { opacity: .75; }
@@ -1553,14 +1581,12 @@ button.project-tree-toggle { min-width: 42px; min-height: 38px; border: 0; borde
 .project-meta { flex: none; white-space: nowrap; }
 button.project-reset { min-height: 28px; min-width: 28px; padding: 0; }
 .project-pane { max-height: min(70vh, 640px); overflow: auto; }
-.project-pane > .code-pre { margin: 0; padding: var(--s3) 0; }
 .project-pane .code-editor { border: 0; border-radius: 0; box-shadow: none; }
 /* The Yours | Solution switch and what a solution changed. */
 .project-views { display: inline-flex; flex: none; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r1); }
 button.project-view { min-height: 24px; padding: 0 var(--s2); border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: 12px; }
 button.project-view + button.project-view { border-inline-start: 1px solid var(--line); }
 button.project-view[aria-pressed="true"] { background: var(--wash); color: var(--ink); font-weight: 600; }
-.code-line.changed { background: color-mix(in srgb, var(--accent) 9%, transparent); box-shadow: inset 3px 0 var(--accent); }
 .code-refs.compact .code-ref-head { border-bottom: 0; }
 .code-notes { display: grid; gap: 2px; margin: 0; padding: var(--s2); list-style: none; border-top: 1px solid var(--line); font-size: var(--text-small); }
 button.code-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--s3); width: 100%; min-height: 0; padding: var(--s2) var(--s3); border: 0; border-radius: var(--r1); background: transparent; color: var(--ink); text-align: start; font: inherit; }
@@ -1600,7 +1626,7 @@ button.ide-toggle[aria-expanded="true"] { background: var(--wash); color: var(--
 .in-workspace .project-tree-divider::after { content: ''; position: absolute; inset: 0 -3px; }
 .in-workspace .project-editor { min-height: 0; }
 .in-workspace .project-pane { flex: 1 1 auto; min-height: 0; max-height: none; }
-.in-workspace .project-pane > :is(.code-editor, .code-pre) { min-height: 100%; }
+.in-workspace .project-pane > .code-editor { min-height: 100%; }
 .ide-task .unit-header h1 { font-size: var(--text-title-small, 1.75rem); }
 /* Narrow pages: one panel at a time behind a Files | Code | Task switch. */
 .ide[data-size="narrow"] .ide-views { display: flex; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r1); }

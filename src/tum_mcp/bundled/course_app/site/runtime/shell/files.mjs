@@ -1,6 +1,6 @@
 import data from '../../data.mjs';
 import { node, svgNode, button, append, studyText } from './dom.mjs';
-import { renderCode, codeEditor, languageName, lineSet } from '../reading/code.mjs';
+import { renderCode, codeEditor, codeFile, languageName, lineSet } from '../reading/code.mjs';
 import { iconButton } from './navigation.mjs';
 
 // A light code project for a programming exercise: a file tree, tabs for open files,
@@ -40,8 +40,97 @@ export function openInWorkspace(path, lines, { solution = false } = {}) {
 const spanSet = spans => new Set((spans || []).flatMap(([first, last]) => Array.from({ length: last - first + 1 }, (_, index) => first + index)));
 const TREE = { min: 160, max: 320, start: 220 };
 
+// Notes on a solved file, as in a guide: choosing a section, by its gutter dot or its lines, tints
+// the lines and opens its note under them with the step that writes it and a way through the
+// file's other notes. Each stop is { first, last, note, step }; `step` is { key, label, prompt }.
+function explain(listing, stops, onStep) {
+  const rows = [...listing.querySelector('.code-editor-gutter').children];
+  const view = listing.querySelector('.code-editor-view'), codeLines = [...view.querySelectorAll('.code-line')];
+  const lines = stop => stop.first === stop.last ? `line ${stop.first}` : `lines ${stop.first}–${stop.last}`;
+  const dots = stops.map((stop, index) => {
+    const dot = button('', () => choose(open === index ? -1 : index), 'quiet code-note-dot');
+    dot.setAttribute('aria-label', `Explain ${lines(stop)}`); dot.setAttribute('aria-expanded', 'false');
+    rows[stop.first - 1].prepend(dot);
+    for (let number = stop.first; number <= stop.last; number++) codeLines[number - 1].classList.add('explained');
+    return dot;
+  });
+  // One card moves between sections; moving it drops focus, so `choose` puts focus back.
+  const text = node('span', 'code-note-text'), step = button('', () => onStep(stops[open].step.key), 'quiet code-note-step');
+  const count = node('span', 'code-note-count');
+  const prev = iconButton('Previous note', 'left', () => choose(open - 1));
+  const next = iconButton('Next note', 'right', () => choose(open + 1));
+  const card = append(node('span', 'code-note-card'), text, append(node('span', 'code-note-foot'), step, append(node('span', 'code-note-nav'), prev, count, next)));
+  card.setAttribute('role', 'note'); card.tabIndex = -1;
+  // The gutter keeps a gap as tall as the card, so its numbers stay level with their lines.
+  const gap = node('span', 'code-gutter-gap');
+  const fit = () => {
+    const style = getComputedStyle(card);
+    gap.style.height = `${card.offsetHeight + parseFloat(style.marginTop) + parseFloat(style.marginBottom)}px`;
+  };
+  new ResizeObserver(fit).observe(card);
+  let open = -1;
+  function choose(index) {
+    const before = stops[open];
+    if (before) for (let number = before.first; number <= before.last; number++) { codeLines[number - 1].classList.remove('marked'); rows[number - 1].classList.remove('marked'); }
+    dots.forEach((dot, at) => dot.setAttribute('aria-expanded', String(at === index)));
+    const focused = card.contains(document.activeElement) ? document.activeElement : null;
+    open = index;
+    const stop = stops[index];
+    if (!stop) { card.remove(); gap.remove(); return; }
+    for (let number = stop.first; number <= stop.last; number++) { codeLines[number - 1].classList.add('marked'); rows[number - 1].classList.add('marked'); }
+    text.replaceChildren(studyText('span', '', stop.note));
+    step.hidden = !stop.step || !onStep;
+    if (stop.step) step.replaceChildren(node('span', 'code-note-step-label', `Step ${stop.step.label} · `), studyText('span', '', stop.step.prompt));
+    count.textContent = `${index + 1} / ${stops.length}`;
+    prev.disabled = index === 0; next.disabled = index === stops.length - 1;
+    // After the line break that ends the section's last line; before it, the break would open an empty line.
+    const last = codeLines[stop.last - 1];
+    (last.nextSibling?.nodeType === Node.TEXT_NODE ? last.nextSibling : last).after(card);
+    rows[stop.last - 1].after(gap); fit();
+    // An arrow disabled at the end of the notes hands focus to the other one.
+    if (focused) (focused.disabled ? (focused === next ? prev : next) : focused).focus({ preventScroll: true });
+    // Scrolled by hand: scrollIntoView would also scroll the code sideways to a long line's start.
+    const port = listing.parentElement, box = port.getBoundingClientRect();
+    const top = codeLines[stop.first - 1].getBoundingClientRect().top, bottom = card.getBoundingClientRect().bottom + parseFloat(getComputedStyle(card).marginBottom);
+    if (top < box.top) port.scrollTop -= box.top - top;
+    else if (bottom > box.bottom) port.scrollTop += Math.min(bottom - box.bottom, top - box.top);
+  }
+  view.addEventListener('click', event => {
+    // Selecting code to copy it is not a choice.
+    if (card.contains(event.target) || String(getSelection())) return;
+    const number = Number(event.target.closest('.code-line')?.dataset.line);
+    const index = stops.findIndex(stop => number >= stop.first && number <= stop.last);
+    if (index < 0) return;
+    choose(index === open ? -1 : index);
+    // The card takes focus, so Up, Down and Esc work after a click on the code too.
+    if (open >= 0) card.focus({ preventScroll: true });
+  });
+  // Hovering an explained section tints all of it, showing what a click will open.
+  let hovered = [];
+  const hover = stop => {
+    hovered.forEach(line => line.classList.remove('hovered'));
+    hovered = stop ? codeLines.slice(stop.first - 1, stop.last) : [];
+    hovered.forEach(line => line.classList.add('hovered'));
+  };
+  view.addEventListener('pointerover', event => {
+    const number = Number(event.target.closest?.('.code-line')?.dataset.line);
+    hover(card.contains(event.target) ? null : stops.find(stop => number >= stop.first && number <= stop.last));
+  });
+  view.addEventListener('pointerleave', () => hover(null));
+  listing.addEventListener('keydown', event => {
+    if (!card.contains(event.target) && !dots.includes(event.target)) return;
+    if (event.key === 'Escape' && open >= 0) { const dot = dots[open]; choose(-1); dot.focus(); event.preventDefault(); return; }
+    const move = { ArrowDown: 1, ArrowUp: -1 }[event.key];
+    if (!move || open < 0) return;
+    event.preventDefault(); event.stopPropagation();
+    choose(Math.min(stops.length - 1, Math.max(0, open + move)));
+  });
+  return choose;
+}
+
 // `ide` places the project in the editor workspace: the workspace owns the tree's visibility,
-// the tree resizes by its divider, and opening a file from the tree reports it.
+// the tree resizes by its divider, and opening a file from the tree reports it. `ide.notes` maps a
+// solved file's path to its explained sections, and `ide.onStep` opens the step that writes one.
 export function renderFiles(block, ide = null) {
   const files = new Map(block.files.map(file => [file.path, file]));
   const drafts = readDrafts(block.key);
@@ -50,7 +139,7 @@ export function renderFiles(block, ide = null) {
   const root = node('div', 'project'); root.dataset.workspace = block.key;
   root.setAttribute('role', 'region'); root.setAttribute('aria-label', `Code workspace: ${block.description}`);
   const start = block.open || block.files.find(file => file.editable)?.path || block.files[0].path;
-  let open = [start], active = start, marked = new Set();
+  let open = [start], active = start, marked = new Set(), chooseNote = null;
   const solved = new Set();
 
   // Folders first, then files, alphabetically; a single top folder chain stays open.
@@ -153,7 +242,7 @@ export function renderFiles(block, ide = null) {
     const folders = file.path.split('/').slice(0, -1).join('/');
     const crumbs = append(node('span', 'project-crumbs'), append(node('span', 'project-crumbs-inner'), folders ? node('span', 'project-folders', `${folders}/`) : '', node('span', 'project-current', file.path.split('/').pop())));
     crumbs.title = file.path;
-    const side = node('span', 'project-meta', [languageName(file.language, file.path), file.editable ? 'editable' : 'read only'].filter(Boolean).join(' · '));
+    const side = node('span', 'project-meta', [languageName(file.language, file.path), file.editable && !solved.has(file.path) ? 'editable' : 'read only'].filter(Boolean).join(' · '));
     pathBar.append(crumbs, side);
     if (typeof file.solution === 'string') {
       // Yours is the student's file; Solution is the solved file with the task's changes marked.
@@ -172,9 +261,12 @@ export function renderFiles(block, ide = null) {
     }
   }
   function paintPane(file) {
-    pane.replaceChildren();
+    pane.replaceChildren(); chooseNote = null;
     if (solved.has(file.path)) {
-      pane.append(renderCode(file.solution, file.language || file.path.split('.').pop(), { numbers: true, marked, changed: spanSet(file.changed) }));
+      const listing = codeFile(file.solution, file.language || file.path.split('.').pop(), { marked, changed: spanSet(file.changed) });
+      pane.append(listing);
+      const stops = ide?.notes?.get(file.path);
+      if (stops?.length) chooseNote = explain(listing, stops, ide.onStep);
       return;
     }
     if (file.editable) {
@@ -188,7 +280,7 @@ export function renderFiles(block, ide = null) {
       pane.append(codeEditor(input, file.language || file.path.split('.').pop(), marked));
       return;
     }
-    pane.append(renderCode(file.code, file.language || file.path.split('.').pop(), { numbers: true, marked }));
+    pane.append(codeFile(file.code, file.language || file.path.split('.').pop(), { marked }));
   }
   function paint() {
     const file = files.get(active);
@@ -197,7 +289,14 @@ export function renderFiles(block, ide = null) {
   function show(path, lines, { solution = false } = {}) {
     if (!open.includes(path)) open = [...open, path].slice(-6);
     if (solution && typeof files.get(path).solution === 'string') solved.add(path);
-    active = path; marked = lineSet(lines); paint();
+    // A step's lines count in the starter file, so they mark nothing in the solved one.
+    active = path; marked = solution || !solved.has(path) ? lineSet(lines) : new Set();
+    // Opening solved lines opens the first note inside them, whose tint replaces the plain mark.
+    const notes = solution && solved.has(path) ? ide?.notes?.get(path) || [] : [];
+    const noted = notes.findIndex(stop => marked.has(stop.first) && marked.has(stop.last));
+    if (noted >= 0) marked = new Set();
+    paint();
+    if (noted >= 0) chooseNote(noted);
     const first = pane.querySelector('.code-line.marked');
     pane.scrollTop = first ? Math.max(0, first.getBoundingClientRect().top - pane.getBoundingClientRect().top - pane.clientHeight / 3) : 0;
   }
