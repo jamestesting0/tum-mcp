@@ -87,16 +87,19 @@ Zulip channel.
 
 ## Optional extensions
 
-Run `tum-mcp install` to choose extensions, then reload your client.
-
-| Extension | Skill added | What it offers |
+| Extension | Skill | What you get |
 | --- | --- | --- |
-| `lecture` | `prepare-lecture` | Concise notes for useful remarks and highlights for worked explanations worth watching, each with a time range and frame. Prefers transcripts and slides; local recognition is optional. |
-| `audio-notes` | `audio-notes` | Turn prepared Study lessons or the Exam cheatsheet into hands-free revision tracks, with checked coverage, chapter re-entry and a listening check. Play them in the app's Audio workspace or download the playlist. Voice setup happens when used. |
-| `video-notes` | `video-notes` | Explain prepared Study concepts in depth or solve selected Exercises with intuitive visual walkthroughs in the local app. Check timing, captions and layout; install the render runtime when first used. |
+| `lecture` | `prepare-lecture` | Notes and must-watch highlights from lecture recordings, each with a time range and frame |
+| `audio-notes` | `audio-notes` | Hands-free revision tracks from Study lessons or the Exam cheatsheet |
+| `video-notes` | `video-notes` | Visual walkthroughs of Study concepts and selected Exercises |
 
-Use `tum-mcp doctor` to see installed workflows and `tum-mcp uninstall` to remove
-them.
+```sh
+tum-mcp install    # Choose extensions, then reload your client
+tum-mcp doctor     # See what is installed
+tum-mcp uninstall  # Remove them
+```
+
+Voice and video tools are set up the first time you use them.
 
 [Lecture and recognition](docs/lecture-notes.md) ·
 [Video Notes](docs/study.md#create-and-maintain-video-notes) · [Setup details](docs/setup.md)
