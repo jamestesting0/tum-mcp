@@ -1648,8 +1648,9 @@ def term_flags(terms: TermList, *workspaces: BaseModel | None) -> list[dict[str,
         {
             "item": "course",
             "flag": "unused_term",
-            "detail": f"app/terms.json lists '{name}', but no prose uses it. Add the spelling "
-            "the text uses as another form, or remove the entry.",
+            "detail": f"app/terms.json lists '{name}', but no explanatory prose uses it "
+            "(headings, objectives, code and math are never marked). Add the spelling the "
+            "prose uses as another form, or remove the entry.",
         }
         for name in marker.unused()
     ]
