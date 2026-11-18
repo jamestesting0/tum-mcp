@@ -87,11 +87,11 @@ Zulip channel.
 
 ## Optional extensions
 
-| Extension | Skill | What you get |
-| --- | --- | --- |
-| `lecture` | `prepare-lecture` | Notes and must-watch highlights from lecture recordings, each with a time range and frame |
-| `audio-notes` | `audio-notes` | Hands-free revision tracks from Study lessons or the Exam cheatsheet |
-| `video-notes` | `video-notes` | Visual walkthroughs of Study concepts and selected Exercises |
+| Workflow | Example request |
+| --- | --- |
+| `prepare-lecture` | “Make notes for this week's recording and mark the parts worth rewatching.” |
+| `audio-notes` | “Turn my Study lessons into audio tracks I can revise with hands-free.” |
+| `video-notes` | “Make a visual walkthrough of this exercise's solution.” |
 
 ```sh
 tum-mcp install    # Choose extensions, then reload your client
