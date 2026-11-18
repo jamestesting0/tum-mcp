@@ -1,0 +1,23 @@
+id: language-theo
+# A German-taught course studied by a student who writes in English: Study in English with
+# the German source terms, Exercises kept in German like the exam, with English terms.
+turns:
+  - say: "Prepare my study lessons for the pumping lemma section of Einführung in die Theoretische Informatik from the summer semester 2025."
+    skills: [sync-course, prepare-study]
+  - say: "Now prepare a guided exercise for the pumping lemma exercise on the tutorial sheets, only that one exercise."
+    skills: [prepare-exercises]
+replies:
+  language: "English for the Study lessons; keep the Exercises in German like the exam."
+  english: "English for the Study lessons; keep the Exercises in German like the exam."
+  german: "English for the Study lessons; keep the Exercises in German like the exam."
+  deutsch: "English for the Study lessons; keep the Exercises in German like the exam."
+  review round: "No, that is enough for now."
+  another: "No, that is enough for now."
+  learning record: "Keep the learning record off."
+  course: "Einführung in die Theoretische Informatik (IN0011), summer semester 2025."
+  semester: "Summer semester 2025."
+  section: "Only the pumping lemma."
+  more: "No, only the pumping lemma."
+  exam: "No exam preparation for now."
+  publish: "No, keep it local."
+  default: "Your choice, go ahead."
