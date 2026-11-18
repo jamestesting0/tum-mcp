@@ -13,8 +13,8 @@ language. Record each language as a two-letter code such as `en` or `de`. Transl
 faithfully: its givens, symbols and labels stay as printed. Never translate code or
 identifiers such as method, class, variable and file names. When the workspace language
 differs from the course's or the student's, list each key term once in `app/terms.json`
-under `pairs` (`study schema terms`). The build marks its first use in each unit and
-shows the other language there, so never add it in brackets.
+under `pairs` (`study schema terms`); skip a term spelled the same in both. The build marks
+its first use in each unit and shows the other language there, so never add it in brackets.
 
 # Prepare Lecture
 

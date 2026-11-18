@@ -8,7 +8,6 @@ TERMS = TermList.model_validate(
         "pairs": [
             {"en": ["regular language", "regular languages"], "de": "reguläre Sprache"},
             {"en": "language", "de": "Sprache"},
-            {"en": "Pumping-Lemma", "de": "Pumping-Lemma"},
         ],
         "glosses": [{"term": "pigeonhole", "meaning": "Too many items for too few boxes."}],
     }
@@ -44,13 +43,21 @@ def test_only_prose_fields_are_marked() -> None:
     }
 
 
-def test_a_term_spelled_alike_in_both_languages_gets_no_bubble() -> None:
-    assert mark("The Pumping-Lemma holds.") == ["The Pumping-Lemma holds."]
+def test_bubbles_show_the_other_language_and_the_gloss() -> None:
     bubbles = TERMS.bubbles()
-    assert "pumping-lemma" not in bubbles
     assert bubbles["regular languages"] == {"pair": {"de": "reguläre Sprache"}}
     assert bubbles["reguläre sprache"] == {"pair": {"en": "regular language"}}
     assert bubbles["pigeonhole"] == {"meaning": "Too many items for too few boxes."}
+
+
+def test_bullet_points_steps_and_table_cells_are_marked() -> None:
+    context = {"points": ["A language."], "steps": ["A pigeonhole."], "rows": [["Sprache"]]}
+    TERMS.marker().mark(context)
+    assert context == {
+        "points": ["A {{language}}."],
+        "steps": ["A {{pigeonhole}}."],
+        "rows": [["Sprache"]],
+    }
 
 
 def test_a_form_belongs_to_one_pair_and_a_pair_needs_two_languages() -> None:
@@ -58,3 +65,5 @@ def test_a_form_belongs_to_one_pair_and_a_pair_needs_two_languages() -> None:
         TermList.model_validate({"pairs": [{"en": "set", "de": "Menge"}, {"en": "set", "fr": "x"}]})
     with pytest.raises(ValidationError, match="two languages"):
         TermList.model_validate({"pairs": [{"en": "set"}]})
+    with pytest.raises(ValidationError, match="spelled the same"):
+        TermList.model_validate({"pairs": [{"en": "Pumping-Lemma", "de": "Pumping-Lemma"}]})

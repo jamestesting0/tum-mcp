@@ -1701,12 +1701,20 @@ def term_markers(value: JsonValue, *, fold: bool = True) -> set[str]:
 TERM_PROSE = frozenset(
     {
         "paragraphs",
+        "points",
+        "steps",
         "explanation",
         "note",
         "hint",
         "hints",
         "introduction",
         "summary",
+        "caption",
+        "description",
+        "statement",
+        "rows",
+        "action",
+        "why",
     }
 )
 

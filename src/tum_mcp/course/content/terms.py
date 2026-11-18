@@ -46,6 +46,11 @@ class TermList(Frozen):
         for pair in self.pairs:
             if len(pair) < 2 or any(isinstance(v, tuple) and not v for v in pair.values()):
                 raise ValueError("A pair names its term in at least two languages.")
+            if len({_display(value).lower() for value in pair.values()}) < 2:
+                raise ValueError(
+                    f"'{_display(next(iter(pair.values())))}' is spelled the same in each "
+                    "language and needs no pair."
+                )
         forms = [form for _, form in set(self.forms())]
         if len(set(forms)) != len(forms):
             raise ValueError("List each term form in one pair only.")
