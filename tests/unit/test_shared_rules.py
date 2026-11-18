@@ -2,9 +2,9 @@ import json
 from importlib.resources import files
 from pathlib import Path
 
-from tum_mcp.course.checks.report import foreign_language, language_flags
+from tum_mcp.course.checks.report import foreign_language, handbook_flags, language_flags
 from tum_mcp.course.content.study import StudyContent
-from tum_mcp.course.project.context import workspace_languages
+from tum_mcp.course.project.context import handbook_problem, workspace_languages
 
 SKILLS = Path(str(files("tum_mcp") / "bundled/skills"))
 AUTHORING = {"prepare-study", "prepare-exercises", "prepare-exams", "prepare-lecture"}
@@ -90,3 +90,12 @@ def test_each_workspace_uses_its_chosen_language_else_the_course_language(
     assert set(workspace_languages(tmp_path).values()) == {"de"}
     (folder / "course.md").write_text("# No header\n", encoding="utf-8")
     assert set(workspace_languages(tmp_path).values()) == {None}
+    assert handbook_problem(tmp_path) is None
+    # A language name instead of its code is reported, not silently treated as unrecorded.
+    (folder / "course.md").write_text(
+        "---\ncourse_key: c\nsemester: ws\ncontent_language: German\n---\n# C\n",
+        encoding="utf-8",
+    )
+    flags = handbook_flags(handbook_problem(tmp_path))
+    assert [flag["flag"] for flag in flags] == ["invalid_handbook"]
+    assert "content_language" in str(flags[0]["detail"])

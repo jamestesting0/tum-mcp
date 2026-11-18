@@ -1623,6 +1623,20 @@ def language_flags(
     return flags
 
 
+def handbook_flags(problem: str | None) -> list[dict[str, JsonValue]]:
+    """An invalid course.md frontmatter silently voids its review receipt and languages."""
+    if problem is None:
+        return []
+    return [
+        {
+            "item": "course",
+            "flag": "invalid_handbook",
+            "detail": f"The .tum-mcp/course.md frontmatter is invalid ({problem}). Fix it; "
+            "languages are two-letter codes such as en or de.",
+        }
+    ]
+
+
 def term_flags(terms: TermList, *workspaces: BaseModel | None) -> list[dict[str, JsonValue]]:
     """Listed terms the build would mark nowhere, usually because the text uses a spelling the
     list does not name."""

@@ -99,14 +99,19 @@ class CourseReview(Frozen):
     coverage_gaps: tuple[str, ...] = ()
 
 
+def _header(root: Path) -> ContextHeader | None:
+    """The handbook's frontmatter, or None while course.md has none; an invalid one raises."""
+    path = private_path(root, "course.md")
+    text = path.read_text(encoding="utf-8") if path.is_file() else ""
+    if not text.startswith("---\n") or "\n---\n" not in text[4:]:
+        return None
+    return ContextHeader.model_validate(yaml.safe_load(text[4:].split("\n---\n", 1)[0]))
+
+
 def workspace_languages(root: Path) -> dict[Workspace, str | None]:
     """Each workspace's language: its recorded choice, else the course's language."""
-    path = private_path(root, "course.md")
-    header = None
     try:
-        text = path.read_text(encoding="utf-8") if path.is_file() else ""
-        if text.startswith("---\n") and "\n---\n" in text[4:]:
-            header = ContextHeader.model_validate(yaml.safe_load(text[4:].split("\n---\n", 1)[0]))
+        header = _header(root)
     except (UnicodeError, yaml.YAMLError, ValidationError):
         header = None
     if header is None:
@@ -115,6 +120,20 @@ def workspace_languages(root: Path) -> dict[Workspace, str | None]:
         workspace: header.languages.get(workspace, header.content_language)
         for workspace in get_args(Workspace)
     }
+
+
+def handbook_problem(root: Path) -> str | None:
+    """Why course.md's frontmatter is invalid, or None when it is valid or absent."""
+    try:
+        _ = _header(root)
+    except ValidationError as error:
+        return "; ".join(
+            f"{'.'.join(map(str, item['loc']))}: {item['msg']}"
+            for item in error.errors(include_input=False)
+        )[:400]
+    except (UnicodeError, yaml.YAMLError) as error:
+        return str(error)[:400]
+    return None
 
 
 def context_review(root: Path, state: StudyState) -> CourseReview:
