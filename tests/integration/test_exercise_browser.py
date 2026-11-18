@@ -1276,7 +1276,8 @@ def solved_project_url(exercise_project: Path) -> Iterator[str]:
     del check["model_answer"]
     check["solution_code"] = [
         {"path": "src/Counter.java", "lines": "4-6",
-         "walkthrough": [{"lines": "5", "note": "The field grows by one."}]}
+         "walkthrough": [{"lines": "5", "note": "The field grows by one."},
+                         {"lines": "6", "note": "The method returns nothing."}]}
     ]  # fmt: skip
     exercise["solution"] = {"answers": [{"code": [{"path": "src/Counter.java", "lines": "4-6"}]}]}
     exercise["statement"].insert(
@@ -1347,8 +1348,60 @@ def test_solved_files_compare_and_the_workspace_layout_is_remembered(
         expect(version.get_by_role("button", name="Solution")).to_have_attribute(
             "aria-pressed", "true"
         )
-        expect(workspace.locator(".project-pane .code-line.changed")).to_have_count(1)
+        pane = workspace.locator(".project-pane")
+        expect(pane.locator(".code-gutter-row.changed")).to_have_count(1)
+        expect(workspace.locator(".project-meta")).to_have_text("Java · read only")
+        # The solved lines open with the note inside them, as a guide's note does.
+        card = pane.locator(".code-note-card")
+        expect(card).to_contain_text("The field grows by one.")
+        expect(pane.locator(".code-editor-view .code-line.marked")).to_have_count(1)
+        # The gutter keeps a gap for the card, so line numbers stay level with their lines.
+        assert page.evaluate(
+            "(() => { const row = document.querySelector('.code-gutter-row[data-line=\"6\"]');"
+            " const line = document.querySelector('.code-editor-view .code-line[data-line=\"6\"]');"
+            " return Math.abs(row.getBoundingClientRect().top"
+            " - line.getBoundingClientRect().top) < 1; })()"
+        )
+        # The arrows walk the notes and keep focus as the card moves; at the last note the
+        # other arrow takes it, and the keys keep working.
+        card.get_by_role("button", name="Next note").press("Enter")
+        expect(card).to_contain_text("The method returns nothing.")
+        expect(card.get_by_role("button", name="Previous note")).to_be_focused()
+        page.keyboard.press("ArrowUp")
+        expect(card).to_contain_text("The field grows by one.")
+        page.keyboard.press("Escape")
+        expect(card).to_have_count(0)
+        expect(pane.get_by_role("button", name="Explain line 5")).to_be_focused()
+        explained = pane.locator(".code-editor-view .code-line[data-line='5']")
+        # Hovering a closed section tints it, showing what a click opens.
+        explained.hover()
+        assert explained.evaluate("line => getComputedStyle(line).backgroundColor") not in (
+            "rgba(0, 0, 0, 0)",
+            "transparent",
+        )
+        # Choosing a section by its code opens its note with focus on it; again, closes it.
+        explained.click()
+        page.keyboard.press("ArrowDown")
+        expect(card).to_contain_text("The method returns nothing.")
+        pane.locator(".code-editor-view .code-line[data-line='6']").click()
+        expect(card).to_have_count(0)
+        explained.click()
+        # The step link shows its step even when the address already names it, and opens a
+        # folded task to show it.
+        page.locator(".ide-task-toggle").click()
+        expect(workspace).to_have_attribute("data-task", "closed")
+        card.get_by_role("button", name=re.compile(r"^Step \d")).click()
+        expect(workspace).to_have_attribute("data-task", "open")
+        expect(page.locator(".ide-task [data-step-prompt]")).to_be_focused()
+        # A long file leaves the tab bar its height.
+        page.set_viewport_size({"width": 1440, "height": 260})
+        assert workspace.locator(".project-bar").bounding_box()["height"] >= 38
+        page.set_viewport_size({"width": 1440, "height": 900})
         divider = page.get_by_role("separator", name="Resize task")
+        # The task may take more than half, as long as the editor keeps its minimum.
+        assert int(divider.get_attribute("aria-valuemax") or 0) > (
+            workspace.bounding_box()["width"] / 2
+        )
         divider.focus()
         before = int(divider.get_attribute("aria-valuenow") or 0)
         divider.press("ArrowLeft")
@@ -1360,6 +1413,25 @@ def test_solved_files_compare_and_the_workspace_layout_is_remembered(
         expect(workspace).to_have_attribute("data-task", "closed")
         page.locator(".ide-task-toggle").click()
         expect(divider).to_have_attribute("aria-valuenow", str(before + 16))
+        # Dragged well below its minimum, the task folds and reopens at its earlier width.
+        box = divider.bounding_box()
+        right = workspace.bounding_box()["x"] + workspace.bounding_box()["width"]
+        page.mouse.move(box["x"] + 2, box["y"] + 100)
+        page.mouse.down()
+        page.mouse.move(right - 120, box["y"] + 100, steps=5)
+        page.mouse.up()
+        expect(workspace).to_have_attribute("data-task", "closed")
+        page.locator(".ide-task-toggle").click()
+        expect(divider).to_have_attribute("aria-valuenow", str(before + 16))
+        # A task widened by keyboard takes the tree's room; narrowed again, it gives it back.
+        expect(workspace).to_have_attribute("data-files", "open")
+        divider.focus()
+        for _ in range(40):
+            divider.press("ArrowLeft")
+        expect(workspace).to_have_attribute("data-files", "closed")
+        for _ in range(40):
+            divider.press("ArrowRight")
+        expect(workspace).to_have_attribute("data-files", "open")
         phone = context.new_page()
         phone.on("pageerror", lambda error: errors.append(str(error)))
         phone.set_viewport_size({"width": 390, "height": 844})

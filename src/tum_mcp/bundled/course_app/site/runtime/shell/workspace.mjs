@@ -6,7 +6,9 @@ import { askButton } from '../ask/ask.mjs';
 // A coding exercise as an editor: files, the code and the task side by side, as in the
 // Artemis online editor. Files and Task fold away and resize by their dividers; each
 // course remembers the layout. Narrow pages show one panel at a time.
-const TASK = { min: 340, start: 400, share: 0.5 };
+// A dragged task leaves the editor at least `editor` wide; released more than `fold` below its
+// minimum, it folds as the Task button does.
+const TASK = { min: 340, start: 400, editor: 360, fold: 80 };
 const EDITOR_MIN = 420, WIDE = 1100, NARROW = 760;
 const prefsKey = `course-app:${data.course.identity}:ide:v1`;
 const viewKey = key => `course-app:${data.course.identity}:ide-view:v1:${key}`;
@@ -17,7 +19,7 @@ function write(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage blocked: this visit only */ }
 }
 
-export function editorWorkspace({ block, task, exerciseKey, stepLabel }) {
+export function editorWorkspace({ block, task, exerciseKey, stepLabel, notes, openStep }) {
   const prefs = read(prefsKey, {});
   const ide = node('div', 'ide');
   let size = 'wide', view = read(viewKey(exerciseKey), 'task');
@@ -30,6 +32,13 @@ export function editorWorkspace({ block, task, exerciseKey, stepLabel }) {
     treeWidth: prefs.treeWidth, treeOpen: false,
     onTreeWidth: width => save({ treeWidth: width }),
     onOpen: () => { if (size === 'narrow') setView('code'); },
+    notes,
+    // A folded task opens, so the step the note links to is in view.
+    onStep: key => {
+      if (size === 'narrow') setView('task');
+      else if (!taskOpen) { taskOpen = true; save({ taskOpen }); layout(); }
+      openStep(key);
+    },
   });
 
   // One control per panel. Opening the tree where it does not fit beside an open task folds
@@ -64,7 +73,7 @@ export function editorWorkspace({ block, task, exerciseKey, stepLabel }) {
   const body = append(node('div', 'ide-body'), code, divider, panel);
   ide.append(bar, body);
 
-  const maxTask = () => Math.max(TASK.min, Math.min(ide.clientWidth * TASK.share, ide.clientWidth - EDITOR_MIN));
+  const maxTask = () => Math.max(TASK.min, ide.clientWidth - 5 - TASK.editor);
   function setTask(width, remember) {
     taskWidth = Math.round(Math.min(maxTask(), Math.max(TASK.min, width)));
     ide.style.setProperty('--task-width', `${taskWidth}px`);
@@ -74,16 +83,23 @@ export function editorWorkspace({ block, task, exerciseKey, stepLabel }) {
   }
   divider.addEventListener('pointerdown', event => {
     divider.setPointerCapture(event.pointerId);
-    const right = ide.getBoundingClientRect().right;
-    const move = moved => setTask(right - moved.clientX, false);
+    const right = ide.getBoundingClientRect().right, from = taskWidth;
+    let wanted = taskWidth;
+    // The tree folds while the task needs its room and comes back when the task gives it back.
+    const move = moved => { wanted = right - moved.clientX; setTask(wanted, false); layout(); };
     divider.addEventListener('pointermove', move);
-    divider.addEventListener('pointerup', () => { divider.removeEventListener('pointermove', move); setTask(taskWidth, true); }, { once: true });
+    divider.addEventListener('pointerup', () => {
+      divider.removeEventListener('pointermove', move);
+      if (wanted >= TASK.min - TASK.fold) { setTask(taskWidth, true); return; }
+      // A folded task reopens at the width it had before this drag.
+      taskOpen = false; save({ taskOpen }); setTask(from, true); layout();
+    }, { once: true });
   });
   divider.addEventListener('keydown', event => {
     const step = { ArrowLeft: 16, ArrowRight: -16 }[event.key];
-    if (step) { event.preventDefault(); setTask(taskWidth + step, true); }
+    if (step) { event.preventDefault(); setTask(taskWidth + step, true); layout(); }
   });
-  divider.addEventListener('dblclick', () => setTask(TASK.start, true));
+  divider.addEventListener('dblclick', () => { setTask(TASK.start, true); layout(); });
 
   function setView(name) {
     view = name; write(viewKey(exerciseKey), name); layout();

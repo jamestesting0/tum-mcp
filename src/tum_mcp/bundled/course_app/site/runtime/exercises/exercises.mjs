@@ -491,16 +491,32 @@ export function exercisePage(exercise, options) {
   }
   const task = options.comment(root);
   if (projectBlock) {
+    // The same count the step's own guide shows: within its part.
+    const ownSteps = step => exercise.steps.filter(item => (item.part || null) === (step.part || null));
     const stepLabel = () => {
-      // The same count the step's own guide shows: within its part.
       const step = exercise.steps.find(item => item.key === value.lastStep);
-      const own = exercise.steps.filter(item => (item.part || null) === (step?.part || null));
-      return step ? `${own.indexOf(step) + 1}/${own.length}` : '';
+      return step ? `${ownSteps(step).indexOf(step) + 1}/${ownSteps(step).length}` : '';
     };
-    workspace = editorWorkspace({ block: projectBlock, task, exerciseKey: exercise.key, stepLabel });
+    // Each solved file's explained sections: the walkthrough stops of the steps that write it and
+    // of the Solution, in line order. A range explained twice keeps its step's note.
+    const notes = new Map();
+    const addNotes = (refs, step) => {
+      for (const ref of refs || []) for (const stop of ref.walkthrough || []) {
+        const [first, last = first] = String(stop.lines).split('-').map(Number);
+        if (!notes.has(ref.path)) notes.set(ref.path, []);
+        const list = notes.get(ref.path);
+        if (!list.some(item => item.first === first && item.last === last)) list.push({ first, last, note: stop.note, step });
+      }
+    };
+    for (const step of exercise.steps) addNotes(step.check?.solution_code, { key: step.key, label: ownSteps(step).indexOf(step) + 1, prompt: step.prompt });
+    for (const answer of exercise.solution.answers) addNotes(answer.code, null);
+    for (const list of notes.values()) list.sort((a, b) => a.first - b.first);
+    // A link to the step already in the address changes nothing, so that step is shown directly.
+    const openStep = key => { if (location.hash === options.link(key)) page.navigateStep(key); else location.hash = options.link(key); };
+    workspace = editorWorkspace({ block: projectBlock, task, exerciseKey: exercise.key, stepLabel, notes, openStep });
     openStepFile(active.steps[active.index]);
   }
-  return { root: workspace || task, workspace: Boolean(workspace),
+  const page = { root: workspace || task, workspace: Boolean(workspace),
     heading: stepKey ? active.panel.querySelector('[data-step-prompt]') : heading,
     // A guided past question is labelled and titled "Question N"; the header names it once.
     title: [...new Set([exercise.label, exercise.title])].join(' · '), current: exercise.key,
@@ -539,4 +555,5 @@ export function exercisePage(exercise, options) {
       announce(`Step ${nextIndex + 1} of ${guide.steps.length}. ${guide.steps[nextIndex].prompt}`);
       activityChanged(); return true;
     } };
+  return page;
 }

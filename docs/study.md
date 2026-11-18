@@ -472,12 +472,14 @@ lecture note and Study unit to each workspace that exists, or records why none f
 A link added to an older item does not reopen its review. A sheet whose problems are not all prepared
 says which ones are still missing. A programming exercise opens as an editor workspace, as
 in the Artemis online editor: its files, the code and the task side by side. The Files and Task
-buttons fold and open their panels, and the dividers resize them. Where the file tree does
+buttons fold and open their panels, and the dividers resize them. The task can grow until
+the editor is 360 pixels wide, and dragging it far enough to the right folds it. Where the file tree does
 not fit beside the task, opening one folds the other. The app remembers the layout per
 course; on a phone a Files | Code | Task switch shows one at a time. A writing step opens
 its file at the lines to change, and Compare shows the solved lines with notes that
 explain them: choosing a note highlights its lines. Each editable file switches between Yours and Solution, where the lines the
-task changed are marked. Code is never run, and nothing is graded by keywords.
+task changed are marked. In Solution, a dot marks each explained section: choosing it opens
+the note under the section, with a link to the step that writes it. Code is never run, and nothing is graded by keywords.
 
 The files come from Artemis when you have started the exercise there: the agent reads them
 as Artemis copied them from the template, never your later work, and never starts, pushes

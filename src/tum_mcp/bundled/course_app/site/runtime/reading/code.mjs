@@ -89,22 +89,39 @@ function lines(code, language) {
   }
   return result;
 }
-function lineNode(parts, number, marked, changed = false) {
-  const line = node('span', `code-line${marked ? ' marked' : ''}${changed ? ' changed' : ''}`);
+function lineNode(parts, number, marked) {
+  const line = node('span', `code-line${marked ? ' marked' : ''}`);
   if (number) line.dataset.line = String(number);
   for (const [type, text] of parts) line.append(type ? node('span', `tok-${type}`, text) : document.createTextNode(text));
   return line;
 }
 
-// A highlighted listing; `start` numbers an excerpt from its real line, `marked` lines stand out
-// and `changed` lines carry the edge mark of what a solution changed.
-export function renderCode(code, language, { numbers = false, start = 1, marked = new Set(), changed = new Set() } = {}) {
+// A highlighted listing; `start` numbers an excerpt from its real line and `marked` lines stand out.
+export function renderCode(code, language, { numbers = false, start = 1, marked = new Set() } = {}) {
   const listing = node('code', `code-view${numbers ? ' numbered' : ''}`);
   lines(code, language).forEach((parts, index) => {
     if (index) listing.append('\n');
-    listing.append(lineNode(parts, numbers ? start + index : 0, marked.has(start + index), changed.has(start + index)));
+    listing.append(lineNode(parts, numbers ? start + index : 0, marked.has(start + index)));
   });
   return append(node('pre', 'code-pre'), listing);
+}
+// A read-only project file in the editor's frame, so a solved or read-only file looks exactly
+// like an editable one. The gutter has one row per line: `changed` rows carry the edge mark of
+// what a solution changed.
+export function codeFile(code, language, { marked = new Set(), changed = new Set() } = {}) {
+  const shell = node('div', 'code-editor read-only'), gutter = node('div', 'code-editor-gutter'), view = node('pre', 'code-editor-view');
+  lines(code, language).forEach((parts, index) => {
+    const number = index + 1;
+    const row = node('span', `code-gutter-row${changed.has(number) ? ' changed' : ''}${marked.has(number) ? ' marked' : ''}`);
+    row.dataset.line = String(number);
+    // Only the numbers are hidden: the gutter can also hold a note's button.
+    const label = node('span', 'code-gutter-number', String(number)); label.setAttribute('aria-hidden', 'true');
+    gutter.append(append(row, label));
+    if (index) view.append('\n');
+    view.append(lineNode(parts, number, marked.has(number)));
+  });
+  shell.append(gutter, append(node('div', 'code-editor-stack'), view));
+  return shell;
 }
 // A listing's header: its language and a Wrap lines toggle, remembered across listings.
 const wrapKey = 'study-space:code-wrap';
