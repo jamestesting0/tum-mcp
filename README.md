@@ -110,17 +110,17 @@ After initialization, a course project looks something like this:
 
 ```text
 course/
-  AGENTS.md                 Course instructions and inventory
-  materials/                Course content, exams, exercises and other sources
-  app/                      Study, Exercises, Exam and optional Lecture website
-    study/                  Course index and individual Study lessons
-    exercises/              Exercise-set index and individual guided problems
-    exam/                   Exam index, cheatsheet entries, patterns and mocks
-    lectures/               Optional: Lecture index and individual lectures
-    lecture-assets/         Optional: highlight thumbnails and meaningful note images
   .tum-mcp/                 Private course state, comments and lecture evidence
+  app/                      Study, Exercises, Exam and optional Lecture website
+    exam/                   Exam index, cheatsheet entries, patterns and mocks
+    exercises/              Exercise-set index and individual guided problems
+    lecture-assets/         Optional: highlight thumbnails and meaningful note images
+    lectures/               Optional: Lecture index and individual lectures
+    study/                  Course index and individual Study lessons
   audio/                    Optional: scripts, tracks and chapters for Audio Notes
+  materials/                Course content, exams, exercises and other sources
   videos/                   Optional: storyboards, scenes and explainer videos for Video Notes
+  AGENTS.md                 Course instructions and inventory
 ```
 
 ## Privacy, updates and removal
