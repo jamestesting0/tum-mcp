@@ -18,30 +18,31 @@ tum-mcp login
 tum-mcp doctor
 ```
 
-`tum-mcp setup` configures your installed coding clients and installs the optional
-workflows you pick (Lecture, Audio Notes, Video Notes) in one pass.
-Nothing is preselected, and Enter with nothing selected skips a step.
-
-Doctor reuses successful client checks for 24 hours while checking local
-registration and hooks every time. Use `tum-mcp doctor --refresh-clients` for a
-fresh client probe.
-
 Then create a folder for one course, open an agent chat in it and run `$sync-course`
 (Codex, Antigravity, Cursor) or `/sync-course` (Claude Code). You are all set: the
 agent collects the course's materials and you get your own learning harness for that
 course.
 
-Recommended models: GPT-6.1 Terra high or Opus 5.5 medium.
+Recommended models:
+
+| Model | Why |
+| --- | --- |
+| GPT Terra high | Balanced |
+| GPT Luna max | Free |
+| GPT Sol medium | Cost-effective intelligence |
+| Opus medium | Best choice for Claude |
+| Cursor Auto | Free |
 
 ## Read and study
 
 Ask your agent to explain course material, find announcements or catch up on a
-Zulip channel. Campus access is read-only and follows your account permissions;
-submissions, posting and exercise execution are unavailable.
-Course content in Moodle and Artemis remains readable across semesters while your
-account has access. Ask “prepare Algorithms for WS23” to select winter 2023/24;
-unspecified requests prefer the current semester. Discovery defaults stay narrow,
-with `include_past=true` available for explicit semester requests.
+Zulip channel.
+
+- Campus access is read-only and follows your account permissions. Submissions,
+  posting and exercise execution are unavailable.
+- Moodle and Artemis courses stay readable across semesters while your account has
+  access. Requests use the current semester unless you name one, such as "prepare
+  Algorithms for WS23" (winter 2023/24).
 
 | Workflow | Example request |
 | --- | --- |
@@ -53,25 +54,36 @@ with `include_past=true` available for explicit semester requests.
 | `review-course` | “Score my lessons and exercises and fix what is hard to learn from.” |
 | `publish-course` | “Publish my reviewed study site for phone access.” |
 
-Each project holds one course. Run `tum-mcp study` in its folder to open the app.
-Ask the agent to refresh it when sources change or address comments left in the
-app. For your own resources, such as past exams from other websites, create a
-temporary folder, put them all there and ask the agent to sort them into the course.
-Preparation checks coverage and completes the draft before offering review.
-Approve review for one round of checking and repair, or request more rounds.
-Study plans connect source decisions to worked steps and transfer practice.
-Browser checks follow revealed Study and Exercise content and flag formulas that
-clip, scroll individually or become too small to read.
-Exercise guides follow the solution's subgoals and show the full working on Compare, while
-the Solution gives the answer; each workspace can be prepared on its own and links the
-others when they exist.
-[Study guide and demo](docs/study.md).
+### Your course app
 
-TUMonline provides study names/degrees, public course catalog metadata and partial
-course curriculum positions by default. Your grades and progress, exams and
-semester fee status are available once you allow them with `tum-mcp manage tumonline`.
-The catalog does not show enrollments, and full curricula are unavailable.
-[TUMonline permissions](docs/tum-mcp.md#tumonline-permissions).
+- Each project holds one course. Run `tum-mcp study` in its folder to open the app.
+- Ask the agent to refresh the app when sources change, or to address comments you
+  left in it.
+- To add your own resources, such as past exams from other websites, put them in a
+  temporary folder and ask the agent to sort them into the course.
+- Study, Exercises and Exam can each be prepared on their own. They link to each
+  other once they exist.
+- Study lessons go from the source's reasoning to worked steps, then to practice.
+- Exercise guides follow the solution step by step. Compare shows the full working;
+  Solution shows only the answer.
+
+### Preparation and review
+
+1. The agent checks coverage and completes the draft.
+2. It then offers review: approve one round of checking and repair, or ask for more.
+3. Browser checks flag formulas that clip, scroll on their own or get too small to read.
+
+[Study guide and demo](docs/study.md)
+
+### TUMonline
+
+- By default: study names and degrees, the public course catalog and partial
+  curriculum positions per course.
+- After you allow them with `tum-mcp manage tumonline`: grades and progress, exams
+  and semester fee status.
+- Not available: enrollments and full curricula.
+
+[TUMonline permissions](docs/tum-mcp.md#tumonline-permissions)
 
 ## Optional extensions
 
