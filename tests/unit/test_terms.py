@@ -44,6 +44,16 @@ def test_only_prose_fields_are_marked() -> None:
     }
 
 
+def test_a_pair_spelled_alike_is_skipped_without_a_bubble_or_flag() -> None:
+    terms = TermList.model_validate({"pairs": [{"en": "Pumping-Lemma", "de": "Pumping-Lemma"}]})
+    context = {"paragraphs": ["The Pumping-Lemma holds."]}
+    marker = terms.marker()
+    marker.mark(context)
+    assert context == {"paragraphs": ["The Pumping-Lemma holds."]}
+    assert terms.bubbles() == {}
+    assert marker.unused() == []
+
+
 def test_bubbles_show_the_other_language_and_the_gloss() -> None:
     bubbles = TERMS.bubbles()
     assert bubbles["regular languages"] == {"pair": {"de": "reguläre Sprache"}}
@@ -66,8 +76,6 @@ def test_a_form_belongs_to_one_pair_and_a_pair_needs_two_languages() -> None:
         TermList.model_validate({"pairs": [{"en": "set", "de": "Menge"}, {"en": "set", "fr": "x"}]})
     with pytest.raises(ValidationError, match="two languages"):
         TermList.model_validate({"pairs": [{"en": "set"}]})
-    with pytest.raises(ValidationError, match="spelled the same"):
-        TermList.model_validate({"pairs": [{"en": "Pumping-Lemma", "de": "Pumping-Lemma"}]})
 
 
 def test_a_workspace_in_another_language_than_the_student_needs_pairs() -> None:

@@ -14,8 +14,8 @@ faithfully: its givens, symbols and labels stay as printed. Never translate code
 identifiers such as method, class, variable and file names. When the workspace language
 differs from the course's or the student's, list each key term once in `app/terms.json`
 under `pairs` (`study schema terms`). Both cases need it: an English workspace of a German
-course, and a German workspace for a student who writes in English. Skip a term spelled the
-same in both languages. The build marks
+course, and a German workspace for a student who writes in English. A term spelled the same
+in both languages needs no pair. The build marks
 its first use in each unit and shows the other language there, so never add it in brackets.
 
 # Prepare Lecture

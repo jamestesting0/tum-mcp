@@ -9,6 +9,8 @@
   both languages, with glosses for difficult words (Study's former `annotations` move there
   automatically). The build marks each term's first use per unit, exercise statement
   included, and its bubble shows the other language. Identifiers are never translated.
+  `study report` flags a listed term no prose uses, a workspace that needs term pairs but
+  lists none, and a handbook whose language fields are not two-letter codes.
   Definition bubbles no longer repeat the term, and marked terms keep their dotted
   underline in Safari and on iOS.
 - Ask agent: a button in the local course app asks about the selected text or the
