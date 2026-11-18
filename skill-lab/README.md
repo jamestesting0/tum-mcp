@@ -89,14 +89,14 @@ lab models --host codex
 
 # First round only: run the current skills once per author; these runs become the baseline.
 lab round new r0 --fresh --scenario course-workspaces --author claude \
-  --matrix codex:gpt-6.1-terra:high:fast --judge codex:gpt-6.1-sol:xhigh --reason "first baseline"
+  --matrix codex:gpt-6.1-terra:high --judge codex:gpt-6.1-sol:xhigh --reason "first baseline"
 lab variant r0 base
 lab run r0 --variant base --all-authors     # Claude and Codex at once
 
 # Every later round: --from takes the previous round's newest completed run per author as
 # the baseline (or name them with --baseline ROUND/RUN, or later with `lab baseline`).
 lab round new r1 --from r0 --scenario course-workspaces --author claude \
-  --matrix codex:gpt-6.1-terra:high:fast --judge codex:gpt-6.1-sol:xhigh --reason "headings"
+  --matrix codex:gpt-6.1-terra:high --judge codex:gpt-6.1-sol:xhigh --reason "headings"
 lab variant r1 candidate --patch .omo/skill-lab/rounds/r1/candidate.patch
 lab run r1 --variant candidate --all-authors
 lab collect r1
@@ -141,7 +141,7 @@ independent. To look at a run's app:
 ```
 
 Models are `host:model:effort[:fast]`; a bare `claude` or `codex` means that host's default author,
-`claude:opus:medium` or `codex:gpt-6.1-terra:high:fast`. The optional `fast` tier selects
+`claude:opus:medium` or `codex:gpt-6.1-terra:high` (standard speed). The optional `fast` tier selects
 Codex priority service for supported models; omitting it means standard speed. Claude takes an alias (`opus`, `sonnet`, `haiku`, `fable`)
 or a `claude-*` name with `low|medium|high|xhigh|max`; Codex takes a model from its list with
 a supported effort. Judges default to `claude:claude-opus-5-5:xhigh` and
