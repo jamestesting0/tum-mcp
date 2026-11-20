@@ -836,6 +836,15 @@ button.ask-launch[hidden] { display: none; }
 @media print { button.ask-launch { display: none; } }
 .reference-panel.ask-panel { display: flex; flex-direction: column; padding: 0; overflow: hidden; font-size: var(--text-ui); }
 .ask-panel:not([open]) { display: none; }
+:root:has(.ask-panel[open]:not(:modal)) { --ask-width: 400px; }
+.ask-panel[open]:not(:modal) { inset: 0 0 0 auto; width: var(--ask-width); border-inline-start: 1px solid var(--line); }
+.ask-panel:modal { inset: 0; width: 100%; border: 0; }
+:root:has(.ask-panel[open]:not(:modal)) .main { margin-inline-end: var(--ask-width); }
+:root:has(.ask-panel[open]:not(:modal)) :is(.page-outline, .contents-toggle) { display: none; }
+:root:has(.ask-panel[open]:not(:modal)) .page-layout.has-contents { display: block; }
+@media (max-width: 1199px) {
+  :root:has(.ask-panel[open]:not(:modal)) .reading:not(:has(> .ide)) { padding-inline: var(--s6); }
+}
 .ask-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: var(--s3) var(--s3) var(--s3) var(--s6); border-bottom: 1px solid var(--line); }
 .ask-title { display: flex; align-items: center; gap: var(--s1); min-width: 0; }
 .ask-title .icon-button { margin-inline-start: calc(-1 * var(--s3)); }

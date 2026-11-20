@@ -10,6 +10,7 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
+from playwright.sync_api import Browser, expect
 
 FAKE = Path(__file__).parents[1] / "fixtures/ask_agent"
 ANCHOR = {
@@ -83,6 +84,30 @@ def send(base: str, token: str, body: dict) -> list[dict]:
 
 def unit_text(project: Path) -> str:
     return (project / "app/study/units/graphs.json").read_text(encoding="utf-8")
+
+
+@pytest.mark.skipif(
+    os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Explicit owned browser QA."
+)
+def test_ask_agent_docks_beside_the_lesson_and_keeps_a_draft_on_resize(
+    preview: str, course_browser: Browser
+) -> None:
+    with course_browser.new_page(viewport={"width": 1060, "height": 704}) as page:
+        page.goto(preview + "/#graphs/content")
+        page.get_by_role("button", name="Ask agent", exact=True).click()
+        docked = page.locator("dialog[open]:not(:modal)").get_by_role("textbox")
+        expect(docked).to_be_visible()
+        draft = "Why does this example work?"
+        docked.fill(draft)
+
+        page.set_viewport_size({"width": 740, "height": 704})
+        modal = page.locator("dialog:modal").get_by_role("textbox")
+        expect(modal).to_have_value(draft)
+        expect(modal).to_be_focused()
+
+        page.set_viewport_size({"width": 1060, "height": 704})
+        expect(docked).to_have_value(draft)
+        expect(docked).to_be_focused()
 
 
 def test_requests_need_the_preview_origin_and_the_start_token(preview: str) -> None:
