@@ -729,7 +729,7 @@
           "label": "Ask agent",
           "line": "Ask about the section you are reading.",
           "after": {
-            "css": ".ask-panel .ask-context"
+            "css": ".ask-panel .ask-composer .ask-context"
           }
         },
         {
@@ -750,8 +750,9 @@
           "click": true,
           "label": "Send",
           "line": "It reads the lecture, then edits the lesson.",
+          "place": "bottom",
           "after": {
-            "css": ".ask-panel .ask-work"
+            "css": ".ask-panel .ask-work > summary"
           }
         },
         {
@@ -765,16 +766,17 @@
         },
         {
           "at": 0.74,
-          "target": {
-            "css": ".ask-panel button[aria-label=\"Close\"]"
+          "before": {
+            "css": ".ask-panel:modal button[aria-label=\"Close\"]"
           },
-          "click": true,
+          "target": {
+            "css": "main section.read-section[data-block-index=\"4\"] ol.steps > li",
+            "text": "^In the trace"
+          },
+          "wait": 9000,
           "label": "The lesson",
           "line": "The new step is already on the page.",
-          "after": {
-            "css": "main section.read-section li",
-            "text": "^In the trace"
-          }
+          "place": "below"
         }
       ],
       "appStart": "#dijkstra/content"

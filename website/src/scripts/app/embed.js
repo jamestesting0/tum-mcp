@@ -3,7 +3,7 @@ import { stroke } from '../ui/icons.js';
 import { createGuide } from './guide.js';
 
 const THEME_KEY = 'study-space:theme';
-const TRAVEL_MS = 640;
+const CLICK_CUE_MS = 240;
 // Room kept under a walkthrough's control for the guide's callout.
 const CALLOUT_ROOM = 96;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -14,7 +14,12 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 // the tour drives it and keeps keyboard focus on the page; once engaged, it is theirs.
 export function createAppEmbed({ documentText, stage, onEngage }) {
   const frame = h('iframe.app-frame', { title: 'Graph Search study app, live', tabindex: '-1', loading: 'eager' });
-  const guide = createGuide({ topInset: () => (loaded ? viewOf(win().document.scrollingElement).top : 0) });
+  const guide = createGuide({ topInset: () => {
+    if (!loaded) return 0;
+    const doc = win().document;
+    return doc.querySelector('.ask-panel:modal .ask-head')?.getBoundingClientRect().bottom
+      ?? viewOf(doc.scrollingElement).top;
+  } });
   const shield = h('button.app-shield', { type: 'button', 'aria-label': 'Use the study app' });
   const resume = h('button.resume', { type: 'button' }, stroke('arrow', 16), h('span', { text: 'Resume tour' }));
   const element = h('div.app-slot', {}, frame, guide.element, shield, resume);
@@ -39,7 +44,7 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     superseded = new Promise(resolve => { wake = resolve; });
     return run;
   }
-  const rest = ms => Promise.race([pause(ms), superseded]);
+  const rest = ms => ms > 0 ? Promise.race([pause(ms), superseded]) : Promise.resolve();
   let pressed = [];
 
   const win = () => frame.contentWindow;
@@ -79,9 +84,11 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
 
   // scrollIntoView would also scroll the tour page; move only the app's own scroll container.
   function scroller(item) {
-    let box = item.parentElement;
-    while (box && !(box.scrollHeight > box.clientHeight && /auto|scroll/.test(win().getComputedStyle(box).overflowY))) box = box.parentElement;
-    return box ?? win().document.scrollingElement;
+    for (let box = item.parentElement; box; box = box.parentElement) {
+      if (box.scrollHeight > box.clientHeight && /auto|scroll/.test(win().getComputedStyle(box).overflowY)) return box;
+      if (box.matches('dialog')) return null;
+    }
+    return win().document.scrollingElement;
   }
 
   // On phones the app's sidebar is a sticky top bar, so the page's view starts below it and a
@@ -100,6 +107,7 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
 
   function alignTop(item) {
     const box = scroller(item);
+    if (!box) return;
     jump(box, box.scrollTop + item.getBoundingClientRect().top - viewOf(box).top - 24);
   }
 
@@ -129,11 +137,13 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
   // Keeps the target in the upper part of the view, leaving room for the callout below it.
   // While the content moves, the ring and callout lift away and the pointer rests in place.
   async function bringIntoView(item, smooth, live) {
+    if (win().getComputedStyle(item).position === 'fixed') return;
     const box = scroller(item);
+    if (!box) return;
     // A scroll box inside the page (a map, a wide table) first shows the item within itself.
     if (box !== win().document.scrollingElement && box.parentElement) {
       const outer = scroller(box);
-      if (outer !== box && outer.scrollHeight > outer.clientHeight + 1) {
+      if (outer && outer !== box && outer.scrollHeight > outer.clientHeight + 1) {
         const inner = viewOf(box);
         const rect = item.getBoundingClientRect();
         const below = rect.bottom - (inner.top + inner.height);
@@ -168,7 +178,7 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     top = Math.max(0, Math.min(top, end));
     for (let pass = 0; pass < 3; pass += 1) {
       const line = view.top + top - box.scrollTop;
-      const row = rowAt(line, view);
+      const row = rowAt(line, view, box);
       if (!row) break;
       const above = Math.max(0, top - (line - row.top) - 8);
       const past = top + (row.bottom - line) + 1;
@@ -179,13 +189,14 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
   }
 
   // The largest row the line crosses: an element short enough to be a row, or a line of text.
-  function rowAt(line, view) {
+  function rowAt(line, view, box) {
     const doc = win().document;
+    const scope = box === doc.scrollingElement ? doc.querySelector('main') ?? doc.body : box;
     const crosses = rect => rect.top < line - 1 && rect.bottom > line + 1 && rect.height < view.height * 0.3;
     let row = null;
     const consider = rect => { if (crosses(rect) && (!row || rect.height > row.height)) row = rect; };
-    for (const element of doc.querySelectorAll('main *')) consider(element.getBoundingClientRect());
-    const texts = doc.createTreeWalker(doc.querySelector('main') ?? doc.body, NodeFilter.SHOW_TEXT);
+    for (const element of scope.querySelectorAll('*')) consider(element.getBoundingClientRect());
+    const texts = doc.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
     const range = doc.createRange();
     for (let text = texts.nextNode(); text; text = texts.nextNode()) {
       const parent = text.parentElement.getBoundingClientRect();
@@ -200,6 +211,7 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
   // square around a small drawn control such as a step dot.
   function outline(item) {
     const rect = item.getBoundingClientRect();
+    if (item.matches('textarea, input, .ask-work > summary, ol.steps > li')) return rect;
     const style = win().getComputedStyle(item);
     const bare = !(item instanceof win().SVGElement) && style.backgroundColor === 'rgba(0, 0, 0, 0)' && Number.parseFloat(style.borderTopWidth) === 0;
     if (!bare) return rect;
@@ -213,6 +225,26 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     if (item.textContent.trim()) return rect;
     const side = Math.min(rect.width, rect.height);
     return new DOMRect(rect.left + (rect.width - side) / 2, rect.top + (rect.height - side) / 2, side, side);
+  }
+
+  // The live reply replaces its work summary when it finishes. Follow the replacement and
+  // hold the caption outside the composer, so the context and the draft stay readable.
+  function measureTarget(item, target) {
+    return () => {
+      if (!item?.getClientRects().length && target) item = match(target);
+      if (!item?.getClientRects().length) return null;
+      let rect = outline(item);
+      const thread = item.closest('.ask-thread')?.getBoundingClientRect();
+      if (thread) {
+        const top = Math.max(rect.top, thread.top);
+        const bottom = Math.min(rect.bottom, thread.bottom);
+        if (bottom <= top) return null;
+        rect = new DOMRect(rect.left, top, rect.width, bottom - top);
+      }
+      const composer = item.closest('.ask-panel')?.querySelector('.ask-composer');
+      const composerBox = composer?.getBoundingClientRect();
+      return { rect, captionBox: composer?.contains(item) ? composerBox : rect, captionLimit: composerBox?.top };
+    };
   }
 
   // A real click starts with pointerdown, which also closes any open bubble the app shows. A toggle
@@ -235,6 +267,14 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     doc.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     // The Ask agent panel stays open across its scene's beats; a rebuild closes it.
     doc.querySelectorAll('dialog[open]:not(.ask-panel)').forEach(dialog => dialog.close());
+  }
+
+  function revealTarget(beat) {
+    const cover = beat.before && match(beat.before);
+    if (!cover) return false;
+    guide.lift();
+    cover.click();
+    return true;
   }
 
   // Returns the app to the route's first view: dialogs closed, toggles the guide switched on
@@ -300,8 +340,8 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     const toggle = match({ css: 'button.outline-toggle' });
     if (!toggle || toggle.getAttribute('aria-expanded') === 'true') return null;
     if (animate) {
-      guide.place(outline(toggle), beat, { animate, index: scene.beat, count: scene.beats.length, measure: () => (toggle.isConnected ? outline(toggle) : null) });
-      await rest(TRAVEL_MS);
+      await rest(guide.place(measureTarget(toggle), beat, { animate, index: scene.beat, count: scene.beats.length }));
+      await rest(CLICK_CUE_MS);
       if (!live()) return null;
       guide.press({ quiet: false });
     }
@@ -337,6 +377,7 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
   async function playBeat(scene, id, animate) {
     const beat = scene.beats[scene.beat];
     const live = () => id === run && !engaged;
+    animate = animate && !reducedMotion.matches;
     // Moving on closes the previous beat's bubble before anything is measured, as the next
     // click would; a bubble closing later would shift the layout under the ring.
     // A beat that opened a menu (the workspace switcher) leaves it open for the next beat to use.
@@ -348,27 +389,30 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     if (revealed) item = await revealSidebar(beat, scene, animate, live);
     if (!live()) return false;
     if (!item) { guide.hide(); await settleRoute(beat.route); closeSidebar(); return true; }
-    await bringIntoView(item, animate && !reducedMotion.matches, live);
+    if (revealTarget(beat)) await frames();
+    if (!live()) return false;
+    await bringIntoView(item, animate, live);
     if (!live()) return false;
     // In a walkthrough the click changes the visual above the control, so the callout goes below.
-    guide.place(outline(item), item.closest('.walk') && !beat.place ? { ...beat, place: 'below' } : beat, { animate, index: scene.beat, count: scene.beats.length, measure: () => (item.isConnected ? outline(item) : null) });
+    const placement = item.closest('.walk') && !beat.place ? { ...beat, place: 'below' } : beat;
+    await rest(guide.place(measureTarget(item, beat.target), placement, { animate, index: scene.beat, count: scene.beats.length }));
+    if (!live()) return false;
     if (beat.type) {
-      if (animate) await rest(TRAVEL_MS);
-      if (!live()) return false;
       await typeInto(item, beat.type, animate, live);
       if (!live()) return false;
     }
     if (!beat.click) return true;
-    if (animate) await rest(TRAVEL_MS);
+    if (animate) await rest(CLICK_CUE_MS);
     if (!live()) return false;
     guide.press({ quiet: !animate });
     // A click that changes page lets the old page fade out first, so the new one fades in from a dip, not a cut.
-    if (beat.route && animate && !reducedMotion.matches) {
+    if (beat.route && animate) {
       await pause(240);
       await win().document.querySelector('main')?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: 'ease-in', fill: 'forwards' }).finished;
       if (!live()) return false;
     }
     click(scene.hash, beat.target, item);
+    if (!item.getClientRects().length) guide.lift();
     if (beat.route) {
       await settleRoute(beat.route);
       closeSidebar();
@@ -378,29 +422,27 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
       // The control the click used is gone with the old page; the ring moves to the new page's title.
       await landed();
       const heading = match({ css: 'main h1' }) ?? match({ css: 'main h2' });
-      if (heading && live()) guide.follow(outline(heading), beat, () => (heading.isConnected ? outline(heading) : null), animate);
-      return true;
+      if (heading && live()) await rest(guide.retarget(measureTarget(heading), beat, animate));
+      return live();
     }
     if (!beat.after) {
       await frames();
       if (!live()) return false;
       // The lens stays on a control clicked in place.
-      if (item.isConnected && beat.opens) guide.follow(outline(item), beat, () => (item.isConnected ? outline(item) : null), animate);
-      return true;
+      if (item.isConnected && beat.opens) await rest(guide.retarget(measureTarget(item), beat, animate));
+      return live();
     }
     const result = await find(beat.after, beat.wait ?? 1500);
     if (!live()) return false;
     // On a phone the switcher opens inside the revealed sidebar, so the lens stays on it and goes
     // straight to the workspace next, as on a desktop, rather than widening over the whole menu.
     if (result && !(revealed && beat.opens)) {
-      if (animate) await rest(TRAVEL_MS / 2);
-      if (!live()) return false;
       // What the click revealed may sit under the app's sticky bar or below the view.
-      await bringIntoView(result, animate && !reducedMotion.matches, live);
+      await bringIntoView(result, animate, live);
       if (!live()) return false;
-      guide.follow(outline(result), beat, () => (result.isConnected ? outline(result) : null), animate);
+      await rest(guide.retarget(measureTarget(result, beat.after), beat, animate));
     }
-    return true;
+    return live();
   }
 
   // A scene is one story step's route plus the guide beat the scroll asks for. The driver walks
@@ -521,10 +563,11 @@ export function createAppEmbed({ documentText, stage, onEngage }) {
     const demo = win().__askDemo;
     if (demo) demo.instant = true;
     for (const beat of scene.beats.slice(0, Math.max(scene.beat, 0))) {
-      if (!beat.click && !beat.type) continue;
+      if (!beat.before && !beat.click && !beat.type) continue;
       let item = await find(beat.target, beat.wait ?? (inSidebar(beat) ? 300 : 900));
       if (!item && inSidebar(beat)) item = await revealSidebar(beat, scene, false, () => id === run);
       if (id !== run) return;
+      if (item) revealTarget(beat);
       if (item && beat.type) await typeInto(item, beat.type, false, () => true);
       if (item && beat.click) click(scene.hash, beat.target, item);
       await settleRoute(beat.route);

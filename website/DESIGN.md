@@ -131,7 +131,7 @@ Atkinson Hyperlegible Next for everything the page itself says; the system UI fo
 
 - The page is at most 1240px wide with 24px gutters. The header is sticky at 60px.
 - The story is one tall track (`steps × 78vh + 100vh`) with a sticky stage below the header. Scroll position maps to a step and a progress `t` within it. Every step is a complete state, so any position renders directly.
-- The stage is a 1280 × 800 desk scaled to fit. The agent window fills it. The browser window sits at 1060 × 704, offset like a real window over the editor.
+- The stage is a 1280 × 800 desk scaled to fit. The agent window fills it. The 1060 × 704 browser window is centered over the editor. Ask agent docks on the right beside the lesson when both fit.
 - Phone (≤ 760px): the header is 56px, steps are 70svh, the stage shows the focused part of the agent at full width, the agent switcher becomes a 2 × 2 grid, and the playback bar shows only the current chapter's name. Commands wrap.
 
 ## Elevation & Depth
@@ -171,8 +171,8 @@ While the app is on screen, scroll plays two or three beats per section. Each be
 
 1. dims the app slightly around one control and rings it in accent, with a soft halo pulse;
 2. moves the lens there: it shrinks to a small accent disc, travels, and widens into the highlight around the control while the rest dims;
-3. shows an ink callout with a label, one line on what the control offers, and dots for the section's beats;
-4. on click beats, briefly brightens the lens's fill without moving it; a page-changing click gathers it into a disc first, and when the click reveals something (a new page's title, a menu, a panel) the lens glides on to it. The dimming stays steady while the guide shows, and the lens follows its control every frame while the app scrolls or reflows.
+3. shows an ink callout once the lens lands, with a label, one line on what the control offers, and dots for the section's beats. Ask agent callouts leave the message composer clear;
+4. on click beats, briefly brightens the lens's fill without moving it. When the click reveals another control, the lens moves to it. The lens follows its control as the app reflows and fades while the guide scrolls to a different target.
 
 Scrolling back rebuilds the view and replays earlier clicks instantly, so every scroll position shows the same state. On phones, a beat falls back to the narrow layout's version of its control (the menu button for the sidebar, the map's list). The guide hides while the visitor uses the app and returns on Resume. With reduced motion, beats appear in place.
 

@@ -12,7 +12,7 @@
 .traffic i:nth-child(3) { background: #28c840; }
 
 .bw {
-  position: absolute; left: 148px; top: 58px; width: 1060px; height: 704px; z-index: 3;
+  position: absolute; inset: 0; margin: auto; width: 1060px; height: 704px; z-index: 3;
   display: flex; flex-direction: column; border-radius: 12px; overflow: hidden;
   background: var(--canvas); box-shadow: 0 2px 6px rgb(0 0 0 / .12), 0 32px 80px -16px rgb(7 33 64 / .45), 0 0 0 1px rgb(0 0 0 / .16);
   opacity: 0; transform: translateY(28px) scale(.975); pointer-events: none; visibility: hidden;
@@ -21,13 +21,15 @@
 :root[data-theme="dark"] .bw { box-shadow: 0 2px 6px rgb(0 0 0 / .4), 0 32px 80px -16px rgb(0 0 0 / .7), 0 0 0 1px rgb(255 255 255 / .12); }
 .bw.is-open { opacity: 1; transform: none; pointer-events: auto; visibility: visible; transition-delay: 0s; }
 .bw-bar {
-  display: flex; align-items: center; gap: 18px; height: 44px; padding: 0 16px; flex: none;
+  position: relative; display: flex; align-items: center; gap: 18px; height: 44px; padding: 0 16px; flex: none;
   background: #f4f4f5; border-bottom: 1px solid rgb(0 0 0 / .1); color: #6b6b70;
 }
 :root[data-theme="dark"] .bw-bar { background: #2a2a2c; border-bottom-color: rgb(255 255 255 / .08); color: #a1a1a6; }
 .bw-nav { display: inline-flex; gap: 10px; }
+.bw-nav:last-child { margin-inline-start: auto; }
 .bw-address {
-  flex: 1; max-width: 440px; margin: 0 auto; height: 28px; display: flex; align-items: center; justify-content: center;
+  position: absolute; left: 50%; translate: -50%; width: 440px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
   border-radius: 7px; background: rgb(0 0 0 / .06); color: #3a3a3c; font: 500 12.5px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 :root[data-theme="dark"] .bw-address { background: rgb(255 255 255 / .08); color: #e5e5ea; }
@@ -47,15 +49,11 @@
 .guide { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 260ms var(--ease); --guide-dim: rgb(7 33 64 / .08); }
 :root[data-theme="dark"] .guide { --guide-dim: rgb(0 0 0 / .34); }
 .guide.is-on { opacity: 1; }
-.guide.is-instant > * { transition: none; }
-/* An instant placement still fades the ring and its dimming in or out, so the page never flashes. */
-.guide.is-instant > .guide-ring { transition: opacity 260ms ease-in-out; }
 .guide-ring, .guide-callout { position: absolute; left: 0; top: 0; }
 .guide-ring { will-change: transform, width, height; transition: opacity 360ms ease-in-out 120ms; }
 .guide-ring::after { content: ""; position: absolute; inset: 0; border-radius: inherit; animation: guide-halo 1.9s var(--ease-out) infinite; }
-.guide.is-lifting .guide-callout { opacity: 0; transition: opacity 140ms var(--ease); }
-.guide-callout.is-snap { transition-property: opacity; }
-.guide-callout.is-tracking { transition-property: opacity; }
+.guide:is(.is-lifting, .is-unanchored) :is(.guide-ring, .guide-callout),
+.guide.is-travelling .guide-callout { opacity: 0; }
 @keyframes guide-halo {
   from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); }
   to { box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent); }
@@ -64,10 +62,9 @@
   display: flex; align-items: flex-end; gap: 14px; max-width: min(320px, calc(100% - 24px)); padding: 11px 13px 12px 15px;
   border-radius: 12px; background: var(--ink); color: var(--canvas); font: 14px/1.4 var(--font-ui);
   box-shadow: 0 1px 2px rgb(0 0 0 / .14), 0 16px 36px -14px rgb(7 33 64 / .6);
-  transition: transform 640ms var(--ease-out) 70ms, opacity 240ms var(--ease);
+  transition: opacity 140ms var(--ease);
 }
-.guide-text { min-width: 0; transition: opacity 170ms var(--ease), transform 170ms var(--ease); }
-.guide-callout.is-swapping .guide-text { opacity: 0; transform: translateY(3px); }
+.guide-text { min-width: 0; }
 .guide-text strong { display: block; font-weight: 650; letter-spacing: .005em; }
 .guide-text span { display: block; opacity: .78; }
 .guide-dots { display: flex; gap: 4px; flex: none; padding-bottom: 5px; }
@@ -95,6 +92,7 @@
   .sg-idp .sg-logo { right: 18px; width: 56px; }
   .bw-bar { height: 38px; gap: 10px; padding: 0 10px; }
   .bw-nav, .bw .traffic { display: none; }
+  .bw-address { position: static; translate: none; width: 100%; margin-inline: auto; }
   .resume { bottom: 12px; }
   /* The callout spans the window, so it reads as part of it rather than a chip floating beside the control. */
   .guide-callout { width: calc(100% - 24px); max-width: none; justify-content: space-between; }
