@@ -63,6 +63,9 @@ Zulip channel.
   temporary folder and ask the agent to sort them into the course.
 - Study, Exercises and Exam can each be prepared on their own. They link to each
   other once they exist.
+- In a combined request, the agent can keep preparing lessons and lecture notes
+  while an exercise waits for clarification. The readiness report shows what
+  still needs attention in each workspace.
 - Study lessons go from the source's reasoning to worked steps, then to practice.
 - Exercise guides follow the solution step by step. Compare shows the full working;
   Solution shows only the answer.

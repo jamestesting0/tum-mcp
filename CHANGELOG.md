@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 0.27.0 — 2026-11-20
+
+- Keep feasible Study, Exercises and Lecture work moving when another workspace
+  needs clarification. Readiness shows the next repair for each affected
+  workspace. A combined task stays open until its required checks pass.
+- Preserve released exercise statements and check each required part against
+  its own guide and answer. Scoped checks run the relevant answer keys, and a
+  malformed key reports a failure without stopping checks on other items.
+- Resume lecture preparation from the first unread interval using the saved
+  source comparison. Keep worked examples distinct and link explanations to
+  the relevant recording times.
+- Recheck Exam sheets when cited papers change. Bind browser receipts to
+  current captures, media completion to the requested output, and publication
+  to current review evidence.
+
 ## 0.26.0 — 2026-11-18
 
 - Course languages: each workspace has its own language. When the course is taught in
