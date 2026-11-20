@@ -226,11 +226,18 @@ def test_the_broker_runs_the_interaction_check_and_a_lab_chosen_checker(tmp_path
     template = ran[ran.index("--command") + 1]
     assert "read-only" in template and "gpt-6.1-terra" in template and "{prompt}" in template
     assert request("review", "run-checker", ".", "--plans")[3] == "--plans"
+    assert request("review", "run-checker", ".", "--plans", "--batch", "week_1.v2")[3:6] == [
+        "--plans",
+        "--batch",
+        "week_1.v2",
+    ]
     # The trial cannot pick the host command or reach outside its packets.
     for arguments in (
         ("review", "run-checker", ".", "--packet", "x", "--command", "sh -c id"),
         ("review", "run-checker", ".", "--host", "claude", "--plans"),
         ("review", "run-checker", ".", "--packet", "../../etc"),
+        ("review", "run-checker", ".", "--plans", "--batch", "Week-1"),
+        ("review", "run-checker", ".", "--packet", "r1-p2", "--batch", "week-1"),
     ):
         with pytest.raises(LabError):
             request(*arguments)
@@ -257,6 +264,94 @@ def test_help_runs_in_the_trial_and_checks_go_to_the_broker():
     assert not shim.brokers(["study", "visuals", ".", "--help"])
     assert not shim.brokers(["lecture", "prepare", ".", "--help"])
     assert not shim.brokers(["study", "lint", "."])
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["moodle", "courses"],
+        ["doctor", "--live"],
+        ["serve"],
+        ["lecture", "prepare", ".", "--recording", "https://live.rbg.tum.de/w/1/2"],
+    ],
+)
+def test_offline_shim_and_broker_refuse_campus_paths(tmp_path, args):
+    from skill_lab import LabError, runs, shim
+
+    assert shim.refusal(args, offline=True)
+    with pytest.raises(LabError, match="offline broker"):
+        runs._render_request({"arguments": args, "cwd": str(tmp_path)}, tmp_path, offline=True)
+
+
+@pytest.mark.parametrize("limit", [1, 3])
+def test_offline_checker_limits_actual_launches_and_never_repairs(tmp_path, limit):
+    import sys
+
+    from skill_lab import shim
+
+    ledger, counter = tmp_path / "ledger", tmp_path / "launches"
+    command = [sys.executable, "-c", f"open({str(counter)!r}, 'a').write('called\\n')"]
+    budget = (str(ledger), limit)
+    for attempt in range(limit):
+        log = str(tmp_path / f"request-{attempt}")
+        assert shim.checker(log, "plan_check", command, budget=budget) == 0
+        assert shim.checker(log, "plan_check", command, budget=budget) == 2
+    assert shim.checker(str(tmp_path / "extra"), "plan_check", command, budget=budget) == 2
+    assert counter.read_text().splitlines() == ["called"] * limit
+
+
+def test_offline_broker_deadline_stops_hanging_child_process(tmp_path, monkeypatch):
+    import socket
+    import subprocess
+    import sys
+    import tempfile
+    import time
+    from pathlib import Path
+
+    from skill_lab import runs, shim
+
+    # EOF on this socket requires the separate worker process to close its inherited fd.
+    program = (
+        "import socket, subprocess, sys; "
+        "s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); "
+        "s.sendall(b'ready'); "
+        "p=subprocess.Popen([sys.executable,'-c','import signal; signal.pause()'],"
+        "pass_fds=[s.fileno()]); p.wait()"
+    )
+    folder = tmp_path / "broker"
+    state = runs.OfflineBrokerTurn(1, tmp_path / "ledger")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        runs, "_broker_command", lambda *_: [sys.executable, "-c", program, sockpath]
+    )
+    with (
+        tempfile.TemporaryDirectory(dir="/tmp") as short_dir,
+        socket.socket(socket.AF_UNIX) as receiver,
+    ):
+        sockpath = f"{short_dir}/broker.sock"
+        receiver.bind(sockpath)
+        receiver.listen()
+        receiver.settimeout(6)
+        state.deadline = time.monotonic() + 4
+        stop = runs.render_broker(folder, Path(sys.executable), ["checker"], turn=state)
+        shim_path = Path(shim.__file__)
+        with subprocess.Popen(
+            [sys.executable, str(shim_path), "review", "run-checker", ".", "--plans"],
+            env={**__import__("os").environ, "SKILL_LAB_RENDER_BROKER": str(folder)},
+            stderr=subprocess.PIPE,
+        ) as caller:
+            try:
+                connection, _ = receiver.accept()
+                with connection:
+                    connection.settimeout(6)
+                    assert connection.recv(5) == b"ready"
+                    assert connection.recv(1) == b""
+                assert b"exhausted the author turn deadline" in caller.communicate(timeout=6)[1]
+                assert caller.returncode == 2
+            finally:
+                state.finish()
+                stop.set()
+                caller.kill()
 
 
 def test_recording_preparation_is_confined_to_the_course_and_canonical_streams(tmp_path):

@@ -640,32 +640,67 @@ def check_visuals(
         f"visual/{width}/{item}": value for width in widths for item, value in revisions.items()
     }
     kept = reusable(root, identity, keyed)
+    previous = read_report(root)
+    prior = previous["items"] if previous else {}
+    # The receipt certifies a check; the report supplies the per-width measurements.
+    kept = {
+        key: entry
+        for key, entry in kept.items()
+        if (item := key.split("/", 2)[2]) in prior and prior[item]["revision"] == entry.revision
+    }
     unchanged = {
         item for item in revisions if all(f"visual/{width}/{item}" in kept for width in widths)
     }
-    fresh = [visit for visit in visits if visit.item not in unchanged]
-    measured, sheets = (
-        _measure(root, site, fresh, widths=widths, choice=choice, stamp=identity.build)
-        if fresh
-        else ({}, {})
-    )
+    # Group widths that need the same visits so a bad sheet only redraws its item and width.
+    groups: dict[tuple[str, ...], list[str]] = {}
+    for width in widths:
+        pending = tuple(item for item in revisions if f"visual/{width}/{item}" not in kept)
+        if pending:
+            groups.setdefault(pending, []).append(width)
+    measured: dict[str, dict[str, Visual]] = {}
+    sheets: dict[tuple[str, str], tuple[str, ...]] = {}
+    for pending, selected_widths in groups.items():
+        fresh = [visit for visit in visits if visit.item in pending]
+        found, written = _measure(
+            root, site, fresh, widths=tuple(selected_widths), choice=choice, stamp=identity.build
+        )
+        sheets.update(written)
+        for item, checks in found.items():
+            visuals = measured.setdefault(item, {})
+            for key, visual in checks.items():
+                visuals.setdefault(key, visual).widths.update(visual.widths)
     items: dict[str, dict[str, Any]] = {
         item: {
             "revision": value,
             "checked_at": datetime.date.today().isoformat(),
             "visuals": [asdict(visual) for visual in measured.get(item, {}).values()],
-            "sheets": [path for width in widths for path in sheets.get((item, width), ())],
+            "sheets": [
+                path
+                for width in widths
+                for path in (
+                    kept[f"visual/{width}/{item}"].captures
+                    if f"visual/{width}/{item}" in kept
+                    else sheets.get((item, width), ())
+                )
+            ],
         }
         for item, value in revisions.items()
         if item not in unchanged
     }
     defects = _defects(items)
-    previous = read_report(root)
-    note_items: dict[str, dict[str, Any]] = {
-        item: previous["items"][item]
-        for item in unchanged
-        if previous and item in previous["items"]
-    } | items
+    for item, record in items.items():
+        measured_visuals = {visual["id"]: visual for visual in record["visuals"]}
+        for visual in prior.get(item, {}).get("visuals", []):
+            retained_widths = {
+                width: details
+                for width, details in visual["widths"].items()
+                if f"visual/{width}/{item}" in kept
+            }
+            if retained_widths:
+                current = measured_visuals.setdefault(visual["id"], {**visual, "widths": {}})
+                current["widths"].update(retained_widths)
+        record["visuals"] = list(measured_visuals.values())
+    note_items: dict[str, dict[str, Any]] = {item: prior[item] for item in unchanged} | items
     notes = [
         {"item": item, "visual": visual["id"], "detail": finding["detail"]}
         for item, record in note_items.items()
@@ -676,7 +711,7 @@ def check_visuals(
     ]
     failed = {(defect["item"], defect["width"]) for defect in defects}
     states = {
-        f"visual/{width}/{item}": item in unchanged or (item, width) not in failed
+        f"visual/{width}/{item}": (item, width) not in failed
         for width in widths
         for item in revisions
     }
@@ -695,12 +730,8 @@ def check_visuals(
         identity,
         states,
         (request, result),
-        captures={f"visual/{width}/{item}": paths for (item, width), paths in sheets.items()}
-        | {
-            f"visual/{width}/{item}": kept[f"visual/{width}/{item}"]
-            for width in widths
-            for item in unchanged
-        },
+        captures={f"visual/{width}/{item}": paths for (item, width), paths in sheets.items()},
+        retained=kept,
         revisions=keyed,
     )
     with FileLock(str(private_path(root, "update.lock"))):

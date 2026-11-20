@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tarfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -115,6 +116,24 @@ def python_of(variant_dir: Path) -> Path:
     return variant_dir / "venv" / "bin" / "python"
 
 
+def installed_hash(variant_dir: Path) -> str:
+    """Fingerprint installed product and bundled skill bytes, excluding interpreter caches."""
+    packages = list((variant_dir / "venv" / "lib").glob("python*/site-packages/tum_mcp"))
+    if len(packages) != 1 or not packages[0].is_dir():
+        raise LabError(
+            "The variant has no isolated installed product. Build it with `lab variant`."
+        )
+    package = packages[0]
+    manifest = {
+        path.relative_to(package).as_posix(): digest(path)
+        for path in sorted(package.rglob("*"))
+        if path.is_file() and "__pycache__" not in path.parts
+    }
+    if not manifest:
+        raise LabError("The isolated installed product is empty.")
+    return hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
+
+
 def create(round_id: str, name: str, base: Base, patch: Path | None = None) -> Path:
     directory = paths.round_dir(round_id) / "variants" / name
     wanted = spec_of(base, patch)
@@ -133,11 +152,23 @@ def create(round_id: str, name: str, base: Base, patch: Path | None = None) -> P
     subprocess.run(
         ["uv", "venv", "--quiet", "--python", "3.13", str(directory / "venv")], check=True
     )
+    python = python_of(directory)
+    if sys.platform == "darwin" and python.is_symlink():
+        # Seatbelt can follow a direct link to the allowed binary without reading uv's alias.
+        target = python.resolve(strict=True)
+        if python.readlink() != target:
+            python.unlink()
+            python.symlink_to(target)
     subprocess.run(
-        ["uv", "pip", "install", "--quiet", "--python", str(python_of(directory)), str(repo)],
+        ["uv", "pip", "install", "--quiet", "--python", str(python), str(repo)],
         check=True,
     )
-    record.write_text(json.dumps({"name": name, "spec": wanted}, indent=2), encoding="utf-8")
+    record.write_text(
+        json.dumps(
+            {"name": name, "spec": wanted, "installed_hash": installed_hash(directory)}, indent=2
+        ),
+        encoding="utf-8",
+    )
     return directory
 
 

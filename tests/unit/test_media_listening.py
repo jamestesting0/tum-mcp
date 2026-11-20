@@ -1,7 +1,9 @@
-from tum_mcp.course.media.listening import align, judge, tokens
+import pytest
+
+from tum_mcp.course.media.listening import ExpectedSentence, TimedWord, align, judge, tokens
 
 
-def words(text: str, start: float, step: float = 0.4) -> list[dict]:
+def words(text: str, start: float, step: float = 0.4) -> list[TimedWord]:
     return [
         {"word": word, "start": start + i * step, "end": start + i * step + 0.3}
         for i, word in enumerate(text.split())
@@ -18,7 +20,7 @@ def test_tokens_say_numbers_and_names_the_way_a_narrator_does() -> None:
 
 
 def test_a_swallowed_word_is_unclear_while_a_matching_sentence_is_not() -> None:
-    expected = [
+    expected: list[ExpectedSentence] = [
         {
             "key": "b01/1",
             "text": "Two rooms, A and B, may each begin dirty.",
@@ -36,7 +38,7 @@ def test_a_swallowed_word_is_unclear_while_a_matching_sentence_is_not() -> None:
 
 
 def test_a_dropped_negation_and_an_unplanned_silence_are_flagged() -> None:
-    expected = [
+    expected: list[ExpectedSentence] = [
         {
             "key": "c1/1",
             "text": "Arc consistency does not assign values.",
@@ -55,8 +57,38 @@ def test_a_dropped_negation_and_an_unplanned_silence_are_flagged() -> None:
 def test_a_dropped_clause_in_a_long_sentence_is_flagged() -> None:
     said = "Without a dynamics model the agent {}estimates action values from many simulated runs "
     said += "and keeps the best one for each state."
-    expected = [{"key": "e/7", "text": said.format("can still "), "start": 0.0, "end": 9.0}]
+    expected: list[ExpectedSentence] = [
+        {"key": "e/7", "text": said.format("can still "), "start": 0.0, "end": 9.0}
+    ]
     heard = words(said.format("").replace("the agent ", ""), 0.0)
     aligned = align(expected, heard)
     assert aligned[0]["match"] >= 0.8
     assert judge(aligned, heard)["flags"] == ["dropped e/7: 4 words in a row not heard"]
+
+
+@pytest.mark.parametrize(
+    ("spoken", "operation", "removed", "inserted"),
+    [
+        ("The total is not minus twenty four units", "insert", [], ["not"]),
+        ("The total is twenty four units", "delete", ["minus"], []),
+        ("The total is minus twenty five units", "replace", ["four"], ["five"]),
+        ("The total is um minus twenty-four units", None, [], []),
+    ],
+)
+def test_aligned_critical_edits_preserve_spoken_timing(
+    spoken: str, operation: str | None, removed: list[str], inserted: list[str]
+) -> None:
+    expected: list[ExpectedSentence] = [
+        {"key": "e/1", "text": "The total is −24 units.", "start": 0.0, "end": 4.0}
+    ]
+    heard = words(spoken, 0.0)
+    aligned = align(expected, heard)
+    assert bool(judge(aligned, heard)["flags"]) == (operation is not None)
+    if operation is not None:
+        [edit] = aligned[0]["critical_edits"]
+        assert (edit["operation"], edit["expected"], edit["heard"]) == (
+            operation,
+            removed,
+            inserted,
+        )
+        assert edit["start"] >= heard[2]["end"] and edit["end"] <= heard[-1]["end"]

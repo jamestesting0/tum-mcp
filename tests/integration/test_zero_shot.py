@@ -6,11 +6,13 @@ import sys
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.course.checks.plans import Plan, gate_status, plan_problems
 from tum_mcp.course.content.store import read_document
+from tum_mcp.errors import CampusError, Code
 
 
 def invoke(*args: str) -> dict:
@@ -56,6 +58,99 @@ def test_an_answer_key_catches_a_wrong_value_and_a_wrong_trace_state(demo: Path)
     # A key that prints nothing usable is a failure, not a pass.
     (demo / ".tum-mcp/checks" / f"{item}.py").write_text("print('done')\n")
     assert not invoke("study", "verify", str(demo), "--item", item)["passed"]
+
+
+@pytest.mark.parametrize(
+    ("authored", "status"),
+    [
+        ("120 items", "failed"),
+        ("−12 items", "failed"),
+        ("12.5 items", "failed"),
+        ("12 items and 120 steps", "failed"),
+        ("12 items and 34kg", "failed"),
+        ("12kg", "failed"),
+        ("12 items", "passed"),
+        ("+1.2e1 items", "passed"),
+    ],
+)
+def test_numeric_key_compares_the_complete_value(demo: Path, authored: str, status: str) -> None:
+    unit = read_document(demo, "study")["units"][0]
+    unit["title"] = authored
+    (demo / "app/study/units" / f"{unit['key']}.json").write_text(json.dumps(unit))
+    item = f"study/{unit['key']}"
+    write_key(demo, item, {"values": {"title": 12}})
+
+    result = invoke("study", "verify", str(demo), "--item", item)
+    assert result["passed"] is (status == "passed")
+    assert result["status"] == status
+    assert (result["checked_items"], result["comparisons"]) == (1, 1)
+
+
+@pytest.mark.parametrize(
+    ("script", "diagnostic"),
+    [
+        ("""print('{"values":{"title":1' + "0" * 309 + '}}')""", "title"),
+        ("""print('{"values":{"title":1' + "0" * 4999 + '}}')""", "JSON"),
+        (r"import sys; sys.stdout.buffer.write(b'\xff')", "UTF-8"),
+        (r"import sys; sys.stderr.buffer.write(b'key crashed: \xff'); sys.exit(1)", "key crashed"),
+    ],
+    ids=["uncomparable", "integer-limit", "invalid-stdout", "invalid-stderr"],
+)
+def test_broken_answer_key_does_not_prevent_checking_a_later_item(
+    exercise_project: Path, script: str, diagnostic: str
+) -> None:
+    root = exercise_project
+    exercises = content_file(root, "exercises")
+    content = json.loads(exercises.read_bytes())
+    group = content["sets"][0]
+    exercise = group["exercises"][0]
+    exercise["title"] = "12 items"
+    exercises.write_text(json.dumps(content), encoding="utf-8")
+    unit = json.loads(content_file(root, "study").read_bytes())["units"][0]
+    first = f"exercises/{group['key']}/{exercise['key']}"
+    second = f"study/{unit['key']}"
+    key = root / ".tum-mcp/checks" / f"{first}.py"
+    key.parent.mkdir(parents=True, exist_ok=True)
+    key.write_text(script + "\n", encoding="utf-8")
+    write_key(root, second, {"exact_values": {"title": unit["title"]}})
+
+    result = invoke("study", "verify", str(root))
+
+    entries = {row["item"]: row for row in result["items"]}
+    assert {key: row["status"] for key, row in entries.items()} == {
+        first: "failed",
+        second: "passed",
+    }
+    assert entries[first]["problems"]
+    assert diagnostic in entries[first]["problems"][0]
+
+
+def test_verify_reports_empty_and_malformed_keys_without_losing_siblings(
+    exercise_project: Path,
+) -> None:
+    root = exercise_project
+    unit = read_document(root, "study")["units"][0]
+    group = read_document(root, "exercises")["sets"][0]
+    exercise = group["exercises"][0]
+    malformed = f"study/{unit['key']}"
+    valid = f"exercises/{group['key']}/{exercise['key']}"
+    initial = invoke("study", "verify", str(root), "--item", malformed)
+    assert initial["passed"] and initial["status"] == "no_checks"
+    assert initial["checked_items"] == initial["comparisons"] == 0
+    write_key(root, malformed, {"values": ["title"]})
+    write_key(root, valid, {"exact_values": {"title": exercise["title"]}})
+    result = invoke("study", "verify", str(root))
+    entries = {row["item"]: row for row in result["items"]}
+    assert result["status"] == "failed" and not result["passed"]
+    assert entries[malformed]["status"] == "failed"
+    assert entries[valid]["status"] == "passed"
+
+    write_key(root, malformed, {"values": {}})
+    mixed = invoke("study", "verify", str(root))
+    assert mixed["status"] == "failed" and not mixed["passed"]
+    result = invoke("study", "verify", str(root), "--item", malformed)
+    assert result["status"] == "no_checks"
+    assert result["checked_items"] == result["comparisons"] == 0
 
 
 def test_lint_reports_one_items_plan_links_and_kind_defaults(demo: Path) -> None:
@@ -186,7 +281,11 @@ def test_the_plan_gate_holds_only_for_the_plan_it_read(demo: Path, tmp_path: Pat
     incomplete = CliRunner().invoke(
         app, ["review", "run-checker", str(demo), "--plans", "--command", command]
     )
-    assert incomplete.exit_code != 0 and "complete batch plans" in str(incomplete.exception)
+    assert incomplete.exit_code != 0
+    assert isinstance(incomplete.exception, CampusError)
+    assert incomplete.exception.code == Code.ACTION_REQUIRED
+    assert "batch complete" in str(incomplete.exception)
+    assert "Missing: study/other" in str(incomplete.exception)
     (path.parent / "other.json").write_text(
         json.dumps({"item": "study/other", "cases": ["A second lesson."]})
     )

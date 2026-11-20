@@ -28,8 +28,9 @@ review-course) has fresh checkers read it. The session that wrote an item never 
       Only if review was already requested, add `--review-rounds N` for its authorized total
       budget (default one). The completion hook continues a prematurely stopped task; it
       never authorizes review. Use the hook context's `--owner HOST:ID` on start, finish and
-      pause. Honor a user pause or concrete external blocker with `study task pause PROJECT
-      --reason REASON` and report the evidence.
+      pause. Honor an explicit user pause immediately. For a missing source or
+      unresolved choice, name the affected item and work through the remaining
+      items before using `study task pause PROJECT --reason REASON`.
 
    | Purpose | Command |
    | --- | --- |
@@ -76,6 +77,10 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    ([planning](planning.md#choose-the-lectures-examples)). `tum-mcp study digests PROJECT`
    lists missing and stale ones. Plans, authors and checkers read the digest instead of the
    whole source; open the source pages for anything the digest does not settle.
+   When a released exercise uses a lecture example, teach the shared method from
+   the lecture. Give Study a practice case with a different deciding input. Keep
+   the exercise's worked answer behind its Guide and Solution, and link to the
+   related Study passage for Recall.
 3. **Check coverage before drafting.**
 
    1. Run `study report PROJECT --section coverage-plan --preparation ID`. It validates
@@ -126,9 +131,14 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    teaching decision directly in the lesson. If advice changes a checked decision,
    update that plan and check it again. Keep unchanged approvals and repair every part
    named by a failing reason.
-   Read the complete batch locally before this call and fix all detectable omissions
-   together. Do not request independent checks of unchanged approved plans. Changing
-   only an artifact key elsewhere in the batch does not change the source requirements.
+   Before launching, compare every required outcome with the complete batch. Check that
+   the plans define the terms and rules they use, teach the full procedure and test the
+   same learner action through its result. Settle block and question keys, cross-workspace
+   links and computed examples before checking the plans. During drafting, keep these
+   decisions unless the source or teaching requires a change. Fix wording, notation and
+   rendering in the lesson without editing its approved plan. If a teaching decision
+   does change, finish related changes and local lint before submitting the changed
+   plans together. Do not spend another checker launch on a passing plan's advice.
 5. **Solve first.** For a computed trace, result or mock question, write
    `.tum-mcp/checks/<item>.py` before the item. `study verify PROJECT` runs it and
    compares its JSON with the content. Reuse solved plan instances unless the input or
@@ -232,7 +242,11 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    Read readiness before any final response. When it is false and tools remain usable,
    execute its next action and continue. A partial progress summary does not complete
    preparation. Within this one user request, keep the checklist across context changes.
-   Before the final report run `study task finish PROJECT`: it checks the whole draft
+    Read `workspace_actions` in batch readiness. Follow the next prerequisite in
+    each requested workspace. If a source or decision needs the student, name the
+    affected item and continue with feasible work. Preserve the unresolved item
+    in the batch. Pause when no feasible work remains or the student asks to stop.
+    Before the final report run `study task finish PROJECT`: it checks the whole draft
    and any already authorized review. If refused, continue its pending work.
 
 ## Phase B: the review loop

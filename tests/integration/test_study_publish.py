@@ -9,6 +9,9 @@ import pytest
 from documents import content_file
 from filelock import FileLock, Timeout
 from study_publish_fixture import GitHubFixture
+from test_course_tasks import task_project as task_project
+from test_preparation_workflow import write
+from test_review_loop import answer, check_all, packets
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
@@ -19,6 +22,9 @@ from tum_mcp.course.app import publish_site
 from tum_mcp.course.app.build import RETIRED_TEMPLATE_FILES, build
 from tum_mcp.course.app.publish_models import load_publication
 from tum_mcp.course.app.publish_site import MARKER, SITE_FILES, blob_sha
+from tum_mcp.course.checks import batch
+from tum_mcp.course.project.store import load_state
+from tum_mcp.course.review import loop
 from tum_mcp.errors import CampusError, Code
 
 
@@ -39,24 +45,98 @@ def reviewed(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) ->
 
 
 def test_a_draft_build_stays_local_until_the_review_gate_passes(
-    project: Path, github: GitHubFixture, monkeypatch: pytest.MonkeyPatch
+    task_project: Path, github: GitHubFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from tum_mcp.course.review import loop
-
-    # Given a published site and an edited lesson no review has passed.
-    assert first_publish(project).exit_code == 0
-    commits = len(github.commits)
+    project = task_project
+    study = content_file(project, "study")
+    content = json.loads(study.read_bytes())
+    (graphs,) = (unit for unit in content["units"] if unit["key"] == "graphs")
+    study.write_text(json.dumps(content | {"units": [graphs]}))
+    content_file(project, "exam").write_text(
+        json.dumps(
+            {
+                "course_key": content["course_key"],
+                "topics": [{"key": "graphs", "title": "Graphs", "order": 1}],
+                "concepts": [
+                    {
+                        "key": "degree",
+                        "topic": "graphs",
+                        "title": "Vertex degree",
+                        "kind": "definition",
+                        "line": "The degree counts the edge ends at a vertex.",
+                        "basis": "emphasized",
+                        "units": ["graphs"],
+                        "sources": graphs["sources"],
+                    }
+                ],
+            },
+        )
+    )
+    ledger_path = project / ".tum-mcp/coverage.json"
+    ledger = json.loads(ledger_path.read_bytes())
+    ledger["sources"][0]["exam"] = [
+        {"key": "degree", "text": "Define vertex degree.", "locator": "2", "concepts": ["degree"]}
+    ]
+    ledger["sources"].extend(
+        {
+            "source": entry.resource.key,
+            "status": {"checked_at": "2026-11-06"},
+            "exam": [
+                {
+                    "key": f"outside-{entry.resource.key}",
+                    "text": entry.resource.title,
+                    "locator": "Listing",
+                    "status": "out_of_scope",
+                    "note": "This batch covers vertex degree only.",
+                }
+            ],
+        }
+        for entry in load_state(project).resources
+        if entry.resource.key != "graphs"
+    )
+    write(ledger_path, ledger)
+    request_path = project / ".tum-mcp/batches/selected.json"
+    request = batch.Batch.model_validate_json(request_path.read_bytes())
+    request = request.model_copy(update={"items": (*request.items, "exam/sheet")})
+    _ = request_path.write_text(request.model_dump_json())
+    monkeypatch.setattr(batch, "_browser_problems", lambda *args: [])
+    first = first_publish(project)
+    assert first.exit_code == 0, first.output or repr(first.exception)
+    baseline = load_publication(project)
+    assert baseline is not None
+    repository = baseline.repository
     change_lesson(project)
-    # Then the build keeps the draft local and says why.
+    _ = build(project, publish=False)
+
+    assert study_publish.unreviewed(project) == ["course", "exam/sheet", "study/graphs"]
+    _ = loop.start(project, budget=2, batch="selected")
+    for packet in packets(project, loop.next_round(project)):
+        if packet["profile"] != "exam-sheet":
+            _ = loop.record(project, answer(packet), "fresh")
+    assert loop.close_round(project, incomplete=True)["status"] == "running"
+    requests, commits = len(github.requests), len(github.commits)
     held = build(project).publication
-    assert held is not None and held.status == "held" and "review gate" in held.message
-    assert len(github.commits) == commits
-    # When every item is in a review whose gate passes, the next build publishes.
-    loop.start(project, budget=1)
-    monkeypatch.setattr(loop, "gate", lambda context, scope: {})
+    assert held is not None and held.status == "held"
+    assert study_publish.unreviewed(project) == ["exam/sheet"]
+    assert len(github.requests) == requests
+
+    _ = check_all(project)
+    assert loop.close_round(project)["status"] == "passed"
     published = build(project).publication
     assert published is not None and published.status == "deployed"
     assert len(github.commits) == commits + 1
+    assert b"Updated synthetic lesson" in github.files(repository)["data.mjs"]
+
+    revised = request.model_copy(
+        update={"request": request.request + " Also explain why loops contribute twice."}
+    )
+    _ = request_path.write_text(revised.model_dump_json())
+    change_lesson(project)
+    requests = len(github.requests)
+    reopened = build(project).publication
+    assert reopened is not None and reopened.status == "held"
+    assert study_publish.unreviewed(project) == ["course", "exam/sheet", "study/graphs"]
+    assert len(github.requests) == requests
 
 
 def test_a_draft_is_published_anyway_on_explicit_sync(project: Path, github: GitHubFixture) -> None:

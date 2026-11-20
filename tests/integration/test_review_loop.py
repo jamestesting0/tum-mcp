@@ -921,8 +921,74 @@ def test_packet_renders_cited_pages_and_supplies_prior_definitions(tmp_path: Pat
     assert all((project / path).is_file() for path in pages["cached"].values())
 
 
+@pytest.mark.parametrize(
+    ("material", "availability", "status", "locator"),
+    [
+        ("present", "available", "current", "in_bounds"),
+        ("changed", "available", "stale", "unverified"),
+        ("missing", "unavailable", "unavailable", "unverified"),
+    ],
+    ids=["present", "changed", "missing"],
+)
+def test_checker_packet_classifies_source_with_historical_cache(
+    tmp_path: Path, material: str, availability: str, status: str, locator: str
+) -> None:
+    from material_fixture import material_project, minimal_unit, pdf_bytes
+
+    from tum_mcp.course.project.store import load_state
+    from tum_mcp.course.sources.text import document_text
+
+    project = material_project(tmp_path, {"slides": ("content", pdf_bytes(["Worked example."]))})
+    state = load_state(project)
+    (source,) = state.resources
+    assert source.path and source.sha256
+    document_text(project, "slides")
+    examples = [{"pages": "1", "text": "Worked example."}]
+    saved = project / ".tum-mcp/digests/slides.json"
+    saved.parent.mkdir(exist_ok=True)
+    saved.write_text(
+        json.dumps({"source": "slides", "sha256": source.sha256, "examples": examples}),
+        encoding="utf-8",
+    )
+    content_file(project, "study").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "course_key": state.course.key,
+                "organization": "topics",
+                "introduction": "Synthetic content.",
+                "units": [minimal_unit("lesson", "slides", source.sha256)],
+            }
+        ),
+        encoding="utf-8",
+    )
+    if material == "missing":
+        (project / source.path).unlink()
+    elif material == "changed":
+        (project / source.path).write_bytes(pdf_bytes(["Revised example."]))
+
+    loop.start(project, workspaces=("study",))
+    sent = packets(project, loop.next_round(project))
+
+    lesson = next(
+        item for packet in sent for item in packet["items"] if item["item"] == "study/lesson"
+    )
+    (evidence,) = lesson["digests"]
+    assert (evidence["availability"], evidence["status"], evidence["locator_status"]) == (
+        availability,
+        status,
+        locator,
+    )
+    if material == "present":
+        assert evidence["examples"] == examples
+    else:
+        assert "examples" not in evidence
+
+
 @pytest.mark.parametrize("evidence", ["current", "stale-draft", "missing-phone"])
 def test_visual_packet_links_the_current_captures(project: Path, evidence: str) -> None:
+    from test_lecture_highlight_cli import frame_png
+
     key = next(key for key, visuals in loop.load(project).visuals.items() if visuals)
     build, managed = build_files(project)
     identity = BrowserBuild(
@@ -931,9 +997,10 @@ def test_visual_packet_links_the_current_captures(project: Path, evidence: str) 
     directory = project / ".tum-mcp/visuals"
     directory.mkdir()
     sheets = {}
+    png = frame_png()
     for width in ("phone", "desktop"):
         sheet = directory / f"{width}.png"
-        sheet.touch()
+        _ = sheet.write_bytes(png)
         sheets[f"visual/{width}/{key}"] = (sheet.relative_to(project).as_posix(),)
     save_receipt(project, identity, dict.fromkeys(sheets, True), captures=sheets)
     if evidence == "stale-draft":

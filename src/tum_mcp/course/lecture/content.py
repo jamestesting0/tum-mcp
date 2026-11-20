@@ -6,6 +6,7 @@ from itertools import pairwise
 from typing import Annotated, Literal, assert_never, cast
 
 from pydantic import AfterValidator, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 from tum_mcp.course.content.latex import validate_inline
 from tum_mcp.course.content.study import (
@@ -29,6 +30,7 @@ from tum_mcp.course.lecture.evidence import (
     Interval,
     LectureCoverage,
     Recording,
+    Seconds,
     Thumbnail,
     merge_intervals,
 )
@@ -124,6 +126,11 @@ class Note(Frozen):
     sources: tuple[Key, ...] = Field(default=(), max_length=5)
     pages: PageRange | None = None
     evidence: tuple[Key, ...] = Field(min_length=1, max_length=20)
+    at: Seconds | None = Field(
+        default=None,
+        description="Watch time within cited speech, where the note's claim is stated.",
+        exclude_if=lambda value: value is None,
+    )
     image: NoteImage | None = None
     blocks: tuple[NoteBlock, ...] = Field(default=(), max_length=3)
 
@@ -236,6 +243,7 @@ class Lecture(Frozen):
                     "title": note.title,
                     "context": note.context,
                     "text": note.text,
+                    **({"at": note.at} if note.at is not None else {}),
                     **_note_visuals(note),
                     "image": (
                         {"sha256": note.image.sha256, "alt": note.image.alt}
@@ -348,6 +356,14 @@ class LectureContent(Frozen):
                     case Note():
                         image = entry.image
                         spans = tuple(item.interval for item in speech)
+                        if entry.at is not None and not any(
+                            span.start_s <= entry.at < span.end_s for span in spans
+                        ):
+                            raise PydanticCustomError(
+                                "lecture_note_watch_time",
+                                "Note {note}: Watch time must fall inside cited speech.",
+                                {"note": entry.key},
+                            )
                     case unreachable:
                         assert_never(unreachable)
                 if image is not None:

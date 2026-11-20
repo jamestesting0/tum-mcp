@@ -34,8 +34,8 @@ def cmd_round(args: argparse.Namespace) -> None:
     if args.action == "status":
         show({"round": rounds.load(args.round), "runs": rounds.status_rows(args.round)})
         return
-    if not args.scenario or not args.author or not args.judge or not args.reason:
-        raise LabError("round new needs --scenario, --author, --judge and --reason.")
+    if not args.scenario or not args.author or not args.reason:
+        raise LabError("round new needs --scenario, --author and --reason.")
     if args.fresh == bool(args.previous):
         raise LabError("Choose exactly one of --fresh or --from.")
     show(
@@ -85,12 +85,18 @@ def cmd_calibrate(args: argparse.Namespace) -> None:
 
 
 def cmd_run(args: argparse.Namespace) -> None:
-    from skill_lab import runs
+    from skill_lab import runs, scenarios
+
+    config = rounds.load(args.round)
+    selected = args.scenario or config["confirm_scenario" if args.confirm else "scenario"]
+    if selected in scenarios.FAI_SCENARIOS and (
+        args.repeat != 1 or args.author or args.all_authors
+    ):
+        raise LabError("Scored authoring does not allow repeats or alternate authors.")
 
     if args.all_authors and args.author:
         raise LabError("Choose --author or --all-authors.")
     if args.all_authors:
-        config = rounds.load(args.round)
         authors = [
             ModelSpec.from_dict(item) for item in (config["roles"]["author"], *config["matrix"])
         ]
@@ -131,6 +137,7 @@ def cmd_collect(args: argparse.Namespace) -> None:
 def cmd_judge(args: argparse.Namespace) -> None:
     from skill_lab import judge
 
+    rounds.check_budget(args.round, "judge")
     pairs = [pair.split(":", 1) for pair in args.pairs or []]
     if args.confirm and not pairs:
         pairs = [["base", "composed"]]
@@ -148,6 +155,7 @@ def cmd_judge(args: argparse.Namespace) -> None:
 def cmd_review(args: argparse.Namespace) -> None:
     from skill_lab import judge
 
+    rounds.check_budget(args.round, "judge")
     specs = [ModelSpec.parse(text) for text in args.judge] if args.judge else None
     show([judge.review_run(args.round, run, judges=specs) for run in args.run])
 

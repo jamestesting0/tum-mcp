@@ -1,0 +1,8 @@
+id: fai-authoring-026
+turns:
+  - say: "prepare exercises and lecture up to lecture 6/ week 6"
+    skills: [prepare-exercises, prepare-lecture, read-content]
+  - say: "also prepare study"
+    skills: [prepare-study, read-content]
+  - say: "I found the tutorial erratum for Sheet 6 and added it to the course materials. Please use it to finish the exercise."
+    skills: [prepare-exercises, read-content]

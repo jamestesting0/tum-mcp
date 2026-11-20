@@ -98,6 +98,9 @@ def fake_run(round_id, run_id, author, started, workspaces, materials):
         (app / name).mkdir()
         (app / name / "index.json").write_text("{}")
     (app / "data.mjs").write_text("{}")
+    state = run_dir / "workspace" / ".tum-mcp" / "state.json"
+    state.parent.mkdir()
+    state.write_text("{}")
     for name in materials:
         (run_dir / "workspace" / "materials" / name).parent.mkdir(parents=True, exist_ok=True)
         (run_dir / "workspace" / "materials" / name).write_text(name)
@@ -128,19 +131,58 @@ def test_a_round_judges_its_candidates_against_the_previous_rounds_runs(lab_stat
     fake_run("r1", "candidate-2", claude, "5", ["study", "exercises"], ["a.pdf"])
     # When the round pairs runs, each baseline meets the newest candidate by its author.
     assert judge.default_pairs("r1") == [["t1/base-2", "candidate-2"], ["t1/base-3", "candidate-1"]]
-    # Then a packet holds only the workspaces both built, and every material either read.
+    # Then the packet carries only comparable workspaces and each candidate's sources.
     left = judge.find_run("r1", "t1/base-3")
     right = judge.find_run("r1", "candidate-1")
     packet = lab_state / "packet"
     built = judge.build_packet("k", left, right, packet)
     assert built["unjudged"] == {"Exam": "candidate-1"}
     assert built["same_materials"] is False
-    assert sorted(p.name for p in (packet / "sources").iterdir()) == ["a.pdf", "b.pdf"]
-    for letter in ("A", "B"):
+    for letter, side in built["ids"].items():
+        expected = ["a.pdf"] if side == "left" else ["a.pdf", "b.pdf"]
+        assert (
+            sorted(p.name for p in (packet / "sources" / letter / "materials").iterdir())
+            == expected
+        )
         app = packet / "candidates" / letter / "app"
         assert sorted(p.name for p in app.iterdir()) == ["study"]
     with pytest.raises(LabError):
         rounds.checked_baselines(["base-2"])
+
+
+@pytest.mark.parametrize(
+    ("right_path", "right_bytes", "same"),
+    [
+        ("slides.pdf", b"first", True),
+        ("renamed.pdf", b"first", False),
+        ("slides.pdf", b"other", False),
+        (None, b"", None),
+    ],
+)
+def test_blind_sources_compare_all_project_names_and_bytes(
+    lab_state, right_path, right_bytes, same
+):
+    author = "codex:gpt-6.1-terra:high"
+    left = fake_run("r1", "base-1", author, "1", [], ["common.pdf"])
+    right = fake_run("r1", "candidate-1", author, "2", [], ["common.pdf"])
+    for record, name, body in ((left, "slides.pdf", b"first"), (right, right_path, right_bytes)):
+        root = paths.round_dir("r1") / "runs" / record["id"] / "workspace" / "another-course"
+        (root / ".tum-mcp").mkdir(parents=True)
+        (root / ".tum-mcp/state.json").write_text("{}")
+        if name:
+            (root / "materials").mkdir()
+            (root / "materials" / name).write_bytes(body)
+
+    packet = lab_state / "packet"
+    built = judge.build_packet("k", left, right, packet)
+
+    assert built["same_materials"] is same
+    for letter, side in built["ids"].items():
+        available = packet / "sources" / letter
+        assert (available / "materials/common.pdf").read_text() == "common.pdf"
+        name, body = ("slides.pdf", b"first") if side == "left" else (right_path, right_bytes)
+        if name:
+            assert (available / "another-course/materials" / name).read_bytes() == body
 
 
 def test_baseline_timing_is_compared_only_with_the_same_speed_tier(lab_state):

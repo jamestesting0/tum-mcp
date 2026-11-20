@@ -9,8 +9,9 @@ For each candidate, decide:
 1. Is it useful for this course? Otherwise omit it.
 2. What does it add to the available materials? Compare assumptions, intermediate
    steps, their justification and the interpretation, not merely titles or formulas.
-3. Can a concise note preserve that contribution, with a formula or frame if needed?
-   Prefer a note.
+3. Can a concise note preserve that contribution with a single Watch link?
+   Prefer a note when the learner needs one moment. Use a stepped highlight when
+   they need to follow distinct moments in a worked example.
 4. Does following the reasoning or demonstration itself teach something? Consider a
    highlight. Judge for a student learning the topic, not an expert who can supply
    the missing steps.
@@ -27,10 +28,12 @@ For each candidate, decide:
 | Brief visual moment | Note with a meaningful frame when needed; the source link can open the recording |
 | Repetition, slide read-aloud, greetings, irrelevant asides or logistics without consequence | Omit |
 
-A question already printed in the materials may still need its missing working or
-justification. Conversely, a new fact may need only a note. Do not create both a note
-and a highlight description saying the same thing; retain both only for distinct
-purposes, such as a condition to remember and a walkthrough applying it.
+When a slide poses a question or stops before the last inference, keep the
+recording's solution if it supplies the missing reasoning. Compare what the
+lecture material gives the learner at that point. A solution in the separate
+Exercises workspace does not fill the gap in the lecture. A new fact may need
+only a note. Give a note and a highlight separate jobs, such as stating a
+condition and walking through its use.
 
 Missing comparison materials mean "comparison unavailable", not "absent from slides".
 Different page counts, numbering or editions are not enough to establish this limit.
@@ -74,9 +77,9 @@ retained context can support a note and a highlight with distinct purposes.
 
 - One idea per highlight. Merge adjacent stretches on the same idea; split where the
   topic changes.
-- Highlights normally run a few minutes (often 2–10). A ten-second remark is a note;
-  passages below roughly a minute default to notes. These are editorial guides, not
-  schema cutoffs: never pad a passage to qualify.
+- A brief remark is usually a note. A short proof or demonstration can still be
+  a highlight when its steps need separate Watch links. Let the working determine
+  the length.
 - Start at the passage that opens the explanation (the question or the example's
   setup) and end with the passage that concludes it, including the correction after
   a mistake. Resolve pronouns and necessary prerequisites; do not begin at
@@ -94,9 +97,10 @@ retained context can support a note and a highlight with distinct purposes.
   example as `steps`, consequences or cases as `points`, and a frame when the slide or
   board carries the point ([content](content.md)). Show a concrete object instead of
   describing it in words: an inline formula, or up to three `blocks` (a formula,
-  derivation, table, graph, tree, code or a `study figure` crop of the slide). A note
-  stays one idea: reasoning that takes minutes to follow is a highlight, and a thumbnail
-  is never decoration.
+  derivation, table, graph, tree, code or a `study figure` crop of the slide).
+  Use a diagram or a legible crop when the relationships are what the student needs
+  to see, such as graph edges or the positions on a board. A note stays one idea.
+  Reasoning that takes minutes to follow is a highlight.
 - Give every note what it concerns and why it matters, for a student who missed the
   lecture. The `title` names the subject in the course's terms ("BFS on a disconnected
   graph", "Correction to the Dijkstra slide", "Exam: allowed aids"). The `context` sets
@@ -151,6 +155,10 @@ frame, not from agreement between recognizers.
 Check notes just as carefully. Do not silently reconcile a conflict between the
 lecturer and the materials, or retain an early error without the later correction.
 Keep unresolved claims out of confident notes/highlights and disclose the review gap.
+Set a correction note's `at` to the sentence that states the correction.
+Use the note's `context` for the earlier setup. In a proof, calculation or
+demonstration, give each decisive step its own `at` time from the speech or frame
+where that step is shown. Keep the setup in the highlight's overall interval.
 
 Keep a compact private review map, for example
 `.tum-mcp/lecture-review/LECTURE_KEY.md`: the topic/time map, the compared material

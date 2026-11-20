@@ -112,7 +112,37 @@ lab round status r1
 lab clean --keep 3
 ```
 
-`lab collect` writes each run's `metrics.json`. Codex reports a thread's token usage
+`lab collect` writes each run's `metrics.json` and saves the full `study report --json`
+as `report.json` when available. `report_status` distinguishes `not_measured` (no
+project), `failed` (including invalid report JSON), and `measured` (including zero).
+The collector counts `quality` flags and counts only the named coverage gap lists:
+uninspected sources, core and enrichment outcome gaps, sources without outcomes,
+unprepared items, units without outcomes, and the three Exam cheatsheet gap lists.
+Review uses `review.gate`. Render records `render.checked` and `render.passed` separately.
+
+`delivery` has one row per requested workspace. Run creation freezes the request from
+the scenario's turn `skills` and optional `expected_items` mapping. For example,
+`demo-calibration` expects `study/components` regardless of what the demo writes.
+Expected keys use `study/UNIT`, `exercises/SET/ITEM`, `exam/concept/KEY`,
+`exam/pattern/KEY`, `exam/mock/MOCK/QUESTION`, or `lecture/RECORDING[/ENTRY]`.
+An absent workspace has no content index. A partial workspace lacks readable or
+expected items or has open readiness checks for the requested items. A complete
+workspace has readable items, all expected keys, and passing applicable readiness.
+For a content task with zero review rounds, delivery uses its current batch draft
+readiness. With no explicit item keys, a workspace row uses its batch items when
+available. Formal-review tasks and projects without a content-task batch retain
+the item review checks. `review_passed` separately reports the formal review gate.
+`delivered`, `lessons_built`, and `exercises_built` are legacy index-presence fields.
+In particular, `delivered` means a Study or Exercises index exists, regardless of
+what was requested or whether it is ready. An empty `delivery` means the requested
+workspaces are unknown or none were declared.
+
+Reports carrying `metrics_definition: requested-delivery-full-report-v2` share this
+definition. An absent definition identifies legacy metrics. Do not aggregate across
+definitions. Recollect retained runs first, using matching turn prompts to recover
+the request for runs that predate the saved request manifest.
+
+Codex reports a thread's token usage
 cumulatively, so `tokens` is each thread's final total and `turn_tokens` lists what each
 turn added. It also counts command output characters, the plan and packet checker
 sessions the broker ran, and the review verdicts by kind (pass, fail, uncertain).
@@ -120,9 +150,12 @@ sessions the broker ran, and the review verdicts by kind (pass, fail, uncertain)
 Rounds run one after another. Within a round, `--all-authors` runs the round's author and
 its `--matrix` authors at once, one trial per host. The judge pairs runs by author model only:
 a baseline and a candidate compare when the same host, model and effort wrote them. Their
-scenarios may differ. The judge then sees only the workspaces both built and the
-materials either read; `unjudged` names a workspace only one built, and `same_materials`
-says whether both read the same files. A candidate's new workspace is judged by `lab review`.
+scenarios may differ. The judge sees the workspaces both built, and `unjudged` names a
+workspace only one built. `sources/A` and `sources/B` retain each candidate's available
+materials under their relative course roots. `same_materials` compares relative project
+and file names and SHA-256 content digests for all discovered courses. It is `null`
+when either inventory is missing or unverifiable. Available files do not establish
+which files an author actually read. A candidate's new workspace is judged by `lab review`.
 
 To compare several candidate patches in one round (INV and DOM from `prompts/`), create one
 variant per patch, run each, then `lab judge r1 --pairs r0/base-1:inv-1 r0/base-1:dom-1`.

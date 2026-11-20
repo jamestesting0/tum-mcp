@@ -12,9 +12,12 @@ from tum_mcp.course.app.build import build
 from tum_mcp.course.app.comment_models import OPERATION
 from tum_mcp.course.app.comments import change_comment, read_comments
 from tum_mcp.course.app.publish_site import export_site
+from tum_mcp.course.checks.batch import assess_batch
+from tum_mcp.course.checks.plans import Plan, record_gate
 from tum_mcp.course.content.exam import ExamContent
 from tum_mcp.course.content.exam_data import exam_revisions
-from tum_mcp.course.project.store import load_state
+from tum_mcp.course.project.store import load_state, private_path
+from tum_mcp.course.workflow import tasks
 from tum_mcp.errors import CampusError, Code
 
 
@@ -22,7 +25,30 @@ from tum_mcp.errors import CampusError, Code
 def course(tmp_path: Path) -> Path:
     root = exam_project(tmp_path)
     (root / "app").mkdir()
-    (content_file(root, "exam")).write_text(json.dumps(exam_document(root)), encoding="utf-8")
+    document = exam_document(root)
+    content_file(root, "exam").write_text(json.dumps(document), encoding="utf-8")
+    private_path(root, "coverage.json").write_text(
+        json.dumps(
+            {
+                "course_key": document["course_key"],
+                "sources": [
+                    {
+                        "source": "slides",
+                        "status": {"checked_at": "2026-10-28"},
+                        "exam": [
+                            {
+                                "key": c["key"],
+                                "text": c["line"],
+                                "locator": "1",
+                                "concepts": [c["key"]],
+                            }
+                            for c in document["concepts"]
+                        ],
+                    }
+                ],
+            }
+        )
+    )
     return root
 
 
@@ -52,6 +78,155 @@ def test_changed_sources_block_the_build_and_name_only_stale_items(course: Path)
         build(course, publish=False)
     assert error.value.code == Code.STALE_RESULT
     assert "concept:observer" in error.value.message and "variant:" not in error.value.message
+
+
+def select_exam_item(course: Path, item: str) -> None:
+    batch = private_path(course, "batches/selected.json")
+    batch.parent.mkdir(parents=True, exist_ok=True)
+    batch.write_text(
+        json.dumps(
+            {
+                "course_key": load_state(course).course.key,
+                "request": "Prepare the selected Exam material.",
+                "items": [item],
+            }
+        )
+    )
+
+
+def exam_pdf(course: Path, key: str) -> Path:
+    source = next(item for item in load_state(course).resources if item.resource.key == key)
+    assert source.path is not None
+    return course / source.path
+
+
+@pytest.mark.parametrize("gate", ["readiness", "finish"])
+def test_selected_sheet_rechecks_cited_pdf_bytes(
+    course: Path, monkeypatch: pytest.MonkeyPatch, gate: str
+) -> None:
+    monkeypatch.setattr("tum_mcp.course.checks.batch._browser_problems", lambda *args: [])
+    select_exam_item(course, "exam/sheet")
+    build(course, publish=False)
+    assert payload(course)["workspaces"] == ["exam"]
+    assert len(payload(course)["exam"]["concepts"]) == 6
+    tasks.begin(course, "selected", owner="exam-author")
+    reading = assess_batch(course, "selected")
+    assert reading.ready, reading.problems
+    assert tasks.finish(course, owner="exam-author")["ready"]
+
+    data = (course / "app/data.mjs").read_bytes()
+    receipt = private_path(course, "task.json").read_bytes()
+    cited = exam_pdf(course, "slides")
+    original = cited.read_bytes()
+    cited.write_bytes(pdf_bytes(["Changed concept source"]))
+    if gate == "readiness":
+        reading = assess_batch(course, "selected")
+        assert not reading.ready
+        assert any(
+            p.startswith("exam/sheet:") and "concept:observer" in p and "slides" in p
+            for p in reading.problems
+        )
+    else:
+        with pytest.raises(CampusError, match=r"exam/sheet:.*concept:observer.*slides"):
+            tasks.finish(course, owner="exam-author")
+    assert (course / "app/data.mjs").read_bytes() == data
+    assert private_path(course, "task.json").read_bytes() == receipt
+
+    cited.write_bytes(original)
+    assert assess_batch(course, "selected").ready
+    assert tasks.finish(course, owner="exam-author")["ready"]
+
+
+def test_unrelated_paper_leaves_sheet_ready_but_blocks_full_build(
+    course: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("tum_mcp.course.checks.batch._browser_problems", lambda *args: [])
+    select_exam_item(course, "exam/sheet")
+    build(course, publish=False)
+    exam_pdf(course, "exam-ss19").write_bytes(pdf_bytes(["Changed outdated paper"]))
+
+    assert assess_batch(course, "selected").ready
+    with pytest.raises(CampusError) as error:
+        build(course, publish=False)
+    assert error.value.code == Code.STALE_RESULT
+    assert "variant:" in error.value.message
+
+
+def test_paper_counted_in_sheet_badges_is_checked(
+    course: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("tum_mcp.course.checks.batch._browser_problems", lambda *args: [])
+    select_exam_item(course, "exam/sheet")
+    build(course, publish=False)
+    exam_pdf(course, "exam-ws23-b").write_bytes(pdf_bytes(["Changed counted variant"]))
+
+    (problem,) = assess_batch(course, "selected").problems
+    assert problem.startswith("exam/sheet: variant:") and "exam-ws23-b" in problem
+
+
+def test_exam_pattern_derives_sheet_and_reports_its_stale_workflow_source(
+    course: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("tum_mcp.course.checks.batch._browser_problems", lambda *args: [])
+    item = "exam/pattern/observer-design"
+    select_exam_item(course, item)
+    plan = Plan(item=item)
+    path = private_path(course, f"plans/{item}.json")
+    path.parent.mkdir(parents=True)
+    path.write_text(plan.model_dump_json())
+    record_gate(
+        course, [{"item": item, "fingerprint": plan.fingerprint(), "verdict": "pass"}], "fresh"
+    )
+    document = exam_document(course)
+    extra = next(s for s in load_state(course).resources if s.resource.key == "exam-ss19")
+    document["patterns"][0]["sources"].append({"key": extra.resource.key, "sha256": extra.sha256})
+    content_file(course, "exam").write_text(json.dumps(document))
+    build(course, publish=False)
+    before = assess_batch(course, "selected")
+    assert "exam/sheet" in before.items
+    assert not any("cited source bytes" in p for p in before.problems)
+
+    exam_pdf(course, "exam-ss19").write_bytes(pdf_bytes(["Changed workflow source"]))
+    after = assess_batch(course, "selected")
+    new_problems = set(after.problems) - set(before.problems)
+    assert {p.partition(":")[0] for p in new_problems} == {item, "exam/sheet"}
+    assert all("pattern:observer-design" in p and "exam-ss19" in p for p in new_problems)
+
+
+@pytest.mark.parametrize("practice", [False, True], ids=["mock", "untimed-practice"])
+def test_mock_checks_its_own_source_and_only_the_displayed_profile(
+    course: Path, monkeypatch: pytest.MonkeyPatch, practice: bool
+) -> None:
+    monkeypatch.setattr("tum_mcp.course.checks.batch._browser_problems", lambda *args: [])
+    item = "exam/mock/forecast-1/f1-1"
+    document = exam_document(course)
+    resources = {s.resource.key: s.sha256 for s in load_state(course).resources}
+    mock = document["mocks"][0]
+    mock["sources"].append({"key": "exam-ws22", "sha256": resources["exam-ws22"]})
+    if practice:
+        mock.update(kind="practice", duration_minutes=None, instructions=None)
+    document["profile"]["sources"] = [{"key": "exam-ss19", "sha256": resources["exam-ss19"]}]
+    content_file(course, "exam").write_text(json.dumps(document))
+    select_exam_item(course, item)
+    build(course, publish=False)
+    assert assess_batch(course, "selected").ready
+
+    own_source = exam_pdf(course, "exam-ws22")
+    original = own_source.read_bytes()
+    own_source.write_bytes(pdf_bytes(["Changed mock source"]))
+    assert any(
+        p.startswith(f"{item}: mock:forecast-1 ") and "exam-ws22" in p
+        for p in assess_batch(course, "selected").problems
+    )
+    own_source.write_bytes(original)
+
+    exam_pdf(course, "exam-ss19").write_bytes(pdf_bytes(["Changed profile source"]))
+    reading = assess_batch(course, "selected")
+    if practice:
+        assert reading.ready, reading.problems
+    else:
+        (problem,) = reading.problems
+        assert problem.startswith(f"{item}: profile ") and "exam-ss19" in problem
 
 
 def test_exam_prep_exports_alone_and_with_study_without_document_references(course: Path) -> None:

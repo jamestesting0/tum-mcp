@@ -1,13 +1,16 @@
 import json
 import os
+import sys
 from pathlib import Path
+from typing import Literal, assert_never
+from unittest.mock import patch
 
 import pytest
 from documents import content_file
 from test_review_loop import answer, packets
 from typer.testing import CliRunner
 
-from tum_mcp.cli import app
+from tum_mcp.cli import app, main
 from tum_mcp.course.app.build import build
 from tum_mcp.course.checks.plans import read_plan, record_gate
 from tum_mcp.course.project.store import load_state
@@ -140,7 +143,8 @@ def test_a_coverage_link_alone_does_not_make_a_preparation_ready(project: Path) 
     assert any("answer-key" in problem for problem in readiness(project)["problems"])
 
 
-def test_preflight_requires_each_exercise_part_and_its_own_evidence(exercise_project: Path) -> None:
+@pytest.fixture
+def multipart_exercise(exercise_project: Path) -> Path:
     root = exercise_project
     state = load_state(root)
     sheet = next(
@@ -173,11 +177,28 @@ def test_preflight_requires_each_exercise_part_and_its_own_evidence(exercise_pro
                 {
                     "source": source["key"],
                     "status": {"availability": "released", "checked_at": "2026-11-06"},
-                    "items": [{"label": "Exercise 1", "exercise": exercise["key"]}],
+                    "items": [
+                        {"label": item["label"], "exercise": item["key"]}
+                        for item in group["exercises"]
+                    ],
                 }
             ],
         },
     )
+    return root
+
+
+def test_preflight_requires_each_exercise_part_and_its_own_evidence(
+    multipart_exercise: Path,
+) -> None:
+    root = multipart_exercise
+    document = content_file(root, "exercises")
+    content = json.loads(document.read_bytes())
+    group = content["sets"][0]
+    exercise = group["exercises"][0]
+    solution = exercise["solution"]["answers"][0]
+    state = load_state(root)
+    source = next(ref for ref in exercise["sources"] if ref["key"] == group["sheet"])
     demands = [
         {
             "kind": "exercises",
@@ -214,6 +235,7 @@ def test_preflight_requires_each_exercise_part_and_its_own_evidence(exercise_pro
                 "basis": "source",
                 "reason": "Selected exercise.",
                 "locator": "Exercise 1",
+                "deferred_items": {"Exercise 2": "Outside this preparation's selected problem."},
             }
         ],
         "demands": demands[:1],
@@ -234,7 +256,104 @@ def test_preflight_requires_each_exercise_part_and_its_own_evidence(exercise_pro
 
     demands[1]["target"]["answer_block"] = 0
     write(path, scope)
-    assert len(readiness(root)["items"]["exercises/sheet-1/sample-relaxation"]) == 2
+    item = "exercises/sheet-1/sample-relaxation"
+    assert len(readiness(root)["items"][item]) == 2
+
+    demands[1]["blocked_reason"] = "The released handout omits the rounding rule."
+    write(path, scope)
+    batch = root / ".tum-mcp/batches/mapped.json"
+    write(
+        batch,
+        {
+            "course_key": state.course.key,
+            "request": "Prepare the first exercise.",
+            "items": [item],
+            "preparations": ["bounded"],
+        },
+    )
+    runner = CliRunner()
+    started = runner.invoke(
+        app,
+        [
+            "study",
+            "task",
+            "start",
+            str(root),
+            "--batch",
+            "mapped",
+            "--owner",
+            "codex:exercise-blocker",
+        ],
+    )
+    assert started.exit_code == 0, started.exception
+    result = runner.invoke(
+        app, ["study", "task", "finish", str(root), "--owner", "codex:exercise-blocker"]
+    )
+    reason = f"{item}/decision: blocked: The released handout omits the rounding rule."
+    assert result.exit_code != 0 and reason in str(result.exception)
+    assert len(readiness(root)["items"][item]) == 2
+    assert reason in readiness(root)["problems"]
+    del demands[1]["blocked_reason"]
+
+    target = "steps[0].check.answer"
+    demands[0]["values"] = [target]
+    write(path, scope)
+    assert reason not in readiness(root)["problems"]
+    key = root / ".tum-mcp/checks" / f"{item}.py"
+    key.parent.mkdir(parents=True)
+    key.write_text(f"import json\nprint(json.dumps({{'values': {{{target!r}: 2 + 1}}}}))\n")
+
+    def answer_problems() -> list[str]:
+        return [p for p in readiness(root)["problems"] if "answer-key" in p]
+
+    assert not answer_problems()
+    exercise["steps"][0]["check"]["answer"] = 30
+    document.write_text(json.dumps(content))
+    assert any("cost" in problem and "values" in problem for problem in answer_problems())
+    exercise["steps"][0]["check"]["answer"] = 3
+    document.write_text(json.dumps(content))
+    key.rename(key.with_name("scratch.py"))
+    assert any("cost" in problem and "values" in problem for problem in answer_problems())
+    assert not any("/decision:" in problem for problem in answer_problems())
+
+
+@pytest.mark.parametrize("fault", ["duplicate-parent-target", "omitted-index-item"])
+def test_build_identifies_the_item_and_broken_exercise_mapping(
+    multipart_exercise: Path,
+    fault: Literal["duplicate-parent-target", "omitted-index-item"],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = multipart_exercise
+    command = ["tum-mcp", "study", "build", str(root), "--local-only"]
+    with patch.object(sys, "argv", command), pytest.raises(SystemExit) as clean:
+        main()
+    assert clean.value.code == 0, capsys.readouterr().err
+
+    item = "sample-relaxation"
+    index = "app/exercises/sets.json"
+    match fault:
+        case "duplicate-parent-target":
+            ledger = root / ".tum-mcp/coverage.json"
+            coverage = json.loads(ledger.read_bytes())
+            items = coverage["sources"][0]["items"]
+            items.append(items[0] | {"label": "Exercise 1 duplicate"})
+            write(ledger, coverage)
+            expected = (item, "more than once", "ledger")
+        case "omitted-index-item":
+            sets = json.loads((root / index).read_bytes())
+            sets["sets"][0]["exercises"].remove(item)
+            write(root / index, sets)
+            expected = (f"app/exercises/sheet-1/{item}.json", "not listed", index)
+        case unreachable:
+            assert_never(unreachable)
+
+    with patch.object(sys, "argv", command), pytest.raises(SystemExit) as result:
+        main()
+
+    diagnostic = capsys.readouterr().err
+    print(f"Clean CLI exit {clean.value.code}; mutated CLI exit {result.value.code}: {diagnostic}")
+    assert result.value.code == 2, diagnostic
+    assert all(fragment in diagnostic for fragment in expected), diagnostic
 
 
 @pytest.mark.skipif(

@@ -88,6 +88,11 @@ class ExerciseDemand(Demand):
         description="Original part label, even when this scope selects only that part.",
     )
     target: ExerciseTarget | None = None
+    blocked_reason: Text | None = Field(
+        default=None,
+        exclude_if=lambda reason: reason is None,
+        description="Missing source rule or input needed to answer this demand.",
+    )
 
 
 Requirement = Annotated[StudyDemand | ExerciseDemand, Field(discriminator="kind")]

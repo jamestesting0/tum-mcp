@@ -6,20 +6,28 @@ from typing import TYPE_CHECKING, Annotated
 from pydantic import Field, JsonValue, TypeAdapter, ValidationError
 
 from tum_mcp.course.app.build import current_data
-from tum_mcp.course.app.visuals import _exam_visuals
+from tum_mcp.course.app.visuals import _exam_visuals, shell_workspace
 from tum_mcp.course.checks.plans import gate_status, plan_problems, read_plan
-from tum_mcp.course.checks.preparation import PreparedScope, Readiness, _browser_problems, assess
-from tum_mcp.course.content.exam_data import read_exam, stale_exam
+from tum_mcp.course.checks.preparation import (
+    BrowserProblem,
+    PreparedScope,
+    Readiness,
+    _browser_problems,
+    assess,
+    browser_owner,
+    record_browser_problems,
+)
+from tum_mcp.course.content.exam_data import exam_surface_sources, read_exam, stale_exam_sources
 from tum_mcp.course.content.study import Text
 from tum_mcp.course.lecture.check import SUMMARY_META, TITLE_DATE, check_highlights
 from tum_mcp.course.lecture.data import read_lectures, stale_lectures
 from tum_mcp.course.lecture.selection import selection_problems
 from tum_mcp.course.ledger.coverage import read_ledger
-from tum_mcp.course.project.models import Key
+from tum_mcp.course.project.models import KEY_SEGMENT, PLAN_ROUTES, Key
 from tum_mcp.course.project.store import digest as source_digest
 from tum_mcp.course.project.store import load_state, private_path, read_bytes
 from tum_mcp.course.review.items import digest
-from tum_mcp.course.review.models import INVARIANT_FLAGS
+from tum_mcp.course.review.models import INVARIANT_FLAGS, SHEET
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
 
@@ -29,7 +37,7 @@ if TYPE_CHECKING:
 Item = Annotated[
     str,
     Field(
-        pattern=r"^(study/[a-z0-9-]+|exercises/[a-z0-9-]+/[a-z0-9-]+|exam/(pattern/[a-z0-9-]+|mock/[a-z0-9-]+/[a-z0-9-]+|sheet)|lecture/[a-z0-9-]+)$"
+        pattern=rf"^({PLAN_ROUTES}|exam/(mock/{KEY_SEGMENT}/{KEY_SEGMENT}|sheet)|lecture/{KEY_SEGMENT})$"
     ),
 ]
 
@@ -41,27 +49,61 @@ class Batch(Frozen):
     preparations: tuple[Key, ...] = Field(default=(), max_length=100)
 
 
-def require_batch_plans(root: Path, pending: set[str]) -> None:
-    """Check a declared batch together rather than starting a host for each new plan."""
-    for path in sorted(private_path(root, "batches").glob("*.json")):
+def checker_batch(root: Path, items: set[str], selector: str | None) -> tuple[str, Batch] | None:
+    """Resolve one course-owned batch for plan checking."""
+    paths = sorted(private_path(root, "batches").glob("*.json"))
+    if selector is not None:
         try:
+            key = TypeAdapter(Key).validate_python(selector)
+        except ValidationError as error:
+            raise CampusError(Code.ACTION_REQUIRED, "Use a valid project batch key.") from error
+        paths = [path for path in paths if path.stem == key]
+        if not paths:
+            raise CampusError(Code.ACTION_REQUIRED, f"No batch request for {key}.")
+    if not paths or (selector is None and not items):
+        return None
+    course = load_state(root).course.key
+    matches: list[tuple[str, Batch]] = []
+    for path in paths:
+        try:
+            key = TypeAdapter(Key).validate_python(path.stem)
             batch = Batch.model_validate_json(path.read_bytes())
         except ValidationError as error:
             raise CampusError(
                 Code.INVALID_RESPONSE, f"Invalid batch request: {path.name}."
             ) from error
-        if not pending.intersection(batch.items):
-            continue
-        planned = [
-            key for key in batch.items if key.startswith(("study/", "exercises/", "exam/pattern/"))
-        ]
-        missing = [key for key in planned if read_plan(root, key) is None]
-        if missing:
-            raise CampusError(
-                Code.ACTION_REQUIRED,
-                "Write the complete batch plans before starting the fresh checker. "
-                "Missing: " + ", ".join(missing) + ". Then check the pending plans together.",
-            )
+        if batch.course_key != course:
+            if selector is not None:
+                raise CampusError(Code.SCOPE_DENIED, "The batch belongs to another course.")
+        elif selector is not None or items.intersection(batch.items):
+            matches.append((key, batch))
+    if len(matches) > 1:
+        choices = ", ".join(key for key, _ in matches)
+        raise CampusError(Code.ACTION_REQUIRED, f"Choose a plan scope with --batch: {choices}.")
+    return matches[0] if matches else None
+
+
+def _batch_browser(
+    root: Path,
+    routes: list[str],
+    visuals: set[str],
+    problems: list[str],
+    workspace_problems: dict[str, list[str]],
+) -> list[BrowserProblem]:
+    assigned = {problem for issues in workspace_problems.values() for problem in issues}
+    if any(
+        problem not in assigned
+        and not problem.startswith(("study/", "exercises/", "exam/", "lecture/"))
+        for problem in problems
+    ):
+        return []
+    selected = [
+        route for route in routes if not workspace_problems[browser_owner(shell_workspace(route))]
+    ]
+    if not selected:
+        return []
+    owners = {browser_owner(shell_workspace(route)) for route in selected}
+    return _browser_problems(root, selected, visuals & owners)
 
 
 def assess_batch(root: Path, identifier: str, context: "Context | None" = None) -> Readiness:
@@ -81,7 +123,7 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
         ) from error
     if batch.course_key != state.course.key:
         raise CampusError(Code.SCOPE_DENIED, "The batch belongs to another course.")
-    context = context or load(root)
+    context = context or load(root, answer_scope=batch.items, batch_dependencies=True)
     items = {key: [{"request": batch.request}] for key in batch.items if key in context.items}
     problems = [f"{key}: requested draft is missing." for key in batch.items if key not in items]
     if len({key.split("/", 1)[0] for key in batch.items}) > 1 and "course" in context.items:
@@ -91,9 +133,16 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
     dispositions = [{"request": batch.request, "items": list(batch.items)}]
     provisional: list[str] = []
     preparations: list[dict[str, JsonValue]] = []
+    browser_commands: dict[str, str] = {}
+    workspace_problems: dict[str, list[str]] = {
+        key.partition("/")[0]: [] for key in batch.items if key != "course"
+    }
     for scope in batch.preparations:
         readiness = assess(root, scope, context)
         problems.extend(readiness.problems)
+        browser_commands.update(readiness.browser_commands)
+        for workspace, issues in readiness.workspace_problems.items():
+            workspace_problems.setdefault(workspace, []).extend(issues)
         covered.update(readiness.items)
         fingerprints.update(readiness.fingerprints)
         provisional.extend(readiness.provisional_plans)
@@ -129,14 +178,16 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
     routes: list[str] = []
     visuals: set[str] = set()
     exam = read_exam(root)
-    if exam and exam.concepts and any(key.startswith("exam/pattern/") for key in items):
-        items["exam/sheet"] = [{"request": batch.request}]
-    if exam:
-        stale = set(stale_exam(root, state, exam))
+    if exam and any(key.startswith("exam/") for key in items):
+        if SHEET in context.items and any(key.startswith("exam/pattern/") for key in items):
+            items.setdefault(SHEET, [{"request": batch.request}])
+        dependencies = exam_surface_sources(exam, set(items))
+        stale_records = stale_exam_sources(root, state, exam, set().union(*dependencies.values()))
         problems.extend(
-            f"{key}: cited source bytes or revisions changed."
-            for key in items
-            if key.startswith("exam/pattern/") and f"pattern:{key.rsplit('/', 1)[-1]}" in stale
+            f"{key}: {owner} cited source bytes or revisions changed: {', '.join(sources)}."
+            for key, owners in dependencies.items()
+            for owner, sources in stale_records.items()
+            if owner in owners
         )
     for key in items:
         if key.startswith("exam/pattern/"):
@@ -148,20 +199,16 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
                     f"{key}: {p}" for p in plan_problems(plan, context.items[key].value, outcomes)
                 )
             routes.append("#exam/patterns/" + key.rsplit("/", 1)[-1])
-        if key == "exam/sheet":
+        if key == SHEET:
             routes.append("#exam/sheet")
         if key.startswith("exam/mock/"):
             mock = key.split("/")[2]
             routes.append(f"#exam/mock/{mock}")
-            if f"mock:{mock}" in stale:
-                problems.append(f"{key}: cited source bytes or revisions changed.")
         problems.extend(
             f"{key}: {flag['detail']}"
             for flag in context.flags_by_item.get(key, [])
             if flag["flag"] in INVARIANT_FLAGS
         )
-        if key in verified and not verified[key]["passed"]:
-            problems.append(f"{key}: computed answers do not match.")
     if exam and any(key.startswith("exam/") for key in items) and _exam_visuals(exam):
         visuals.add("exam")
     lectures = read_lectures(root)
@@ -196,6 +243,11 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
             for entry in lecture.entries:
                 entry_key = f"{selection_key}/{entry.key}"
                 items[entry_key] = [{"request": batch.request}]
+    problems.extend(
+        f"{key}: computed answers do not match."
+        for key in items
+        if key in verified and verified[key]["status"] != "passed"
+    )
     # New content in a workspace reopens the link decisions of items elsewhere that could point
     # to it (an exercise or cheatsheet entry and a new lesson), so they are decided now.
     from tum_mcp.course.app.build import read_content
@@ -214,10 +266,19 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
         for pair in undecided(root, study, read_exercises(root), exam, lectures)
         if pair.target in added and pair.item not in items
     )
+    for problem in problems:
+        workspace = problem.partition("/")[0]
+        if workspace in workspace_problems:
+            workspace_problems[workspace].append(problem)
+
+    pending_check = None
     if read_bytes(root / "app/data.mjs") != current_data(root):
-        problems.append("Build the complete current draft.")
-    elif not problems and routes:
-        problems.extend(_browser_problems(root, routes, visuals))
+        problem = "Build the complete current draft."
+        problems.append(problem)
+        pending_check = (problem, "tum-mcp study build . --local-only")
+    elif routes:
+        browser = _batch_browser(root, routes, visuals, problems, workspace_problems)
+        browser_commands.update(record_browser_problems(browser, problems, workspace_problems))
     signature = source_digest(batch.model_dump_json().encode())
     contract = source_digest(batch.model_dump_json(exclude={"items"}).encode())
     return Readiness(
@@ -232,4 +293,10 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
         },
         provisional_plans=tuple(provisional),
         preparations=tuple(preparations),
+        pending_check=pending_check,
+        browser_commands=browser_commands,
+        workspace_problems={
+            workspace: tuple(dict.fromkeys(issues))
+            for workspace, issues in workspace_problems.items()
+        },
     )

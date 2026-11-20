@@ -1,13 +1,15 @@
 """Explicit lecture preparation and bounded offline evidence inspection."""
 
 import json
+from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated
 
 import typer
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 
 from tum_mcp.course.lecture.evidence import Crop, merge_intervals
+from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.store import digest, load_state, private_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.extensions import require_lecture
@@ -15,6 +17,8 @@ from tum_mcp.lecture_processing.prepare_visuals import FrameInventory
 from tum_mcp.lecture_processing.progress import read_progress
 from tum_mcp.lecture_processing.receipts import (
     PASSAGES,
+    PreparedReceipt,
+    Receipt,
     evidence_bytes,
     export_snapshot,
     read_receipt,
@@ -143,14 +147,20 @@ def prepare(
 
 
 @app.command()
-def inspect(project: Path) -> None:
+def inspect(
+    project: Path,
+    through: Annotated[
+        datetime | None,
+        typer.Option(formats=["%Y-%m-%d"], help="Last requested teaching date (YYYY-MM-DD)."),
+    ] = None,
+) -> None:
     """Show cached receipts with their as-of date; does not fetch or start recognition."""
     require_lecture()
     root = project.expanduser().resolve()
     state = load_state(root)
     directory = private_path(root, "lectures")
     receipts = [
-        read_receipt(root, folder.name).model_dump(mode="json")
+        read_receipt(root, folder.name)
         for folder in sorted(directory.glob("live-*"))
         if folder.is_dir() and (folder / "receipt.json").is_file()
     ]
@@ -165,12 +175,84 @@ def inspect(project: Path) -> None:
             {
                 "course": state.course.title,
                 "mode": "offline_cached_as_of_receipts",
-                "recordings": receipts,
+                "recordings": [receipt.model_dump(mode="json") for receipt in receipts],
                 "progress": progress,
+                **(_meeting_scope(root, state, receipts, through.date()) if through else {}),
             },
             indent=2,
         )
     )
+
+
+def _meeting_scope(
+    root: Path, state: StudyState, receipts: list[Receipt], through: date
+) -> dict[str, JsonValue]:
+    from tum_mcp.course.project.schedule import read_schedule
+
+    schedule = read_schedule(root, state)
+    prepared = [receipt for receipt in receipts if isinstance(receipt, PreparedReceipt)]
+    dates = {receipt.recording.recorded_on for receipt in prepared}
+    sessions = schedule.sessions if schedule else ()
+    days = sorted(dates | {session.on for session in sessions if session.basis != "release"})
+    rows: list[JsonValue] = []
+    for day in days:
+        keys: list[JsonValue] = []
+        unavailable: list[JsonValue] = []
+        for receipt in prepared:
+            if receipt.recording.recorded_on != day:
+                continue
+            if day > through:
+                keys.append(receipt.key)
+                continue
+            try:
+                _ = usable_receipt(root, receipt.key)
+            except CampusError as error:
+                unavailable.append({"recording": receipt.key, "reason": str(error)})
+            else:
+                keys.append(receipt.key)
+        rows.append(
+            {
+                "date": day.isoformat(),
+                "sources": [
+                    str(key)
+                    for key in sorted(
+                        {
+                            key
+                            for session in sessions
+                            if session.on == day
+                            for key in session.sources
+                        }
+                    )
+                ],
+                "recordings": keys,
+                "unavailable": unavailable,
+                "disposition": (
+                    "out_of_scope" if day > through else "available" if keys else "missing"
+                ),
+            }
+        )
+    return {"meetings": rows}
+
+
+@app.command(name="selection-progress")
+def read_selection_progress(
+    project: Path,
+    recording: Annotated[str, typer.Option(help="Prepared recording key from inspect.")],
+    finalize: Annotated[
+        bool, typer.Option(help="Promote the complete map after checking the authored Lecture.")
+    ] = False,
+) -> None:
+    """Recover the first unread eligible interval from current local evidence."""
+    from tum_mcp.course.lecture.selection import finalize_selection, selection_progress
+
+    require_lecture()
+    root = project.expanduser().resolve()
+    receipt = usable_receipt(root, recording)
+    if finalize:
+        finalize_selection(root, receipt)
+        typer.echo(f"Saved the current selection for {receipt.key}.")
+    else:
+        typer.echo(selection_progress(root, receipt).model_dump_json(indent=2))
 
 
 @app.command(name="transcript")

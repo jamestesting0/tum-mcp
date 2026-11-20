@@ -11,7 +11,7 @@ from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.study import StudyContent, Text
 from tum_mcp.course.ledger.coverage import CoverageLedger
 from tum_mcp.course.media.audio import MediaFile
-from tum_mcp.course.project.models import Digest, Key
+from tum_mcp.course.project.models import PLAN_ROUTES, Digest, Key
 from tum_mcp.settings import Frozen
 
 if TYPE_CHECKING:
@@ -64,12 +64,7 @@ CRITERIA: tuple[Criterion, ...] = (
 Score = Literal[1, 2, 3]
 ItemKey = Annotated[
     str,
-    Field(
-        pattern=(
-            r"^(study/[a-z0-9-]+|exercises/[a-z0-9-]+/[a-z0-9-]+|exam/pattern/[a-z0-9-]+"
-            r"|exam/sheet)$"
-        )
-    ),
+    Field(pattern=(rf"^({PLAN_ROUTES}|exam/sheet)$")),
 ]
 Revision = Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]
 # The visual's address on the render check's contact sheets, such as block:3 or step:trace:0.

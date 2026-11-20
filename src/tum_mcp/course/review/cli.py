@@ -260,11 +260,12 @@ def plans(
     item: Annotated[
         list[str] | None, typer.Option(help="Exact plan item to read. Repeat for a batch.")
     ] = None,
+    batch: Annotated[str | None, typer.Option(help="Check plans for this batch key.")] = None,
 ) -> None:
     """Read a batch of plans or all plans awaiting a fresh checker."""
     from tum_mcp.course.checks.plans import plan_packet
 
-    _echo(plan_packet(project.expanduser().resolve(), tuple(item or ())))
+    _echo(plan_packet(project.expanduser().resolve(), tuple(item or ()), batch=batch))
 
 
 @app.command(name="plan-record")
@@ -280,8 +281,15 @@ def plan_record(
     from tum_mcp.course.checks.plans import record_gate
 
     _refuse_codex_fresh(provenance)
-    answers = json.loads(file.read_bytes()).get("items", [])
-    _echo(record_gate(project.expanduser().resolve(), answers, provenance))
+    answer = json.loads(file.read_bytes())
+    _echo(
+        record_gate(
+            project.expanduser().resolve(),
+            answer.get("items", []),
+            provenance,
+            batch=answer.get("batch"),
+        )
+    )
 
 
 @app.command(name="run-checker")
@@ -295,10 +303,13 @@ def run_checker(
     command: Annotated[
         str | None, typer.Option(help="A checker command template; {prompt} is replaced.")
     ] = None,
+    batch: Annotated[str | None, typer.Option(help="Check plans for this batch key.")] = None,
 ) -> None:
     """Check a packet, or the waiting plans, in a separate headless session, recorded fresh."""
     from tum_mcp.course.review.runner import run
 
     if plans == (packet is not None):
         raise CampusError(Code.ACTION_REQUIRED, "Name one packet with --packet, or use --plans.")
-    _echo(run(project, packet, host, command, plans=plans))
+    if batch is not None and not plans:
+        raise CampusError(Code.ACTION_REQUIRED, "--batch requires --plans.")
+    _echo(run(project, packet, host, command, plans=plans, batch=batch))

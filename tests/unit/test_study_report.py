@@ -22,6 +22,48 @@ def exercises() -> dict:
 
 
 @pytest.mark.parametrize(
+    ("field", "text", "matched"),
+    [
+        ("statement", "In the table below, enter both distances.", ""),
+        ("statement", "Use the lecture notes (figure 2) to find the edge.", ""),
+        ("statement", "The lecture notes that the bound is strict.", "The lecture notes"),
+        ("statement", "The lecture gives the following problem.", "The lecture gives"),
+        ("statement", "This problem was uploaded by a tutor.", "uploaded by"),
+        ("hint", "The lecture checks the goal first.", "The lecture checks"),
+        ("check", "The lecture explains this update.", "The lecture explains"),
+        ("solution", "This answer was imported from the draft.", "imported from"),
+    ],
+)
+def test_exercise_prose_distinguishes_source_instructions_from_narration(
+    field: str, text: str, matched: str
+) -> None:
+    payload = exercises()
+    record = payload["sets"][0]["exercises"][0]
+    if field == "statement":
+        record["statement"][0]["paragraphs"] = [text]
+    elif field == "hint":
+        record["steps"][0]["hints"] = [text]
+    elif field == "check":
+        step = next(s for s in record["steps"] if s["check"]["kind"] == "self_check")
+        step["check"]["model_answer"][0]["paragraphs"] = [text]
+    else:
+        record["solution"]["answers"][0]["blocks"][0]["paragraphs"] = [text]
+    content = ExerciseContent.model_validate(payload)
+
+    flags = [
+        str(flag["detail"])
+        for flag in quality_flags(None, content)
+        if flag["flag"] == "meta_reference" and flag["item"] == record["key"]
+    ]
+    if matched:
+        (detail,) = flags
+        assert field in detail
+        assert matched in detail
+    else:
+        assert flags == []
+
+
+@pytest.mark.parametrize(
     ("name", "stage", "marks"),
     [
         (
@@ -612,24 +654,9 @@ def test_flags_point_at_dense_prose_unanswered_tables_and_large_steps() -> None:
     content["units"][0]["blocks"][0]["paragraphs"] = ["The lecture gives a bound of n squared."]
     narrated = quality_flags(StudyContent.model_validate(content), None)
     assert "meta_reference" in {flag["flag"] for flag in narrated}
-    # The same applies to an exercise's guide and statement.
-    guided = exercises()
-    guided["sets"][0]["exercises"][0]["steps"][0]["explanation"] = (
-        "The lecture checks a generated goal before inserting it."
-    )
-    narrated = quality_flags(None, ExerciseContent.model_validate(guided))
-    assert "meta_reference" in {flag["flag"] for flag in narrated}
     guided = exercises()
     exercise = guided["sets"][0]["exercises"][0]
-    exercise["statement"][0]["paragraphs"] = ["The lecture gives the following problem."]
-    assert "meta_reference" in {
-        flag["flag"] for flag in quality_flags(None, ExerciseContent.model_validate(guided))
-    }
     step = next(step for step in exercise["steps"] if step["check"]["kind"] == "self_check")
-    step["check"]["model_answer"][0]["paragraphs"] = ["The lecture explains this update."]
-    assert "meta_reference" in {
-        flag["flag"] for flag in quality_flags(None, ExerciseContent.model_validate(guided))
-    }
     # A Compare answer listing several computed results in one sentence asks for working.
     step["check"]["model_answer"][0]["paragraphs"] = [
         r"\(a+b = 5+3i\), \(ab = 10+5i\), \(1/a = (3-4i)/25\) and \(|a| = 5\)."

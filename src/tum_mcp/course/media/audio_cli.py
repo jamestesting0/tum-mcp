@@ -114,11 +114,18 @@ def narration(project: Path, stem: str) -> None:
 
 
 @app.command()
-def listen(project: Path, stem: str) -> None:
+def listen(
+    project: Path,
+    stem: str,
+    dispose: Annotated[
+        list[str] | None,
+        typer.Option("--dispose", help="Record SENTENCE=REASON for a flag in the current report."),
+    ] = None,
+) -> None:
     """Transcribe a published track and compare it with its script and timing."""
     from tum_mcp.course.media.listening import listen_audio
 
-    _emit(listen_audio(_ready(project), stem))
+    _emit(listen_audio(_ready(project), stem, tuple(dispose or ())))
 
 
 @app.command()

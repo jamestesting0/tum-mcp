@@ -25,8 +25,9 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import TypedDict
 
-from pydantic import JsonValue
+from pydantic import JsonValue, TypeAdapter, ValidationError
 
 from tum_mcp.course.project.store import confined
 
@@ -35,6 +36,20 @@ TIMEOUT_S = 30
 NODE_VALUES = "@node_values"
 GRID = "@grid"
 STEP = re.compile(r"([^.\[\]]+)|\[(\d+)\]")
+NUMBER_TEXT = r"[+-]?(?:[0-9]+(?:[.,][0-9]+)*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
+NUMBER = re.compile(NUMBER_TEXT)
+STANDALONE_NUMBER = re.compile(rf"(?<![\w.,+-]){NUMBER_TEXT}(?![\w+-]|[.,][0-9])")
+
+type ExpectedRows = list[dict[str, JsonValue]]
+
+
+class KeyOutput(TypedDict, total=False):
+    values: dict[str, JsonValue]
+    exact_values: dict[str, JsonValue]
+    walkthroughs: dict[str, ExpectedRows | dict[str, ExpectedRows]]
+
+
+KEY_OUTPUT = TypeAdapter(KeyOutput)
 
 
 def script_path(root: Path, item: str) -> Path:
@@ -47,20 +62,22 @@ def run_key(root: Path, item: str) -> dict:
     with tempfile.TemporaryDirectory() as folder:
         try:
             done = subprocess.run(  # noqa: S603 - the project's own answer key, run isolated
-                [sys.executable, "-I", str(path)],
+                [sys.executable, "-I", "-X", "utf8", str(path)],
                 cwd=folder,
                 capture_output=True,
-                text=True,
                 timeout=TIMEOUT_S,
                 check=False,
             )
         except subprocess.TimeoutExpired:
             return {"problem": f"the answer key ran past {TIMEOUT_S} s"}
     if done.returncode:
-        return {"problem": f"the answer key failed: {done.stderr.strip()[-400:]}"}
+        detail = done.stderr.decode("utf-8", errors="replace").strip()[-400:]
+        return {"problem": f"the answer key failed: {detail}"}
     try:
-        output = json.loads(done.stdout)
-    except json.JSONDecodeError:
+        output = json.loads(done.stdout.decode("utf-8"))
+    except UnicodeDecodeError:
+        return {"problem": "the answer key did not print UTF-8"}
+    except (ValueError, RecursionError):
         return {"problem": "the answer key printed no JSON object"}
     return output if isinstance(output, dict) else {"problem": "the answer key printed no object"}
 
@@ -73,11 +90,38 @@ def at(value: JsonValue, path: str) -> JsonValue:
 
 def _same(found: JsonValue, expected: JsonValue) -> bool:
     if isinstance(expected, int | float) and not isinstance(expected, bool):
+        if isinstance(found, bool):
+            return False
+        if isinstance(found, int | float):
+            number = found
+        elif isinstance(found, str):
+            text = found.replace("−", "-")
+            # Count attached quantities too. They make the text ambiguous even
+            # when one standalone number matches the answer key.
+            tokens = list(NUMBER.finditer(text))
+            if len(tokens) != 1:
+                return False
+            token = tokens[0]
+            literal = token[0]
+            standalone = STANDALONE_NUMBER.match(text, token.start())
+            if (
+                standalone is None
+                or standalone.end() != token.end()
+                or literal.count(".") > 1
+                or "," in literal
+            ):
+                return False
+            number = float(literal)
+        else:
+            return False
         try:
-            number = float(str(found).strip())
-        except ValueError:
-            return str(expected) in " ".join(str(found).split())
-        return math.isclose(number, expected, rel_tol=1e-9, abs_tol=1e-12)
+            return (
+                math.isfinite(number)
+                and math.isfinite(expected)
+                and math.isclose(number, expected, rel_tol=1e-9, abs_tol=1e-12)
+            )
+        except OverflowError:
+            return False
     return " ".join(str(expected).split()) in " ".join(str(found).split())
 
 
@@ -192,27 +236,42 @@ def _board(block: dict, steps: list[dict]) -> dict[str, str]:
 def compare(value: JsonValue, output: dict) -> tuple[list[str], int]:
     """The differences between an item's content and its answer key, and how many values
     were compared."""
+    problems, compared, _, _ = _comparison(value, KEY_OUTPUT.validate_python(output, strict=True))
+    return problems, compared
+
+
+def _comparison(value: JsonValue, output: KeyOutput) -> tuple[list[str], int, set[str], set[str]]:
     problems: list[str] = []
     compared = 0
+    matched_values: set[str] = set()
+    matched_walkthroughs: set[str] = set()
     for path, expected in (output.get("values") or {}).items():
-        compared += 1
         try:
             found = at(value, path)
         except (KeyError, IndexError, TypeError):
             problems.append(f"{path}: no such place in the content")
             continue
+        compared += 1
         if not _same(found, expected):
-            problems.append(f"{path}: the key computes {expected!r}, the content says {found!r}")
+            message = f"{path}: the key computes {expected!r}, the content says {found!r}"
+            if isinstance(expected, int | float) and not isinstance(expected, bool):
+                message += ". Compare a numeric field or text containing one numeric value."
+            problems.append(message)
+        else:
+            matched_values.add(path)
     for path, expected in (output.get("exact_values") or {}).items():
-        compared += 1
         try:
             found = at(value, path)
         except (KeyError, IndexError, TypeError):
             problems.append(f"{path}: no such place in the content")
             continue
+        compared += 1
         if not _exact(found, expected):
             problems.append(f"{path}: the key computes {expected!r}, the content says {found!r}")
+        else:
+            matched_values.add(path)
     for key, steps in (output.get("walkthroughs") or {}).items():
+        start_count, start_problems = compared, len(problems)
         block = _walkthrough(value, key)
         if block is None:
             problems.append(f"walkthrough {key}: not in the content")
@@ -221,6 +280,8 @@ def compare(value: JsonValue, output: dict) -> tuple[list[str], int]:
             failures, count = _compare_runs(block, steps, key)
             problems.extend(failures)
             compared += count
+            if count and not failures:
+                matched_walkthroughs.add(key)
             continue
         written = block["steps"]
         if len(written) != len(steps):
@@ -234,40 +295,68 @@ def compare(value: JsonValue, output: dict) -> tuple[list[str], int]:
                         f"walkthrough {key} step {number}: {label} is {rows.get(label)!r}, "
                         f"the key computes {state!r}"
                     )
-    return problems, compared
+        if compared > start_count and len(problems) == start_problems:
+            matched_walkthroughs.add(key)
+    return problems, compared, matched_values, matched_walkthroughs
 
 
 def verify(root: Path, items: dict, only: str | None = None) -> list[dict[str, JsonValue]]:
-    """Run every answer key (or one item's) against its item's current content."""
+    """Run answer keys for the supplied item inventory against current content."""
     results: list[dict[str, JsonValue]] = []
     for key, item in sorted(items.items()):
         if (only and key != only) or "answer-key" not in item.blocks:
             continue
         output = run_key(root, key)
         if "problem" in output:
-            results.append({"item": key, "passed": False, "problems": [output["problem"]]})
+            results.append(
+                {
+                    "item": key,
+                    "passed": False,
+                    "status": "failed",
+                    "compared": 0,
+                    "problems": [str(output["problem"])],
+                }
+            )
             continue
-        problems, compared = compare(item.value, output)
-        if not compared:
+        try:
+            parsed = KEY_OUTPUT.validate_python(output, strict=True)
+        except ValidationError as error:
+            field = ".".join(str(part) for part in error.errors()[0]["loc"])
+            results.append(
+                {
+                    "item": key,
+                    "passed": False,
+                    "status": "failed",
+                    "compared": 0,
+                    "problems": [f"the answer key returned malformed {field or 'output'}"],
+                }
+            )
+            continue
+        problems, compared, matched_values, matched_walkthroughs = _comparison(item.value, parsed)
+        status = "failed" if problems else "passed" if compared else "no_checks"
+        if status == "no_checks":
             problems.append("the answer key compares nothing")
         results.append(
             {
                 "item": key,
                 "passed": not problems,
+                "status": status,
                 "compared": compared,
+                "matched_values": sorted(matched_values),
+                "matched_walkthroughs": sorted(matched_walkthroughs),
                 "problems": problems,
                 "values": sorted(
-                    (output.get("values") or {}).keys() | (output.get("exact_values") or {}).keys()
+                    parsed.get("values", {}).keys() | parsed.get("exact_values", {}).keys()
                 ),
-                "exact_values": sorted(output.get("exact_values") or {}),
+                "exact_values": sorted(parsed.get("exact_values", {})),
                 "checked_runs": {
                     name: {run: len(rows) for run, rows in steps.items() if isinstance(rows, list)}
-                    for name, steps in (output.get("walkthroughs") or {}).items()
+                    for name, steps in parsed.get("walkthroughs", {}).items()
                     if isinstance(steps, dict)
                 },
                 "walkthroughs": sorted(
                     name
-                    for name, steps in (output.get("walkthroughs") or {}).items()
+                    for name, steps in parsed.get("walkthroughs", {}).items()
                     if steps and all(steps)
                 ),
             }

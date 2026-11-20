@@ -55,7 +55,7 @@ All commands print JSON; prefix them with `tum-mcp audio-notes`.
    `audio/voice.json`, else `narrator`; set it to the profile you use in step 4.
    Register each track with `tum-mcp study task start PROJECT --media audio/STEM --owner
    OWNER` (the owner comes from the hook context). `study task finish` passes once the
-   track is published and current.
+   exact stem is published, current and checked with `listen`.
 3. **Check.** `check PROJECT STEM` rejects stale or missing coverage and sentences
    with symbols a voice cannot say; it warns about production wording and chapters
    that open with a pronoun. Then review the script as continuous speech
@@ -72,11 +72,13 @@ All commands print JSON; prefix them with `tum-mcp audio-notes`.
    runtime (`tum-mcp video-notes runtime status`).
 6. **Listen.** `listen PROJECT STEM` transcribes the published track, aligns each
    sentence with the script and timing, re-listens to doubtful sentences alone and
-   flags unclear or missing words, dropped numbers and negations, timing slips,
-   unplanned silences and pace. Reword each still-flagged sentence (a name the voice
-   swallows, "A and B, may each" heard as "and B. Mage"), synthesize it again,
-   publish and listen again until nothing is flagged or the flag is a recognizer
-   quirk you can name.
+   flags unclear speech, changed numbers, signs and negation, timing slips,
+   unplanned silences and pace. Repair actual speech and timing problems, publish
+   again and rerun `listen`. To explain a recognizer quirk in the current report,
+   run `listen PROJECT STEM --dispose 'SENTENCE=REASON'` using its flagged sentence
+   key. Repeat `--dispose` for each affected sentence. The report retains the flags
+   and new listening runs require fresh reasons. This records an author judgment
+   about recognition. Human listening and formal review are separate.
 7. **Published site.** When the request's tracks are installed and the course has a
    published site, run `tum-mcp study publish sync PROJECT --automatic` once. It
    respects a paused site and the review gate. Never upload after each track.

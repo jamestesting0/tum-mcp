@@ -315,12 +315,16 @@ def build_for_publication(root: Path, *, media: bool = True) -> dict[str, bytes]
 
 def unreviewed(root: Path) -> list[str]:
     """Items no passing review gate covers yet: never reviewed, or reviewed and still held."""
-    from tum_mcp.course.review.loop import gate, load, read_state
+    from tum_mcp.course.review.loop import load, publication_problems, read_state
 
     state = read_state(root)
     scope = state.scope if state else ()
     context = load(root)
-    blocked = {key for key, problems in gate(context, scope).items() if problems}
+    blocked = (
+        {key for key, problems in publication_problems(context, state).items() if problems}
+        if state
+        else set()
+    )
     return sorted({key for key in context.items if key not in scope} | blocked)
 
 

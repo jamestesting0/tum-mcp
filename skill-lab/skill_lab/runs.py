@@ -8,18 +8,21 @@ import os
 import re
 import shlex
 import shutil
+import signal
+import stat
 import subprocess
 import sys
 import tarfile
 import threading
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 
 from filelock import FileLock, Timeout
 
-from skill_lab import LabError, hosts, models, paths, rounds, safety, scenarios, variants
+from skill_lab import LabError, hosts, models, paths, profiles, rounds, safety, scenarios, variants
 from skill_lab.models import ModelSpec
 
 LAB_CODE = Path(__file__).resolve().parent
@@ -33,6 +36,17 @@ Installer = Callable[[Path, str, Path, Path], None]
 SESSION_EXPIRED_MARKERS = ("SESSION_EXPIRED",)
 BROKER_SECONDS = 2400
 EXPIRED_MESSAGE = "A campus session expired during the run; run `tum-mcp login`, then repeat it."
+FAI_SLOTS = {
+    ("base", scenarios.FAI_JOURNEY): 3,
+    ("candidate", scenarios.FAI_JOURNEY): 2,
+    ("candidate", scenarios.FAI_RESUME): 2,
+}
+LOOPBACK_NETWORK = (
+    "(version 1) (allow default) (deny network*) "
+    '(allow network* (local ip "localhost:*")) '
+    "(allow network-bind (local unix-socket)) "
+    '(allow network-outbound (remote ip "localhost:*"))'
+)
 
 
 def _broker_command(python: Path, arguments: list[str]) -> list[str]:
@@ -41,15 +55,18 @@ def _broker_command(python: Path, arguments: list[str]) -> list[str]:
 
 RENDER_OPTIONS = frozenset({"--exam", "--gallery", "--phone", "--interact", "--learner", "--json"})
 PACKET = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{0,80}$")
+BATCH_KEY = re.compile(r"[a-z0-9][a-z0-9_.-]{0,99}")
 STEM = re.compile(r"[0-9]{2}_[a-z0-9][a-z0-9-]{0,80}")
 
 
 def _render_request(
-    job: dict, workspace: Path, checker: list[str] | None = None
+    job: dict, workspace: Path, checker: list[str] | None = None, *, offline: bool = False
 ) -> tuple[list[str], Path]:
     arguments = job["arguments"]
     cwd = Path(job["cwd"]).resolve()
     command = arguments[:2]
+    if offline and command not in (["study", "visuals"], ["review", "run-checker"]):
+        raise LabError("The offline broker only runs local browser checks and fresh checkers.")
     if not cwd.is_relative_to(workspace) or command not in (
         ["study", "visuals"],
         ["review", "run-checker"],
@@ -106,6 +123,7 @@ def _render_request(
     if checker is None:
         raise LabError("This trial has no fresh checker.")
     chosen: list[str] = []
+    batch = False
     for option in options:
         if option == "--packet":
             value = next(options, "")
@@ -114,9 +132,51 @@ def _render_request(
             chosen += [option, value]
         elif option == "--plans":
             chosen.append(option)
+        elif option == "--batch":
+            value = next(options, "")
+            if batch or not BATCH_KEY.fullmatch(value):
+                raise LabError("A plan checker request accepts one canonical project batch key.")
+            batch = True
+            chosen += [option, value]
         else:
-            raise LabError("A checker request names only --packet ID or --plans.")
+            raise LabError("A checker request names only --packet ID or --plans [--batch KEY].")
+    if batch and ("--plans" not in chosen or "--packet" in chosen):
+        raise LabError("A checker batch selector requires --plans without --packet.")
     return [*arguments[:3], *chosen, "--command", shlex.join(checker)], cwd
+
+
+class OfflineBrokerTurn:
+    """Own the offline broker's process groups and the run's checker allowance."""
+
+    def __init__(self, limit: int, ledger: Path) -> None:
+        self.limit = limit
+        self.ledger = ledger
+        self.failure: str | None = None
+        self.deadline = 0.0
+        self.lock = threading.Lock()
+        self.active: set[subprocess.Popen[str]] = set()
+
+    def remaining(self, deadline: float) -> float:
+        if self.failure:
+            raise LabError(self.failure)
+        remaining = deadline - time.monotonic()
+        if not deadline or deadline != self.deadline or remaining <= 0:
+            raise LabError("The broker request has no active author turn.")
+        return remaining
+
+    def ledger_events(self) -> list[dict[str, str]]:
+        if not self.ledger.exists():
+            return []
+        return [json.loads(line) for line in self.ledger.read_text(encoding="utf-8").splitlines()]
+
+    def finish(self) -> None:
+        with self.lock:
+            self.deadline = 0
+            for process in self.active:
+                with suppress(ProcessLookupError):
+                    os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+            self.active.clear()
 
 
 def render_broker(
@@ -124,6 +184,8 @@ def render_broker(
     python: Path,
     checker: list[str] | None = None,
     environment: dict[str, str] | None = None,
+    *,
+    turn: OfflineBrokerTurn | None = None,
 ) -> threading.Event:
     """Serve vetted checks and recording preparation outside the author's sandbox.
 
@@ -132,29 +194,69 @@ def render_broker(
     """
     stop = threading.Event()
 
-    def handle(request: Path, job: dict) -> None:
+    def handle(request: Path, job: dict, deadline: float) -> None:
         started = datetime.now(UTC).isoformat()
         try:
-            observed = checker
-            if checker and job["arguments"][:2] == ["review", "run-checker"]:
+            observed, log = checker, request
+            is_checker = bool(checker and job["arguments"][:2] == ["review", "run-checker"])
+            if is_checker and checker:
                 kind = "plan_check" if "--plans" in job["arguments"] else "review_packet"
                 log = request.with_name(request.name.replace(".request.json", ".sessions.jsonl"))
                 observed = [
                     str(python), "-I", str(LAB_CODE / "shim.py"),
-                    "--lab-checker", str(log), kind, *checker,
+                    "--lab-checker", str(log), kind,
+                    *(["--budget", str(turn.ledger), str(turn.limit)] if turn else []), *checker,
                 ]  # fmt: skip
-            arguments, cwd = _render_request(job, folder.parent.resolve(), observed)
-            done = subprocess.run(  # noqa: S603 - workspace-bound vetted command only
-                _broker_command(python, arguments),
-                cwd=cwd,
-                env=environment,
-                capture_output=True,
-                text=True,
-                timeout=BROKER_SECONDS,
-                check=False,
+            arguments, cwd = _render_request(
+                job, folder.parent.resolve(), observed, offline=turn is not None
             )
+            command = _broker_command(python, arguments)
+            if turn and arguments[:2] == ["study", "visuals"]:
+                if sys.platform != "darwin":
+                    raise LabError("The offline browser broker requires macOS loopback isolation.")
+                command = ["/usr/bin/sandbox-exec", "-p", LOOPBACK_NETWORK, *command]
+            if turn is None:
+                done = subprocess.run(  # noqa: S603 - workspace-bound vetted command only
+                    command,
+                    cwd=cwd,
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    timeout=BROKER_SECONDS,
+                    check=False,
+                )
+            else:
+                with turn.lock:
+                    remaining = turn.remaining(deadline)
+                    process = subprocess.Popen(  # noqa: S603 - workspace-bound vetted command only
+                        command,
+                        cwd=cwd,
+                        env=environment,
+                        text=True,
+                        start_new_session=True,
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
+                    turn.active.add(process)
+                with process:
+                    try:
+                        stdout, stderr = process.communicate(timeout=remaining)
+                    except subprocess.TimeoutExpired:
+                        with turn.lock:
+                            turn.failure = (
+                                "An offline broker job exhausted the author turn deadline."
+                            )
+                            with suppress(ProcessLookupError):
+                                os.killpg(process.pid, signal.SIGKILL)
+                        process.communicate()
+                        raise LabError(turn.failure) from None
+                    finally:
+                        with turn.lock:
+                            turn.active.discard(process)
+                done = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
             result = {"code": done.returncode, "stdout": done.stdout, "stderr": done.stderr}
-        except (LabError, subprocess.TimeoutExpired) as error:
+        except (LabError, OSError, subprocess.TimeoutExpired) as error:
             result = {"code": 2, "stdout": "", "stderr": str(error)}
         result.update(
             started=started,
@@ -170,10 +272,11 @@ def render_broker(
         # Each request runs on its own thread: a render never waits behind a long checker,
         # and a round's checkers run side by side.
         while not stop.wait(1):
+            deadline = turn.deadline if turn else 0
             for request in sorted(folder.glob("*.request.json")):
                 job = json.loads(request.read_text(encoding="utf-8"))
                 request.unlink()
-                threading.Thread(target=handle, args=(request, job), daemon=True).start()
+                threading.Thread(target=handle, args=(request, job, deadline), daemon=True).start()
 
     threading.Thread(target=serve, daemon=True).start()
     return stop
@@ -215,7 +318,9 @@ def require_moodle(states: dict[str, str]) -> None:
         )
 
 
-def install(variant_dir: Path, host: str, home: Path, downloads: Path) -> None:
+def install(
+    variant_dir: Path, host: str, home: Path, downloads: Path, *, offline: bool = False
+) -> None:
     command = [
         str(variants.python_of(variant_dir)),
         "-I",
@@ -228,10 +333,20 @@ def install(variant_dir: Path, host: str, home: Path, downloads: Path) -> None:
         str(LAB_CODE / "mcp_proxy.py"),
         "--block",
         ",".join(sorted(safety.BLOCKED_TOOLS)),
-        "--downloads",
-        str(downloads),
     ]
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    command += ["--offline"] if offline else ["--downloads", str(downloads)]
+    env = (
+        hosts.clean_environment(
+            {"TUM_MCP_CONFIG_DIR": str(downloads.parent / "config")},
+            home,
+            None,
+            host,
+            offline=True,
+        )
+        if offline
+        else None
+    )
+    result = subprocess.run(command, capture_output=True, text=True, check=False, env=env)
     if result.returncode:
         raise LabError(f"Installing the variant failed: {result.stderr.strip()[-600:]}")
 
@@ -340,16 +455,48 @@ def projects(workspace: Path) -> list[Path]:
     return found
 
 
-def inventory_hash(workspace: Path) -> str | None:
+def inventory_hash(workspace: Path, *, copy_to: Path | None = None) -> str | None:
+    """Hash relative paths and bytes across every course, optionally copying those bytes."""
+    inventory: dict[str, dict[str, str]] = {}
+    verifiable = True
     found = projects(workspace)
-    if not found:
+    for project in found:
+        files: dict[str, str] = {}
+        materials = project / "materials"
+        try:
+            if materials.is_symlink() or not materials.is_dir():
+                verifiable = False
+                continue
+            for folder, dirs, names in materials.walk(on_error=_inventory_error):
+                for name in list(dirs):
+                    if (folder / name).is_symlink():
+                        dirs.remove(name)
+                        verifiable = False
+                for name in sorted(names):
+                    source = folder / name
+                    if not stat.S_ISREG(source.lstat().st_mode):
+                        verifiable = False
+                        continue
+                    relative = source.relative_to(project).as_posix()
+                    if copy_to is not None:
+                        target = copy_to / source.relative_to(workspace)
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(source, target)
+                        source = target
+                    with source.open("rb") as stream:
+                        files[relative] = hashlib.file_digest(stream, "sha256").hexdigest()
+        except OSError:
+            verifiable = False
+        if not files:
+            verifiable = False
+        inventory[project.relative_to(workspace).as_posix()] = files
+    if not found or not verifiable:
         return None
-    digest = hashlib.sha256()
-    for path in sorted((found[0] / "materials").rglob("*")):
-        if path.is_file():
-            relative = path.relative_to(found[0]).as_posix()
-            digest.update(f"{relative}\0{path.stat().st_size}\n".encode())
-    return digest.hexdigest()
+    return hashlib.sha256(json.dumps(inventory, sort_keys=True).encode()).hexdigest()
+
+
+def _inventory_error(error: OSError) -> None:
+    raise error
 
 
 def next_run_id(round_id: str, variant: str) -> str:
@@ -418,12 +565,41 @@ def execute(
     if not scenario_id:
         raise LabError("This round has no confirmation scenario; pass --scenario.")
     scenario = scenarios.load(scenario_id)
+    if scenario.offline:
+        expected = ModelSpec.parse(models.DEFAULT_AUTHORS["codex"])
+        if (
+            author is not None
+            or spec != expected
+            or checkpoint
+            or confirm
+            or plant
+            or accept_drift
+            or until is not None
+        ):
+            raise LabError("Scored authoring uses the fixed author and complete scripted scenario.")
+        if config["scenario"] != scenarios.FAI_JOURNEY or config["budget"]["judge_sessions"] != 0:
+            raise LabError("Scored authoring requires a journey round with zero judges.")
+        minimum_budget = FAI_SLOTS.get((variant_name, scenario.id))
+        if minimum_budget is None:
+            raise LabError("This variant and scenario do not name a planned authoring slot.")
+        if not minimum_budget <= config["budget"]["runs"] <= 3:
+            raise LabError("This slot is not covered by the recorded authoring run budget.")
     if until is not None:
         # One stage of a staged scenario: the run ends after this turn.
         scenario = dataclasses.replace(scenario, turns=scenario.turns[:until])
     variant_dir = paths.round_dir(round_id) / "variants" / variant_name
     if not (variant_dir / "variant.json").is_file():
         raise LabError(f"Variant {variant_name} does not exist; create it with `lab variant`.")
+    if scenario.offline:
+        manifest = json.loads((variant_dir / "variant.json").read_text(encoding="utf-8"))
+        variant_spec = manifest["spec"]
+        if (
+            variant_spec["ref"] != config["base"]["ref"]
+            or (variant_name == "base" and variant_spec["patches"])
+            or any(variants.digest(Path(p["path"])) != p["sha256"] for p in variant_spec["patches"])
+            or manifest.get("installed_hash") != variants.installed_hash(variant_dir)
+        ):
+            raise LabError("The installed variant or its recorded inputs have drifted.")
     start = 0
     source: tuple[Path, int] | None = None
     drift: dict | None = None
@@ -443,8 +619,11 @@ def execute(
             drift = {"reason": accept_drift, "files": changed}
         if refusal:
             raise LabError(f"Checkpoint refused: {refusal}")
-    campus_check()
+    if not scenario.offline:
+        campus_check()
     timeout = int(config["budget"]["turn_timeout_min"]) * 60
+    if scenario.offline and timeout != 12 * 60:
+        raise LabError("Scored authoring requires the recorded 12-minute turn limit.")
     # A trial installs into, and clears the logs of, its host's profile, so one profile runs one
     # trial at a time; other hosts and profile slots run side by side.
     profile = paths.profile_name(spec.host)
@@ -457,9 +636,16 @@ def execute(
             f"Another live {profile} trial is running; each profile runs one at a time."
         ) from error
     try:
+        if scenario.offline:
+            profiles.require_offline_login()
         # Both hosts may start together; the round lock keeps the budget count and ids exact.
         with FileLock(str(paths.round_dir(round_id) / "runs.lock")):
             rounds.check_budget(round_id, "runs")
+            if scenario.offline:
+                claim = paths.round_dir(round_id) / f"claimed-{variant_name}-{scenario.id}"
+                if claim.exists():
+                    raise LabError(f"The {variant_name}/{scenario.id} slot was already claimed.")
+                claim.touch(exist_ok=False)
             run_id = next_run_id(round_id, variant_name)
         return _run(
             round_id,
@@ -511,6 +697,11 @@ def _run(
     (run_dir / "workspace").symlink_to(workspace, target_is_directory=True)
     history = run_dir / "history.git"
     subprocess.run(["git", "init", "-q", "--bare", str(history)], check=True)
+    if scenario.offline:
+        from skill_lab import authoring_fixture
+
+        authoring_fixture.seed(workspace, scenario.id)
+        snapshot(history, workspace, 0)
     if source:
         restore(*source, workspace)
     if source and drift is not None:
@@ -522,9 +713,13 @@ def _run(
         (run_dir / "planted.json").write_text(json.dumps(planted, indent=2), encoding="utf-8")
     shim = bin_dir / "tum-mcp"
     broker = workspace / ".lab-broker"
+    shim_env = {"SKILL_LAB_RENDER_BROKER": str(broker)}
+    if scenario.offline:
+        shim_env["SKILL_LAB_OFFLINE"] = "1"
+    assignments = " ".join(f"{key}={shlex.quote(value)}" for key, value in shim_env.items())
     shim.write_text(
-        f'#!/bin/sh\nSKILL_LAB_RENDER_BROKER="{broker}" exec "{python}" -I '
-        f'"{LAB_CODE / "shim.py"}" "$@"\n',
+        f"#!/bin/sh\n{assignments} exec {shlex.quote(str(python))} -I "
+        f'{shlex.quote(str(LAB_CODE / "shim.py"))} "$@"\n',
         encoding="utf-8",
     )
     shim.chmod(0o755)
@@ -544,32 +739,119 @@ def _run(
         "confirm": confirm,
         "started": datetime.now(UTC).isoformat(timespec="seconds"),
         "status": "running",
+        "delivery_request": scenarios.delivery_request(scenario.turns),
         "turns": [],
     }
+    if scenario.offline:
+        record["installed_hash"] = variants.installed_hash(variant_dir)
     write_record(run_dir, record)
     began = time.monotonic()
-    environment = hosts.clean_environment(storage_environment(downloads), home, bin_dir, spec.host)
-    serving = render_broker(broker, python, hosts.checker_command(spec), environment)
+    storage = (
+        storage_environment(downloads)
+        if not scenario.offline
+        else {
+            name: str(run_dir / destination)
+            for name, destination in (
+                ("TUM_MCP_DATA_DIR", "data"),
+                ("TUM_MCP_CONFIG_DIR", "config"),
+                ("TUM_MOODLE_DATA_DIR", "moodle"),
+            )
+        }
+    )
+    environment = hosts.clean_environment(
+        storage, home, bin_dir, spec.host, offline=scenario.offline
+    )
+    broker_turn = (
+        OfflineBrokerTurn(
+            1 if scenario.id == scenarios.FAI_RESUME else 3, run_dir / "checker.jsonl"
+        )
+        if scenario.offline
+        else None
+    )
+    permissions = ()
+    executable = "codex"
+    if scenario.offline:
+        codex = shutil.which("codex", path=environment["PATH"])
+        if codex is None:
+            raise LabError("The isolated Codex executable is unavailable.")
+        executable = str(Path(codex).resolve())
+        permissions = (
+            bin_dir, LAB_CODE / "shim.py", python.parent.parent,
+            python.resolve().parent.parent, Path(sys.base_prefix), run_dir / "config",
+            home / ".agents" / "skills", home / ".codex" / "hooks",
+            Path(executable), Path("/opt/homebrew"), Path("/usr/local"),
+        )  # fmt: skip
+    serving = render_broker(
+        broker,
+        python,
+        hosts.checker_command(spec, permissions=permissions, executable=executable),
+        environment,
+        turn=broker_turn,
+    )
     try:
-        installer(variant_dir, spec.host, home, downloads)
+        if scenario.offline and installer is install:
+            install(variant_dir, spec.host, home, downloads, offline=True)
+        else:
+            installer(variant_dir, spec.host, home, downloads)
         if source:
             snapshot(history, workspace, start)
         session = None
         for number, turn in enumerate(scenario.turns[start:], start=start + 1):
+            if scenario.id == scenarios.FAI_JOURNEY and number == 3:
+                authoring_fixture.release_clarification(workspace)
             entry = {"turn": number, "message": turn.say, "replies": []}
             message, attempt = turn.say, 0
             while True:
                 label = f"turn-{number}" + (f"-reply-{attempt}" if attempt else "")
                 clock = time.monotonic()
-                result = hosts.run_turn(
-                    spec,
-                    message,
-                    workspace=workspace,
-                    environment=environment,
-                    session=session,
-                    timeout=timeout,
-                    raw=run_dir / "raw" / f"{label}.jsonl",
-                )
+                if broker_turn:
+                    with broker_turn.lock:
+                        for pending in broker.glob("*.request.json"):
+                            pending.unlink(missing_ok=True)
+                        broker_turn.deadline = clock + timeout
+                try:
+                    result = hosts.run_turn(
+                        spec,
+                        message,
+                        workspace=workspace,
+                        environment=environment,
+                        session=session,
+                        timeout=timeout,
+                        raw=run_dir / "raw" / f"{label}.jsonl",
+                        **(
+                            {"permissions": permissions, "executable": executable}
+                            if permissions
+                            else {}
+                        ),
+                    )
+                finally:
+                    if broker_turn:
+                        broker_turn.finish()
+                        for event in broker_turn.ledger_events():
+                            if event["event"] == "refused":
+                                broker_turn.failure = event["reason"]
+                if broker_turn and broker_turn.failure:
+                    result.is_error = True
+                    result.error = broker_turn.failure
+                if (
+                    scenario.offline
+                    and models.reported_matches(spec, result.model_reported) is False
+                ):
+                    result.is_error = True
+                    result.error = "The author reported a different model."
+                if (
+                    scenario.offline
+                    and not result.is_error
+                    and (
+                        not result.session_id
+                        and not session
+                        or result.session_id
+                        and session
+                        and result.session_id != session
+                    )
+                ):
+                    result.is_error = True
+                    result.error = "The author did not preserve the scripted host session."
                 session = result.session_id or session
                 question_text = result.student_questions or result.text
                 asked_student = bool(result.student_questions) or scenarios.asks_student(
@@ -613,6 +895,11 @@ def _run(
         record["error"] = str(error)
     finally:
         serving.set()
+        if broker_turn:
+            record["checker_reservations"] = sum(
+                event["event"] == "reserved" for event in broker_turn.ledger_events()
+            )
+            record["checker_limit"] = broker_turn.limit
         record["minutes"] = round((time.monotonic() - began) / 60, 1)
         record["ended"] = datetime.now(UTC).isoformat(timespec="seconds")
         reported = {
@@ -624,7 +911,11 @@ def _run(
         record["models_reported"] = sorted(reported)
         if any(models.reported_matches(spec, name) is False for name in reported):
             record["status"] = "invalid-model"
+        if scenario.offline and variants.installed_hash(variant_dir) != record["installed_hash"]:
+            record["status"] = "invalid-variant"
+            record["error"] = "The installed variant changed during the run."
         record["inventory_hash"] = inventory_hash(workspace)
+        record["inventory_definition"] = "project-path-content-sha256-v1"
         found = projects(workspace)
         record["project"] = str(found[0].relative_to(workspace)) if found else None
         hits = finalize_transcripts(run_dir, spec.host)

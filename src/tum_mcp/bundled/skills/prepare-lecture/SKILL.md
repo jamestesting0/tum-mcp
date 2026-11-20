@@ -61,8 +61,12 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    uncertainty. Reuse valid prepared evidence. Acquire only missing eligible
    evidence with `lecture prepare`; a whole-silent recording is invalid and stops
    there. Missing recognition/materials remain gaps, never permission to invent.
-3. Read the entire retained transcript through bounded pages, then make a topic/time map
-   aligned with the verified slides or script. Its topics become the lecture's `chapters`:
+   For a verified date cutoff, add `--through YYYY-MM-DD` to `lecture inspect`.
+   Use its recording keys for the batch. Several decks can belong to one meeting.
+   Keep missing dates and later recordings in the inventory with their disposition.
+3. Cover the retained transcript in bounded pages. On resume, use the saved
+   comparisons for pages already covered. Align the topic map with the verified
+   slides or script. Its topics become the lecture's `chapters`:
    a title in the course's terms, the interval and the pages taught
    (`study schema --example lecture-chapter`). Only taught topics are chapters. A guest
    talk, administration, a break, the recording's end or a topic outside the request gets
@@ -71,6 +75,15 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    Match the actual explanations, diagrams and examples across editions. Different
    page numbers or slide totals alone are not an evidence blocker. Use exact source
    keys from `study find`; reconcile downloaded materials before reading them by key.
+   After each transcript page, save work to
+   `.tum-mcp/work/lecture-selection/RECORDING_KEY.json`. Use
+   `study schema lecture-selection-work` and bind every material comparison to its
+   exact source revision. Resume with `tum-mcp lecture selection-progress PROJECT
+   --recording RECORDING_KEY`. Use the returned decisions as the completed prefix.
+   Read from `next_interval.start_s` and append the new decisions. Reopen an earlier
+   interval only when its evidence changed or a later passage explicitly corrects its
+   conclusion. If you need to split a saved interval at a chapter boundary, carry its
+   decision and material comparison into the new spans.
 4. Classify candidates as Note, Highlight or Omit with
    [authoring](references/authoring.md). Compare explanations, not just topic names.
    Record what each highlight adds and include the setup through the conclusion. A
@@ -93,6 +106,9 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    [content](references/content.md). Record `.tum-mcp/lecture-review/RECORDING_KEY.json`
    using `study schema lecture-selection`. Its decisions partition every eligible
    recording interval and identify each selected entry or a specific omission reason.
+   If you worked from a saved map, add the final decisions and run
+   `lecture selection-progress PROJECT --recording RECORDING_KEY --finalize` after
+   writing the Lecture draft. This checks the complete map before saving it for review.
    A decision never crosses a chapter boundary, so each omission speaks for one topic.
    Name the compared material revisions and pages, and record unresolved comparisons.
    Omit missing or uncertain speech with that reason; a note or highlight may not include
@@ -108,7 +124,9 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    against the reported speech, keeping conditions and attribution. Verify the
    full selected explanation, not just the printed opening/closing excerpts, against
    each highlight's title, teaches line and points. Check unclear speech against
-   the slides and frames.
+   the slides and frames. In the built page, check that each Watch link opens the
+   moment that makes its claim. Set `at` on a correction note to the time the
+   corrected statement begins, within its cited speech.
 8. Build one coherent batch with `tum-mcp study build PROJECT --local-only` and check
    the app with [verification](references/verification.md). The shared
    [course app](../prepare-study/references/app.md) renders notes and highlights;

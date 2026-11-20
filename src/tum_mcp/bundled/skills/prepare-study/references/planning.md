@@ -66,6 +66,10 @@ input, result and shortest valid reasoning). The weakness is practice that repla
 solved case without requiring the intended decision. Change a relevant condition or
 input, then solve the new case now. Reusing the same setting is useful when the required
 reasoning changes. Renaming alone does not establish transfer.
+For a worked decision, choose a variation that takes a different branch and ask what
+changes through the result. Changing values while taking the same branch is routine
+application. For an algorithm or proof, a question about one step does not assess the
+full process if the objective asks the student to carry it through.
 Recall-only objectives need no invented transfer case. Released exercise statements
 remain faithful to their source. This is part of the existing plan check, not another
 checker or a separate planning document.
@@ -94,8 +98,15 @@ and partial illustrations the main run already covers. Teach one main example pe
 mechanism. Add a second only when it shows something the first cannot; a contrast on
 the same input can be a `variant` run of one walkthrough. Keep distinct source
 demonstrations when they teach different decisions, even on the same object.
-Construct an example only when
-the lecture has none for the concept, or for practice. There is no quota.
+Two examples can share a page and a figure yet use them to reach different decisions.
+Identify each by its inputs, deciding step and result. If it is unclear whether two
+examples repeat each other, keep both in the selection context until you can explain
+which step they share or what makes them different.
+Use a constructed example when no lecture example can teach the concept here.
+If a lecture example gives away a released exercise's answer, keep that example
+in the Exercise guide. Teach the same deciding step in Study with different
+inputs or a different case. State why in the plan and cite the source for the
+method. Keep the practice case separate from both worked answers.
 
 For each concept taught through a selected source demonstration, the plan names its
 `example`, whatever the concept's kind:

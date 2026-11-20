@@ -36,7 +36,9 @@ the message as `text` (at most 400; never a repeat of the context), `evidence` k
 an optional `passage` (`unit` and `block` of the Study passage that teaches the subject;
 the build checks it exists) and optional `sources`/`pages` as below. Note and highlight keys share one
 namespace per lecture. A note has no authored clip interval: its speech evidence
-locates its recording source, and the note shows that moment as "Watch mm:ss".
+locates its recording source. Set `at` to the time the claim begins, inside
+cited speech. For older notes without `at`, Watch opens at the start of the
+earliest cited speech interval.
 
 Write each note for a student who skipped the lecture: it must stand on its own.
 - `kind` (optional): `correction` when the note corrects the materials, `exam tip` for an
@@ -62,6 +64,8 @@ Each highlight has:
   original recording clock, inside processed time;
 - `teaches`: one sentence of at most 400 characters;
 - `points`: at most three, each at most 300 characters;
+- `steps`: when a learner needs to follow distinct stages, give each its
+  `action`, `why` and `at` on the recording clock. Each `at` opens its own link.
 - optional `sources` (course materials such as slides or a script, declared on the
   lecture) and `pages` for the first of them;
 - `evidence`: the keys it rests on;

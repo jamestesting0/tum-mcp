@@ -8,36 +8,260 @@ import subprocess
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+from typing import Final
 
-from skill_lab import paths, variants
+from skill_lab import LabError, paths, scenarios, variants
 from skill_lab.models import ModelSpec
 from skill_lab.runs import storage_environment
+from tum_mcp.course.app.build import read_content
+from tum_mcp.course.checks.batch import assess_batch
+from tum_mcp.course.checks.preparation import Readiness
+from tum_mcp.course.content.exam_data import read_exam
+from tum_mcp.course.content.exercise_data import read_exercises
 from tum_mcp.course.content.store import present
+from tum_mcp.course.lecture.data import read_lectures
+from tum_mcp.course.review import loop
+from tum_mcp.course.workflow.tasks import read_task
+from tum_mcp.errors import CampusError
+
+METRICS_DEFINITION: Final = "requested-delivery-full-report-v2"
+ITEM_PREFIXES: Final = ("study/", "exercises/", "exam/", "lecture/")
+COVERAGE_GAPS: Final = (
+    "not_inspected",
+    "outcome_gaps",
+    "enrichment_gaps",
+    "sources_without_outcomes",
+    "unprepared_items",
+    "units_without_outcomes",
+)
+SHEET_GAPS: Final = ("gaps", "sources_without_requirements", "entries_without_requirement")
 
 
-def count_items(value: object) -> int:
-    if isinstance(value, list):
-        return len(value)
-    if isinstance(value, dict):
-        return sum(count_items(item) for item in value.values() if isinstance(item, list | dict))
-    return 0
-
-
-def study(python: Path, project: Path, downloads: Path, *arguments: str) -> tuple[dict, str]:
+def study(python: Path, project: Path, downloads: Path, *arguments: str) -> tuple[dict | None, str]:
     environment = {**os.environ, **storage_environment(downloads)}
-    result = subprocess.run(
-        [str(python), "-I", "-m", "tum_mcp", "study", *arguments, str(project)],
-        capture_output=True,
-        text=True,
-        env=environment,
-        check=False,
-    )
-    if result.returncode:
-        return {}, result.stderr.strip()[-600:]
     try:
-        return json.loads(result.stdout), ""
-    except ValueError:
-        return {}, ""
+        result = subprocess.run(
+            [str(python), "-I", "-m", "tum_mcp", "study", *arguments, str(project)],
+            capture_output=True,
+            text=True,
+            env=environment,
+            check=False,
+        )
+    except (OSError, UnicodeError) as error:
+        return None, str(error)
+    if result.returncode:
+        return None, result.stderr.strip() or result.stdout.strip() or f"Exit {result.returncode}"
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        return None, f"Invalid JSON: {error}"
+    if not isinstance(data, dict):
+        return None, "Expected a JSON object."
+    return data, ""
+
+
+def report_metrics(report: dict | None, error: str) -> dict:
+    metrics = {
+        "report_status": "failed" if error else "not_measured",
+        "report_error": error,
+        "quality_flags": None,
+        "coverage_gaps": None,
+        "render_checked": None,
+        "render_passed": None,
+        "review_passed": None,
+    }
+    if report is None:
+        return metrics
+    match report:
+        case {
+            "quality": list() as quality,
+            "coverage": dict() as coverage,
+            "render": {"checked": bool() as checked, "passed": bool() as render},
+            "review": {"gate": bool() as gate},
+        }:
+            sheet = coverage.get("cheatsheet", {})
+            groups = [(coverage, COVERAGE_GAPS)]
+            if "cheatsheet" in coverage:
+                groups.append((sheet, SHEET_GAPS))
+            if all(
+                isinstance(group, dict) and all(isinstance(group.get(key), list) for key in keys)
+                for group, keys in groups
+            ):
+                return metrics | {
+                    "report_status": "measured",
+                    "quality_flags": len(quality),
+                    "coverage_gaps": sum(len(group[key]) for group, keys in groups for key in keys),
+                    "render_checked": checked,
+                    "render_passed": render,
+                    "review_passed": gate,
+                }
+    return metrics | {"report_status": "failed", "report_error": "Missing full report fields."}
+
+
+def requested_delivery(record: dict) -> dict[str, list[str]]:
+    if "delivery_request" in record:
+        return record["delivery_request"]
+    if any("skills" in turn or "expected_items" in turn for turn in record["turns"]):
+        return scenarios.delivery_request(
+            [
+                scenarios.Turn(
+                    "", skills=turn.get("skills", []), expected_items=turn.get("expected_items", {})
+                )
+                for turn in record["turns"]
+            ]
+        )
+    # Older runs only recorded messages. Use tracked/local turn metadata as long as the
+    # saved prompts still match, rather than inferring demand from available workspaces.
+    if name := record.get("scenario"):
+        try:
+            scenario = scenarios.load(name)
+        except LabError:
+            return {}
+        turns = record["turns"]
+        if turns and all(
+            0 < turn["turn"] <= len(scenario.turns)
+            and turn.get("message") == scenario.turns[turn["turn"] - 1].say
+            for turn in turns
+        ):
+            return scenarios.delivery_request(scenario.turns[: max(turn["turn"] for turn in turns)])
+    return {}
+
+
+def learner_items(project: Path, workspace: str) -> dict[str, str]:
+    """Map readable learner IDs to their corresponding readiness checks."""
+    match workspace:
+        case "study":
+            return {
+                f"study/{unit.key}": f"study/{unit.key}" for unit in read_content(project).units
+            }
+        case "exercises":
+            content = read_exercises(project)
+            return (
+                {
+                    f"exercises/{group.key}/{item.key}": f"exercises/{group.key}/{item.key}"
+                    for group in content.sets
+                    if content
+                    for item in group.exercises
+                }
+                if content
+                else {}
+            )
+        case "exam":
+            content = read_exam(project)
+            if content is None:
+                return {}
+            return (
+                {f"exam/concept/{item.key}": "exam/sheet" for item in content.concepts}
+                | {
+                    f"exam/pattern/{item.key}": f"exam/pattern/{item.key}"
+                    for item in content.patterns
+                }
+                | {
+                    f"exam/mock/{mock.key}/{question.key}": f"exam/mock/{mock.key}/{question.key}"
+                    for mock in content.mocks
+                    for question in mock.questions
+                }
+            )
+        case "lectures":
+            from tum_mcp.course.lecture.selection import selection_item
+
+            content = read_lectures(project)
+            if content is None:
+                return {}
+            items = {}
+            for lecture in content.lectures:
+                if lecture.entries:
+                    key = f"lecture/{lecture.key}"
+                    items[key] = selection_item(project, lecture).key
+                    items.update(
+                        {f"{key}/{entry.key}": f"{key}/{entry.key}" for entry in lecture.entries}
+                    )
+            return items
+        case _:
+            raise LabError(f"Unknown delivery workspace {workspace!r}.")
+
+
+def draft_problems(readiness: Readiness, workspace: str, keys: set[str]) -> list[str]:
+    """Project draft blockers onto a delivery row, including shared prerequisites."""
+    workspace = "lecture" if workspace == "lectures" else workspace
+    local = set(readiness.workspace_problems.get(workspace, ()))
+    assigned = {problem for issues in readiness.workspace_problems.values() for problem in issues}
+    return [
+        problem
+        for problem in dict.fromkeys((*readiness.problems, *sorted(local)))
+        if any(problem.startswith((f"{key}:", f"{key}/")) for key in keys)
+        or (not problem.startswith(ITEM_PREFIXES) and (problem in local or problem not in assigned))
+    ]
+
+
+def measure_delivery(project: Path | None, requested: dict[str, list[str]]) -> dict:
+    rows = {}
+    context = None
+    draft = None
+    readiness_error = ""
+    if project is not None and any(present(project, name) for name in requested):
+        try:
+            task = read_task(project)
+            if task and task.batch and task.review_rounds == 0:
+                draft = assess_batch(project, task.batch)
+            else:
+                context = loop.load(project)
+                if state := loop.read_state(project):
+                    loop.scorecard(context, state, blocked={})
+        except (CampusError, OSError, ValueError, TypeError, KeyError) as error:
+            context = None
+            readiness_error = f"Readiness unavailable: {error}"
+    for workspace, expected in requested.items():
+        items: dict[str, str] = {}
+        problems = []
+        has_content = project is not None and present(project, workspace)
+        if project is not None and has_content:
+            try:
+                items = learner_items(project, workspace)
+            except (CampusError, OSError, ValueError, TypeError, KeyError) as error:
+                problems.append(f"Cannot read learner items: {error}")
+            if readiness_error:
+                problems.append(readiness_error)
+        missing = sorted(set(expected) - items.keys())
+        if items:
+            selected = set(expected) & items.keys() if expected else items.keys()
+            keys = {items[item] for item in selected}
+            if workspace == "lectures":
+                keys.update(items["/".join(item.split("/")[:2])] for item in selected)
+        if items and draft is not None:
+            # A workspace-only request uses its batch scope when the app also has older items.
+            if not expected and (scoped := keys.intersection(draft.items)):
+                keys = scoped
+            problems.extend(draft_problems(draft, workspace, keys))
+            if draft.scope is not None:
+                problems.extend(
+                    f"{key}: outside the draft readiness scope"
+                    for key in sorted(keys - draft.items.keys())
+                )
+        elif items and context is not None:
+            for key in sorted(keys):
+                if key not in context.items:
+                    problems.append(f"{key}: readiness unavailable")
+                else:
+                    problems.extend(f"{key}: {problem}" for problem in loop.item_gate(context, key))
+            readiness = context.preparation
+            if readiness and keys.intersection(readiness.items):
+                problems.extend(
+                    problem
+                    for problem in readiness.problems
+                    if not problem.startswith(ITEM_PREFIXES)
+                    or any(problem.startswith(f"{key}:") for key in keys)
+                )
+        status = "absent"
+        if has_content:
+            status = "complete" if items and not (missing or problems) else "partial"
+        rows[workspace] = {
+            "status": status,
+            "readable_items": sorted(items),
+            "missing_items": missing,
+            "problems": problems,
+        }
+    return rows
 
 
 def transcript_stats(run_dir: Path, host: str) -> dict:
@@ -288,8 +512,10 @@ def collect_run(round_id: str, run_id: str, *, visuals: bool = True) -> dict:
     workspace, downloads = run_dir / "workspace", run_dir / "downloads"
     project = workspace / record["project"] if record.get("project") else None
     python = variants.python_of(paths.round_dir(round_id) / "variants" / record["variant"])
+    delivery = measure_delivery(project, requested_delivery(record))
     metrics: dict = {
         "run": run_id,
+        "metrics_definition": METRICS_DEFINITION,
         "status": record["status"],
         "minutes": record.get("minutes"),
         "speed_tier": record.get("speed_tier")
@@ -297,6 +523,7 @@ def collect_run(round_id: str, run_id: str, *, visuals: bool = True) -> dict:
         or "standard",
         "questions_answered": sum(len(turn.get("replies", [])) for turn in record["turns"]),
         "project_created": project is not None,
+        "delivery": delivery,
         "delivered": bool(
             project and any(present(project, workspace) for workspace in ("study", "exercises"))
         ),
@@ -315,16 +542,16 @@ def collect_run(round_id: str, run_id: str, *, visuals: bool = True) -> dict:
         )
     for phase in metrics.get("phase_table", []):
         phase["source"] = "checker" if "attempt" in phase else "command"
+    report, error = None, ""
     if project is not None:
         if visuals:
             _, error = study(python, project, downloads, "visuals")
             metrics["visuals_error"] = error
-        report, error = study(python, project, downloads, "report")
-        metrics["report_error"] = error
-        metrics["quality_flags"] = count_items(report.get("quality"))
-        metrics["coverage_gaps"] = count_items(report.get("coverage"))
-        metrics["render_passed"] = (report.get("render") or {}).get("passed")
-        metrics["review_passed"] = (report.get("review") or {}).get("passed")
+        report, error = study(python, project, downloads, "report", "--json")
+    metrics.update(report_metrics(report, error))
+    if report is not None:
         (run_dir / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    else:
+        (run_dir / "report.json").unlink(missing_ok=True)
     (run_dir / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     return metrics

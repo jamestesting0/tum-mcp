@@ -3,8 +3,7 @@
 import json
 import subprocess
 
-from skill_lab import hosts, models, paths
-from skill_lab.runs import campus_states
+from skill_lab import LabError, hosts, models, paths
 
 
 def create(host: str) -> str:
@@ -15,17 +14,24 @@ def create(host: str) -> str:
     return f'HOME="{home}" codex login'
 
 
-def host_login(host: str) -> tuple[bool, str]:
+def host_login(host: str, *, offline: bool = False) -> tuple[bool, str]:
     home = paths.profile_home(host)
     if not home.is_dir():
         return False, "profile missing; run `lab profile create`"
-    environment = hosts.clean_environment({}, home, None, host)
+    environment = hosts.clean_environment({}, home, None, host, offline=offline)
     if host == "codex":
         result = subprocess.run(
-            ["codex", "login", "status"], env=environment, capture_output=True, text=True
+            ["codex", "login", "status"],
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
         text = (result.stdout + result.stderr).strip()
-        return text.lower().startswith("logged in"), text.splitlines()[0] if text else ""
+        expected = "logged in using chatgpt" if offline else "logged in"
+        return result.returncode == 0 and text.lower().startswith(expected), (
+            text.splitlines()[0] if text else ""
+        )
     result = subprocess.run(
         ["claude", "-p", "Reply with exactly OK", "--model", "haiku", "--output-format", "json"],
         env=environment,
@@ -43,6 +49,8 @@ def host_login(host: str) -> tuple[bool, str]:
 
 
 def check(host: str) -> dict:
+    from skill_lab.runs import campus_states
+
     ok, detail = host_login(host)
     return {
         "host": host,
@@ -51,3 +59,12 @@ def check(host: str) -> dict:
         "models": sorted(models.available(host, paths.profile_home(host))),
         "campus": campus_states(),
     }
+
+
+def require_offline_login() -> None:
+    try:
+        ready, _ = host_login("codex", offline=True)
+    except (FileNotFoundError, subprocess.TimeoutExpired) as error:
+        raise LabError("The isolated Codex profile cannot check its ChatGPT login.") from error
+    if not ready:
+        raise LabError("The isolated Codex profile must already be logged in through ChatGPT.")

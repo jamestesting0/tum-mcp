@@ -319,12 +319,19 @@ def publish(
 
 
 @app.command()
-def listen(project: Path, video: str) -> None:
+def listen(
+    project: Path,
+    video: str,
+    dispose: Annotated[
+        list[str] | None,
+        typer.Option("--dispose", help="Record SENTENCE=REASON for a flag in the current report."),
+    ] = None,
+) -> None:
     """Transcribe a published video's narration, compare it with its cues and sample frames."""
     require_video_notes()
     from tum_mcp.course.media.listening import listen_video
 
-    _emit(listen_video(_project(project), video))
+    _emit(listen_video(_project(project), video, tuple(dispose or ())))
 
 
 @app.command()
