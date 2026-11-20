@@ -58,6 +58,7 @@ for (const step of story.steps) {
     if (!(beat.at > previous && beat.at < 1)) fail(`Step ${step.key} has a guide beat at ${beat.at}; beats must follow each other after ${opens} and before 1.`);
     const targets = [beat.target].flat();
     if (!targets.every(target => target?.css) || !beat.label || !beat.line) fail(`Step ${step.key} has a guide beat without a target, label or line.`);
+    if (beat.before && !beat.before.css) fail(`Step ${step.key} has a guide beat without a selector for its opening click.`);
     previous = beat.at;
   }
 }

@@ -11,7 +11,9 @@ import { MARKS } from './marks.mjs';
 const API = '/_study/agent/';
 const restoreKey = `course-app:${data.course.identity}:ask-restore`;
 const chatKey = `course-app:${data.course.identity}:ask-chat`;
-const wide = matchMedia('(min-width: 1200px)'), narrow = matchMedia('(max-width: 799px)');
+const narrow = matchMedia('(max-width: 799px)');
+// A 400px chat leaves the same 360px minimum as the coding exercise's editor.
+const dockMin = 760;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const EFFORTS = { none: 'None', minimal: 'Minimal', low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' };
 let token = null, panel = null, view = null, status = null, chat = null, pending = null, running = null, watch = null, lexer = null;
@@ -819,7 +821,6 @@ function close() {
   const dialog = panel; panel = null;
   if (launcher) launcher.hidden = false;
   watch?.abort(); watch = null;
-  delete document.documentElement.dataset.reference;
   dialog.close(); dialog.remove();
   pending?.focus?.()?.focus({ preventScroll: true });
 }
@@ -827,12 +828,43 @@ function close() {
 function ensurePanel() {
   if (panel) return;
   document.querySelector('dialog.reference-panel')?.close();
-  panel = node('dialog', 'reference-panel ask-panel');
-  panel.setAttribute('aria-label', 'Ask agent');
-  panel.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); close(); } });
-  panel.addEventListener('close', () => { if (panel) close(); });
-  document.body.append(panel);
-  if (wide.matches) { document.documentElement.dataset.reference = 'open'; panel.show(); } else panel.showModal();
+  const dialog = node('dialog', 'reference-panel ask-panel');
+  panel = dialog;
+  dialog.setAttribute('aria-label', 'Ask agent');
+  dialog.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); close(); } });
+  document.body.append(dialog);
+
+  // The course outline can take focus first when entering the narrow layout.
+  let focused;
+  dialog.addEventListener('focusin', event => { focused = event.target; });
+  const layout = () => {
+    if (panel !== dialog) return;
+    const isDocked = dialog.open && !dialog.matches(':modal');
+    const available = document.querySelector('main').offsetWidth + (isDocked ? dialog.offsetWidth : 0);
+    const docked = !narrow.matches && available >= dockMin;
+    if (dialog.open && isDocked === docked) return;
+    const previous = focused;
+    dialog.close();
+    if (docked) dialog.show(); else dialog.showModal();
+    if (previous && dialog.contains(previous)) previous.focus({ preventScroll: true });
+  };
+  const observer = new ResizeObserver(layout);
+  const observePage = () => {
+    observer.disconnect();
+    observer.observe(document.querySelector('main'), { box: 'border-box' });
+  };
+  const lifecycle = new AbortController();
+  for (const event of ['hashchange', 'course-data']) {
+    addEventListener(event, observePage, { signal: lifecycle.signal });
+  }
+  dialog.addEventListener('close', () => {
+    if (dialog.open) return;
+    observer.disconnect();
+    lifecycle.abort();
+    if (panel === dialog) close();
+  });
+  layout();
+  observePage();
 }
 
 // Opens the panel; a passage from the selection toolbar becomes the pinned context.

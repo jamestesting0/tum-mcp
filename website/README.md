@@ -67,7 +67,8 @@ website/
   Workspace switches are beats too: a step's `appStart` is the page it opens on, `route` is
   where a click leads (the guide goes there itself if the click cannot happen), and `opens`
   marks a beat that opens a menu for the next one. A beat with `type` types its text into
-  the field, and `wait` gives a beat longer to find its control (the agent's result).
+  the field, `wait` gives a beat longer to find its control (the agent's result), and
+  `before` can click a control to uncover the target before the guide highlights it.
   `app/embed.js` plays them as the visitor scrolls; `app/guide.js` draws the lens (a disc
   that travels and widens into the spotlight) and the callout. `npm run check` validates the beats' order and fields.
 - **Pacing.** The scroll chooses the scene; the CLI and agent parts of a scene play by
@@ -105,5 +106,7 @@ website/
 Exercises, Exam and Lecture content, Audio Notes track and Video Notes video were produced
 with the bundled workflows and pass `tum-mcp study lint`. The formal plan gate and the
 review loop were not run, because they need fresh reviewer agents. After changing a
-source, run `npm run course -- --build`. After changing the CLI's setup screens, run
-`npm run capture-cli`. Then rebuild.
+source, run `npm run course -- --build`. After changing the bundled study app, run
+`uv run tum-mcp study build website/course` from the repository root to refresh the
+embedded app. After changing the CLI's setup screens, run `npm run capture-cli`.
+Then rebuild the walkthrough.
