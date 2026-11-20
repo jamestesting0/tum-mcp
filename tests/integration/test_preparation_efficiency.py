@@ -126,7 +126,10 @@ def test_batch_readiness_only_runs_requested_answer_keys(project: Path) -> None:
     checks = project / ".tum-mcp/checks/study"
     checks.mkdir(parents=True, exist_ok=True)
     stamp = project / "unrelated-key-ran"
-    (checks / "dfs.py").write_text(f"from pathlib import Path\nPath({str(stamp)!r}).touch()\n")
+    (checks / "dfs.py").write_text(
+        f"from pathlib import Path\nPath({str(stamp)!r}).touch()\n",
+        encoding="utf-8",
+    )
     (checks / "bfs.py").write_text('print(\'{"exact_values": {"title": "Wrong title"}}\')\n')
     write(
         project / ".tum-mcp/batches/selected.json",
