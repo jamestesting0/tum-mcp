@@ -16,6 +16,7 @@ import os
 import shutil
 import sys
 import tempfile
+from datetime import UTC, datetime
 from importlib import import_module
 from importlib.util import find_spec
 from pathlib import Path
@@ -46,12 +47,31 @@ def client_module(name: str):
     return import_module(legacy if find_spec(legacy) else f"tum_mcp.clients.{name}")
 
 
-def launch(proxy: str, block: str):
+def launch(proxy: str, block: str, *, offline: bool):
     hosts = client_module("hosts")
 
     backend = (sys.executable, "-I", "-m", "tum_mcp", "serve")
     return hosts.StdioLaunch(
-        sys.executable, ("-I", proxy, "--block", block, "--", *backend), hosts.storage_environment()
+        sys.executable,
+        ("-I", proxy, "--block", block, *(("--offline",) if offline else ()), "--", *backend),
+        () if offline else hosts.storage_environment(),
+    )
+
+
+def enable_local_lecture() -> None:
+    from tum_mcp import __version__
+    from tum_mcp.extensions import LectureInstallation
+    from tum_mcp.moodle.config import private_write
+    from tum_mcp.settings import config_dir
+
+    installed = LectureInstallation(
+        enabled=True,
+        installed_at=datetime.now(UTC),
+        package_version=__version__,
+        asr_requested=False,
+    )
+    private_write(
+        config_dir() / "lecture-extension.json", installed.model_dump_json(indent=2).encode()
     )
 
 
@@ -102,7 +122,13 @@ def install_claude_profile(staged: Path, config: Path, entry_launch) -> list[str
     return paths
 
 
-def install_codex_profile(staged: Path, home: Path, entry_launch) -> list[str]:
+def install_codex_profile(
+    staged: Path,
+    home: Path,
+    entry_launch,
+    *,
+    offline: bool,
+) -> list[str]:
     skills = home / ".agents" / "skills"
     skills.mkdir(parents=True, exist_ok=True)
     paths = []
@@ -128,7 +154,7 @@ def install_codex_profile(staged: Path, home: Path, entry_launch) -> list[str]:
     ]
     config = home / ".codex" / "config.toml"
     config.parent.mkdir(parents=True, exist_ok=True)
-    config.write_text("\n".join(lines), encoding="utf-8")
+    config.write_text("\n".join(lines[:3] if offline else lines), encoding="utf-8")
     return paths + install_course_hooks(home)
 
 
@@ -212,20 +238,23 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--proxy", required=True)
     parser.add_argument("--block", default="")
     parser.add_argument("--downloads")
+    parser.add_argument("--offline", action="store_true")
     args = parser.parse_args(argv)
     if args.downloads:
         os.environ["TUM_MOODLE_DOWNLOAD_DIR"] = args.downloads
     home = args.home.resolve()
     home.mkdir(parents=True, exist_ok=True)
     remove_previous(home)
-    entry_launch = launch(args.proxy, args.block)
+    if args.offline:
+        enable_local_lecture()
+    entry_launch = launch(args.proxy, args.block, offline=args.offline)
     with tempfile.TemporaryDirectory(prefix="skill-lab-stage-") as temporary:
         staged = Path(temporary)
         names = staged_skills(staged / "skills")
         if args.host == "claude":
             paths = install_claude_profile(staged, home, entry_launch)
         else:
-            paths = install_codex_profile(staged, home, entry_launch)
+            paths = install_codex_profile(staged, home, entry_launch, offline=args.offline)
     from tum_mcp import __version__
 
     (home / MARKER).write_text(

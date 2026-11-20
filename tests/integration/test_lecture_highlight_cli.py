@@ -144,8 +144,9 @@ def test_check_skips_transcript_review_for_synthetic_lectures(prepared: Prepared
     assert report["lectures"] == [{"key": "bfs-lecture", "transcript": "synthetic"}]
 
 
+@pytest.mark.parametrize("at", [None, 305, 309])
 def test_notes_only_build_needs_no_frames_and_check_does_not_impose_clip_boundaries(
-    prepared: Prepared,
+    prepared: Prepared, at: float | None
 ) -> None:
     lecture = prepared.notes["lectures"][0]
     lecture["highlights"] = []
@@ -153,8 +154,15 @@ def test_notes_only_build_needs_no_frames_and_check_does_not_impose_clip_boundar
         item for item in prepared.notes["evidence"] if item["key"] == "speech-note"
     ]
     prepared.notes["evidence"][0]["interval"] = {"start_s": 302.5, "end_s": 309}
+    if at is not None:
+        lecture["notes"][0]["at"] = at
     (prepared.folder / "frames.json").unlink()
     prepared.write_notes()
+    if at == 309:
+        result = run("check", str(prepared.root))
+        assert result.exit_code != 0
+        assert "Watch time must fall inside cited speech" in result.output + str(result.exception)
+        return
     result, report = check(prepared)
     assert result.exit_code == 0 and report["errors"] == 0
     assert report["lectures"][0]["highlights"] == 0
@@ -162,6 +170,11 @@ def test_notes_only_build_needs_no_frames_and_check_does_not_impose_clip_boundar
     assert report["lectures"][0]["note_items"][0]["issues"] == []
     build(prepared.root, publish=False)
     assert not (prepared.root / "app/lecture-assets").exists()
+    app_data = (prepared.root / "app/data.mjs").read_text(encoding="utf-8")
+    payload, _ = json.JSONDecoder().raw_decode(app_data.removeprefix("export default "))
+    note = payload["lectures"]["lectures"][0]["notes"][0]
+    assert note["at_s"] == (302.5 if at is None else at)
+    assert note["url"].endswith("?t=302" if at is None else "?t=305")
 
 
 def test_note_image_must_match_its_measured_prepared_frame(prepared: Prepared) -> None:

@@ -280,7 +280,10 @@ def test_a_walkthrough_stage_can_draw_its_own_input() -> None:
     ("change", "message"),
     [
         ({"pages": None}, "names its source and pages"),
-        ({"origin": "constructed", "source": None, "pages": None}, "why the lecture has none"),
+        (
+            {"origin": "constructed", "source": None, "pages": None},
+            "why a lecture example does not fit",
+        ),
     ],
 )
 @pytest.mark.parametrize("kind", ["algorithm", "rule", "comparison"])
@@ -522,6 +525,7 @@ def test_a_rule_source_example_is_digest_matched_and_linked_to_its_picture(
                 "sha256": "0" * 64,
                 "examples": [
                     {"pages": "3-5", "text": shows},
+                    {"pages": "3-5", "text": "The same inputs show when the rule stops applying."},
                     {"pages": "8", "text": "Another demonstration."},
                 ],
             }
@@ -529,7 +533,14 @@ def test_a_rule_source_example_is_digest_matched_and_linked_to_its_picture(
     )
     packet = plan_packet(tmp_path)
     assert packet["unused_examples"] == [
-        {"source": source, "kind": "example", "pages": "8", "text": "Another demonstration."}
+        {
+            "source": source,
+            "kind": "example",
+            "pages": "3-5",
+            "text": "The same inputs show when the rule stops applying.",
+            "overlaps_planned": "3-5",
+        },
+        {"source": source, "kind": "example", "pages": "8", "text": "Another demonstration."},
     ]
     assert packet["plans"][0]["concepts"][0]["example"] == example
     assert plan_problems(current, {"blocks": []}, None) == [

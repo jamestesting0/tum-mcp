@@ -9,7 +9,11 @@ from pydantic import Field, field_validator, model_validator
 
 from tum_mcp.settings import Frozen
 
-Key = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.-]{0,99}$")]
+KEY_SEGMENT = r"[a-z0-9][a-z0-9_.-]{0,99}"
+Key = Annotated[str, Field(pattern=rf"^{KEY_SEGMENT}$")]
+PLAN_ROUTES = (
+    rf"study/{KEY_SEGMENT}|exercises/{KEY_SEGMENT}/{KEY_SEGMENT}|exam/pattern/{KEY_SEGMENT}"
+)
 Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
 PageRange = Annotated[str, Field(pattern=r"^[1-9][0-9]{0,3}(-[1-9][0-9]{0,3})?$")]
 ProviderName = Literal["moodle", "artemis", "zulip", "sample", "tum_live", "local"]

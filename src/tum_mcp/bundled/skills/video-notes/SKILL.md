@@ -43,7 +43,7 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
    course, finish one demanding target end to end before batching. Register each planned
    video with `tum-mcp study task start PROJECT --media video/STEM --owner OWNER` (the
    owner comes from the hook context). `study task finish` passes once the video is
-   published and current.
+   published, current and checked with `listen`.
 3. **Storyboard.** For the stem `plan` printed, `tum-mcp video-notes outline PROJECT
    STEM` writes `videos/storyboards/STEM.json` as a draft: one chapter per source section (unit
    sections, exercise parts, pattern stages), with every required part already located
@@ -83,7 +83,11 @@ separately stated scope; see [Explore](../prepare-study/references/explore.md).
    `listen PROJECT STEM`: it transcribes the narration, checks every sentence and its
    timing against the cues, re-listens to doubtful sentences alone, and samples a
    frame while each sentence is spoken. Reword sentences it still flags, fix frames
-   that show the wrong object for their sentence, render and publish again. Never
+   that show the wrong object for their sentence, render and publish again. For a
+   recognizer quirk in the current report, run
+   `listen PROJECT STEM --dispose 'SENTENCE=REASON'` with its flagged sentence key.
+   Repeat the option for each affected sentence. Flags remain visible. New listening
+   runs require fresh reasons. Human listening and formal review are separate. Never
    leave a requested video as a draft in `.build`. Details, records and recovery:
    [workflow](references/workflow.md).
 9. **Published site.** When the request's videos are installed and the course has a

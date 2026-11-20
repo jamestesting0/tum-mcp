@@ -4,6 +4,7 @@ Usage: <variant python> -I shim.py <tum-mcp arguments...>
 Standard library only, because it runs on the variant's interpreter without the lab on its path.
 """
 
+import fcntl
 import json
 import os
 import subprocess
@@ -16,9 +17,27 @@ BLOCKED = frozenset(
     {"login", "logout", "setup", "uninstall", "update", "install", "manage", "serve"}
 )
 BLOCKED_STUDY = frozenset({"publish"})
+OFFLINE_GROUPS = frozenset({"study", "review", "skills", "version", "--version", "--help", "-h"})
+OFFLINE_LECTURE = frozenset(
+    {
+        "inspect",
+        "selection-progress",
+        "transcript",
+        "frames",
+        "thumbnail",
+        "check",
+        "export-snapshot",
+    }
+)
 
 
-def refusal(arguments: list[str]) -> str | None:
+def refusal(arguments: list[str], *, offline: bool = False) -> str | None:
+    if offline and arguments:
+        group, *tail = arguments
+        if group not in OFFLINE_GROUPS and not (
+            group == "lecture" and tail and tail[0] in OFFLINE_LECTURE | {"--help", "-h"}
+        ):
+            return "This command is unavailable in the offline authoring trial."
     if arguments and arguments[0] in BLOCKED:
         return f"tum-mcp {arguments[0]} is not available in a skill-lab trial."
     if len(arguments) > 1 and arguments[0] == "study" and arguments[1] in BLOCKED_STUDY:
@@ -67,12 +86,32 @@ def brokered(arguments: list[str], folder: str) -> int:
     return int(result["code"])
 
 
-def checker(log: str, kind: str, command: list[str]) -> int:
+def checker(
+    log: str, kind: str, command: list[str], *, budget: tuple[str, int] | None = None
+) -> int:
     """Observe each fresh or repair invocation without retaining its prompt or output."""
     attempt = 0
     if os.path.exists(log):
         with open(log, encoding="utf-8") as handle:
             attempt = sum(json.loads(line)["event"] == "started" for line in handle)
+    if budget:
+        if attempt:
+            print(
+                "Automatic checker repair is disabled in the offline authoring trial.",
+                file=sys.stderr,
+            )
+            return 2
+        ledger, limit = budget
+        with open(ledger, "a+", encoding="utf-8") as stream:
+            fcntl.flock(stream, fcntl.LOCK_EX)
+            stream.seek(0)
+            reserved = sum(json.loads(line)["event"] == "reserved" for line in stream)
+            if reserved >= limit:
+                reason = f"Offline checker launch budget exhausted ({limit})."
+                stream.write(json.dumps({"event": "refused", "reason": reason}) + "\n")
+                print(reason, file=sys.stderr)
+                return 2
+            stream.write(json.dumps({"event": "reserved", "log": os.path.basename(log)}) + "\n")
     with open(log, "a", encoding="utf-8") as handle:
         handle.write(
             json.dumps(
@@ -104,8 +143,13 @@ def checker(log: str, kind: str, command: list[str]) -> int:
 def main() -> None:
     arguments = sys.argv[1:]
     if arguments[:1] == ["--lab-checker"]:
-        raise SystemExit(checker(arguments[1], arguments[2], arguments[3:]))
-    message = refusal(arguments)
+        options = arguments[3:]
+        budget = (options[1], int(options[2])) if options[:1] == ["--budget"] else None
+        raise SystemExit(
+            checker(arguments[1], arguments[2], options[3:] if budget else options, budget=budget)
+        )
+    offline = os.environ.get("SKILL_LAB_OFFLINE") == "1"
+    message = refusal(arguments, offline=offline)
     if message:
         print(message, file=sys.stderr)
         raise SystemExit(2)

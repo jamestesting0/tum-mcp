@@ -50,14 +50,14 @@ def demo(tmp_path: Path) -> Path:
     return project
 
 
-def script(project: Path, **changes: object) -> dict:
+def script(project: Path, *, stem: str = "01_structures", **changes: object) -> dict:
     found = audio_project.sources(project)
     concepts = {item["unit"]: item for item in found["exam"]["concepts"]}
     pattern = found["exam"]["patterns"][0]
     first, second = list(concepts)[:2]
     value = {
         "key": "structures",
-        "stem": "01_structures",
+        "stem": stem,
         "title": "Structures",
         "voice": "narrator",
         "units": [
@@ -83,7 +83,7 @@ def script(project: Path, **changes: object) -> dict:
     value.update(changes)
     folder = project / "audio/categories"
     folder.mkdir(exist_ok=True)
-    (folder / "01_structures.json").write_text(json.dumps(value), encoding="utf-8")
+    (folder / f"{stem}.json").write_text(json.dumps(value), encoding="utf-8")
     return value
 
 
@@ -116,8 +116,8 @@ class FakeWorker:
         }
 
 
-def synthesize(project: Path) -> None:
-    for item in audio_project.narration(project, "01_structures"):
+def synthesize(project: Path, stem: str = "01_structures") -> None:
+    for item in audio_project.narration(project, stem):
         target = project / item["file"]
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(SPEECH, target)
@@ -211,29 +211,164 @@ def test_an_exercise_track_has_its_own_shelf_and_recalls_the_exercise(
     assert track["chapters"][0]["recall"] == [target]
 
 
-def test_a_media_task_holds_the_session_until_its_track_is_published(
-    demo: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    "fault", ["clean", "category", "changed bytes", "deleted", "legacy", "report", "republished"]
+)
+def test_audio_task_requires_listening_to_the_exact_published_stem(
+    demo: Path, monkeypatch: pytest.MonkeyPatch, fault: str
 ) -> None:
-    # Agents stopped after an outline; a media task keeps them going until publication.
-    from tum_mcp.course.media import video_runtime
+    from tum_mcp.course.media import audio_cli, listening, video_runtime
     from tum_mcp.course.workflow import tasks
 
-    monkeypatch.setattr(video_runtime, "call_worker", FakeWorker(output=TRACK, seconds=1.0))
+    monkeypatch.setattr(video_runtime, "call_worker", FakeWorker(output=TRACK, seconds=2.5))
+    monkeypatch.setattr(audio_cli, "audio_notes_enabled", lambda: True)
     owner = "codex:thread-a"
-    tasks.begin(demo, None, owner=owner, media=("audio/01_structures",))
+    requested = "structures" if fault == "category" else "01_structures"
+    sibling = ("audio/02_patterns",) if fault == "deleted" else ()
+    tasks.begin(demo, None, owner=owner, media=(f"audio/{requested}", *sibling))
     with pytest.raises(CampusError, match="not published"):
         tasks.finish(demo, owner=owner)
     stop = {"session_id": owner, "cwd": str(demo)}
     blocked = tasks.stop(stop)
-    assert blocked["decision"] == "block" and "audio/01_structures" in blocked["reason"]
+    assert blocked["decision"] == "block" and f"audio/{requested}" in blocked["reason"]
 
-    script(demo)
+    original = script(demo)
+    if sibling:
+        script(demo, units=original["units"][:-1], chapters=original["chapters"][:-1])
+        script(
+            demo,
+            stem="02_patterns",
+            key="patterns",
+            title="Patterns",
+            units=original["units"][-1:],
+            chapters=original["chapters"][-1:],
+        )
     synthesize(demo)
     review = demo / "audio/.build/review.md"
     review.write_text("Checked.\n", encoding="utf-8")
-    audio_project.publish(demo, "01_structures", review)
-    assert tasks.finish(demo, owner=owner)["ready"]
-    assert tasks.stop(stop) == {}
+    published_track = audio_project.publish(demo, "01_structures", review)
+    if fault == "clean":
+        with pytest.raises(CampusError, match="Listening report is missing"):
+            tasks.finish(demo, owner=owner)
+
+    def recognize(
+        build: Path, _track: Path, _language: str
+    ) -> tuple[list[listening.TimedWord], float]:
+        timeline = json.loads((build / "timeline.json").read_bytes())
+        heard: list[listening.TimedWord] = []
+        for entry in timeline["sentences"]:
+            spoken = entry["text"].split()
+            if not heard and fault in {"report", "republished"}:
+                spoken.insert(1, "not")
+            step = (entry["end"] - entry["start"]) / len(spoken)
+            heard.extend(
+                {
+                    "word": word,
+                    "start": entry["start"] + i * step,
+                    "end": entry["start"] + (i + 0.8) * step,
+                }
+                for i, word in enumerate(spoken)
+            )
+        return heard, timeline["total"]
+
+    monkeypatch.setattr(listening, "_recognize", recognize)
+    if sibling:
+        synthesize(demo, "02_patterns")
+        audio_project.publish(demo, "02_patterns", review)
+        assert listening.listen_audio(demo, "02_patterns")["flags"] == []
+    if fault in {"report", "republished"}:
+        # The stand-alone recognition returns the same misread sentence.
+        from types import SimpleNamespace
+
+        from tum_mcp.lecture_processing import transcription
+
+        worker = FakeWorker(output=TRACK, seconds=2.5)
+        build = demo / "audio/.build/01_structures"
+        first = json.loads((build / "timeline.json").read_bytes())["sentences"][0]
+        heard, _ = recognize(build, demo / published_track["track"], "en")
+        clip_start = first["start"] - 0.3
+        clip_words = [
+            SimpleNamespace(
+                word=w["word"], start=w["start"] - clip_start, end=w["end"] - clip_start
+            )
+            for w in heard
+            if w["start"] < first["end"]
+        ]
+
+        def listen_worker(request: dict, **options: int) -> dict:
+            if request["action"] == "pcm16k":
+                return {"windows": [{"file": str(SPEECH)}]}
+            return worker(request, **options)
+
+        monkeypatch.setattr(video_runtime, "call_worker", listen_worker)
+        monkeypatch.setattr(
+            transcription,
+            "recognize",
+            lambda *_, **__: SimpleNamespace(segments=[SimpleNamespace(words=clip_words)]),
+        )
+    command = ["audio-notes", "listen", str(demo), "01_structures"]
+    listened = CliRunner().invoke(app, command)
+    assert listened.exit_code == 0, listened.output or listened.exception
+    result = json.loads(listened.output)
+    if fault in {"report", "republished"}:
+        [flagged] = result["flagged_sentences"]
+        key = flagged["key"]
+        assert result["flags"] == [f"added {key}: not"]
+        with pytest.raises(CampusError, match="Unresolved listening flags"):
+            tasks.finish(demo, owner=owner)
+        for bad in ("unknown=recognizer quirk", f"{key}=   "):
+            rejected = CliRunner().invoke(app, [*command, "--dispose", bad])
+            assert rejected.exit_code != 0
+        disposition = CliRunner().invoke(app, [*command, "--dispose", f"{key}=Recognizer quirk."])
+        assert disposition.exit_code == 0, disposition.output or disposition.exception
+        assert json.loads(disposition.output)["flags"] == result["flags"]
+    else:
+        assert result["flags"] == []
+    if fault == "category":
+        with pytest.raises(CampusError, match="stem"):
+            tasks.finish(demo, owner=owner)
+        return
+    if fault == "legacy":
+        report_path = demo / result["report"]
+        legacy = json.loads(report_path.read_bytes())
+        del legacy["method_version"]
+        report_path.write_text(json.dumps(legacy), encoding="utf-8")
+        with pytest.raises(CampusError, match="Listening method changed"):
+            tasks.finish(demo, owner=owner)
+        listening.listen_audio(demo, "01_structures")
+    finished = CliRunner().invoke(app, ["study", "task", "finish", str(demo), "--owner", owner])
+    assert finished.exit_code == 0, finished.output or finished.exception
+    track = demo / published_track["track"]
+    if fault == "changed bytes":
+        track.write_bytes(b"x" + track.read_bytes()[1:])
+    elif fault == "deleted":
+        track.unlink()
+    elif fault == "report":
+        with (demo / result["report"]).open("ab") as stream:
+            stream.write(b"\n")
+    elif fault == "republished":
+        monkeypatch.setattr(video_runtime, "call_worker", FakeWorker(seconds=2.5))
+        audio_project.publish(demo, "01_structures", review)
+    hook = CliRunner().invoke(
+        app,
+        ["study", "task", "hook"],
+        input=json.dumps({**stop, "session_id": "thread-a", "hook_event_name": "Stop"}),
+    )
+    assert hook.exit_code == 0, hook.output or hook.exception
+    blocked = json.loads(hook.output)
+    expected = {
+        "changed bytes": "Media file bytes changed",
+        "deleted": "Missing media file",
+        "report": "Listening report changed",
+        "republished": "Listening report belongs to a different artifact",
+    }
+    if fault in expected:
+        assert blocked["decision"] == "block"
+        assert f"audio/01_structures: {expected[fault]}" in blocked["reason"]
+        assert "audio/02_patterns:" not in blocked["reason"]
+    else:
+        task = tasks.read_task(demo)
+        assert blocked == {} and task is not None and task.phase == "complete"
 
 
 def test_a_pattern_track_must_say_each_part_not_the_pattern_as_a_whole(demo: Path) -> None:

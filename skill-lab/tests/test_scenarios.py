@@ -35,6 +35,19 @@ def test_local_override_merges_replies_and_can_replace_turns(lab_state):
     assert scenario.reply_to("Shall I continue?") == scenario.replies["default"]
 
 
+@pytest.mark.parametrize("name", ["fai-authoring-026", "fai-authoring-026-resume"])
+def test_scored_scenario_ignores_overrides_and_never_answers_questions(lab_state, name):
+    expected = scenarios.load(name)
+    override = lab_state / "scenarios" / f"{name}.yaml"
+    override.parent.mkdir(parents=True)
+    override.write_text(yaml.safe_dump({"turns": ["Override"], "replies": {"course": "Leak"}}))
+
+    actual = scenarios.load(name)
+
+    assert actual.turns == expected.turns
+    assert actual.reply_to("Which course?") is None
+
+
 LIVE_QUESTION_BEFORE_OPTIONS = """Moodle shows no release dates. Which sheet do you want?
 
 1. **Exercise 1** is my recommendation.

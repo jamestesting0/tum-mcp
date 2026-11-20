@@ -2,6 +2,7 @@
 
 import os
 import shlex
+from datetime import UTC, datetime
 from pathlib import Path, PureWindowsPath
 from typing import Annotated, Literal
 
@@ -30,7 +31,7 @@ MediaRef = Annotated[str, Field(pattern=r"^(video|audio)/[a-z0-9][a-z0-9_.-]{0,9
 
 
 class Task(Frozen):
-    """A requested batch of course content, or requested media that ends when published."""
+    """A requested batch of course content, or published media with checked listening."""
 
     owner: str = Field(min_length=1, max_length=200)
     batch: Key | None = None
@@ -39,6 +40,8 @@ class Task(Frozen):
     phase: Literal["pending", "ready", "complete", "paused", "stalled"] = "pending"
     inputs: Digest | None = None
     review_before: Digest | None = None
+    review_requested_at: datetime | None = None
+    review_closed_before: datetime | None = None
     # The review's round budget when this task began; an extension adds this task's rounds.
     review_budget_before: int = Field(default=0, ge=0, le=40)
     last_inputs: Digest | None = None
@@ -57,6 +60,16 @@ class Task(Frozen):
 def read_task(root: Path) -> Task | None:
     body = read_bytes(confined(root, NAME))
     return Task.model_validate_json(body) if body is not None else None
+
+
+def checker_task_batch(root: Path) -> str | None:
+    """The active batch in the calling author’s hook context, if any."""
+    task = read_task(root)
+    identity = os.environ.get("CODEX_THREAD_ID")
+    owner = os.environ.get("TUM_MCP_TASK_OWNER") or (f"codex:{identity}" if identity else None)
+    if task and task.phase in {"pending", "ready"} and task.owner == owner:
+        return task.batch
+    return None
 
 
 def _save(root: Path, task: Task) -> Task:
@@ -99,9 +112,10 @@ def begin(
         and existing.phase in {"paused", "stalled"}
         and (existing.batch, existing.media, existing.review_rounds) == scope
     ):
-        return _save(
-            root, existing.model_copy(update={"phase": "pending", "stagnant": 0, "reason": ""})
-        )
+        if not existing.review_rounds or existing.review_requested_at is not None:
+            return _save(
+                root, existing.model_copy(update={"phase": "pending", "stagnant": 0, "reason": ""})
+            )
     if existing and existing.phase in {"pending", "ready"}:
         if existing.owner != task.owner:
             raise CampusError(
@@ -111,13 +125,17 @@ def begin(
             raise CampusError(
                 Code.ACTION_REQUIRED, "Pause the existing task before changing its scope."
             )
-        return existing
+        if not existing.review_rounds or existing.review_requested_at is not None:
+            return existing
     review = read_state(root)
+    closed = [entry.closed for entry in review.rounds if entry.closed is not None] if review else []
     return _save(
         root,
         task.model_copy(
             update={
                 "review_before": digest(review.model_dump_json().encode()) if review else None,
+                "review_requested_at": datetime.now(UTC),
+                "review_closed_before": max(closed, default=None),
                 "review_budget_before": review.budget if review else 0,
             }
         ),
@@ -132,28 +150,34 @@ def _owned(root: Path, owner: str | None = None) -> Task:
 
 
 def media_problems(root: Path, media: tuple[str, ...]) -> list[str]:
-    """What keeps each requested video or track from being published and current."""
+    return _media_completion(root, media)[0]
+
+
+def _media_completion(root: Path, media: tuple[str, ...]) -> tuple[list[str], str]:
+    """Check the requested artifacts and bind readiness to the evidence that passed."""
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.content.store import present
-    from tum_mcp.course.media.audio import AudioManifest
-    from tum_mcp.course.media.audio_project import audio
     from tum_mcp.course.media.inventory import discover
-    from tum_mcp.course.media.video_project import _read
+    from tum_mcp.course.media.listening import verify_listening
 
     content = read_content(root) if present(root, "study") else None
-    found = {item.item: item for item in discover(root, load_state(root), content).items}
-    tracks = _read(audio(root, "manifest.json"), AudioManifest)
-    keys = {entry.stem: key for key, entry in (tracks.categories if tracks else {}).items()}
-    problems = []
+    inventory = discover(root, load_state(root), content)
+    problems: list[str] = []
+    revisions: list[tuple[str, str, str]] = []
     for ref in media:
-        kind, name = ref.split("/", 1)
-        item = found.get(ref if kind == "video" else f"audio/{keys.get(name, name)}")
-        if item is None:
-            problems.append(f"{ref} is not published yet.")
-        elif item.stale or item.technical:
-            reasons = ", ".join((*item.stale, *item.technical))
-            problems.append(f"{ref} is published but out of date ({reasons}).")
-    return problems
+        item = inventory.requested(ref)
+        if isinstance(item, str):
+            problems.append(f"{ref}: {item}")
+            continue
+        try:
+            evidence = verify_listening(root, item)
+        except CampusError as error:
+            problems.append(f"{ref}: {error.message}")
+        except OSError as error:
+            problems.append(f"{ref}: {error}")
+        else:
+            revisions.append((ref, item.revision, evidence))
+    return problems, digest(repr(revisions).encode())
 
 
 # Media progress: what an author writes and what publish records, not renders or audio.
@@ -165,6 +189,7 @@ MEDIA_INPUTS = (
     "videos/storyboards/*.json",
     "videos/scenes/*/*.py",
     "videos/.build/*/timing.json",
+    "audio/plan.json",
     "audio/manifest.json",
     "audio/voice.json",
     "audio/categories/*.json",
@@ -211,13 +236,13 @@ def inputs(root: Path, media: bool = False) -> str:
 def finish(root: Path, *, owner: str | None = None) -> dict:
     task = _owned(root, owner)
     if task.media:
-        problems = media_problems(root, task.media)
+        problems, media_inputs = _media_completion(root, task.media)
         if problems:
             raise CampusError(
                 Code.ACTION_REQUIRED,
-                f"{problems[0]} Continue its workflow through publish and listen.",
+                " ".join([*problems, "Continue its workflow through publish and listen."]),
             )
-        _save(root, task.model_copy(update={"phase": "ready", "inputs": inputs(root, True)}))
+        _save(root, task.model_copy(update={"phase": "ready", "inputs": media_inputs}))
         return {
             "ready": True,
             "next_action": "Report each published item with its path, duration and checks.",
@@ -229,6 +254,21 @@ def finish(root: Path, *, owner: str | None = None) -> dict:
         from tum_mcp.course.review.repair_scope import contract
 
         review = read_state(root)
+        if task.review_requested_at is None:
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                "Run study task begin again to bind this older task, then finish a fresh review.",
+            )
+        fresh = [
+            entry
+            for entry in (review.rounds if review else ())
+            if entry.started >= task.review_requested_at
+            and entry.closed is not None
+            and (task.review_closed_before is None or entry.closed > task.review_closed_before)
+            and entry.answered is not None
+            and not entry.pending_packets
+            and bool(entry.packets)
+        ]
         if (
             review is None
             or review.batch is None
@@ -245,7 +285,11 @@ def finish(root: Path, *, owner: str | None = None) -> dict:
             or not review.rounds
             or review.rounds[-1].closed is None
             or review.rounds[-1].pending_packets
-            or digest(review.model_dump_json().encode()) == task.review_before
+            or not fresh
+            or (
+                len(fresh) < task.review_rounds
+                and not (task.review_budget_before == 0 and review.status == "passed")
+            )
         ):
             raise CampusError(
                 Code.ACTION_REQUIRED, "Finish the authorized combined review and repair."
@@ -303,10 +347,19 @@ def stop(payload: dict) -> dict:
                 root, task.model_copy(update={"phase": "paused", "reason": "The user interrupted."})
             )
             continue
-        current = inputs(root, bool(task.media))
-        if task.phase == "ready" and task.inputs == current:
+        problems, media_inputs = _media_completion(root, task.media) if task.media else ([], "")
+        current = (
+            media_inputs if task.media and task.phase == "ready" else inputs(root, bool(task.media))
+        )
+        if task.phase == "ready" and not problems and task.inputs == current:
             _save(root, task.model_copy(update={"phase": "complete"}))
             continue
+        if task.media and task.phase == "ready":
+            if not problems:
+                problems = [
+                    f"Media or listening evidence changed since finish: {', '.join(task.media)}."
+                ]
+            current = inputs(root, True)
         stagnant = task.stagnant + 1 if task.last_inputs == current else 0
         if stagnant >= 3:
             _save(root, task.model_copy(update={"phase": "stalled", "stagnant": stagnant}))
@@ -321,7 +374,7 @@ def stop(payload: dict) -> dict:
         if task.media:
             reasons.append(
                 f"The registered media task in {root} is unfinished: "
-                + " ".join(media_problems(root, task.media))
+                + " ".join(problems)
                 + " Continue the existing request through each stage: storyboard or script, "
                 "narration, scenes, render, publish and listen. "
                 f"Run tum-mcp study task finish {shlex.quote(str(root))} "
@@ -342,7 +395,9 @@ def stop(payload: dict) -> dict:
             f"The registered course task in {root} is unfinished. Continue the existing request. "
             f"Run tum-mcp study report {shlex.quote(str(root))} "
             f"--section readiness --batch {task.batch}; "
-            f"perform its next action until the entire batch is ready. {review} "
+            f"Use workspace_actions to choose the next feasible prerequisite in every requested "
+            f"workspace. Finish feasible siblings while a concrete external blocker is open. "
+            f"The combined gate still requires all requested work. {review} "
             f"Run tum-mcp study task finish {shlex.quote(str(root))} "
             f"--owner {shlex.quote(owner)} before the final report. "
             "A failed local check is pending work, not an external blocker. "

@@ -1,0 +1,4 @@
+id: fai-authoring-026-resume
+turns:
+  - say: "Please pick up where we left off preparing the lecture recording."
+    skills: [prepare-lecture, read-content]

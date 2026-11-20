@@ -1,0 +1,6 @@
+id: demo-calibration
+turns:
+  - say: "Create the local component demo with its Study lesson."
+    skills: [prepare-study]
+    expected_items:
+      study: [study/components]

@@ -28,6 +28,37 @@ comments are app behavior covered by the package's tests; report a suspected app
 defect instead of changing installed files (see
 [the course app](../../prepare-study/references/app.md)).
 
+## Check the indexed answer
+
+Suppose Sheet 1, Exercise 2, gives an edge of weight 3 from a node at distance 4
+to a node already at distance 9. Part (a) asks for the candidate distance. Part
+(b) asks whether to update and why. Under `app/exercises/`, index the item as
+`exercises/sheet-1/relax-edge`. Retain both source questions in the statement.
+Point `part_blocks` at their separate headings. Give each part its own guide
+steps and labelled solution answer. The first guide shows the sum and states
+the result. The second compares it with the old distance before deciding.
+
+Point the sheet's parent coverage entry at `relax-edge` once. Use the indexed
+item key in the item plan and the preparation demands. Map each demand to its
+own part and guide. If part (a)'s first guide uses a numeric check, put
+`steps[0].check.answer` in that demand's `values`. If part (b) asks only for a
+justification, review the reasoning and leave its computed targets empty.
+Register computed work in `.tum-mcp/checks/exercises/sheet-1/relax-edge.py`:
+
+```python
+import json
+
+source_distance = 4
+edge_weight = 3
+candidate_distance = source_distance + edge_weight
+print(json.dumps({"values": {"steps[0].check.answer": candidate_distance}}))
+```
+
+Run `tum-mcp study verify . --item exercises/sheet-1/relax-edge --json`.
+Confirm that the requested target appears in `matched_values`. Compare
+intermediate values as well when they determine a later step. A missing key
+or `no_checks` result provides no evidence for a computed demand.
+
 For a targeted authoring update, compare before/after IDs and unrelated objects;
 Study and template assets should not change. Reuse passing evidence while inputs
 remain unchanged. Report actual checks and gaps; do not claim retention, mastery,

@@ -10,8 +10,8 @@ from pathlib import Path
 from pydantic import Field, JsonValue, ValidationError
 
 from tum_mcp.course.content.study import Text
-from tum_mcp.course.project.models import Digest, Key, PageRange, StudyState
-from tum_mcp.course.project.store import confined, read_bytes
+from tum_mcp.course.project.models import Digest, Key, PageRange, ResourceState, StudyState
+from tum_mcp.course.project.store import confined, digest, read_bytes
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
 
@@ -45,33 +45,48 @@ def read_digest(root: Path, source: str) -> SourceDigest | None:
 def digest_status(root: Path, state: StudyState) -> list[dict[str, JsonValue]]:
     """Each current source with its digest: missing, stale, or current with any page that
     lies past the source's read text."""
+    return [
+        digest_evidence(root, item.resource.key, item, read_digest(root, item.resource.key))
+        for item in state.resources
+    ]
+
+
+def digest_evidence(
+    root: Path, source: str, item: ResourceState | None, found: SourceDigest | None
+) -> dict[str, JsonValue]:
     from tum_mcp.course.sources.text import cached_record
 
-    rows: list[dict[str, JsonValue]] = []
-    for item in state.resources:
-        if item.status != "current" or not item.sha256:
-            continue
-        key = item.resource.key
-        found = read_digest(root, key)
-        if found is None:
-            rows.append({"source": key, "status": "missing"})
-            continue
-        if found.sha256 != item.sha256:
-            rows.append({"source": key, "status": "stale"})
-            continue
-        record = cached_record(root, item.sha256)
-        pages = len(record.pages) if record else None
-        outside = sorted(
+    row: dict[str, JsonValue] = {
+        "source": source,
+        "status": "missing" if found is None else "unavailable",
+        "availability": "unknown" if item is None else "unavailable",
+        "locator_status": "unverified",
+    }
+    if item is None or item.status != "current" or item.sha256 is None or item.path is None:
+        return row
+    body = read_bytes(confined(root, item.path))
+    if body is None:
+        return row
+    row["availability"] = "available"
+    if found is None:
+        return row
+    if found.sha256 != item.sha256 or digest(body) != item.sha256:
+        row["status"] = "stale"
+        return row
+    row["status"] = "current"
+    record = cached_record(root, item.sha256)
+    if record and record.pages:
+        outside: list[JsonValue] = sorted(
             {
                 entry.pages
                 for entry in (*found.examples, *found.definitions, *found.figures)
-                if pages is not None and int(entry.pages.rpartition("-")[2]) > pages
+                if int(entry.pages.rpartition("-")[2]) > len(record.pages)
             }
         )
-        rows.append(
-            {"source": key, "status": "current"} | ({"pages_outside": outside} if outside else {})
-        )
-    return rows
+        row["locator_status"] = "invalid" if outside else "in_bounds"
+        if outside:
+            row["pages_outside"] = outside
+    return row
 
 
 _WORD = re.compile(r"[a-z0-9]+")

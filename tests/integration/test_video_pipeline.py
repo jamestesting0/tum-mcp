@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 from documents import content_file
 from filelock import FileLock
+from typer.testing import CliRunner
 
+from tum_mcp.cli import app
 from tum_mcp.course.app.build import read_content
 from tum_mcp.course.media import video_project as project
 from tum_mcp.course.media.video_content import Storyboard
@@ -41,11 +43,12 @@ class FakeRuntime:
         self.renders = 0
         self.frame_requests: list[dict] = []
         self.assembly_requests: list[dict] = []
+        self.seconds = 1.6
 
     def __call__(self, request: dict, **_: object) -> dict:
         action = request["action"]
         if action == "measure":
-            return {"ok": True, "durations": {name: 1.6 for name in request["files"]}}
+            return {"ok": True, "durations": {name: self.seconds for name in request["files"]}}
         if action == "render":
             run = Path(request["run"])
             timing = json.loads((run / "timing.json").read_text(encoding="utf-8"))
@@ -258,8 +261,17 @@ def review(tmp_path: Path) -> Path:
 
 
 def test_full_flow_publishes_a_checked_final_video(
-    course: Path, runtime: FakeRuntime, tmp_path: Path
+    built_project: Path,
+    course: Path,
+    runtime: FakeRuntime,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from tum_mcp.course.media import listening, video_cli
+    from tum_mcp.course.workflow import tasks
+
+    runtime.seconds = 2.1
+    shutil.copytree(built_project, course, dirs_exist_ok=True)
     prepare(course, tmp_path)
     assert project.check(course, STEM).errors == ()
     working = course / f"videos/.build/{STEM}/transcript.txt"
@@ -289,6 +301,35 @@ def test_full_flow_publishes_a_checked_final_video(
     assert "text-first (Mostly a comparison table.)" in (course / "videos/COVERAGE.md").read_text(
         encoding="utf-8"
     )
+    owner = "codex:video-author"
+    tasks.begin(course, None, owner=owner, media=(f"video/{STEM}",))
+    with pytest.raises(CampusError, match="Listening report is missing"):
+        tasks.finish(course, owner=owner)
+    heard: list[listening.TimedWord] = []
+    for beat in receipt.beats:
+        for cue in beat.cues:
+            spoken = cue.text.split()
+            step = (cue.end - cue.start) / len(spoken)
+            heard.extend(
+                {"word": word, "start": cue.start + i * step, "end": cue.start + (i + 0.8) * step}
+                for i, word in enumerate(spoken)
+            )
+    monkeypatch.setattr(listening, "_recognize", lambda *_: (heard, receipt.duration))
+    monkeypatch.setattr(video_cli, "require_video_notes", lambda: None)
+    listened = CliRunner().invoke(app, ["video-notes", "listen", str(course), STEM])
+    assert listened.exit_code == 0, listened.output or listened.exception
+    result = json.loads(listened.output)
+    assert result["flags"] == []
+    assert (course / result["speech_aligned_frames"]).is_file()
+    assert tasks.finish(course, owner=owner)["ready"]
+    hook = CliRunner().invoke(
+        app,
+        ["study", "task", "hook"],
+        input=json.dumps({"session_id": "video-author", "cwd": str(course)}),
+    )
+    assert hook.exit_code == 0, hook.output or hook.exception
+    task = tasks.read_task(course)
+    assert json.loads(hook.output) == {} and task is not None and task.phase == "complete"
     before = runtime.renders
     again = project.render(course, STEM, quality="final", jobs=1, max_minutes=None, run=None)
     assert again["ok"] and runtime.renders == before
@@ -930,6 +971,7 @@ def test_media_discovery_cannot_count_a_stem_reassigned_to_another_source_as_com
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.media.inventory import discover
     from tum_mcp.course.project.store import load_state
+    from tum_mcp.course.workflow import tasks
 
     stem = prepare_walkthrough(exercise_project, tmp_path)
     final = project.render(
@@ -954,6 +996,9 @@ def test_media_discovery_cannot_count_a_stem_reassigned_to_another_source_as_com
     found = discover(exercise_project, load_state(exercise_project), read_content(exercise_project))
     assert found.pending == [{"item": f"video/{stem}", "source": "study/bfs", "reason": "changed"}]
     assert found.items[0].structure["targets"] == ["exercises/sheet-1/sample-relaxation"]
+    tasks.begin(exercise_project, None, owner="test", media=(f"video/{stem}",))
+    with pytest.raises(CampusError, match=r"current plan changed \(study/bfs\)"):
+        tasks.finish(exercise_project, owner="test")
 
 
 def test_unpublished_plan_target_removed_from_the_source_is_not_new_work(

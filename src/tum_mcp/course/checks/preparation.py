@@ -1,6 +1,7 @@
 """Preflight for prepared review. The author's mapping is evidence for a fresh reader."""
 
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -65,14 +66,43 @@ class Readiness(Frozen):
     cutoff_verified: bool | None = None
     walkthrough_evidence: Literal["source_mapped"] | None = None
     preparations: tuple[dict[str, JsonValue], ...] = ()
+    workspace_problems: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    pending_check: tuple[str, str] | None = Field(default=None, exclude=True)
+    browser_commands: dict[str, str] = Field(default_factory=dict, exclude=True)
 
     @property
     def ready(self) -> bool:
         return bool(self.items) and not self.problems
 
     def report(self) -> dict[str, JsonValue]:
+        actions: dict[str, JsonValue] = {}
+        for workspace, issues in self.workspace_problems.items():
+            first = issues[0] if issues else None
+            owner = first.partition(":")[0] if first else ""
+            command = None
+            count = len(issues)
+            if first:
+                if first in self.browser_commands:
+                    command = self.browser_commands[first]
+                elif owner in self.items:
+                    command = f"tum-mcp study lint . --item {owner} --json"
+                elif workspace == "lecture":
+                    command = "tum-mcp lecture inspect ."
+                else:
+                    kind = {"study": "preparation", "exercises": "exercises", "exam": "exam"}
+                    command = f"tum-mcp study schema {kind.get(workspace, 'batch')}"
+            elif self.pending_check is not None:
+                first, command = self.pending_check
+                count = 1
+            actions[workspace] = {
+                "status": "pending" if first else "prepared",
+                "prerequisite": first,
+                "command": command,
+                "problems": count,
+            }
         return self.model_dump(mode="json", exclude={"fingerprints"}) | {
             "ready": self.ready,
+            "workspace_actions": actions,
             "next_action": (
                 "The checks passed; continue to the requested next stage."
                 if self.ready
@@ -171,9 +201,9 @@ def _draft_items(
     ledger: CoverageLedger,
     study: StudyContent | None,
     exercises: ExerciseContent | None,
-) -> tuple[dict[str, list[dict[str, JsonValue]]], list[str]]:
+) -> tuple[dict[str, list[dict[str, JsonValue]]], dict[str, list[str]]]:
     items: dict[str, list[dict[str, JsonValue]]] = defaultdict(list)
-    problems: list[str] = []
+    problems: dict[str, list[str]] = {workspace: [] for workspace in scope.workspaces}
     for demand in scope.demands:
         match demand:
             case StudyDemand(target=target):
@@ -182,8 +212,11 @@ def _draft_items(
             case ExerciseDemand(target=target):
                 problem = _exercise_problem(demand, exercises, ledger)
                 key = f"exercises/{target.set}/{target.exercise}" if target else ""
+                if problem and demand.blocked_reason:
+                    owner = f"{key}/{demand.id}" if key else f"{demand.source}/{demand.id}"
+                    problems["exercises"].append(f"{owner}: blocked: {demand.blocked_reason}")
         if problem:
-            problems.append(f"{demand.source}/{demand.id}: {problem}")
+            problems.setdefault(demand.kind, []).append(f"{demand.source}/{demand.id}: {problem}")
         elif key:
             items[key].append(demand.model_dump(mode="json"))
     for group in exercises.sets if exercises else ():
@@ -200,34 +233,93 @@ def _draft_items(
                 and demand.target.exercise == exercise.key
             }
             if missing := set(exercise.parts) - mapped:
-                problems.append(
+                problems["exercises"].append(
                     f"{key}: missing original part mappings {', '.join(sorted(missing))}."
                 )
     return dict(items), problems
 
 
-def _browser_problems(root: Path, routes: list[str], visuals: set[str]) -> list[str]:
+@dataclass(frozen=True, slots=True)
+class BrowserProblem:
+    message: str
+    workspaces: frozenset[str]
+    command: str
+
+
+def browser_owner(workspace: str) -> str:
+    return "lecture" if workspace == "lectures" else workspace
+
+
+def _browser_problems(root: Path, routes: list[str], visuals: set[str]) -> list[BrowserProblem]:
+    route_owners = {route: shell_workspace(route) for route in routes}
+    visual_owners = {item: item.partition("/")[0] for item in visuals}
+    shell_owners = set(route_owners.values())
+    owners = frozenset(browser_owner(owner) for owner in shell_owners | set(visual_owners.values()))
+    visuals_command = "tum-mcp study visuals ."
+    interact_command = f"{visuals_command} --interact"
     receipt = read_receipt(root)
     if receipt is None:
-        return ["Missing browser receipts. Run study visuals and study visuals --interact."]
+        return [
+            BrowserProblem(
+                "Missing browser receipts. Run study visuals and study visuals --interact.",
+                owners,
+                interact_command,
+            )
+        ]
     identity = browser_identity(root, browser_choice())
-    if not identity.managed or receipt.identity != identity:
-        return ["Browser evidence is stale or the app has custom templates. Rebuild and recheck."]
+    if receipt.identity != identity:
+        return [
+            BrowserProblem(
+                "Browser evidence is stale. Run study visuals and study visuals --interact.",
+                owners,
+                interact_command,
+            )
+        ]
     required = {
-        *(f"visual/{width}/{item}" for width in DEFAULT_WIDTHS for item in visuals),
-        *(f"interact/{width}/{route}" for width in DEFAULT_WIDTHS for route in routes),
-        *(
-            f"shell/{width}/{theme}/{workspace}"
+        **{
+            f"visual/{width}/{item}": (owner, visuals_command)
+            for width in DEFAULT_WIDTHS
+            for item, owner in visual_owners.items()
+        },
+        **{
+            f"interact/{width}/{route}": (owner, interact_command)
+            for width in DEFAULT_WIDTHS
+            for route, owner in route_owners.items()
+        },
+        **{
+            f"shell/{width}/{theme}/{owner}": (owner, interact_command)
             for width in DEFAULT_WIDTHS
             for theme in ("light", "dark")
-            for workspace in {shell_workspace(route) for route in routes}
-        ),
+            for owner in shell_owners
+        },
     }
-    return [
-        f"{key}: browser evidence is {'failed' if receipt.states.get(key) is False else 'missing'}."
-        for key in sorted(required)
-        if not receipt.evidence(root, key)
-    ]
+    problems = []
+    for key, (owner, command) in sorted(required.items()):
+        if not receipt.evidence(root, key):
+            status = "failed" if receipt.states.get(key) is False else "missing"
+            problems.append(
+                BrowserProblem(
+                    f"{key}: browser evidence is {status}.",
+                    frozenset({browser_owner(owner)}),
+                    command,
+                )
+            )
+    return problems
+
+
+def record_browser_problems(
+    browser: list[BrowserProblem],
+    problems: list[str],
+    workspace_problems: dict[str, list[str]],
+) -> dict[str, str]:
+    commands: dict[str, str] = {}
+    for issue in browser:
+        if issue.message not in problems:
+            problems.append(issue.message)
+        commands[issue.message] = issue.command
+        for workspace in issue.workspaces:
+            workspace_problems[workspace].append(issue.message)
+    return commands
 
 
 def assess(root: Path, identifier: str, context: "Context | None" = None) -> Readiness:
@@ -252,20 +344,39 @@ def assess(root: Path, identifier: str, context: "Context | None" = None) -> Rea
         **scope_summary(scope, state, problems),
     }
     if ledger is None:
-        return Readiness(**kwargs, problems=tuple(problems))
+        return Readiness(
+            **kwargs,
+            problems=tuple(problems),
+            workspace_problems={workspace: tuple(problems) for workspace in scope.workspaces},
+        )
     study = read_content(root) if present(root, "study") else None
     exercises = read_exercises(root)
-    items, draft_problems = _draft_items(scope, ledger, study, exercises)
-    problems.extend(draft_problems)
-    if problems:
-        return Readiness(**kwargs, items=items, problems=tuple(problems))
+    items, workspace_problems = _draft_items(scope, ledger, study, exercises)
+    scope_blocked = bool(problems)
+    problems.extend(problem for issues in workspace_problems.values() for problem in issues)
+    mapped_start = len(problems)
+    if scope_blocked or all(workspace_problems.values()):
+        return Readiness(
+            **kwargs,
+            items=items,
+            problems=tuple(problems),
+            workspace_problems={
+                workspace: tuple(issues) for workspace, issues in workspace_problems.items()
+            },
+        )
 
-    context = context or load(root)
+    feasible = {key for key in items if not workspace_problems[key.partition("/")[0]]}
+    context = context or load(root, answer_scope=tuple(feasible))
     outcomes = {outcome.key for entry in ledger.sources for outcome in entry.outcomes}
     verified = {result["item"]: result for result in context.answer_keys}
     provisional = []
     read_coverage = coverage_reader(root)
     for key, demands in items.items():
+        if key not in feasible:
+            continue
+        for demand in demands:
+            if reason := demand.get("blocked_reason"):
+                problems.append(f"{key}/{demand['id']}: blocked: {reason}")
         plan = read_plan(root, key)
         status = (
             gate_status(plan, coverage_reader_for_command=read_coverage) if plan else "unchecked"
@@ -307,7 +418,8 @@ def assess(root: Path, identifier: str, context: "Context | None" = None) -> Rea
         for demand in demands:
             for kind in ("values", "walkthroughs"):
                 if demand[kind] and (
-                    not result.get("passed") or not set(demand[kind]) <= set(result.get(kind, ()))
+                    result.get("status") != "passed"
+                    or not set(demand[kind]) <= set(result.get(f"matched_{kind}", ()))
                 ):
                     problems.append(f"{key}/{demand['id']}: missing or failed answer-key {kind}.")
     stale = {
@@ -317,20 +429,30 @@ def assess(root: Path, identifier: str, context: "Context | None" = None) -> Rea
     problems.extend(
         f"{key}: cited source bytes or revisions changed."
         for key in items
-        if key.rsplit("/", 1)[-1] in stale[key.split("/", 1)[0]]
+        if key in feasible and key.rsplit("/", 1)[-1] in stale[key.split("/", 1)[0]]
     )
+    for problem in problems[mapped_start:]:
+        for key in items:
+            if problem.startswith((f"{key}:", f"{key}/")):
+                workspace_problems[key.partition("/")[0]].append(problem)
+                break
     data = read_bytes(confined(root, "app/data.mjs"))
+    pending_check = None
+    browser_commands: dict[str, str] = {}
     if data is None or data != current_data(root):
-        problems.append("The built app does not match current content. Run study build.")
-    elif not problems:
-        routes = interaction_routes(study, exercises)
-        problems.extend(
-            _browser_problems(
+        problem = "The built app does not match current content. Run study build."
+        problems.append(problem)
+        pending_check = (problem, "tum-mcp study build . --local-only")
+    else:
+        feasible = {key for key in feasible if not workspace_problems[key.partition("/")[0]]}
+        if feasible:
+            routes = interaction_routes(study, exercises)
+            browser = _browser_problems(
                 root,
-                [route for key, route in routes.items() if key in items],
-                set(items) & context.visuals.keys(),
+                [route for key, route in routes.items() if key in feasible],
+                feasible & context.visuals.keys(),
             )
-        )
+            browser_commands = record_browser_problems(browser, problems, workspace_problems)
 
     sources = {entry.source: entry.sha256 for entry in scope.inventory}
     fingerprints = {
@@ -349,4 +471,10 @@ def assess(root: Path, identifier: str, context: "Context | None" = None) -> Rea
         fingerprints=fingerprints,
         problems=tuple(problems),
         provisional_plans=tuple(provisional),
+        pending_check=pending_check,
+        browser_commands=browser_commands,
+        workspace_problems={
+            workspace: tuple(dict.fromkeys(issues))
+            for workspace, issues in workspace_problems.items()
+        },
     )

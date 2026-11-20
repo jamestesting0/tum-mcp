@@ -8,7 +8,9 @@ import datetime
 import json
 import re
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
+from functools import cache
 from importlib.resources import files
 from pathlib import Path
 from typing import Final, Literal
@@ -53,6 +55,7 @@ from tum_mcp.errors import CampusError, Code
 from tum_mcp.settings import Frozen
 
 DEFAULT_ROUNDS: Final = 1
+MAX_ROUNDS: Final = 20
 PACKET_CHARS = 60_000
 # One checker reply must hold a quoted verdict per check: trial checkers completed packets of
 # up to about 100 short verdicts and gave up on 100 to 312 long ones. A study lesson's checks
@@ -83,6 +86,7 @@ class RoundLog(Frozen):
     verified: bool = False
     verify_passes: int = Field(default=0, ge=0, le=2)
     verify_fingerprints: dict[str, str] = Field(default_factory=dict)
+    fresh_request: bool = Field(default=False, exclude_if=lambda value: not value)
 
     @property
     def pending_packets(self) -> tuple[str, ...]:
@@ -93,7 +97,7 @@ class RoundLog(Frozen):
 
 class LoopState(Frozen):
     schema_version: Literal[1] = 1
-    budget: int = Field(ge=1, le=20)
+    budget: int = Field(ge=1, le=MAX_ROUNDS)
     scope: tuple[str, ...] = Field(max_length=5000)
     status: Literal["running", "passed", "budget_spent"] = "running"
     rounds: tuple[RoundLog, ...] = ()
@@ -126,7 +130,16 @@ def read_state(root: Path) -> LoopState | None:
         return None
     try:
         return LoopState.model_validate_json(body)
-    except ValidationError:
+    except ValidationError as error:
+        if any(
+            issue["loc"] == ("budget",) and issue["type"] == "less_than_equal"
+            for issue in error.errors(include_input=False)
+        ):
+            raise CampusError(
+                Code.INVALID_RESPONSE,
+                f"The saved review exceeds {MAX_ROUNDS} rounds. Preserve loop.json and its "
+                "history, then restore the last valid review state from a trusted backup.",
+            ) from None
         raise CampusError(Code.INVALID_RESPONSE, "The review loop state needs review.") from None
 
 
@@ -155,7 +168,14 @@ class Context:
         return self.records[key]
 
 
-def load(root: Path, *, answer_item: str | None = None) -> Context:
+def load(
+    root: Path,
+    *,
+    answer_item: str | None = None,
+    answer_scope: tuple[str, ...] | None = None,
+    batch_dependencies: bool = False,
+    answer_workspaces: tuple[str, ...] = (),
+) -> Context:
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.app.visuals import visual_ids
     from tum_mcp.course.checks.answers import verify
@@ -286,9 +306,25 @@ def load(root: Path, *, answer_item: str | None = None) -> Context:
         ),
     ]
     # An answer key that disagrees with its item is a correctness defect the gate holds on.
-    answer_keys = verify(
-        root, items, resolve_item(items, answer_item) if answer_item is not None else None
-    )
+    if answer_item is not None:
+        answer_scope = (resolve_item(items, answer_item),)
+    elif answer_workspaces:
+        answer_scope = _workspace_scope(items, answer_workspaces)
+    if answer_scope is None:
+        checked = items
+    else:
+        scope = set(answer_scope).intersection(items)
+        if batch_dependencies:
+            from tum_mcp.course.review.models import SHEET
+
+            if SHEET in items and any(key.startswith("exam/pattern/") for key in scope):
+                scope.add(SHEET)
+            if "course" in items and len({key.split("/")[0] for key in answer_scope}) > 1:
+                scope.add("course")
+            lectures = tuple(f"{key}/" for key in scope if key.startswith("lecture/"))
+            scope.update(key for key in items if key.startswith(lectures))
+        checked = {key: items[key] for key in scope}
+    answer_keys = verify(root, checked)
     flags += [
         {"item": result["item"], "flag": "answer_key", "detail": "; ".join(result["problems"])}
         for result in answer_keys
@@ -419,10 +455,39 @@ def _bind_preparation(context: Context, state: LoopState) -> Readiness | None:
     return reading
 
 
+def publication_problems(context: Context, state: LoopState) -> dict[str, list[str]]:
+    from tum_mcp.course.review.repair_scope import contract
+
+    if state.batch and state.batch_contract is not None:
+        name = state.batch.identifier
+        if read_bytes(
+            private_path(context.root, f"batches/{name}.json")
+        ) is None or state.batch_contract != contract(context.root, name, state.batch_sources):
+            return {key: ["Reviewed request changed."] for key in state.scope}
+    _ = _bind_preparation(context, state)
+    return gate(context, state.scope)
+
+
 def _require_ready(readiness: Readiness) -> None:
     if not readiness.ready:
         problems = " ".join(readiness.problems[:5])
         raise CampusError(Code.ACTION_REQUIRED, f"Preparation is not ready. {problems}")
+
+
+def _workspace_scope(items: dict[str, ReviewItem], workspaces: tuple[str, ...]) -> tuple[str, ...]:
+    prefixes = {
+        "study": ("study/",),
+        "exercises": ("exercises/",),
+        "exam": ("exam/",),
+        "lectures": ("lecture/",),
+        "course": ("course",),
+    }
+    wanted = workspaces or tuple(prefixes)
+    return tuple(
+        key
+        for key in items
+        if any(key.startswith(prefixes[name]) for name in wanted if name in prefixes)
+    )
 
 
 def start(
@@ -434,9 +499,9 @@ def start(
     batch: str | None = None,
     ad_hoc: bool = False,
 ) -> LoopState:
-    context = load(root)
-    existing = read_state(context.root)
-    if batch is None and not ad_hoc and any(private_path(context.root, "batches").glob("*.json")):
+    root = root.expanduser().resolve()
+    existing = read_state(root)
+    if batch is None and not ad_hoc and any(private_path(root, "batches").glob("*.json")):
         raise CampusError(
             Code.ACTION_REQUIRED,
             "This project has a declared batch. Complete it and use --batch ID, "
@@ -447,6 +512,7 @@ def start(
     binding = (existing.batch or existing.preparation) if existing else None
     if existing and binding and existing.status == "running":
         if (batch if existing.batch else preparation) == binding.identifier:
+            context = load(root, answer_scope=existing.scope)
             if reading := _bind_preparation(context, existing):
                 _require_ready(reading)
                 return existing
@@ -457,36 +523,25 @@ def start(
         from tum_mcp.course.checks.batch import assess_batch
         from tum_mcp.course.review.repair_scope import contract
 
-        readiness = assess_batch(context.root, batch, context)
+        readiness = assess_batch(root, batch)
         _require_ready(readiness)
         state = LoopState(
             budget=budget,
             scope=tuple(readiness.items),
             batch=readiness.scope,
-            batch_contract=contract(context.root, batch),
-            batch_sources=tuple(entry.resource.key for entry in load_state(context.root).resources),
+            batch_contract=contract(root, batch),
+            batch_sources=tuple(entry.resource.key for entry in load_state(root).resources),
         )
-        apply(context.root, (_state_write(context.root, state),))
+        apply(root, (_state_write(root, state),))
         return state
     if preparation:
-        readiness = assess(context.root, preparation, context)
+        readiness = assess(root, preparation)
         _require_ready(readiness)
         state = LoopState(budget=budget, scope=tuple(readiness.items), preparation=readiness.scope)
-        apply(context.root, (_state_write(context.root, state),))
+        apply(root, (_state_write(root, state),))
         return state
-    prefixes = {
-        "study": ("study/",),
-        "exercises": ("exercises/",),
-        "exam": ("exam/",),
-        "lectures": ("lecture/",),
-        "course": ("course",),
-    }
-    wanted = workspaces or tuple(prefixes)
-    scope = tuple(
-        key
-        for key in context.items
-        if any(key.startswith(prefixes[name]) for name in wanted if name in prefixes)
-    )
+    context = load(root, answer_workspaces=workspaces)
+    scope = _workspace_scope(context.items, workspaces)
     if not scope:
         raise CampusError(Code.ACTION_REQUIRED, "Nothing to review: prepare content first.")
     state = LoopState(budget=budget, scope=scope)
@@ -574,17 +629,30 @@ def _cited(value: object, found: set[str]) -> set[str]:
     return found
 
 
-def _digests(root: Path, value: dict) -> list[dict[str, JsonValue]]:
-    """The digests of the sources an item cites: what the checker compares it against."""
+def _digest_reader(root: Path) -> Callable[[str], dict[str, JsonValue]]:
+    """Read and classify each source once per packet build."""
     from tum_mcp.course.project.store import load_state
-    from tum_mcp.course.sources.digests import digest_status, read_digest
+    from tum_mcp.course.sources.digests import digest_evidence, read_digest
 
-    status = {row["source"]: row["status"] for row in digest_status(root, load_state(root))}
-    return [
-        found.model_dump(mode="json", exclude={"sha256"}) | {"status": status.get(key, "current")}
-        for key in sorted(_cited(value, set()))
-        if (found := read_digest(root, key)) is not None
-    ]
+    items = {item.resource.key: item for item in load_state(root).resources}
+
+    @cache
+    def lookup(key: str) -> dict[str, JsonValue]:
+        found = read_digest(root, key)
+        evidence = digest_evidence(root, key, items.get(key), found)
+        if found and evidence["status"] == "current":
+            evidence = found.model_dump(mode="json", exclude={"sha256"}) | evidence
+        return evidence
+
+    return lookup
+
+
+def _digests(
+    root: Path, value: dict, lookup: Callable[[str], dict[str, JsonValue]] | None = None
+) -> list[dict[str, JsonValue]]:
+    """The digests of the sources an item cites: what the checker compares it against."""
+    read = lookup if lookup is not None else _digest_reader(root)
+    return [read(key) for key in sorted(_cited(value, set()))]
 
 
 def _page_evidence(root: Path, value: dict) -> list[dict[str, JsonValue]]:
@@ -656,8 +724,8 @@ def _study_context(context: Context, item: ReviewItem) -> dict[str, JsonValue]:
 
 def next_round(root: Path) -> dict[str, JsonValue]:
     """Open the next round and write its packets: one profile each, small enough to read."""
-    context = load(root)
-    state = read_state(context.root)
+    root = root.expanduser().resolve()
+    state = read_state(root)
     if state is None:
         raise CampusError(Code.ACTION_REQUIRED, "Start the loop first: tum-mcp review start.")
     if state.status != "running":
@@ -669,12 +737,33 @@ def next_round(root: Path) -> dict[str, JsonValue]:
         raise CampusError(Code.ACTION_REQUIRED, "Close the current round first.")
     if state.round >= state.budget:
         raise CampusError(Code.ACTION_REQUIRED, "The round budget is spent; extend it to go on.")
+    context = load(root, answer_scope=state.scope)
     _bind_preparation(context, state)
     if context.preparation:
         _require_ready(context.preparation)
     number = state.round + 1
-    packets, writes = _packets(context, state, number, verify=False)
-    log = RoundLog(round=number, started=_now(), packets=tuple(packets), answered=())
+    from tum_mcp.course.workflow.tasks import read_task
+
+    started = _now()
+    task = read_task(context.root) if state.batch else None
+    fresh_request = bool(
+        task
+        and state.batch
+        and task.batch == state.batch.identifier
+        and task.phase == "pending"
+        and task.review_rounds
+        and task.review_requested_at
+        and task.review_closed_before
+    )
+    nonce = digest(started.isoformat())[:12] if fresh_request else ""
+    packets, writes = _packets(context, state, number, verify=False, fresh_nonce=nonce)
+    log = RoundLog(
+        round=number,
+        started=started,
+        packets=tuple(packets),
+        answered=(),
+        fresh_request=fresh_request,
+    )
     writes.append(
         _state_write(context.root, state.model_copy(update={"rounds": (*state.rounds, log)}))
     )
@@ -684,10 +773,11 @@ def next_round(root: Path) -> dict[str, JsonValue]:
 
 def verify_round(root: Path) -> dict[str, JsonValue]:
     """Refresh stale verdicts and verify fixes within the current round."""
-    context = load(root)
-    state = read_state(context.root)
+    root = root.expanduser().resolve()
+    state = read_state(root)
     if state is None or not state.rounds or state.rounds[-1].closed is not None:
         raise CampusError(Code.ACTION_REQUIRED, "Open a round with tum-mcp review next first.")
+    context = load(root, answer_scope=state.scope)
     log = state.rounds[-1]
     passes = max(log.verify_passes, int(log.verified))
     if passes >= 2:
@@ -766,17 +856,20 @@ def profile_guidance(profile: str) -> str:
 
 
 def _packets(
-    context: Context, state: LoopState, number: int, *, verify: int
+    context: Context, state: LoopState, number: int, *, verify: int, fresh_nonce: str = ""
 ) -> tuple[list[str], list[Write]]:
     sheets = current_sheets(context.root) if context.visuals else {}
+    read_digest = _digest_reader(context.root)
     groups: dict[str, list[dict[str, JsonValue]]] = {}
     for key in state.scope:
         if key not in context.items:
             continue
         tasks = item_tasks(context, key)
+        item, record = context.items[key], context.record(key)
+        if fresh_nonce:
+            tasks["needs"] = [check.id for check in registry.judged(item.profile)]
         if not (tasks["needs"] or tasks["verify"] or tasks["visuals"] or tasks["rule"]):
             continue
-        item, record = context.items[key], context.record(key)
         groups.setdefault(item.profile, []).append(
             {
                 "item": key,
@@ -834,7 +927,7 @@ def _packets(
                 "answer_key": next(
                     (entry for entry in context.answer_keys if entry["item"] == key), None
                 ),
-                "digests": _digests(context.root, item.value),
+                "digests": _digests(context.root, item.value, read_digest),
                 "source_pages": _page_evidence(context.root, item.value),
                 **_study_context(context, item),
                 "concepts": _concepts(context.root, item),
@@ -866,6 +959,8 @@ def _packets(
         for index, items in enumerate(batches, 1):
             phase = "v2" if verify == 2 else "v" if verify else ""
             packet_id = f"r{number}{phase}-{profile}-{index}"
+            if fresh_nonce:
+                packet_id = f"{packet_id}-{fresh_nonce}"
             tasks = [
                 (task, value)
                 for task in ("needs", "verify", "visuals", "rule")
@@ -1070,10 +1165,13 @@ def record(
     partial: bool = False,
 ) -> dict[str, JsonValue]:
     """Validate a checker's answers against its packet and the current content, then save."""
-    context = load(root)
-    state = read_state(context.root)
+    root = root.expanduser().resolve()
+    state = read_state(root)
     if state is None or not state.rounds or state.rounds[-1].closed is not None:
         raise CampusError(Code.ACTION_REQUIRED, "Open a round with tum-mcp review next first.")
+    if state.rounds[-1].fresh_request and provenance != "fresh":
+        raise CampusError(Code.ACTION_REQUIRED, "This requested round needs a fresh checker.")
+    context = load(root, answer_scope=state.scope)
     _bind_preparation(context, state)
     if context.preparation:
         _require_ready(context.preparation)
@@ -1724,8 +1822,8 @@ def gate(context: Context, scope: tuple[str, ...]) -> dict[str, list[str]]:
 
 
 def close_round(root: Path, *, incomplete: bool = False) -> dict[str, JsonValue]:
-    context = load(root)
-    state = read_state(context.root)
+    root = root.expanduser().resolve()
+    state = read_state(root)
     if state is None or not state.rounds or state.rounds[-1].closed is not None:
         raise CampusError(Code.ACTION_REQUIRED, "No open round to close.")
     pending = state.rounds[-1].pending_packets
@@ -1735,6 +1833,7 @@ def close_round(root: Path, *, incomplete: bool = False) -> dict[str, JsonValue]
             f"The round still has unanswered packets ({', '.join(pending)}). "
             "Record them, or use --incomplete to end the round with these gaps.",
         )
+    context = load(root, answer_scope=state.scope)
     _bind_preparation(context, state)
     number = state.round
     blocked = {key: problems for key, problems in gate(context, state.scope).items() if problems}
@@ -1975,10 +2074,11 @@ def _markdown(card: dict[str, JsonValue]) -> str:
 
 
 def status(root: Path) -> dict[str, JsonValue]:
-    context = load(root)
-    state = read_state(context.root)
+    root = root.expanduser().resolve()
+    state = read_state(root)
     if state is None:
         return {"loop": None, "next": "tum-mcp review start PROJECT"}
+    context = load(root, answer_scope=state.scope)
     card = scorecard(context, state)
     open_round = bool(state.rounds) and state.rounds[-1].closed is None
     pending = list(state.rounds[-1].pending_packets) if open_round else []
@@ -2050,6 +2150,10 @@ def extend(root: Path, rounds: int) -> LoopState:
     state = read_state(root)
     if state is None:
         raise CampusError(Code.ACTION_REQUIRED, "No loop to extend.")
+    if rounds < 1 or state.budget + rounds > MAX_ROUNDS:
+        raise CampusError(
+            Code.ACTION_REQUIRED, f"Extend by at least one round, up to {MAX_ROUNDS} total."
+        )
     updated = state.model_copy(
         update={
             "budget": state.budget + rounds,

@@ -13,7 +13,7 @@ from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
-from pydantic import Field, JsonValue, ValidationError, model_validator
+from pydantic import ConfigDict, Field, JsonValue, TypeAdapter, ValidationError, model_validator
 
 from tum_mcp.course.content.study import (
     Label,
@@ -111,7 +111,7 @@ class Example(Frozen):
     why: Text | None = Field(
         default=None,
         exclude_if=lambda value: value is None,
-        description="For a constructed example: why the lecture has no example for this concept.",
+        description="For a constructed example: why a lecture example does not fit this lesson.",
     )
 
     @model_validator(mode="after")
@@ -119,7 +119,7 @@ class Example(Frozen):
         if self.origin == "source" and not (self.source and self.pages):
             raise ValueError("A lecture example names its source and pages.")
         if self.origin == "constructed" and not self.why:
-            raise ValueError("A constructed example says why the lecture has none.")
+            raise ValueError("A constructed example says why a lecture example does not fit.")
         if self.script and self.states is not None and self.states != len(self.script):
             raise ValueError(
                 f"`states` is {self.states} but `script` has {len(self.script)} lines; "
@@ -205,6 +205,18 @@ class GateEntry(Frozen):
 class GateUpdates(Frozen):
     resolved: tuple[str | int, ...] = ()
     evidence: dict[str, str] = Field(default_factory=dict)
+
+
+class PlanVerdict(GateUpdates):
+    # Existing plan-record callers can copy packet rows and add their verdict.
+    model_config = ConfigDict(extra="ignore")
+
+    item: str
+    fingerprint: str
+    coverage_fingerprint: str | None = None
+    verdict: Literal["pass", "fail"]
+    reasons: tuple[Text, ...] = ()
+    advice: tuple[Text, ...] = ()
 
 
 class Approval(Frozen):
@@ -674,34 +686,54 @@ def _updated_history(
     return tuple(history)
 
 
-def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "same"]) -> dict:
+def record_gate(
+    root: Path,
+    answers: JsonValue,
+    provenance: Literal["fresh", "same"],
+    *,
+    batch: str | None = None,
+) -> dict:
     """Save a checker's plan verdicts; each applies to the plan as it was read."""
+    from tum_mcp.course.checks.batch import checker_batch
+
+    try:
+        submitted = TypeAdapter(list[PlanVerdict]).validate_python(answers)
+    except ValidationError as error:
+        issue = error.errors()[0]
+        location = ".".join(str(part) for part in issue["loc"])
+        raise CampusError(
+            Code.INVALID_RESPONSE, f"Invalid plan verdict at {location}: {issue['msg']}."
+        ) from error
+    selected = checker_batch(root, {answer.item for answer in submitted}, batch)
+    if selected and any(answer.item not in selected[1].items for answer in submitted):
+        raise CampusError(
+            Code.ACTION_REQUIRED, f"Plan verdicts must belong to batch {selected[0]}."
+        )
+    binding = (selected[0],) if selected else None
     read_coverage = coverage_reader(root)
     writes: list[Write] = []
     recorded: list[str] = []
     verdicts: dict[str, dict] = {}
-    for answer in answers:
-        item = str(answer.get("item", ""))
+    for answer in submitted:
+        item = answer.item
         name = private_name(root, f"plans/{item}.json")
         original = read_bytes(confined(root, name))
         if original is None:
             raise CampusError(Code.ACTION_REQUIRED, f"No plan for {item}.")
         plan = _parse_plan(item, original)
-        if answer.get("fingerprint") != plan.fingerprint():
+        if answer.fingerprint != plan.fingerprint():
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item} changed since it was read.")
         coverage, batches = (
-            _coverage(plan.preparation, plan.item, read_coverage)
+            _coverage(plan.preparation, plan.item, read_coverage, binding)
             if plan.preparation
             else (None, None)
         )
-        if coverage and answer.get("coverage_fingerprint") != coverage["scope"]["fingerprint"]:
+        if coverage and answer.coverage_fingerprint != coverage["scope"]["fingerprint"]:
             raise CampusError(
                 Code.ACTION_REQUIRED, f"Plan {item}: coverage changed or was not checked."
             )
-        verdict = answer.get("verdict")
-        reasons = tuple(str(reason) for reason in answer.get("reasons", []))
-        advice = tuple(str(note) for note in answer.get("advice", []))
-        if verdict not in {"pass", "fail"} or (verdict == "fail" and not reasons):
+        verdict, reasons, advice = answer.verdict, answer.reasons, answer.advice
+        if verdict == "fail" and not reasons:
             raise CampusError(Code.ACTION_REQUIRED, f"Plan {item}: pass, or fail with the reasons.")
         if (
             provenance == "same"
@@ -723,14 +755,6 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
             )
             + 1
         )
-        try:
-            updates = GateUpdates.model_validate(
-                {"resolved": answer.get("resolved", []), "evidence": answer.get("evidence", {})}
-            )
-        except ValidationError as error:
-            raise CampusError(
-                Code.ACTION_REQUIRED, f"Plan {item}: {error.errors()[0]['msg']}"
-            ) from None
         if plan.gate:
             hashes = _concept_hashes(plan)
             changed = {
@@ -743,7 +767,7 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
                 for entry in _history(plan.gate)
                 if entry.kind == "reason" and entry.state == "open"
             }
-            evidence = {_normalized(key): value.strip() for key, value in updates.evidence.items()}
+            evidence = {_normalized(key): value.strip() for key, value in answer.evidence.items()}
             demoted = tuple(
                 reason
                 for reason in reasons
@@ -757,7 +781,7 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
                 verdict = "pass"
         if verdict == "pass" and (problems := example_problems(plan)):
             raise CampusError(Code.ACTION_REQUIRED, " ".join(problems[:5]))
-        history = _updated_history(plan, updates, reasons, advice)
+        history = _updated_history(plan, answer, reasons, advice)
         gate = Approval(
             fingerprint=plan.fingerprint(),
             verdict=verdict,
@@ -798,9 +822,9 @@ def record_gate(root: Path, answers: list[dict], provenance: Literal["fresh", "s
 
 
 def _coverage(
-    preparation: str, item: str, read_coverage: CoverageReader
+    preparation: str, item: str, read_coverage: CoverageReader, bound: tuple[str, ...] | None
 ) -> tuple[dict[str, JsonValue], tuple[str, ...]]:
-    coverage, batches = read_coverage(preparation, None)
+    coverage, batches = read_coverage(preparation, bound)
     report = coverage.report()
     if not report["ready"]:
         raise CampusError(
@@ -823,13 +847,17 @@ def _pages(value: str) -> set[int]:
 def _unused_examples(root: Path, waiting: list[Plan]) -> list[JsonValue]:
     from tum_mcp.course.sources.digests import read_digest
 
-    planned: dict[str, list[tuple[str, set[int]]]] = {}
+    planned: dict[str, list[tuple[str, set[int], str]]] = {}
     for plan in waiting:
         for concept in plan.concepts:
             example = concept.example
             if example and example.source and example.pages:
                 planned.setdefault(example.source, []).append(
-                    (example.pages, _pages(example.pages))
+                    (
+                        example.pages,
+                        _pages(example.pages),
+                        " ".join(example.shows.casefold().split()),
+                    )
                 )
     folder = confined(root, ".tum-mcp/digests")
     unused: list[JsonValue] = []
@@ -841,9 +869,11 @@ def _unused_examples(root: Path, waiting: list[Plan]) -> list[JsonValue]:
         for kind, entries in (("example", digest.examples), ("figure", digest.figures)):
             for entry in entries:
                 pages = _pages(entry.pages)
-                # A planned example inside this entry's pages selects the same demonstration.
-                # A figure can teach a separate idea on the same page as a selected example.
-                if kind == "example" and any(within <= pages for _, within in ranges):
+                # An overlap provides context. Only matching content selects a demonstration.
+                text = " ".join(entry.text.casefold().split())
+                if kind == "example" and any(
+                    pages == within and text == description for _, within, description in ranges
+                ):
                     continue
                 item: dict[str, JsonValue] = {
                     "source": digest.source,
@@ -853,30 +883,73 @@ def _unused_examples(root: Path, waiting: list[Plan]) -> list[JsonValue]:
                 }
                 # A wider planned range can contain a separate demonstration; let the
                 # checker judge it instead of hiding it.
-                wider = [label for label, within in ranges if kind == "example" and pages & within]
+                wider = [
+                    label for label, within, _ in ranges if kind == "example" and pages & within
+                ]
                 if wider:
                     item["overlaps_planned"] = wider[0]
                 unused.append(item)
     return unused
 
 
-def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]:
+def plan_packet(
+    root: Path, items: tuple[str, ...] = (), *, batch: str | None = None
+) -> dict[str, JsonValue]:
     """Read the requested authoring batch or all plans waiting for a fresh checker."""
+    from tum_mcp.course.checks.batch import checker_batch
+    from tum_mcp.course.project.models import PLAN_ROUTES
+    from tum_mcp.course.workflow.tasks import checker_task_batch
+
     read_coverage = coverage_reader(root)
-    if items:
-        waiting = []
-        for item in dict.fromkeys(items):
-            plan = read_plan(root, item)
-            if plan is None or plan.item != item:
-                raise CampusError(Code.ACTION_REQUIRED, f"No plan for {item}.")
-            waiting.append(plan)
-    else:
-        waiting = [
-            plan
-            for plan in plans(root)
+    selector = batch if batch is not None else checker_task_batch(root)
+    selected = checker_batch(root, set(items), selector)
+    available = plans(root) if selected is None else []
+    if selected is None and not items:
+        pending = {
+            plan.item
+            for plan in available
             if gated(plan.item)
             and gate_status(plan, coverage_reader_for_command=read_coverage) != "approved"
-        ]
+        }
+        selected = checker_batch(root, pending, None)
+
+    bound = (selected[0],) if selected else None
+
+    def status(plan: Plan) -> str:
+        def scoped_coverage(identifier: str, previous: tuple[str, ...] | None):
+            return read_coverage(identifier, bound if bound is not None else previous)
+
+        return gate_status(plan, coverage_reader_for_command=scoped_coverage)
+
+    if selected:
+        name, scope = selected
+        if missing_scope := sorted(set(items) - set(scope.items)):
+            raise CampusError(
+                Code.ACTION_REQUIRED, f"Plans outside batch {name}: {', '.join(missing_scope)}."
+            )
+        available = []
+        missing = []
+        for item in dict.fromkeys(scope.items):
+            if not re.fullmatch(PLAN_ROUTES, item):
+                continue
+            plan = read_plan(root, item)
+            if plan is None or plan.item != item:
+                missing.append(item)
+            else:
+                available.append(plan)
+        if missing:
+            raise CampusError(
+                Code.ACTION_REQUIRED,
+                f"Write the complete plans for batch {name} before starting the fresh checker. "
+                f"Missing: {', '.join(missing)}.",
+            )
+    if items:
+        by_item = {plan.item: plan for plan in available}
+        if absent := sorted(set(items) - by_item.keys()):
+            raise CampusError(Code.ACTION_REQUIRED, f"No plan for {', '.join(absent)}.")
+        waiting = [by_item[item] for item in dict.fromkeys(items)]
+    else:
+        waiting = [plan for plan in available if gated(plan.item) and status(plan) != "approved"]
     if ungated := [plan.item for plan in waiting if not gated(plan.item)]:
         raise CampusError(
             Code.ACTION_REQUIRED,
@@ -884,14 +957,17 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
         )
     part_maps = [
         {"item": plan.item, "parts": [part.model_dump(mode="json") for part in plan.parts]}
-        for plan in plans(root)
+        for plan in available
         if not gated(plan.item) and any(part.needs for part in plan.parts)
     ]
     coverage = {}
     for plan in waiting:
         if plan.preparation and plan.preparation not in coverage:
-            coverage[plan.preparation] = _coverage(plan.preparation, plan.item, read_coverage)[0]
+            coverage[plan.preparation] = _coverage(
+                plan.preparation, plan.item, read_coverage, bound
+            )[0]
     return {
+        **({"batch": selected[0]} if selected else {}),
         **({"coverage": coverage} if coverage else {}),
         **(
             {"part_maps": part_maps}
@@ -922,11 +998,7 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                     if plan.preparation
                     else {}
                 ),
-                **(
-                    {"status": gate_status(plan, coverage_reader_for_command=read_coverage)}
-                    if items
-                    else {}
-                ),
+                **({"status": status(plan)} if items else {}),
                 **(
                     {"previous": list(plan.gate.reasons)}
                     if plan.gate and plan.gate.verdict == "fail"
@@ -941,6 +1013,7 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             for plan in waiting
         ],
         "answer": {
+            **({"batch": selected[0]} if selected else {}),
             "items": [
                 {
                     "item": plan.item,
@@ -957,7 +1030,7 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
                     "evidence": {},
                 }
                 for plan in waiting
-            ]
+            ],
         },
         "ask": (
             "1. On the first check, list every blocking problem you can find in one pass. "
@@ -1031,7 +1104,10 @@ def plan_packet(root: Path, items: tuple[str, ...] = ()) -> dict[str, JsonValue]
             "givens or a desired result to force an ending. For each additional example "
             "of one mechanism say what it shows that the first cannot; otherwise it is a repeat. "
             "Leave out repeated mechanisms on another object, applications without workable "
-            "inputs and empirical tables. Construct a case only when the lecture has none.\n"
+            "inputs and empirical tables. Prefer the lecture case when it fits. When it gives "
+            "away a released exercise's answer, keep that case in the Exercise guide and plan "
+            "a different worked case that teaches the same decision in Study. Require a reason "
+            "for the change and verify that the new case preserves the teaching point.\n"
             "5. Study practice checks understanding of the lecture; never require a proof, "
             "derivation or program for the student to write (Exercises work, made only on "
             "request). For Study application or reasoning, check each practice case has its solved "

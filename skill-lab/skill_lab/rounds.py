@@ -52,7 +52,7 @@ def new(
     scenario: str,
     confirm_scenario: str | None,
     author: str,
-    judge: str,
+    judge: str | None,
     confirm_judges: list[str] | None,
     matrix: list[str],
     reason: str,
@@ -67,13 +67,23 @@ def new(
         raise LabError(f"Round {round_id} already exists.")
     for name in filter(None, (scenario, confirm_scenario)):
         scenarios.load(name)
-    author_spec, judge_spec = ModelSpec.parse(author), ModelSpec.parse(judge)
-    confirm = [ModelSpec.parse(t) for t in (confirm_judges or models.DEFAULT_CONFIRM_JUDGES)]
+    if budget_judges < 0:
+        raise LabError("The judge budget cannot be negative.")
+    if budget_judges and not judge:
+        raise LabError("A positive judge budget requires --judge.")
+    author_spec = ModelSpec.parse(author)
+    judge_spec = ModelSpec.parse(judge) if judge and budget_judges else None
+    confirm = (
+        [ModelSpec.parse(t) for t in (confirm_judges or models.DEFAULT_CONFIRM_JUDGES)]
+        if judge_spec
+        else []
+    )
     extra = [ModelSpec.parse(text) for text in matrix]
     for spec in (author_spec, *extra):
         validate_spec(spec, "author")
-    for spec in (judge_spec, *confirm):
-        validate_spec(spec, "judge")
+    if judge_spec:
+        for spec in (judge_spec, *confirm):
+            validate_spec(spec, "judge")
     if previous:
         prior = load(previous)
         base = Base(prior["base"]["ref"], [*prior["base"]["patches"], composed_patch(previous)])
@@ -86,7 +96,10 @@ def new(
         "base": base.as_dict(),
         "scenario": scenario,
         "confirm_scenario": confirm_scenario,
-        "roles": {"author": author_spec.as_dict(), "judge": judge_spec.as_dict()},
+        "roles": {
+            "author": author_spec.as_dict(),
+            "judge": judge_spec.as_dict() if judge_spec else None,
+        },
         "confirm_judges": [spec.as_dict() for spec in confirm],
         "matrix": [spec.as_dict() for spec in extra],
         # Earlier runs this round's candidates are judged against; the round does not rerun them.

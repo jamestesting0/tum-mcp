@@ -262,9 +262,16 @@ scaled down to its 12 px text floor, then widened into the free margin beside th
 one that still scrolls sideways at desktop width is listed under `notes`. It writes
 contact sheets to `.tum-mcp/visuals/` and records the result in
 `.tum-mcp/visual-check.json`. Editing an item or updating the app makes its result stale,
-and `study report` lists items whose check is missing, stale or failing. A rerun redraws
-only the items changed since their last passing check and lists the rest as `unchanged`;
-updating the app's templates, images or the checks themselves redraws everything.
+and `study report` lists items whose check is missing, stale or failing. Browser checks
+record a digest of each contact sheet. If a sheet is missing, has changed, or has no
+recorded digest, rerun `study visuals` at the affected width. Other passing widths
+can be reused. Readiness and reviewer packet links check those same digests.
+Interaction checks do not require screenshots.
+
+With stock templates, a rebuild can reuse passing checks for unchanged items when the
+renderer, browser and checks still match. If the build preserves custom templates, run
+both visual and interaction checks on that build. A later change to that build requires
+fresh checks.
 
 Authoring and review are separate. A prepare skill first drafts and checks its work
 (Phase A): it reads each source once into a digest (`.tum-mcp/digests/`, `study digests`),

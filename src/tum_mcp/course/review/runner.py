@@ -111,23 +111,48 @@ def answers_from(output: str) -> dict:
 
 
 def run(
-    project: Path, packet: str | None, host: str, command: str | None = None, *, plans: bool = False
+    project: Path,
+    packet: str | None,
+    host: str,
+    command: str | None = None,
+    *,
+    plans: bool = False,
+    batch: str | None = None,
 ) -> dict[str, JsonValue]:
     root = project.expanduser().resolve()
     if plans:
-        from tum_mcp.course.checks.batch import require_batch_plans
         from tum_mcp.course.review.items import digest
 
-        waiting = plan_packet(root)
+        waiting = plan_packet(root, batch=batch)
         if not waiting["plans"]:
             return {"recorded": [], "next": "No plan waits for the gate."}
-        require_batch_plans(root, {plan["item"] for plan in waiting["plans"]})
         name = private_name(Path("."), f"review/packets/plans-{digest(waiting)}.json")
         path = confined(root, name)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(waiting, indent=2), encoding="utf-8")
         answers = _ask(root, PLAN_PROMPT.format(packet=name), host, command)
-        return record_gate(root, answers.get("items", []), "fresh")
+        expected = {entry["item"]: entry["fingerprint"] for entry in waiting["plans"]}
+        returned = answers.get("items")
+        if (
+            not isinstance(returned, list)
+            or len(returned) != len(expected)
+            or not all(
+                isinstance(row, dict)
+                and isinstance(row.get("item"), str)
+                and isinstance(row.get("fingerprint"), str)
+                for row in returned
+            )
+            or {row["item"]: row["fingerprint"] for row in returned} != expected
+        ):
+            raise CampusError(
+                Code.INVALID_RESPONSE,
+                "The checker must return exactly one verdict for every submitted plan fingerprint. "
+                "The plan check remains pending.",
+            )
+        selected = waiting.get("batch")
+        return record_gate(
+            root, returned, "fresh", batch=selected if isinstance(selected, str) else None
+        )
     name = private_name(Path("."), f"review/packets/{packet}.json")
     if not confined(root, name).is_file():
         raise CampusError(Code.ACTION_REQUIRED, f"No packet {packet}; run tum-mcp review next.")

@@ -65,7 +65,9 @@ organization.lesson_closure
 }
 
 
-def _complete(intervals: list[MediaInterval], duration: float, tolerance: float) -> bool:
+def covers_duration(
+    intervals: list[MediaInterval] | tuple[MediaInterval, ...], duration: float, tolerance: float
+) -> bool:
     covered = 0.0
     for interval in sorted(intervals, key=lambda item: item.start):
         if interval.start > covered + tolerance:
@@ -108,9 +110,9 @@ def _evidence(
     playback = [
         interval for entry in accepted if entry.kind == "playback" for interval in entry.intervals
     ]
-    if _complete(listening, item.duration, tolerance):
+    if covers_duration(listening, item.duration, tolerance):
         kinds.add("listening")
-    if _complete(playback, item.duration, tolerance):
+    if covers_duration(playback, item.duration, tolerance):
         kinds.add("playback")
     required = {"script", "signal", "listening"}
     if item.modality == "video":

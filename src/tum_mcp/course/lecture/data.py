@@ -26,7 +26,11 @@ def read_lectures(root: Path) -> LectureContent | None:
     try:
         return LectureContent.model_validate_json(body)
     except ValidationError as error:
-        locations = [".".join(map(str, item["loc"])) for item in error.errors(include_input=False)]
+        errors = error.errors(include_input=False)
+        for item in errors:
+            if item["type"] == "lecture_note_watch_time":
+                raise CampusError(Code.INVALID_RESPONSE, item["msg"]) from None
+        locations = [".".join(map(str, item["loc"])) for item in errors]
         raise CampusError(
             Code.INVALID_RESPONSE,
             "Invalid lecture notes or highlights at: "
@@ -130,13 +134,12 @@ def render_lectures(root: Path, content: LectureContent) -> dict[str, JsonValue]
             for step, rendered_step in zip(highlight.steps, body["steps"], strict=True):
                 rendered_step["url"] = watch_link(lecture.recording, step.at or 0)
         for note, body in zip(lecture.notes, rendered["notes"], strict=True):
-            anchor = min(
-                (evidence[key] for key in note.evidence if evidence[key].kind != "frame"),
-                key=lambda item: item.interval.start_s,
-            )
+            speech = [evidence[key] for key in note.evidence if evidence[key].kind != "frame"]
+            anchor = min(speech, key=lambda item: item.interval.start_s)
+            at = anchor.interval.start_s if note.at is None else note.at
             body["recording_source"] = anchor.source_key
-            body["at_s"] = anchor.interval.start_s
-            body["url"] = watch_link(lecture.recording, anchor.interval.start_s)
+            body["at_s"] = at
+            body["url"] = watch_link(lecture.recording, at)
     return value
 
 

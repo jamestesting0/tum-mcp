@@ -12,6 +12,9 @@ SKILL_PREFIX = "src/tum_mcp/bundled/skills/"
 MAX_REPLIES_PER_TURN = 2
 TAIL_PARAGRAPHS = 6
 CLOSING_PARAGRAPHS = 2
+FAI_JOURNEY = "fai-authoring-026"
+FAI_RESUME = "fai-authoring-026-resume"
+FAI_SCENARIOS = frozenset({FAI_JOURNEY, FAI_RESUME})
 ADDRESSED = re.compile(r"\b(?:you|your|should i|shall i|do i|may i)\b", re.IGNORECASE)
 QUESTION = re.compile(r"[^.!?\n]*\?(?=[*_`)\"']*(?:\s|$))")
 REQUEST = re.compile(
@@ -27,6 +30,8 @@ class Turn:
     skills: list[str] = field(default_factory=list)
     # Workspaces this turn only adds to (a practice exam beside restored patterns).
     extends: list[str] = field(default_factory=list)
+    # Scoring metadata lives with the scenario, outside the author's workspace.
+    expected_items: dict[str, list[str]] = field(default_factory=dict)
 
 
 @dataclass
@@ -35,7 +40,13 @@ class Scenario:
     turns: list[Turn]
     replies: dict[str, str] = field(default_factory=dict)
 
+    @property
+    def offline(self) -> bool:
+        return self.id in FAI_SCENARIOS
+
     def reply_to(self, text: str) -> str | None:
+        if self.offline:
+            return None
         asked = question_text(text).lower()
         for key, answer in self.replies.items():
             if key != "default" and key.lower() in asked:
@@ -65,11 +76,20 @@ def parse(data: dict, source: str) -> Scenario:
         if isinstance(item, str):
             turns.append(Turn(item))
         elif isinstance(item, dict) and isinstance(item.get("say"), str):
+            expected = item.get("expected_items", {})
+            if not isinstance(expected, dict) or any(
+                name not in BUILDS.values()
+                or not isinstance(keys, list)
+                or any(not isinstance(key, str) or not key for key in keys)
+                for name, keys in expected.items()
+            ):
+                raise LabError(f"Scenario {source} needs workspace names and expected item keys.")
             turns.append(
                 Turn(
                     item["say"],
                     [str(s) for s in item.get("skills", [])],
                     [str(s) for s in item.get("extends", [])],
+                    expected,
                 )
             )
         else:
@@ -84,12 +104,18 @@ def load(scenario_id: str) -> Scenario:
         raise LabError(f"No scenario {scenario_id!r} in {paths.SCENARIOS}.")
     data = yaml.safe_load(tracked.read_text(encoding="utf-8"))
     override = paths.state() / "scenarios" / f"{scenario_id}.yaml"
-    if override.is_file():
+    if scenario_id not in FAI_SCENARIOS and override.is_file():
         local = yaml.safe_load(override.read_text(encoding="utf-8")) or {}
         if "turns" in local:
             data["turns"] = local["turns"]
         data["replies"] = {**(data.get("replies") or {}), **(local.get("replies") or {})}
-    return parse(data, str(tracked))
+    scenario = parse(data, str(tracked))
+    if scenario_id in FAI_SCENARIOS and (
+        scenario.id != scenario_id
+        or len(scenario.turns) != (3 if scenario_id == FAI_JOURNEY else 1)
+    ):
+        raise LabError(f"Invalid scripted fixture scenario {scenario_id}.")
+    return scenario
 
 
 def available() -> list[str]:
@@ -110,6 +136,18 @@ BUILDS = {
     "prepare-exams": "exam",
     "prepare-lecture": "lectures",
 }
+
+
+def delivery_request(turns: list[Turn]) -> dict[str, list[str]]:
+    """Union the requested workspaces and their independently expected item keys."""
+    requested: dict[str, set[str]] = {}
+    for turn in turns:
+        for skill in turn.skills:
+            if skill in BUILDS:
+                requested.setdefault(BUILDS[skill], set())
+        for workspace, items in turn.expected_items.items():
+            requested.setdefault(workspace, set()).update(items)
+    return {workspace: sorted(items) for workspace, items in sorted(requested.items())}
 
 
 def drift_refusal(

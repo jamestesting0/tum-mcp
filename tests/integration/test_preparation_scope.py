@@ -2,9 +2,11 @@ import json
 from pathlib import Path
 
 import pytest
+from documents import content_file
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
+from tum_mcp.course.app.build import build
 from tum_mcp.course.ledger.coverage import CoverageLedger
 from tum_mcp.course.ledger.preparation import (
     Preparation,
@@ -15,6 +17,52 @@ from tum_mcp.course.ledger.preparation import (
 from tum_mcp.course.project.schedule import Schedule
 from tum_mcp.course.project.store import load_state
 from tum_mcp.errors import CampusError
+
+
+def test_lint_preserves_source_bound_statement_and_reports_sibling(exercise_project: Path) -> None:
+    document = content_file(exercise_project, "exercises")
+    data = json.loads(document.read_bytes())
+    group = data["sets"][0]
+    first = group["exercises"][0]
+    instructions = [
+        "In the table below, enter both distances.",
+        "Use the lecture notes (figure 2) to find the edge.",
+    ]
+    first["statement"][0]["paragraphs"] = instructions
+    first["statement"][0]["pages"] = "1"
+    sibling = {
+        **first,
+        "key": "strict-bound",
+        "label": "2",
+        "statement": [
+            {
+                **first["statement"][0],
+                "paragraphs": ["The lecture notes that the bound is strict."],
+            },
+        ],
+    }
+    group["exercises"].append(sibling)
+    saved = json.dumps(data).encode()
+    document.write_bytes(saved)
+    build(exercise_project, publish=False)
+
+    def lint(key: str) -> dict:
+        item = f"exercises/{group['key']}/{key}"
+        result = CliRunner().invoke(
+            app, ["study", "lint", str(exercise_project), "--item", item, "--json"]
+        )
+        assert result.exit_code == 0, result.output
+        return json.loads(result.output)
+
+    assert all(flag["flag"] != "meta_reference" for flag in lint(first["key"])["flags"])
+    bad = lint(sibling["key"])
+    assert not bad["passed"]
+    assert any(
+        flag["flag"] == "meta_reference" and "statement:" in flag["detail"] for flag in bad["flags"]
+    )
+    learner_data = (exercise_project / "app/data.mjs").read_text()
+    assert all(text in learner_data for text in instructions)
+    assert document.read_bytes() == saved
 
 
 def test_scope_accounts_for_intro_cutoff_and_new_inventory(project: Path) -> None:

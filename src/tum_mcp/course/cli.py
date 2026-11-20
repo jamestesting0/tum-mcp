@@ -324,6 +324,7 @@ def report(
             "ready": reading.ready,
             "problems": list(reading.problems),
             "next_action": result["next_action"],
+            "workspace_actions": result["workspace_actions"],
             "items": items,
         }
         emit(root, "readiness", {"readiness": result}, full=full, summary=summary)
@@ -649,6 +650,10 @@ def schema(
             from tum_mcp.course.lecture.selection import Selection
 
             result = Selection.model_json_schema()
+        case "lecture-selection-work":
+            from tum_mcp.course.lecture.selection import WorkingSelection
+
+            result = WorkingSelection.model_json_schema()
         case "snapshot":
             result = Snapshot.model_json_schema()
         case "content":
@@ -710,7 +715,35 @@ def schema(
             require_lecture()
             result = LectureContent.model_json_schema()
         case _:
-            raise CampusError(Code.ACTION_REQUIRED, f"Unknown schema kind {kind}.")
+            from difflib import get_close_matches
+
+            kinds = (
+                "audio-manifest",
+                "audio-plan",
+                "batch",
+                "content",
+                "coverage",
+                "digest",
+                "exam",
+                "exercises",
+                "lecture-selection",
+                "lecture-selection-work",
+                "lectures",
+                "media-review",
+                "plan",
+                "preparation",
+                "review",
+                "schedule",
+                "snapshot",
+                "terms",
+            )
+            matches = get_close_matches(kind, kinds, n=1)
+            hint = (
+                f"Use `tum-mcp study schema {matches[0]}`."
+                if matches
+                else f"Available kinds: {', '.join(kinds)}."
+            )
+            raise CampusError(Code.ACTION_REQUIRED, f"Unknown schema kind {kind}. {hint}")
     if definition is not None:
         definitions = result.get("$defs", {})
         if definition not in definitions:
@@ -798,7 +831,25 @@ def verify(
 
     root = project.expanduser().resolve()
     results = loop.load(root, answer_item=item).answer_keys
-    emit(root, "verify", {"passed": all(r["passed"] for r in results), "items": results}, full=full)
+    checked = [r["compared"] for r in results if isinstance(r.get("compared"), int)]
+    passed = all(r["passed"] for r in results)
+    status = (
+        ("passed" if passed else "failed")
+        if any(checked)
+        else ("failed" if any(r["status"] == "failed" for r in results) else "no_checks")
+    )
+    emit(
+        root,
+        "verify",
+        {
+            "passed": passed,
+            "items": results,
+            "status": status,
+            "checked_items": sum(bool(count) for count in checked),
+            "comparisons": sum(checked),
+        },
+        full=full,
+    )
 
 
 @app.command(rich_help_panel="Check")

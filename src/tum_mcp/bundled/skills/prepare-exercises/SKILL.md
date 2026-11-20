@@ -76,6 +76,11 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    3. With an official solution, transcribe it, re-solve it and keep the correct answer.
       Its steps are the skeleton of your working; fill in the operations it skips. A slip
       in it gets one note line that names the difference, and that line is authored.
+      When a required input or rule is missing, set `blocked_reason` on the
+      affected exercise demand in the preparation file. A conditional guide can
+      help the student, but it does not satisfy a request for one definite
+      answer. Continue the other items. Clear the blocker after checking the
+      supplied rule and updating the answer and its key.
    4. Write the part map as the plan, `.tum-mcp/plans/exercises/<set>/<problem>.json`:
       each `part` with its `answer`, `method`, `official` locator and `needs` (the ideas the
       method uses, each linked to its Study `unit` and `block`, or with the reason none

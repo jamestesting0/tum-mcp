@@ -151,6 +151,11 @@ META_REFERENCE = re.compile(
     r"|\b(?:in|as) the (?:table|diagram|figure)(?: above| below)?(?: shows)?,",
     re.IGNORECASE,
 )
+STATEMENT_SOURCE_POINTER = re.compile(
+    r"\bin the (?:table|diagram|figure) (?:above|below),"
+    r"|\bthe lecture notes(?=\s*\()",
+    re.IGNORECASE,
+)
 # Mathematics typed as plain text: Greek letters, math symbols, sub/superscripts, a function
 # applied to a condition or several arguments (P(A|B), Q(S, a)) or a one-letter equation (V = 3).
 PLAIN_MATH = re.compile(
@@ -1791,6 +1796,32 @@ def uncited_page_flags(root: Path, content: StudyContent, flag: Flag) -> None:
                 run = []
 
 
+def _text_block_prose(blocks: tuple[Block, ...]) -> Iterator[str]:
+    for block in blocks:
+        if isinstance(block, TextBlock):
+            yield from (*block.paragraphs, *block.steps, *block.points)
+
+
+def _exercise_prose(exercise: Exercise) -> Iterator[tuple[str, Iterator[str]]]:
+    yield "statement", _text_block_prose(exercise.statement)
+    for step in exercise.steps:
+        yield f"guide {step.key} prompt", iter((step.prompt,))
+        yield f"guide {step.key} hint", iter(step.hints)
+        yield f"guide {step.key} blocks", _text_block_prose(step.blocks)
+        working = step.explanation
+        yield (
+            f"guide {step.key} explanation",
+            (iter((working,)) if isinstance(working, str) else _text_block_prose(working)),
+        )
+        if step.check and step.check.kind == "self_check":
+            answer = step.check.model_answer
+            if isinstance(answer, tuple):
+                yield f"guide {step.key} self-check", _text_block_prose(answer)
+            elif isinstance(answer, str):
+                yield f"guide {step.key} self-check", iter((answer,))
+    yield "solution", _text_block_prose(exercise.solution.blocks)
+
+
 def quality_flags(
     content: StudyContent | None, exercises: ExerciseContent | None, *, root: Path | None = None
 ) -> list[dict[str, JsonValue]]:
@@ -2151,59 +2182,26 @@ def quality_flags(
                     f"{len(exercise.parts)} parts share one guide; name each step's `part` so "
                     "every part gets its own guide.",
                 )
-            authored = (
-                [
-                    text
-                    for step in exercise.steps
-                    for text in (
-                        step.prompt,
-                        *step.hints,
-                        *((step.explanation,) if isinstance(step.explanation, str) else ()),
-                        *(
-                            part
-                            for block in (
-                                *step.blocks,
-                                *(() if isinstance(step.explanation, str) else step.explanation),
-                                *(
-                                    step.check.model_answer
-                                    if step.check
-                                    and step.check.kind == "self_check"
-                                    and isinstance(step.check.model_answer, tuple)
-                                    else ()
-                                ),
-                            )
-                            if isinstance(block, TextBlock)
-                            for part in (*block.paragraphs, *block.steps, *block.points)
-                        ),
+            for field, texts in _exercise_prose(exercise):
+                narrated = []
+                for text in texts:
+                    for sentence in re.split(r"(?<=[.!?])\s+", text):
+                        # Keep explicit provenance checks even when the statement also points
+                        # at its own table or uses “lecture notes” as the name of a resource.
+                        subject = (
+                            STATEMENT_SOURCE_POINTER.sub(" ", sentence)
+                            if field == "statement"
+                            else sentence
+                        )
+                        if match := PROVENANCE.search(sentence) or META_REFERENCE.search(subject):
+                            narrated.append(match.group())
+                if narrated:
+                    flag(
+                        exercise.key,
+                        "meta_reference",
+                        f"{field}: '{narrated[0][:90]}' talks about the material or its origin. "
+                        f"State the idea itself ({len(narrated)} matching sentence(s)).",
                     )
-                ]
-                + [
-                    part
-                    for block in exercise.solution.blocks
-                    if isinstance(block, TextBlock)
-                    for part in (*block.paragraphs, *block.steps, *block.points)
-                ]
-                + [
-                    part
-                    for block in exercise.statement
-                    if isinstance(block, TextBlock)
-                    for part in (*block.paragraphs, *block.steps, *block.points)
-                ]
-            )
-            narrated = [
-                sentence
-                for text in authored
-                for sentence in re.split(r"(?<=[.!?])\s+", text)
-                if META_REFERENCE.search(sentence) or PROVENANCE.search(sentence)
-            ]
-            if narrated:
-                flag(
-                    exercise.key,
-                    "meta_reference",
-                    f"{len(narrated)} sentence(s) in the statement, guide or solution talk "
-                    "about the material "
-                    f"instead of the subject, such as '{narrated[0][:90]}'; state the idea itself.",
-                )
             framing = [
                 sentence
                 for block in exercise.statement

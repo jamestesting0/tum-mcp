@@ -2,6 +2,7 @@
 
 import json
 import os
+import signal
 import subprocess
 import tempfile
 import threading
@@ -38,6 +39,9 @@ DROPPED_ENV_PREFIXES = ("CLAUDE_CODE_", "CODEX_", "OMO_", "SENPI_", "PI_", "UV_"
 DROPPED_ENV = frozenset(
     {"CLAUDECODE", "CLAUDE_CONFIG_DIR", "VIRTUAL_ENV", "PYTHONPATH", "PYTHONHOME"}
 )
+OFFLINE_ENV = frozenset(
+    {"PATH", "LANG", "LC_ALL", "LC_CTYPE", "TERM", "TMPDIR", "PLAYWRIGHT_BROWSERS_PATH"}
+)
 
 
 @dataclass
@@ -54,12 +58,19 @@ class TurnResult:
 
 
 def clean_environment(
-    extra: dict[str, str], profile: Path, path_prefix: Path | None, host: str
+    extra: dict[str, str],
+    profile: Path,
+    path_prefix: Path | None,
+    host: str,
+    *,
+    offline: bool = False,
 ) -> dict:
     environment = {
         key: value
         for key, value in os.environ.items()
-        if key not in DROPPED_ENV and not key.startswith(DROPPED_ENV_PREFIXES)
+        if key not in DROPPED_ENV
+        and not key.startswith(DROPPED_ENV_PREFIXES)
+        and (not offline or key in OFFLINE_ENV)
     }
     browsers = Path.home() / "Library" / "Caches" / "ms-playwright"
     if browsers.is_dir():
@@ -105,7 +116,24 @@ def claude_command(
     return command
 
 
-def checker_command(spec: ModelSpec) -> list[str]:
+def offline_permissions(readable: tuple[Path, ...], *, author: bool) -> list[str]:
+    """Grant the installed runtime and current workspace access, leaving the oracle and auth out."""
+    roots = {":minimal": "read", ":workspace_roots": "write" if author else "read"}
+    roots.update({str(path.resolve()): "read" for path in readable})
+    filesystem = ", ".join(f"{json.dumps(key)} = {json.dumps(mode)}" for key, mode in roots.items())
+    return [
+        "-c", 'default_permissions="fai_trial"',
+        "-c", f"permissions.fai_trial.filesystem={{{filesystem}}}",
+        "-c", "permissions.fai_trial.network.enabled=false",
+        "-c", "mcp_servers={}",
+        "-c", 'web_search="disabled"',
+        "-c", 'approval_policy="never"',
+    ]  # fmt: skip
+
+
+def checker_command(
+    spec: ModelSpec, *, permissions: tuple[Path, ...] = (), executable: str = "codex"
+) -> list[str]:
     """A fresh, read-only checker session with the trial's own model; `{prompt}` is filled in
     by `tum-mcp review run-checker`, which reads the answers from standard output."""
     if spec.host == "claude":
@@ -115,10 +143,14 @@ def checker_command(spec: ModelSpec) -> list[str]:
             "--disallowedTools", "Bash,Write,Edit,WebFetch,WebSearch",
         ]  # fmt: skip
     command = [
-        "codex", "exec", "--skip-git-repo-check", "-m", spec.model,
-        "-c", f'model_reasoning_effort="{spec.effort}"', "-s", "read-only",
-        "-c", "mcp_servers={}",
+        executable, "exec", "--skip-git-repo-check", "-m", spec.model,
+        "-c", f'model_reasoning_effort="{spec.effort}"',
     ]  # fmt: skip
+    command += (
+        offline_permissions(permissions, author=False)
+        if permissions
+        else ["-s", "read-only", "-c", "mcp_servers={}"]
+    )
     if spec.tier == "fast":
         command += ["-c", 'service_tier="priority"']
     return [*command, "{prompt}"]
@@ -132,9 +164,11 @@ def codex_command(
     session: str | None,
     judge: bool = False,
     downloads: str | None = None,
+    permissions: tuple[Path, ...] = (),
+    executable: str = "codex",
 ) -> list[str]:
     command = [
-        "codex",
+        executable,
         "exec",
         "--json",
         "--skip-git-repo-check",
@@ -149,6 +183,8 @@ def codex_command(
         command += ["-c", 'service_tier="priority"']
     if judge:
         command += ["-s", "read-only", "-c", "mcp_servers={}"]
+    elif permissions:
+        command += offline_permissions(permissions, author=True)
     else:
         command += ["-s", "workspace-write", "-c", "sandbox_workspace_write.network_access=false"]
         # Moodle downloads land in the run's own folder, outside the workspace; the trial must
@@ -284,6 +320,8 @@ def run_turn(
     timeout: int,
     raw: Path,
     judge: bool = False,
+    permissions: tuple[Path, ...] = (),
+    executable: str = "codex",
 ) -> TurnResult:
     if spec.host == "claude":
         command = claude_command(spec, message, session=session, judge=judge)
@@ -295,12 +333,14 @@ def run_turn(
             session=session,
             judge=judge,
             downloads=environment.get("TUM_MOODLE_DOWNLOAD_DIR"),
+            permissions=permissions,
+            executable=executable,
         )
     raw.parent.mkdir(parents=True, exist_ok=True)
     try:
         completed = capture_turn(command, workspace, environment, timeout)
         output, failure = completed.stdout, ""
-        if completed.returncode and not output.strip():
+        if completed.returncode and (permissions or not output.strip()):
             failure = f"exit {completed.returncode}: {completed.stderr.strip()[-400:]}"
     except subprocess.TimeoutExpired as expired:
         output = expired.stdout or ""
@@ -335,6 +375,7 @@ def capture_turn(
             stderr=errors,
             text=True,
             encoding="utf-8",
+            start_new_session=True,
         ) as process,
     ):
 
@@ -351,7 +392,7 @@ def capture_turn(
         try:
             process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            process.kill()
+            os.killpg(process.pid, signal.SIGKILL)
             process.wait()
             reader.join()
             raise subprocess.TimeoutExpired(command, timeout, output="".join(lines)) from None

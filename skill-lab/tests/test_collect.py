@@ -1,14 +1,236 @@
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from skill_lab import shim
+import pytest
+from skill_lab import scenarios, shim, variants
 from skill_lab.collect import checker_phases, collect_run, review_stats, transcript_stats
+
+from tum_mcp.course.app.build import current_data
+from tum_mcp.course.checks.batch import Batch, assess_batch
+from tum_mcp.course.content.exam_data import read_exam
+from tum_mcp.course.workflow.tasks import begin
 
 
 def _write(path, events):
     path.write_text("\n".join(json.dumps(event) for event in events), encoding="utf-8")
+
+
+def _calibration_run(
+    lab_state: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    project: str | None = ".",
+    skills: tuple[str, ...] | list[str] = (),
+    expected: dict[str, list[str]] | None = None,
+    scenario: str | None = None,
+) -> Path:
+    directory = lab_state / "rounds/r1/runs/candidate-1"
+    workspace = directory / "workspace"
+    workspace.mkdir(parents=True)
+    monkeypatch.setattr(variants, "python_of", lambda _: Path(sys.executable))
+    (directory / "run.json").write_text(
+        json.dumps(
+            {
+                "author": "codex:gpt-6.1-terra:high",
+                "status": "completed",
+                "variant": "candidate",
+                "project": project,
+                "scenario": scenario,
+                "turns": [
+                    {"turn": 1, "parts": [], "skills": skills, "expected_items": expected or {}}
+                ],
+            }
+        )
+    )
+    return directory
+
+
+def _study_cli(project: Path, *arguments: str) -> str:
+    return subprocess.run(
+        [sys.executable, "-I", "-m", "tum_mcp", "study", *arguments, str(project)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+
+
+def test_demo_collection_matches_independently_read_full_report(
+    lab_state: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    turn = scenarios.load("demo-calibration").turns[0]
+    directory = _calibration_run(
+        lab_state, monkeypatch, skills=turn.skills, expected=turn.expected_items
+    )
+    project = directory / "workspace"
+    _study_cli(project, "demo")
+    expected = json.loads(_study_cli(project, "report", "--json"))
+
+    measured = collect_run("r1", "candidate-1", visuals=False)
+
+    assert measured["quality_flags"] == len(expected["quality"]) == 20
+    assert measured["review_passed"] is expected["review"]["gate"]
+    assert measured["render_passed"] is expected["render"]["passed"]
+    assert measured["delivery"]["study"]["readable_items"] == ["study/components"]
+    assert measured["delivery"]["study"]["missing_items"] == []
+    assert measured["coverage_gaps"] == sum(
+        len(expected["coverage"][field])
+        for field in (
+            "not_inspected",
+            "outcome_gaps",
+            "enrichment_gaps",
+            "sources_without_outcomes",
+            "unprepared_items",
+            "units_without_outcomes",
+        )
+    ) + sum(
+        len(expected["coverage"]["cheatsheet"][field])
+        for field in ("gaps", "sources_without_requirements", "entries_without_requirement")
+    )
+    assert json.loads((directory / "report.json").read_text()) == expected
+
+
+@pytest.mark.parametrize(
+    ("project", "body", "exit_code", "status", "count"),
+    [
+        (None, "", 0, "not_measured", None),
+        (".", "", 0, "failed", None),
+        (".", "{", 0, "failed", None),
+        (".", "{}", 0, "failed", None),
+        (".", "specific report failure", 3, "failed", None),
+        (".", None, 0, "measured", 0),
+    ],
+)
+def test_report_status_distinguishes_unavailable_and_clean(
+    lab_state: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    project: str | None,
+    body: str | None,
+    exit_code: int,
+    status: str,
+    count: int | None,
+) -> None:
+    directory = _calibration_run(lab_state, monkeypatch, project=project)
+    if body is None:
+        # A real empty course report can be measured without producing a workspace.
+        root = directory / "workspace"
+        _study_cli(root, "demo")
+        for name in ("study", "exercises", "exam"):
+            shutil.rmtree(root / "app" / name)
+        assert json.loads(_study_cli(root, "report", "--json"))["quality"] == []
+    else:
+        emitter = tmp_path / "report-python"
+        emitter.write_text(
+            f"#!{sys.executable}\nimport sys\n"
+            f"print({body!r}, file=sys.stderr if {exit_code} else sys.stdout)\n"
+            f"sys.exit({exit_code})\n"
+        )
+        emitter.chmod(0o755)
+        monkeypatch.setattr(variants, "python_of", lambda _: emitter)
+
+    metrics = collect_run("r1", "candidate-1", visuals=False)
+
+    assert (metrics.get("report_status"), metrics.get("quality_flags")) == (status, count)
+    assert bool(metrics["report_error"]) is (status == "failed")
+    if exit_code:
+        assert "specific report failure" in metrics["report_error"]
+
+
+@pytest.mark.parametrize(
+    ("skills", "retained", "expected", "outcomes"),
+    [
+        (["prepare-exams"], {"exam"}, {}, {"exam": "partial"}),
+        (
+            ["prepare-lecture"],
+            {"lectures"},
+            {"lectures": ["lecture/missing"]},
+            {"lectures": "partial"},
+        ),
+        (
+            ["prepare-study", "prepare-exercises"],
+            {"exercises"},
+            {},
+            {"study": "absent", "exercises": "partial"},
+        ),
+    ],
+)
+def test_delivery_is_scoped_to_the_request(
+    lab_state: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    skills: list[str],
+    retained: set[str],
+    expected: dict[str, list[str]],
+    outcomes: dict[str, str],
+) -> None:
+    directory = _calibration_run(lab_state, monkeypatch, skills=skills, expected=expected)
+    project = directory / "workspace"
+    _study_cli(project, "demo", *(["--lectures"] if "lectures" in retained else []))
+    for name in {"study", "exercises", "exam", "lectures"} - retained:
+        folder = project / "app" / name
+        if folder.is_dir():
+            shutil.rmtree(folder)
+
+    metrics = collect_run("r1", "candidate-1", visuals=False)
+
+    assert {name: row["status"] for name, row in metrics.get("delivery", {}).items()} == outcomes
+    if expected:
+        assert metrics["delivery"]["lectures"]["missing_items"] == ["lecture/missing"]
+
+
+@pytest.mark.parametrize(
+    ("case", "status", "problem"),
+    [
+        ("draft", "complete", None),
+        ("stale-build", "partial", "Build the complete current draft."),
+        ("unrequested-sibling", "complete", None),
+        ("formal-review", "partial", "no current verdict"),
+    ],
+)
+def test_exam_delivery_uses_applicable_readiness(
+    lab_state: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+    status: str,
+    problem: str | None,
+) -> None:
+    item = "exam/mock/demo-forecast/demo-f1"
+    directory = _calibration_run(
+        lab_state, monkeypatch, skills=["prepare-exams"], expected={"exam": [item]}
+    )
+    project = directory / "workspace"
+    _study_cli(project, "demo")
+    for workspace in ("study", "exercises"):
+        shutil.rmtree(project / "app" / workspace)
+    (project / "app/data.mjs").write_bytes(current_data(project))
+    exam = read_exam(project)
+    assert exam is not None
+    # Browser receipts are verified separately. Exercise real batch checks and collection here.
+    monkeypatch.setattr("tum_mcp.course.checks.batch._browser_problems", lambda *args: [])
+    items = (item, "exam/mock/unrequested/missing") if case == "unrequested-sibling" else (item,)
+    batch = Batch(course_key=exam.course_key, request="Prepare one mock question.", items=items)
+    batch_path = project / ".tum-mcp/batches/mock.json"
+    batch_path.parent.mkdir()
+    batch_path.write_text(batch.model_dump_json())
+    begin(project, "mock", review_rounds=int(case == "formal-review"), owner="test")
+    if case == "stale-build":
+        (project / "app/data.mjs").unlink()
+    readiness = assess_batch(project, "mock")
+    assert readiness.ready is (case in {"draft", "formal-review"}), readiness.problems
+
+    measured = collect_run("r1", "candidate-1", visuals=False)
+
+    row = measured["delivery"]["exam"]
+    assert item in row["readable_items"]
+    assert row["missing_items"] == []
+    assert row["status"] == status, row["problems"]
+    if problem is not None:
+        assert any(problem in issue for issue in row["problems"]), row["problems"]
+    else:
+        assert row["problems"] == []
+    assert measured["review_passed"] is False
 
 
 def test_codex_usage_is_counted_once_per_thread(tmp_path):

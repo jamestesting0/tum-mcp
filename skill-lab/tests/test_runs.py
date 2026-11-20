@@ -1,8 +1,10 @@
 import json
+import os
 import shutil
 import subprocess
 import sys
 import textwrap
+from pathlib import Path
 
 import pytest
 import yaml
@@ -41,6 +43,169 @@ FAKE_CLAUDE = textwrap.dedent(
         print(json.dumps(event))
     """
 )
+
+
+def test_scored_cli_stages_same_session_and_claims_each_slot_once(
+    lab_state, tmp_path, monkeypatch, capsys
+):
+    from skill_lab import authoring_fixture, cli, scenarios, variants
+
+    fake = tmp_path / "codex"
+    fake.write_text(
+        f"#!{sys.executable}\n"
+        + textwrap.dedent("""
+        import json, os, pathlib, sys
+        if sys.argv[1:3] == ["login", "status"]:
+            print("Logged in using ChatGPT")
+            raise SystemExit(0)
+        if sys.argv[1] == "app-server":
+            trusted = set()
+            config = pathlib.Path(os.environ["CODEX_HOME"]) / "hooks.json"
+            entries = json.loads(config.read_text())["hooks"]
+            for line in sys.stdin:
+                call = json.loads(line)
+                if "id" not in call:
+                    continue
+                method, result = call["method"], {}
+                if method == "hooks/list":
+                    hooks = [
+                        {
+                            "source": "user", "sourcePath": str(config),
+                            "key": f"{name}{index}",
+                            "command": entry["hooks"][0]["command"],
+                            "enabled": True, "currentHash": "hash",
+                            "trustStatus": (
+                                "trusted" if f"{name}{index}" in trusted else "untrusted"
+                            ),
+                        }
+                        for name, values in entries.items()
+                        for index, entry in enumerate(values)
+                    ]
+                    result = {"data": [{"hooks": hooks}]}
+                if method == "config/batchWrite":
+                    trusted.update(call["params"]["edits"][0]["value"])
+                print(json.dumps({"id": call["id"], "result": result}), flush=True)
+            raise SystemExit(0)
+        work = pathlib.Path.cwd()
+        trace = work / "stub-turns.jsonl"
+        resumed = "resume" in sys.argv
+        state = json.loads((work / ".tum-mcp/state.json").read_text())
+        options = sys.argv
+        assert "mcp_servers={}" in options and "--add-dir" not in options
+        assert "OPENAI_API_KEY" not in os.environ and "TUM_MOODLE_TOKEN" not in os.environ
+        with trace.open("a") as log:
+            log.write(json.dumps([sys.argv[-1], resumed, "tutorial-erratum" in str(state)]) + "\\n")
+        message = "Which course rule?" if work.name.startswith("base") else "Understood."
+        print(json.dumps({"type": "thread.started", "thread_id": f"thread-{work.name}"}))
+        item = {"type": "agent_message", "text": message}
+        print(json.dumps({"type": "item.completed", "item": item}))
+        print(json.dumps({"type": "turn.completed"}))
+        """)
+    )
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-env-only")
+    monkeypatch.setenv("TUM_MOODLE_TOKEN", "test-env-only")
+    home = paths.profile_home("codex")
+    (home / ".codex").mkdir(parents=True)
+    (home / ".codex/models_cache.json").write_text(
+        json.dumps(
+            {
+                "models": [
+                    {
+                        "slug": "gpt-6.1-terra",
+                        "supported_reasoning_levels": [{"effort": "high"}],
+                    }
+                ]
+            }
+        )
+    )
+    installed_round = os.environ.get("SKILL_LAB_PREFLIGHT_VARIANTS")
+    baseline_ref = "WORKTREE"
+    for name in ("base", "candidate"):
+        variant = paths.round_dir("fai") / "variants" / name
+        if installed_round:
+            installed = Path(installed_round).resolve(strict=True) / name
+            baseline_ref = json.loads((installed / "variant.json").read_text())["spec"]["ref"]
+            variant.parent.mkdir(parents=True, exist_ok=True)
+            variant.symlink_to(installed, target_is_directory=True)
+            continue
+        variant.mkdir(parents=True)
+        package = variant / "venv/lib/python3.13/site-packages/tum_mcp"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text(f"version = {name!r}\n")
+        (variant / "variant.json").write_text(
+            json.dumps(
+                {
+                    "spec": {"ref": "WORKTREE", "patches": []},
+                    "installed_hash": variants.installed_hash(variant),
+                }
+            )
+        )
+    if not installed_round:
+        monkeypatch.setattr(variants, "python_of", lambda _: Path(sys.executable))
+    monkeypatch.setattr(runs, "campus_states", lambda: pytest.fail("campus preflight ran"))
+
+    def cli_run(*args):
+        parsed = cli.parser().parse_args(args)
+        parsed.func(parsed)
+        return json.loads(capsys.readouterr().out)
+
+    cli_run(
+        "round",
+        "new",
+        "fai",
+        "--fresh",
+        "--base",
+        baseline_ref,
+        "--scenario",
+        scenarios.FAI_JOURNEY,
+        "--author",
+        "codex:gpt-6.1-terra:high",
+        "--budget-runs",
+        "3",
+        "--budget-judges",
+        "0",
+        "--turn-timeout-min",
+        "12",
+        "--reason",
+        "safe subprocess stub",
+    )
+    with pytest.raises(LabError, match="allow repeats"):
+        cli_run("run", "fai", "--variant", "base", "--repeat", "2")
+    base = cli_run("run", "fai", "--variant", "base")[0]
+    with pytest.raises(LabError, match="already claimed"):
+        cli_run("run", "fai", "--variant", "base")
+    candidate = cli_run("run", "fai", "--variant", "candidate")[0]
+    resume = cli_run("run", "fai", "--variant", "candidate", "--scenario", scenarios.FAI_RESUME)[0]
+    assert [item["status"] for item in (base, candidate, resume)] == ["completed"] * 3, (
+        base,
+        candidate,
+        resume,
+    )
+    roots = [paths.round_dir("fai") / "runs" / item["id"] for item in (base, candidate, resume)]
+    assert len({(root / "workspace").resolve() for root in roots}) == 3
+    tags = []
+    for root in roots:
+        history, workspace = root / "history.git", root / "workspace"
+        tags.append(runs.git(history, workspace, "rev-parse", "turn-0^{tree}").strip())
+        trace = [
+            json.loads(row) for row in (workspace / "stub-turns.jsonl").read_text().splitlines()
+        ]
+        if root == roots[2]:
+            assert trace == [[scenarios.load(scenarios.FAI_RESUME).turns[0].say, False, False]]
+            continue
+        assert [row[0] for row in trace] == [
+            turn.say for turn in scenarios.load(scenarios.FAI_JOURNEY).turns
+        ]
+        assert [row[1] for row in trace] == [False, True, True]
+        assert authoring_fixture.CLARIFICATION_KEY not in runs.git(
+            history, workspace, "show", "turn-2:.tum-mcp/state.json"
+        )
+        assert authoring_fixture.CLARIFICATION_KEY in runs.git(
+            history, workspace, "show", "turn-3:.tum-mcp/state.json"
+        )
+    assert tags[0] == tags[1]
 
 
 @pytest.fixture

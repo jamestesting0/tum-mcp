@@ -1,14 +1,21 @@
 import json
+import sys
 from pathlib import Path
 
 import pytest
 from lecture_prepared_fixture import Prepared, prepare_recording
 from test_review_loop import answer, packets
+from typer.testing import CliRunner
 
+from tum_mcp.cli import app
+from tum_mcp.course.app.browser_evidence import browser_identity, save_receipt
 from tum_mcp.course.app.build import build
 from tum_mcp.course.checks.batch import assess_batch
+from tum_mcp.course.project.store import load_state
 from tum_mcp.course.review import loop
+from tum_mcp.course.sources import text
 from tum_mcp.errors import CampusError
+from tum_mcp.moodle.browsers import BrowserChoice
 
 
 @pytest.fixture
@@ -63,6 +70,229 @@ def write_batch(prepared: Prepared, extra: tuple[str, ...] = ()) -> None:
         ),
         encoding="utf-8",
     )
+
+
+@pytest.mark.parametrize(
+    ("gate", "command"),
+    [
+        ("build", "tum-mcp study build . --local-only"),
+        ("browser", "tum-mcp study visuals . --interact"),
+    ],
+)
+def test_lecture_readiness_reports_the_shared_check(
+    prepared: Prepared, monkeypatch: pytest.MonkeyPatch, gate: str, command: str
+) -> None:
+    write_selection(prepared, selection(prepared))
+    write_batch(prepared)
+    assert assess_batch(prepared.root, "complete").ready
+    if gate == "build":
+        (prepared.root / "app/data.mjs").unlink()
+    else:
+        from tum_mcp.course.checks import batch, preparation
+
+        monkeypatch.setattr(batch, "_browser_problems", preparation._browser_problems)
+    result = CliRunner().invoke(
+        app,
+        [
+            "study",
+            "report",
+            str(prepared.root),
+            "--section",
+            "readiness",
+            "--batch",
+            "complete",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0, result.output or repr(result.exception)
+    readiness = json.loads(result.output)["readiness"]
+    assert not readiness["ready"]
+    assert readiness["workspace_actions"]["lecture"]["status"] == "pending"
+    assert readiness["workspace_actions"]["lecture"]["command"] == command
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        pytest.param("interact/desktop/#lectures/bfs-lecture", id="interaction"),
+        pytest.param("shell/desktop/dark/lectures", id="shell"),
+        pytest.param(None, id="passing"),
+    ],
+)
+def test_exercise_blocker_does_not_hide_lecture_receipt(
+    prepared: Prepared, monkeypatch: pytest.MonkeyPatch, missing: str | None
+) -> None:
+    from tum_mcp.course.checks import batch, preparation
+
+    write_selection(prepared, selection(prepared))
+    exercise = "exercises/week-two/withheld"
+    write_batch(prepared, (exercise,))
+    monkeypatch.setattr(batch, "_browser_problems", preparation._browser_problems)
+    browser = BrowserChoice("Synthetic browser", sys.executable)
+    identity = browser_identity(prepared.root, browser)
+    monkeypatch.setattr(preparation, "browser_choice", lambda: browser)
+    states = {
+        "interact/desktop/#lectures/bfs-lecture": True,
+        "interact/phone/#lectures/bfs-lecture": True,
+        "shell/phone/light/lectures": True,
+        "shell/phone/dark/lectures": True,
+        "shell/desktop/light/lectures": True,
+        "shell/desktop/dark/lectures": True,
+    }
+    if missing:
+        states.pop(missing)
+    save_receipt(prepared.root, identity, states)
+
+    readiness = assess_batch(prepared.root, "complete")
+
+    exercise_problem = f"{exercise}: requested draft is missing."
+    lecture_problems = (f"{missing}: browser evidence is missing.",) if missing else ()
+    assert readiness.problems == (exercise_problem, *lecture_problems)
+    assert readiness.workspace_problems == {
+        "exercises": (exercise_problem,),
+        "lecture": lecture_problems,
+    }
+    assert not readiness.ready
+    actions = readiness.report()["workspace_actions"]
+    assert isinstance(actions, dict)
+    assert actions["lecture"] == {
+        "status": "pending" if missing else "prepared",
+        "prerequisite": next(iter(lecture_problems), None),
+        "command": "tum-mcp study visuals . --interact" if missing else None,
+        "problems": len(lecture_problems),
+    }
+
+
+def test_lecture_resume_reads_only_a_current_partial_selection(prepared: Prepared) -> None:
+    value = selection(prepared)
+    value["decisions"] = value["decisions"][:2]
+    folder = prepared.root / ".tum-mcp/work/lecture-selection"
+    folder.mkdir(parents=True)
+    checkpoint = folder / f"{prepared.recording.key}.json"
+    checkpoint.write_text(json.dumps(value))
+
+    command = [
+        "lecture",
+        "selection-progress",
+        str(prepared.root),
+        "--recording",
+        prepared.recording.key,
+    ]
+    result = CliRunner().invoke(app, command)
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    assert report["next_interval"]["start_s"] == 60
+    assert [
+        {key: decision[key] for key in ("interval", "disposition", "entry", "reason")}
+        for decision in report["decisions"]
+    ] == value["decisions"]
+    assert not report["ready_to_finalize"]
+    write_batch(prepared)
+    assert not assess_batch(prepared.root, "complete").ready
+
+    (resource,) = load_state(prepared.root).resources
+    assert resource.path and resource.sha256
+    material_path = prepared.root / resource.path
+    original = material_path.read_bytes()
+    value["materials"] = [{"key": resource.resource.key, "sha256": resource.sha256}]
+    value["decisions"][1]["material"] = resource.resource.key
+    checkpoint.write_text(json.dumps(value))
+    material_path.write_bytes(original + b"\nRevised slide.")
+    result = CliRunner().invoke(app, command)
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    assert report["next_interval"]["start_s"] == 20
+    assert len(report["decisions"]) == 1
+    assert any("current material" in problem for problem in report["problems"])
+    material_path.write_bytes(original)
+
+    value["transcript_sha256"] = "f" * 64
+    checkpoint.write_text(json.dumps(value))
+    result = CliRunner().invoke(app, command)
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    assert report["next_interval"]["start_s"] == 0
+    assert report["decisions"] == []
+    assert any("transcript" in problem for problem in report["problems"])
+
+    result = CliRunner().invoke(app, [*command, "--finalize"])
+    assert result.exit_code != 0 and "another transcript" in str(result.exception)
+    assert not (prepared.root / ".tum-mcp/lecture-review").exists()
+    checkpoint.write_text(json.dumps(selection(prepared)))
+    result = CliRunner().invoke(app, [*command, "--finalize"])
+    assert result.exit_code == 0, result.output or repr(result.exception)
+    assert not any("selection map" in p for p in assess_batch(prepared.root, "complete").problems)
+
+
+def test_lecture_inspect_distinguishes_missing_and_out_of_scope_meetings(
+    prepared: Prepared,
+) -> None:
+    root = prepared.root
+    key = prepared.recording.key
+    (root / ".tum-mcp/schedule.json").write_text(
+        json.dumps(
+            {
+                "sessions": [
+                    {"on": on, "sources": [key], "label": label, "basis": "course page"}
+                    for on, label in (
+                        ("2026-10-25", "Search"),
+                        ("2026-10-26", "Missing recording"),
+                        ("2026-11-02", "Later topic"),
+                    )
+                ]
+            }
+        )
+    )
+    result = CliRunner().invoke(app, ["lecture", "inspect", str(root), "--through", "2026-10-26"])
+    assert result.exit_code == 0, result.output or repr(result.exception)
+    meetings = json.loads(result.output)["meetings"]
+    assert [(row["date"], row["disposition"], row["recordings"]) for row in meetings] == [
+        ("2026-10-25", "available", [key]),
+        ("2026-10-26", "missing", []),
+        ("2026-11-02", "out_of_scope", []),
+    ]
+
+
+def test_reviewer_distinguishes_source_freshness_from_page_bounds(prepared: Prepared) -> None:
+    root = prepared.root
+    (material,) = load_state(root).resources
+    key = material.resource.key
+    assert material.sha256
+    checkpoint = root / ".tum-mcp/digests" / f"{key}.json"
+    checkpoint.parent.mkdir(exist_ok=True)
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "source": key,
+                "sha256": material.sha256,
+                "examples": [{"pages": "2", "text": "An example on the second page."}],
+            }
+        )
+    )
+
+    def evidence() -> dict:
+        return loop._digests(root, {"sources": [key]})[0]
+
+    initial = evidence()
+    assert initial["status"] == "current" and initial["locator_status"] == "unverified"
+    cache = root / ".tum-mcp/cache/text" / f"{material.sha256}.json"
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(
+        text.TextRecord(
+            extractor=text.EXTRACTOR,
+            sha256=material.sha256,
+            kind="pdf",
+            pages=(text.TextPage(number=1, text="First page.", available=True),),
+        ).model_dump_json()
+    )
+    assert evidence()["locator_status"] == "invalid"
+    assert evidence()["pages_outside"] == ["2"]
+    path = root / ".tum-mcp/state.json"
+    state = json.loads(path.read_bytes())
+    state["resources"][0]["status"] = "withdrawn"
+    path.write_text(json.dumps(state))
+    assert evidence()["availability"] == "unavailable"
+    assert "examples" not in evidence()
 
 
 @pytest.mark.parametrize("missing", ["map", "interval", "output"])

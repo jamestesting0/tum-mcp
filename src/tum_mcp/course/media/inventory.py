@@ -65,6 +65,7 @@ class MediaItem:
     visuals: tuple[str, ...] = ()
     locations: tuple[tuple[str, str], ...] = ()
     guidance_sha256: str = ""
+    publication_sha256: str | None = None
 
     @property
     def revision(self) -> str:
@@ -79,6 +80,39 @@ class MediaInventory:
     structure: list[dict[str, JsonValue]] = field(default_factory=list)
     known: set[str] = field(default_factory=set)
     unreadable: set[str] = field(default_factory=set)
+    planned_stems: dict[str, str] = field(default_factory=dict)
+    published_stems: dict[str, str] = field(default_factory=dict)
+
+    def requested(self, ref: str) -> MediaItem | str:
+        """Resolve a requested stem and retain the inventory's reason for blocking it."""
+        folder = "audio" if ref.startswith("audio/") else "videos"
+        for entry in self.invalid:
+            if entry.get("path") in {f"{folder}/plan.json", f"{folder}/manifest.json"}:
+                return str(entry["note"])
+        key = self.planned_stems.get(ref)
+        if key is None:
+            if ref in self.published_stems:
+                return "published stem is no longer selected in the current plan."
+            return "requested stem is not published in the current plan."
+        if key == self.published_stems.get(ref):
+            for entry in self.invalid:
+                if entry.get("item") == key:
+                    return str(entry["note"])
+            item = next((item for item in self.items if item.item == key), None)
+            if item is not None and (item.stale or item.technical):
+                return ", ".join((*item.stale, *item.technical))
+        else:
+            item = None
+        for entry in self.pending:
+            if entry["item"] == key:
+                reason = entry["reason"]
+                if reason == "new":
+                    return "requested stem is not published yet."
+                source = f" ({entry['source']})" if "source" in entry else ""
+                return f"current plan {reason}{source}."
+        if item is None:
+            return "requested stem has no matching published receipt."
+        return item
 
 
 def _bound(record: AudioManifest | AudioPlan | Manifest | VideoPlan, state: StudyState) -> None:
@@ -213,6 +247,7 @@ def _audio_item(
         tuple(technical),
         guidance_sha256=guide,
         locations=tuple((chapter.key, "") for chapter in chapters.root),
+        publication_sha256=sha256(canonical(receipt.model_dump(mode="json"))),
     )
 
 
@@ -376,6 +411,7 @@ def _video_item(
         receipt.visuals,
         tuple((b.chapter, b.key) for b in receipt.beats),
         guide,
+        publication_sha256=sha256(canonical(receipt.model_dump(mode="json"))),
     )
 
 
@@ -425,6 +461,7 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
         match manifest:
             case AudioManifest():
                 for key, receipt in manifest.categories.items():
+                    result.published_stems[f"audio/{receipt.stem}"] = f"audio/{key}"
                     result.known.add(f"audio/{key}")
                     try:
                         if content is None and any(u.kind == "unit" for u in receipt.units):
@@ -435,7 +472,8 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                         result.items.append(item)
                         result.structure.append(item.structure)
                     except (CampusError, OSError) as error:
-                        result.invalid.append({"item": f"audio/{key}", "note": str(error)})
+                        note = error.message if isinstance(error, CampusError) else str(error)
+                        result.invalid.append({"item": f"audio/{key}", "note": note})
                         result.structure.append(
                             {
                                 "item": f"audio/{key}",
@@ -444,6 +482,9 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                             }
                         )
             case Manifest():
+                result.published_stems.update(
+                    (f"video/{stem}", f"video/{stem}") for stem in manifest.videos
+                )
                 result.known.update(f"video/{stem}" for stem in manifest.videos)
                 if source_inventory is not None:
                     for stem, receipt in manifest.videos.items():
@@ -452,7 +493,8 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                             result.items.append(item)
                             result.structure.append(item.structure)
                         except (CampusError, OSError, SyntaxError, UnicodeError) as error:
-                            result.invalid.append({"item": f"video/{stem}", "note": str(error)})
+                            note = error.message if isinstance(error, CampusError) else str(error)
+                            result.invalid.append({"item": f"video/{stem}", "note": note})
                             result.structure.append(
                                 {
                                     "item": f"video/{stem}",
@@ -492,6 +534,7 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                     *(k for k in plan.categories if k not in plan.category_order),
                 ):
                     desired = plan.categories[key]
+                    result.planned_stems[f"audio/{desired.stem}"] = f"audio/{key}"
                     old = published.get(key)
                     actual = next((i for i in result.items if i.item == f"audio/{key}"), None)
                     affected_units = {u.target for u in desired.units}
@@ -538,6 +581,7 @@ def discover(root: Path, state: StudyState, content: StudyContent | None) -> Med
                         result.structure.append({"source": identity, "decision": "text-first"})
                         continue
                     key = f"video/{desired.stem}"
+                    result.planned_stems[key] = key
                     old = (
                         manifest.videos.get(desired.stem)
                         if isinstance(manifest, Manifest)

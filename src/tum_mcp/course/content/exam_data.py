@@ -28,6 +28,7 @@ from tum_mcp.course.content.exam import (
     NEAR_VERBATIM,
     ExamContent,
     Mock,
+    SourceRole,
     block_text,
     concept_revision,
     mock_revision,
@@ -39,7 +40,7 @@ from tum_mcp.course.content.exam import (
 from tum_mcp.course.content.exercises import ExerciseContent
 from tum_mcp.course.content.latex import inline_math
 from tum_mcp.course.content.store import locate, read_json
-from tum_mcp.course.content.study import StudyContent, compile_formulas, has_visual
+from tum_mcp.course.content.study import SourceVersion, StudyContent, compile_formulas, has_visual
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.store import confined, digest
 from tum_mcp.errors import CampusError, Code
@@ -80,6 +81,13 @@ def read_exam(root: Path) -> ExamContent | None:
 
 def stale_exam(root: Path, state: StudyState, content: ExamContent) -> tuple[str, ...]:
     """Items whose cited sources changed; only these need review before the next build."""
+    return tuple(stale_exam_sources(root, state, content))
+
+
+def stale_exam_sources(
+    root: Path, state: StudyState, content: ExamContent, owners: set[str] | None = None
+) -> dict[str, tuple[str, ...]]:
+    """Find changed source keys by Exam record, optionally limited to displayed records."""
     if state.course.key != content.course_key:
         raise CampusError(Code.SCOPE_DENIED, "Exam belongs to a different course.")
     resources = {item.resource.key: item for item in state.resources}
@@ -100,26 +108,79 @@ def stale_exam(root: Path, state: StudyState, content: ExamContent) -> tuple[str
             )
         return current[(key, sha256)]
 
-    stale: list[str] = []
-    if content.profile and not all(fresh(s.key, s.sha256) for s in content.profile.sources):
-        stale.append("profile")
-    for label, items in (
-        ("concept", content.concepts),
-        ("pattern", content.patterns),
-        ("mock", content.mocks),
-    ):
-        stale.extend(
-            f"{label}:{item.key}"
-            for item in items
-            if not all(fresh(source.key, source.sha256) for source in item.sources)
-        )
-    stale.extend(
-        f"variant:{variant.key}"
+    records: dict[str, tuple[SourceVersion | SourceRole, ...]] = {
+        **({"profile": content.profile.sources} if content.profile else {}),
+        **{f"concept:{item.key}": item.sources for item in content.concepts},
+        **{f"pattern:{item.key}": item.sources for item in content.patterns},
+        **{f"mock:{item.key}": item.sources for item in content.mocks},
+    }
+    records.update(
+        (f"variant:{variant.key}", variant.sources)
         for sitting in content.sittings
         for variant in sitting.variants
-        if not all(fresh(source.key, source.sha256) for source in variant.sources)
     )
-    return tuple(stale)
+    return {
+        owner: changed
+        for owner, sources in records.items()
+        if (owners is None or owner in owners)
+        and (
+            changed := tuple(
+                source.key for source in sources if not fresh(source.key, source.sha256)
+            )
+        )
+    }
+
+
+def exam_surface_sources(content: ExamContent, items: set[str]) -> dict[str, set[str]]:
+    """Source-bearing records rendered by each selected Exam item."""
+    surfaces: dict[str, set[str]] = {}
+    concepts = {concept.key: concept for concept in content.concepts}
+    past = content.past_questions()
+
+    def entries(keys: set[str]) -> set[str]:
+        records = {f"concept:{key}" for key in keys}
+        records.update(
+            f"pattern:{concepts[key].workflow_from}" for key in keys if concepts[key].workflow_from
+        )
+        # A tested entry displays its occurrence across considered past sittings.
+        tested = {key for key in keys if concepts[key].basis == "tested"}
+        records.update(
+            f"variant:{variant.key}"
+            for sitting, variant, question in past.values()
+            if sitting.relevance in CONSIDERED
+            and question.status == "classified"
+            and tested.intersection(question.concepts)
+        )
+        return records
+
+    if "exam/sheet" in items:
+        surfaces["exam/sheet"] = entries(set(concepts))
+    for pattern in content.patterns:
+        item = f"exam/pattern/{pattern.key}"
+        if item in items:
+            examples = {example.question for example in pattern.examples if example.question}
+            surfaces[item] = {
+                f"pattern:{pattern.key}",
+                *entries(set(pattern.concepts)),
+                *(
+                    f"variant:{variant.key}"
+                    for _, variant, question in past.values()
+                    if question.key in examples or pattern.key in question.patterns
+                ),
+            }
+    for mock in content.mocks:
+        selected = {f"exam/mock/{mock.key}/{question.key}" for question in mock.questions} & items
+        if selected:
+            # All questions are rendered on the mock's shared route. Only timed mocks
+            # show the profile's allowed-aids field.
+            records = {
+                f"mock:{mock.key}",
+                *entries({key for q in mock.questions for key in q.concepts}),
+            }
+            if mock.kind == "exam" and content.profile and content.profile.allowed_aids:
+                records.add("profile")
+            surfaces.update((item, records) for item in selected)
+    return surfaces
 
 
 def check_exercise_links(content: ExamContent, exercises: ExerciseContent | None) -> None:

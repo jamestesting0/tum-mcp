@@ -9,6 +9,7 @@ from pathlib import Path
 
 from skill_lab import LabError, hosts, models, paths, rounds
 from skill_lab.models import ModelSpec
+from skill_lab.runs import inventory_hash
 
 DIMENSIONS = (
     "correctness",
@@ -66,15 +67,11 @@ def rubric_references(run: dict) -> Path:
     return repo / "src/tum_mcp/bundled/skills/review-course/references"
 
 
-def copy_sources(runs: list[dict], destination: Path) -> bool:
-    """Give the judge every material either run read; report whether they read the same."""
-    hashes = {run.get("inventory_hash") for run in runs}
-    for run in runs:
-        project = paths.round_dir(run["round"]) / "runs" / run["id"] / "workspace"
-        materials = project / str(run.get("project")) / "materials"
-        if run.get("project") and materials.is_dir():
-            shutil.copytree(materials, destination, dirs_exist_ok=True)
-    return len(hashes) == 1
+def copy_sources(run: dict, destination: Path) -> str | None:
+    """Copy available materials and verify the inventory of the copied bytes."""
+    workspace = paths.round_dir(run["round"]) / "runs" / run["id"] / "workspace"
+    destination.mkdir(parents=True)
+    return inventory_hash(workspace, copy_to=destination)
 
 
 def assign_ids(pair_key: str) -> dict[str, str]:
@@ -129,8 +126,10 @@ def build_packet(pair_key: str, left: dict, right: dict, packet: Path) -> dict:
     if packet.exists():
         shutil.rmtree(packet)
     runs = {"left": left, "right": right}
+    inventories = {}
     for letter, side in ids.items():
         copy_candidate(runs[side], packet / "candidates" / letter)
+        inventories[letter] = copy_sources(runs[side], packet / "sources" / letter)
     apps = {letter: packet / "candidates" / letter / "app" for letter in ids}
     unjudged = {}
     for name, workspace in WORKSPACE_FOLDERS.items():
@@ -141,14 +140,19 @@ def build_packet(pair_key: str, left: dict, right: dict, packet: Path) -> dict:
     # The bundled data repeats every workspace, including any left out above.
     for app in apps.values():
         (app / "data.mjs").unlink(missing_ok=True)
-    same_materials = copy_sources([left, right], packet / "sources")
+    same_materials = None if None in inventories.values() else inventories["A"] == inventories["B"]
     # The rubric comes from the reference run's variant, in whichever round it ran.
     references = rubric_references(left)
     (packet / "rubric").mkdir(parents=True)
     for name in RUBRIC_FILES:
         if (references / name).is_file():
             shutil.copy2(references / name, packet / "rubric" / name)
-    return {"ids": ids, "unjudged": unjudged, "same_materials": same_materials}
+    return {
+        "ids": ids,
+        "unjudged": unjudged,
+        "same_materials": same_materials,
+        "available_source_inventories": inventories,
+    }
 
 
 def parse_verdict(text: str) -> dict:
@@ -218,6 +222,11 @@ def judge_pair(
     names = {"left": left_variant, "right": right_variant}
     prompt = (paths.PROMPTS / "judge.md").read_text(encoding="utf-8")
     prompt = prompt.replace("{dimensions}", ", ".join(DIMENSIONS))
+    prompt += (
+        "\nUse `sources/A/` for candidate A and `sources/B/` for candidate B. "
+        "These directories hold available materials for each candidate, with each project's "
+        "relative root preserved. Availability does not establish that the author read a file.\n"
+    )
     timeout = int(config["budget"]["turn_timeout_min"]) * 60
     sessions = []
     for spec in judges:
@@ -259,6 +268,7 @@ def judge_pair(
         "author": left["author"],
         "unjudged": built["unjudged"],
         "same_materials": built["same_materials"],
+        "available_source_inventories": built["available_source_inventories"],
         "ids": ids,
         "sessions": sessions,
         "all_prefer_right": bool(winners)
@@ -301,7 +311,7 @@ def review_run(round_id: str, run_id: str, *, judges: list[ModelSpec] | None = N
     if packet.exists():
         shutil.rmtree(packet)
     copy_candidate(run, packet / "candidates" / "A")
-    copy_sources([run], packet / "sources")
+    copy_sources(run, packet / "sources")
     references = rubric_references(run)
     (packet / "rubric").mkdir(parents=True)
     for name in RUBRIC_FILES:
@@ -309,6 +319,7 @@ def review_run(round_id: str, run_id: str, *, judges: list[ModelSpec] | None = N
             shutil.copy2(references / name, packet / "rubric" / name)
     prompt = (paths.PROMPTS / "review.md").read_text(encoding="utf-8")
     prompt = prompt.replace("{dimensions}", ", ".join(DIMENSIONS))
+    prompt += "\nThe sources directory contains available materials. Reads are unverified.\n"
     timeout = int(config["budget"]["turn_timeout_min"]) * 60
     sessions = []
     for spec in judges:

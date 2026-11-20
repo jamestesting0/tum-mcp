@@ -81,6 +81,9 @@ def main(argv: list[str]) -> int:
         return 2
     split = argv.index("--")
     options, command = argv[:split], argv[split + 1 :]
+    if "--offline" in options:
+        print(BLOCKED_MESSAGE, file=sys.stderr)
+        return 2
     blocked: set[str] = set()
     if "--block" in options:
         blocked = {name for name in options[options.index("--block") + 1].split(",") if name}
