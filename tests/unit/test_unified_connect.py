@@ -1,5 +1,7 @@
 import json
+import time
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 from urllib.parse import urlsplit
 
@@ -132,7 +134,7 @@ def test_pending_sign_in_failure_names_the_service_and_preserves_completed_conne
         {"name": "session", "value": "synthetic-only", "domain": "www.moodle.tum.de"}
     ]
     ticks = iter((0, 1, 601))
-    monkeypatch.setattr(connect.time, "monotonic", lambda: next(ticks))
+    monkeypatch.setattr(connect, "time", SimpleNamespace(monotonic=ticks.__next__, time=time.time))
     monkeypatch.setattr(connect, "sync_playwright", manager)
     if browser_closed:
         context.new_page.return_value.wait_for_timeout.side_effect = connect.BrowserError("closed")
