@@ -27,9 +27,8 @@ Recommended models:
 
 | Model | Why |
 | --- | --- |
-| GPT Terra high | Balanced |
 | GPT Luna max | Free |
-| GPT Sol medium | Cost-effective intelligence |
+| GPT-6.2 Sol medium | Cost-effective intelligence |
 | Opus medium | Best choice for Claude |
 | Cursor Auto | Free |
 
