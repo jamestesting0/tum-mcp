@@ -113,7 +113,7 @@ def test_scored_cli_stages_same_session_and_claims_each_slot_once(
             {
                 "models": [
                     {
-                        "slug": "gpt-6.1-terra",
+                        "slug": "gpt-6.2-sol",
                         "supported_reasoning_levels": [{"effort": "high"}],
                     }
                 ]
@@ -161,7 +161,7 @@ def test_scored_cli_stages_same_session_and_claims_each_slot_once(
         "--scenario",
         scenarios.FAI_JOURNEY,
         "--author",
-        "codex:gpt-6.1-terra:high",
+        "codex",
         "--budget-runs",
         "3",
         "--budget-judges",
