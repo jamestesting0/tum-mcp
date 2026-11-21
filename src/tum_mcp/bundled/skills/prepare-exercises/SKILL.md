@@ -127,9 +127,9 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    `tum-mcp study links PROJECT` lists what is still undecided and records a reason when no
    link fits.
 5. Finish Phase A of the [draft checks](../prepare-study/references/loop.md) without its
-   digest and plan gate: build the batch, run `tum-mcp study verify PROJECT`, run
-   `tum-mcp study visuals PROJECT --exercise SET/KEY` and `--interact`, and
-   link every problem of each sheet in the
+   digest and plan gate. Use the answer results from item lint and batch readiness.
+   Build the batch, run `tum-mcp study visuals PROJECT --exercise SET/KEY` and
+   `--interact`, and link every problem of each sheet in the
    [coverage ledger](../prepare-study/references/coverage.md) (its set declares the
    sheet it covers). Keep provisional sheets separate from assigned coursework. Check
    the preparation scope for both workspaces if both were requested, then ask once before

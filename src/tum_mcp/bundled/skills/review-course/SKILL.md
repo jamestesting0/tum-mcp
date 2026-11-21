@@ -147,18 +147,19 @@ scores.
       while the original source revisions, request and required demands stay fixed.
    6. Finish every original finding and draft repair before running
       `tum-mcp review verify PROJECT` in the open round. Give its packets to fresh
-      checkers and record every batch. A verify packet judges each listed check on the
-      changed blocks and how they fit their surroundings; the earlier pass already judged
-      the rest. Read every changed block against its cited source
-      pages and the reference selection. A finding demanding another worked example
-      must name the missing understanding or decision the existing examples cannot show;
+      checkers and record every batch. For items marked `full_item`, judge the assigned
+      checks on the entire new item and its cited sources. For other items, judge the
+      changed blocks and how they fit their surroundings. Read each changed block
+      against its cited source pages and the reference selection. A finding demanding
+      another worked example must name the missing understanding or decision the existing examples cannot show;
       otherwise it is not a defect. The weakness is repetition added without a teaching
       purpose. A distinct source demonstration or needed boundary case can still be essential.
       Repair only findings this pass opened, then run `review verify PROJECT` again.
-      This second pass asks all stale checks, visuals, fixes and rulings only for items
-      changed since the first pass. Record its fresh answers, then close. There are at
-      most two verify passes per round. Report repairs after the second as unverified;
-      another check needs another round requested by the student.
+      This second pass includes newly added items and asks for stale checks, visuals,
+      fixes and rulings on items changed since the first pass. Record its fresh
+      answers, then close. There are at most two verify passes per round. Report
+      repairs after the second as unverified. Another check needs another round
+      requested by the student.
    7. `tum-mcp review close-round PROJECT` computes the gate and writes
       `.tum-mcp/loop/scorecard.md`. Use `review status` to check progress while a
       round is open. If a packet cannot be recorded, finish the available repairs

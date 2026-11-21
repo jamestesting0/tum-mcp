@@ -12,6 +12,7 @@ from tum_mcp.cli import app
 from tum_mcp.course.app.build import build
 from tum_mcp.course.checks.plans import plan_packet, record_gate
 from tum_mcp.course.review import loop
+from tum_mcp.course.review.registry import judged
 from tum_mcp.course.review.repair_scope import repair_scope
 from tum_mcp.course.workflow import tasks
 from tum_mcp.errors import CampusError
@@ -85,6 +86,56 @@ def split(project: Path) -> None:
     )
     approve(project)
     build(project, publish=False)
+
+
+@pytest.mark.parametrize("earlier_passes", [0, 1, 2])
+def test_new_unit_receives_full_verification_in_the_open_round(
+    splitting: Path, monkeypatch: pytest.MonkeyPatch, earlier_passes: int
+) -> None:
+    for packet in packets(splitting, loop.next_round(splitting)):
+        loop.record(splitting, answer(packet), "fresh")
+    for _ in range(earlier_passes):
+        for packet in packets(splitting, loop.verify_round(splitting)):
+            loop.record(splitting, answer(packet), "fresh")
+
+    split(splitting)
+    runner = CliRunner()
+    repair = runner.invoke(
+        app,
+        ["review", "repair-scope", str(splitting), "--reason", "Separate the boundary decision."],
+    )
+    assert repair.exit_code == 0, repair.output
+    if earlier_passes == 2:
+        with pytest.raises(CampusError, match="already has two verify passes"):
+            loop.verify_round(splitting)
+        card = loop.close_round(splitting)
+        entry = next(row for row in card["items"] if row["item"] == "study/graphs-boundary")
+        assert not entry["fresh"] and entry["scores"] == {}
+        return
+
+    monkeypatch.setattr(loop, "PACKET_VERDICTS", 4)
+    result = runner.invoke(app, ["review", "verify", str(splitting)])
+    assert result.exit_code == 0, result.output
+    verification = packets(splitting, json.loads(result.output))
+    entries = [
+        entry
+        for packet in verification
+        for entry in packet["items"]
+        if entry["item"] == "study/graphs-boundary"
+    ]
+    assert {check for entry in entries for check in entry["needs"]} == {
+        check.id for check in judged("study-unit")
+    }
+    assert len(entries) > 1
+    assert all(entry["full_item"] for entry in entries)
+    assert "review verify" in json.loads(repair.output)["next"]
+    for packet in verification:
+        loop.record(splitting, answer(packet), "fresh")
+    card = loop.scorecard(loop.load(splitting), loop.read_state(splitting))
+    assert next(row for row in card["items"] if row["item"] == "study/graphs-boundary")["fresh"]
+    if earlier_passes == 1:
+        with pytest.raises(CampusError, match="already has two verify passes"):
+            loop.verify_round(splitting)
 
 
 @pytest.mark.parametrize("closed", [False, True])

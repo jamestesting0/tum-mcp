@@ -8,7 +8,7 @@ import datetime
 import json
 import re
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Container
 from dataclasses import dataclass, field, replace
 from functools import cache
 from importlib.resources import files
@@ -64,9 +64,11 @@ PACKET_CHARS = 60_000
 PACKET_VERDICTS = 30
 GATED = ("correctness", "coverage")
 REPAIR_GUIDANCE = (
-    "This is a verify packet. The earlier pass already judged the unchanged blocks, and "
-    "each item's `changed` lists the blocks edited since. Judge each listed check on the "
-    "changed blocks and on how they fit the passages around them; read the rest as context, "
+    "This is a verify packet. For an item marked `full_item`, read all its passages and "
+    "cited sources and judge each assigned check on the full item. "
+    "For other items, `changed` lists the blocks edited since the earlier review. "
+    "Judge each listed check on the changed blocks and how they fit the surrounding "
+    "passages; read the rest as context, "
     "not for a second review. "
     "Read every changed block against its cited source pages and the reference selection. "
     "A finding demanding an added worked example must name the decision the existing runs "
@@ -804,18 +806,34 @@ def verify_round(root: Path) -> dict[str, JsonValue]:
                 ).read_bytes()
             )["items"]
         }
+    new_items = frozenset(
+        key
+        for key in state.scope
+        if key not in fingerprints
+        and any(
+            repair.get("round") == state.round
+            and isinstance(added := repair.get("added"), list)
+            and key in added
+            for repair in state.structural_repairs
+        )
+    )
     scope = tuple(
         key
         for key in state.scope
         if key in context.items
         and (
             not passes
+            or key in new_items
             or (key in fingerprints and packet_fingerprint(context.items[key]) != fingerprints[key])
             or (key not in fingerprints and bool(_changed(context.root, context.items[key])))
         )
     )
     packets, writes = _packets(
-        context, state.model_copy(update={"scope": scope}), state.round, verify=passes + 1
+        context,
+        state.model_copy(update={"scope": scope}),
+        state.round,
+        verify=passes + 1,
+        full_items=new_items,
     )
     log = log.model_copy(
         update={
@@ -856,7 +874,13 @@ def profile_guidance(profile: str) -> str:
 
 
 def _packets(
-    context: Context, state: LoopState, number: int, *, verify: int, fresh_nonce: str = ""
+    context: Context,
+    state: LoopState,
+    number: int,
+    *,
+    verify: int,
+    fresh_nonce: str = "",
+    full_items: Container[str] = (),
 ) -> tuple[list[str], list[Write]]:
     sheets = current_sheets(context.root) if context.visuals else {}
     read_digest = _digest_reader(context.root)
@@ -866,7 +890,7 @@ def _packets(
             continue
         tasks = item_tasks(context, key)
         item, record = context.items[key], context.record(key)
-        if fresh_nonce:
+        if fresh_nonce or key in full_items:
             tasks["needs"] = [check.id for check in registry.judged(item.profile)]
         if not (tasks["needs"] or tasks["verify"] or tasks["visuals"] or tasks["rule"]):
             continue
@@ -875,6 +899,7 @@ def _packets(
                 "item": key,
                 "title": item.title,
                 "fingerprint": packet_fingerprint(item),
+                **({"full_item": True} if key in full_items else {}),
                 **(
                     {
                         "preparation": {

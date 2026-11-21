@@ -140,9 +140,10 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    does change, finish related changes and local lint before submitting the changed
    plans together. Do not spend another checker launch on a passing plan's advice.
 5. **Solve first.** For a computed trace, result or mock question, write
-   `.tum-mcp/checks/<item>.py` before the item. `study verify PROJECT` runs it and
-   compares its JSON with the content. Reuse solved plan instances unless the input or
-   method changed.
+   `.tum-mcp/checks/<item>.py` before the item. Item lint runs that key and compares
+   its JSON with the content. Use current lint and readiness results as the draft's
+   answer evidence. For a separate answer report, run `study verify PROJECT --item ITEM`.
+   Reuse solved plan instances unless the input or method changed.
 
    The weakness is a checked endpoint with unchecked intermediate reasoning.
    Each authored walkthrough run is keyed as `primary` or `variant`. Give one complete
@@ -197,6 +198,9 @@ review-course) has fresh checkers read it. The session that wrote an item never 
    again by the checkers, and the gate holds until each has a ruling.
 7. **Read the assembled draft once before browser checks.** Check prerequisites and
    Recall links against the content actually prepared, and consistency across items.
+   When Study adds a passage that better teaches a method used by an older exercise,
+   update the part map and Recall destination together. Keep the older exercise's
+   preparation and check the changed guide's destination in the built app.
    **Link across workspaces.** `tum-mcp study links PROJECT` lists every exercise,
    cheatsheet entry, lecture note and unit without a link to a workspace that exists, with
    candidate passages. Link each in its content (exercise `prerequisites`, concept `units` or
