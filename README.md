@@ -62,7 +62,8 @@ Zulip channel.
 - To add your own resources, such as past exams from other websites, put them in a
   temporary folder and ask the agent to sort them into the course.
 - Study, Exercises and Exam can each be prepared on their own. They link to each
-  other once they exist.
+  other once they exist. When a new Study lesson teaches a method used by an
+  earlier exercise, Recall can open that specific passage.
 - In a combined request, the agent can keep preparing lessons and lecture notes
   while an exercise waits for clarification. The readiness report shows what
   still needs attention in each workspace.
