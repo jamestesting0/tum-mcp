@@ -123,16 +123,17 @@ def repair_scope(root: Path, reason: str) -> dict:
             ),
         ),
     )
+    log = updated.rounds[-1]
+    if log.closed:
+        next_action = "Report the repaired round and any items still awaiting verification."
+    elif max(log.verify_passes, int(log.verified)) < 2:
+        next_action = "Run tum-mcp review verify PROJECT after completing the round's repairs."
+    else:
+        next_action = "Close the round and report any items still awaiting verification."
     return {
         "added": added,
         **({"removed": removed} if removed else {}),
         "round": updated.round,
         "budget": updated.budget,
-        "next": (
-            "Report the repaired round. "
-            if state.rounds[-1].closed
-            else "Close the repaired round. "
-        )
-        + "Added items have no new review or transferred scores; "
-        "report remaining verification. Another round requires user authorization.",
+        "next": next_action,
     }
