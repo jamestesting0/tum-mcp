@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.27.1 — 2026-11-21
+
+- Review newly split lessons in full during the next available verification pass
+  of the existing round.
+- Update an older exercise's Recall link when a new Study passage teaches the
+  method it needs. Reuse the answer-key results from lint and readiness at
+  draft handoff.
+- Dock Ask agent beside the lesson when there is room and preserve focus as the
+  panel moves between docked and modal layouts.
+
 ## 0.27.0 — 2026-11-20
 
 - Keep feasible Study, Exercises and Lecture work moving when another workspace
