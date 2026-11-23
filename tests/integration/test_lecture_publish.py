@@ -125,12 +125,13 @@ def test_lecture_content_math_and_canonical_links_survive_without_source_metadat
     path.write_bytes(pdf_bytes(["Learning outcomes", "Revised diagram"]))
     revised = source.model_copy(update={"sha256": digest(path.read_bytes())})
     (root / ".tum-mcp/state.json").write_text(
-        state.model_copy(update={"resources": (*state.resources, revised)}).model_dump_json()
+        state.model_copy(update={"resources": (*state.resources, revised)}).model_dump_json(),
+        encoding="utf-8",
     )
     lecture["sources"][0]["sha256"] = revised.sha256
     for evidence in value["evidence"]:
         evidence["source_sha256"] = revised.sha256
-    notes.write_text(json.dumps(value))
+    notes.write_text(json.dumps(value), encoding="utf-8")
     build(root, publish=False)
     updated = lecture_fixtures.payload(root)["lectures"]["lectures"][0]["chapters"][0]
     assert (root / "app" / updated["slide_preview"]).is_file()
