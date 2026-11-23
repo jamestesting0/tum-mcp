@@ -44,11 +44,14 @@ app.add_typer(
 @app.callback()
 def launch(
     context: typer.Context,
-    port: Annotated[int, typer.Option(min=0, max=65535, help="Local app port.")] = 8765,
+    port: Annotated[
+        int | None,
+        typer.Option(min=0, max=65535, help="Exact local port. Use 0 for any free port."),
+    ] = None,
 ) -> None:
     """Open this course's study app, or run a study management command."""
     if context.invoked_subcommand is None:
-        from tum_mcp.course.app.preview import serve as preview
+        from tum_mcp.course.app.preview_launch import serve as preview
 
         preview(Path.cwd(), port, open_browser=True)
 
@@ -966,7 +969,7 @@ def schedule(
 @app.command(rich_help_panel="Author")
 def serve(project: Path, port: Annotated[int, typer.Option(min=0, max=65535)] = 8765) -> None:
     """Preview the prepared app and local comments without external hosting or logs."""
-    from tum_mcp.course.app.preview import serve as preview
+    from tum_mcp.course.app.preview_launch import serve as preview
 
     preview(project, port)
 

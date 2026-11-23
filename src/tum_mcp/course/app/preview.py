@@ -1,27 +1,18 @@
 """Loopback course preview with confined, same-origin comment and Ask agent endpoints."""
 
-import errno
 import gzip
 import io
 import json
 import re
-import shutil
 import socket
-import subprocess
 import time
-import webbrowser
-from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import BinaryIO
 from urllib.parse import unquote, urlsplit
 
-import typer
-
-from tum_mcp.course.project.paths import app_path
 from tum_mcp.course.project.store import confined
 from tum_mcp.errors import CampusError, Code
-from tum_mcp.moodle.browsers import is_wsl
 
 
 class PreviewServer(ThreadingHTTPServer):
@@ -352,72 +343,3 @@ def _file_reply(
     handler.send_header("Content-Length", str(end - start + 1))
     handler.end_headers()
     return Slice(stream, start, end - start + 1)
-
-
-def serve(project: Path, port: int, *, open_browser: bool = False) -> None:
-    root = project.expanduser().resolve()
-    site = app_path(root, "index.html").parent
-    if not (site / "index.html").is_file():
-        raise CampusError(Code.ACTION_REQUIRED, "Build the study site first.")
-    try:
-        server = PreviewServer(("127.0.0.1", port), partial(Handler, directory=str(site)))
-    except OSError as error:
-        # Winsock exposes its native code instead of the POSIX errno.
-        if error.errno not in {errno.EADDRINUSE, 10048}:
-            raise
-        raise CampusError(
-            Code.ACTION_REQUIRED,
-            f"Port {port} is in use. Reuse the preview if it serves this project, or run "
-            "tum-mcp study serve PROJECT --port PORT with a different port. "
-            "Use --port 0 for a free port. Keep the same port to retain browser progress.",
-        ) from None
-    with server:
-        url = f"http://127.0.0.1:{server.server_port}/"
-        print(f"Study preview: {url}", flush=True)
-        from tum_mcp.course.app.publish_models import load_publication
-
-        try:
-            publication = load_publication(root)
-            if publication is not None:
-                if publication.hosted_url:
-                    print(f"Hosted study: {publication.hosted_url}", flush=True)
-                print(f"GitHub repository: https://github.com/{publication.repository}", flush=True)
-                if publication.deployed_commit != publication.commit:
-                    print("Latest hosted update is pending verification.", flush=True)
-                if not publication.auto_sync:
-                    print("Automatic publication is paused.", flush=True)
-        except CampusError:
-            print(
-                "Saved GitHub publication settings need review; local preview is available.",
-                flush=True,
-            )
-        try:
-            if open_browser:
-                try:
-                    if is_wsl():
-                        shell = shutil.which("powershell.exe") or shutil.which("pwsh.exe")
-                        opened = (
-                            shell is not None
-                            and subprocess.run(  # noqa: S603
-                                [
-                                    shell,
-                                    "-NoProfile",
-                                    "-NonInteractive",
-                                    "-Command",
-                                    f"Start-Process '{url}'",
-                                ],
-                                capture_output=True,
-                                timeout=10,
-                                check=False,
-                            ).returncode
-                            == 0
-                        )
-                    else:
-                        opened = typer.launch(url) == 0
-                except (OSError, subprocess.SubprocessError, webbrowser.Error):
-                    opened = False
-                if not opened:
-                    print("Open the URL above in your browser.", flush=True)
-            server.serve_forever()
-        except KeyboardInterrupt:
-            print("Study preview stopped.")

@@ -398,12 +398,21 @@ From the course project folder, launch the prepared app with:
 tum-mcp study
 ```
 
-It opens the default browser at `http://127.0.0.1:8765`. Keep the terminal open;
-press Ctrl+C to stop. In WSL, it opens the Windows browser through Windows interop.
-If automatic opening is unavailable, open the printed URL. For a different project
-or an unattended preview, use `tum-mcp study serve ./pse-ws26 --port 8765`.
-If port 8765 is busy, stop the other preview or choose `tum-mcp study --port 8766`.
-Keep the same address and port between sessions so browser progress remains available.
+The launcher opens the default browser and remembers a port for each course folder,
+starting at `8765`. Running the command again for the same course reopens its
+running preview. Keep the original terminal open and press Ctrl+C there to stop it.
+In WSL, the command opens the Windows browser through Windows interop. If automatic
+opening is unavailable, open the printed URL.
+
+When the course's usual port is busy, the launcher prints a temporary URL. The
+browser stores progress separately at each address, so use the course's usual
+URL to see your usual progress. If you previously used a shared port for several
+courses, use `tum-mcp study --port 8765` once that port is free to view progress
+saved there.
+
+Use `tum-mcp study --port PORT` to require a specific port or `--port 0` to use
+any free port. For an unattended preview, use
+`tum-mcp study serve ./pse-ws26 --port 0`. It prints the URL without opening a browser.
 
 The preview binds `127.0.0.1`, serves `app/` and has two bounded same-origin
 endpoints: one saves comments, the other runs Ask agent (below). It makes no campus
