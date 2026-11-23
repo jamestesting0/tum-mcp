@@ -16,9 +16,8 @@ from typer.testing import CliRunner
 
 from tum_mcp.cli import app
 from tum_mcp.course.app import github as study_github
-from tum_mcp.course.app import preview as study_preview
+from tum_mcp.course.app import preview_launch, publish_site
 from tum_mcp.course.app import publish as study_publish
-from tum_mcp.course.app import publish_site
 from tum_mcp.course.app.build import RETIRED_TEMPLATE_FILES, build
 from tum_mcp.course.app.publish_models import load_publication
 from tum_mcp.course.app.publish_site import MARKER, SITE_FILES, blob_sha
@@ -614,8 +613,7 @@ def test_launcher_shows_local_hosted_and_repository_links(
     assert first_publish(project).exit_code == 0
     saved = load_publication(project)
     monkeypatch.chdir(project)
-    monkeypatch.setattr(study_preview.typer, "launch", lambda url: 0)
-    monkeypatch.setattr(study_preview, "is_wsl", lambda: False)
+    monkeypatch.setattr(preview_launch, "_open_browser", lambda url: True)
 
     def stop(server: ThreadingHTTPServer) -> None:
         raise KeyboardInterrupt
