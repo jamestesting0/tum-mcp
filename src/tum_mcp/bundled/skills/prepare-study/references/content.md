@@ -162,8 +162,9 @@ unchanged units keep theirs.
 Build preserves and reports customized app files and leaves unknown files untouched.
 Do not change renderer code to bypass invalid content.
 
-Launch with `tum-mcp study` inside the project; it opens `127.0.0.1:8765`. Keep the
-same address and port so browser progress remains available, or pass `--port PORT`.
+Launch with `tum-mcp study` inside the project. It opens a local URL and remembers
+the project's port so browser progress remains available between sessions.
+Use `--port PORT` to require a specific port.
 For unattended checks, `tum-mcp study serve PROJECT --port 0` prints a URL without
 opening a browser. The app needs no campus credentials or external services.
 

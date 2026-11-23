@@ -240,6 +240,8 @@ def _app_data(
     lectures: LectureContent | None = None,
     root: Path | None = None,
     exam: ExamContent | None = None,
+    *,
+    preparing_slides: bool = False,
 ) -> dict[str, JsonValue]:
     continuity = _read_progress_continuity(root)
     terms = read_terms(root) if root is not None else TermList()
@@ -328,7 +330,22 @@ def _app_data(
         if root is None:
             raise CampusError(Code.ACTION_REQUIRED, "Lecture projection needs its bound project.")
         value = render_lectures(root, lectures)
+        stored = {item.resource.key: item for item in state.resources}
         for lecture in value["lectures"]:
+            for chapter in lecture["chapters"]:
+                if chapter["pages"] and chapter["sources"]:
+                    source = stored.get(chapter["sources"][0])
+                    if (
+                        source
+                        and source.path
+                        and source.path.lower().endswith(".pdf")
+                        and source.sha256
+                    ):
+                        page = chapter.get("preview_page") or chapter["pages"].split("-")[0]
+                        preview = digest(f"chapter-slide-v1:{source.sha256}:{page}".encode())
+                        name = f"lecture-assets/{preview}.jpg"
+                        if preparing_slides or app_path(root, name).is_file():
+                            chapter["slide_preview"] = name
             marker.mark(lecture)
         payload["lectures"] = value
         payload["workspaces"].append("lectures")
@@ -529,7 +546,8 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
                 )
         source = files("tum_mcp") / "bundled/course_app/site"
         desired = {name: (source / name).read_bytes() for name in TEMPLATE_FILES}
-        payload = _app_data(state, content, exercises, lectures, root, exam)
+        payload = _app_data(state, content, exercises, lectures, root, exam, preparing_slides=True)
+        lecture_writes = asset_writes(root, lectures, state, payload.get("lectures", {}))
         for image in sorted(set(figure_images(payload))):
             figure_bytes(app_path(root, image))
         desired["data.mjs"] = data_module(payload)
@@ -569,7 +587,7 @@ def build(root: Path, *, publish: bool = True) -> BuildReport:
                 "Customized templates were preserved; review workspace support before building.",
             )
         writes.append(Write(f"{folder}/.managed.json", previous, updated))
-        writes.extend(asset_writes(root, lectures))
+        writes.extend(lecture_writes)
         apply(root, tuple(writes))
         from tum_mcp.course.app.comments import prune_comments
 

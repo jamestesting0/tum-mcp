@@ -1,7 +1,7 @@
 // The interaction smoke: on the open page, use every stepping and help control the way a
 // student would and report each one that does not respond. Returns the problems found and
 // how many controls were exercised. Runs in the app page; never edits content.
-async ({ query, study, exercise }) => {
+async ({ query, study, exercise, lectureRoute, firstLecture, previewOnly }) => {
   const problems = [], frame = () => new Promise(resolve => requestAnimationFrame(() => resolve()));
   let used = 0;
   const say = (control, problem) => problems.push({ control, problem });
@@ -16,7 +16,57 @@ async ({ query, study, exercise }) => {
   const mathText = value => typeof value === 'string' ? /\\\(|<math[\s>]/.test(value)
     : value !== null && typeof value === 'object' && Object.values(value).some(mathText);
   const mathRoute = study || exercise;
-  const data = mathRoute ? (await import(new URL('data.mjs', location.href).href)).default : null;
+  const data = mathRoute || lectureRoute ? (await import(new URL('data.mjs', location.href).href)).default : null;
+  if (lectureRoute) {
+    const [, key, section] = lectureRoute.split('/');
+    const lectures = data.lectures.lectures;
+    const lecture = lectures.find(item => item.key === key);
+    const entry = id => document.querySelector(`[data-lecture-section="${CSS.escape(id)}"]`);
+    if (!document.querySelector('.lecture-workspace')) say(lectureRoute, 'Lecture workspace did not open');
+    if (key && !lecture) say(key, 'Lecture is absent from built data');
+    if (document.documentElement.scrollWidth > innerWidth) say(lectureRoute, 'Lecture overflows the reading width');
+    const checkImage = async (img, src, id) => {
+      if (!img || img.getAttribute('src') !== src) { say(id, 'Expected lecture preview is absent'); return; }
+      img.scrollIntoView({ block: 'center', behavior: 'instant' });
+      let timer;
+      try {
+        await Promise.race([
+          img.decode(),
+          new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Preview timed out')), 5000); }),
+        ]);
+      } catch {
+        say(id, 'Lecture preview failed to decode in view');
+        return;
+      } finally { clearTimeout(timer); }
+      if (!visible(img) || !img.naturalWidth) say(id, 'Decoded lecture preview is hidden');
+    };
+    if (section) {
+      if (document.activeElement !== entry(section)?.querySelector('h3')) say(section, 'Highlight heading did not receive focus');
+    } else if (lecture) {
+      for (const chapter of lecture.chapters || []) {
+        const row = entry(chapter.key);
+        const time = row?.querySelector('.lecture-chapter-time a');
+        if (!time || time.href !== chapter.url || time.tabIndex < 0) say(chapter.key, 'Missing chapter recording link');
+        if (chapter.slide_preview) await checkImage(row?.querySelector('.lecture-preview'), chapter.slide_preview, chapter.key);
+      }
+      for (const highlight of lecture.highlights) {
+        await checkImage(entry(highlight.key)?.querySelector('.lecture-thumb img'), highlight.thumbnail.asset, highlight.key);
+      }
+    } else if (!key) {
+      for (const item of lectures) {
+        const row = document.querySelector(`.topic-row a[href="#lectures/${CSS.escape(item.key)}"]`);
+        if (!row) say(item.key, 'Lecture missing from index');
+        const cover = item.highlights[0]?.thumbnail.asset || item.chapters?.find(chapter => chapter.slide_preview)?.slide_preview;
+        if (cover) await checkImage(row?.querySelector('img'), cover, item.key);
+      }
+      const link = document.querySelector(`.topic-row a[href="#lectures/${CSS.escape(firstLecture)}"]`);
+      if (firstLecture && link) {
+        link.click(); await frame(); await frame(); used++;
+        if (location.hash !== link.hash || !document.querySelector('.lecture-workspace h1')) say(firstLecture, 'Index row did not open the lecture');
+      }
+    }
+    if (previewOnly) return { problems, used };
+  }
   const { katexGroups, mathSizeFloor } = mathRoute
     ? await import(new URL('runtime/reading/math-fit.mjs', location.href).href) : {};
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);

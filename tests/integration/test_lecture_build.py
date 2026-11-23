@@ -45,6 +45,60 @@ def bytes_tree(root: Path) -> dict[str, bytes]:
     }
 
 
+def test_chapter_previews_share_valid_pages_and_preserve_edits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from material_fixture import material_project, pdf_bytes
+
+    from tum_mcp.course.lecture import assets
+    from tum_mcp.course.project.store import apply, digest
+
+    root = material_project(tmp_path, {"slides": ("content", pdf_bytes(["Opening", "Diagram"]))})
+    state = load_state(root)
+
+    def rendered(pages: list[int], revision: str) -> dict:
+        return {
+            "lectures": [
+                {
+                    "chapters": [
+                        {
+                            "pages": "1-12",
+                            "preview_page": page,
+                            "sources": ["slides"],
+                            "slide_preview": "lecture-assets/"
+                            + digest(f"{revision}:{page}".encode())
+                            + ".jpg",
+                        }
+                        for page in pages
+                    ]
+                }
+            ]
+        }
+
+    document = rendered([2, 2, 12], "v1")
+    apply(root, assets.asset_writes(root, None, state, document))
+    chapters = document["lectures"][0]["chapters"]
+    assert chapters[0]["slide_preview"] == chapters[1]["slide_preview"]
+    assert "slide_preview" not in chapters[2]
+    path = root / "app" / chapters[0]["slide_preview"]
+    original = path.read_bytes()
+    assert original.startswith(b"\xff\xd8")
+    with monkeypatch.context() as warm:
+        warm.setattr(
+            assets, "page_images", lambda *args: pytest.fail("Re-rendered an unchanged page")
+        )
+        apply(root, assets.asset_writes(root, None, state, rendered([2], "v1")))
+    path.write_bytes(b"local edits")
+    with pytest.raises(CampusError, match="preserved"):
+        assets.asset_writes(root, None, state, rendered([1], "v2"))
+    assert path.read_bytes() == b"local edits"
+    path.write_bytes(original)
+    replacement = rendered([1], "v2")
+    apply(root, assets.asset_writes(root, None, state, replacement))
+    assert not path.exists()
+    assert (root / "app" / replacement["lectures"][0]["chapters"][0]["slide_preview"]).is_file()
+
+
 @pytest.mark.parametrize(
     "selected",
     [

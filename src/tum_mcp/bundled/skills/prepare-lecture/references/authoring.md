@@ -2,6 +2,11 @@
 
 Read this after the full transcript map and the relevant course materials.
 
+For a numerical worked highlight, put the consequential inputs, intermediate weights
+and final value in its steps when those numbers carry the explanation. Verify them
+against the visible board or cited slide. A student reading the steps on a phone
+should be able to recover the answer without magnifying the recording thumbnail.
+
 ## Selection
 
 For each candidate, decide:

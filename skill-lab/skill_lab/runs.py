@@ -111,10 +111,10 @@ def _render_request(
         return arguments, cwd
     if command == ["study", "visuals"]:
         for option in options:
-            if option in {"--unit", "--exercise"}:
+            if option in {"--unit", "--exercise", "--lecture"}:
                 value = next(options, "")
                 if not value or value.startswith("-"):
-                    raise LabError("A render selection needs a unit or exercise key.")
+                    raise LabError(f"Supply a key for {option}.")
             elif option not in RENDER_OPTIONS:
                 raise LabError("The render broker received an unsupported option.")
         return arguments, cwd
@@ -282,7 +282,13 @@ def render_broker(
     return stop
 
 
-def storage_environment(downloads: Path) -> dict[str, str]:
+def storage_environment(downloads: Path, *, offline: bool = False) -> dict[str, str]:
+    if offline:
+        return {
+            "TUM_MCP_DATA_DIR": str(downloads.parent / "data"),
+            "TUM_MCP_CONFIG_DIR": str(downloads.parent / "config"),
+            "TUM_MOODLE_DATA_DIR": str(downloads.parent / "moodle"),
+        }
     from skill_lab.install_variant import client_module
 
     environment = dict(client_module("hosts").storage_environment())
@@ -746,18 +752,7 @@ def _run(
         record["installed_hash"] = variants.installed_hash(variant_dir)
     write_record(run_dir, record)
     began = time.monotonic()
-    storage = (
-        storage_environment(downloads)
-        if not scenario.offline
-        else {
-            name: str(run_dir / destination)
-            for name, destination in (
-                ("TUM_MCP_DATA_DIR", "data"),
-                ("TUM_MCP_CONFIG_DIR", "config"),
-                ("TUM_MOODLE_DATA_DIR", "moodle"),
-            )
-        }
-    )
+    storage = storage_environment(downloads, offline=scenario.offline)
     environment = hosts.clean_environment(
         storage, home, bin_dir, spec.host, offline=scenario.offline
     )

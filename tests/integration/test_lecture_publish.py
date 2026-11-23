@@ -54,13 +54,15 @@ def test_scope_projection_and_referenced_thumbnails_only(
 def test_lecture_content_math_and_canonical_links_survive_without_source_metadata(
     lecture_project: Path,
 ) -> None:
+    from material_fixture import pdf_bytes
+
     from tum_mcp.course.project.models import Resource, ResourceState
     from tum_mcp.course.project.store import digest
 
     root = lecture_project
     state = load_state(root)
-    path = root / "materials/content/material-lecture-only.md"
-    path.write_bytes(b"LECTURE_ONLY")
+    path = root / "materials/content/material-lecture-only.pdf"
+    path.write_bytes(pdf_bytes(["Learning outcomes", "LECTURE ONLY"]))
     source = ResourceState(
         resource=Resource(
             key="lecture-only",
@@ -83,6 +85,7 @@ def test_lecture_content_math_and_canonical_links_survive_without_source_metadat
     value = json.loads(notes.read_text(encoding="utf-8"))
     lecture = value["lectures"][0]
     lecture["sources"] = [{"key": "lecture-only", "sha256": source.sha256}]
+    lecture["chapters"][0].update(sources=["lecture-only"], pages="1-2", preview_page=2)
     lecture["summary"] += r" LECTURE_ONLY_TEXT \(\mathrm{LECTUREONLYMATH}\)"
     for entry in lecture["notes"] + lecture["highlights"]:
         entry["sources"] = ["lecture-only"]
@@ -90,7 +93,13 @@ def test_lecture_content_math_and_canonical_links_survive_without_source_metadat
         evidence.update(source_key="lecture-only", source_sha256=source.sha256)
     notes.write_text(json.dumps(value), encoding="utf-8")
     build(root, publish=False)
+    chapter = lecture_fixtures.payload(root)["lectures"]["lectures"][0]["chapters"][0]
+    preview = chapter["slide_preview"]
+    assert (root / "app" / preview).read_bytes().startswith(b"\xff\xd8")
     included = export_site(root)
+    assert preview not in included
+    assert b'"slide_preview"' not in included["data.mjs"]
+    assert b'"preview_page"' not in included["data.mjs"]
     assert b"LECTURE_ONLY_TEXT" in included["data.mjs"]
     assert b"LECTUREONLYMATH" in included["data.mjs"]
     for private in (
@@ -113,6 +122,20 @@ def test_lecture_content_math_and_canonical_links_survive_without_source_metadat
     assert published["notes"][0]["recording_source"] == "live-1-1"
     assert published["notes"][0]["url"].endswith("?t=300")
     assert [item["url"].rsplit("?", 1)[1] for item in published["highlights"]] == ["t=20", "t=120"]
+    path.write_bytes(pdf_bytes(["Learning outcomes", "Revised diagram"]))
+    revised = source.model_copy(update={"sha256": digest(path.read_bytes())})
+    (root / ".tum-mcp/state.json").write_text(
+        state.model_copy(update={"resources": (*state.resources, revised)}).model_dump_json(),
+        encoding="utf-8",
+    )
+    lecture["sources"][0]["sha256"] = revised.sha256
+    for evidence in value["evidence"]:
+        evidence["source_sha256"] = revised.sha256
+    notes.write_text(json.dumps(value), encoding="utf-8")
+    build(root, publish=False)
+    updated = lecture_fixtures.payload(root)["lectures"]["lectures"][0]["chapters"][0]
+    assert (root / "app" / updated["slide_preview"]).is_file()
+    assert not (root / "app" / preview).exists()
 
 
 def test_deleted_lecture_assets_leave_the_same_repository_without_erasing_unrelated_files(

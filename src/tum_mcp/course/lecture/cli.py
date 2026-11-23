@@ -9,6 +9,7 @@ import typer
 from pydantic import JsonValue, ValidationError
 
 from tum_mcp.course.lecture.evidence import Crop, merge_intervals
+from tum_mcp.course.lecture.scope import RecordingRow, accounting, cached_recordings
 from tum_mcp.course.project.models import StudyState
 from tum_mcp.course.project.store import digest, load_state, private_path
 from tum_mcp.errors import CampusError, Code
@@ -17,11 +18,8 @@ from tum_mcp.lecture_processing.prepare_visuals import FrameInventory
 from tum_mcp.lecture_processing.progress import read_progress
 from tum_mcp.lecture_processing.receipts import (
     PASSAGES,
-    PreparedReceipt,
-    Receipt,
     evidence_bytes,
     export_snapshot,
-    read_receipt,
     recording_dir,
     source_text,
     usable_receipt,
@@ -153,17 +151,49 @@ def inspect(
         datetime | None,
         typer.Option(formats=["%Y-%m-%d"], help="Last requested teaching date (YYYY-MM-DD)."),
     ] = None,
+    batch: Annotated[
+        str | None, typer.Option(help="Reconcile recordings with this course batch.")
+    ] = None,
 ) -> None:
     """Show cached receipts with their as-of date; does not fetch or start recognition."""
     require_lecture()
     root = project.expanduser().resolve()
     state = load_state(root)
     directory = private_path(root, "lectures")
-    receipts = [
-        read_receipt(root, folder.name)
-        for folder in sorted(directory.glob("live-*"))
-        if folder.is_dir() and (folder / "receipt.json").is_file()
-    ]
+    receipts = cached_recordings(root, state)
+    cutoff = through.date() if through else None
+    selected = None
+    if batch:
+        from tum_mcp.course.checks.batch import checker_batch
+
+        result = checker_batch(root, set(), batch)
+        if result is None:
+            raise CampusError(Code.ACTION_REQUIRED, f"No batch request for {batch}.")
+        _, selected = result
+        if selected.lecture_scope:
+            if cutoff and cutoff != selected.lecture_scope.through:
+                raise CampusError(
+                    Code.ACTION_REQUIRED, "Use the verified cutoff in the lecture batch."
+                )
+            cutoff = selected.lecture_scope.through
+        if not cutoff:
+            raise CampusError(
+                Code.ACTION_REQUIRED, "Supply --through for a batch without a lecture cutoff."
+            )
+    summary = {}
+    if cutoff:
+        rows, problems = accounting(
+            root,
+            receipts,
+            cutoff,
+            selected.items if selected else (),
+            selected.lecture_scope if selected else None,
+        )
+        summary = {
+            **_meeting_scope(root, state, rows, cutoff),
+            "accounting": [row.model_dump(mode="json") for row in rows],
+            "problems": problems,
+        }
     progress = {
         folder.name: value.model_dump(mode="json")
         for folder in sorted(directory.glob("live-*"))
@@ -177,7 +207,7 @@ def inspect(
                 "mode": "offline_cached_as_of_receipts",
                 "recordings": [receipt.model_dump(mode="json") for receipt in receipts],
                 "progress": progress,
-                **(_meeting_scope(root, state, receipts, through.date()) if through else {}),
+                **summary,
             },
             indent=2,
         )
@@ -185,31 +215,23 @@ def inspect(
 
 
 def _meeting_scope(
-    root: Path, state: StudyState, receipts: list[Receipt], through: date
+    root: Path, state: StudyState, recordings: list[RecordingRow], through: date
 ) -> dict[str, JsonValue]:
     from tum_mcp.course.project.schedule import read_schedule
 
     schedule = read_schedule(root, state)
-    prepared = [receipt for receipt in receipts if isinstance(receipt, PreparedReceipt)]
-    dates = {receipt.recording.recorded_on for receipt in prepared}
+    dates = {row.recorded_on for row in recordings if row.recorded_on is not None}
     sessions = schedule.sessions if schedule else ()
     days = sorted(dates | {session.on for session in sessions if session.basis != "release"})
     rows: list[JsonValue] = []
     for day in days:
-        keys: list[JsonValue] = []
-        unavailable: list[JsonValue] = []
-        for receipt in prepared:
-            if receipt.recording.recorded_on != day:
-                continue
-            if day > through:
-                keys.append(receipt.key)
-                continue
-            try:
-                _ = usable_receipt(root, receipt.key)
-            except CampusError as error:
-                unavailable.append({"recording": receipt.key, "reason": str(error)})
-            else:
-                keys.append(receipt.key)
+        matching = [row for row in recordings if row.recorded_on == day]
+        keys = [row.recording for row in matching if row.evidence in {"prepared", "partial"}]
+        unavailable = [
+            {"recording": row.recording, "reason": row.reason}
+            for row in matching
+            if row.evidence in {"invalid", "unavailable"}
+        ]
         rows.append(
             {
                 "date": day.isoformat(),
@@ -227,7 +249,13 @@ def _meeting_scope(
                 "recordings": keys,
                 "unavailable": unavailable,
                 "disposition": (
-                    "out_of_scope" if day > through else "available" if keys else "missing"
+                    "out_of_scope"
+                    if day > through
+                    else "available"
+                    if keys
+                    else "unavailable"
+                    if unavailable
+                    else "missing"
                 ),
             }
         )

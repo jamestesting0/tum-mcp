@@ -67,13 +67,17 @@ def prepare(
                 )
             valid = validity(watch)
             if valid.status == "invalid":
-                return save_invalid(directory, watch.course.id, recording_id, valid)
+                return save_invalid(
+                    directory, watch.course.id, recording_id, valid, watch.stream.start.date()
+                )
             budget = TransferBudget()
             with MediaHTTP(media_grant(watch), budget) as client:
                 manifest = load_manifest(client)
                 valid = validity(watch, manifest.duration_s)
                 if valid.status == "invalid":
-                    return save_invalid(directory, watch.course.id, recording_id, valid)
+                    return save_invalid(
+                        directory, watch.course.id, recording_id, valid, watch.stream.start.date()
+                    )
                 require_content(valid)
                 return _evidence(
                     directory,

@@ -64,6 +64,11 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    For a verified date cutoff, add `--through YYYY-MM-DD` to `lecture inspect`.
    Use its recording keys for the batch. Several decks can belong to one meeting.
    Keep missing dates and later recordings in the inventory with their disposition.
+   For an all-through request, add `lecture_scope.through` to the course batch. Record
+   justified exceptions under `lecture_scope.exclusions`, keyed by recording, with a
+   reason and, for duplicates, the other recording key as `duplicate_of`. Run
+   `lecture inspect PROJECT --through YYYY-MM-DD --batch ID` to reconcile the known
+   recordings with the draft. Leave scope absent for requests selecting specific lectures.
 3. Cover the retained transcript in bounded pages. On resume, use the saved
    comparisons for pages already covered. Align the topic map with the verified
    slides or script. Its topics become the lecture's `chapters`:
@@ -92,8 +97,10 @@ span per expression (JSON doubles each backslash). `study lint` reports `plain_m
    `passage` for Recall, as notes do. Label a note `kind` only as a `correction` of the
    materials or an explicit `exam tip`. `study schema --example lecture-note` and
    `lecture-highlight` print a complete entry with its rule.
-5. Capture one frame per highlight in a single `lecture prepare` call with a repeated
-   `--frame-at`, at a moment that shows the highlight's topic. Look at every frame
+5. Inspect measured frames already available in each selected interval with `lecture frames`.
+   Stage a suitable existing frame directly with `lecture thumbnail`. Capture the remaining
+   frames together per recording with repeated `--frame-at` in one `lecture prepare` call.
+   Pick a moment that shows the highlight's topic. Look at every frame
    yourself: it must show what the highlight is about. Use it to confirm names and
    notation; check clip boundaries against speech, not a later still. Stage
    each thumbnail with `lecture thumbnail`. Capture a note image when the slide or board

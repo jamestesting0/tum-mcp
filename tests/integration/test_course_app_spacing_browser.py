@@ -138,6 +138,15 @@ def test_completed_outline_title_keeps_its_row_and_scroll(
         data["units"].extend(
             unit | {"key": f"extra-{index}", "title": f"{title} {index}"} for index in range(8)
         )
+        data["units"].append(
+            unit
+            | {
+                "key": "constraints",
+                "label": "2",
+                "path": ["Week 2 · Constraints"],
+                "title": "Solving constraints",
+            }
+        )
         route.fulfill(response=response, body=f"export default {json.dumps(data)};\n")
 
     def classic_scrollbar(route: Route) -> None:
@@ -154,6 +163,9 @@ def test_completed_outline_title_keeps_its_row_and_scroll(
         page.goto(example_url + "#study/components/content")
         if width == 390:
             page.locator(".outline-toggle").click()
+        expect(page.locator('.unit-list a[href="#constraints/content"] .unit-label')).to_have_text(
+            "Week 2"
+        )
         link = page.get_by_role("link", name=title, exact=True)
         expect(link).to_be_visible()
         before = link.bounding_box()

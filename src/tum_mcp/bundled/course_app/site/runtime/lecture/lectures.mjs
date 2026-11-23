@@ -26,6 +26,12 @@ function timeLink(url, start, end) {
   link.setAttribute('aria-label', `Open recording at ${link.textContent}`);
   return link;
 }
+function previewImage(src) {
+  const image = node('img', 'lecture-preview');
+  Object.assign(image, { src, alt: '', loading: 'lazy', decoding: 'async' });
+  image.addEventListener('error', () => image.remove(), { once: true });
+  return image;
+}
 export function lectureOutline(current = '') {
   const nav = node('nav', 'unit-list'); nav.setAttribute('aria-label', 'Lecture');
   for (const lecture of lectures) {
@@ -114,7 +120,7 @@ function highlightView(highlight, active) {
 }
 // Stretches of the recording without usable speech, each shown once where it occurs.
 function gaps(lecture) {
-  const spans = [['Not recorded', lecture.coverage.missing || []], ['Unclear audio', lecture.coverage.uncertain || []]];
+  const spans = [['Audio unavailable', lecture.coverage.missing || []], ['Unclear audio', lecture.coverage.uncertain || []]];
   return spans.flatMap(([label, list]) => list.map(span => ({
     start: span.start_s,
     row: node('p', 'small lecture-gap', `${label} ${clock(span.start_s)}–${clock(span.end_s)}`),
@@ -141,7 +147,20 @@ function lectureChapters(lecture, chapters, active) {
     if (chapter.key === active) section.dataset.lectureActiveSection = '';
     const heading = append(node('div', 'section-heading'), studyText('h2', '', chapter.title));
     if (chapter.sources?.length) heading.append(sourcesNote(chapter.sources, data.sources, data.course.synthetic, chapter.title, {}, chapter.pages || ''));
-    section.append(heading, append(node('p', 'lecture-chapter-time small'), timeLink(chapter.url, chapter.interval.start_s, chapter.interval.end_s)));
+    const time = timeLink(chapter.url, chapter.interval.start_s, chapter.interval.end_s);
+    time.setAttribute('aria-label', `Watch ${chapter.title} at ${clock(chapter.interval.start_s)}`);
+    const header = node('div', 'lecture-chapter-head');
+    if (chapter.slide_preview) {
+      const link = node('a', 'lecture-chapter-preview');
+      Object.assign(link, { href: chapter.url, target: '_blank', rel: 'noopener noreferrer', tabIndex: -1 });
+      link.setAttribute('aria-hidden', 'true');
+      link.title = `Course material, page ${chapter.preview_page || chapter.pages.split('-')[0]}`;
+      link.append(previewImage(chapter.slide_preview));
+      header.append(link);
+    }
+    header.append(append(node('div', 'lecture-chapter-copy'), heading,
+      append(node('p', 'lecture-chapter-time small'), time)));
+    section.append(header);
     let notes = null;
     while (next < entries.length && inside(chapter, entries[next].start)) {
       const entry = entries[next++];
@@ -172,7 +191,10 @@ export function renderLectures(hash) {
       if (item.notes.length) parts.push(`${item.notes.length} note${item.notes.length === 1 ? '' : 's'}`);
       if (item.highlights.length) parts.push(`${item.highlights.length} highlight${item.highlights.length === 1 ? '' : 's'}`, `${duration(watchTime(item))} of ${duration(item.recording.duration_s)}`);
       const count = parts.join(' · ') || 'No lecture additions';
-      list.append(topicRow(lectureLink(item), item.title, [date(item.recording.recorded_on), item.summary, node('span', 'small lecture-count', count)]));
+      const row = topicRow(lectureLink(item), item.title, [date(item.recording.recorded_on), item.summary, node('span', 'small lecture-count', count)]);
+      const cover = item.highlights[0]?.thumbnail.asset || item.chapters?.find(chapter => chapter.slide_preview)?.slide_preview;
+      if (cover) row.querySelector('a').prepend(previewImage(cover));
+      list.append(row);
     }
     if (lectures.length) root.append(list);
     return { root, heading, title: 'Lecture' };

@@ -1090,8 +1090,21 @@ summary.ask-avatar:focus-visible { outline: 2px solid var(--accent); outline-off
 
 /* Lecture */
 .lecture-gap { color: var(--muted); margin-block: var(--s3); }
-.lecture-chapter > .section-heading { margin-bottom: 0; }
-.lecture-chapter > p.lecture-chapter-time { margin-top: var(--s1); color: var(--muted); }
+.lecture-workspace .topic-row a:has(> .lecture-preview),
+.lecture-chapter-head { display: flex; align-items: flex-start; gap: var(--s3); }
+.lecture-preview { display: block; width: clamp(5.5rem, 18vw, 9rem); aspect-ratio: 16 / 9; object-fit: contain; background: var(--aside); border-radius: var(--r1); }
+.lecture-workspace .topic-row .topic-copy, .lecture-chapter-copy { flex: 1; min-width: 0; }
+.lecture-chapter-preview:empty { display: none; }
+.lecture-chapter { margin-bottom: 0; padding-block: var(--s3); border-top: 1px solid var(--line); }
+.lecture-chapter-copy .section-heading { margin: 0; }
+.lecture-chapter-copy .section-heading h2 { font-size: var(--text-subsection); line-height: 1.3; }
+.lecture-chapter-copy .lecture-chapter-time { margin: 0; }
+.lecture-chapter-head:not(:has(.lecture-preview)) .lecture-chapter-copy { display: flex; align-items: center; flex-wrap: wrap; column-gap: var(--s3); }
+.lecture-chapter-head:not(:has(.lecture-preview)) .section-heading { flex: 1 1 10rem; }
+@media (min-width: 800px) and (max-width: 1199px) {
+  .lecture-workspace [data-lecture-section],
+  .lecture-workspace .section-heading > :is(h2, h3) { scroll-margin-top: calc(var(--target) + var(--s5)); }
+}
 .lecture-chapter > .lecture-note-list, .lecture-chapter > .lecture-highlight { margin-top: var(--s2); }
 .lecture-chapter > .lecture-highlight { padding-block: var(--space-between); border-top: 1px solid var(--line); }
 .reading :is(h2, h3, h4, h5, h6, [data-contents-entry]) { scroll-margin-top: var(--s6); }

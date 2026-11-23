@@ -24,6 +24,18 @@ def test_highlights_validate_without_assessments_and_keep_actual_frame_time() ->
     assert not hasattr(lecture, "questions")
 
 
+def test_chapter_preview_uses_a_cited_page_without_moving_comment_anchors() -> None:
+    value = fixture()
+    chapter = value["lectures"][0]["chapters"][0]
+    chapter.update(sources=["graphs"], pages="2-5")
+    original = LectureContent.model_validate(value).lectures[0].semantic_revision
+    chapter["preview_page"] = 4
+    assert LectureContent.model_validate(value).lectures[0].semantic_revision == original
+    chapter["preview_page"] = 6
+    with pytest.raises(ValidationError, match="within the chapter"):
+        LectureContent.model_validate(value)
+
+
 @pytest.mark.parametrize("timestamp", [-1, float("nan"), float("inf"), 601, 12])
 def test_thumbnail_time_must_be_finite_in_its_actual_evidence_interval(timestamp: float) -> None:
     value = fixture()

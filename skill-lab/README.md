@@ -137,8 +137,13 @@ In particular, `delivered` means a Study or Exercises index exists, regardless o
 what was requested or whether it is ready. An empty `delivery` means the requested
 workspaces are unknown or none were declared.
 
-Reports carrying `metrics_definition: requested-delivery-full-report-v2` share this
-definition. An absent definition identifies legacy metrics. Do not aggregate across
+Reports carrying `metrics_definition: requested-delivery-full-report-v3` use the
+run's installed variant and browser dependencies to evaluate delivery. A lecture
+with chapter bookmarks and no notes or highlights counts as readable. Use
+`lab collect ROUND --run RUN --no-visuals` to score a saved run without adding
+browser visits to its evidence. If a saved variant can no longer run its assessor,
+delivery is `unmeasured` and its problem records the cause. An absent definition
+identifies legacy metrics. Do not aggregate across
 definitions. Recollect retained runs first, using matching turn prompts to recover
 the request for runs that predate the saved request manifest.
 

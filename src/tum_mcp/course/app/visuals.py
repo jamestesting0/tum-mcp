@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from tum_mcp.course.content.exam import ExamContent
     from tum_mcp.course.content.exercises import ExerciseContent
     from tum_mcp.course.content.study import Block, StudyContent
+    from tum_mcp.course.lecture.content import Lecture
     from tum_mcp.moodle.browsers import BrowserChoice
 
 WIDTHS = {"phone": 390, "narrow": 600, "desktop": 1280}
@@ -194,12 +195,13 @@ def _visits(
     tasks: frozenset[str] = frozenset(),
     *,
     with_exam: bool = False,
+    with_lectures: bool = False,
 ) -> tuple[list[Visit], dict[str, str]]:
     """The page loads that show every visual of the selected items, and each item's revision."""
     from tum_mcp.course.content.responses import SelfCheck
     from tum_mcp.course.content.study import render_blocks
 
-    everything = not units and not tasks and not with_exam
+    everything = not units and not tasks and not with_exam and not with_lectures
     visits: list[Visit] = []
     revisions: dict[str, str] = {}
     for unit in content.units if content else ():
@@ -404,6 +406,7 @@ def _measure(
     choice = choice or browser_choice()
     bundled = files("tum_mcp.bundled")
     measure = bundled.joinpath("visual_check.js").read_text(encoding="utf-8")
+    interaction = bundled.joinpath("interaction_check.js").read_text(encoding="utf-8")
     inject = bundled.joinpath("visual_inject.js").read_text(encoding="utf-8")
     host = next((visit.route for visit in visits if visit.route.endswith("/content")), "#home")
     folder = root / ".tum-mcp" / "visuals" / stamp
@@ -436,6 +439,39 @@ def _measure(
                     shots.clear()
                     for visit in visits:
                         _open(page, base + (visit.route or host))
+                        if visit.route.startswith("#lectures"):
+                            checked = page.evaluate(
+                                interaction, {"lectureRoute": visit.route, "previewOnly": True}
+                            )
+                            findings = [
+                                {
+                                    "code": "fidelity",
+                                    "detail": f"{issue['control']}: {issue['problem']}",
+                                }
+                                for issue in checked["problems"]
+                            ]
+                            findings.extend(
+                                {"code": "render_error", "detail": error} for error in errors
+                            )
+                            errors.clear()
+                            visual = measured.setdefault(visit.item, {}).setdefault(
+                                visit.route, Visual(visit.route, "lecture", visit.route)
+                            )
+                            visual.widths[name] = {"facts": {}, "findings": findings}
+                            if photograph:
+                                target = page.locator(
+                                    {
+                                        0: ".lecture-workspace h1",
+                                        1: ".lecture-chapter",
+                                        2: "[data-lecture-active-section]",
+                                    }[visit.route.count("/")]
+                                ).first
+                                if target.count():
+                                    target.evaluate("el => el.scrollIntoView({block:'start'})")
+                                shots.setdefault(visit.item, []).append(
+                                    (visit.route, page.screenshot())
+                                )
+                            continue
                         if visit.inject:
                             if not page.evaluate("() => Boolean(window.__visualInject)"):
                                 page.add_script_tag(url=base + INJECTOR, type="module")
@@ -594,6 +630,7 @@ def check_visuals(
     exam: bool = False,
     gallery: bool = False,
     phone: bool = False,
+    lectures: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     from tum_mcp.course.app.build import read_content
     from tum_mcp.course.content.exam_data import read_exam
@@ -628,10 +665,19 @@ def check_visuals(
         frozenset(units),
         frozenset(exercises),
         with_exam=exam,
+        with_lectures=bool(lectures),
     )
     widths = tuple(WIDTHS) if phone else DEFAULT_WIDTHS
     choice = browser_choice()
     identity = browser_identity(root, choice)
+    selected_lectures = _selected_lectures(root, lectures, not (units or exercises or exam))
+    if selected_lectures:
+        visits.append(Visit("lecture", "#lectures"))
+        revisions["lecture"] = identity.build
+        for lecture in selected_lectures:
+            key = f"lecture/{lecture.key}"
+            visits.extend(Visit(key, route) for route in lecture_routes(lecture))
+            revisions[key] = identity.build
     request = result_key("visual", [*revisions, *units, *exercises], widths)
     required = tuple(f"visual/{width}/{item}" for width in widths for item in revisions)
     if previous_result := cached(root, identity, request, required):
@@ -760,6 +806,23 @@ def check_visuals(
     return result
 
 
+def lecture_routes(lecture: "Lecture") -> list[str]:
+    detail = f"#lectures/{lecture.key}"
+    return [detail, f"{detail}/{lecture.highlights[0].key}"] if lecture.highlights else [detail]
+
+
+def _selected_lectures(root: Path, keys: tuple[str, ...], everything: bool) -> list["Lecture"]:
+    from tum_mcp.course.lecture.data import read_lectures
+
+    if not (keys or everything):
+        return []
+    content = read_lectures(root)
+    available = {item.key: item for item in content.lectures} if content else {}
+    if missing := set(keys) - available.keys():
+        raise CampusError(Code.ACTION_REQUIRED, "Unknown lecture: " + ", ".join(sorted(missing)))
+    return [available[key] for key in dict.fromkeys(keys)] if keys else list(available.values())
+
+
 def interaction_routes(
     content: "StudyContent | None",
     exercises: "ExerciseContent | None",
@@ -843,6 +906,7 @@ def check_interactions(
     *,
     exam: bool = False,
     phone: bool = False,
+    lectures: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Exercise the applicable student routes and preserve exact-build receipts."""
     from playwright.sync_api import Error as BrowserError
@@ -852,7 +916,6 @@ def check_interactions(
     from tum_mcp.course.app.preview import Handler, PreviewServer
     from tum_mcp.course.content.exam_data import read_exam
     from tum_mcp.course.content.exercise_data import read_exercises
-    from tum_mcp.course.lecture.data import read_lectures
     from tum_mcp.moodle.browser_runtime import browser_driver, launch_loopback_browser
 
     root = project.expanduser().resolve()
@@ -866,7 +929,7 @@ def check_interactions(
         raise CampusError(
             Code.ACTION_REQUIRED, "Unknown browser items: " + ", ".join(sorted(missing))
         )
-    everything = not (selected or exam)
+    everything = not (selected or exam or lectures)
     routes = [route for key, route in candidates.items() if everything or key in selected]
     exam_content = read_exam(root) if everything or exam else None
     if exam_content:
@@ -879,8 +942,11 @@ def check_interactions(
             for variant in sitting.variants
             if variant.replayable
         ]
-    lectures = read_lectures(root) if everything else None
-    routes += [f"#lectures/{lecture.key}" for lecture in (lectures.lectures if lectures else ())]
+    selected_lectures = _selected_lectures(root, lectures, everything)
+    if selected_lectures:
+        routes.append("#lectures")
+        for lecture in selected_lectures:
+            routes.extend(lecture_routes(lecture))
     widths = tuple(WIDTHS) if phone else DEFAULT_WIDTHS
     request = result_key("interact", routes, widths)
     required = (
@@ -923,6 +989,12 @@ def check_interactions(
                                         script,
                                         {
                                             "query": query if index == 0 else "",
+                                            "lectureRoute": route
+                                            if route.startswith("#lectures")
+                                            else "",
+                                            "firstLecture": selected_lectures[0].key
+                                            if selected_lectures
+                                            else "",
                                             "study": route[1:].split("/")[0]
                                             if route.endswith("/content")
                                             else None,

@@ -239,7 +239,9 @@ function outline(currentIndex) {
     });
     const link = node('a', 'unit-link study-unit-link'); link.href = `#${unit.key}/content`;
     if (index === currentIndex) link.setAttribute('aria-current', 'page');
-    link.append(entry(ancestry.length ? '' : unit.label || parts(unit.path?.[0] || '')[0], unit.title));
+    const groupLabel = parts(unit.path?.[0] || '')[0];
+    const label = groupLabel && /^\d+$/.test(unit.label) ? groupLabel : unit.label || groupLabel;
+    link.append(entry(ancestry.length ? '' : label, unit.title));
     const status = node('span', 'small'); status.dataset.studyProgress = unit.key;
     link.append(status); parent.append(link);
   });

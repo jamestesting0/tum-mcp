@@ -189,6 +189,7 @@ def test_the_render_broker_refuses_other_commands_and_outside_projects(tmp_path)
         ["study", "publish", "."],
         ["study", "visuals", "../outside"],
         ["study", "visuals", ".", "--output", "../outside"],
+        ["study", "visuals", ".", "--lecture", "--interact"],
         ["review", "run-checker", ".", "--packet", "r1-p1"],
     ):
         with pytest.raises(LabError):
@@ -221,6 +222,8 @@ def test_the_broker_runs_the_interaction_check_and_a_lab_chosen_checker(tmp_path
         "--json",
     ]
     assert request(*learner) == learner
+    lectures = ["study", "visuals", ".", "--lecture", "logic", "--lecture", "graphs", "--interact"]
+    assert request(*lectures) == lectures
     ran = request("review", "run-checker", ".", "--packet", "r1-p2")
     assert ran[:5] == ["review", "run-checker", ".", "--packet", "r1-p2"]
     template = ran[ran.index("--command") + 1]

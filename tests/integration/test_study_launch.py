@@ -3,17 +3,21 @@
 import errno
 import socket
 import subprocess
+from collections.abc import Callable
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
+from urllib.parse import urlsplit
 
 import httpx2
 import pytest
 from typer.testing import CliRunner
 
 from tum_mcp.cli import app
-from tum_mcp.course.app import preview as study_preview
+from tum_mcp.course.app import preview_launch as study_preview
 from tum_mcp.errors import CampusError, Code
+
+type LaunchStudy = Callable[[Path, Callable[[], None] | None], str]
 
 
 @pytest.fixture
@@ -26,24 +30,68 @@ def project(tmp_path: Path) -> Path:
     return root
 
 
-def test_no_arguments_launches_current_project_at_a_stable_address(
-    project: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.fixture
+def launch_study(monkeypatch: pytest.MonkeyPatch) -> LaunchStudy:
+    opened: list[str] = []
+    monkeypatch.setattr(study_preview, "is_wsl", lambda: False)
+
+    def open_browser(url: str) -> int:
+        opened.append(url)
+        return 0
+
+    monkeypatch.setattr(study_preview.typer, "launch", open_browser)
+
+    def launch(project: Path, while_serving: Callable[[], None] | None) -> str:
+        index = len(opened)
+        with monkeypatch.context() as session:
+            session.chdir(project)
+
+            def serve(server: ThreadingHTTPServer) -> None:
+                assert opened[index] == f"http://127.0.0.1:{server.server_port}/"
+                if while_serving is not None:
+                    while_serving()
+                raise KeyboardInterrupt
+
+            session.setattr(ThreadingHTTPServer, "serve_forever", serve)
+            result = CliRunner().invoke(app, ["study"])
+            assert result.exit_code == 0, result.output
+        assert opened[index] in result.output
+        return opened[index]
+
+    return launch
+
+
+def test_projects_keep_their_addresses_when_reopened_in_reverse_order(
+    project: Path, launch_study: LaunchStudy
 ) -> None:
-    # Given a course project and an isolated preview boundary.
-    monkeypatch.chdir(project)
-    launches: list[tuple[Path, int, bool]] = []
+    other = project.with_name("Second course")
+    site = other / "app"
+    site.mkdir(parents=True)
+    (site / "index.html").write_bytes(b"<!doctype html><title>Second course</title>")
+    other_addresses: list[str] = []
 
-    def preview(root: Path, port: int, *, open_browser: bool = False) -> None:
-        launches.append((root, port, open_browser))
+    first = launch_study(project, lambda: other_addresses.append(launch_study(other, None)))
+    (second,) = other_addresses
 
-    monkeypatch.setattr(study_preview, "serve", preview)
+    assert first != second
+    assert launch_study(other, None) == second
+    assert launch_study(project, None) == first
 
-    # When the user enters the short command without options.
-    result = CliRunner().invoke(app, ["study"])
 
-    # Then it launches this course automatically on the same origin each time.
-    assert result.exit_code == 0, result.output
-    assert launches == [(project.resolve(), 8765, True)]
+def test_occupied_preferred_port_uses_a_temporary_address_until_preview_stops(
+    project: Path, launch_study: LaunchStudy
+) -> None:
+    preferred = launch_study(project, None)
+    port = urlsplit(preferred).port
+    assert port is not None
+    reopened: list[str] = []
+
+    with study_preview.PreviewServer(("127.0.0.1", port), study_preview.Handler):
+        temporary = launch_study(project, lambda: reopened.append(launch_study(project, None)))
+        assert temporary != preferred
+        assert reopened == [temporary]
+
+    assert launch_study(project, None) == preferred
 
 
 @pytest.mark.parametrize("automatic", [True, False])
@@ -111,7 +159,7 @@ def test_launcher_without_a_built_site_preserves_the_directory(
 
 def test_help_does_not_launch_a_server_or_browser(monkeypatch: pytest.MonkeyPatch) -> None:
     # Given the real CLI with server startup prohibited.
-    def unexpected_launch(project: Path, port: int, *, open_browser: bool = False) -> None:
+    def unexpected_launch(project: Path, port: int | None, *, open_browser: bool = False) -> None:
         pytest.fail("Help must not start a preview.")
 
     monkeypatch.setattr(study_preview, "serve", unexpected_launch)

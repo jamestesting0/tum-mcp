@@ -1,14 +1,14 @@
 """Restricted job receipts, bounded offline evidence reads and additive source export."""
 
 import re
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import Field, TypeAdapter, ValidationError, model_validator
 
 from tum_mcp.course.lecture.evidence import Interval, LectureCoverage, Recording, Seconds
-from tum_mcp.course.project.models import Coverage, Digest, Resource, Snapshot
+from tum_mcp.course.project.models import Coverage, Digest, Resource, Snapshot, StudyState
 from tum_mcp.course.project.store import ReadObserver, confined, digest, load_state, private_path
 from tum_mcp.errors import CampusError, Code
 from tum_mcp.lecture_processing.progress import read_progress
@@ -26,6 +26,7 @@ class InvalidReceipt(Frozen):
     checked_at: str
     reason: str
     duration_s: Seconds | None
+    recorded_on: date | None = None
 
     @model_validator(mode="after")
     def consistent(self) -> "InvalidReceipt":
@@ -84,7 +85,7 @@ def now() -> str:
 
 
 def save_invalid(
-    directory: Path, course_id: int, recording_id: int, valid: Validity
+    directory: Path, course_id: int, recording_id: int, valid: Validity, recorded_on: date
 ) -> InvalidReceipt:
     receipt = InvalidReceipt(
         key=directory.name,
@@ -93,6 +94,7 @@ def save_invalid(
         checked_at=now(),
         reason=valid.reason,
         duration_s=valid.duration_s,
+        recorded_on=recorded_on,
     )
     private_write(confined(directory, "receipt.json"), receipt.model_dump_json(indent=2).encode())
     return receipt
@@ -104,7 +106,13 @@ def recording_dir(root: Path, key: str) -> Path:
     return private_path(root, f"lectures/{key}")
 
 
-def read_receipt(root: Path, key: str, *, read_observer: ReadObserver | None = None) -> Receipt:
+def read_receipt(
+    root: Path,
+    key: str,
+    *,
+    state: StudyState | None = None,
+    read_observer: ReadObserver | None = None,
+) -> Receipt:
     path = recording_dir(root, key) / "receipt.json"
     if not path.is_file() or path.is_symlink() or path.stat().st_size > 1024**2:
         raise CampusError(
@@ -131,7 +139,7 @@ def read_receipt(root: Path, key: str, *, read_observer: ReadObserver | None = N
             isinstance(result, InvalidReceipt)
             or binding.course_slug == result.recording.course_slug
         )
-        for binding in load_state(root).course.bindings
+        for binding in (state or load_state(root)).course.bindings
     ):
         raise CampusError(
             Code.SCOPE_DENIED, "Cached recording is outside the current course binding."
@@ -145,15 +153,21 @@ def usable_receipt(
     receipt = read_receipt(root, key, read_observer=read_observer)
     if isinstance(receipt, InvalidReceipt):
         raise CampusError(Code.CAPABILITY_UNSUPPORTED, f"Recording invalid: {receipt.reason}.")
+    require_current_receipt(root, receipt, read_observer=read_observer)
+    return receipt
+
+
+def require_current_receipt(
+    root: Path, receipt: PreparedReceipt, *, read_observer: ReadObserver | None = None
+) -> None:
     require_content(receipt.validity)
-    progress = read_progress(recording_dir(root, key), read_observer=read_observer)
+    progress = read_progress(recording_dir(root, receipt.key), read_observer=read_observer)
     if progress is not None and progress.metadata_revision != receipt.metadata_revision:
         raise CampusError(
             Code.STALE_RESULT,
             "Source metadata changed during interrupted preparation; "
             "resume before reading older evidence.",
         )
-    return receipt
 
 
 def evidence_bytes(
@@ -209,9 +223,9 @@ def export_snapshot(root: Path, output: Path) -> Snapshot:
     base = private_path(root, "lectures")
     resources: list[Resource] = []
     for folder in sorted(base.glob("live-*")) if base.is_dir() else ():
-        receipt = read_receipt(root, folder.name)
+        receipt = read_receipt(root, folder.name, state=state)
         if isinstance(receipt, PreparedReceipt):
-            usable_receipt(root, folder.name)
+            require_current_receipt(root, receipt)
         course_id = (
             receipt.course_id
             if isinstance(receipt, InvalidReceipt)

@@ -34,7 +34,24 @@ the recording at its start. The page follows the lecture's chapters: each topic 
 then its notes and highlights in recording order. A note links its moment with "Watch"
 and needs no thumbnail. A missing or unclear stretch shows where it happened. The lecture
 list shows note/highlight counts and highlight watching time, and the Contents button
-lists the chapters.
+lists the chapters. In the local app, a chapter with a renderable PDF citation shows
+a small preview of the first cited page. Selecting it opens the chapter's recording
+time. Lecture list rows use the first highlight's recording frame when available,
+then a chapter preview. The build reuses previews for unchanged pages. Hosted exports
+omit local PDF previews.
+
+Set a chapter's optional `preview_page` to a page within its cited range to show a
+representative diagram or example. The note and highlight timestamps keep the
+original recording clock. Check one lecture with
+`tum-mcp study visuals PROJECT --lecture KEY` and repeat with `--interact`.
+Add `--phone` to check smaller widths.
+
+For all recordings through a date, set the batch's `lecture_scope.through` to the
+verified cutoff. Use `tum-mcp lecture inspect PROJECT --batch ID --through YYYY-MM-DD`
+to see cached evidence, batch membership and authored pages by recording. Document
+exclusions under `lecture_scope.exclusions` with their reason and the canonical
+recording key for a duplicate. An older invalid receipt may have no recording date.
+Subset batches can use the report without declaring all-through coverage.
 Either section may be absent; a reviewed lecture may have no worthwhile additions.
 Attribution review stays private, so the reading flow is clean.
 Lecture has no quizzes or flashcards; broader teaching/practice stays in Study.

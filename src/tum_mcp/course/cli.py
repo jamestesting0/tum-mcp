@@ -44,11 +44,14 @@ app.add_typer(
 @app.callback()
 def launch(
     context: typer.Context,
-    port: Annotated[int, typer.Option(min=0, max=65535, help="Local app port.")] = 8765,
+    port: Annotated[
+        int | None,
+        typer.Option(min=0, max=65535, help="Exact local port. Use 0 for any free port."),
+    ] = None,
 ) -> None:
     """Open this course's study app, or run a study management command."""
     if context.invoked_subcommand is None:
-        from tum_mcp.course.app.preview import serve as preview
+        from tum_mcp.course.app.preview_launch import serve as preview
 
         preview(Path.cwd(), port, open_browser=True)
 
@@ -776,6 +779,9 @@ def schema(
 @app.command(rich_help_panel="Check")
 def visuals(
     project: Path,
+    lecture: Annotated[
+        list[str] | None, typer.Option(help="Check this lecture; repeatable.")
+    ] = None,
     unit: Annotated[list[str] | None, typer.Option(help="Only this unit; repeatable.")] = None,
     exercise: Annotated[
         list[str] | None, typer.Option(help="Only this exercise, as SET/KEY; repeatable.")
@@ -799,18 +805,31 @@ def visuals(
     """Measure every drawn visual at desktop width (phone on request) and draw contact sheets."""
     from tum_mcp.course.app.visuals import check_interactions, check_visuals
 
+    if lecture and gallery:
+        raise typer.BadParameter("--lecture cannot be combined with --gallery.")
     if interact:
         emit(
             project.expanduser().resolve(),
             "interact",
             check_interactions(
-                project, tuple(unit or ()), tuple(exercise or ()), exam=exam, phone=phone
+                project,
+                tuple(unit or ()),
+                tuple(exercise or ()),
+                exam=exam,
+                phone=phone,
+                lectures=tuple(lecture or ()),
             ),
             full=full,
         )
         return
     result = check_visuals(
-        project, tuple(unit or ()), tuple(exercise or ()), exam=exam, gallery=gallery, phone=phone
+        project,
+        tuple(unit or ()),
+        tuple(exercise or ()),
+        exam=exam,
+        gallery=gallery,
+        phone=phone,
+        lectures=tuple(lecture or ()),
     )
     summary = summarize(result)
     # Every drawing that still scrolls at desktop width is shown: a note cut off after three
@@ -966,7 +985,7 @@ def schedule(
 @app.command(rich_help_panel="Author")
 def serve(project: Path, port: Annotated[int, typer.Option(min=0, max=65535)] = 8765) -> None:
     """Preview the prepared app and local comments without external hosting or logs."""
-    from tum_mcp.course.app.preview import serve as preview
+    from tum_mcp.course.app.preview_launch import serve as preview
 
     preview(project, port)
 
