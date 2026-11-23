@@ -5,12 +5,16 @@ import sys
 from pathlib import Path
 
 import pytest
+from PIL import Image
 from skill_lab import scenarios, shim, variants
 from skill_lab.collect import checker_phases, collect_run, review_stats, transcript_stats
 
+from tum_mcp.course.app.browser_evidence import browser_choice, browser_identity, save_receipt
 from tum_mcp.course.app.build import current_data
 from tum_mcp.course.checks.batch import Batch, assess_batch
 from tum_mcp.course.content.exam_data import read_exam
+from tum_mcp.course.content.store import document_writes, read_document
+from tum_mcp.course.project.store import apply
 from tum_mcp.course.workflow.tasks import begin
 
 
@@ -184,6 +188,8 @@ def test_delivery_is_scoped_to_the_request(
     ("case", "status", "problem"),
     [
         ("draft", "complete", None),
+        ("different-controller", "complete", None),
+        ("changed-capture", "partial", "browser evidence is missing"),
         ("stale-build", "partial", "Build the complete current draft."),
         ("unrequested-sibling", "complete", None),
         ("formal-review", "partial", "no current verdict"),
@@ -207,8 +213,22 @@ def test_exam_delivery_uses_applicable_readiness(
     (project / "app/data.mjs").write_bytes(current_data(project))
     exam = read_exam(project)
     assert exam is not None
-    # Browser receipts are verified separately. Exercise real batch checks and collection here.
-    monkeypatch.setattr("tum_mcp.course.checks.batch._browser_problems", lambda *args: [])
+    monkeypatch.setenv("TUM_MCP_BROWSER", sys.executable)
+    identity = browser_identity(project, browser_choice())
+    picture = ".tum-mcp/visuals/exam.png"
+    (project / picture).parent.mkdir(exist_ok=True)
+    Image.new("RGB", (8, 8)).save(project / picture)
+    save_receipt(
+        project,
+        identity,
+        {
+            "interact/desktop/#exam/mock/demo-forecast": True,
+            "shell/desktop/light/exam": True,
+            "shell/desktop/dark/exam": True,
+            "visual/desktop/exam": True,
+        },
+        captures={"visual/desktop/exam": (picture,)},
+    )
     items = (item, "exam/mock/unrequested/missing") if case == "unrequested-sibling" else (item,)
     batch = Batch(course_key=exam.course_key, request="Prepare one mock question.", items=items)
     batch_path = project / ".tum-mcp/batches/mock.json"
@@ -217,8 +237,17 @@ def test_exam_delivery_uses_applicable_readiness(
     begin(project, "mock", review_rounds=int(case == "formal-review"), owner="test")
     if case == "stale-build":
         (project / "app/data.mjs").unlink()
+    if case == "changed-capture":
+        Image.new("RGB", (12, 12)).save(project / picture)
     readiness = assess_batch(project, "mock")
-    assert readiness.ready is (case in {"draft", "formal-review"}), readiness.problems
+    assert readiness.ready is (case in {"draft", "different-controller", "formal-review"}), (
+        readiness.problems
+    )
+    if case == "different-controller":
+        monkeypatch.setattr(
+            "tum_mcp.course.checks.preparation.browser_identity",
+            lambda *_: identity.model_copy(update={"browser": "0" * 64}),
+        )
 
     measured = collect_run("r1", "candidate-1", visuals=False)
 
@@ -231,6 +260,33 @@ def test_exam_delivery_uses_applicable_readiness(
     else:
         assert row["problems"] == []
     assert measured["review_passed"] is False
+
+
+def test_chapter_only_lecture_is_a_readable_delivery(lab_state, monkeypatch):
+    key = "lecture/bfs-lecture"
+    directory = _calibration_run(
+        lab_state, monkeypatch, skills=["prepare-lecture"], expected={"lectures": [key]}
+    )
+    project = directory / "workspace"
+    _study_cli(project, "demo", "--lectures")
+    data = read_document(project, "lectures")
+    lecture = data["lectures"][0]
+    assert lecture["chapters"]
+    lecture.update(notes=[], highlights=[])
+    data["evidence"] = []
+    apply(project, document_writes(project, "lectures", data))
+    row = collect_run("r1", "candidate-1", visuals=False)["delivery"]["lectures"]
+    assert row["readable_items"] == [key]
+    assert row["missing_items"] == []
+
+
+def test_unavailable_variant_keeps_delivery_unmeasured(lab_state, monkeypatch, tmp_path):
+    _calibration_run(lab_state, monkeypatch, skills=["prepare-lecture"])
+    monkeypatch.setattr(variants, "python_of", lambda _: tmp_path / "removed-variant")
+    metrics = collect_run("r1", "candidate-1", visuals=False)
+    assert metrics["delivery"]["lectures"]["status"] == "unmeasured"
+    assert metrics["delivery"]["lectures"]["problems"]
+    assert metrics["report_status"] == "failed"
 
 
 def test_codex_usage_is_counted_once_per_thread(tmp_path):
