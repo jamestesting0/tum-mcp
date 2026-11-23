@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.28.0 — 2026-11-23
+
+- Show slide previews beside lecture chapter timestamps and use a recording frame
+  as the lecture cover when a highlight is available.
+- Check selected lecture pages on desktop and phone. Report which recordings in
+  the requested scope are ready, excluded, or still need a decision.
+- Remember a local preview port for each course and reopen its running app.
+  On WSL, open the preview in the Windows browser.
+
 ## 0.27.1 — 2026-11-21
 
 - Review newly split lessons in full during the next available verification pass

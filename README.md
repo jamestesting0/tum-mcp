@@ -57,6 +57,7 @@ Zulip channel.
 ### Your course app
 
 - Each project holds one course. Run `tum-mcp study` in its folder to open the app.
+  The launcher remembers a local port for each course and reopens its running preview.
 - Ask the agent to refresh the app when sources change, or to address comments you
   left in it.
 - To add your own resources, such as past exams from other websites, put them in a
