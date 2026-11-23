@@ -62,12 +62,13 @@ or repair. A transcript page is not proof of full lecture coverage. Compare with
 the receipt's processed/missing/uncertain spans and make a full topic map first.
 
 Classify before acquiring images: text notes need no frame, every highlight needs
-a thumbnail, and a visual note may need an informative frame. Capture selected
-frames in one call, then stage each and check the evidence:
+a thumbnail, and a visual note may need an informative frame. Inspect the cached
+frames first. Stage a suitable measured capture directly; ordinary preparation
+also retries previously failed audio. Request only the missing moments together:
 
 ```sh
-tum-mcp lecture prepare PROJECT --recording URL --frame-at 772 --frame-at 1402
 tum-mcp lecture frames PROJECT --recording KEY --start START --end END --limit 10
+tum-mcp lecture prepare PROJECT --recording URL --frame-at 772 --frame-at 1402
 tum-mcp lecture thumbnail PROJECT --recording KEY --at 772
 tum-mcp lecture thumbnail PROJECT --recording KEY --at 1402 --crop X,Y,WIDTH,HEIGHT
 tum-mcp lecture check PROJECT

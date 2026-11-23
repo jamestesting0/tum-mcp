@@ -779,6 +779,9 @@ def schema(
 @app.command(rich_help_panel="Check")
 def visuals(
     project: Path,
+    lecture: Annotated[
+        list[str] | None, typer.Option(help="Check this lecture; repeatable.")
+    ] = None,
     unit: Annotated[list[str] | None, typer.Option(help="Only this unit; repeatable.")] = None,
     exercise: Annotated[
         list[str] | None, typer.Option(help="Only this exercise, as SET/KEY; repeatable.")
@@ -802,18 +805,31 @@ def visuals(
     """Measure every drawn visual at desktop width (phone on request) and draw contact sheets."""
     from tum_mcp.course.app.visuals import check_interactions, check_visuals
 
+    if lecture and gallery:
+        raise typer.BadParameter("--lecture cannot be combined with --gallery.")
     if interact:
         emit(
             project.expanduser().resolve(),
             "interact",
             check_interactions(
-                project, tuple(unit or ()), tuple(exercise or ()), exam=exam, phone=phone
+                project,
+                tuple(unit or ()),
+                tuple(exercise or ()),
+                exam=exam,
+                phone=phone,
+                lectures=tuple(lecture or ()),
             ),
             full=full,
         )
         return
     result = check_visuals(
-        project, tuple(unit or ()), tuple(exercise or ()), exam=exam, gallery=gallery, phone=phone
+        project,
+        tuple(unit or ()),
+        tuple(exercise or ()),
+        exam=exam,
+        gallery=gallery,
+        phone=phone,
+        lectures=tuple(lecture or ()),
     )
     summary = summarize(result)
     # Every drawing that still scrolls at desktop width is shown: a note cut off after three

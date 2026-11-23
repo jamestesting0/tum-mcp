@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Annotated
 from pydantic import Field, JsonValue, TypeAdapter, ValidationError
 
 from tum_mcp.course.app.build import current_data
-from tum_mcp.course.app.visuals import _exam_visuals, shell_workspace
+from tum_mcp.course.app.visuals import _exam_visuals, lecture_routes, shell_workspace
 from tum_mcp.course.checks.plans import gate_status, plan_problems, read_plan
 from tum_mcp.course.checks.preparation import (
     BrowserProblem,
@@ -21,6 +21,7 @@ from tum_mcp.course.content.exam_data import exam_surface_sources, read_exam, st
 from tum_mcp.course.content.study import Text
 from tum_mcp.course.lecture.check import SUMMARY_META, TITLE_DATE, check_highlights
 from tum_mcp.course.lecture.data import read_lectures, stale_lectures
+from tum_mcp.course.lecture.scope import LectureScope, accounting, cached_recordings
 from tum_mcp.course.lecture.selection import selection_problems
 from tum_mcp.course.ledger.coverage import read_ledger
 from tum_mcp.course.project.models import KEY_SEGMENT, PLAN_ROUTES, Key
@@ -47,6 +48,7 @@ class Batch(Frozen):
     request: Text
     items: tuple[Item, ...] = Field(min_length=1, max_length=5000)
     preparations: tuple[Key, ...] = Field(default=(), max_length=100)
+    lecture_scope: LectureScope | None = None
 
 
 def checker_batch(root: Path, items: set[str], selector: str | None) -> tuple[str, Batch] | None:
@@ -103,7 +105,9 @@ def _batch_browser(
     if not selected:
         return []
     owners = {browser_owner(shell_workspace(route)) for route in selected}
-    return _browser_problems(root, selected, visuals & owners)
+    return _browser_problems(
+        root, selected, {item for item in visuals if item.partition("/")[0] in owners}
+    )
 
 
 def assess_batch(root: Path, identifier: str, context: "Context | None" = None) -> Readiness:
@@ -137,6 +141,18 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
     workspace_problems: dict[str, list[str]] = {
         key.partition("/")[0]: [] for key in batch.items if key != "course"
     }
+    if batch.lecture_scope:
+        rows, gaps = accounting(
+            root,
+            cached_recordings(root, state),
+            batch.lecture_scope.through,
+            batch.items,
+            batch.lecture_scope,
+        )
+        dispositions.extend(row.model_dump(mode="json") for row in rows)
+        problems.extend(gaps)
+        workspace_problems.setdefault("lecture", []).extend(gaps)
+        browser_commands.update({gap: f"tum-mcp lecture inspect . --batch {key}" for gap in gaps})
     for scope in batch.preparations:
         readiness = assess(root, scope, context)
         problems.extend(readiness.problems)
@@ -239,7 +255,10 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
                     f"{selection_key}: add chapters, the lecture's topics in recording order "
                     "(study schema --example lecture-chapter)."
                 )
-            routes.append(f"#lectures/{lecture.key}")
+            if "#lectures" not in routes:
+                routes.append("#lectures")
+            routes.extend(lecture_routes(lecture))
+            visuals.update(("lecture", selection_key))
             for entry in lecture.entries:
                 entry_key = f"{selection_key}/{entry.key}"
                 items[entry_key] = [{"request": batch.request}]
@@ -279,12 +298,19 @@ def assess_batch(root: Path, identifier: str, context: "Context | None" = None) 
     elif routes:
         browser = _batch_browser(root, routes, visuals, problems, workspace_problems)
         browser_commands.update(record_browser_problems(browser, problems, workspace_problems))
-    signature = source_digest(batch.model_dump_json().encode())
-    contract = source_digest(batch.model_dump_json(exclude={"items"}).encode())
+    excluded = {"lecture_scope"} if batch.lecture_scope is None else set()
+    signature = source_digest(batch.model_dump_json(exclude=excluded).encode())
+    contract = source_digest(batch.model_dump_json(exclude=excluded | {"items"}).encode())
+    lecture_cutoff = (
+        batch.lecture_scope.through.isoformat()
+        if batch.lecture_scope and set(workspace_problems) == {"lecture"}
+        else None
+    )
     return Readiness(
         identifier=identifier,
         scope=PreparedScope(identifier=identifier, fingerprint=signature),
-        mode="selected_sources",
+        mode="through_date" if lecture_cutoff else "selected_sources",
+        cutoff=lecture_cutoff,
         problems=tuple(problems),
         dispositions=tuple(dispositions),
         items=items,

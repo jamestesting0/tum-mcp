@@ -83,11 +83,21 @@ class Chapter(Frozen):
     interval: Interval
     sources: tuple[Key, ...] = Field(default=(), max_length=5)
     pages: PageRange | None = None
+    preview_page: int | None = Field(
+        default=None,
+        ge=1,
+        exclude_if=lambda value: value is None,
+        description="Optional representative page within this chapter's cited PDF range.",
+    )
 
     @model_validator(mode="after")
     def located(self) -> "Chapter":
         if self.pages is not None and not self.sources:
             raise ValueError("Chapter pages need the source they belong to.")
+        if self.preview_page is not None:
+            bounds = [int(value) for value in self.pages.split("-")] if self.pages else []
+            if not bounds or not bounds[0] <= self.preview_page <= bounds[-1]:
+                raise ValueError("Choose a preview page within the chapter's cited pages.")
         return self
 
 
@@ -271,7 +281,9 @@ class Lecture(Frozen):
             **(
                 {
                     "chapters": [
-                        chapter.model_dump(mode="json", exclude={"sources", "pages"})
+                        chapter.model_dump(
+                            mode="json", exclude={"sources", "pages", "preview_page"}
+                        )
                         for chapter in self.chapters
                     ]
                 }

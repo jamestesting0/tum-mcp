@@ -29,6 +29,8 @@ def project(payload: dict[str, JsonValue]) -> dict[str, JsonValue]:
         for highlight in lecture["highlights"]:
             highlight["url"] = watch_link(recording, highlight["interval"]["start_s"])
         for chapter in lecture.get("chapters", []):
+            chapter.pop("slide_preview", None)
+            chapter.pop("preview_page", None)
             chapter["url"] = watch_link(recording, chapter["interval"]["start_s"])
         lecture["recording"] = {
             "recorded_on": recording.recorded_on.isoformat(),

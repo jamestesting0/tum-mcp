@@ -73,6 +73,8 @@ def test_highlights_deep_links_thumbnails_and_workspace_return(
         expect(page.locator(".topic-row .lecture-count")).to_have_text(
             "1 note \u00b7 2 highlights \u00b7 2 min of 10 min"
         )
+        cover = page.locator(".topic-row img")
+        expect(cover).to_be_visible(timeout=2000)
         directory = Path(os.environ.get("TUM_MCP_LECTURE_QA_PATH", str(tmp_path)))
         directory.mkdir(parents=True, exist_ok=True)
         page.screenshot(path=str(directory / f"{width}-{theme}-list.png"))
@@ -211,6 +213,8 @@ def test_notes_only_highlights_only_and_empty_selection(
             expect(page.locator(".lecture-chapter-time a")).to_have_attribute(
                 "href", "https://example.invalid/lectures/synthetic?t=0"
             )
+            chapter = page.locator(".lecture-chapter")
+            assert chapter.evaluate("el => el.getBoundingClientRect().height") <= 88
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         folder = Path(os.environ.get("TUM_MCP_LECTURE_QA_PATH", str(tmp_path)))
         folder.mkdir(parents=True, exist_ok=True)
@@ -289,7 +293,7 @@ def test_missing_routes_images_and_untrusted_copy_are_readable(
             expect(page.locator(".lecture-thumb").nth(1)).to_be_hidden()
             # A lost stretch shows where it happened, not as provenance in the header.
             expect(page.locator(".lecture-chapter .lecture-gap")).to_have_text(
-                "Not recorded 9:00–10:00"
+                "Audio unavailable 9:00–10:00"
             )
             assert page.get_by_text("Sources checked").count() == 0
             expect(page.locator(".lecture-teaches").first).to_have_text(

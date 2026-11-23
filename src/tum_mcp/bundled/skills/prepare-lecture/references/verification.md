@@ -25,21 +25,29 @@ Run one coherent build with `tum-mcp study build PROJECT --local-only`, then
 missing assets or customized-template conflicts without overwriting user work.
 Keep prior usable notes and highlights intact if a source cannot be refreshed.
 
-Open the real app locally (`tum-mcp study` in the project folder). Follow the
-Lecture list, a lecture and a highlight deep link. Check:
+Check the final build with `tum-mcp study visuals PROJECT --lecture KEY --phone`
+for phone and desktop contact sheets, then add `--interact` to check the index,
+lecture and highlight links. Repeat `--lecture` to cover several lectures together.
+In a headless session, inspect the captured sheets and use these browser results.
+On an interactive desktop, `tum-mcp study` opens the app for hands-on inspection.
 
 - The list row shows the lecture's highlight count and watching time; the summary
   states the lecture's scope; note counts and highlight watching time are distinct.
-  Notes precede highlights; absent sections leave no empty heading. Notes-only,
+  On chaptered pages, notes and highlights appear where they occur in recording order.
+  A chapter with a local PDF citation can show the first cited page beside its title and time.
+  When it is a generic heading or learning-outcomes slide, select a representative
+  page inside that citation with `preview_page`. Check the preview at card size.
+  Inspect the opening chapter rows and the Lecture index at phone and desktop widths.
+  The index uses a highlight frame when available. Absent sections leave no empty heading. Notes-only,
   highlights-only and no selected additions must not create dummy cards.
 - Each note reads as title, context and message; a student who missed the lecture can
   tell what it answers. Notes are concise, with no prominent time range or mandatory
   thumbnail, and a Recall link opens the right Study passage. Their source controls open the supporting moment and applicable pages.
   Meaningful images have descriptive alternative text; formulas render correctly.
-- Time ranges use the original recording clock. Independently open at least two
-  highlight links in the player and confirm that each lands where its explanation
-  starts. Do not infer seek behavior solely from the URL. A missing/unavailable player
-  is a verification limitation.
+- Time ranges use the original recording clock. When the player is available,
+  open two highlight links (or the only one) and confirm that playback starts
+  at the explanation. In an offline session, check the frame time and speech
+  against the saved recording evidence and report that player seeking was unverified.
 - Every thumbnail loads, shows the highlight's topic and lies inside its range.
 - Slide or script pages appear in a highlight's sources only where they apply.
 - Notes and highlights read well at desktop width, with no overflowing

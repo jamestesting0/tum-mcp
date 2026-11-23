@@ -257,37 +257,39 @@ def _browser_problems(root: Path, routes: list[str], visuals: set[str]) -> list[
     owners = frozenset(browser_owner(owner) for owner in shell_owners | set(visual_owners.values()))
     visuals_command = "tum-mcp study visuals ."
     interact_command = f"{visuals_command} --interact"
+    lecture_args = "".join(
+        f" --lecture {route.split('/')[1]}"
+        for route in routes
+        if route.startswith("#lectures/") and route.count("/") == 1
+    )
+
+    def command_for(command: str, owner: str) -> str:
+        return command + lecture_args if browser_owner(owner) == "lecture" else command
+
     receipt = read_receipt(root)
-    if receipt is None:
+    if receipt is None or receipt.identity != browser_identity(root, browser_choice()):
+        status = "missing" if receipt is None else "stale"
         return [
             BrowserProblem(
-                "Missing browser receipts. Run study visuals and study visuals --interact.",
-                owners,
-                interact_command,
+                f"{owner}: browser evidence is {status}.",
+                frozenset({owner}),
+                command_for(interact_command, owner),
             )
-        ]
-    identity = browser_identity(root, browser_choice())
-    if receipt.identity != identity:
-        return [
-            BrowserProblem(
-                "Browser evidence is stale. Run study visuals and study visuals --interact.",
-                owners,
-                interact_command,
-            )
+            for owner in sorted(owners)
         ]
     required = {
         **{
-            f"visual/{width}/{item}": (owner, visuals_command)
+            f"visual/{width}/{item}": (owner, command_for(visuals_command, owner))
             for width in DEFAULT_WIDTHS
             for item, owner in visual_owners.items()
         },
         **{
-            f"interact/{width}/{route}": (owner, interact_command)
+            f"interact/{width}/{route}": (owner, command_for(interact_command, owner))
             for width in DEFAULT_WIDTHS
             for route, owner in route_owners.items()
         },
         **{
-            f"shell/{width}/{theme}/{owner}": (owner, interact_command)
+            f"shell/{width}/{theme}/{owner}": (owner, command_for(interact_command, owner))
             for width in DEFAULT_WIDTHS
             for theme in ("light", "dark")
             for owner in shell_owners

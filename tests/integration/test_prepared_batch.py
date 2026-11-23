@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -76,7 +77,7 @@ def write_batch(prepared: Prepared, extra: tuple[str, ...] = ()) -> None:
     ("gate", "command"),
     [
         ("build", "tum-mcp study build . --local-only"),
-        ("browser", "tum-mcp study visuals . --interact"),
+        ("browser", "tum-mcp study visuals . --interact --lecture bfs-lecture"),
     ],
 )
 def test_lecture_readiness_reports_the_shared_check(
@@ -116,6 +117,7 @@ def test_lecture_readiness_reports_the_shared_check(
     [
         pytest.param("interact/desktop/#lectures/bfs-lecture", id="interaction"),
         pytest.param("shell/desktop/dark/lectures", id="shell"),
+        pytest.param("visual/desktop/lecture", id="index-picture"),
         pytest.param(None, id="passing"),
     ],
 )
@@ -132,6 +134,10 @@ def test_exercise_blocker_does_not_hide_lecture_receipt(
     identity = browser_identity(prepared.root, browser)
     monkeypatch.setattr(preparation, "browser_choice", lambda: browser)
     states = {
+        "interact/desktop/#lectures": True,
+        "interact/desktop/#lectures/bfs-lecture/h-first": True,
+        "visual/desktop/lecture": True,
+        "visual/desktop/lecture/bfs-lecture": True,
         "interact/desktop/#lectures/bfs-lecture": True,
         "interact/phone/#lectures/bfs-lecture": True,
         "shell/phone/light/lectures": True,
@@ -141,7 +147,17 @@ def test_exercise_blocker_does_not_hide_lecture_receipt(
     }
     if missing:
         states.pop(missing)
-    save_receipt(prepared.root, identity, states)
+    from PIL import Image
+
+    picture = ".tum-mcp/visuals/lecture.png"
+    (prepared.root / picture).parent.mkdir(exist_ok=True)
+    Image.new("RGB", (20, 20)).save(prepared.root / picture)
+    save_receipt(
+        prepared.root,
+        identity,
+        states,
+        captures={key: (picture,) for key in states if key.startswith("visual/")},
+    )
 
     readiness = assess_batch(prepared.root, "complete")
 
@@ -158,8 +174,25 @@ def test_exercise_blocker_does_not_hide_lecture_receipt(
     assert actions["lecture"] == {
         "status": "pending" if missing else "prepared",
         "prerequisite": next(iter(lecture_problems), None),
-        "command": "tum-mcp study visuals . --interact" if missing else None,
+        "command": (
+            "tum-mcp study visuals . --lecture bfs-lecture"
+            if missing and missing.startswith("visual/")
+            else "tum-mcp study visuals . --interact --lecture bfs-lecture"
+            if missing
+            else None
+        ),
         "problems": len(lecture_problems),
+    }
+
+
+def test_missing_mixed_browser_receipts_offer_a_scoped_lecture_command(prepared: Prepared) -> None:
+    from tum_mcp.course.checks.preparation import _browser_problems
+
+    issues = _browser_problems(
+        prepared.root, ["#lectures", "#lectures/bfs-lecture", "#exam/sheet"], {"lecture", "exam"}
+    )
+    assert {issue.command for issue in issues if "lecture" in issue.workspaces} == {
+        "tum-mcp study visuals . --interact --lecture bfs-lecture"
     }
 
 
@@ -251,6 +284,114 @@ def test_lecture_inspect_distinguishes_missing_and_out_of_scope_meetings(
         ("2026-10-26", "missing", []),
         ("2026-11-02", "out_of_scope", []),
     ]
+
+
+def test_all_through_inventory_preserves_unknown_dates_and_explains_subset(
+    prepared: Prepared,
+) -> None:
+    write_batch(prepared)
+    write_selection(prepared, selection(prepared))
+    receipt = json.loads((prepared.folder / "receipt.json").read_bytes())
+    for number, day in [(12, "2026-10-25"), (13, "2026-11-01")]:
+        key = f"live-42-{number}"
+        folder = prepared.folder.parent / key
+        folder.mkdir()
+        (folder / "receipt.json").write_text(
+            json.dumps(
+                {
+                    **receipt,
+                    "key": key,
+                    "recording": {
+                        **receipt["recording"],
+                        "recording_id": number,
+                        "recorded_on": day,
+                    },
+                }
+            )
+        )
+    silent = prepared.folder.parent / "live-42-14"
+    silent.mkdir()
+    (silent / "receipt.json").write_text(
+        json.dumps(
+            {
+                "status": "invalid",
+                "key": silent.name,
+                "course_id": 42,
+                "recording_id": 14,
+                "reason": "whole_recording_silence",
+                "checked_at": "2026-10-26",
+                "duration_s": 100,
+            }
+        )
+    )
+    args = [
+        "lecture",
+        "inspect",
+        str(prepared.root),
+        "--through",
+        "2026-10-26",
+        "--batch",
+        "complete",
+    ]
+    runner = CliRunner()
+    output = runner.invoke(app, args)
+    assert output.exit_code == 0, output.output
+    result = json.loads(output.output)
+    rows = {row["recording"]: row for row in result["accounting"]}
+    assert rows[prepared.recording.key]["authored_key"] == "bfs-lecture"
+    assert rows[prepared.recording.key]["membership"] == "selected"
+    assert rows[silent.name]["recorded_on"] is None
+    assert rows[silent.name]["evidence"] == "invalid"
+    assert rows["live-42-12"]["membership"] == "undetermined"
+    assert rows["live-42-13"]["membership"] == "after_cutoff"
+    assert not result["problems"]
+    path = prepared.root / ".tum-mcp/batches/complete.json"
+    batch = json.loads(path.read_bytes())
+    batch["lecture_scope"] = {"through": "2026-10-26"}
+    path.write_text(json.dumps(batch))
+    assert any("live-42-12" in issue for issue in assess_batch(prepared.root, "complete").problems)
+    batch["lecture_scope"]["exclusions"] = {
+        "live-42-12": {
+            "reason": "Second capture of the same meeting and worked example.",
+            "duplicate_of": prepared.recording.key,
+        }
+    }
+    path.write_text(json.dumps(batch))
+    assert assess_batch(prepared.root, "complete").ready
+    for target in ("live-42-13", silent.name):
+        batch["lecture_scope"]["exclusions"]["live-42-12"]["duplicate_of"] = target
+        path.write_text(json.dumps(batch))
+        issues = assess_batch(prepared.root, "complete").problems
+        assert any("live-42-12" in issue and target in issue for issue in issues)
+
+
+@pytest.mark.skipif(os.environ.get("TUM_MCP_BROWSER_INTEGRATION") != "1", reason="Owned browser QA")
+def test_scoped_commands_clear_lecture_readiness_and_detect_missing_frame(
+    prepared: Prepared, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tum_mcp.course.checks import batch, preparation
+
+    monkeypatch.setattr(batch, "_browser_problems", preparation._browser_problems)
+    write_batch(prepared)
+    write_selection(prepared, selection(prepared))
+    runner = CliRunner()
+    root = str(prepared.root)
+    requested = ["study", "visuals", root, "--lecture", "bfs-lecture", "--json"]
+    for options in (["--interact"], []):
+        response = runner.invoke(app, [*requested, *options])
+        assert response.exit_code == 0, response.output or repr(response.exception)
+        result = json.loads(response.output)
+        assert result["passed"], result
+        if options:
+            assert result["pages"] == 3
+        else:
+            assert result["checked"] == ["lecture", "lecture/bfs-lecture"]
+    assert assess_batch(prepared.root, "complete").ready
+    highlight = prepared.notes["lectures"][0]["highlights"][1]
+    (prepared.root / "app" / highlight["thumbnail"]["asset"]).unlink()
+    failed = json.loads(runner.invoke(app, [*requested, "--interact"]).output)
+    assert not failed["passed"]
+    assert any(problem["control"] == highlight["key"] for problem in failed["problems"])
 
 
 def test_reviewer_distinguishes_source_freshness_from_page_bounds(prepared: Prepared) -> None:
