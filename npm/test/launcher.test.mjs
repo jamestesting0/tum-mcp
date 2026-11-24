@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runtimeIdentity } from '../runtime.mjs';
 
 const launcher = fileURLToPath(new URL('../tum-mcp.mjs', import.meta.url));
 
@@ -45,6 +47,48 @@ test('serve fails closed before explicit setup', () => {
   const result = invoke(['serve']);
   assert.equal(result.status, 2);
   assert.match(result.stderr, /^Error: TUM MCP is not set up yet/);
+});
+
+test('SIGINT sent only to the Study launcher shuts down its runtime before exiting', {
+  skip: process.platform === 'win32' && 'Native Windows uses console control events.',
+}, async () => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'tum-mcp-study-signal-')));
+  const identity = runtimeIdentity();
+  const generation = 'env-fixture';
+  const control = join(root, 'runtimes', identity);
+  const runtime = join(control, generation);
+  const python = join(runtime, 'bin', 'python');
+  const stopped = join(root, 'stopped');
+  mkdirSync(dirname(python), { recursive: true });
+  writeFileSync(join(control, 'current.json'), JSON.stringify({ schema: 2, identity, generation, python }));
+  writeFileSync(join(runtime, '.tum-mcp-ready'), identity);
+  writeFileSync(python, `#!/usr/bin/env node
+const { writeFileSync } = require('node:fs');
+process.once('SIGINT', () => {
+  writeFileSync(${JSON.stringify(stopped)}, '');
+  process.exit(0);
+});
+// When the test closes the input pipe, also exit on the unfixed launcher.
+process.stdin.once('end', () => process.exit(1));
+process.stdin.resume();
+console.log('ready');
+`, { mode: 0o700 });
+
+  const child = spawn(process.execPath, [launcher, 'study'], {
+    env: { ...process.env, TUM_MCP_DATA_DIR: root, PATH: `${dirname(process.execPath)}${delimiter}${process.env.PATH}` },
+    stdio: ['pipe', 'pipe', 'inherit'],
+  });
+  const signal = AbortSignal.timeout(5000);
+  const exited = once(child, 'exit', { signal });
+  try {
+    await Promise.race([once(child.stdout, 'data', { signal }), exited]);
+    assert.ok(child.kill('SIGINT'), 'Study launcher exited before the interrupt');
+    await exited;
+    assert.ok(existsSync(stopped), 'Study launcher exited before the runtime handled SIGINT');
+  } finally {
+    child.stdin.end();
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 
