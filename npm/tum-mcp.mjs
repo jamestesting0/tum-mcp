@@ -1,10 +1,27 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { acquireSetupLock, currentPython, dataRoot, ensureRuntime, removeRuntimeFiles } from './runtime.mjs';
 import { managePackage } from './package-manager.mjs';
 import { hasHelp, printHelp } from './ui.mjs';
+
+async function runStudyPreview(python, args, env) {
+  // Give the preview its own process group so terminal signals reach it only through this launcher.
+  const child = spawn(python, args, { env, stdio: 'inherit', detached: true });
+  const signals = ['SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGTERM'];
+  const forward = signal => child.kill(signal);
+  for (const signal of signals) process.on(signal, forward);
+  try {
+    const [status, signal] = await once(child, 'exit');
+    return { status, signal };
+  } catch (error) {
+    return { error };
+  } finally {
+    for (const signal of signals) process.off(signal, forward);
+  }
+}
 
 let args = process.argv.slice(2);
 const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
@@ -54,7 +71,14 @@ try {
       const purge = args[0] === 'uninstall' && args.includes('--purge-runtime') && args.includes('--all');
       const release = purge ? await acquireSetupLock() : null;
       try {
-        const child = spawnSync(python, ['-I', '-m', 'tum_mcp', ...forwarded], { env, stdio: 'inherit', shell: false });
+        const [command, action] = forwarded;
+        const studyPreview = command === 'study' && (
+          action === undefined || action === 'serve' || action === '--port' || action.startsWith('--port=')
+        );
+        const pythonArgs = ['-I', '-m', 'tum_mcp', ...forwarded];
+        const child = studyPreview && process.platform !== 'win32'
+          ? await runStudyPreview(python, pythonArgs, env)
+          : spawnSync(python, pythonArgs, { env, stdio: 'inherit', shell: false });
         if (child.error) throw new Error('The TUM MCP runtime could not start; run tum-mcp setup to repair it.');
         process.exitCode = child.status ?? (child.signal === 'SIGINT' ? 130 : 1);
         if (args[0] === 'uninstall' && child.status === 20) {
