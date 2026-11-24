@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.28.1 — 2026-11-24
+
+- Stop the local Study preview when the npm launcher receives Ctrl+C on macOS,
+  Linux, or WSL, including terminals that interrupt only the launcher.
+
 ## 0.28.0 — 2026-11-23
 
 - Show slide previews beside lecture chapter timestamps and use a recording frame
