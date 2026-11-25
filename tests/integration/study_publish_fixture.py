@@ -8,14 +8,14 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import partial
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import SimpleHTTPRequestHandler
 from io import BytesIO
 from pathlib import Path
 from threading import Thread
 
 from pydantic import JsonValue
 
-from tum_mcp.course.app.preview import byte_range
+from tum_mcp.course.app.preview import PreviewServer, byte_range
 from tum_mcp.course.app.publish_site import blob_sha
 
 
@@ -61,7 +61,7 @@ def serve_export(site: dict[str, bytes], directory: Path) -> Iterator[str]:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(value)
     handler = partial(PagesHandler, directory=str(directory))
-    with ThreadingHTTPServer(("127.0.0.1", 0), handler) as server:
+    with PreviewServer(("127.0.0.1", 0), handler) as server:
         Thread(target=server.serve_forever, daemon=True).start()
         try:
             yield f"http://127.0.0.1:{server.server_port}"
